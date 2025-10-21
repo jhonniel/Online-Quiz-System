@@ -1,0 +1,194 @@
+@extends('layouts.admin')
+
+@section('page-title', 'User Activity Logs')
+
+@section('breadcrumb')
+    <li>
+        <div class="flex items-center">
+            <svg class="w-4 h-4 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
+                <path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd"></path>
+            </svg>
+            <span class="ml-2 text-sm font-medium text-gray-500">User Activity</span>
+        </div>
+    </li>
+@endsection
+
+@section('content')
+<div class="space-y-6">
+    <!-- Page Header -->
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between">
+        <div>
+            <h1 class="text-2xl font-bold text-gray-900">User Activity Logs</h1>
+            <p class="mt-1 text-sm text-gray-600">Monitor user activities, login/logout events, and system usage</p>
+        </div>
+        <div class="mt-4 sm:mt-0 flex space-x-3">
+            <a href="{{ route('admin.user-activity.sessions') }}"
+               class="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z"></path>
+                </svg>
+                View Sessions
+            </a>
+            <a href="{{ route('admin.user-activity.statistics') }}"
+               class="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
+                </svg>
+                Statistics
+            </a>
+        </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="bg-white shadow rounded-lg p-6">
+        <form method="GET" action="{{ route('admin.user-activity.index') }}" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+            <!-- Activity Type Filter -->
+            <div>
+                <label for="activity_type" class="block text-sm font-medium text-gray-700 mb-1">Activity Type</label>
+                <select name="activity_type" id="activity_type" class="w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500">
+                    <option value="">All Types</option>
+                    @foreach($activityTypes as $type)
+                        <option value="{{ $type }}" {{ request('activity_type') == $type ? 'selected' : '' }}>
+                            {{ ucfirst(str_replace('_', ' ', $type)) }}
+                        </option>
+                    @endforeach
+                </select>
+            </div>
+
+            <!-- User Filter -->
+            <div>
+                <label for="user_id" class="block text-sm font-medium text-gray-700 mb-1">User</label>
+                <select name="user_id" id="user_id" class="w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500">
+                    <option value="">All Users</option>
+                    @foreach($users as $user)
+                        <option value="{{ $user->id }}" {{ request('user_id') == $user->id ? 'selected' : '' }}>
+                            {{ $user->name }}
+                        </option>
+                    @endforeach
+                </select>
+            </div>
+
+            <!-- Date From -->
+            <div>
+                <label for="date_from" class="block text-sm font-medium text-gray-700 mb-1">Date From</label>
+                <input type="date" name="date_from" id="date_from" value="{{ request('date_from') }}"
+                       class="w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500">
+            </div>
+
+            <!-- Date To -->
+            <div>
+                <label for="date_to" class="block text-sm font-medium text-gray-700 mb-1">Date To</label>
+                <input type="date" name="date_to" id="date_to" value="{{ request('date_to') }}"
+                       class="w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500">
+            </div>
+
+            <!-- IP Address -->
+            <div>
+                <label for="ip_address" class="block text-sm font-medium text-gray-700 mb-1">IP Address</label>
+                <input type="text" name="ip_address" id="ip_address" value="{{ request('ip_address') }}"
+                       placeholder="192.168.1.1" class="w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500">
+            </div>
+
+            <!-- Filter Buttons -->
+            <div class="md:col-span-2 lg:col-span-5 flex justify-end space-x-3">
+                <button type="submit"
+                        class="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                    <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"></path>
+                    </svg>
+                    Apply Filters
+                </button>
+                <a href="{{ route('admin.user-activity.index') }}"
+                   class="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                    Clear Filters
+                </a>
+            </div>
+        </form>
+    </div>
+
+    <!-- Activity Logs Table -->
+    <div class="bg-white shadow rounded-lg overflow-hidden">
+        <div class="px-6 py-4 border-b border-gray-200">
+            <h3 class="text-lg font-medium text-gray-900">Activity Logs</h3>
+            <p class="text-sm text-gray-600">Showing {{ $activities->count() }} of {{ $activities->total() }} activities</p>
+        </div>
+
+        @if($activities->count() > 0)
+            <div class="overflow-x-auto">
+                <table class="min-w-full divide-y divide-gray-200">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">User</th>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Activity</th>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Action</th>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Page</th>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">IP Address</th>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Timestamp</th>
+                        </tr>
+                    </thead>
+                    <tbody class="bg-white divide-y divide-gray-200">
+                        @foreach($activities as $activity)
+                            <tr class="hover:bg-gray-50">
+                                <td class="px-6 py-4 whitespace-nowrap">
+                                    <div class="flex items-center">
+                                        <div class="w-8 h-8 bg-indigo-100 rounded-full flex items-center justify-center">
+                                            <span class="text-indigo-600 font-semibold text-sm">
+                                                {{ substr($activity->user->name, 0, 1) }}
+                                            </span>
+                                        </div>
+                                        <div class="ml-3">
+                                            <div class="text-sm font-medium text-gray-900">{{ $activity->user->name }}</div>
+                                            <div class="text-sm text-gray-500">{{ $activity->user->email }}</div>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap">
+                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium
+                                        {{ $activity->activity_type === 'login' ? 'bg-green-100 text-green-800' :
+                                           ($activity->activity_type === 'logout' ? 'bg-red-100 text-red-800' :
+                                           'bg-blue-100 text-blue-800') }}">
+                                        {{ ucfirst(str_replace('_', ' ', $activity->activity_type)) }}
+                                    </span>
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                    {{ $activity->action ?? 'N/A' }}
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                    @if($activity->page_url)
+                                        <a href="{{ $activity->page_url }}" target="_blank" class="text-indigo-600 hover:text-indigo-900 truncate block max-w-xs">
+                                            {{ Str::limit($activity->page_url, 50) }}
+                                        </a>
+                                    @else
+                                        N/A
+                                    @endif
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                    {{ $activity->ip_address }}
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                    <div>{{ $activity->created_at->format('M j, Y') }}</div>
+                                    <div class="text-xs text-gray-400">{{ $activity->created_at->format('g:i A') }}</div>
+                                </td>
+                            </tr>
+                        @endforeach
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Pagination -->
+            <div class="px-6 py-4 border-t border-gray-200">
+                {{ $activities->appends(request()->query())->links() }}
+            </div>
+        @else
+            <div class="px-6 py-12 text-center">
+                <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                </svg>
+                <h3 class="mt-2 text-sm font-medium text-gray-900">No activities found</h3>
+                <p class="mt-1 text-sm text-gray-500">No user activities match your current filters.</p>
+            </div>
+        @endif
+    </div>
+</div>
+@endsection
