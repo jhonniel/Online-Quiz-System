@@ -52,6 +52,7 @@ class LeaveRequest extends Model
             'work_from_home' => 'Work From Home',
             'absent' => 'Absent',
             'overtime' => 'Overtime',
+            'offset' => 'Offset',
             default => ucfirst(str_replace('_', ' ', $this->type)),
         };
     }
@@ -67,6 +68,21 @@ class LeaveRequest extends Model
             'rejected' => 'bg-red-100 text-red-800',
             default => 'bg-gray-100 text-gray-800',
         };
+    }
+
+    /**
+     * Get a human-readable status label.
+     *
+     * If the request is pending but has already been reviewed (admin requested
+     * changes via resubmission), show \"Resubmission\" as the status label.
+     */
+    public function getDisplayStatusAttribute(): string
+    {
+        if ($this->status === 'pending' && $this->reviewed_at) {
+            return 'Resubmission';
+        }
+
+        return ucfirst($this->status);
     }
 
     /**

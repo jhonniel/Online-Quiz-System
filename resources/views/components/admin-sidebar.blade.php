@@ -1,5 +1,5 @@
 <!-- Admin Sidebar -->
-<div class="fixed inset-y-0 left-0 z-50 bg-gray-900 transform transition-all duration-300 ease-in-out sidebar-scroll overflow-y-auto"
+<div class="fixed inset-y-0 left-0 z-50 bg-gray-900 transform transition-all duration-300 ease-in-out flex flex-col"
      :class="[
          { '-translate-x-full': !sidebarOpen, 'translate-x-0': sidebarOpen },
          sidebarCollapsed ? 'w-16' : 'w-64'
@@ -10,7 +10,7 @@
      x-effect="$store.sidebar = { collapsed: sidebarCollapsed }">
 
     <!-- Sidebar Header -->
-    <div class="flex items-center justify-between h-16 px-6 bg-gray-800">
+    <div class="flex items-center justify-between h-16 px-6 bg-gray-800 flex-shrink-0">
         <div class="flex items-center space-x-2" :class="sidebarCollapsed ? 'justify-center' : ''">
             @if($settings['system_logo'])
                 <img src="{{ Storage::url($settings['system_logo']) }}"
@@ -30,7 +30,7 @@
     </div>
 
     <!-- Navigation -->
-    <nav class="mt-6 px-3">
+    <nav class="mt-6 px-3 flex-1 overflow-y-auto sidebar-scroll">
         <!-- Dashboard -->
         <div class="mb-6">
             <a href="{{ route('admin.dashboard') }}"
@@ -247,7 +247,7 @@
                     </span>
                 </a>
                 <a href="{{ route('admin.leave-requests.index') }}"
-                   class="flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors duration-200 {{ request()->routeIs('admin.leave-requests.*') ? 'bg-indigo-700 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white' }}"
+                   class="flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors duration-200 {{ request()->routeIs('admin.leave-requests.index') ? 'bg-indigo-700 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white' }}"
                    :class="sidebarCollapsed ? 'justify-center' : ''"
                    :title="sidebarCollapsed ? 'Leave Requests' : ''">
                     <svg class="h-5 w-5" :class="sidebarCollapsed ? '' : 'mr-3'" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -255,6 +255,17 @@
                     </svg>
                     <span class="transition-opacity duration-300" :class="sidebarCollapsed ? 'opacity-0 w-0 overflow-hidden' : 'opacity-100'">
                         Leave Requests
+                    </span>
+                </a>
+                <a href="{{ route('admin.leave-requests.calendar') }}"
+                   class="flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors duration-200 {{ request()->routeIs('admin.leave-requests.calendar') ? 'bg-indigo-700 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white' }}"
+                   :class="sidebarCollapsed ? 'justify-center' : ''"
+                   :title="sidebarCollapsed ? 'Leave Calendar' : ''">
+                    <svg class="h-5 w-5" :class="sidebarCollapsed ? '' : 'mr-3'" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                    </svg>
+                    <span class="transition-opacity duration-300" :class="sidebarCollapsed ? 'opacity-0 w-0 overflow-hidden' : 'opacity-100'">
+                        Leave Calendar
                     </span>
                 </a>
             </div>
@@ -282,7 +293,7 @@
     </nav>
 
     <!-- User Info at Bottom -->
-    <div class="absolute bottom-0 left-0 right-0 p-4 bg-gray-800 border-t border-gray-700">
+    <div class="p-4 bg-gray-800 border-t border-gray-700 flex-shrink-0">
         <div class="flex items-center" :class="sidebarCollapsed ? 'justify-center' : 'space-x-3'">
             <div class="w-8 h-8 bg-indigo-600 rounded-full flex items-center justify-center">
                 <span class="text-white text-sm font-medium">

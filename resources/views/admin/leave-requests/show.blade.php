@@ -49,7 +49,7 @@
             <!-- Request Information -->
             <div class="bg-white rounded-lg shadow border border-gray-200 p-6">
                 <h2 class="text-xl font-bold text-gray-900 mb-4">Request Information</h2>
-                
+
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
                         <label class="block text-sm font-medium text-gray-500 mb-1">Employee</label>
@@ -88,7 +88,7 @@
                     <div>
                         <label class="block text-sm font-medium text-gray-500 mb-1">Status</label>
                         <span class="px-3 py-1 inline-flex text-sm leading-5 font-semibold rounded-full {{ $leaveRequest->status_badge_class }}">
-                            {{ ucfirst($leaveRequest->status) }}
+                            {{ $leaveRequest->display_status }}
                         </span>
                     </div>
 
@@ -112,12 +112,458 @@
                     @endif
                 </div>
 
-                @if($leaveRequest->reason)
+                {{-- Structured details for special types so admin can see the same form info as the employee --}}
+                @if($leaveRequest->type === 'overtime')
+                    @php
+                        $raw = $leaveRequest->reason ?? '';
+                        $otHours = '';
+                        $otDates = '';
+                        $otTasks = '';
+                        $otReason = '';
+
+                        if (preg_match('/Total Overtime Hours:\s*(.+)/', $raw, $m)) {
+                            $otHours = trim($m[1]);
+                        }
+                        if (preg_match('/Overtime Dates:\s*(.+)/', $raw, $m)) {
+                            $otDates = trim($m[1]);
+                        }
+                        if (preg_match('/Tasks \/ ClickUp Links:\s*(.+?)(?:\n+Additional Explanation:|\z)/s', $raw, $m)) {
+                            $otTasks = trim($m[1]);
+                        }
+                        if (preg_match('/Additional Explanation:\s*(.+)\z/s', $raw, $m)) {
+                            $otReason = trim($m[1]);
+                        }
+
+                        $otTasksEscaped = e($otTasks);
+                        $otTasksWithLinks = preg_replace(
+                            '~(https?://[^\s]+)~',
+                            '<a href="$1" target="_blank" rel="noopener" class="text-indigo-600 underline break-words">$1</a>',
+                            $otTasksEscaped
+                        );
+                    @endphp
+
+                    <div class="mt-6 grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-500 mb-1">Total Overtime Hours</label>
+                            <p class="text-sm font-semibold text-gray-900">{{ $otHours }}</p>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-500 mb-1">Overtime Dates</label>
+                            <p class="text-sm font-semibold text-gray-900">{{ $otDates }}</p>
+                        </div>
+                        <div class="md:col-span-2">
+                            <label class="block text-sm font-medium text-gray-500 mb-1">Tasks / ClickUp Links</label>
+                            <p class="text-sm text-gray-900 bg-gray-50 p-4 rounded-lg border border-gray-200 whitespace-pre-line">
+                                {!! nl2br($otTasksWithLinks) !!}
+                            </p>
+                        </div>
+                        @if($otReason)
+                            <div class="md:col-span-2">
+                                <label class="block text-sm font-medium text-gray-500 mb-1">Additional Explanation</label>
+                                <p class="text-sm text-gray-900 bg-gray-50 p-4 rounded-lg border border-gray-200 whitespace-pre-line">
+                                    {{ $otReason }}
+                                </p>
+                            </div>
+                        @endif
+                    </div>
+                @elseif($leaveRequest->type === 'work_from_home')
+                    @php
+                        $raw = $leaveRequest->reason ?? '';
+                        $mode = '';
+                        $remoteAddress = '';
+                        $workDates = '';
+                        $tasks = '';
+                        $reasonAbsence = '';
+
+                        if (preg_match('/Mode:\s*(.+)/', $raw, $m)) {
+                            $mode = trim($m[1]);
+                        }
+                        if (preg_match('/Remote Address:\s*(.+)/', $raw, $m)) {
+                            $remoteAddress = trim($m[1]);
+                        }
+                        if (preg_match('/Work Dates:\s*(.+)/', $raw, $m)) {
+                            $workDates = trim($m[1]);
+                        }
+                        if (preg_match('/Tasks \/ ClickUp Links:\s*(.+?)(?:\n+Additional Explanation:|\z)/s', $raw, $m)) {
+                            $tasks = trim($m[1]);
+                        }
+                        if (preg_match('/Additional Explanation:\s*(.+)\z/s', $raw, $m)) {
+                            $reasonAbsence = trim($m[1]);
+                        }
+
+                        $tasksEscaped = e($tasks);
+                        $tasksWithLinks = preg_replace(
+                            '~(https?://[^\s]+)~',
+                            '<a href="$1" target="_blank" rel="noopener" class="text-indigo-600 underline break-words">$1</a>',
+                            $tasksEscaped
+                        );
+                    @endphp
+
+                    <div class="mt-6 grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-500 mb-1">Work Mode</label>
+                            <p class="text-sm font-semibold text-gray-900">{{ $mode }}</p>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-500 mb-1">Remote Address</label>
+                            <p class="text-sm font-semibold text-gray-900">{{ $remoteAddress }}</p>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-500 mb-1">Work Dates</label>
+                            <p class="text-sm font-semibold text-gray-900">{{ $workDates }}</p>
+                        </div>
+                        <div class="md:col-span-2">
+                            <label class="block text-sm font-medium text-gray-500 mb-1">Tasks / ClickUp Links</label>
+                            <p class="text-sm text-gray-900 bg-gray-50 p-4 rounded-lg border border-gray-200 whitespace-pre-line">
+                                {!! nl2br($tasksWithLinks) !!}
+                            </p>
+                        </div>
+                        @if($reasonAbsence)
+                            <div class="md:col-span-2">
+                                <label class="block text-sm font-medium text-gray-500 mb-1">Reasons for Absence</label>
+                                <p class="text-sm text-gray-900 bg-gray-50 p-4 rounded-lg border border-gray-200 whitespace-pre-line">
+                                    {{ $reasonAbsence }}
+                                </p>
+                            </div>
+                        @endif
+                    </div>
+                @endif
+
+                @if($leaveRequest->reason && !in_array($leaveRequest->type, ['vacation_leave', 'sick_leave', 'work_from_home', 'overtime']))
                     <div class="mt-6">
-                        <label class="block text-sm font-medium text-gray-500 mb-1">Reason</label>
-                        <p class="text-sm text-gray-900 bg-gray-50 p-4 rounded-lg border border-gray-200">
+                        <label class="block text-sm font-medium text-gray-500 mb-1">Reason (Raw)</label>
+                        <p class="text-sm text-gray-900 bg-gray-50 p-4 rounded-lg border border-gray-200 whitespace-pre-line">
                             {{ $leaveRequest->reason }}
                         </p>
+                    </div>
+                @endif
+
+                <!-- Vacation / Sick Leave / Offset Letter-style View (matches employee template) -->
+                @if(in_array($leaveRequest->type, ['vacation_leave', 'sick_leave', 'offset']))
+                    @php
+                        $effectiveDate = $leaveRequest->created_at->format('F d, Y');
+                        $startDate = $leaveRequest->start_date->format('F d, Y');
+                        $endDate = ($leaveRequest->end_date ?? $leaveRequest->start_date)->format('F d, Y');
+                        $lengthText = $leaveRequest->days . ' ' . ($leaveRequest->days == 1 ? 'day' : 'days');
+                        $reasonText = $leaveRequest->reason ?: '_______________________________________________';
+                        $employee = $leaveRequest->user;
+                    @endphp
+
+                    <div class="mt-6 border border-gray-300 rounded-lg p-6 space-y-4 bg-white">
+                        <!-- Effective Date -->
+                        <p class="text-xs font-semibold tracking-wide text-gray-700 uppercase">
+                            {{ $effectiveDate }}
+                        </p>
+
+                        <!-- Greeting -->
+                        <div class="space-y-1">
+                            <p class="text-sm font-semibold text-gray-900">Dear Ms. May Grace Acosta,</p>
+                        </div>
+
+                        <!-- Body -->
+                        <div class="space-y-3 text-sm text-gray-800">
+                            <p>
+                                Please accept this letter as formal request for a leave of absence. My leave is due to
+                                <span class="underline decoration-gray-400 decoration-1">{{ $reasonText }}</span>
+                                . I am requesting a leave of
+                                <span class="underline decoration-gray-400 decoration-1">{{ $lengthText }}</span>.
+                                The leave will last from
+                                <span class="underline decoration-gray-400 decoration-1">{{ $startDate }}</span>
+                                until
+                                <span class="underline decoration-gray-400 decoration-1">{{ $endDate }}</span>.
+                            </p>
+
+                            <p>
+                                If my leave of absence is approved, I’ll try my best to assist with any questions by phone call
+                                or chat provided that I have the means or I can connect with the internet.
+                            </p>
+
+                            <p class="font-semibold">Additional info:</p>
+                            <p class="min-h-[3rem] border-t border-gray-300 pt-2 text-gray-800 whitespace-pre-line">
+                                {{ $leaveRequest->reason }}
+                            </p>
+
+                            <p>
+                                Please let me know if you have any questions and an appropriate time for us to speak to
+                                discuss the terms of my leave of absence.
+                            </p>
+                        </div>
+
+                        <!-- Closing and Signature Block -->
+                        <div class="space-y-1 text-sm text-gray-800 pt-4">
+                            <p>Thank you for understanding.</p>
+                            <p class="mt-4">Best regards,</p>
+                            <p>Truly yours,</p>
+                        </div>
+
+                        <div class="mt-4 space-y-2 text-sm text-gray-900">
+                            <div class="space-y-0.5">
+                                <p class="font-semibold">{{ $employee->name ?? '[YOUR NAME]' }}</p>
+                                <p class="text-gray-700 uppercase text-xs tracking-wide">{{ strtoupper($employee->role ?? 'Employee') }}</p>
+                            </div>
+
+                            @php
+                                $remarksText = strtoupper($leaveRequest->status === 'approved'
+                                    ? 'Approved'
+                                    : ($leaveRequest->status === 'rejected' ? 'Disapproved' : 'Pending'));
+                            @endphp
+                            @php
+                                $remarksText = strtoupper($leaveRequest->status === 'approved'
+                                    ? 'Approved'
+                                    : ($leaveRequest->status === 'rejected' ? 'Disapproved' : 'Pending'));
+                            @endphp
+
+                            <div class="mt-6 space-y-1 text-sm text-gray-900">
+                                <p>Noted:</p>
+                                <div class="mt-2">
+                                    <p class="font-semibold underline">{{ $signatories['immediate_supervisor'] ?? 'CHARMAINE JOY ROSATACE' }}</p>
+                                    <p class="text-gray-700 text-xs tracking-wide">IMMEDIATE SUPERVISOR</p>
+                                </div>
+                                <div class="mt-3">
+                                    <p class="font-semibold underline">{{ $signatories['hr_admin'] ?? 'MAY GRACE ACOSTA' }}</p>
+                                    <p class="text-gray-700 text-xs tracking-wide">HR ADMIN</p>
+                                </div>
+                                <div class="mt-3 flex items-center justify-between">
+                                    <div>
+                                        <p class="text-xs text-gray-700">Approved:</p>
+                                        <p class="font-semibold underline">{{ $signatories['cto'] ?? 'NITISH KHEMANI' }}</p>
+                                        <p class="text-gray-700 text-xs tracking-wide">CHIEF TECHNOLOGY OFFICER</p>
+                                    </div>
+                                    <div class="text-xs font-semibold tracking-wide text-gray-900">
+                                        REMARKS: {{ $remarksText }}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                @elseif($leaveRequest->type === 'work_from_home')
+                    @php
+                        $effectiveDate = $leaveRequest->created_at->format('F d, Y');
+                        $employee = $leaveRequest->user;
+                        $raw = $leaveRequest->reason ?? '';
+                        $mode = '';
+                        $remoteAddress = '';
+                        $workDates = '';
+                        $reasonAbsence = '';
+                        $tasks = '';
+
+                        if (preg_match('/Mode:\s*(.+)/', $raw, $m)) {
+                            $mode = trim($m[1]);
+                        }
+                        if (preg_match('/Remote Address:\s*(.+)/', $raw, $m)) {
+                            $remoteAddress = trim($m[1]);
+                        }
+                        if (preg_match('/Work Dates:\s*(.+)/', $raw, $m)) {
+                            $workDates = trim($m[1]);
+                        }
+                        if (preg_match('/Additional Explanation:\s*(.+)\z/s', $raw, $m)) {
+                            $reasonAbsence = trim($m[1]);
+                        }
+                        if (preg_match('/Tasks \/ ClickUp Links:\s*(.+?)(?:\n+Additional Explanation:|\z)/s', $raw, $m)) {
+                            $tasks = trim($m[1]);
+                        }
+
+                        $tasksEscaped = e($tasks);
+                        $tasksWithLinks = preg_replace(
+                            '~(https?://[^\s]+)~',
+                            '<a href="$1" target="_blank" rel="noopener" class="text-indigo-600 underline break-words">$1</a>',
+                            $tasksEscaped
+                        );
+                    @endphp
+
+                    <div class="mt-6 border border-gray-300 rounded-lg p-6 space-y-4 bg-white">
+                        <!-- Effective Date -->
+                        <p class="text-xs font-semibold tracking-wide text-gray-700 uppercase">
+                            {{ $effectiveDate }}
+                        </p>
+
+                        <!-- Greeting -->
+                        <div class="space-y-1">
+                            <p class="text-sm font-semibold text-gray-900">Dear Ms. May Grace Acosta,</p>
+                        </div>
+
+                        <!-- Body -->
+                        <div class="space-y-3 text-sm text-gray-800">
+                            <p>
+                                Please accept this letter as official notice that I will be
+                                <span class="font-semibold">
+                                    [{{ $mode ?: 'working remotely or request to be excused' }}]
+                                </span>
+                                at
+                                <span class="font-semibold">
+                                    [{{ $remoteAddress ?: 'remote address' }}]
+                                </span>
+                                and was or will be unable to report to work on or from
+                                <span class="font-semibold">
+                                    [{{ $leaveRequest->start_date->format('F d, Y') }}]
+                                </span>
+                                to
+                                <span class="font-semibold">
+                                    [{{ ($leaveRequest->end_date ?? $leaveRequest->start_date)->format('F d, Y') }}]
+                                </span>
+                                due to
+                                <span class="font-semibold">
+                                    [{{ $reasonAbsence ?: 'reasons for absence' }}]
+                                </span>.
+                            </p>
+
+                            <p class="font-semibold">
+                                [Strictly List down Task Listed in ClickUp for Devs via link]
+                            </p>
+                            <p class="min-h-[3rem] border-t border-gray-300 pt-2 text-gray-800 whitespace-pre-line">
+                                {!! nl2br($tasksWithLinks) !!}
+                            </p>
+
+                            <p>Thank you for understanding.</p>
+                            <p class="mt-4">Best regards,</p>
+                            <p>Truly yours,</p>
+                        </div>
+
+                        <!-- Signature and Noted/Approved Block -->
+                        <div class="mt-4 space-y-2 text-sm text-gray-900">
+                            <div class="space-y-0.5">
+                                <p class="font-semibold">{{ $employee->name ?? '[YOUR NAME]' }}</p>
+                                <p class="text-gray-700 uppercase text-xs tracking-wide">{{ strtoupper($employee->role ?? 'Employee') }}</p>
+                            </div>
+
+                            @php
+                                $remarksText = strtoupper($leaveRequest->status === 'approved'
+                                    ? 'Approved'
+                                    : ($leaveRequest->status === 'rejected' ? 'Disapproved' : 'Pending'));
+                            @endphp
+                            <div class="mt-6 space-y-1 text-sm text-gray-900">
+                                <p>Noted:</p>
+                                <div class="mt-2">
+                                    <p class="font-semibold underline">{{ $signatories['immediate_supervisor'] ?? 'CHARMAINE JOY ROSATACE' }}</p>
+                                    <p class="text-gray-700 text-xs tracking-wide">IMMEDIATE SUPERVISOR</p>
+                                </div>
+                                <div class="mt-3">
+                                    <p class="font-semibold underline">{{ $signatories['hr_admin'] ?? 'MAY GRACE ACOSTA' }}</p>
+                                    <p class="text-gray-700 text-xs tracking-wide">HR ADMIN</p>
+                                </div>
+                                <div class="mt-3 flex items-center justify-between">
+                                    <div>
+                                        <p class="text-xs text-gray-700">Approved:</p>
+                                        <p class="font-semibold underline">{{ $signatories['cto'] ?? 'NITISH KHEMANI' }}</p>
+                                        <p class="text-gray-700 text-xs tracking-wide">CHIEF TECHNOLOGY OFFICER</p>
+                                    </div>
+                                    <div class="text-xs font-semibold tracking-wide text-gray-900">
+                                        REMARKS: {{ $remarksText }}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                @elseif($leaveRequest->type === 'overtime')
+                    @php
+                        $effectiveDate = $leaveRequest->created_at->format('F d, Y');
+                        $employee = $leaveRequest->user;
+                        $raw = $leaveRequest->reason ?? '';
+                        $otHours = '';
+                        $otDates = '';
+                        $otReason = '';
+                        $otTasks = '';
+
+                        if (preg_match('/Total Overtime Hours:\s*(.+)/', $raw, $m)) {
+                            $otHours = trim($m[1]);
+                        }
+                        if (preg_match('/Overtime Dates:\s*(.+)/', $raw, $m)) {
+                            $otDates = trim($m[1]);
+                        }
+                        if (preg_match('/Tasks \/ ClickUp Links:\s*(.+?)(?:\n+Additional Explanation:|\z)/s', $raw, $m)) {
+                            $otTasks = trim($m[1]);
+                        }
+                        if (preg_match('/Additional Explanation:\s*(.+)\z/s', $raw, $m)) {
+                            $otReason = trim($m[1]);
+                        }
+                    @endphp
+
+                    <div class="mt-6 border border-gray-300 rounded-lg p-6 space-y-4 bg-white">
+                        <!-- Effective Date -->
+                        <p class="text-xs font-semibold tracking-wide text-gray-700 uppercase">
+                            {{ $effectiveDate }}
+                        </p>
+
+                        <!-- Greeting -->
+                        <div class="space-y-1">
+                            <p class="text-sm font-semibold text-gray-900">Dear Ms. May Grace Acosta,</p>
+                        </div>
+
+                        <!-- Body -->
+                        <div class="space-y-3 text-sm text-gray-800">
+                            <p>
+                                Please accept this letter to formally request for an approval for additional
+                                <span class="font-semibold underline decoration-gray-400 decoration-1">
+                                    {{ $otHours ?: '[Number of hours]' }}
+                                </span>
+                                working hours and in days
+                                <span class="font-semibold underline decoration-gray-400 decoration-1">
+                                    {{ $otDates ?: '[state the dates]' }}
+                                </span>
+                                @if(!empty($otReason))
+                                due to
+                                <span class="font-semibold underline decoration-gray-400 decoration-1">
+                                    {{ $otReason }}
+                                </span>
+                                @endif
+                                Examples: urgent project deadline, increased workload due to staffing shortage, critical system maintenance, etc.
+                            </p>
+
+                            <p class="font-semibold">
+                                [Strictly List down Task Listed in ClickUp for Devs via link]
+                            </p>
+                            @php
+                                // Make any URLs inside the task list clickable while preserving line breaks
+                                $otTasksEscaped = e($otTasks);
+                                $otTasksWithLinks = preg_replace(
+                                    '~(https?://[^\s]+)~',
+                                    '<a href="$1" target="_blank" rel="noopener" class="text-indigo-600 underline break-words">$1</a>',
+                                    $otTasksEscaped
+                                );
+                            @endphp
+                            <p class="min-h-[3rem] border-t border-gray-300 pt-2 text-gray-800 whitespace-pre-line">
+                                {!! nl2br($otTasksWithLinks) !!}
+                            </p>
+
+                            <p>Thank you for understanding.</p>
+                            <p class="mt-4">Best regards,</p>
+                            <p>Truly yours,</p>
+                        </div>
+
+                        <!-- Signature and Noted/Approved Block -->
+                        <div class="mt-4 space-y-2 text-sm text-gray-900">
+                            <div class="space-y-0.5">
+                                <p class="font-semibold">{{ $employee->name ?? '[YOUR NAME]' }}</p>
+                                <p class="text-gray-700 uppercase text-xs tracking-wide">{{ strtoupper($employee->role ?? 'Employee') }}</p>
+                            </div>
+
+                            @php
+                                $remarksText = strtoupper($leaveRequest->status === 'approved'
+                                    ? 'Approved'
+                                    : ($leaveRequest->status === 'rejected' ? 'Disapproved' : 'Pending'));
+                            @endphp
+                            <div class="mt-6 space-y-1 text-sm text-gray-900">
+                                <p>Noted:</p>
+                                <div class="mt-2">
+                                    <p class="font-semibold underline">{{ $signatories['immediate_supervisor'] ?? 'CHARMAINE JOY ROSATACE' }}</p>
+                                    <p class="text-gray-700 text-xs tracking-wide">IMMEDIATE SUPERVISOR</p>
+                                </div>
+                                <div class="mt-3">
+                                    <p class="font-semibold underline">{{ $signatories['hr_admin'] ?? 'MAY GRACE ACOSTA' }}</p>
+                                    <p class="text-gray-700 text-xs tracking-wide">HR ADMIN</p>
+                                </div>
+                                <div class="mt-3 flex items-center justify-between">
+                                    <div>
+                                        <p class="text-xs text-gray-700">Approved:</p>
+                                        <p class="font-semibold underline">{{ $signatories['cto'] ?? 'NITISH KHEMANI' }}</p>
+                                        <p class="text-gray-700 text-xs tracking-wide">CHIEF TECHNOLOGY OFFICER</p>
+                                    </div>
+                                    <div class="text-xs font-semibold tracking-wide text-gray-900">
+                                        REMARKS: {{ $remarksText }}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 @endif
             </div>
@@ -133,8 +579,42 @@
             @endif
         </div>
 
-        <!-- Action Panel -->
+        <!-- Side Panel: Balances + Actions -->
         <div class="space-y-6">
+            @isset($balances)
+                <!-- Leave Balances & Overtime -->
+                <div class="bg-white rounded-lg shadow border border-gray-200 p-6 space-y-4">
+                    <h3 class="text-lg font-bold text-gray-900 mb-2">Employee Balances ({{ now()->year }})</h3>
+                    <div class="grid grid-cols-1 gap-3">
+                        <div class="border border-gray-100 rounded-lg px-3 py-2">
+                            <p class="text-xs font-semibold text-gray-500 uppercase tracking-wide">Vacation Leave</p>
+                            <p class="text-sm text-gray-900">
+                                Remaining:
+                                <span class="font-bold">{{ $balances['vacation']['remaining'] }}</span>
+                                / {{ $balances['vacation']['allowance'] }} days
+                            </p>
+                            <p class="text-xs text-gray-500">Used: {{ $balances['vacation']['used'] }} days</p>
+                        </div>
+                        <div class="border border-gray-100 rounded-lg px-3 py-2">
+                            <p class="text-xs font-semibold text-gray-500 uppercase tracking-wide">Sick Leave</p>
+                            <p class="text-sm text-gray-900">
+                                Remaining:
+                                <span class="font-bold">{{ $balances['sick']['remaining'] }}</span>
+                                / {{ $balances['sick']['allowance'] }} days
+                            </p>
+                            <p class="text-xs text-gray-500">Used: {{ $balances['sick']['used'] }} days</p>
+                        </div>
+                        <div class="border border-gray-100 rounded-lg px-3 py-2">
+                            <p class="text-xs font-semibold text-gray-500 uppercase tracking-wide">Overtime (This Year)</p>
+                            <p class="text-sm text-gray-900">
+                                <span class="font-bold">{{ $overtimeFormatted ?? '00:00' }}</span> hours
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            @endisset
+
+            <!-- Action Panel -->
             @if($leaveRequest->isPending())
                 <!-- Approve Form -->
                 <div class="bg-white rounded-lg shadow border border-gray-200 p-6">
@@ -205,7 +685,7 @@
                     <h3 class="text-lg font-bold text-gray-900 mb-4">Request Status</h3>
                     <div class="text-center py-4">
                         <span class="px-4 py-2 inline-flex text-lg leading-5 font-semibold rounded-full {{ $leaveRequest->status_badge_class }}">
-                            {{ ucfirst($leaveRequest->status) }}
+                            {{ $leaveRequest->display_status }}
                         </span>
                         <p class="text-sm text-gray-500 mt-4">
                             This request has already been {{ $leaveRequest->status }}.

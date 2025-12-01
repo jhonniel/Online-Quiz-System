@@ -130,10 +130,10 @@
                             <ul class="list-disc list-inside space-y-1">
                                 <li><strong>Employee Email</strong> - Must match an existing employee email</li>
                                 <li><strong>Date</strong> - Format: YYYY-MM-DD (e.g., 2024-12-01)</li>
-                                <li><strong>Worked Hours</strong> - Base hours worked for that day (numeric, can include minutes, e.g., 8.50 for 8h 30m)</li>
-                                <li><strong>Added Time From Note</strong> - Extra hours to add (numeric, can include minutes, e.g., 1.25 for 1h 15m)</li>
-                                <li><strong>Total Hours</strong> - Worked Hours + Added Time From Note (numeric, hours + minutes in decimal)</li>
-                                <li><strong>Overtime Hours</strong> - Overtime hours (numeric, e.g., 2.00)</li>
+                                <li><strong>Worked Hours</strong> - Base hours worked for that day in <strong>HH:MM</strong> (e.g., 08:00, 07:30)</li>
+                                <li><strong>Added Time From Note</strong> - Extra hours to add in <strong>HH:MM</strong> (e.g., 01:15)</li>
+                                <li><strong>Total Hours</strong> - Optional, will be recalculated as Worked Hours + Added Time From Note</li>
+                                <li><strong>Overtime Hours</strong> - Optional, system will recalculate as (Total Hours − 08:00) when Total Hours &gt; 08:00</li>
                                 <li><strong>Status</strong> - present, absent, late, half_day, on_leave (optional, defaults to present)</li>
                                 <li><strong>Remarks</strong> - Any additional notes (optional)</li>
                             </ul>
@@ -208,115 +208,244 @@
     <div class="bg-white rounded-2xl shadow-xl border border-gray-200 overflow-hidden">
         <div class="px-6 py-4 border-b border-gray-200 bg-gray-50">
             <h2 class="text-lg font-semibold text-gray-900">Time Records</h2>
-            <p class="text-sm text-gray-600 mt-1">Total records: {{ $dtrs->total() }}</p>
+            <p class="text-sm text-gray-600 mt-1">Total records: {{ $totalRecords }}</p>
         </div>
 
-        <div class="overflow-x-auto">
-            <table class="min-w-full divide-y divide-gray-200">
-                <thead class="bg-gray-50">
-                    <tr>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Employee</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Worked Hours</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Added Time From Note</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total Hours</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Overtime</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Remarks</th>
-                    </tr>
-                </thead>
-                <tbody class="bg-white divide-y divide-gray-200">
-                    @forelse($dtrs as $dtr)
-                        <tr class="hover:bg-gray-50">
-                            <td class="px-6 py-4 whitespace-nowrap">
-                                <div class="flex items-center">
-                                    <div class="flex-shrink-0 h-10 w-10">
-                                        <div class="h-10 w-10 rounded-full bg-indigo-100 flex items-center justify-center">
-                                            <span class="text-indigo-600 font-medium text-sm">{{ substr($dtr->user->name, 0, 1) }}</span>
+        <div class="overflow-x-auto" id="dtr-groups-root">
+            @forelse($groupedDtrs as $monthKey => $month)
+                <div class="border-b border-gray-200" data-month-group>
+                    <button type="button"
+                            class="w-full flex items-center justify-between px-6 py-3 bg-gray-100 hover:bg-gray-200 transition text-left"
+                            data-toggle="month">
+                        <h3 class="text-md font-bold text-gray-900">{{ $month['label'] }}</h3>
+                        <span class="ml-3 inline-flex items-center justify-center rounded-full bg-white/70 text-gray-700 text-xs px-2 py-0.5">
+                            <span class="mr-1" data-month-chevron>−</span>
+                            Toggle
+                        </span>
+                    </button>
+
+                    <div class="border-t border-gray-200" data-month-content>
+                        @foreach($month['weeks'] as $weekKey => $week)
+                            <div class="border-b border-gray-200" data-week-group>
+                                <button type="button"
+                                        class="w-full flex items-center justify-between px-6 py-2 bg-gray-50 hover:bg-gray-100 transition text-left"
+                                        data-toggle="week">
+                                    <h4 class="text-sm font-semibold text-gray-800">{{ $week['label'] }}</h4>
+                                    <span class="ml-3 inline-flex items-center justify-center rounded-full bg-white/70 text-gray-700 text-xs px-2 py-0.5">
+                                        <span class="mr-1" data-week-chevron>−</span>
+                                        Toggle
+                                    </span>
+                                </button>
+
+                                <div data-week-content>
+                            @foreach($week['employees'] as $employeeGroup)
+                                <div class="px-6 py-2 bg-white">
+                                    <div class="flex items-center mb-2">
+                                        <div class="flex-shrink-0 h-8 w-8">
+                                            <div class="h-8 w-8 rounded-full bg-indigo-100 flex items-center justify-center">
+                                                <span class="text-indigo-600 font-medium text-xs">
+                                                    {{ substr($employeeGroup['employee']->name, 0, 1) }}
+                                                </span>
+                                            </div>
+                                        </div>
+                                        <div class="ml-3">
+                                            <div class="text-sm font-semibold text-gray-900">
+                                                {{ $employeeGroup['employee']->name }}
+                                            </div>
+                                            <div class="text-xs text-gray-500">
+                                                {{ $employeeGroup['employee']->email }}
+                                            </div>
                                         </div>
                                     </div>
-                                    <div class="ml-4">
-                                        <div class="text-sm font-medium text-gray-900">{{ $dtr->user->name }}</div>
-                                        <div class="text-sm text-gray-500">{{ $dtr->user->email }}</div>
-                                    </div>
-                                </div>
-                            </td>
-                            <td class="px-6 py-4 whitespace-nowrap">
-                                <div class="text-sm text-gray-900">{{ $dtr->date->format('M d, Y') }}</div>
-                                <div class="text-sm text-gray-500">{{ $dtr->date->format('l') }}</div>
-                            </td>
-                            <td class="px-6 py-4 whitespace-nowrap">
-                                @php
-                                    $workedHours = max(($dtr->total_hours ?? 0) - ($dtr->added_time_from_note ?? 0), 0);
-                                    $workedMinutes = (int) round($workedHours * 60);
-                                    $workedH = intdiv($workedMinutes, 60);
-                                    $workedM = $workedMinutes % 60;
-                                    $workedFormatted = sprintf('%02d:%02d', $workedH, $workedM);
-                                @endphp
-                                <div class="text-sm font-medium text-gray-900">
-                                    {{ $workedMinutes > 0 ? $workedFormatted : '00:00' }}
-                                </div>
-                            </td>
-                            <td class="px-6 py-4 whitespace-nowrap">
-                                @php
-                                    $extraMinutes = (int) round(($dtr->added_time_from_note ?? 0) * 60);
-                                    $extraH = intdiv($extraMinutes, 60);
-                                    $extraM = $extraMinutes % 60;
-                                    $extraFormatted = sprintf('%02d:%02d', $extraH, $extraM);
-                                @endphp
-                                <div class="text-sm font-medium text-gray-900">
-                                    {{ $extraMinutes > 0 ? $extraFormatted : '00:00' }}
-                                </div>
-                            </td>
-                            <td class="px-6 py-4 whitespace-nowrap">
-                                @php
-                                    $totalMinutes = (int) round(($dtr->total_hours ?? 0) * 60);
-                                    $totalH = intdiv($totalMinutes, 60);
-                                    $totalM = $totalMinutes % 60;
-                                    $totalFormatted = sprintf('%02d:%02d', $totalH, $totalM);
-                                @endphp
-                                <div class="text-sm font-medium text-gray-900">
-                                    {{ $totalMinutes > 0 ? $totalFormatted : '00:00' }}
-                                </div>
-                            </td>
-                            <td class="px-6 py-4 whitespace-nowrap">
-                                <div class="text-sm font-medium text-orange-600">
-                                    {{ $dtr->overtime_hours > 0 ? number_format($dtr->overtime_hours, 2) . ' hrs' : '-' }}
-                                </div>
-                            </td>
-                            <td class="px-6 py-4 whitespace-nowrap">
-                                <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full {{ $dtr->getStatusBadgeClass() }}">
-                                    {{ ucfirst(str_replace('_', ' ', $dtr->status)) }}
-                                </span>
-                            </td>
-                            <td class="px-6 py-4">
-                                <div class="text-sm text-gray-500 max-w-xs truncate" title="{{ $dtr->remarks }}">
-                                    {{ $dtr->remarks ?: '-' }}
-                                </div>
-                            </td>
-                        </tr>
-                    @empty
-                        <tr>
-                            <td colspan="8" class="px-6 py-12 text-center">
-                                <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                                </svg>
-                                <h3 class="mt-2 text-sm font-medium text-gray-900">No time records found</h3>
-                                <p class="mt-1 text-sm text-gray-500">No employee time records match your filters.</p>
-                            </td>
-                        </tr>
-                    @endforelse
-                </tbody>
-            </table>
-        </div>
 
-        <!-- Pagination -->
-        @if($dtrs->hasPages())
-            <div class="px-6 py-4 border-t border-gray-200 bg-gray-50">
-                {{ $dtrs->links() }}
-            </div>
-        @endif
-    </div>
+                                    <table class="min-w-full divide-y divide-gray-200 mb-4">
+                                        <thead class="bg-gray-50">
+                                            <tr>
+                                                <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
+                                                <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Worked Hours</th>
+                                                <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Added Time From Note</th>
+                                                <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total Hours</th>
+                                                <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Overtime</th>
+                                                <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                                                <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Remarks</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody class="bg-white divide-y divide-gray-200">
+                                            @foreach($employeeGroup['records'] as $dtr)
+                                                <tr class="hover:bg-gray-50">
+                                                    <td class="px-3 py-2 whitespace-nowrap">
+                                                        <div class="text-sm text-gray-900">{{ $dtr->date->format('M d, Y') }}</div>
+                                                        <div class="text-xs text-gray-500">{{ $dtr->date->format('l') }}</div>
+                                                    </td>
+                                                    <td class="px-3 py-2 whitespace-nowrap">
+                                                        @php
+                                                            $workedHours = max(($dtr->total_hours ?? 0) - ($dtr->added_time_from_note ?? 0), 0);
+                                                            $workedMinutes = (int) round($workedHours * 60);
+                                                            $workedH = intdiv($workedMinutes, 60);
+                                                            $workedM = $workedMinutes % 60;
+                                                            $workedFormatted = sprintf('%02d:%02d', $workedH, $workedM);
+                                                        @endphp
+                                                        <div class="text-sm font-medium text-gray-900">
+                                                            {{ $workedMinutes > 0 ? $workedFormatted : '00:00' }}
+                                                        </div>
+                                                    </td>
+                                                    <td class="px-3 py-2 whitespace-nowrap">
+                                                        @php
+                                                            $extraMinutes = (int) round(($dtr->added_time_from_note ?? 0) * 60);
+                                                            $extraH = intdiv($extraMinutes, 60);
+                                                            $extraM = $extraMinutes % 60;
+                                                            $extraFormatted = sprintf('%02d:%02d', $extraH, $extraM);
+                                                        @endphp
+                                                        <div class="text-sm font-medium text-gray-900">
+                                                            {{ $extraMinutes > 0 ? $extraFormatted : '00:00' }}
+                                                        </div>
+                                                    </td>
+                                                    <td class="px-3 py-2 whitespace-nowrap">
+                                                        @php
+                                                            $totalMinutes = (int) round(($dtr->total_hours ?? 0) * 60);
+                                                            $totalH = intdiv($totalMinutes, 60);
+                                                            $totalM = $totalMinutes % 60;
+                                                            $totalFormatted = sprintf('%02d:%02d', $totalH, $totalM);
+                                                        @endphp
+                                                        <div class="text-sm font-medium text-gray-900">
+                                                            {{ $totalMinutes > 0 ? $totalFormatted : '00:00' }}
+                                                        </div>
+                                                    </td>
+                                                    <td class="px-3 py-2 whitespace-nowrap">
+                                                        @php
+                                                            $otMinutes = (int) round(($dtr->overtime_hours ?? 0) * 60);
+                                                            $otH = intdiv($otMinutes, 60);
+                                                            $otM = $otMinutes % 60;
+                                                            $otFormatted = sprintf('%02d:%02d', $otH, $otM);
+                                                        @endphp
+                                                        <div class="text-sm font-medium text-orange-600">
+                                                            {{ $otMinutes > 0 ? $otFormatted : '00:00' }}
+                                                        </div>
+                                                    </td>
+                                                    <td class="px-3 py-2 whitespace-nowrap">
+                                                        @php
+                                                            // If status is travel, show Travel
+                                                            if ($dtr->status === 'travel') {
+                                                                $statusLabel = 'Travel';
+                                                                $statusClass = 'bg-blue-100 text-blue-800';
+                                                            } else {
+                                                                // Otherwise, show Under Time or Completed based on total hours
+                                                                $totalMinutesForStatus = (int) round(($dtr->total_hours ?? 0) * 60);
+                                                                if ($totalMinutesForStatus < 480) {
+                                                                    $statusLabel = 'Under Time';
+                                                                    $statusClass = 'bg-yellow-100 text-yellow-800';
+                                                                } else {
+                                                                    $statusLabel = 'Completed';
+                                                                    $statusClass = 'bg-green-100 text-green-800';
+                                                                }
+                                                            }
+                                                        @endphp
+                                                        <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full {{ $statusClass }}">
+                                                            {{ $statusLabel }}
+                                                        </span>
+                                                    </td>
+                                                    <td class="px-3 py-2">
+                                                        <div class="flex items-center space-x-3">
+                                                            <div class="text-sm text-gray-500 max-w-xs truncate" title="{{ $dtr->remarks }}">
+                                                                {{ $dtr->remarks ?: '-' }}
+                                                            </div>
+                                                            <a href="{{ route('admin.dtr.edit', $dtr) }}"
+                                                               class="inline-flex items-center px-2.5 py-1.5 border border-indigo-200 text-xs font-medium rounded-md text-indigo-700 bg-indigo-50 hover:bg-indigo-100">
+                                                                Edit
+                                                            </a>
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            @endforeach
+                                        </tbody>
+                                    </table>
+                                </div>
+                            @endforeach
+                                </div>
+                            </div>
+                        @endforeach
+                    </div>
+                </div>
+            @empty
+                <div class="px-6 py-12 text-center">
+                    <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                    </svg>
+                    <h3 class="mt-2 text-sm font-medium text-gray-900">No time records found</h3>
+                    <p class="mt-1 text-sm text-gray-500">No employee time records match your filters.</p>
+                </div>
+            @endforelse
+        </div>
 </div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const root = document.getElementById('dtr-groups-root');
+        if (!root) {
+            console.error('DTR groups root not found');
+            return;
+        }
+
+        function toggleVisibility(element, chevron) {
+            if (!element) return;
+            
+            const isHidden = element.classList.contains('hidden');
+            if (isHidden) {
+                element.classList.remove('hidden');
+                element.style.display = '';
+                if (chevron) chevron.textContent = '−';
+            } else {
+                element.classList.add('hidden');
+                element.style.display = 'none';
+                if (chevron) chevron.textContent = '+';
+            }
+        }
+
+        // Month toggles
+        root.querySelectorAll('[data-month-group]').forEach(function (monthGroup, monthIndex) {
+            const button = monthGroup.querySelector('[data-toggle="month"]');
+            const content = monthGroup.querySelector('[data-month-content]');
+            const chevron = monthGroup.querySelector('[data-month-chevron]');
+            
+            if (!button || !content) {
+                console.warn('Month toggle elements not found', { button: !!button, content: !!content });
+                return;
+            }
+
+            // Collapse all months except the first by default
+            if (monthIndex > 0) {
+                content.classList.add('hidden');
+                content.style.display = 'none';
+                if (chevron) chevron.textContent = '+';
+            }
+
+            button.addEventListener('click', function (e) {
+                e.preventDefault();
+                e.stopPropagation();
+                toggleVisibility(content, chevron);
+            });
+        });
+
+        // Week toggles
+        root.querySelectorAll('[data-week-group]').forEach(function (weekGroup) {
+            const button = weekGroup.querySelector('[data-toggle="week"]');
+            const content = weekGroup.querySelector('[data-week-content]');
+            const chevron = weekGroup.querySelector('[data-week-chevron]');
+            
+            if (!button || !content) {
+                console.warn('Week toggle elements not found', { button: !!button, content: !!content });
+                return;
+            }
+
+            // Weeks expanded by default
+            button.addEventListener('click', function (e) {
+                e.preventDefault();
+                e.stopPropagation();
+                toggleVisibility(content, chevron);
+            });
+        });
+    });
+</script>
+
 @endsection
 

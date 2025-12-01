@@ -31,6 +31,7 @@ class User extends Authenticatable
         'profile_picture',
         'cover_photo',
         'bio',
+        'overtime_months_credited',
     ];
 
     /**

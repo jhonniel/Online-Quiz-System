@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\User;
 use App\Models\University;
+use App\Models\LeaveBalance;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rule;
@@ -98,7 +99,160 @@ class UserController extends Controller
 
     public function show(User $user)
     {
-        return view('admin.users.show', compact('user'));
+        // Only admins should access this profile view via middleware/routes,
+        // but we also guard here for safety.
+        if (!auth()->check() || !auth()->user()->isAdmin()) {
+            abort(403, 'Only administrators can view employee profiles.');
+        }
+
+        $balances = null;
+        $overtimeFormatted = null;
+        $overtimeWindowLabel = null;
+
+        if ($user->role === 'employee') {
+            $currentYear = now()->year;
+            $months = $user->overtime_months_credited ?? 12;
+
+            if ($months === 12) {
+                $fromDate = now()->copy()->startOfYear();
+                $overtimeWindowLabel = 'Current Year';
+            } else {
+                $fromDate = now()->copy()->subMonths($months)->startOfDay();
+                $overtimeWindowLabel = "Last {$months} month(s)";
+            }
+
+            $leaveBalance = \App\Models\LeaveBalance::firstOrCreate(
+                ['user_id' => $user->id, 'year' => $currentYear],
+                [
+                    'vacation_allowance' => 15,
+                    'sick_allowance' => 10,
+                ]
+            );
+
+            $usedVacation = \App\Models\LeaveRequest::where('user_id', $user->id)
+                ->where('type', 'vacation_leave')
+                ->where('status', 'approved')
+                ->whereYear('start_date', $currentYear)
+                ->get()
+                ->sum->days;
+
+            $usedSick = \App\Models\LeaveRequest::where('user_id', $user->id)
+                ->where('type', 'sick_leave')
+                ->where('status', 'approved')
+                ->whereYear('start_date', $currentYear)
+                ->get()
+                ->sum->days;
+
+            $balances = [
+                'vacation' => [
+                    'allowance' => (float) $leaveBalance->vacation_allowance,
+                    'used' => $usedVacation,
+                    'remaining' => max((float) $leaveBalance->vacation_allowance - $usedVacation, 0),
+                ],
+                'sick' => [
+                    'allowance' => (float) $leaveBalance->sick_allowance,
+                    'used' => $usedSick,
+                    'remaining' => max((float) $leaveBalance->sick_allowance - $usedSick, 0),
+                ],
+            ];
+
+            $overtimeQuery = \App\Models\Dtr::where('user_id', $user->id);
+            if ($months === 12) {
+                $overtimeQuery->whereYear('date', $currentYear);
+            } else {
+                $overtimeQuery->whereDate('date', '>=', $fromDate->toDateString());
+            }
+            $totalOvertimeHours = $overtimeQuery->sum('overtime_hours');
+
+            // Add overtime coming from approved overtime leave requests (HH:MM in reason)
+            $approvedOvertimeRequestsQuery = \App\Models\LeaveRequest::where('user_id', $user->id)
+                ->where('type', 'overtime')
+                ->where('status', 'approved');
+
+            if ($months === 12) {
+                $approvedOvertimeRequestsQuery->whereYear('start_date', $currentYear);
+            } else {
+                $approvedOvertimeRequestsQuery->whereDate('start_date', '>=', $fromDate->toDateString());
+            }
+
+            $approvedOvertimeRequests = $approvedOvertimeRequestsQuery->get();
+
+            $overtimeFromLeavesMinutes = 0;
+            foreach ($approvedOvertimeRequests as $otRequest) {
+                $raw = $otRequest->reason ?? '';
+                if (preg_match('/Total Overtime Hours:\s*([0-9]{2}:[0-9]{2})/', $raw, $m)) {
+                    [$h, $mPart] = array_map('intval', explode(':', $m[1]));
+                    $overtimeFromLeavesMinutes += $h * 60 + $mPart;
+                }
+            }
+
+            $totalOvertimeHours += $overtimeFromLeavesMinutes / 60;
+
+            $approvedOffsetQuery = \App\Models\LeaveRequest::where('user_id', $user->id)
+                ->where('type', 'offset')
+                ->where('status', 'approved');
+
+            if ($months === 12) {
+                $approvedOffsetQuery->whereYear('start_date', $currentYear);
+            } else {
+                $approvedOffsetQuery->whereDate('start_date', '>=', $fromDate->toDateString());
+            }
+
+            $approvedOffsetCount = $approvedOffsetQuery->count();
+
+            $offsetHoursUsed = $approvedOffsetCount * 8; // 8 hours per approved offset
+
+            $netOvertimeHours = max($totalOvertimeHours - $offsetHoursUsed, 0);
+
+            $overtimeMinutes = (int) round($netOvertimeHours * 60);
+            $overtimeHoursPart = intdiv($overtimeMinutes, 60);
+            $overtimeMinutesPart = $overtimeMinutes % 60;
+            $overtimeFormatted = sprintf('%02d:%02d', $overtimeHoursPart, $overtimeMinutesPart);
+        }
+
+        return view('admin.users.show', compact('user', 'balances', 'overtimeFormatted', 'overtimeWindowLabel'));
+    }
+
+    public function updateOvertimeWindow(Request $request, User $user)
+    {
+        $request->validate([
+            'overtime_months_credited' => 'required|integer|in:12,9,6,3,1',
+        ]);
+
+        // Apply setting globally to all employees
+        User::where('role', 'employee')->update([
+            'overtime_months_credited' => $request->overtime_months_credited,
+        ]);
+
+        return redirect()->route('users.show', $user)
+            ->with('success', 'Overtime credited window updated for all employees.');
+    }
+
+    public function updateLeaveBalance(Request $request, User $user)
+    {
+        $request->validate([
+            'vacation_allowance' => 'required|numeric|min:0|max:365',
+            'sick_allowance' => 'required|numeric|min:0|max:365',
+            'year' => 'required|integer|min:2000|max:2100',
+        ]);
+
+        $year = (int) $request->year;
+
+        $leaveBalance = LeaveBalance::firstOrCreate(
+            ['user_id' => $user->id, 'year' => $year],
+            [
+                'vacation_allowance' => 0,
+                'sick_allowance' => 0,
+            ]
+        );
+
+        $leaveBalance->update([
+            'vacation_allowance' => $request->vacation_allowance,
+            'sick_allowance' => $request->sick_allowance,
+        ]);
+
+        return redirect()->route('users.show', $user)
+            ->with('success', "Leave balances updated for {$year}.");
     }
 
     public function edit(User $user)

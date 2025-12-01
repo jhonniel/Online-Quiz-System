@@ -52,6 +52,8 @@ Route::prefix('admin')->middleware(['auth', 'admin'])->group(function () {
     Route::patch('users/{user}/toggle-status', [AdminUserController::class, 'toggleStatus'])->name('admin.users.toggle-status');
     Route::patch('users/{user}/approve', [AdminUserController::class, 'approve'])->name('admin.users.approve');
     Route::patch('users/{user}/disapprove', [AdminUserController::class, 'disapprove'])->name('admin.users.disapprove');
+    Route::patch('users/{user}/overtime-window', [AdminUserController::class, 'updateOvertimeWindow'])->name('admin.users.overtime-window');
+    Route::patch('users/{user}/leave-balance', [AdminUserController::class, 'updateLeaveBalance'])->name('admin.users.leave-balance');
     Route::post('users/bulk-assign-role', [AdminUserController::class, 'bulkAssignRole'])->name('admin.users.bulk-assign-role');
 
     // University Management
@@ -95,11 +97,14 @@ Route::prefix('admin')->middleware(['auth', 'admin'])->group(function () {
     Route::get('/dtr', [App\Http\Controllers\Admin\DtrController::class, 'index'])->name('admin.dtr.index');
     Route::get('/dtr/create', [App\Http\Controllers\Admin\DtrController::class, 'create'])->name('admin.dtr.create');
     Route::post('/dtr', [App\Http\Controllers\Admin\DtrController::class, 'store'])->name('admin.dtr.store');
+    Route::get('/dtr/{dtr}/edit', [App\Http\Controllers\Admin\DtrController::class, 'edit'])->name('admin.dtr.edit');
+    Route::put('/dtr/{dtr}', [App\Http\Controllers\Admin\DtrController::class, 'update'])->name('admin.dtr.update');
     Route::post('/dtr/import', [App\Http\Controllers\Admin\DtrController::class, 'import'])->name('admin.dtr.import');
     Route::get('/dtr/template', [App\Http\Controllers\Admin\DtrController::class, 'downloadTemplate'])->name('admin.dtr.template');
 
     // Leave Requests Management
     Route::get('/leave-requests', [App\Http\Controllers\Admin\LeaveRequestController::class, 'index'])->name('admin.leave-requests.index');
+    Route::get('/leave-calendar', [App\Http\Controllers\Admin\LeaveRequestController::class, 'calendar'])->name('admin.leave-requests.calendar');
     Route::get('/leave-requests/{leaveRequest}', [App\Http\Controllers\Admin\LeaveRequestController::class, 'show'])->name('admin.leave-requests.show');
     Route::post('/leave-requests/{leaveRequest}/approve', [App\Http\Controllers\Admin\LeaveRequestController::class, 'approve'])->name('admin.leave-requests.approve');
     Route::post('/leave-requests/{leaveRequest}/reject', [App\Http\Controllers\Admin\LeaveRequestController::class, 'reject'])->name('admin.leave-requests.reject');

@@ -14,7 +14,7 @@ return new class extends Migration
         Schema::create('leave_requests', function (Blueprint $table) {
             $table->id();
             $table->foreignId('user_id')->constrained()->onDelete('cascade');
-            $table->enum('type', ['vacation_leave', 'sick_leave', 'work_from_home', 'absent', 'overtime'])->default('vacation_leave');
+            $table->enum('type', ['vacation_leave', 'sick_leave', 'work_from_home', 'absent', 'overtime', 'offset'])->default('vacation_leave');
             $table->date('start_date');
             $table->date('end_date')->nullable();
             $table->text('reason')->nullable();

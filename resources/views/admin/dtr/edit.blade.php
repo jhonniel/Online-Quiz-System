@@ -8,15 +8,15 @@
             <div class="flex items-center space-x-4">
                 <div class="flex-shrink-0 bg-white/20 backdrop-blur-sm rounded-2xl p-4">
                     <svg class="h-10 w-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                     </svg>
                 </div>
                 <div>
-                    <h1 class="text-3xl font-bold">Add DTR Record</h1>
-                    <p class="text-indigo-100 mt-1">Manually add a new employee time record</p>
+                    <h1 class="text-3xl font-bold">Edit DTR Record</h1>
+                    <p class="text-indigo-100 mt-1">Update an existing employee time record</p>
                 </div>
             </div>
-            <a href="{{ route('admin.dtr.index') }}" 
+            <a href="{{ route('admin.dtr.index') }}"
                class="inline-flex items-center px-4 py-2 bg-white/10 backdrop-blur-sm border border-white/20 rounded-lg text-white hover:bg-white/20 transition duration-200">
                 <svg class="h-5 w-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
@@ -51,8 +51,9 @@
 
     <!-- Form -->
     <div class="bg-white rounded-2xl shadow-xl border border-gray-200 p-8">
-        <form action="{{ route('admin.dtr.store') }}" method="POST" class="space-y-6">
+        <form action="{{ route('admin.dtr.update', $dtr) }}" method="POST" class="space-y-6">
             @csrf
+            @method('PUT')
 
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <!-- Employee Selection -->
@@ -64,7 +65,8 @@
                             class="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
                         <option value="">Select Employee</option>
                         @foreach($employees as $employee)
-                            <option value="{{ $employee->id }}" {{ old('user_id') == $employee->id ? 'selected' : '' }}>
+                            <option value="{{ $employee->id }}"
+                                {{ old('user_id', $dtr->user_id) == $employee->id ? 'selected' : '' }}>
                                 {{ $employee->name }} ({{ $employee->email }})
                             </option>
                         @endforeach
@@ -79,7 +81,8 @@
                     <label for="date" class="block text-sm font-medium text-gray-700 mb-2">
                         Date <span class="text-red-500">*</span>
                     </label>
-                    <input type="date" name="date" id="date" value="{{ old('date', date('Y-m-d')) }}" required
+                    <input type="date" name="date" id="date"
+                           value="{{ old('date', $dtr->date->format('Y-m-d')) }}" required
                            class="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
                     @error('date')
                         <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
@@ -93,7 +96,7 @@
                     Added Time From Note (HH:MM)
                 </label>
                 <input type="text" name="added_time_from_note" id="added_time_from_note"
-                       value="{{ old('added_time_from_note') }}"
+                       value="{{ old('added_time_from_note', $addedFormatted) }}"
                        placeholder="00:00"
                        class="time-input w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
                 <p class="mt-1 text-xs text-gray-500">
@@ -108,7 +111,7 @@
             <div class="flex items-center space-x-2 p-4 bg-blue-50 border border-blue-200 rounded-lg">
                 <input type="checkbox" name="is_travel" id="is_travel" value="1"
                        class="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
-                       {{ old('is_travel') ? 'checked' : '' }}>
+                       {{ old('is_travel', $dtr->status === 'travel') ? 'checked' : '' }}>
                 <label for="is_travel" class="text-sm font-medium text-gray-700 cursor-pointer">
                     Mark as Travel (will auto-set Worked Hours to 08:00 and Status to Travel)
                 </label>
@@ -120,8 +123,8 @@
                     <label for="total_hours" class="block text-sm font-medium text-gray-700 mb-2">
                         Worked Hours (HH:MM) <span class="text-red-500">*</span>
                     </label>
-                    <input type="text" name="total_hours" id="total_hours" 
-                           value="{{ old('total_hours') }}" 
+                    <input type="text" name="total_hours" id="total_hours"
+                           value="{{ old('total_hours', $workedFormatted) }}"
                            placeholder="08:00"
                            class="time-input w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
                            required>
@@ -134,29 +137,41 @@
                     @enderror
                 </div>
 
-                <!-- Overtime Hours -->
+                <!-- Read-only Overtime Info (calculated on save) -->
                 <div>
-                    <label for="overtime_hours" class="block text-sm font-medium text-gray-700 mb-2">
+                    <label class="block text-sm font-medium text-gray-700 mb-2">
                         Overtime (HH:MM)
                     </label>
-                    <input type="text" name="overtime_hours" id="overtime_hours" 
-                           value="{{ old('overtime_hours') }}" 
-                           placeholder="00:00"
-                           class="time-input w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
-                    <p class="mt-1 text-xs text-gray-500">Overtime in <strong>HH:MM</strong> (e.g., 01:00, 00:45). No AM/PM.</p>
-                    @error('overtime_hours')
-                        <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
-                    @enderror
+                    @php
+                        $otMinutes = (int) round(($dtr->overtime_hours ?? 0) * 60);
+                        $otH = intdiv($otMinutes, 60);
+                        $otM = $otMinutes % 60;
+                        $otFormatted = sprintf('%02d:%02d', $otH, $otM);
+                    @endphp
+                    <div class="px-4 py-3 border border-gray-200 rounded-lg bg-gray-50 text-sm font-semibold text-orange-700">
+                        {{ $otMinutes > 0 ? $otFormatted : '00:00' }}
+                    </div>
+                    <p class="mt-1 text-xs text-gray-500">
+                        Overtime is automatically recalculated on save as
+                        <strong>(Total Hours − 08:00)</strong> when Total Hours is more than 08:00.
+                    </p>
                 </div>
 
                 <!-- Status (Auto-set based on Travel checkbox) -->
                 <div>
-                    <input type="hidden" name="status" id="status" value="present">
+                    <input type="hidden" name="status" id="status" value="{{ old('status', $dtr->status) }}">
                     <label class="block text-sm font-medium text-gray-700 mb-2">
                         Status
                     </label>
-                    <div id="status_display" class="px-4 py-3 border border-gray-200 rounded-lg bg-gray-50 text-sm font-medium text-gray-700">
-                        Present
+                    @php
+                        $currentStatus = old('status', $dtr->status);
+                        $statusDisplayText = $currentStatus === 'travel' ? 'Travel' : ucfirst(str_replace('_', ' ', $currentStatus));
+                        $statusDisplayClass = $currentStatus === 'travel' 
+                            ? 'px-4 py-3 border border-gray-200 rounded-lg bg-blue-50 text-sm font-medium text-blue-700'
+                            : 'px-4 py-3 border border-gray-200 rounded-lg bg-gray-50 text-sm font-medium text-gray-700';
+                    @endphp
+                    <div id="status_display" class="{{ $statusDisplayClass }}">
+                        {{ $statusDisplayText }}
                     </div>
                     <p class="mt-1 text-xs text-gray-500">
                         Status is automatically set based on Travel checkbox. Time Records will show <strong>Under Time</strong> or <strong>Completed</strong> based on Total Hours.
@@ -171,7 +186,7 @@
                 </label>
                 <textarea name="remarks" id="remarks" rows="3"
                           placeholder="Any additional notes or comments"
-                          class="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">{{ old('remarks') }}</textarea>
+                          class="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">{{ old('remarks', $dtr->remarks) }}</textarea>
                 <p class="mt-1 text-xs text-gray-500">Optional notes about this time record</p>
                 @error('remarks')
                     <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
@@ -192,7 +207,7 @@
                     <svg class="h-5 w-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
                     </svg>
-                    Add DTR Record
+                    Update DTR Record
                 </button>
             </div>
         </form>
@@ -215,14 +230,8 @@
         }
 
         inputs.forEach(function (input) {
-            input.addEventListener('input', function (e) {
-                const cursorPos = input.selectionStart;
-                const before = input.value;
+            input.addEventListener('input', function () {
                 input.value = formatTime(input.value);
-                // Best-effort keep cursor near end
-                if (document.activeElement === input) {
-                    input.selectionStart = input.selectionEnd = input.value.length;
-                }
             });
         });
 
@@ -233,33 +242,49 @@
         const statusDisplay = document.getElementById('status_display');
 
         if (travelCheckbox && totalHoursInput && statusInput && statusDisplay) {
-            function updateStatus() {
+            const isInitialLoad = true;
+            let initialStatus = statusInput.value;
+            
+            function updateStatus(isInitial = false) {
                 if (travelCheckbox.checked) {
-                    // Set Worked Hours to 08:00
-                    totalHoursInput.value = '08:00';
                     // Set Status to Travel
                     statusInput.value = 'travel';
                     statusDisplay.textContent = 'Travel';
                     statusDisplay.className = 'px-4 py-3 border border-gray-200 rounded-lg bg-blue-50 text-sm font-medium text-blue-700';
+                    
+                    // Only set Worked Hours to 08:00 if not initial load (user is toggling checkbox)
+                    if (!isInitial) {
+                        totalHoursInput.value = '08:00';
+                        totalHoursInput.dispatchEvent(new Event('input', { bubbles: true }));
+                    }
                 } else {
                     // Reset to default if unchecked
-                    if (totalHoursInput.value === '08:00') {
-                        totalHoursInput.value = '';
-                    }
                     statusInput.value = 'present';
                     statusDisplay.textContent = 'Present';
                     statusDisplay.className = 'px-4 py-3 border border-gray-200 rounded-lg bg-gray-50 text-sm font-medium text-gray-700';
+                    
+                    // Only reset worked hours if not initial load and it was 08:00
+                    if (!isInitial && totalHoursInput.value === '08:00') {
+                        totalHoursInput.value = '';
+                    }
                 }
-                // Trigger input event to ensure formatting is applied
-                totalHoursInput.dispatchEvent(new Event('input', { bubbles: true }));
             }
 
-            travelCheckbox.addEventListener('change', updateStatus);
+            travelCheckbox.addEventListener('change', function() {
+                updateStatus(false);
+            });
             
-            // Initialize on page load
-            updateStatus();
+            // Initialize on page load - just update display, don't change worked hours
+            if (initialStatus === 'travel') {
+                travelCheckbox.checked = true;
+                updateStatus(true);
+            } else {
+                updateStatus(true);
+            }
         }
     });
 </script>
 
 @endsection
+
+

@@ -6,6 +6,8 @@ use App\Http\Controllers\Controller;
 use App\Models\LeaveRequest;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Carbon\Carbon;
+use Carbon\CarbonPeriod;
 
 class LeaveRequestController extends Controller
 {
@@ -72,7 +74,223 @@ class LeaveRequestController extends Controller
     public function show(LeaveRequest $leaveRequest)
     {
         $leaveRequest->load(['user', 'reviewer']);
-        return view('admin.leave-requests.show', compact('leaveRequest'));
+
+        // Compute current-year leave balances and overtime for this employee
+        $employee = $leaveRequest->user;
+        $currentYear = now()->year;
+        $months = $employee->overtime_months_credited ?? 12;
+
+        if ($months === 12) {
+            $fromDate = now()->copy()->startOfYear();
+        } else {
+            $fromDate = now()->copy()->subMonths($months)->startOfDay();
+        }
+
+        $leaveBalance = \App\Models\LeaveBalance::firstOrCreate(
+            ['user_id' => $employee->id, 'year' => $currentYear],
+            [
+                'vacation_allowance' => 15,
+                'sick_allowance' => 10,
+            ]
+        );
+
+        $usedVacation = LeaveRequest::where('user_id', $employee->id)
+            ->where('type', 'vacation_leave')
+            ->where('status', 'approved')
+            ->whereYear('start_date', $currentYear)
+            ->get()
+            ->sum->days;
+
+        $usedSick = LeaveRequest::where('user_id', $employee->id)
+            ->where('type', 'sick_leave')
+            ->where('status', 'approved')
+            ->whereYear('start_date', $currentYear)
+            ->get()
+            ->sum->days;
+
+        $balances = [
+            'vacation' => [
+                'allowance' => (float) $leaveBalance->vacation_allowance,
+                'used' => $usedVacation,
+                'remaining' => max((float) $leaveBalance->vacation_allowance - $usedVacation, 0),
+            ],
+            'sick' => [
+                'allowance' => (float) $leaveBalance->sick_allowance,
+                'used' => $usedSick,
+                'remaining' => max((float) $leaveBalance->sick_allowance - $usedSick, 0),
+            ],
+        ];
+
+        $dtrOvertimeQuery = \App\Models\Dtr::where('user_id', $employee->id);
+        if ($months === 12) {
+            $dtrOvertimeQuery->whereYear('date', $currentYear);
+        } else {
+            $dtrOvertimeQuery->whereDate('date', '>=', $fromDate->toDateString());
+        }
+        $totalOvertimeHours = $dtrOvertimeQuery->sum('overtime_hours');
+
+        // Add overtime coming from approved overtime leave requests (HH:MM in reason)
+        $approvedOvertimeRequestsQuery = LeaveRequest::where('user_id', $employee->id)
+            ->where('type', 'overtime')
+            ->where('status', 'approved');
+
+        if ($months === 12) {
+            $approvedOvertimeRequestsQuery->whereYear('start_date', $currentYear);
+        } else {
+            $approvedOvertimeRequestsQuery->whereDate('start_date', '>=', $fromDate->toDateString());
+        }
+
+        $approvedOvertimeRequests = $approvedOvertimeRequestsQuery->get();
+
+        $overtimeFromLeavesMinutes = 0;
+        foreach ($approvedOvertimeRequests as $otRequest) {
+            $raw = $otRequest->reason ?? '';
+            if (preg_match('/Total Overtime Hours:\s*([0-9]{2}:[0-9]{2})/', $raw, $m)) {
+                [$h, $mPart] = array_map('intval', explode(':', $m[1]));
+                $overtimeFromLeavesMinutes += $h * 60 + $mPart;
+            }
+        }
+
+        $totalOvertimeHours += $overtimeFromLeavesMinutes / 60;
+
+        $approvedOffsetQuery = LeaveRequest::where('user_id', $employee->id)
+            ->where('type', 'offset')
+            ->where('status', 'approved');
+
+        if ($months === 12) {
+            $approvedOffsetQuery->whereYear('start_date', $currentYear);
+        } else {
+            $approvedOffsetQuery->whereDate('start_date', '>=', $fromDate->toDateString());
+        }
+
+        $approvedOffsetCount = $approvedOffsetQuery->count();
+
+        $offsetHoursUsed = $approvedOffsetCount * 8; // 8 hours per approved offset
+
+        $netOvertimeHours = max($totalOvertimeHours - $offsetHoursUsed, 0);
+
+        $overtimeMinutes = (int) round($netOvertimeHours * 60);
+        $overtimeHoursPart = intdiv($overtimeMinutes, 60);
+        $overtimeMinutesPart = $overtimeMinutes % 60;
+        $overtimeFormatted = sprintf('%02d:%02d', $overtimeHoursPart, $overtimeMinutesPart);
+
+        // Get signatory names from settings
+        $signatories = [
+            'immediate_supervisor' => \App\Models\Setting::get('leave_immediate_supervisor', 'CHARMAINE JOY ROSATACE'),
+            'hr_admin' => \App\Models\Setting::get('leave_hr_admin', 'MAY GRACE ACOSTA'),
+            'cto' => \App\Models\Setting::get('leave_cto', 'NITISH KHEMANI'),
+        ];
+
+        return view('admin.leave-requests.show', compact('leaveRequest', 'balances', 'overtimeFormatted', 'signatories'));
+    }
+
+    /**
+     * Calendar view of leave requests for easier tracking.
+     */
+    public function calendar(Request $request)
+    {
+        // Use Manila timezone for current date/month context
+        $nowManila = Carbon::now('Asia/Manila');
+        $monthParam = $request->input('month', $nowManila->format('Y-m'));
+        $employeeId = $request->input('employee');
+
+        try {
+            $currentMonth = Carbon::createFromFormat('Y-m', $monthParam, 'Asia/Manila')->startOfMonth();
+        } catch (\Exception $e) {
+            $currentMonth = $nowManila->copy()->startOfMonth();
+        }
+
+        $startOfMonth = $currentMonth->copy()->startOfMonth();
+        $endOfMonth = $currentMonth->copy()->endOfMonth();
+
+        // Extend to full weeks for calendar grid
+        $startOfCalendar = $startOfMonth->copy()->startOfWeek(Carbon::MONDAY);
+        $endOfCalendar = $endOfMonth->copy()->endOfWeek(Carbon::SUNDAY);
+
+        // Base query for leave requests that intersect the calendar range
+        // Wrap OR conditions in a single group so employee filter applies to all.
+        $leaveQuery = LeaveRequest::with('user')
+            ->where(function ($outer) use ($startOfCalendar, $endOfCalendar) {
+                $outer->where(function ($q) use ($startOfCalendar, $endOfCalendar) {
+                    // Requests with a start and end date that overlap the calendar window
+                    $q->whereDate('start_date', '<=', $endOfCalendar->toDateString())
+                      ->whereDate('end_date', '>=', $startOfCalendar->toDateString());
+                })->orWhere(function ($q) use ($startOfCalendar, $endOfCalendar) {
+                    // Handle single-day requests where end_date is null
+                    $q->whereNull('end_date')
+                      ->whereDate('start_date', '>=', $startOfCalendar->toDateString())
+                      ->whereDate('start_date', '<=', $endOfCalendar->toDateString());
+                });
+            });
+
+        if ($employeeId) {
+            $leaveQuery->where('user_id', $employeeId);
+        }
+
+        $leaveRequests = $leaveQuery->get();
+
+        // Prepare map of day => leave entries
+        $days = [];
+        $period = CarbonPeriod::create($startOfCalendar, $endOfCalendar);
+
+        foreach ($period as $date) {
+            $key = $date->toDateString();
+            $days[$key] = [
+                'date' => $date->copy(),
+                'requests' => [],
+            ];
+        }
+
+        foreach ($leaveRequests as $requestItem) {
+            $rangeStart = $requestItem->start_date->copy()->max($startOfCalendar);
+            $rangeEnd = ($requestItem->end_date ?? $requestItem->start_date)->copy()->min($endOfCalendar);
+
+            $dayPeriod = CarbonPeriod::create($rangeStart, $rangeEnd);
+            foreach ($dayPeriod as $day) {
+                $key = $day->toDateString();
+                if (!isset($days[$key])) {
+                    continue;
+                }
+
+                $days[$key]['requests'][] = [
+                    'id' => $requestItem->id,
+                    'employee' => $requestItem->user,
+                    'type_label' => $requestItem->type_label,
+                    'status' => $requestItem->status,
+                ];
+            }
+        }
+
+        $weeks = [];
+        $week = [];
+        foreach ($days as $day) {
+            $week[] = $day;
+            if (count($week) === 7) {
+                $weeks[] = $week;
+                $week = [];
+            }
+        }
+        if (!empty($week)) {
+            $weeks[] = $week;
+        }
+
+        $prevMonth = $currentMonth->copy()->subMonth()->format('Y-m');
+        $nextMonth = $currentMonth->copy()->addMonth()->format('Y-m');
+
+        // Employees list for sidebar filter (employees only)
+        $employees = \App\Models\User::where('role', 'employee')
+            ->where('is_active', true)
+            ->orderBy('name')
+            ->get();
+
+        return view('admin.leave-requests.calendar', [
+            'currentMonth' => $currentMonth,
+            'weeks' => $weeks,
+            'prevMonth' => $prevMonth,
+            'nextMonth' => $nextMonth,
+            'employees' => $employees,
+            'selectedEmployeeId' => $employeeId,
+        ]);
     }
 
     /**

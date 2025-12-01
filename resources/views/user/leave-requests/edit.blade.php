@@ -8,15 +8,15 @@
             <div class="flex items-center">
                 <div class="flex-shrink-0">
                     <svg class="h-6 w-6 sm:h-8 sm:w-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
                     </svg>
                 </div>
                 <div class="ml-3">
-                    <h1 class="text-lg sm:text-xl lg:text-2xl font-bold text-white">New Leave Request</h1>
-                    <p class="text-indigo-100 text-sm">Submit a new leave or work request</p>
+                    <h1 class="text-lg sm:text-xl lg:text-2xl font-bold text-white">Edit Leave Request</h1>
+                    <p class="text-indigo-100 text-sm">Update your leave request based on admin feedback</p>
                 </div>
             </div>
-            <a href="{{ route('user.leave-requests.index') }}"
+            <a href="{{ route('user.leave-requests.show', $leaveRequest) }}"
                class="inline-flex items-center px-4 py-2 bg-white/20 backdrop-blur-sm border border-white/30 rounded-lg text-white hover:bg-white/30 transition duration-200">
                 <svg class="h-5 w-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
@@ -29,9 +29,28 @@
     <!-- Form -->
     <div class="flex-1 overflow-y-auto p-4">
         <div class="max-w-3xl mx-auto">
+            @if($leaveRequest->admin_notes)
+                <div class="bg-yellow-50 border-l-4 border-yellow-400 p-4 mb-6 rounded-lg">
+                    <div class="flex">
+                        <div class="flex-shrink-0">
+                            <svg class="h-5 w-5 text-yellow-400" fill="currentColor" viewBox="0 0 20 20">
+                                <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>
+                            </svg>
+                        </div>
+                        <div class="ml-3">
+                            <h3 class="text-sm font-medium text-yellow-800">Admin Feedback</h3>
+                            <div class="mt-2 text-sm text-yellow-700 whitespace-pre-line">
+                                {{ $leaveRequest->admin_notes }}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            @endif
+
             <div class="bg-white rounded-lg shadow border border-gray-200 p-6">
-                <form action="{{ route('user.leave-requests.store') }}" method="POST" class="space-y-6">
+                <form action="{{ route('user.leave-requests.update', $leaveRequest) }}" method="POST" class="space-y-6">
                     @csrf
+                    @method('PUT')
 
                     <!-- Request Type -->
                     <div>
@@ -41,12 +60,12 @@
                         <select name="type" id="type" required
                                 class="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
                             <option value="">Select Request Type</option>
-                            <option value="vacation_leave" {{ old('type') == 'vacation_leave' ? 'selected' : '' }}>Vacation Leave</option>
-                            <option value="sick_leave" {{ old('type') == 'sick_leave' ? 'selected' : '' }}>Sick Leave</option>
-                            <option value="work_from_home" {{ old('type') == 'work_from_home' ? 'selected' : '' }}>Work From Home</option>
-                            <option value="absent" {{ old('type') == 'absent' ? 'selected' : '' }}>Absent</option>
-                            <option value="overtime" {{ old('type') == 'overtime' ? 'selected' : '' }}>Overtime</option>
-                            <option value="offset" {{ old('type') == 'offset' ? 'selected' : '' }}>Offset</option>
+                            <option value="vacation_leave" {{ old('type', $editData['type']) == 'vacation_leave' ? 'selected' : '' }}>Vacation Leave</option>
+                            <option value="sick_leave" {{ old('type', $editData['type']) == 'sick_leave' ? 'selected' : '' }}>Sick Leave</option>
+                            <option value="work_from_home" {{ old('type', $editData['type']) == 'work_from_home' ? 'selected' : '' }}>Work From Home</option>
+                            <option value="absent" {{ old('type', $editData['type']) == 'absent' ? 'selected' : '' }}>Absent</option>
+                            <option value="overtime" {{ old('type', $editData['type']) == 'overtime' ? 'selected' : '' }}>Overtime</option>
+                            <option value="offset" {{ old('type', $editData['type']) == 'offset' ? 'selected' : '' }}>Offset</option>
                         </select>
                         @error('type')
                             <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
@@ -60,8 +79,7 @@
                                 Start Date <span class="text-red-500">*</span>
                             </label>
                             <input type="date" name="start_date" id="start_date" 
-                                   value="{{ old('start_date') }}" 
-                                   min="{{ date('Y-m-d') }}"
+                                   value="{{ old('start_date', $editData['start_date']) }}" 
                                    required
                                    class="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
                             @error('start_date')
@@ -74,7 +92,7 @@
                                 End Date <span class="text-gray-400">(Optional)</span>
                             </label>
                             <input type="date" name="end_date" id="end_date" 
-                                   value="{{ old('end_date') }}" 
+                                   value="{{ old('end_date', $editData['end_date']) }}" 
                                    class="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
                             <p class="mt-1 text-xs text-gray-500">Leave blank for single day requests</p>
                             @error('end_date')
@@ -90,7 +108,7 @@
                         </label>
                         <textarea name="reason" id="reason" rows="4"
                                   placeholder="Please provide a reason for this request..."
-                                  class="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">{{ old('reason') }}</textarea>
+                                  class="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">{{ old('reason', $editData['reason']) }}</textarea>
                         <p class="mt-1 text-xs text-gray-500">
                             Provide additional details about your request. For <strong>Overtime</strong>, if provided, this will appear as the explanation for extra hours. If not provided, it will be left blank.
                         </p>
@@ -100,7 +118,7 @@
                     </div>
 
                     <!-- Overtime Details (visible only when Request Type = Overtime) -->
-                    <div id="overtime-section" class="space-y-4 hidden">
+                    <div id="overtime-section" class="space-y-4 {{ old('type', $editData['type']) == 'overtime' ? '' : 'hidden' }}">
                         <div class="border-t border-gray-200 pt-4 mt-4">
                             <h2 class="text-sm font-semibold text-gray-900 mb-2">Overtime Details</h2>
                             <p class="text-xs text-gray-500 mb-3">
@@ -115,7 +133,7 @@
                                 Total Overtime Hours (HH:MM) <span class="text-red-500">*</span>
                             </label>
                             <input type="text" name="overtime_hours" id="overtime_hours"
-                                   value="{{ old('overtime_hours') }}"
+                                   value="{{ old('overtime_hours', $editData['overtime_hours']) }}"
                                    placeholder="01:20"
                                    class="time-input w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
                             <p class="mt-1 text-xs text-gray-500">
@@ -132,7 +150,7 @@
                                 Overtime Dates <span class="text-red-500">*</span>
                             </label>
                             <input type="text" name="overtime_dates" id="overtime_dates"
-                                   value="{{ old('overtime_dates') }}"
+                                   value="{{ old('overtime_dates', $editData['overtime_dates']) }}"
                                    placeholder="e.g., May 10–11, 2025 or specific dates"
                                    class="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
                             <p class="mt-1 text-xs text-gray-500">
@@ -150,7 +168,7 @@
                             </label>
                             <textarea name="overtime_tasks" id="overtime_tasks" rows="4"
                                       placeholder="Strictly list down tasks listed in ClickUp for Devs via link..."
-                                      class="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">{{ old('overtime_tasks') }}</textarea>
+                                      class="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">{{ old('overtime_tasks', $editData['overtime_tasks']) }}</textarea>
                             <p class="mt-1 text-xs text-gray-500">
                                 List the tasks that justify this overtime, including any ClickUp or ticket links.
                             </p>
@@ -161,7 +179,7 @@
                     </div>
 
                     <!-- Work From Home Details (visible only when Request Type = Work From Home) -->
-                    <div id="wfh-section" class="space-y-4 hidden">
+                    <div id="wfh-section" class="space-y-4 {{ old('type', $editData['type']) == 'work_from_home' ? '' : 'hidden' }}">
                         <div class="border-t border-gray-200 pt-4 mt-4">
                             <h2 class="text-sm font-semibold text-gray-900 mb-2">Work From Home Details</h2>
                             <p class="text-xs text-gray-500 mb-3">
@@ -178,10 +196,10 @@
                             <select name="wfh_mode" id="wfh_mode"
                                     class="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
                                 <option value="">Select Mode</option>
-                                <option value="working_remotely" {{ old('wfh_mode') == 'working_remotely' ? 'selected' : '' }}>
+                                <option value="working_remotely" {{ old('wfh_mode', $editData['wfh_mode']) == 'working_remotely' ? 'selected' : '' }}>
                                     Working remotely
                                 </option>
-                                <option value="request_to_be_excused" {{ old('wfh_mode') == 'request_to_be_excused' ? 'selected' : '' }}>
+                                <option value="request_to_be_excused" {{ old('wfh_mode', $editData['wfh_mode']) == 'request_to_be_excused' ? 'selected' : '' }}>
                                     Request to be excused
                                 </option>
                             </select>
@@ -196,7 +214,7 @@
                                 Remote Address <span class="text-red-500">*</span>
                             </label>
                             <input type="text" name="wfh_address" id="wfh_address"
-                                   value="{{ old('wfh_address') }}"
+                                   value="{{ old('wfh_address', $editData['wfh_address']) }}"
                                    placeholder="e.g., Home address or remote work location"
                                    class="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
                             @error('wfh_address')
@@ -211,7 +229,7 @@
                             </label>
                             <textarea name="wfh_tasks" id="wfh_tasks" rows="4"
                                       placeholder="Strictly list down tasks listed in ClickUp for Devs via link..."
-                                      class="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">{{ old('wfh_tasks') }}</textarea>
+                                      class="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">{{ old('wfh_tasks', $editData['wfh_tasks']) }}</textarea>
                             <p class="mt-1 text-xs text-gray-500">
                                 List the tasks you will work on while remote, including any ClickUp or ticket links.
                             </p>
@@ -223,7 +241,7 @@
 
                     <!-- Form Actions -->
                     <div class="flex items-center justify-end space-x-3 pt-6 border-t border-gray-200">
-                        <a href="{{ route('user.leave-requests.index') }}"
+                        <a href="{{ route('user.leave-requests.show', $leaveRequest) }}"
                            class="inline-flex items-center px-6 py-3 border border-gray-300 text-sm font-medium rounded-lg text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition duration-200">
                             Cancel
                         </a>
@@ -232,7 +250,7 @@
                             <svg class="h-5 w-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
                             </svg>
-                            Submit Request
+                            Update Request
                         </button>
                     </div>
                 </form>

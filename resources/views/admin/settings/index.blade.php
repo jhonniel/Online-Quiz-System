@@ -338,6 +338,95 @@
                                 </div>
                             </div>
                         </div>
+
+                        <!-- Overtime Settings -->
+                        <div class="form-section">
+                            <div class="flex items-center space-x-3 mb-6">
+                                <div class="flex-shrink-0 bg-blue-100 rounded-lg p-2">
+                                    <svg class="h-6 w-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                    </svg>
+                                </div>
+                                <div>
+                                    <h3 class="text-lg font-semibold text-gray-900">Overtime Settings</h3>
+                                    <p class="text-sm text-gray-500">Control how much overtime history is credited for employees.</p>
+                                </div>
+                            </div>
+
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div>
+                                    <label for="overtime_months_credited" class="block text-sm font-medium text-gray-700 mb-2">
+                                        Overtime Credited Window
+                                    </label>
+                                    <select id="overtime_months_credited" name="overtime_months_credited"
+                                            class="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                                        @php
+                                            $currentWindow = $settings['overtime_months_credited'] ?? 12;
+                                        @endphp
+                                        <option value="12" {{ $currentWindow == 12 ? 'selected' : '' }}>Current Year (12 months)</option>
+                                        <option value="9" {{ $currentWindow == 9 ? 'selected' : '' }}>Last 9 months</option>
+                                        <option value="6" {{ $currentWindow == 6 ? 'selected' : '' }}>Last 6 months</option>
+                                        <option value="3" {{ $currentWindow == 3 ? 'selected' : '' }}>Last 3 months</option>
+                                        <option value="1" {{ $currentWindow == 1 ? 'selected' : '' }}>Last 1 month</option>
+                                    </select>
+                                    <p class="mt-2 text-xs text-gray-500">
+                                        This setting applies <strong>globally</strong> to all employees when calculating overtime balances
+                                        in Leave Requests and profiles.
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Leave Request Signatories -->
+                        <div class="form-section">
+                            <div class="flex items-center space-x-3 mb-6">
+                                <div class="flex-shrink-0 bg-purple-100 rounded-lg p-2">
+                                    <svg class="h-6 w-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                                    </svg>
+                                </div>
+                                <div>
+                                    <h3 class="text-lg font-semibold text-gray-900">Leave Request Signatories</h3>
+                                    <p class="text-sm text-gray-500">Configure names for leave request letter templates.</p>
+                                </div>
+                            </div>
+
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div>
+                                    <label for="leave_immediate_supervisor" class="block text-sm font-medium text-gray-700 mb-2">
+                                        Immediate Supervisor Name
+                                    </label>
+                                    <input type="text" id="leave_immediate_supervisor" name="leave_immediate_supervisor"
+                                           value="{{ $settings['leave_immediate_supervisor'] ?? 'CHARMAINE JOY ROSATACE' }}"
+                                           class="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                                    <p class="mt-2 text-xs text-gray-500">
+                                        Name displayed as "IMMEDIATE SUPERVISOR" in leave request letters.
+                                    </p>
+                                </div>
+                                <div>
+                                    <label for="leave_hr_admin" class="block text-sm font-medium text-gray-700 mb-2">
+                                        HR Admin Name
+                                    </label>
+                                    <input type="text" id="leave_hr_admin" name="leave_hr_admin"
+                                           value="{{ $settings['leave_hr_admin'] ?? 'MAY GRACE ACOSTA' }}"
+                                           class="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                                    <p class="mt-2 text-xs text-gray-500">
+                                        Name displayed as "HR ADMIN" in leave request letters.
+                                    </p>
+                                </div>
+                                <div>
+                                    <label for="leave_cto" class="block text-sm font-medium text-gray-700 mb-2">
+                                        Chief Technology Officer Name
+                                    </label>
+                                    <input type="text" id="leave_cto" name="leave_cto"
+                                           value="{{ $settings['leave_cto'] ?? 'NITISH KHEMANI' }}"
+                                           class="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                                    <p class="mt-2 text-xs text-gray-500">
+                                        Name displayed as "CHIEF TECHNOLOGY OFFICER" in leave request letters.
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
                         </div>
                     </div>
 

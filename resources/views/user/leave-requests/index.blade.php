@@ -101,6 +101,71 @@
         </div>
     </div>
 
+    <!-- Leave Balance & Overtime -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 px-4 pb-4">
+        <!-- Vacation Leave Balance -->
+        <div class="bg-white rounded-lg shadow p-4 border border-indigo-200">
+            <div class="flex items-center">
+                <div class="flex-shrink-0 bg-indigo-100 rounded-lg p-3">
+                    <svg class="h-6 w-6 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                    </svg>
+                </div>
+                <div class="ml-4">
+                    <p class="text-sm font-medium text-gray-500">Vacation Balance</p>
+                    <p class="text-xl font-bold text-gray-900">
+                        {{ $balances['vacation']['remaining'] }} / {{ $balances['vacation']['allowance'] }} days
+                    </p>
+                    <p class="text-xs text-gray-500 mt-1">
+                        Used: {{ $balances['vacation']['used'] }} {{ $balances['vacation']['used'] == 1 ? 'day' : 'days' }} this year
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sick Leave Balance -->
+        <div class="bg-white rounded-lg shadow p-4 border border-blue-200">
+            <div class="flex items-center">
+                <div class="flex-shrink-0 bg-blue-100 rounded-lg p-3">
+                    <svg class="h-6 w-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-3-3v6m9-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                    </svg>
+                </div>
+                <div class="ml-4">
+                    <p class="text-sm font-medium text-gray-500">Sick Leave Balance</p>
+                    <p class="text-xl font-bold text-gray-900">
+                        {{ $balances['sick']['remaining'] }} / {{ $balances['sick']['allowance'] }} days
+                    </p>
+                    <p class="text-xs text-gray-500 mt-1">
+                        Used: {{ $balances['sick']['used'] }} {{ $balances['sick']['used'] == 1 ? 'day' : 'days' }} this year
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Overtime Summary -->
+        <div class="bg-white rounded-lg shadow p-4 border border-emerald-200">
+            <div class="flex items-center">
+                <div class="flex-shrink-0 bg-emerald-100 rounded-lg p-3">
+                    <svg class="h-6 w-6 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m3-4h-4a2 2 0 00-2 2v6a2 2 0 002 2h3l2 2 2-2h1a2 2 0 002-2v-3a8 8 0 10-4 0v1"></path>
+                    </svg>
+                </div>
+                <div class="ml-4">
+                    <p class="text-sm font-medium text-gray-500">
+                        Overtime ({{ $overtimeWindowLabel ?? 'This Year' }})
+                    </p>
+                    <p class="text-xl font-bold text-gray-900">
+                        {{ $overtimeFormatted }}
+                    </p>
+                    <p class="text-xs text-gray-500 mt-1">
+                        Based on approved DTR and overtime records within this window
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Leave Requests Table -->
     <div class="flex-1 overflow-y-auto p-4">
         <div class="bg-white rounded-lg shadow border border-gray-200 overflow-hidden">
@@ -137,7 +202,7 @@
                                     </td>
                                     <td class="px-6 py-4 whitespace-nowrap">
                                         <span class="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full {{ $request->status_badge_class }}">
-                                            {{ ucfirst($request->status) }}
+                                            {{ $request->display_status }}
                                         </span>
                                     </td>
                                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">

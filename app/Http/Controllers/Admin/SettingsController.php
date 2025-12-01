@@ -4,6 +4,8 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Setting;
+use App\Models\User;
+use App\Services\MailConfigService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\DB;
@@ -21,6 +23,9 @@ class SettingsController extends Controller
         foreach ($settingsCollection as $key => $setting) {
             $settings[$key] = $setting->value;
         }
+
+        // Overtime credited window (read from settings, default to 12 months)
+        $settings['overtime_months_credited'] = (int) Setting::get('overtime_months_credited', 12);
 
         // Get system health information
         $health = $this->getSystemHealth();
@@ -183,6 +188,10 @@ class SettingsController extends Controller
             'hiring_instructions' => 'nullable|string|max:2000',
             'hiring_application_public_access' => 'nullable|string|in:enabled,disabled',
             'hiring_application_url' => 'nullable|string|max:255|regex:/^[a-z0-9\-\/_]+$/i',
+            'overtime_months_credited' => 'nullable|integer|in:12,9,6,3,1',
+            'leave_immediate_supervisor' => 'nullable|string|max:255',
+            'leave_hr_admin' => 'nullable|string|max:255',
+            'leave_cto' => 'nullable|string|max:255',
             // Email Configuration
             'mail_mailer' => 'nullable|string|in:smtp,sendmail,mailgun,ses,postmark,resend,log,array',
             'mail_host' => 'nullable|string|max:255',
@@ -294,6 +303,27 @@ class SettingsController extends Controller
         $hiringApplicationUrl = ltrim($hiringApplicationUrl, '/');
         Setting::set('hiring_application_url', $hiringApplicationUrl, 'text', 'Custom URL path for hiring application form (e.g., careers, jobs, apply)');
 
+        // Handle overtime credited window (global for all employees)
+        if ($request->filled('overtime_months_credited')) {
+            $months = (int) $request->overtime_months_credited;
+            Setting::set('overtime_months_credited', $months, 'number', 'Months of overtime history credited for balances');
+
+            // Apply to all employees so controllers can read from user model
+            User::where('role', 'employee')->update([
+                'overtime_months_credited' => $months,
+            ]);
+        }
+
+        // Leave Request Signatories
+        $leaveImmediateSupervisor = $request->leave_immediate_supervisor ?? 'CHARMAINE JOY ROSATACE';
+        Setting::set('leave_immediate_supervisor', $leaveImmediateSupervisor, 'text', 'Name for Immediate Supervisor in leave request letters');
+
+        $leaveHrAdmin = $request->leave_hr_admin ?? 'MAY GRACE ACOSTA';
+        Setting::set('leave_hr_admin', $leaveHrAdmin, 'text', 'Name for HR Admin in leave request letters');
+
+        $leaveCto = $request->leave_cto ?? 'NITISH KHEMANI';
+        Setting::set('leave_cto', $leaveCto, 'text', 'Name for Chief Technology Officer in leave request letters');
+
         // Email Configuration Settings
         $mailMailer = $request->mail_mailer ?? 'log';
         Setting::set('mail_mailer', $mailMailer, 'text', 'Email mailer driver (smtp, sendmail, mailgun, ses, postmark, resend, log, array)');
@@ -346,13 +376,50 @@ class SettingsController extends Controller
             ]);
 
             $testEmail = $request->input('test_email');
-            
-            // Use the current mail configuration from settings
+
+            // Ensure mail configuration is up to date from settings
+            MailConfigService::configure();
+
+            // Basic config validation for SMTP mailer
+            $mailer = Setting::get('mail_mailer', 'log');
+            if ($mailer === 'smtp') {
+                $host = Setting::get('mail_host');
+                $port = Setting::get('mail_port');
+                $username = Setting::get('mail_username');
+                $password = Setting::get('mail_password');
+                $fromAddress = Setting::get('mail_from_address');
+
+                if (empty($host) || empty($port) || empty($username) || empty($password) || empty($fromAddress)) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'SMTP configuration is incomplete. Please make sure Host, Port, Username, Password and From Address are all set before sending a test email.'
+                    ], 422);
+                }
+            }
+
+            // Attempt to send the email synchronously
             Mail::to($testEmail)->send(new \App\Mail\TestEmail());
+
+            // If the underlying mailer exposes failures, check them as an extra safety net
+            try {
+                $mailerInstance = Mail::getFacadeRoot();
+                if (is_object($mailerInstance) && method_exists($mailerInstance, 'failures')) {
+                    $failures = $mailerInstance->failures();
+                    if (!empty($failures)) {
+                        Log::error('Test email reported transport failures', ['failures' => $failures]);
+                        return response()->json([
+                            'success' => false,
+                            'message' => 'The mailer reported a delivery problem for: ' . implode(', ', $failures) . '. Please verify your email configuration.'
+                        ], 500);
+                    }
+                }
+            } catch (\Throwable $t) {
+                // If the method is not available (newer mailer), ignore and rely on exceptions from send()
+            }
 
             return response()->json([
                 'success' => true,
-                'message' => 'Test email sent successfully to ' . $testEmail . '. Please check your inbox (and spam folder).'
+                'message' => 'Test email was sent successfully to ' . $testEmail . '. Please check that it arrives in the inbox (and spam folder).'
             ]);
         } catch (\Exception $e) {
             Log::error('Test email failed: ' . $e->getMessage());
