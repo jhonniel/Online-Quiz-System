@@ -15,6 +15,47 @@
 
 @section('content')
 <div class="h-full flex flex-col space-y-3">
+    <!-- Success/Error Messages -->
+    @if(session('success'))
+        <div class="bg-green-50 border border-green-200 text-green-800 px-4 py-3 rounded-lg mx-2 sm:mx-3 lg:mx-4 xl:mx-6" role="alert">
+            <div class="flex items-center">
+                <svg class="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+                </svg>
+                <span>{{ session('success') }}</span>
+            </div>
+        </div>
+    @endif
+
+    @if(session('error'))
+        <div class="bg-red-50 border border-red-200 text-red-800 px-4 py-3 rounded-lg mx-2 sm:mx-3 lg:mx-4 xl:mx-6" role="alert">
+            <div class="flex items-center">
+                <svg class="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"/>
+                </svg>
+                <span>{{ session('error') }}</span>
+            </div>
+        </div>
+    @endif
+
+    @if($errors->any())
+        <div class="bg-red-50 border border-red-200 text-red-800 px-4 py-3 rounded-lg mx-2 sm:mx-3 lg:mx-4 xl:mx-6" role="alert">
+            <div class="flex items-start">
+                <svg class="w-5 h-5 mr-2 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"/>
+                </svg>
+                <div>
+                    <strong class="font-medium">Validation errors:</strong>
+                    <ul class="mt-1 list-disc list-inside">
+                        @foreach($errors->all() as $error)
+                            <li>{{ $error }}</li>
+                        @endforeach
+                    </ul>
+                </div>
+            </div>
+        </div>
+    @endif
+
     <!-- Search and Filter Bar -->
     <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-3 flex-shrink-0 mx-2 sm:mx-3 lg:mx-4 xl:mx-6">
         <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
@@ -66,13 +107,52 @@
         </div>
     </div>
 
+    <!-- Bulk Action Bar (Hidden by default) -->
+    <div id="bulk-action-bar" class="hidden bg-indigo-50 border border-indigo-200 rounded-lg shadow-sm p-4 flex-shrink-0 mx-2 sm:mx-3 lg:mx-4 xl:mx-6">
+        <div class="flex items-center justify-between">
+            <div class="flex items-center space-x-4">
+                <span id="selected-count" class="text-sm font-medium text-indigo-900">0 users selected</span>
+                <div class="flex items-center space-x-2">
+                    <label for="bulk-role-select" class="text-sm font-medium text-indigo-900">Assign Role:</label>
+                    <select id="bulk-role-select" class="block px-3 py-2 border border-indigo-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 text-sm">
+                        <option value="">Select a role</option>
+                        <option value="admin">Administrator</option>
+                        <option value="student">Student</option>
+                        <option value="employee">Employee</option>
+                        <option value="applicant">Applicant</option>
+                        <option value="user">User (Legacy)</option>
+                    </select>
+                    <button id="bulk-assign-btn" type="button" disabled
+                            class="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed">
+                        <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                        </svg>
+                        Apply
+                    </button>
+                </div>
+            </div>
+            <button id="clear-selection-btn" type="button"
+                    class="text-sm text-indigo-600 hover:text-indigo-800 font-medium">
+                Clear Selection
+            </button>
+        </div>
+    </div>
+
     <!-- Users Table -->
     <div class="bg-white shadow-sm border-t border-b border-gray-200 overflow-hidden flex-1 flex flex-col">
         @if($users->count() > 0)
+            <form id="bulk-role-form" method="POST" action="{{ route('admin.users.bulk-assign-role') }}">
+                @csrf
+                <input type="hidden" name="role" id="role-input" value="">
+            </form>
             <div class="overflow-x-auto flex-1">
                 <table class="min-w-full divide-y divide-gray-200">
                     <thead class="bg-gray-50 sticky top-0 z-10">
                         <tr>
+                            <th scope="col" class="px-3 sm:px-4 lg:px-6 py-3 text-left">
+                                <input type="checkbox" id="select-all" 
+                                       class="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded">
+                            </th>
                             <th scope="col" class="px-3 sm:px-4 lg:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                 <span class="hidden sm:inline">User ID</span>
                                 <span class="sm:hidden">ID</span>
@@ -103,6 +183,10 @@
                     <tbody class="bg-white divide-y divide-gray-200">
                         @foreach($users as $index => $user)
                             <tr class="hover:bg-gray-50 transition-colors duration-150">
+                                <td class="px-3 sm:px-4 lg:px-6 py-4 whitespace-nowrap">
+                                    <input type="checkbox" name="selected_users[]" value="{{ $user->id }}" 
+                                           class="user-checkbox h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded">
+                                </td>
                                 <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
                                     #{{ str_pad($user->id, 4, '0', STR_PAD_LEFT) }}
                                 </td>
@@ -119,7 +203,9 @@
                                         </div>
                                         <div class="ml-4">
                                             <div class="text-sm font-medium text-gray-900">{{ $user->name }}</div>
-                                            <div class="text-sm text-gray-500">{{ $user->role === 'admin' ? 'Administrator' : 'Student' }}</div>
+                                            <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium {{ $user->getRoleBadgeClass() }}">
+                                                {{ $user->getRoleLabel() }}
+                                            </span>
                                         </div>
                                     </div>
                                 </td>
@@ -321,5 +407,106 @@
 
         return false;
     }
+
+    // Bulk Role Assignment
+    document.addEventListener('DOMContentLoaded', function() {
+        const selectAllCheckbox = document.getElementById('select-all');
+        const userCheckboxes = document.querySelectorAll('.user-checkbox');
+        const bulkActionBar = document.getElementById('bulk-action-bar');
+        const selectedCountSpan = document.getElementById('selected-count');
+        const bulkRoleSelect = document.getElementById('bulk-role-select');
+        const bulkAssignBtn = document.getElementById('bulk-assign-btn');
+        const clearSelectionBtn = document.getElementById('clear-selection-btn');
+        const bulkRoleForm = document.getElementById('bulk-role-form');
+        const roleInput = document.getElementById('role-input');
+
+        // Update selected count and show/hide bulk action bar
+        function updateSelection() {
+            const selectedCheckboxes = document.querySelectorAll('.user-checkbox:checked');
+            const count = selectedCheckboxes.length;
+
+            selectedCountSpan.textContent = count + ' user' + (count !== 1 ? 's' : '') + ' selected';
+
+            if (count > 0) {
+                bulkActionBar.classList.remove('hidden');
+            } else {
+                bulkActionBar.classList.add('hidden');
+            }
+
+            // Update select all checkbox state
+            if (selectAllCheckbox) {
+                selectAllCheckbox.checked = count === userCheckboxes.length && count > 0;
+                selectAllCheckbox.indeterminate = count > 0 && count < userCheckboxes.length;
+            }
+
+            // Enable/disable assign button based on role selection
+            bulkAssignBtn.disabled = !bulkRoleSelect.value || count === 0;
+        }
+
+        // Select all checkbox
+        if (selectAllCheckbox) {
+            selectAllCheckbox.addEventListener('change', function() {
+                userCheckboxes.forEach(checkbox => {
+                    checkbox.checked = this.checked;
+                });
+                updateSelection();
+            });
+        }
+
+        // Individual checkboxes
+        userCheckboxes.forEach(checkbox => {
+            checkbox.addEventListener('change', updateSelection);
+        });
+
+        // Role select change
+        bulkRoleSelect.addEventListener('change', function() {
+            bulkAssignBtn.disabled = !this.value || document.querySelectorAll('.user-checkbox:checked').length === 0;
+        });
+
+        // Clear selection
+        clearSelectionBtn.addEventListener('click', function() {
+            userCheckboxes.forEach(checkbox => {
+                checkbox.checked = false;
+            });
+            if (selectAllCheckbox) {
+                selectAllCheckbox.checked = false;
+                selectAllCheckbox.indeterminate = false;
+            }
+            bulkRoleSelect.value = '';
+            updateSelection();
+        });
+
+        // Bulk assign role
+        bulkAssignBtn.addEventListener('click', function() {
+            const selectedCheckboxes = document.querySelectorAll('.user-checkbox:checked');
+            const selectedUserIds = Array.from(selectedCheckboxes).map(cb => cb.value);
+            const selectedRole = bulkRoleSelect.value;
+
+            if (selectedUserIds.length === 0 || !selectedRole) {
+                alert('Please select at least one user and a role.');
+                return;
+            }
+
+            const roleLabel = bulkRoleSelect.options[bulkRoleSelect.selectedIndex].text;
+            const confirmMessage = `Are you sure you want to assign the role "${roleLabel}" to ${selectedUserIds.length} selected user(s)?`;
+
+            if (confirm(confirmMessage)) {
+                // Remove existing user_ids inputs
+                bulkRoleForm.querySelectorAll('input[name="user_ids[]"]').forEach(input => input.remove());
+                
+                // Add each user ID as a separate input field
+                selectedUserIds.forEach(userId => {
+                    const input = document.createElement('input');
+                    input.type = 'hidden';
+                    input.name = 'user_ids[]';
+                    input.value = userId;
+                    bulkRoleForm.appendChild(input);
+                });
+                
+                roleInput.value = selectedRole;
+                bulkRoleForm.submit();
+            }
+        });
+    });
 </script>
 @endsection

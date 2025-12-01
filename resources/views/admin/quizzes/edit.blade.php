@@ -168,6 +168,9 @@
                                         </button>
                                     </div>
 
+                                    <!-- Hidden field for question ID -->
+                                    <input type="hidden" name="questions[{{ $index }}][id]" value="{{ $question->id }}">
+
                                     <div class="space-y-4">
                                         <div>
                                             <label class="block text-sm font-medium text-gray-700">Question Text</label>
@@ -346,6 +349,9 @@ document.addEventListener('DOMContentLoaded', function() {
                     Remove
                 </button>
             </div>
+
+            <!-- Hidden field for question ID (null for new questions) -->
+            <input type="hidden" name="questions[${questionCount}][id]" value="">
 
             <div class="space-y-4">
                 <div>

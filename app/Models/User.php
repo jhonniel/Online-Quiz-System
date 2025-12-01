@@ -128,15 +128,64 @@ class User extends Authenticatable
         return $this->hasMany(Feedback::class, 'assigned_to');
     }
 
+    public function dtrs()
+    {
+        return $this->hasMany(Dtr::class);
+    }
+
     // Helper methods
     public function isAdmin()
     {
         return $this->role === 'admin';
     }
 
+    public function isStudent()
+    {
+        return $this->role === 'student';
+    }
+
+    public function isEmployee()
+    {
+        return $this->role === 'employee';
+    }
+
+    public function isApplicant()
+    {
+        return $this->role === 'applicant';
+    }
+
+    public function isUser()
+    {
+        return $this->role === 'user';
+    }
+
     public function isActive()
     {
         return $this->is_active;
+    }
+
+    public function getRoleLabel()
+    {
+        return match($this->role) {
+            'admin' => 'Administrator',
+            'student' => 'Student',
+            'employee' => 'Employee',
+            'applicant' => 'Applicant',
+            'user' => 'User',
+            default => ucfirst($this->role),
+        };
+    }
+
+    public function getRoleBadgeClass()
+    {
+        return match($this->role) {
+            'admin' => 'bg-purple-100 text-purple-800',
+            'student' => 'bg-blue-100 text-blue-800',
+            'employee' => 'bg-green-100 text-green-800',
+            'applicant' => 'bg-yellow-100 text-yellow-800',
+            'user' => 'bg-gray-100 text-gray-800',
+            default => 'bg-gray-100 text-gray-800',
+        };
     }
 
     // Status methods
@@ -479,5 +528,11 @@ class User extends Authenticatable
     public function forumShares()
     {
         return $this->hasMany(ForumShare::class);
+    }
+
+    // Leave Requests relationship
+    public function leaveRequests()
+    {
+        return $this->hasMany(LeaveRequest::class);
     }
 }

@@ -13,6 +13,8 @@ use App\Models\QuizAttemptHistory;
 use App\Models\Setting;
 use App\Imports\QuestionsImport;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Str;
 use Maatwebsite\Excel\Facades\Excel;
 use Illuminate\Support\Facades\Storage;
@@ -43,7 +45,7 @@ class QuizController extends Controller
 
             return view('admin.quizzes.create', compact('settings'));
         } catch (\Exception $e) {
-            \Log::error('Error in QuizController create method: ' . $e->getMessage());
+            Log::error('Error in QuizController create method: ' . $e->getMessage());
             throw $e;
         }
     }
@@ -75,7 +77,7 @@ class QuizController extends Controller
             'topic' => $request->topic,
             'is_active' => (bool) $request->is_active,
             'total_questions' => count($request->questions),
-            'created_by' => auth()->id(),
+            'created_by' => Auth::id(),
         ]);
 
         foreach ($request->questions as $index => $questionData) {
@@ -142,26 +144,63 @@ class QuizController extends Controller
 
         // Update questions if provided
         if ($request->has('questions')) {
-            // Delete existing questions
-            $quiz->questions()->delete();
+            $existingQuestions = $quiz->questions()->get()->keyBy('id');
+            $submittedQuestionIds = collect($request->questions)->pluck('id')->filter()->toArray();
 
-            // Create new questions
+            // Update existing questions or create new ones
             foreach ($request->questions as $index => $questionData) {
-                $quiz->questions()->create([
-                    'question_text' => $questionData['question_text'],
-                    'question_type' => $questionData['question_type'],
-                    'points' => $questionData['points'],
-                    'option_a' => $questionData['option_a'] ?? null,
-                    'option_b' => $questionData['option_b'] ?? null,
-                    'option_c' => $questionData['option_c'] ?? null,
-                    'option_d' => $questionData['option_d'] ?? null,
-                    'correct_answer' => $questionData['correct_answer'] ?? null,
-                    'alternative_answer_1' => $questionData['alternative_answer_1'] ?? null,
-                    'alternative_answer_2' => $questionData['alternative_answer_2'] ?? null,
-                    'alternative_answer_3' => $questionData['alternative_answer_3'] ?? null,
-                    'requires_manual_grading' => $questionData['question_type'] === 'fill_blank' || $questionData['question_type'] === 'text' || ($questionData['requires_manual_grading'] ?? false),
-                    'order' => $index + 1,
-                ]);
+                $questionId = $questionData['id'] ?? null;
+
+                if ($questionId && $existingQuestions->has($questionId)) {
+                    // Update existing question
+                    $existingQuestions[$questionId]->update([
+                        'question_text' => $questionData['question_text'],
+                        'question_type' => $questionData['question_type'],
+                        'points' => $questionData['points'],
+                        'option_a' => $questionData['option_a'] ?? null,
+                        'option_b' => $questionData['option_b'] ?? null,
+                        'option_c' => $questionData['option_c'] ?? null,
+                        'option_d' => $questionData['option_d'] ?? null,
+                        'correct_answer' => $questionData['correct_answer'] ?? null,
+                        'alternative_answer_1' => $questionData['alternative_answer_1'] ?? null,
+                        'alternative_answer_2' => $questionData['alternative_answer_2'] ?? null,
+                        'alternative_answer_3' => $questionData['alternative_answer_3'] ?? null,
+                        'requires_manual_grading' => $questionData['question_type'] === 'fill_blank' || $questionData['question_type'] === 'text' || ($questionData['requires_manual_grading'] ?? false),
+                        'order' => $index + 1,
+                    ]);
+                } else {
+                    // Create new question
+                    $quiz->questions()->create([
+                        'question_text' => $questionData['question_text'],
+                        'question_type' => $questionData['question_type'],
+                        'points' => $questionData['points'],
+                        'option_a' => $questionData['option_a'] ?? null,
+                        'option_b' => $questionData['option_b'] ?? null,
+                        'option_c' => $questionData['option_c'] ?? null,
+                        'option_d' => $questionData['option_d'] ?? null,
+                        'correct_answer' => $questionData['correct_answer'] ?? null,
+                        'alternative_answer_1' => $questionData['alternative_answer_1'] ?? null,
+                        'alternative_answer_2' => $questionData['alternative_answer_2'] ?? null,
+                        'alternative_answer_3' => $questionData['alternative_answer_3'] ?? null,
+                        'requires_manual_grading' => $questionData['question_type'] === 'fill_blank' || $questionData['question_type'] === 'text' || ($questionData['requires_manual_grading'] ?? false),
+                        'order' => $index + 1,
+                    ]);
+                }
+            }
+
+            // Remove questions that are no longer in the submitted data
+            $questionsToDelete = $existingQuestions->keys()->diff($submittedQuestionIds);
+            if ($questionsToDelete->isNotEmpty()) {
+                // Only delete questions that don't have any quiz attempts
+                $questionsWithAttempts = \App\Models\QuizAttempt::whereIn('question_id', $questionsToDelete)->exists();
+
+                if (!$questionsWithAttempts) {
+                    $quiz->questions()->whereIn('id', $questionsToDelete)->delete();
+                } else {
+                    // If questions have attempts, just mark them as inactive or handle differently
+                    // For now, we'll keep them to preserve the data integrity
+                    Log::warning("Cannot delete questions with existing quiz attempts. Question IDs: " . $questionsToDelete->implode(', '));
+                }
             }
 
             // Update total questions count
@@ -364,7 +403,7 @@ class QuizController extends Controller
                 'quiz_code' => $this->generateQuizCode(),
                 'time_limit' => $request->time_limit,
                 'total_questions' => 0, // Will be updated after import
-                'created_by' => auth()->id(),
+                'created_by' => Auth::id(),
             ]);
 
             // Import questions from Excel
@@ -649,10 +688,23 @@ class QuizController extends Controller
         return view('admin.quizzes.manual-grading', compact('attempts'));
     }
 
+    public function allTextAttempts()
+    {
+        // Get all text attempts (both graded and ungraded) for admin review
+        $attempts = QuizAttempt::whereHas('question', function($query) {
+            $query->where('question_type', 'text');
+        })
+        ->with(['question', 'user', 'quiz'])
+        ->orderBy('created_at', 'desc')
+        ->paginate(20);
+
+        return view('admin.quizzes.all-text-attempts', compact('attempts'));
+    }
+
     public function gradeAttempt(Request $request, QuizAttempt $attempt)
     {
         // Debug: Log incoming request data
-        \Log::info('Manual grading request:', [
+        Log::info('Manual grading request:', [
             'attempt_id' => $attempt->id,
             'is_correct' => $request->is_correct,
             'points_earned' => $request->points_earned,
@@ -672,14 +724,14 @@ class QuizController extends Controller
             'is_correct' => (bool) $request->is_correct,
             'points_earned' => $request->points_earned,
             'graded_at' => now(),
-            'graded_by' => auth()->id(),
+            'graded_by' => Auth::id(),
             'feedback' => $request->feedback,
         ]);
 
         // Update the user's total score in quiz attempt history
         try {
             $this->updateUserScore($attempt);
-            \Log::info('Manual grading completed successfully for attempt:', ['attempt_id' => $attempt->id]);
+            Log::info('Manual grading completed successfully for attempt:', ['attempt_id' => $attempt->id]);
 
             // If there are no more ungraded manual attempts for this user+quiz, mark the latest attempt history as completed
             $hasPendingManual = QuizAttempt::where('quiz_id', $attempt->quiz_id)
@@ -700,7 +752,7 @@ class QuizController extends Controller
                 }
             }
         } catch (\Exception $e) {
-            \Log::error('Error updating user score:', [
+            Log::error('Error updating user score:', [
                 'attempt_id' => $attempt->id,
                 'error' => $e->getMessage()
             ]);

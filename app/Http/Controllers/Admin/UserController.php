@@ -13,8 +13,7 @@ class UserController extends Controller
 {
     public function index()
     {
-        $users = User::where('role', 'user')
-            ->with('university')
+        $users = User::with('university')
             ->orderBy('is_approved', 'asc') // Show pending users first
             ->orderBy('created_at', 'desc')
             ->paginate(10);
@@ -23,10 +22,10 @@ class UserController extends Controller
 
     public function api(Request $request)
     {
-        $users = User::where('role', 'user')
-            ->where('is_active', true)
+        $users = User::where('is_active', true)
+            ->where('role', '!=', 'admin') // Exclude admins from assignment
             ->with('university')
-            ->select('id', 'name', 'email', 'university_id')
+            ->select('id', 'name', 'email', 'university_id', 'role')
             ->get();
 
         // If quiz_id is provided, include assignment information
@@ -58,6 +57,7 @@ class UserController extends Controller
             'name' => 'required|string|max:255',
             'email' => 'required|string|email|max:255|unique:users',
             'password' => 'required|string|min:8|confirmed',
+            'role' => 'required|string|in:admin,user,student,employee,applicant',
             'university_id' => 'nullable',
             'new_university_name' => 'nullable|string|max:255',
             'is_active' => 'boolean',
@@ -87,7 +87,7 @@ class UserController extends Controller
             'name' => $request->name,
             'email' => $request->email,
             'password' => Hash::make($request->password),
-            'role' => 'user',
+            'role' => $request->role,
             'university_id' => $universityId,
             'is_active' => $request->has('is_active'),
         ]);
@@ -113,6 +113,7 @@ class UserController extends Controller
             'name' => 'required|string|max:255',
             'email' => ['required', 'string', 'email', 'max:255', Rule::unique('users')->ignore($user->id)],
             'password' => 'nullable|string|min:8|confirmed',
+            'role' => 'required|string|in:admin,user,student,employee,applicant',
             'university_id' => 'nullable',
             'new_university_name' => 'nullable|string|max:255',
             'is_active' => 'boolean',
@@ -141,6 +142,7 @@ class UserController extends Controller
         $data = [
             'name' => $request->name,
             'email' => $request->email,
+            'role' => $request->role,
             'university_id' => $universityId,
             'is_active' => $request->has('is_active'),
         ];
@@ -191,5 +193,62 @@ class UserController extends Controller
 
         return redirect()->back()
             ->with('success', 'User disapproved successfully.');
+    }
+
+    public function bulkAssignRole(Request $request)
+    {
+        $request->validate([
+            'user_ids' => 'required|array',
+            'user_ids.*' => 'exists:users,id',
+            'role' => 'required|string|in:admin,user,student,employee,applicant',
+        ], [
+            'user_ids.required' => 'Please select at least one user.',
+            'user_ids.array' => 'Invalid user selection format.',
+            'user_ids.*.exists' => 'One or more selected users do not exist.',
+            'role.required' => 'Please select a role to assign.',
+            'role.in' => 'Invalid role selected.',
+        ]);
+
+        $userIds = $request->user_ids;
+        $role = $request->role;
+
+        // Prevent changing admin roles to non-admin (safety check)
+        $adminUsers = User::whereIn('id', $userIds)->where('role', 'admin')->get();
+        if ($adminUsers->count() > 0 && $role !== 'admin') {
+            $adminNames = $adminUsers->pluck('name')->join(', ');
+            return redirect()->back()
+                ->with('error', "Cannot change role of administrator user(s): {$adminNames}. Please deselect admin users or keep them as administrators.");
+        }
+
+        // Prevent changing current user's role if they're an admin
+        if (auth()->check() && in_array(auth()->id(), $userIds) && auth()->user()->isAdmin() && $role !== 'admin') {
+            return redirect()->back()
+                ->with('error', 'You cannot change your own role from administrator.');
+        }
+
+        // Update users (excluding current admin if trying to change their own role)
+        $query = User::whereIn('id', $userIds);
+        if (auth()->check() && auth()->user()->isAdmin() && $role !== 'admin') {
+            $query = $query->where('id', '!=', auth()->id());
+        }
+        
+        $updated = $query->update(['role' => $role]);
+
+        if ($updated > 0) {
+            $roleLabel = match($role) {
+                'admin' => 'Administrator',
+                'student' => 'Student',
+                'employee' => 'Employee',
+                'applicant' => 'Applicant',
+                'user' => 'User',
+                default => ucfirst($role),
+            };
+            
+            return redirect()->back()
+                ->with('success', "Successfully assigned role '{$roleLabel}' to {$updated} user(s).");
+        } else {
+            return redirect()->back()
+                ->with('error', 'No users were updated. Please check your selection.');
+        }
     }
 }

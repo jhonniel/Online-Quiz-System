@@ -34,6 +34,12 @@
                 <div class="text-sm text-gray-500">
                     <span class="font-medium">{{ $attempts->total() }}</span> attempts pending review
                 </div>
+                <a href="{{ route('admin.all-text-attempts') }}" class="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                    <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                    </svg>
+                    View All Text Attempts
+                </a>
             </div>
         </div>
     </div>
@@ -88,11 +94,44 @@
                         <div class="mb-6">
                             <h4 class="text-sm font-medium text-gray-700 mb-2">Correct Answer(s):</h4>
                             @if(in_array($attempt->question->question_type, ['text', 'fill_blank']))
-                                <div class="bg-yellow-50 border border-yellow-200 rounded-md p-3">
-                                    <p class="text-sm text-yellow-800">
-                                        <strong>{{ ucfirst(str_replace('_', ' ', $attempt->question->question_type)) }} Question:</strong> This question requires manual evaluation.
-                                        Review the student's answer and grade based on content, accuracy, and completeness.
-                                    </p>
+                                <div class="space-y-3">
+                                    <!-- Show correct answers if they exist -->
+                                    @if($attempt->question->correct_answer || $attempt->question->alternative_answer_1 || $attempt->question->alternative_answer_2 || $attempt->question->alternative_answer_3)
+                                        <div class="space-y-2">
+                                            @if($attempt->question->correct_answer)
+                                                <div class="flex items-center space-x-2">
+                                                    <span class="text-sm font-medium text-green-600">Main Answer:</span>
+                                                    <span class="text-gray-900 bg-green-50 p-2 rounded border border-green-200">{{ $attempt->question->correct_answer }}</span>
+                                                </div>
+                                            @endif
+                                            @if($attempt->question->alternative_answer_1)
+                                                <div class="flex items-center space-x-2">
+                                                    <span class="text-sm font-medium text-green-600">Alternative 1:</span>
+                                                    <span class="text-gray-900 bg-green-50 p-2 rounded border border-green-200">{{ $attempt->question->alternative_answer_1 }}</span>
+                                                </div>
+                                            @endif
+                                            @if($attempt->question->alternative_answer_2)
+                                                <div class="flex items-center space-x-2">
+                                                    <span class="text-sm font-medium text-green-600">Alternative 2:</span>
+                                                    <span class="text-gray-900 bg-green-50 p-2 rounded border border-green-200">{{ $attempt->question->alternative_answer_2 }}</span>
+                                                </div>
+                                            @endif
+                                            @if($attempt->question->alternative_answer_3)
+                                                <div class="flex items-center space-x-2">
+                                                    <span class="text-sm font-medium text-green-600">Alternative 3:</span>
+                                                    <span class="text-gray-900 bg-green-50 p-2 rounded border border-green-200">{{ $attempt->question->alternative_answer_3 }}</span>
+                                                </div>
+                                            @endif
+                                        </div>
+                                    @else
+                                        <!-- Show generic message if no correct answers are set -->
+                                        <div class="bg-yellow-50 border border-yellow-200 rounded-md p-3">
+                                            <p class="text-sm text-yellow-800">
+                                                <strong>{{ ucfirst(str_replace('_', ' ', $attempt->question->question_type)) }} Question:</strong> This question requires manual evaluation.
+                                                Review the student's answer and grade based on content, accuracy, and completeness.
+                                            </p>
+                                        </div>
+                                    @endif
                                 </div>
                             @else
                                 <div class="space-y-2">

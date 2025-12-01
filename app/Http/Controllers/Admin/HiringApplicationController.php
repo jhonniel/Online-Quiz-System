@@ -1,0 +1,163 @@
+<?php
+
+namespace App\Http\Controllers\Admin;
+
+use App\Http\Controllers\Controller;
+use App\Models\HiringApplication;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Auth;
+
+class HiringApplicationController extends Controller
+{
+    public function index(Request $request)
+    {
+        $query = HiringApplication::with(['reviewer', 'user', 'hiringPosition']);
+        
+        // Filter by position if provided
+        if ($request->has('position') && $request->position) {
+            $query->where('hiring_position_id', $request->position);
+        }
+        
+        $applications = $query->orderBy('created_at', 'desc')->paginate(20);
+
+        $positionFilter = $request->position;
+        $positions = \App\Models\HiringPosition::orderBy('title')->get();
+        
+        $baseQuery = HiringApplication::query();
+        if ($positionFilter) {
+            $baseQuery->where('hiring_position_id', $positionFilter);
+        }
+        
+        $stats = [
+            'total' => $baseQuery->count(),
+            'pending' => (clone $baseQuery)->where('status', 'pending')->count(),
+            'accepted' => (clone $baseQuery)->where('status', 'accepted')->count(),
+            'rejected' => (clone $baseQuery)->where('status', 'rejected')->count(),
+            'interview_scheduled' => (clone $baseQuery)->where('status', 'interview_scheduled')->count(),
+        ];
+
+        return view('admin.hiring-applications.index', compact('applications', 'stats', 'positions', 'positionFilter'));
+    }
+
+    public function show(HiringApplication $application)
+    {
+        $application->load(['reviewer', 'user']);
+        return view('admin.hiring-applications.show', compact('application'));
+    }
+
+    public function accept(Request $request, HiringApplication $application)
+    {
+        $request->validate([
+            'admin_notes' => 'nullable|string|max:1000',
+        ]);
+
+        $application->update([
+            'status' => 'accepted',
+            'admin_notes' => $request->admin_notes,
+            'reviewed_by' => Auth::id(),
+            'reviewed_at' => now(),
+        ]);
+
+        // Generate acceptance token
+        $token = $application->generateAcceptanceToken();
+
+        // Send email notification to applicant if enabled
+        $emailNotificationsEnabled = \App\Models\Setting::get('hiring_email_notifications', 'enabled');
+        if ($emailNotificationsEnabled === 'enabled') {
+            try {
+                \Illuminate\Support\Facades\Mail::to($application->email)
+                    ->send(new \App\Mail\HiringApplicationStatusUpdate(
+                        $application,
+                        'accepted',
+                        $request->admin_notes,
+                        $application->hiringPosition
+                    ));
+            } catch (\Exception $e) {
+                \Illuminate\Support\Facades\Log::error('Failed to send acceptance email', [
+                    'error' => $e->getMessage(),
+                    'application_id' => $application->id
+                ]);
+            }
+        }
+
+        return redirect()->route('admin.hiring-applications.show', $application)
+            ->with('success', 'Application accepted. Acceptance link generated.');
+    }
+
+    public function reject(Request $request, HiringApplication $application)
+    {
+        $request->validate([
+            'admin_notes' => 'nullable|string|max:1000',
+        ]);
+
+        $application->update([
+            'status' => 'rejected',
+            'admin_notes' => $request->admin_notes,
+            'reviewed_by' => Auth::id(),
+            'reviewed_at' => now(),
+        ]);
+
+        // Send email notification to applicant if enabled
+        $emailNotificationsEnabled = \App\Models\Setting::get('hiring_email_notifications', 'enabled');
+        if ($emailNotificationsEnabled === 'enabled') {
+            try {
+                \Illuminate\Support\Facades\Mail::to($application->email)
+                    ->send(new \App\Mail\HiringApplicationStatusUpdate(
+                        $application,
+                        'rejected',
+                        $request->admin_notes,
+                        $application->hiringPosition
+                    ));
+            } catch (\Exception $e) {
+                \Illuminate\Support\Facades\Log::error('Failed to send rejection email', [
+                    'error' => $e->getMessage(),
+                    'application_id' => $application->id
+                ]);
+            }
+        }
+
+        return redirect()->route('admin.hiring-applications.show', $application)
+            ->with('success', 'Application rejected.');
+    }
+
+    public function scheduleInterview(Request $request, HiringApplication $application)
+    {
+        $request->validate([
+            'admin_notes' => 'nullable|string|max:1000',
+        ]);
+
+        $application->update([
+            'status' => 'interview_scheduled',
+            'admin_notes' => $request->admin_notes,
+            'reviewed_by' => Auth::id(),
+            'reviewed_at' => now(),
+        ]);
+
+        return redirect()->route('admin.hiring-applications.show', $application)
+            ->with('success', 'Interview scheduled.');
+    }
+
+    public function downloadResume(HiringApplication $application)
+    {
+        if (!$application->resume_path || !Storage::disk('public')->exists($application->resume_path)) {
+            abort(404, 'Resume not found.');
+        }
+
+        return Storage::disk('public')->download($application->resume_path, 
+            $application->full_name . '_resume.' . pathinfo($application->resume_path, PATHINFO_EXTENSION));
+    }
+
+    public function destroy(HiringApplication $application)
+    {
+        // Delete resume file if exists
+        if ($application->resume_path && Storage::disk('public')->exists($application->resume_path)) {
+            Storage::disk('public')->delete($application->resume_path);
+        }
+
+        $application->delete();
+
+        return redirect()->route('admin.hiring-applications.index')
+            ->with('success', 'Application deleted successfully.');
+    }
+}

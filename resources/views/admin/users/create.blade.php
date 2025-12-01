@@ -80,6 +80,38 @@
                         help="This will be used for login and notifications"
                         icon='<svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 4.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path></svg>'
                     />
+
+                    <!-- Role -->
+                    <div class="space-y-2">
+                        <label class="block text-sm font-medium text-gray-700">
+                            User Role <span class="text-red-500">*</span>
+                        </label>
+                        <div class="relative">
+                            <select name="role" id="role" required
+                                    class="block w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors duration-200 appearance-none bg-white">
+                                <option value="">Select a role</option>
+                                <option value="admin" {{ old('role') == 'admin' ? 'selected' : '' }}>Administrator</option>
+                                <option value="student" {{ old('role') == 'student' ? 'selected' : '' }}>Student</option>
+                                <option value="employee" {{ old('role') == 'employee' ? 'selected' : '' }}>Employee</option>
+                                <option value="applicant" {{ old('role') == 'applicant' ? 'selected' : '' }}>Applicant</option>
+                                <option value="user" {{ old('role') == 'user' ? 'selected' : '' }}>User (Legacy)</option>
+                            </select>
+                            <div class="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                                <svg class="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                                </svg>
+                            </div>
+                        </div>
+                        <p class="text-sm text-gray-500">Select the role that best describes this user's function</p>
+                        @if($errors && $errors->has('role'))
+                            <p class="text-sm text-red-600 flex items-center">
+                                <svg class="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd"></path>
+                                </svg>
+                                {{ $errors->first('role') }}
+                            </p>
+                        @endif
+                    </div>
                 </div>
 
                 <!-- Password -->

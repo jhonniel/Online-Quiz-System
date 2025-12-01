@@ -25,6 +25,11 @@ Route::get('/about', [LandingController::class, 'about'])->name('landing.about')
 Route::get('/contact', [LandingController::class, 'contact'])->name('landing.contact');
 Route::post('/contact', [LandingController::class, 'storeContact'])->name('landing.contact.store');
 
+// Public Hiring Application Routes (dynamic URL based on admin settings)
+// The route will be registered dynamically in the controller based on settings
+Route::get('/hiring/accept/{token}', [App\Http\Controllers\HiringApplicationController::class, 'acceptWithToken'])->name('hiring.accept');
+Route::get('/hiring/application/success', [App\Http\Controllers\HiringApplicationController::class, 'success'])->name('hiring.application.success');
+
 // Role-based Login Routes
 Route::get('/login', [RoleLoginController::class, 'showLoginForm'])->name('login');
 Route::post('/login', [RoleLoginController::class, 'login']);
@@ -47,6 +52,7 @@ Route::prefix('admin')->middleware(['auth', 'admin'])->group(function () {
     Route::patch('users/{user}/toggle-status', [AdminUserController::class, 'toggleStatus'])->name('admin.users.toggle-status');
     Route::patch('users/{user}/approve', [AdminUserController::class, 'approve'])->name('admin.users.approve');
     Route::patch('users/{user}/disapprove', [AdminUserController::class, 'disapprove'])->name('admin.users.disapprove');
+    Route::post('users/bulk-assign-role', [AdminUserController::class, 'bulkAssignRole'])->name('admin.users.bulk-assign-role');
 
     // University Management
     Route::resource('universities', UniversityController::class);
@@ -71,6 +77,7 @@ Route::prefix('admin')->middleware(['auth', 'admin'])->group(function () {
 
     // Manual Grading
     Route::get('manual-grading', [AdminQuizController::class, 'manualGrading'])->name('admin.manual-grading');
+    Route::get('all-text-attempts', [AdminQuizController::class, 'allTextAttempts'])->name('admin.all-text-attempts');
     Route::post('quiz-attempts/{attempt}/grade', [AdminQuizController::class, 'gradeAttempt'])->name('admin.quiz-attempts.grade');
 
     // Quiz Import Routes
@@ -81,6 +88,39 @@ Route::prefix('admin')->middleware(['auth', 'admin'])->group(function () {
     // Settings Management
     Route::get('/settings', [AdminSettingsController::class, 'index'])->name('admin.settings.index');
     Route::post('/settings', [AdminSettingsController::class, 'update'])->name('admin.settings.update');
+    Route::get('/settings/health', [AdminSettingsController::class, 'getHealth'])->name('admin.settings.health');
+    Route::post('/settings/test-email', [AdminSettingsController::class, 'testEmail'])->name('admin.settings.test-email');
+
+    // DTR Management
+    Route::get('/dtr', [App\Http\Controllers\Admin\DtrController::class, 'index'])->name('admin.dtr.index');
+    Route::get('/dtr/create', [App\Http\Controllers\Admin\DtrController::class, 'create'])->name('admin.dtr.create');
+    Route::post('/dtr', [App\Http\Controllers\Admin\DtrController::class, 'store'])->name('admin.dtr.store');
+    Route::post('/dtr/import', [App\Http\Controllers\Admin\DtrController::class, 'import'])->name('admin.dtr.import');
+    Route::get('/dtr/template', [App\Http\Controllers\Admin\DtrController::class, 'downloadTemplate'])->name('admin.dtr.template');
+
+    // Leave Requests Management
+    Route::get('/leave-requests', [App\Http\Controllers\Admin\LeaveRequestController::class, 'index'])->name('admin.leave-requests.index');
+    Route::get('/leave-requests/{leaveRequest}', [App\Http\Controllers\Admin\LeaveRequestController::class, 'show'])->name('admin.leave-requests.show');
+    Route::post('/leave-requests/{leaveRequest}/approve', [App\Http\Controllers\Admin\LeaveRequestController::class, 'approve'])->name('admin.leave-requests.approve');
+    Route::post('/leave-requests/{leaveRequest}/reject', [App\Http\Controllers\Admin\LeaveRequestController::class, 'reject'])->name('admin.leave-requests.reject');
+    Route::post('/leave-requests/{leaveRequest}/resubmit', [App\Http\Controllers\Admin\LeaveRequestController::class, 'resubmit'])->name('admin.leave-requests.resubmit');
+
+    // Hiring Process Management
+    Route::get('/hiring-process', [App\Http\Controllers\Admin\HiringProcessController::class, 'index'])->name('admin.hiring-process.index');
+    Route::get('/hiring-process/applicants', [App\Http\Controllers\Admin\HiringProcessController::class, 'applicants'])->name('admin.hiring-process.applicants');
+
+    // Hiring Positions Management
+    Route::resource('hiring-positions', App\Http\Controllers\Admin\HiringPositionController::class)->names('admin.hiring-positions');
+    Route::patch('hiring-positions/{hiringPosition}/toggle-status', [App\Http\Controllers\Admin\HiringPositionController::class, 'toggleStatus'])->name('admin.hiring-positions.toggle-status');
+
+    // Hiring Applications Management
+    Route::get('/hiring-applications', [App\Http\Controllers\Admin\HiringApplicationController::class, 'index'])->name('admin.hiring-applications.index');
+    Route::get('/hiring-applications/{application}', [App\Http\Controllers\Admin\HiringApplicationController::class, 'show'])->name('admin.hiring-applications.show');
+    Route::post('/hiring-applications/{application}/accept', [App\Http\Controllers\Admin\HiringApplicationController::class, 'accept'])->name('admin.hiring-applications.accept');
+    Route::post('/hiring-applications/{application}/reject', [App\Http\Controllers\Admin\HiringApplicationController::class, 'reject'])->name('admin.hiring-applications.reject');
+    Route::post('/hiring-applications/{application}/schedule-interview', [App\Http\Controllers\Admin\HiringApplicationController::class, 'scheduleInterview'])->name('admin.hiring-applications.schedule-interview');
+    Route::get('/hiring-applications/{application}/download-resume', [App\Http\Controllers\Admin\HiringApplicationController::class, 'downloadResume'])->name('admin.hiring-applications.download-resume');
+    Route::delete('/hiring-applications/{application}', [App\Http\Controllers\Admin\HiringApplicationController::class, 'destroy'])->name('admin.hiring-applications.destroy');
 
     // Forum Management
     Route::resource('forum', App\Http\Controllers\Admin\ForumController::class)->names('admin.forum');
@@ -169,6 +209,9 @@ Route::middleware(['auth'])->group(function () {
     Route::post('/chat/tickets/{ticketNumber}/typing/start', [ChatController::class, 'startTyping'])->name('chat.typing.start');
     Route::post('/chat/tickets/{ticketNumber}/typing/stop', [ChatController::class, 'stopTyping'])->name('chat.typing.stop');
     Route::get('/chat/tickets/{ticketNumber}/typing', [ChatController::class, 'getTypingIndicators'])->name('chat.typing');
+
+    // Leave Requests (Employee Only)
+    Route::resource('leave-requests', App\Http\Controllers\User\LeaveRequestController::class)->names('user.leave-requests');
 
     // Friendship Routes
     Route::get('/friends', [App\Http\Controllers\FriendshipController::class, 'index'])->name('friends.index');

@@ -1,0 +1,41 @@
+<x-mail::message>
+# Application Status Update
+
+Hello {{ $application->first_name }},
+
+@if($status === 'accepted')
+# 🎉 Congratulations!
+
+Your application for the **{{ $position->title ?? $application->position_applied }}** position has been **accepted**!
+
+@if($application->acceptance_token)
+You can now proceed to create your account and continue with the interview process.
+
+<x-mail::button :url="route('hiring.accept', $application->acceptance_token)">
+Create Account & Continue
+</x-mail::button>
+@endif
+
+@elseif($status === 'rejected')
+# Application Update
+
+We regret to inform you that your application for the **{{ $position->title ?? $application->position_applied }}** position has been **rejected** at this time.
+
+@else
+# Application Status: {{ ucfirst($status) }}
+
+Your application for the **{{ $position->title ?? $application->position_applied }}** position status has been updated to **{{ ucfirst($status) }}**.
+
+@endif
+
+@if($message)
+## Additional Information
+
+{{ $message }}
+@endif
+
+Thank you for your interest in joining our team.
+
+Best regards,<br>
+{{ config('app.name') }} Team
+</x-mail::message>

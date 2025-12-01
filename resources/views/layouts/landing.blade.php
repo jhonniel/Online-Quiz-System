@@ -97,6 +97,9 @@
                         <a href="{{ route('landing.features') }}" class="text-gray-700 hover:text-primary transition-colors">Features</a>
                         <a href="{{ route('landing.about') }}" class="text-gray-700 hover:text-primary transition-colors">About</a>
                         <a href="{{ route('landing.contact') }}" class="text-gray-700 hover:text-primary transition-colors">Contact</a>
+                        @if(($settings['hiring_application_public_access'] ?? 'disabled') === 'enabled')
+                            <a href="{{ url('/' . ltrim($settings['hiring_application_url'] ?? 'hiring/apply', '/')) }}" class="text-gray-700 hover:text-primary transition-colors font-medium">Careers</a>
+                        @endif
 
                         @auth
                             <div class="flex items-center space-x-4">
@@ -133,6 +136,9 @@
                     <a href="{{ route('landing.features') }}" class="block px-3 py-2 text-gray-700 hover:text-primary">Features</a>
                     <a href="{{ route('landing.about') }}" class="block px-3 py-2 text-gray-700 hover:text-primary">About</a>
                     <a href="{{ route('landing.contact') }}" class="block px-3 py-2 text-gray-700 hover:text-primary">Contact</a>
+                    @if(($settings['hiring_application_public_access'] ?? 'disabled') === 'enabled')
+                        <a href="{{ url('/' . ltrim($settings['hiring_application_url'] ?? 'hiring/apply', '/')) }}" class="block px-3 py-2 text-gray-700 hover:text-primary font-medium">Careers</a>
+                    @endif
 
                     @auth
                         <div class="border-t pt-2">
@@ -220,5 +226,7 @@
 
         <!-- Seasonal Effects -->
         @include('components.seasonal-effects')
+
+        @yield('scripts')
     </body>
 </html>

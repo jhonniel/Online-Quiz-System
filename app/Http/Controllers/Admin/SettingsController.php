@@ -6,13 +6,158 @@ use App\Http\Controllers\Controller;
 use App\Models\Setting;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
 
 class SettingsController extends Controller
 {
     public function index()
     {
-        $settings = Setting::all()->keyBy('key');
-        return view('admin.settings.index', compact('settings'));
+        $settingsCollection = Setting::all()->keyBy('key');
+        $settings = [];
+        foreach ($settingsCollection as $key => $setting) {
+            $settings[$key] = $setting->value;
+        }
+
+        // Get system health information
+        $health = $this->getSystemHealth();
+
+        return view('admin.settings.index', compact('settings', 'health'));
+    }
+
+    /**
+     * Get system health information
+     */
+    private function getSystemHealth()
+    {
+        $health = [
+            'status' => 'healthy',
+            'checks' => [],
+            'server' => [],
+            'database' => [],
+            'application' => [],
+        ];
+
+        try {
+            // Database Connection Check
+            \DB::connection()->getPdo();
+            $health['database']['status'] = 'connected';
+            $health['database']['driver'] = \DB::connection()->getDriverName();
+            $health['database']['version'] = \DB::select('SELECT version() as version')[0]->version ?? 'Unknown';
+            $health['checks']['database'] = true;
+        } catch (\Exception $e) {
+            $health['database']['status'] = 'disconnected';
+            $health['database']['error'] = $e->getMessage();
+            $health['checks']['database'] = false;
+            $health['status'] = 'unhealthy';
+        }
+
+        // PHP Information
+        $health['server']['php_version'] = PHP_VERSION;
+        $health['server']['php_memory_limit'] = ini_get('memory_limit');
+        $health['server']['php_max_execution_time'] = ini_get('max_execution_time');
+        $health['server']['php_upload_max_filesize'] = ini_get('upload_max_filesize');
+        $health['server']['php_post_max_size'] = ini_get('post_max_size');
+
+        // Laravel Information
+        $health['application']['laravel_version'] = app()->version();
+        $health['application']['app_name'] = config('app.name');
+        $health['application']['app_env'] = config('app.env');
+        $health['application']['app_debug'] = config('app.debug') ? 'Enabled' : 'Disabled';
+        $health['application']['timezone'] = config('app.timezone');
+
+        // Cache Status
+        try {
+            \Cache::put('health_check', 'ok', 1);
+            $health['checks']['cache'] = \Cache::get('health_check') === 'ok';
+            $health['application']['cache_driver'] = config('cache.default');
+        } catch (\Exception $e) {
+            $health['checks']['cache'] = false;
+            $health['status'] = 'unhealthy';
+        }
+
+        // Storage Status
+        try {
+            $disk = \Storage::disk('public');
+            $health['checks']['storage'] = $disk->exists('.') || $disk->put('health_check.txt', 'ok');
+            if ($health['checks']['storage']) {
+                $disk->delete('health_check.txt');
+            }
+        } catch (\Exception $e) {
+            $health['checks']['storage'] = false;
+            $health['status'] = 'unhealthy';
+        }
+
+        // Queue Status (if queue driver is not sync)
+        if (config('queue.default') !== 'sync') {
+            try {
+                $health['checks']['queue'] = true;
+                $health['application']['queue_driver'] = config('queue.default');
+            } catch (\Exception $e) {
+                $health['checks']['queue'] = false;
+            }
+        } else {
+            $health['checks']['queue'] = true;
+            $health['application']['queue_driver'] = 'sync';
+        }
+
+        // Memory Usage
+        $health['server']['memory_usage'] = $this->formatBytes(memory_get_usage(true));
+        $health['server']['memory_peak'] = $this->formatBytes(memory_get_peak_usage(true));
+
+        // Disk Space (if available)
+        if (function_exists('disk_free_space') && function_exists('disk_total_space')) {
+            $free = disk_free_space(base_path());
+            $total = disk_total_space(base_path());
+            if ($free !== false && $total !== false) {
+                $health['server']['disk_free'] = $this->formatBytes($free);
+                $health['server']['disk_total'] = $this->formatBytes($total);
+                $health['server']['disk_used_percent'] = round((($total - $free) / $total) * 100, 2);
+            }
+        }
+
+        // Count Statistics
+        try {
+            $health['statistics'] = [
+                'total_users' => \App\Models\User::count(),
+                'active_users' => \App\Models\User::where('is_active', true)->count(),
+                'total_quizzes' => \App\Models\Quiz::count(),
+                'active_quizzes' => \App\Models\Quiz::where('is_active', true)->count(),
+                'total_attempts' => \App\Models\QuizAttempt::count(),
+                'today_attempts' => \App\Models\QuizAttempt::whereDate('created_at', today())->count(),
+                'pending_applications' => \App\Models\HiringApplication::where('status', 'pending')->count(),
+            ];
+        } catch (\Exception $e) {
+            $health['statistics'] = [];
+        }
+
+        // Overall Status
+        if (in_array(false, $health['checks'])) {
+            $health['status'] = 'unhealthy';
+        } elseif (in_array(null, $health['checks'])) {
+            $health['status'] = 'warning';
+        } else {
+            $health['status'] = 'healthy';
+        }
+
+        return $health;
+    }
+
+    /**
+     * Format bytes to human readable format
+     */
+    private function formatBytes($bytes, $precision = 2)
+    {
+        $units = ['B', 'KB', 'MB', 'GB', 'TB'];
+        
+        for ($i = 0; $bytes > 1024 && $i < count($units) - 1; $i++) {
+            $bytes /= 1024;
+        }
+        
+        return round($bytes, $precision) . ' ' . $units[$i];
     }
 
     public function update(Request $request)
@@ -29,6 +174,24 @@ class SettingsController extends Controller
             'seasonal_effects' => 'nullable|string|in:halloween,christmas,disabled',
             'maintenance_mode' => 'nullable|string|in:enabled,disabled',
             'maintenance_message' => 'nullable|string|max:1000',
+            'hiring_process_enabled' => 'nullable|string|in:enabled,disabled',
+            'hiring_process_description' => 'nullable|string|max:1000',
+            'minimum_quiz_score' => 'nullable|integer|min:0|max:100',
+            'auto_approve_score' => 'nullable|integer|min:0|max:100',
+            'hiring_stages' => 'nullable|string|max:2000',
+            'hiring_email_notifications' => 'nullable|string|in:enabled,disabled',
+            'hiring_instructions' => 'nullable|string|max:2000',
+            'hiring_application_public_access' => 'nullable|string|in:enabled,disabled',
+            'hiring_application_url' => 'nullable|string|max:255|regex:/^[a-z0-9\-\/_]+$/i',
+            // Email Configuration
+            'mail_mailer' => 'nullable|string|in:smtp,sendmail,mailgun,ses,postmark,resend,log,array',
+            'mail_host' => 'nullable|string|max:255',
+            'mail_port' => 'nullable|integer|min:1|max:65535',
+            'mail_username' => 'nullable|string|max:255',
+            'mail_password' => 'nullable|string|max:255',
+            'mail_encryption' => 'nullable|string|in:tls,ssl,null',
+            'mail_from_address' => 'nullable|email|max:255',
+            'mail_from_name' => 'nullable|string|max:255',
         ]);
 
         // Update system name
@@ -101,10 +264,103 @@ class SettingsController extends Controller
         $maintenanceMessage = $request->maintenance_message ?? 'We are currently performing scheduled maintenance. Please check back later.';
         Setting::set('maintenance_message', $maintenanceMessage, 'text', 'Maintenance mode message');
 
+        // Handle hiring process settings
+        $hiringProcessEnabled = $request->hiring_process_enabled ?? 'enabled';
+        Setting::set('hiring_process_enabled', $hiringProcessEnabled, 'text', 'Enable or disable hiring process feature');
+
+        $hiringProcessDescription = $request->hiring_process_description ?? '';
+        Setting::set('hiring_process_description', $hiringProcessDescription, 'text', 'Description of the hiring process workflow');
+
+        $minimumQuizScore = $request->minimum_quiz_score ?? 70;
+        Setting::set('minimum_quiz_score', $minimumQuizScore, 'number', 'Minimum quiz score percentage required to pass');
+
+        $autoApproveScore = $request->auto_approve_score ?? null;
+        Setting::set('auto_approve_score', $autoApproveScore, 'number', 'Quiz score percentage for automatic approval');
+
+        $hiringStages = $request->hiring_stages ?? '';
+        Setting::set('hiring_stages', $hiringStages, 'text', 'List of hiring process stages');
+
+        $hiringEmailNotifications = $request->hiring_email_notifications ?? 'enabled';
+        Setting::set('hiring_email_notifications', $hiringEmailNotifications, 'text', 'Enable or disable email notifications for hiring process');
+
+        $hiringInstructions = $request->hiring_instructions ?? '';
+        Setting::set('hiring_instructions', $hiringInstructions, 'text', 'Instructions displayed to applicants before quiz');
+
+        $hiringApplicationPublicAccess = $request->hiring_application_public_access ?? 'disabled';
+        Setting::set('hiring_application_public_access', $hiringApplicationPublicAccess, 'text', 'Enable or disable public access to hiring application form');
+
+        $hiringApplicationUrl = $request->hiring_application_url ?? 'hiring/apply';
+        // Ensure URL doesn't start with / and is a valid path
+        $hiringApplicationUrl = ltrim($hiringApplicationUrl, '/');
+        Setting::set('hiring_application_url', $hiringApplicationUrl, 'text', 'Custom URL path for hiring application form (e.g., careers, jobs, apply)');
+
+        // Email Configuration Settings
+        $mailMailer = $request->mail_mailer ?? 'log';
+        Setting::set('mail_mailer', $mailMailer, 'text', 'Email mailer driver (smtp, sendmail, mailgun, ses, postmark, resend, log, array)');
+
+        $mailHost = $request->mail_host ?? '';
+        Setting::set('mail_host', $mailHost, 'text', 'SMTP server hostname');
+
+        $mailPort = $request->mail_port ?? 587;
+        Setting::set('mail_port', $mailPort, 'number', 'SMTP server port (usually 587 for TLS, 465 for SSL)');
+
+        $mailUsername = $request->mail_username ?? '';
+        Setting::set('mail_username', $mailUsername, 'text', 'SMTP username/email');
+
+        $mailPassword = $request->mail_password ?? '';
+        Setting::set('mail_password', $mailPassword, 'text', 'SMTP password (stored encrypted)');
+
+        $mailEncryption = $request->mail_encryption ?? 'tls';
+        Setting::set('mail_encryption', $mailEncryption, 'text', 'SMTP encryption (tls, ssl, or null)');
+
+        $mailFromAddress = $request->mail_from_address ?? '';
+        Setting::set('mail_from_address', $mailFromAddress, 'text', 'Default "From" email address');
+
+        $mailFromName = $request->mail_from_name ?? '';
+        Setting::set('mail_from_name', $mailFromName, 'text', 'Default "From" name');
+
         // Clear cache to ensure changes are reflected immediately
         Setting::clearCache();
 
         return redirect()->route('admin.settings.index')
             ->with('success', 'Settings updated successfully.');
+    }
+
+    /**
+     * Get system health data via AJAX
+     */
+    public function getHealth()
+    {
+        $health = $this->getSystemHealth();
+        return response()->json($health);
+    }
+
+    /**
+     * Send a test email
+     */
+    public function testEmail(Request $request)
+    {
+        try {
+            $request->validate([
+                'test_email' => 'required|email|max:255',
+            ]);
+
+            $testEmail = $request->input('test_email');
+            
+            // Use the current mail configuration from settings
+            Mail::to($testEmail)->send(new \App\Mail\TestEmail());
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Test email sent successfully to ' . $testEmail . '. Please check your inbox (and spam folder).'
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Test email failed: ' . $e->getMessage());
+            
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to send test email: ' . $e->getMessage()
+            ], 500);
+        }
     }
 }

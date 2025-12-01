@@ -40,6 +40,24 @@
                         @enderror
                     </div>
 
+                    <!-- Role -->
+                    <div>
+                        <label for="role" class="block text-sm font-medium text-gray-700">Role</label>
+                        <div class="mt-1">
+                            <select name="role" id="role" required
+                                    class="shadow-sm focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-gray-300 rounded-md">
+                                <option value="admin" {{ old('role', $user->role) == 'admin' ? 'selected' : '' }}>Administrator</option>
+                                <option value="student" {{ old('role', $user->role) == 'student' ? 'selected' : '' }}>Student</option>
+                                <option value="employee" {{ old('role', $user->role) == 'employee' ? 'selected' : '' }}>Employee</option>
+                                <option value="applicant" {{ old('role', $user->role) == 'applicant' ? 'selected' : '' }}>Applicant</option>
+                                <option value="user" {{ old('role', $user->role) == 'user' ? 'selected' : '' }}>User (Legacy)</option>
+                            </select>
+                        </div>
+                        @error('role')
+                            <p class="mt-2 text-sm text-red-600">{{ $message }}</p>
+                        @enderror
+                    </div>
+
                     <!-- Password -->
                     <div>
                         <label for="password" class="block text-sm font-medium text-gray-700">Password</label>
