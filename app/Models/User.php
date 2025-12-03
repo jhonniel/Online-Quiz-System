@@ -3,6 +3,8 @@
 namespace App\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
+use App\Services\MailConfigService;
+use Illuminate\Auth\Notifications\ResetPassword;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
@@ -535,5 +537,20 @@ class User extends Authenticatable
     public function leaveRequests()
     {
         return $this->hasMany(LeaveRequest::class);
+    }
+
+    /**
+     * Send the password reset notification.
+     *
+     * @param  string  $token
+     * @return void
+     */
+    public function sendPasswordResetNotification($token)
+    {
+        // Ensure mail configuration is up to date from settings before sending reset link
+        MailConfigService::configure();
+
+        // Use Laravel's built-in ResetPassword notification
+        $this->notify(new ResetPassword($token));
     }
 }

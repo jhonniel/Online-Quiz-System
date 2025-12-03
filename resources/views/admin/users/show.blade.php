@@ -117,13 +117,27 @@
                             </p>
                             <p class="text-xs text-gray-500">Used: {{ $balances['sick']['used'] }} days ({{ now()->year }})</p>
                         </div>
-                        <div class="border border-gray-100 rounded-lg px-3 py-2 bg-emerald-50/40">
+                        <div class="border border-gray-100 rounded-lg px-3 py-2 {{ str_starts_with($overtimeFormatted ?? '00:00', '-') ? 'bg-red-50/40 border-red-200' : 'bg-emerald-50/40' }}">
                             <p class="text-xs font-semibold text-gray-500 uppercase tracking-wide">
                                 Overtime ({{ $overtimeWindowLabel ?? 'Current Year' }})
                             </p>
                             <p class="text-sm text-gray-900">
-                                <span class="font-bold">{{ $overtimeFormatted ?? '00:00' }}</span> hours
+                                <span class="font-bold {{ str_starts_with($overtimeFormatted ?? '00:00', '-') ? 'text-red-600' : 'text-gray-900' }}">{{ $overtimeFormatted ?? '00:00' }}</span> hours
+                                @if(str_starts_with($overtimeFormatted ?? '00:00', '-'))
+                                    <span class="text-xs text-red-500 ml-2">(Negative Balance)</span>
+                                @endif
                             </p>
+                            @if(isset($totalDeficitFormatted) && $totalDeficitHours > 0)
+                                <div class="mt-2 pt-2 border-t border-gray-200">
+                                    <p class="text-xs text-gray-600">
+                                        <span class="font-medium">Total Deficit Deducted:</span>
+                                        <span class="text-red-600 font-semibold">{{ $totalDeficitFormatted }}</span>
+                                    </p>
+                                    <p class="text-xs text-gray-500 mt-1">
+                                        Deficit hours from weekly totals below 40:00 have been deducted from overtime balance
+                                    </p>
+                                </div>
+                            @endif
                         </div>
                     </div>
 

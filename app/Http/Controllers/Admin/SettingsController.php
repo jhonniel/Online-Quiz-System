@@ -27,6 +27,20 @@ class SettingsController extends Controller
         // Overtime credited window (read from settings, default to 12 months)
         $settings['overtime_months_credited'] = (int) Setting::get('overtime_months_credited', 12);
 
+        // Default leave balances
+        $settings['default_vacation_balance'] = (float) Setting::get('default_vacation_balance', 15);
+        $settings['default_sick_leave_balance'] = (float) Setting::get('default_sick_leave_balance', 10);
+
+        // Ensure all email settings are loaded with defaults
+        $settings['mail_mailer'] = Setting::get('mail_mailer', 'log');
+        $settings['mail_host'] = Setting::get('mail_host', '');
+        $settings['mail_port'] = Setting::get('mail_port', '587');
+        $settings['mail_username'] = Setting::get('mail_username', '');
+        $settings['mail_password'] = Setting::get('mail_password', ''); // Note: password is stored but not displayed for security
+        $settings['mail_encryption'] = Setting::get('mail_encryption', 'tls');
+        $settings['mail_from_address'] = Setting::get('mail_from_address', '');
+        $settings['mail_from_name'] = Setting::get('mail_from_name', '');
+
         // Get system health information
         $health = $this->getSystemHealth();
 
@@ -192,6 +206,8 @@ class SettingsController extends Controller
             'leave_immediate_supervisor' => 'nullable|string|max:255',
             'leave_hr_admin' => 'nullable|string|max:255',
             'leave_cto' => 'nullable|string|max:255',
+            'default_vacation_balance' => 'nullable|numeric|min:0|max:365',
+            'default_sick_leave_balance' => 'nullable|numeric|min:0|max:365',
             // Email Configuration
             'mail_mailer' => 'nullable|string|in:smtp,sendmail,mailgun,ses,postmark,resend,log,array',
             'mail_host' => 'nullable|string|max:255',
@@ -324,6 +340,13 @@ class SettingsController extends Controller
         $leaveCto = $request->leave_cto ?? 'NITISH KHEMANI';
         Setting::set('leave_cto', $leaveCto, 'text', 'Name for Chief Technology Officer in leave request letters');
 
+        // Default Leave Balances
+        $defaultVacationBalance = $request->default_vacation_balance ?? 15;
+        Setting::set('default_vacation_balance', $defaultVacationBalance, 'number', 'Default vacation leave balance in days for new employees');
+
+        $defaultSickLeaveBalance = $request->default_sick_leave_balance ?? 10;
+        Setting::set('default_sick_leave_balance', $defaultSickLeaveBalance, 'number', 'Default sick leave balance in days for new employees');
+
         // Email Configuration Settings
         $mailMailer = $request->mail_mailer ?? 'log';
         Setting::set('mail_mailer', $mailMailer, 'text', 'Email mailer driver (smtp, sendmail, mailgun, ses, postmark, resend, log, array)');
@@ -337,8 +360,11 @@ class SettingsController extends Controller
         $mailUsername = $request->mail_username ?? '';
         Setting::set('mail_username', $mailUsername, 'text', 'SMTP username/email');
 
-        $mailPassword = $request->mail_password ?? '';
-        Setting::set('mail_password', $mailPassword, 'text', 'SMTP password (stored encrypted)');
+        // Only update password if a new one is provided (leave blank to keep current)
+        if ($request->filled('mail_password')) {
+            $mailPassword = $request->mail_password;
+            Setting::set('mail_password', $mailPassword, 'text', 'SMTP password (stored encrypted)');
+        }
 
         $mailEncryption = $request->mail_encryption ?? 'tls';
         Setting::set('mail_encryption', $mailEncryption, 'text', 'SMTP encryption (tls, ssl, or null)');

@@ -56,7 +56,8 @@ class RegisteredUserController extends Controller
                 'min:8',
                 'regex:/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).+$/'
             ],
-            'role' => ['nullable', 'string', 'in:student,employee,applicant'],
+            // Role is not validated from user input - only admins can set roles
+            // 'role' => ['nullable', 'string', 'in:student,employee,applicant'],
             'university_id' => ['required'],
             'new_university_name' => ['nullable', 'string', 'max:255'],
         ], [
@@ -102,8 +103,9 @@ class RegisteredUserController extends Controller
             }
         }
 
-        // Determine role - default to 'student' if not provided
-        $role = $request->role ?? 'student';
+        // Determine role - users cannot set their own role, only admins can
+        // Default to 'student' for regular registrations
+        $role = 'student';
         
         // If it's a hiring application, set role to 'applicant'
         if ($isHiringApplication) {

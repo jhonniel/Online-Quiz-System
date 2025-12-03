@@ -4,8 +4,12 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\LeaveRequest;
+use App\Mail\LeaveRequestStatusUpdate;
+use App\Services\MailConfigService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Log;
 use Carbon\Carbon;
 use Carbon\CarbonPeriod;
 
@@ -86,11 +90,14 @@ class LeaveRequestController extends Controller
             $fromDate = now()->copy()->subMonths($months)->startOfDay();
         }
 
+        $defaultVacation = (float) \App\Models\Setting::get('default_vacation_balance', 15);
+        $defaultSick = (float) \App\Models\Setting::get('default_sick_leave_balance', 10);
+        
         $leaveBalance = \App\Models\LeaveBalance::firstOrCreate(
             ['user_id' => $employee->id, 'year' => $currentYear],
             [
-                'vacation_allowance' => 15,
-                'sick_allowance' => 10,
+                'vacation_allowance' => $defaultVacation,
+                'sick_allowance' => $defaultSick,
             ]
         );
 
@@ -153,6 +160,19 @@ class LeaveRequestController extends Controller
 
         $totalOvertimeHours += $overtimeFromLeavesMinutes / 60;
 
+        // Subtract deficit hours from overtime balance (allow negative values)
+        $deficitQuery = \App\Models\DtrDeficit::where('user_id', $employee->id)
+            ->where('is_applied', true);
+        
+        if ($months === 12) {
+            $deficitQuery->whereYear('week_start_date', $currentYear);
+        } else {
+            $deficitQuery->whereDate('week_start_date', '>=', $fromDate->toDateString());
+        }
+        
+        $totalDeficitHours = $deficitQuery->sum('deficit_hours');
+        $totalOvertimeHours = $totalOvertimeHours - $totalDeficitHours;
+
         $approvedOffsetQuery = LeaveRequest::where('user_id', $employee->id)
             ->where('type', 'offset')
             ->where('status', 'approved');
@@ -163,16 +183,29 @@ class LeaveRequestController extends Controller
             $approvedOffsetQuery->whereDate('start_date', '>=', $fromDate->toDateString());
         }
 
-        $approvedOffsetCount = $approvedOffsetQuery->count();
+        $approvedOffsetRequests = $approvedOffsetQuery->get();
 
-        $offsetHoursUsed = $approvedOffsetCount * 8; // 8 hours per approved offset
+        // Parse offset hours from reason field (each offset may have different hours)
+        $offsetHoursUsed = 0;
+        foreach ($approvedOffsetRequests as $offsetRequest) {
+            $raw = $offsetRequest->reason ?? '';
+            if (preg_match('/Hours to Deduct:\s*([0-9]{2}:[0-9]{2})/', $raw, $m)) {
+                [$h, $mPart] = array_map('intval', explode(':', $m[1]));
+                $offsetHoursUsed += $h + ($mPart / 60);
+            } else {
+                // Fallback: if format not found, use 8 hours (for old records)
+                $offsetHoursUsed += 8;
+            }
+        }
 
-        $netOvertimeHours = max($totalOvertimeHours - $offsetHoursUsed, 0);
+        $netOvertimeHours = $totalOvertimeHours - $offsetHoursUsed;
 
-        $overtimeMinutes = (int) round($netOvertimeHours * 60);
-        $overtimeHoursPart = intdiv($overtimeMinutes, 60);
-        $overtimeMinutesPart = $overtimeMinutes % 60;
-        $overtimeFormatted = sprintf('%02d:%02d', $overtimeHoursPart, $overtimeMinutesPart);
+        // Format overtime (handle negative values)
+        $isNegative = $netOvertimeHours < 0;
+        $absOvertimeMinutes = (int) round(abs($netOvertimeHours) * 60);
+        $overtimeHoursPart = intdiv($absOvertimeMinutes, 60);
+        $overtimeMinutesPart = $absOvertimeMinutes % 60;
+        $overtimeFormatted = ($isNegative ? '-' : '') . sprintf('%02d:%02d', $overtimeHoursPart, $overtimeMinutesPart);
 
         // Get signatory names from settings
         $signatories = [
@@ -309,6 +342,17 @@ class LeaveRequestController extends Controller
             'reviewed_at' => now(),
         ]);
 
+        // Send email notification to employee
+        try {
+            MailConfigService::configure();
+            Mail::to($leaveRequest->user->email)->send(
+                new LeaveRequestStatusUpdate($leaveRequest, 'approved', $request->admin_notes)
+            );
+        } catch (\Exception $e) {
+            Log::error('Failed to send leave request approval email: ' . $e->getMessage());
+            // Don't fail the request if email fails
+        }
+
         return redirect()->route('admin.leave-requests.show', $leaveRequest)
             ->with('success', 'Leave request approved successfully.');
     }
@@ -328,6 +372,17 @@ class LeaveRequestController extends Controller
             'reviewed_by' => Auth::id(),
             'reviewed_at' => now(),
         ]);
+
+        // Send email notification to employee
+        try {
+            MailConfigService::configure();
+            Mail::to($leaveRequest->user->email)->send(
+                new LeaveRequestStatusUpdate($leaveRequest, 'rejected', $request->admin_notes)
+            );
+        } catch (\Exception $e) {
+            Log::error('Failed to send leave request rejection email: ' . $e->getMessage());
+            // Don't fail the request if email fails
+        }
 
         return redirect()->route('admin.leave-requests.show', $leaveRequest)
             ->with('success', 'Leave request rejected successfully.');
@@ -352,6 +407,17 @@ class LeaveRequestController extends Controller
             'reviewed_by' => Auth::id(),
             'reviewed_at' => now(),
         ]);
+
+        // Send email notification to employee
+        try {
+            MailConfigService::configure();
+            Mail::to($leaveRequest->user->email)->send(
+                new LeaveRequestStatusUpdate($leaveRequest, 'pending', $request->admin_notes)
+            );
+        } catch (\Exception $e) {
+            Log::error('Failed to send leave request resubmission email: ' . $e->getMessage());
+            // Don't fail the request if email fails
+        }
 
         return redirect()->route('admin.leave-requests.show', $leaveRequest)
             ->with('success', 'Leave request marked for resubmission. The employee will need to correct any errors.');

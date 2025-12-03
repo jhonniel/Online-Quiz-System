@@ -219,12 +219,12 @@
                             data-toggle="month">
                         <h3 class="text-md font-bold text-gray-900">{{ $month['label'] }}</h3>
                         <span class="ml-3 inline-flex items-center justify-center rounded-full bg-white/70 text-gray-700 text-xs px-2 py-0.5">
-                            <span class="mr-1" data-month-chevron>−</span>
+                            <span class="mr-1" data-month-chevron>+</span>
                             Toggle
                         </span>
                     </button>
 
-                    <div class="border-t border-gray-200" data-month-content>
+                    <div class="border-t border-gray-200 hidden" data-month-content style="display: none;">
                         @foreach($month['weeks'] as $weekKey => $week)
                             <div class="border-b border-gray-200" data-week-group>
                                 <button type="button"
@@ -232,12 +232,12 @@
                                         data-toggle="week">
                                     <h4 class="text-sm font-semibold text-gray-800">{{ $week['label'] }}</h4>
                                     <span class="ml-3 inline-flex items-center justify-center rounded-full bg-white/70 text-gray-700 text-xs px-2 py-0.5">
-                                        <span class="mr-1" data-week-chevron>−</span>
+                                        <span class="mr-1" data-week-chevron>+</span>
                                         Toggle
                                     </span>
                                 </button>
 
-                                <div data-week-content>
+                                <div class="hidden" data-week-content style="display: none;">
                             @foreach($week['employees'] as $employeeGroup)
                                 <div class="px-6 py-2 bg-white">
                                     <div class="flex items-center mb-2">
@@ -358,6 +358,79 @@
                                                 </tr>
                                             @endforeach
                                         </tbody>
+                                        <tfoot class="bg-gradient-to-r from-indigo-50 to-purple-50 border-t-2 border-indigo-300">
+                                            @php
+                                                // Calculate weekly total for this employee
+                                                $weeklyTotalHours = 0;
+                                                $weeklyOvertimeHours = 0;
+                                                foreach ($employeeGroup['records'] as $dtr) {
+                                                    $weeklyTotalHours += ($dtr->total_hours ?? 0);
+                                                    $weeklyOvertimeHours += ($dtr->overtime_hours ?? 0);
+                                                }
+                                                $weeklyTotalMinutes = (int) round($weeklyTotalHours * 60);
+                                                $weeklyTotalH = intdiv($weeklyTotalMinutes, 60);
+                                                $weeklyTotalM = $weeklyTotalMinutes % 60;
+                                                $weeklyTotalFormatted = sprintf('%02d:%02d', $weeklyTotalH, $weeklyTotalM);
+                                                
+                                                // Calculate total weekly overtime
+                                                $weeklyOvertimeMinutes = (int) round($weeklyOvertimeHours * 60);
+                                                $weeklyOvertimeH = intdiv($weeklyOvertimeMinutes, 60);
+                                                $weeklyOvertimeM = $weeklyOvertimeMinutes % 60;
+                                                $weeklyOvertimeFormatted = sprintf('%02d:%02d', $weeklyOvertimeH, $weeklyOvertimeM);
+                                                
+                                                // Calculate deficit: Weekly Total Base (40:00) - Weekly Total
+                                                $weeklyBaseMinutes = 40 * 60; // 40:00 = 2400 minutes
+                                                $deficitMinutes = max(0, $weeklyBaseMinutes - $weeklyTotalMinutes);
+                                                $deficitH = intdiv($deficitMinutes, 60);
+                                                $deficitM = $deficitMinutes % 60;
+                                                $deficitFormatted = sprintf('%02d:%02d', $deficitH, $deficitM);
+                                            @endphp
+                                            <tr>
+                                                <td class="px-3 py-3 whitespace-nowrap">
+                                                    <div class="flex items-center space-x-2">
+                                                        <svg class="w-4 h-4 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
+                                                        </svg>
+                                                        <span class="text-sm font-bold text-indigo-900">
+                                                            Weekly Summary
+                                                        </span>
+                                                    </div>
+                                                </td>
+                                                <td class="px-3 py-3 whitespace-nowrap" colspan="2">
+                                                    <div class="flex items-center space-x-3 flex-wrap gap-y-2">
+                                                        <div>
+                                                            <div class="text-xs text-gray-600 font-medium mb-1">Weekly Total</div>
+                                                            <div class="text-base font-bold text-indigo-900 bg-white px-3 py-1 rounded-lg border border-indigo-200 inline-block">
+                                                                {{ $weeklyTotalMinutes > 0 ? $weeklyTotalFormatted : '00:00' }}
+                                                            </div>
+                                                        </div>
+                                                        <div>
+                                                            <div class="text-xs text-gray-600 font-medium mb-1">Base</div>
+                                                            <div class="text-sm font-semibold text-gray-700 bg-white px-2 py-1 rounded border border-gray-200 inline-block">
+                                                                40:00
+                                                            </div>
+                                                        </div>
+                                                        <div>
+                                                            <div class="text-xs text-gray-600 font-medium mb-1">Overtime</div>
+                                                            <div class="text-sm font-bold {{ $weeklyOvertimeMinutes > 0 ? 'text-orange-600' : 'text-gray-600' }} bg-white px-2 py-1 rounded border {{ $weeklyOvertimeMinutes > 0 ? 'border-orange-200' : 'border-gray-200' }} inline-block">
+                                                                {{ $weeklyOvertimeMinutes > 0 ? $weeklyOvertimeFormatted : '00:00' }}
+                                                            </div>
+                                                        </div>
+                                                        <div>
+                                                            <div class="text-xs text-gray-600 font-medium mb-1">Deficit</div>
+                                                            <div class="text-sm font-bold {{ $deficitMinutes > 0 ? 'text-red-600' : 'text-green-600' }} bg-white px-2 py-1 rounded border {{ $deficitMinutes > 0 ? 'border-red-200' : 'border-green-200' }} inline-block">
+                                                                {{ $deficitFormatted }}
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </td>
+                                                <td class="px-3 py-3 whitespace-nowrap" colspan="4">
+                                                    <div class="text-xs text-indigo-600 font-medium">
+                                                        {{ $week['label'] }} • {{ $deficitMinutes > 0 ? 'Deficit: ' . $deficitFormatted . ' hours' : 'No deficit' }}
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        </tfoot>
                                     </table>
                                 </div>
                             @endforeach
@@ -402,7 +475,7 @@
         }
 
         // Month toggles
-        root.querySelectorAll('[data-month-group]').forEach(function (monthGroup, monthIndex) {
+        root.querySelectorAll('[data-month-group]').forEach(function (monthGroup) {
             const button = monthGroup.querySelector('[data-toggle="month"]');
             const content = monthGroup.querySelector('[data-month-content]');
             const chevron = monthGroup.querySelector('[data-month-chevron]');
@@ -412,12 +485,10 @@
                 return;
             }
 
-            // Collapse all months except the first by default
-            if (monthIndex > 0) {
-                content.classList.add('hidden');
-                content.style.display = 'none';
-                if (chevron) chevron.textContent = '+';
-            }
+            // Collapse all months by default
+            content.classList.add('hidden');
+            content.style.display = 'none';
+            if (chevron) chevron.textContent = '+';
 
             button.addEventListener('click', function (e) {
                 e.preventDefault();
@@ -437,7 +508,11 @@
                 return;
             }
 
-            // Weeks expanded by default
+            // Collapse all weeks by default
+            content.classList.add('hidden');
+            content.style.display = 'none';
+            if (chevron) chevron.textContent = '+';
+
             button.addEventListener('click', function (e) {
                 e.preventDefault();
                 e.stopPropagation();

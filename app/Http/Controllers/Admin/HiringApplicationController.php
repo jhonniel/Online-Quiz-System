@@ -4,9 +4,12 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\HiringApplication;
+use App\Services\MailConfigService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Log;
 
 class HiringApplicationController extends Controller
 {
@@ -66,7 +69,10 @@ class HiringApplicationController extends Controller
         $emailNotificationsEnabled = \App\Models\Setting::get('hiring_email_notifications', 'enabled');
         if ($emailNotificationsEnabled === 'enabled') {
             try {
-                \Illuminate\Support\Facades\Mail::to($application->email)
+                // Ensure mail configuration is up to date from settings
+                MailConfigService::configure();
+                
+                Mail::to($application->email)
                     ->send(new \App\Mail\HiringApplicationStatusUpdate(
                         $application,
                         'accepted',
@@ -74,7 +80,7 @@ class HiringApplicationController extends Controller
                         $application->hiringPosition
                     ));
             } catch (\Exception $e) {
-                \Illuminate\Support\Facades\Log::error('Failed to send acceptance email', [
+                Log::error('Failed to send acceptance email', [
                     'error' => $e->getMessage(),
                     'application_id' => $application->id
                 ]);
@@ -102,7 +108,10 @@ class HiringApplicationController extends Controller
         $emailNotificationsEnabled = \App\Models\Setting::get('hiring_email_notifications', 'enabled');
         if ($emailNotificationsEnabled === 'enabled') {
             try {
-                \Illuminate\Support\Facades\Mail::to($application->email)
+                // Ensure mail configuration is up to date from settings
+                MailConfigService::configure();
+                
+                Mail::to($application->email)
                     ->send(new \App\Mail\HiringApplicationStatusUpdate(
                         $application,
                         'rejected',
@@ -110,7 +119,7 @@ class HiringApplicationController extends Controller
                         $application->hiringPosition
                     ));
             } catch (\Exception $e) {
-                \Illuminate\Support\Facades\Log::error('Failed to send rejection email', [
+                Log::error('Failed to send rejection email', [
                     'error' => $e->getMessage(),
                     'application_id' => $application->id
                 ]);

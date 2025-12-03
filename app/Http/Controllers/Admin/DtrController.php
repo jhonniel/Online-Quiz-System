@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Dtr;
+use App\Models\DtrDeficit;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
@@ -172,7 +173,7 @@ class DtrController extends Controller
                 ? $totalDecimal - $standardDecimal
                 : 0;
 
-            Dtr::create([
+            $dtr = Dtr::create([
                 'user_id' => $request->user_id,
                 'date' => $request->date,
                 'added_time_from_note' => $addedDecimal,
@@ -181,6 +182,9 @@ class DtrController extends Controller
                 'status' => $request->status,
                 'remarks' => $request->remarks,
             ]);
+
+            // Calculate and store weekly deficit
+            $this->calculateAndStoreWeeklyDeficit($request->user_id, Carbon::parse($request->date));
 
             return redirect()->route('admin.dtr.index')
                 ->with('success', 'DTR record added successfully.');
@@ -276,6 +280,9 @@ class DtrController extends Controller
                 'remarks' => $request->remarks,
             ]);
 
+            // Calculate and store weekly deficit
+            $this->calculateAndStoreWeeklyDeficit($request->user_id, Carbon::parse($request->date));
+
             return redirect()->route('admin.dtr.index')
                 ->with('success', 'DTR record updated successfully.');
         } catch (\Exception $e) {
@@ -314,6 +321,7 @@ class DtrController extends Controller
             $imported = 0;
             $skipped = 0;
             $errors = [];
+            $affectedUserIds = [];
 
             DB::beginTransaction();
 
@@ -428,6 +436,11 @@ class DtrController extends Controller
                         ]);
                     }
 
+                    // Track affected user
+                    if (!in_array($employee->id, $affectedUserIds)) {
+                        $affectedUserIds[] = $employee->id;
+                    }
+
                     $imported++;
                 } catch (\Exception $e) {
                     Log::error('DTR import error: ' . $e->getMessage());
@@ -438,6 +451,22 @@ class DtrController extends Controller
 
             fclose($handle);
             DB::commit();
+
+            // Recalculate deficits for all affected users and weeks
+            foreach ($affectedUserIds as $userId) {
+                // Get all unique weeks for this user that have DTR records
+                $weeks = Dtr::where('user_id', $userId)
+                    ->get()
+                    ->map(function($dtr) {
+                        return $dtr->date->copy()->startOfWeek()->format('Y-m-d');
+                    })
+                    ->unique()
+                    ->values();
+
+                foreach ($weeks as $weekStart) {
+                    $this->calculateAndStoreWeeklyDeficit($userId, Carbon::parse($weekStart));
+                }
+            }
 
             $message = "Successfully imported {$imported} DTR record(s).";
             if ($skipped > 0) {
@@ -501,5 +530,48 @@ class DtrController extends Controller
             'Pragma' => 'no-cache',
             'Expires' => '0',
         ]);
+    }
+
+    /**
+     * Calculate and store weekly deficit for a user
+     */
+    private function calculateAndStoreWeeklyDeficit($userId, Carbon $date)
+    {
+        try {
+            // Get the week start and end dates (ISO week)
+            $weekStart = $date->copy()->startOfWeek();
+            $weekEnd = $date->copy()->endOfWeek();
+
+            // Get all DTR records for this user in this week
+            $weeklyDtrs = Dtr::where('user_id', $userId)
+                ->whereDate('date', '>=', $weekStart->toDateString())
+                ->whereDate('date', '<=', $weekEnd->toDateString())
+                ->get();
+
+            // Calculate weekly total hours
+            $weeklyTotalHours = $weeklyDtrs->sum('total_hours');
+
+            // Calculate deficit: 40:00 (2400 minutes) - weekly total
+            $weeklyBaseHours = 40.0; // 40 hours = 40:00
+            $deficitHours = max(0, $weeklyBaseHours - $weeklyTotalHours);
+
+            // Store or update deficit record
+            DtrDeficit::updateOrCreate(
+                [
+                    'user_id' => $userId,
+                    'week_start_date' => $weekStart->toDateString(),
+                    'week_end_date' => $weekEnd->toDateString(),
+                ],
+                [
+                    'deficit_hours' => $deficitHours,
+                    'is_applied' => true,
+                ]
+            );
+        } catch (\Exception $e) {
+            Log::error('Failed to calculate weekly deficit: ' . $e->getMessage(), [
+                'user_id' => $userId,
+                'date' => $date->toDateString(),
+            ]);
+        }
     }
 }

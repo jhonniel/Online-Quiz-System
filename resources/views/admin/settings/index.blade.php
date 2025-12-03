@@ -427,6 +427,58 @@
                                 </div>
                             </div>
                         </div>
+
+                        <!-- Default Leave Balances Section -->
+                        <div class="form-section">
+                            <div class="flex items-center space-x-3 mb-6">
+                                <div class="flex-shrink-0 bg-green-100 rounded-lg p-2">
+                                    <svg class="h-6 w-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                    </svg>
+                                </div>
+                                <div>
+                                    <h3 class="text-lg font-semibold text-gray-900">Default Leave Balances</h3>
+                                    <p class="text-sm text-gray-500">Set default vacation and sick leave balances for new employees.</p>
+                                </div>
+                            </div>
+
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div>
+                                    <label for="default_vacation_balance" class="block text-sm font-medium text-gray-700 mb-2">
+                                        <span class="flex items-center">
+                                            <svg class="h-4 w-4 mr-1 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                                            </svg>
+                                            Default Vacation Balance (Days)
+                                        </span>
+                                    </label>
+                                    <input type="number" id="default_vacation_balance" name="default_vacation_balance"
+                                           value="{{ $settings['default_vacation_balance'] ?? 15 }}"
+                                           min="0" max="365" step="0.5"
+                                           class="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                                    <p class="mt-2 text-xs text-gray-500">
+                                        Default vacation leave days assigned to new employees. Can be adjusted per employee.
+                                    </p>
+                                </div>
+                                <div>
+                                    <label for="default_sick_leave_balance" class="block text-sm font-medium text-gray-700 mb-2">
+                                        <span class="flex items-center">
+                                            <svg class="h-4 w-4 mr-1 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                                            </svg>
+                                            Default Sick Leave Balance (Days)
+                                        </span>
+                                    </label>
+                                    <input type="number" id="default_sick_leave_balance" name="default_sick_leave_balance"
+                                           value="{{ $settings['default_sick_leave_balance'] ?? 10 }}"
+                                           min="0" max="365" step="0.5"
+                                           class="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                                    <p class="mt-2 text-xs text-gray-500">
+                                        Default sick leave days assigned to new employees. Can be adjusted per employee.
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
                         </div>
                     </div>
 
@@ -548,6 +600,59 @@
                                 </div>
                             </div>
 
+                            <!-- Current Configuration Summary -->
+                            <div class="bg-gray-50 border border-gray-200 rounded-lg p-4 mb-6">
+                                <h4 class="text-sm font-semibold text-gray-900 mb-3">Current Email Configuration</h4>
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                                    <div>
+                                        <span class="text-gray-600">Mail Driver:</span>
+                                        <span class="ml-2 font-medium text-gray-900">{{ ucfirst($settings['mail_mailer'] ?? 'Log') }}</span>
+                                    </div>
+                                    @if(!empty($settings['mail_host']))
+                                    <div>
+                                        <span class="text-gray-600">SMTP Host:</span>
+                                        <span class="ml-2 font-medium text-gray-900">{{ $settings['mail_host'] }}</span>
+                                    </div>
+                                    @endif
+                                    @if(!empty($settings['mail_port']))
+                                    <div>
+                                        <span class="text-gray-600">SMTP Port:</span>
+                                        <span class="ml-2 font-medium text-gray-900">{{ $settings['mail_port'] }}</span>
+                                    </div>
+                                    @endif
+                                    @if(!empty($settings['mail_encryption']))
+                                    <div>
+                                        <span class="text-gray-600">Encryption:</span>
+                                        <span class="ml-2 font-medium text-gray-900">{{ strtoupper($settings['mail_encryption']) }}</span>
+                                    </div>
+                                    @endif
+                                    @if(!empty($settings['mail_from_address']))
+                                    <div>
+                                        <span class="text-gray-600">From Address:</span>
+                                        <span class="ml-2 font-medium text-gray-900">{{ $settings['mail_from_address'] }}</span>
+                                    </div>
+                                    @endif
+                                    @if(!empty($settings['mail_from_name']))
+                                    <div>
+                                        <span class="text-gray-600">From Name:</span>
+                                        <span class="ml-2 font-medium text-gray-900">{{ $settings['mail_from_name'] }}</span>
+                                    </div>
+                                    @endif
+                                    @if(!empty($settings['mail_username']))
+                                    <div>
+                                        <span class="text-gray-600">Username:</span>
+                                        <span class="ml-2 font-medium text-gray-900">{{ $settings['mail_username'] }}</span>
+                                    </div>
+                                    @endif
+                                    <div>
+                                        <span class="text-gray-600">Password:</span>
+                                        <span class="ml-2 font-medium text-gray-900">
+                                            {{ !empty($settings['mail_password']) ? '•••••••• (Set)' : 'Not Set' }}
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+
                             <div class="space-y-6">
                                 <div>
                                     <label for="mail_mailer" class="block text-sm font-medium text-gray-700 mb-2">Mail Driver</label>
@@ -596,9 +701,12 @@
                                     <div>
                                         <label for="mail_password" class="block text-sm font-medium text-gray-700 mb-2">SMTP Password</label>
                                         <input type="password" name="mail_password" id="mail_password"
-                                               value="{{ $settings['mail_password'] ?? '' }}"
-                                               placeholder="Your SMTP password"
+                                               value=""
+                                               placeholder="{{ !empty($settings['mail_password']) ? 'Leave blank to keep current password' : 'Enter SMTP password' }}"
                                                class="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                                        @if(!empty($settings['mail_password']))
+                                        <p class="mt-1 text-xs text-gray-500">Leave blank to keep the current password. Enter a new password to update it.</p>
+                                        @endif
                                     </div>
                                 </div>
 

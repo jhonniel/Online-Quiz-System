@@ -230,35 +230,6 @@
                         @endif
                     </div>
 
-                    <!-- Role Selection -->
-                    @if(!isset($application) || !$application)
-                        <div class="mb-4">
-                            <div class="relative">
-                                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                    <svg class="h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                                    </svg>
-                                </div>
-                                <select name="role" id="role" required
-                                        class="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500 transition-colors duration-200">
-                                    <option value="">Select Your Role</option>
-                                    <option value="student" {{ old('role') == 'student' ? 'selected' : '' }}>Student</option>
-                                    <option value="employee" {{ old('role') == 'employee' ? 'selected' : '' }}>Employee</option>
-                                    <option value="applicant" {{ old('role') == 'applicant' ? 'selected' : '' }}>Applicant</option>
-                                </select>
-                            </div>
-                            <p class="mt-1 text-sm text-gray-500">Please select the role that best describes you.</p>
-                            @if($errors->has('role'))
-                                <p class="mt-2 text-sm text-red-600 flex items-center">
-                                    <svg class="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
-                                        <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd" />
-                                    </svg>
-                                    {{ $errors->first('role') }}
-                                </p>
-                            @endif
-                        </div>
-                    @endif
-
                     <!-- University -->
                     <div class="mb-4">
                         <div class="relative">

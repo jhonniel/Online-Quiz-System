@@ -22,73 +22,130 @@
 @endsection
 
 @section('content')
-<div class="max-w-4xl mx-auto">
-    <!-- Header Section -->
+<div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
+    <!-- Header Section with Gradient -->
     <div class="mb-8">
-        <div class="flex items-center justify-between">
+        <div class="bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 rounded-2xl shadow-xl p-8 text-white relative overflow-hidden">
+            <!-- Decorative background elements -->
+            <div class="absolute top-0 right-0 w-64 h-64 bg-white opacity-10 rounded-full -mr-32 -mt-32"></div>
+            <div class="absolute bottom-0 left-0 w-48 h-48 bg-white opacity-10 rounded-full -ml-24 -mb-24"></div>
+            
+            <div class="relative z-10 flex items-center justify-between flex-wrap gap-4">
+                <div class="flex items-center space-x-4">
+                    <div class="bg-white/20 backdrop-blur-sm p-4 rounded-xl">
+                        <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z"></path>
+                        </svg>
+                    </div>
             <div>
-                <h1 class="text-3xl font-bold text-gray-900">Create New User</h1>
-                <p class="mt-2 text-gray-600">Create a new user account for the quiz system with proper permissions and settings.</p>
+                        <h1 class="text-3xl font-bold mb-2">Create New User</h1>
+                        <p class="text-indigo-100 text-lg">Add a new user account with proper permissions and settings</p>
+                    </div>
             </div>
-            <a href="{{ route('users.index') }}">
-                <x-formal-button variant="outline" size="md">
-                    <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <a href="{{ route('users.index') }}" class="bg-white/20 hover:bg-white/30 backdrop-blur-sm px-6 py-3 rounded-xl font-semibold transition-all duration-200 flex items-center space-x-2 group">
+                    <svg class="w-5 h-5 group-hover:-translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
                     </svg>
-                    Back to Users
-                </x-formal-button>
+                    <span>Back to Users</span>
             </a>
+            </div>
         </div>
     </div>
 
     <!-- Main Form Card -->
-    <x-formal-card
-        title="User Information"
-        subtitle="Please provide the required information to create a new user account."
-        class="mb-6"
-    >
-        <form action="{{ route('users.store') }}" method="POST" class="space-y-8">
+    <div class="bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden">
+        <form action="{{ route('users.store') }}" method="POST" id="createUserForm" class="divide-y divide-gray-100">
             @csrf
 
             <!-- Basic Information Section -->
-            <div class="space-y-6">
-                <h3 class="text-lg font-medium text-gray-900 border-b border-gray-200 pb-2">Basic Information</h3>
+            <div class="p-8">
+                <div class="flex items-center space-x-3 mb-6">
+                    <div class="bg-indigo-100 p-2 rounded-lg">
+                        <svg class="w-6 h-6 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
+                        </svg>
+                    </div>
+                    <div>
+                        <h2 class="text-xl font-bold text-gray-900">Basic Information</h2>
+                        <p class="text-sm text-gray-500">Essential details for the user account</p>
+                    </div>
+                </div>
 
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <!-- Name -->
-                    <x-formal-input
-                        label="Full Name"
+                    <div class="space-y-2">
+                        <label for="name" class="block text-sm font-semibold text-gray-700">
+                            Full Name <span class="text-red-500">*</span>
+                        </label>
+                        <div class="relative group">
+                            <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                                <svg class="w-5 h-5 text-gray-400 group-focus-within:text-indigo-500 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
+                                </svg>
+                            </div>
+                            <input type="text" 
+                                   id="name" 
                         name="name"
-                        type="text"
-                        :required="true"
-                        placeholder="Enter the user's full name"
-                        :value="old('name')"
-                        :error="$errors->first('name') ?? null"
-                        help="The complete name of the user"
-                        icon='<svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg>'
-                    />
+                                   value="{{ old('name') }}"
+                                   required
+                                   placeholder="John Doe"
+                                   class="block w-full pl-12 pr-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200 bg-gray-50 focus:bg-white @error('name') border-red-300 focus:ring-red-500 focus:border-red-500 @enderror">
+                        </div>
+                        @error('name')
+                            <p class="text-sm text-red-600 flex items-center mt-1">
+                                <svg class="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd"></path>
+                                </svg>
+                                {{ $message }}
+                            </p>
+                        @enderror
+                    </div>
 
                     <!-- Email -->
-                    <x-formal-input
-                        label="Email Address"
+                    <div class="space-y-2">
+                        <label for="email" class="block text-sm font-semibold text-gray-700">
+                            Email Address <span class="text-red-500">*</span>
+                        </label>
+                        <div class="relative group">
+                            <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                                <svg class="w-5 h-5 text-gray-400 group-focus-within:text-indigo-500 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 4.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path>
+                                </svg>
+                            </div>
+                            <input type="email" 
+                                   id="email" 
                         name="email"
-                        type="email"
-                        :required="true"
-                        placeholder="Enter the user's email address"
-                        :value="old('email')"
-                        :error="$errors->first('email') ?? null"
-                        help="This will be used for login and notifications"
-                        icon='<svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 4.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path></svg>'
-                    />
+                                   value="{{ old('email') }}"
+                                   required
+                                   placeholder="john.doe@example.com"
+                                   class="block w-full pl-12 pr-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200 bg-gray-50 focus:bg-white @error('email') border-red-300 focus:ring-red-500 focus:border-red-500 @enderror">
+                        </div>
+                        <p class="text-xs text-gray-500 mt-1">Used for login and notifications</p>
+                        @error('email')
+                            <p class="text-sm text-red-600 flex items-center mt-1">
+                                <svg class="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd"></path>
+                                </svg>
+                                {{ $message }}
+                            </p>
+                        @enderror
+                </div>
 
                     <!-- Role -->
                     <div class="space-y-2">
-                        <label class="block text-sm font-medium text-gray-700">
+                        <label for="role" class="block text-sm font-semibold text-gray-700">
                             User Role <span class="text-red-500">*</span>
                         </label>
-                        <div class="relative">
-                            <select name="role" id="role" required
-                                    class="block w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors duration-200 appearance-none bg-white">
+                        <div class="relative group">
+                            <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none z-10">
+                                <svg class="w-5 h-5 text-gray-400 group-focus-within:text-indigo-500 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path>
+                                </svg>
+                            </div>
+                            <select name="role" 
+                                    id="role" 
+                                    required
+                                    class="block w-full pl-12 pr-10 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200 bg-gray-50 focus:bg-white appearance-none cursor-pointer @error('role') border-red-300 focus:ring-red-500 focus:border-red-500 @enderror">
                                 <option value="">Select a role</option>
                                 <option value="admin" {{ old('role') == 'admin' ? 'selected' : '' }}>Administrator</option>
                                 <option value="student" {{ old('role') == 'student' ? 'selected' : '' }}>Student</option>
@@ -96,138 +153,241 @@
                                 <option value="applicant" {{ old('role') == 'applicant' ? 'selected' : '' }}>Applicant</option>
                                 <option value="user" {{ old('role') == 'user' ? 'selected' : '' }}>User (Legacy)</option>
                             </select>
-                            <div class="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
-                                <svg class="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <div class="absolute inset-y-0 right-0 pr-4 flex items-center pointer-events-none">
+                                <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
                                 </svg>
                             </div>
                         </div>
-                        <p class="text-sm text-gray-500">Select the role that best describes this user's function</p>
-                        @if($errors && $errors->has('role'))
-                            <p class="text-sm text-red-600 flex items-center">
+                        <p class="text-xs text-gray-500 mt-1">Define user permissions and access level</p>
+                        @error('role')
+                            <p class="text-sm text-red-600 flex items-center mt-1">
                                 <svg class="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
                                     <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd"></path>
                                 </svg>
-                                {{ $errors->first('role') }}
+                                {{ $message }}
                             </p>
-                        @endif
-                    </div>
-                </div>
-
-                <!-- Password -->
-                <x-formal-input
-                    label="Password"
-                    name="password"
-                    type="password"
-                    :required="true"
-                    placeholder="Enter a secure password"
-                    :error="$errors->first('password') ?? null"
-                    help="Minimum 8 characters with letters and numbers"
-                    icon='<svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path></svg>'
-                />
+                        @enderror
             </div>
-
-            <!-- Account Settings Section -->
-            <div class="space-y-6">
-                <h3 class="text-lg font-medium text-gray-900 border-b border-gray-200 pb-2">Account Settings</h3>
-
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <!-- Password Confirmation -->
-                    <x-formal-input
-                        label="Confirm Password"
-                        name="password_confirmation"
-                        type="password"
-                        :required="true"
-                        placeholder="Confirm the password"
-                        :error="$errors->first('password_confirmation') ?? null"
-                        help="Re-enter the password to confirm"
-                        icon='<svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path></svg>'
-                    />
 
                     <!-- University -->
                     <div class="space-y-2">
-                        <label class="block text-sm font-medium text-gray-700">
+                        <label for="university_select" class="block text-sm font-semibold text-gray-700">
                             University/School
                         </label>
-                        <div class="relative">
-                            <select name="university_id" id="university_select"
-                                    class="block w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors duration-200 appearance-none bg-white">
-                                <option value="">Select or add new university (optional)</option>
+                        <div class="relative group">
+                            <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none z-10">
+                                <svg class="w-5 h-5 text-gray-400 group-focus-within:text-indigo-500 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path>
+                                </svg>
+                            </div>
+                            <select name="university_id" 
+                                    id="university_select"
+                                    class="block w-full pl-12 pr-10 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200 bg-gray-50 focus:bg-white appearance-none cursor-pointer">
+                                <option value="">Select or add new (optional)</option>
                                 @foreach($universities as $university)
                                     <option value="{{ $university->id }}" {{ old('university_id') == $university->id ? 'selected' : '' }}>
                                         {{ $university->name }}
                                     </option>
                                 @endforeach
-                                <option value="new" class="text-blue-600 font-semibold">+ Add New University</option>
+                                <option value="new" class="text-indigo-600 font-semibold">+ Add New University</option>
                             </select>
-
-                            <!-- Custom dropdown arrow -->
-                            <div class="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
-                                <svg class="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <div class="absolute inset-y-0 right-0 pr-4 flex items-center pointer-events-none">
+                                <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
                                 </svg>
                             </div>
                         </div>
 
-                        <!-- Hidden input for new university name -->
-                        <input type="text" name="new_university_name" id="new_university_name"
-                               class="hidden block w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200"
-                               placeholder="Enter new university name">
+                        <!-- New University Input -->
+                        <div id="new-university-container" class="hidden mt-3 transition-all duration-300">
+                            <label for="new_university_name" class="block text-sm font-semibold text-gray-700 mb-2">
+                                New University Name <span class="text-red-500">*</span>
+                            </label>
+                            <div class="relative">
+                                <input type="text" 
+                                       name="new_university_name" 
+                                       id="new_university_name"
+                                       placeholder="Enter university name"
+                                       class="block w-full px-4 py-3 border-2 border-indigo-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200 bg-indigo-50 focus:bg-white @error('new_university_name') border-red-300 focus:ring-red-500 focus:border-red-500 @enderror">
+                            </div>
+                            @error('new_university_name')
+                                <p class="text-sm text-red-600 flex items-center mt-1">
+                                    <svg class="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                                        <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd"></path>
+                                    </svg>
+                                    {{ $message }}
+                                </p>
+                            @enderror
+                        </div>
+                    </div>
+                </div>
+            </div>
 
-                        <p class="text-sm text-gray-500">Select from existing universities or choose "Add New University" to create one</p>
-                        @if($errors && $errors->has('university_id'))
-                            <p class="text-sm text-red-600 flex items-center">
-                                <svg class="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
-                                    <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd"></path>
-                                </svg>
-                                {{ $errors->first('university_id') }}
-                            </p>
-                        @endif
-                        @if($errors && $errors->has('new_university_name'))
-                            <p class="text-sm text-red-600 flex items-center">
-                                <svg class="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
-                                    <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd"></path>
-                                </svg>
-                                {{ $errors->first('new_university_name') }}
-                            </p>
-                        @endif
+            <!-- Security Section -->
+            <div class="p-8 bg-gradient-to-br from-gray-50 to-white">
+                <div class="flex items-center space-x-3 mb-6">
+                    <div class="bg-purple-100 p-2 rounded-lg">
+                        <svg class="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path>
+                        </svg>
+                    </div>
+                    <div>
+                        <h2 class="text-xl font-bold text-gray-900">Security Settings</h2>
+                        <p class="text-sm text-gray-500">Set up password and account access</p>
                     </div>
                 </div>
 
-                <!-- Active Status -->
-                <div class="flex items-center p-4 bg-gray-50 rounded-lg">
-                    <input type="checkbox" name="is_active" id="is_active" value="1" {{ old('is_active', true) ? 'checked' : '' }}
-                           class="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded">
-                    <label for="is_active" class="ml-3 block text-sm text-gray-900">
-                        <span class="font-medium">Active Account</span>
-                        <span class="text-gray-500 block">User can log in and take quizzes</span>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <!-- Password -->
+                    <div class="space-y-2">
+                        <label for="password" class="block text-sm font-semibold text-gray-700">
+                            Password <span class="text-red-500">*</span>
+                        </label>
+                        <div class="relative group">
+                            <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                                <svg class="w-5 h-5 text-gray-400 group-focus-within:text-indigo-500 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path>
+                                </svg>
+                            </div>
+                            <input type="password" 
+                                   id="password" 
+                                   name="password" 
+                                   required
+                                   placeholder="Enter secure password"
+                                   class="block w-full pl-12 pr-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200 bg-gray-50 focus:bg-white @error('password') border-red-300 focus:ring-red-500 focus:border-red-500 @enderror">
+                            <button type="button" 
+                                    onclick="togglePassword('password')"
+                                    class="absolute inset-y-0 right-0 pr-4 flex items-center text-gray-400 hover:text-gray-600">
+                                <svg id="password-eye" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
+                                </svg>
+                            </button>
+                        </div>
+                        <div id="password-strength" class="hidden mt-2">
+                            <div class="flex items-center space-x-2">
+                                <div class="flex-1 h-2 bg-gray-200 rounded-full overflow-hidden">
+                                    <div id="password-strength-bar" class="h-full transition-all duration-300 rounded-full"></div>
+                                </div>
+                                <span id="password-strength-text" class="text-xs font-medium"></span>
+                            </div>
+                        </div>
+                        <p class="text-xs text-gray-500 mt-1">Minimum 8 characters with letters and numbers</p>
+                        @error('password')
+                            <p class="text-sm text-red-600 flex items-center mt-1">
+                                <svg class="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd"></path>
+                                </svg>
+                                {{ $message }}
+                            </p>
+                        @enderror
+                    </div>
+
+                    <!-- Confirm Password -->
+                    <div class="space-y-2">
+                        <label for="password_confirmation" class="block text-sm font-semibold text-gray-700">
+                            Confirm Password <span class="text-red-500">*</span>
+                        </label>
+                        <div class="relative group">
+                            <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                                <svg class="w-5 h-5 text-gray-400 group-focus-within:text-indigo-500 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                </svg>
+                            </div>
+                            <input type="password" 
+                                   id="password_confirmation" 
+                                   name="password_confirmation" 
+                                   required
+                                   placeholder="Re-enter password"
+                                   class="block w-full pl-12 pr-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200 bg-gray-50 focus:bg-white @error('password_confirmation') border-red-300 focus:ring-red-500 focus:border-red-500 @enderror">
+                            <button type="button" 
+                                    onclick="togglePassword('password_confirmation')"
+                                    class="absolute inset-y-0 right-0 pr-4 flex items-center text-gray-400 hover:text-gray-600">
+                                <svg id="password_confirmation-eye" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
+                                </svg>
+                            </button>
+                        </div>
+                        <div id="password-match" class="hidden mt-2">
+                            <p class="text-sm flex items-center">
+                                <svg id="match-icon" class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                                </svg>
+                                <span id="match-text"></span>
+                            </p>
+                        </div>
+                        @error('password_confirmation')
+                            <p class="text-sm text-red-600 flex items-center mt-1">
+                                <svg class="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd"></path>
+                                </svg>
+                                {{ $message }}
+                            </p>
+                        @enderror
+                    </div>
+                </div>
+            </div>
+
+            <!-- Account Status Section -->
+            <div class="p-8">
+                <div class="flex items-center space-x-3 mb-6">
+                    <div class="bg-green-100 p-2 rounded-lg">
+                        <svg class="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                        </svg>
+                    </div>
+                    <div>
+                        <h2 class="text-xl font-bold text-gray-900">Account Status</h2>
+                        <p class="text-sm text-gray-500">Control user access and permissions</p>
+                    </div>
+                </div>
+
+                <div class="bg-gradient-to-r from-green-50 to-emerald-50 border-2 border-green-200 rounded-xl p-6">
+                    <label class="flex items-start space-x-4 cursor-pointer group">
+                        <div class="relative flex-shrink-0">
+                            <input type="checkbox" 
+                                   name="is_active" 
+                                   id="is_active" 
+                                   value="1" 
+                                   {{ old('is_active', true) ? 'checked' : '' }}
+                                   class="sr-only peer">
+                            <div class="w-14 h-7 bg-gray-300 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-green-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-[4px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-6 after:w-6 after:transition-all peer-checked:bg-green-600"></div>
+                        </div>
+                        <div class="flex-1">
+                            <div class="font-semibold text-gray-900 group-hover:text-green-700 transition-colors">
+                                Active Account
+                            </div>
+                            <p class="text-sm text-gray-600 mt-1">
+                                When enabled, the user can log in and access the system. Disable to temporarily restrict access.
+                            </p>
+                        </div>
                     </label>
                 </div>
             </div>
 
             <!-- Action Buttons -->
-            <div class="flex justify-end space-x-4 pt-6 border-t border-gray-200">
-                <a href="{{ route('users.index') }}">
-                    <x-formal-button variant="outline" size="md">
-                        <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <div class="p-8 bg-gray-50 border-t border-gray-200">
+                <div class="flex flex-col sm:flex-row justify-end space-y-3 sm:space-y-0 sm:space-x-4">
+                    <a href="{{ route('users.index') }}" 
+                       class="inline-flex items-center justify-center px-6 py-3 border-2 border-gray-300 rounded-xl font-semibold text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 transition-all duration-200">
+                        <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
                         </svg>
                         Cancel
-                    </x-formal-button>
-                </a>
-                <x-formal-button
-                    type="submit"
-                    variant="primary"
-                    size="md"
-                >
-                    <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    </a>
+                    <button type="submit" 
+                            class="inline-flex items-center justify-center px-8 py-3 border border-transparent rounded-xl font-semibold text-white bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200">
+                        <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
                     </svg>
                     Create User
-                </x-formal-button>
+                    </button>
+                </div>
             </div>
         </form>
-    </x-formal-card>
+    </div>
 </div>
 @endsection
 
@@ -235,44 +395,137 @@
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     const universitySelect = document.getElementById('university_select');
+    const newUniversityContainer = document.getElementById('new-university-container');
     const newUniversityInput = document.getElementById('new_university_name');
+    const passwordInput = document.getElementById('password');
+    const passwordConfirmationInput = document.getElementById('password_confirmation');
+    const passwordStrengthDiv = document.getElementById('password-strength');
+    const passwordStrengthBar = document.getElementById('password-strength-bar');
+    const passwordStrengthText = document.getElementById('password-strength-text');
+    const passwordMatchDiv = document.getElementById('password-match');
+    const matchIcon = document.getElementById('match-icon');
+    const matchText = document.getElementById('match-text');
 
-    if (universitySelect && newUniversityInput) {
+    // University selection toggle
+    if (universitySelect && newUniversityContainer && newUniversityInput) {
         universitySelect.addEventListener('change', function() {
-            console.log('Dropdown changed to:', this.value); // Debug log
-
             if (this.value === 'new') {
-                // Show the text input for new university
-                newUniversityInput.classList.remove('hidden');
-                newUniversityInput.style.display = 'block';
+                newUniversityContainer.classList.remove('hidden');
                 newUniversityInput.focus();
                 newUniversityInput.required = true;
-                console.log('Showing new university input'); // Debug log
             } else {
-                // Hide the text input
-                newUniversityInput.classList.add('hidden');
-                newUniversityInput.style.display = 'none';
+                newUniversityContainer.classList.add('hidden');
                 newUniversityInput.value = '';
                 newUniversityInput.required = false;
-                console.log('Hiding new university input'); // Debug log
             }
         });
 
-        // Handle form submission
-        const form = document.querySelector('form');
+        // Initialize on page load
+        if (universitySelect.value === 'new') {
+            newUniversityContainer.classList.remove('hidden');
+            newUniversityInput.required = true;
+        }
+    }
+
+    // Password strength checker
+    if (passwordInput && passwordStrengthDiv) {
+        passwordInput.addEventListener('input', function() {
+            const password = this.value;
+            if (password.length > 0) {
+                passwordStrengthDiv.classList.remove('hidden');
+                const strength = calculatePasswordStrength(password);
+                updatePasswordStrength(strength);
+            } else {
+                passwordStrengthDiv.classList.add('hidden');
+            }
+        });
+    }
+
+    // Password match checker
+    if (passwordInput && passwordConfirmationInput && passwordMatchDiv) {
+        function checkPasswordMatch() {
+            const password = passwordInput.value;
+            const confirmation = passwordConfirmationInput.value;
+            
+            if (confirmation.length > 0) {
+                passwordMatchDiv.classList.remove('hidden');
+                if (password === confirmation && password.length > 0) {
+                    matchIcon.classList.remove('text-red-500');
+                    matchIcon.classList.add('text-green-500');
+                    matchText.textContent = 'Passwords match';
+                    matchText.classList.remove('text-red-600');
+                    matchText.classList.add('text-green-600');
+                } else {
+                    matchIcon.classList.remove('text-green-500');
+                    matchIcon.classList.add('text-red-500');
+                    matchText.textContent = 'Passwords do not match';
+                    matchText.classList.remove('text-green-600');
+                    matchText.classList.add('text-red-600');
+                }
+            } else {
+                passwordMatchDiv.classList.add('hidden');
+            }
+        }
+
+        passwordInput.addEventListener('input', checkPasswordMatch);
+        passwordConfirmationInput.addEventListener('input', checkPasswordMatch);
+    }
+
+    // Form validation
+    const form = document.getElementById('createUserForm');
         if (form) {
             form.addEventListener('submit', function(e) {
-                if (universitySelect.value === 'new' && !newUniversityInput.value.trim()) {
+            if (universitySelect && universitySelect.value === 'new' && (!newUniversityInput || !newUniversityInput.value.trim())) {
                     e.preventDefault();
+                if (typeof ToastNotification !== 'undefined') {
                     ToastNotification.warning('Please enter a university name when selecting "Add New University"');
+                } else {
+                    alert('Please enter a university name when selecting "Add New University"');
+                }
+                if (newUniversityInput) {
                     newUniversityInput.focus();
-                    return false;
+                }
+                return false;
                 }
             });
         }
-    } else {
-        console.error('University select or input not found');
-    }
 });
+
+function togglePassword(fieldId) {
+    const field = document.getElementById(fieldId);
+    const eye = document.getElementById(fieldId + '-eye');
+    
+    if (field.type === 'password') {
+        field.type = 'text';
+        eye.innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.29 3.29m0 0a9.953 9.953 0 015.07-1.458M6.29 6.29L12 12m6.71-5.71a9.953 9.953 0 011.458 5.07M18.71 18.71A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029"></path>';
+    } else {
+        field.type = 'password';
+        eye.innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>';
+    }
+}
+
+function calculatePasswordStrength(password) {
+    let strength = 0;
+    
+    if (password.length >= 8) strength += 1;
+    if (password.length >= 12) strength += 1;
+    if (/[a-z]/.test(password)) strength += 1;
+    if (/[A-Z]/.test(password)) strength += 1;
+    if (/\d/.test(password)) strength += 1;
+    if (/[^a-zA-Z\d]/.test(password)) strength += 1;
+    
+    return Math.min(strength, 4);
+}
+
+function updatePasswordStrength(strength) {
+    const colors = ['bg-red-500', 'bg-orange-500', 'bg-yellow-500', 'bg-green-500'];
+    const texts = ['Very Weak', 'Weak', 'Fair', 'Strong', 'Very Strong'];
+    const widths = ['25%', '50%', '75%', '100%'];
+    
+    passwordStrengthBar.className = `h-full transition-all duration-300 rounded-full ${colors[strength - 1] || colors[0]}`;
+    passwordStrengthBar.style.width = widths[strength - 1] || widths[0];
+    passwordStrengthText.textContent = texts[strength] || texts[0];
+    passwordStrengthText.className = `text-xs font-medium ${strength >= 3 ? 'text-green-600' : strength >= 2 ? 'text-yellow-600' : 'text-red-600'}`;
+}
 </script>
 @endsection

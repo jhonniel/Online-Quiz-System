@@ -11,6 +11,20 @@ class RoleLoginController extends Controller
 {
     public function showLoginForm()
     {
+        // If user is already authenticated, redirect to their dashboard
+        if (Auth::check()) {
+            $user = Auth::user();
+            
+            // Check if user is active and approved
+            if ($user->is_active && $user->is_approved) {
+                if ($user->isAdmin()) {
+                    return redirect()->route('admin.dashboard');
+                } else {
+                    return redirect()->route('user.dashboard');
+                }
+            }
+        }
+
         // Get system settings
         $settings = [
             'system_name' => \App\Models\Setting::get('system_name', 'Online Quiz System'),

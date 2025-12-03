@@ -9,11 +9,26 @@ use App\Models\QuizAttempt;
 use App\Models\University;
 use App\Models\ContactMessage;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Auth;
 
 class LandingController extends Controller
 {
     public function index()
     {
+        // If user is already authenticated, redirect to their dashboard
+        if (Auth::check()) {
+            $user = Auth::user();
+            
+            // Check if user is active and approved
+            if ($user->is_active && $user->is_approved) {
+                if ($user->isAdmin()) {
+                    return redirect()->route('admin.dashboard');
+                } else {
+                    return redirect()->route('user.dashboard');
+                }
+            }
+        }
+
         // Check maintenance mode
         $maintenanceMode = \App\Models\Setting::get('maintenance_mode', 'disabled');
         if ($maintenanceMode === 'enabled') {

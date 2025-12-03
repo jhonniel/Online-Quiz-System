@@ -39,11 +39,14 @@ class LeaveRequestController extends Controller
         ];
 
         // Ensure a leave balance record exists for this user & year (auto-recurring each year)
+        $defaultVacation = (float) \App\Models\Setting::get('default_vacation_balance', 15);
+        $defaultSick = (float) \App\Models\Setting::get('default_sick_leave_balance', 10);
+        
         $leaveBalance = LeaveBalance::firstOrCreate(
             ['user_id' => $userId, 'year' => $currentYear],
             [
-                'vacation_allowance' => 15, // Defaults; admin can adjust per employee
-                'sick_allowance' => 10,
+                'vacation_allowance' => $defaultVacation,
+                'sick_allowance' => $defaultSick,
             ]
         );
 
@@ -117,6 +120,19 @@ class LeaveRequestController extends Controller
 
         $totalOvertimeHours += $overtimeFromLeavesMinutes / 60;
 
+        // Subtract deficit hours from overtime balance (allow negative values)
+        $deficitQuery = \App\Models\DtrDeficit::where('user_id', $userId)
+            ->where('is_applied', true);
+        
+        if ($months === 12) {
+            $deficitQuery->whereYear('week_start_date', $currentYear);
+        } else {
+            $deficitQuery->whereDate('week_start_date', '>=', $fromDate->toDateString());
+        }
+        
+        $totalDeficitHours = $deficitQuery->sum('deficit_hours');
+        $totalOvertimeHours = $totalOvertimeHours - $totalDeficitHours;
+
         $approvedOffsetQuery = LeaveRequest::where('user_id', $userId)
             ->where('type', 'offset')
             ->where('status', 'approved');
@@ -127,16 +143,29 @@ class LeaveRequestController extends Controller
             $approvedOffsetQuery->whereDate('start_date', '>=', $fromDate->toDateString());
         }
 
-        $approvedOffsetCount = $approvedOffsetQuery->count();
+        $approvedOffsetRequests = $approvedOffsetQuery->get();
 
-        $offsetHoursUsed = $approvedOffsetCount * 8; // 8 hours per approved offset
+        // Parse offset hours from reason field (each offset may have different hours)
+        $offsetHoursUsed = 0;
+        foreach ($approvedOffsetRequests as $offsetRequest) {
+            $raw = $offsetRequest->reason ?? '';
+            if (preg_match('/Hours to Deduct:\s*([0-9]{2}:[0-9]{2})/', $raw, $m)) {
+                [$h, $mPart] = array_map('intval', explode(':', $m[1]));
+                $offsetHoursUsed += $h + ($mPart / 60);
+            } else {
+                // Fallback: if format not found, use 8 hours (for old records)
+                $offsetHoursUsed += 8;
+            }
+        }
 
-        $netOvertimeHours = max($totalOvertimeHours - $offsetHoursUsed, 0);
+        $netOvertimeHours = $totalOvertimeHours - $offsetHoursUsed;
 
-        $overtimeMinutes = (int) round($netOvertimeHours * 60);
-        $overtimeHoursPart = intdiv($overtimeMinutes, 60);
-        $overtimeMinutesPart = $overtimeMinutes % 60;
-        $overtimeFormatted = sprintf('%02d:%02d', $overtimeHoursPart, $overtimeMinutesPart);
+        // Format overtime (handle negative values)
+        $isNegative = $netOvertimeHours < 0;
+        $absOvertimeMinutes = (int) round(abs($netOvertimeHours) * 60);
+        $overtimeHoursPart = intdiv($absOvertimeMinutes, 60);
+        $overtimeMinutesPart = $absOvertimeMinutes % 60;
+        $overtimeFormatted = ($isNegative ? '-' : '') . sprintf('%02d:%02d', $overtimeHoursPart, $overtimeMinutesPart);
 
         // Build label for the overtime window
         if ($months === 12) {
@@ -189,6 +218,7 @@ class LeaveRequestController extends Controller
             'wfh_mode' => 'required_if:type,work_from_home|nullable|in:working_remotely,request_to_be_excused',
             'wfh_address' => 'required_if:type,work_from_home|nullable|string|max:255',
             'wfh_tasks' => 'required_if:type,work_from_home|nullable|string|max:2000',
+            'offset_hours' => 'nullable|regex:/^\\d{2}:\\d{2}$/',
         ]);
 
         // Build reason – include structured details when type is overtime or WFH
@@ -218,6 +248,32 @@ class LeaveRequestController extends Controller
 
             if (!empty($reasonToStore)) {
                 $details .= "\nAdditional Explanation:\n" . $reasonToStore;
+            }
+
+            $reasonToStore = $details;
+        } elseif ($validated['type'] === 'offset') {
+            // Calculate duration in days
+            $startDate = \Carbon\Carbon::parse($validated['start_date']);
+            $endDate = $validated['end_date'] 
+                ? \Carbon\Carbon::parse($validated['end_date'])
+                : $startDate;
+            $days = $startDate->diffInDays($endDate) + 1; // +1 to include both start and end dates
+
+            // If offset_hours is provided, use it; otherwise calculate as days * 8 hours
+            if (!empty($validated['offset_hours'])) {
+                $offsetHours = $validated['offset_hours'];
+            } else {
+                // Calculate: 1 day = 08:00
+                $totalHours = $days * 8;
+                $offsetHours = sprintf('%02d:00', $totalHours);
+            }
+
+            $details = "Offset Request Details:\n";
+            $details .= "Duration: " . $days . " " . ($days == 1 ? 'day' : 'days') . "\n";
+            $details .= "Hours to Deduct: " . $offsetHours . "\n";
+
+            if (!empty($reasonToStore)) {
+                $details .= "\nReason:\n" . $reasonToStore;
             }
 
             $reasonToStore = $details;
@@ -296,6 +352,7 @@ class LeaveRequestController extends Controller
             'wfh_mode' => '',
             'wfh_address' => '',
             'wfh_tasks' => '',
+            'offset_hours' => '',
         ];
 
         $raw = $leaveRequest->reason ?? '';
@@ -325,6 +382,13 @@ class LeaveRequestController extends Controller
                 $editData['wfh_tasks'] = trim($m[1]);
             }
             if (preg_match('/Additional Explanation:\s*(.+)\z/s', $raw, $m)) {
+                $editData['reason'] = trim($m[1]);
+            }
+        } elseif ($leaveRequest->type === 'offset') {
+            if (preg_match('/Hours to Deduct:\s*([0-9]{2}:[0-9]{2})/', $raw, $m)) {
+                $editData['offset_hours'] = trim($m[1]);
+            }
+            if (preg_match('/Reason:\s*(.+)\z/s', $raw, $m)) {
                 $editData['reason'] = trim($m[1]);
             }
         } else {
@@ -367,6 +431,7 @@ class LeaveRequestController extends Controller
             'wfh_mode' => 'required_if:type,work_from_home|nullable|in:working_remotely,request_to_be_excused',
             'wfh_address' => 'required_if:type,work_from_home|nullable|string|max:255',
             'wfh_tasks' => 'required_if:type,work_from_home|nullable|string|max:2000',
+            'offset_hours' => 'nullable|regex:/^\\d{2}:\\d{2}$/',
         ]);
 
         // Build reason – include structured details when type is overtime or WFH
@@ -396,6 +461,32 @@ class LeaveRequestController extends Controller
 
             if (!empty($reasonToStore)) {
                 $details .= "\nAdditional Explanation:\n" . $reasonToStore;
+            }
+
+            $reasonToStore = $details;
+        } elseif ($validated['type'] === 'offset') {
+            // Calculate duration in days
+            $startDate = \Carbon\Carbon::parse($validated['start_date']);
+            $endDate = $validated['end_date'] 
+                ? \Carbon\Carbon::parse($validated['end_date'])
+                : $startDate;
+            $days = $startDate->diffInDays($endDate) + 1; // +1 to include both start and end dates
+
+            // If offset_hours is provided, use it; otherwise calculate as days * 8 hours
+            if (!empty($validated['offset_hours'])) {
+                $offsetHours = $validated['offset_hours'];
+            } else {
+                // Calculate: 1 day = 08:00
+                $totalHours = $days * 8;
+                $offsetHours = sprintf('%02d:00', $totalHours);
+            }
+
+            $details = "Offset Request Details:\n";
+            $details .= "Duration: " . $days . " " . ($days == 1 ? 'day' : 'days') . "\n";
+            $details .= "Hours to Deduct: " . $offsetHours . "\n";
+
+            if (!empty($reasonToStore)) {
+                $details .= "\nReason:\n" . $reasonToStore;
             }
 
             $reasonToStore = $details;

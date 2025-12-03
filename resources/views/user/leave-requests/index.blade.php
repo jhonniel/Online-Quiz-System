@@ -155,11 +155,17 @@
                     <p class="text-sm font-medium text-gray-500">
                         Overtime ({{ $overtimeWindowLabel ?? 'This Year' }})
                     </p>
-                    <p class="text-xl font-bold text-gray-900">
-                        {{ $overtimeFormatted }}
+                    <p class="text-xl">
+                        <span class="font-bold {{ str_starts_with($overtimeFormatted, '-') ? 'text-red-600' : 'text-gray-900' }}">
+                            {{ $overtimeFormatted }}
+                        </span>
                     </p>
                     <p class="text-xs text-gray-500 mt-1">
-                        Based on approved DTR and overtime records within this window
+                        @if(str_starts_with($overtimeFormatted, '-'))
+                            Negative balance due to deficit hours deducted
+                        @else
+                            Based on approved DTR and overtime records within this window
+                        @endif
                     </p>
                 </div>
             </div>

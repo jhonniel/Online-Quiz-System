@@ -9,11 +9,13 @@ Hello {{ $application->first_name }},
 Your application for the **{{ $position->title ?? $application->position_applied }}** position has been **accepted**!
 
 @if($application->acceptance_token)
-You can now proceed to create your account and continue with the interview process.
+**Please proceed** to create your account and continue with the next steps in the hiring process.
 
 <x-mail::button :url="route('hiring.accept', $application->acceptance_token)">
-Create Account & Continue
+Proceed to Create Account
 </x-mail::button>
+@else
+**Please proceed** with the next steps as instructed by our team.
 @endif
 
 @elseif($status === 'rejected')
@@ -37,5 +39,5 @@ Your application for the **{{ $position->title ?? $application->position_applied
 Thank you for your interest in joining our team.
 
 Best regards,<br>
-{{ config('app.name') }} Team
+Infosoft-Studio
 </x-mail::message>

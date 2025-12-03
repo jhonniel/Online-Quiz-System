@@ -102,15 +102,15 @@
                         @endif
 
                         @auth
-                            <div class="flex items-center space-x-4">
-                                <span class="text-sm text-gray-600">Welcome, {{ auth()->user()->name }}</span>
-                                <form method="POST" action="{{ route('logout') }}" class="inline">
-                                    @csrf
-                                    <button type="submit" class="text-sm text-gray-600 hover:text-primary transition-colors">
-                                        Logout
-                                    </button>
-                                </form>
-                            </div>
+                            @if(auth()->user()->isAdmin())
+                                <a href="{{ route('admin.dashboard') }}" class="bg-primary text-white px-4 py-2 rounded-lg hover:opacity-90 transition-opacity">
+                                    Go To Dashboard
+                                </a>
+                            @else
+                                <a href="{{ route('user.dashboard') }}" class="bg-primary text-white px-4 py-2 rounded-lg hover:opacity-90 transition-opacity">
+                                    Go To Dashboard
+                                </a>
+                            @endif
                         @else
                             <a href="{{ route('login') }}" class="bg-primary text-white px-4 py-2 rounded-lg hover:opacity-90 transition-opacity">
                                 Login
@@ -141,15 +141,15 @@
                     @endif
 
                     @auth
-                        <div class="border-t pt-2">
-                            <div class="px-3 py-2 text-sm text-gray-600">Welcome, {{ auth()->user()->name }}</div>
-                            <form method="POST" action="{{ route('logout') }}">
-                                @csrf
-                                <button type="submit" class="block w-full text-left px-3 py-2 text-gray-700 hover:text-primary">
-                                    Logout
-                                </button>
-                            </form>
-                        </div>
+                        @if(auth()->user()->isAdmin())
+                            <a href="{{ route('admin.dashboard') }}" class="block px-3 py-2 bg-primary text-white rounded-lg mx-3 text-center">
+                                Go To Dashboard
+                            </a>
+                        @else
+                            <a href="{{ route('user.dashboard') }}" class="block px-3 py-2 bg-primary text-white rounded-lg mx-3 text-center">
+                                Go To Dashboard
+                            </a>
+                        @endif
                     @else
                         <a href="{{ route('login') }}" class="block px-3 py-2 bg-primary text-white rounded-lg mx-3 text-center">
                             Login

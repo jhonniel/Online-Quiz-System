@@ -48,8 +48,7 @@ class UserController extends Controller
     public function create()
     {
         $universities = University::active()->orderBy('name')->get();
-        $errors = new \Illuminate\Support\MessageBag(); // Empty MessageBag
-        return view('admin.users.create', compact('universities', 'errors'));
+        return view('admin.users.create', compact('universities'));
     }
 
     public function store(Request $request)
@@ -108,6 +107,8 @@ class UserController extends Controller
         $balances = null;
         $overtimeFormatted = null;
         $overtimeWindowLabel = null;
+        $totalDeficitFormatted = null;
+        $totalDeficitHours = 0;
 
         if ($user->role === 'employee') {
             $currentYear = now()->year;
@@ -121,11 +122,14 @@ class UserController extends Controller
                 $overtimeWindowLabel = "Last {$months} month(s)";
             }
 
+            $defaultVacation = (float) \App\Models\Setting::get('default_vacation_balance', 15);
+            $defaultSick = (float) \App\Models\Setting::get('default_sick_leave_balance', 10);
+            
             $leaveBalance = \App\Models\LeaveBalance::firstOrCreate(
                 ['user_id' => $user->id, 'year' => $currentYear],
                 [
-                    'vacation_allowance' => 15,
-                    'sick_allowance' => 10,
+                    'vacation_allowance' => $defaultVacation,
+                    'sick_allowance' => $defaultSick,
                 ]
             );
 
@@ -188,6 +192,25 @@ class UserController extends Controller
 
             $totalOvertimeHours += $overtimeFromLeavesMinutes / 60;
 
+            // Subtract deficit hours from overtime balance (allow negative values)
+            $deficitQuery = \App\Models\DtrDeficit::where('user_id', $user->id)
+                ->where('is_applied', true);
+            
+            if ($months === 12) {
+                $deficitQuery->whereYear('week_start_date', $currentYear);
+            } else {
+                $deficitQuery->whereDate('week_start_date', '>=', $fromDate->toDateString());
+            }
+            
+            $totalDeficitHours = $deficitQuery->sum('deficit_hours');
+            $totalOvertimeHours = $totalOvertimeHours - $totalDeficitHours;
+            
+            // Format total deficit hours for display
+            $totalDeficitMinutes = (int) round($totalDeficitHours * 60);
+            $deficitHoursPart = intdiv($totalDeficitMinutes, 60);
+            $deficitMinutesPart = $totalDeficitMinutes % 60;
+            $totalDeficitFormatted = sprintf('%02d:%02d', $deficitHoursPart, $deficitMinutesPart);
+
             $approvedOffsetQuery = \App\Models\LeaveRequest::where('user_id', $user->id)
                 ->where('type', 'offset')
                 ->where('status', 'approved');
@@ -198,19 +221,32 @@ class UserController extends Controller
                 $approvedOffsetQuery->whereDate('start_date', '>=', $fromDate->toDateString());
             }
 
-            $approvedOffsetCount = $approvedOffsetQuery->count();
+            $approvedOffsetRequests = $approvedOffsetQuery->get();
 
-            $offsetHoursUsed = $approvedOffsetCount * 8; // 8 hours per approved offset
+            // Parse offset hours from reason field (each offset may have different hours)
+            $offsetHoursUsed = 0;
+            foreach ($approvedOffsetRequests as $offsetRequest) {
+                $raw = $offsetRequest->reason ?? '';
+                if (preg_match('/Hours to Deduct:\s*([0-9]{2}:[0-9]{2})/', $raw, $m)) {
+                    [$h, $mPart] = array_map('intval', explode(':', $m[1]));
+                    $offsetHoursUsed += $h + ($mPart / 60);
+                } else {
+                    // Fallback: if format not found, use 8 hours (for old records)
+                    $offsetHoursUsed += 8;
+                }
+            }
 
-            $netOvertimeHours = max($totalOvertimeHours - $offsetHoursUsed, 0);
+            $netOvertimeHours = $totalOvertimeHours - $offsetHoursUsed;
 
-            $overtimeMinutes = (int) round($netOvertimeHours * 60);
-            $overtimeHoursPart = intdiv($overtimeMinutes, 60);
-            $overtimeMinutesPart = $overtimeMinutes % 60;
-            $overtimeFormatted = sprintf('%02d:%02d', $overtimeHoursPart, $overtimeMinutesPart);
+            // Format overtime (handle negative values)
+            $isNegative = $netOvertimeHours < 0;
+            $absOvertimeMinutes = (int) round(abs($netOvertimeHours) * 60);
+            $overtimeHoursPart = intdiv($absOvertimeMinutes, 60);
+            $overtimeMinutesPart = $absOvertimeMinutes % 60;
+            $overtimeFormatted = ($isNegative ? '-' : '') . sprintf('%02d:%02d', $overtimeHoursPart, $overtimeMinutesPart);
         }
 
-        return view('admin.users.show', compact('user', 'balances', 'overtimeFormatted', 'overtimeWindowLabel'));
+        return view('admin.users.show', compact('user', 'balances', 'overtimeFormatted', 'overtimeWindowLabel', 'totalDeficitFormatted', 'totalDeficitHours'));
     }
 
     public function updateOvertimeWindow(Request $request, User $user)

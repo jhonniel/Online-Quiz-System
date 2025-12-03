@@ -604,10 +604,13 @@
                             </p>
                             <p class="text-xs text-gray-500">Used: {{ $balances['sick']['used'] }} days</p>
                         </div>
-                        <div class="border border-gray-100 rounded-lg px-3 py-2">
+                        <div class="border border-gray-100 rounded-lg px-3 py-2 {{ str_starts_with($overtimeFormatted ?? '00:00', '-') ? 'bg-red-50/40 border-red-200' : '' }}">
                             <p class="text-xs font-semibold text-gray-500 uppercase tracking-wide">Overtime (This Year)</p>
                             <p class="text-sm text-gray-900">
-                                <span class="font-bold">{{ $overtimeFormatted ?? '00:00' }}</span> hours
+                                <span class="font-bold {{ str_starts_with($overtimeFormatted ?? '00:00', '-') ? 'text-red-600' : 'text-gray-900' }}">{{ $overtimeFormatted ?? '00:00' }}</span> hours
+                                @if(str_starts_with($overtimeFormatted ?? '00:00', '-'))
+                                    <span class="text-xs text-red-500 ml-2">(Negative Balance)</span>
+                                @endif
                             </p>
                         </div>
                     </div>

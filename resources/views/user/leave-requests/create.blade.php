@@ -160,6 +160,35 @@
                         </div>
                     </div>
 
+                    <!-- Offset Details (visible only when Request Type = Offset) -->
+                    <div id="offset-section" class="space-y-4 hidden">
+                        <div class="border-t border-gray-200 pt-4 mt-4">
+                            <h2 class="text-sm font-semibold text-gray-900 mb-2">Offset Details</h2>
+                            <p class="text-xs text-gray-500 mb-3">
+                                When requesting <strong>Offset</strong>, you can specify custom hours to be deducted from your overtime balance.
+                                If not specified, it will automatically calculate based on duration (1 day = 08:00).
+                            </p>
+                        </div>
+
+                        <!-- Offset Hours (Optional) -->
+                        <div>
+                            <label for="offset_hours" class="block text-sm font-medium text-gray-700 mb-2">
+                                Hours to Deduct (HH:MM) <span class="text-gray-400">(Optional)</span>
+                            </label>
+                            <input type="text" name="offset_hours" id="offset_hours"
+                                   value="{{ old('offset_hours') }}"
+                                   placeholder="08:00"
+                                   class="time-input w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                            <p class="mt-1 text-xs text-gray-500">
+                                Enter custom hours to deduct in <strong>HH:MM</strong> format (e.g., 08:00, 04:30). 
+                                If left blank, it will automatically calculate as <strong>1 day = 08:00</strong> based on your request duration.
+                            </p>
+                            @error('offset_hours')
+                                <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                            @enderror
+                        </div>
+                    </div>
+
                     <!-- Work From Home Details (visible only when Request Type = Work From Home) -->
                     <div id="wfh-section" class="space-y-4 hidden">
                         <div class="border-t border-gray-200 pt-4 mt-4">
@@ -261,6 +290,7 @@
     const typeSelect = document.getElementById('type');
     const overtimeSection = document.getElementById('overtime-section');
     const wfhSection = document.getElementById('wfh-section');
+    const offsetSection = document.getElementById('offset-section');
 
     function updateRequestTypeSections() {
         if (typeSelect.value === 'overtime') {
@@ -273,6 +303,12 @@
             wfhSection.classList.remove('hidden');
         } else {
             wfhSection.classList.add('hidden');
+        }
+
+        if (typeSelect.value === 'offset') {
+            offsetSection.classList.remove('hidden');
+        } else {
+            offsetSection.classList.add('hidden');
         }
     }
 
