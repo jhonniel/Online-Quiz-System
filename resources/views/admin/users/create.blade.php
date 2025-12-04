@@ -29,7 +29,7 @@
             <!-- Decorative background elements -->
             <div class="absolute top-0 right-0 w-64 h-64 bg-white opacity-10 rounded-full -mr-32 -mt-32"></div>
             <div class="absolute bottom-0 left-0 w-48 h-48 bg-white opacity-10 rounded-full -ml-24 -mb-24"></div>
-            
+
             <div class="relative z-10 flex items-center justify-between flex-wrap gap-4">
                 <div class="flex items-center space-x-4">
                     <div class="bg-white/20 backdrop-blur-sm p-4 rounded-xl">
@@ -83,8 +83,8 @@
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
                                 </svg>
                             </div>
-                            <input type="text" 
-                                   id="name" 
+                            <input type="text"
+                                   id="name"
                         name="name"
                                    value="{{ old('name') }}"
                                    required
@@ -112,8 +112,8 @@
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 4.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path>
                                 </svg>
                             </div>
-                            <input type="email" 
-                                   id="email" 
+                            <input type="email"
+                                   id="email"
                         name="email"
                                    value="{{ old('email') }}"
                                    required
@@ -142,8 +142,8 @@
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path>
                                 </svg>
                             </div>
-                            <select name="role" 
-                                    id="role" 
+                            <select name="role"
+                                    id="role"
                                     required
                                     class="block w-full pl-12 pr-10 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200 bg-gray-50 focus:bg-white appearance-none cursor-pointer @error('role') border-red-300 focus:ring-red-500 focus:border-red-500 @enderror">
                                 <option value="">Select a role</option>
@@ -181,7 +181,7 @@
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path>
                                 </svg>
                             </div>
-                            <select name="university_id" 
+                            <select name="university_id"
                                     id="university_select"
                                     class="block w-full pl-12 pr-10 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200 bg-gray-50 focus:bg-white appearance-none cursor-pointer">
                                 <option value="">Select or add new (optional)</option>
@@ -205,8 +205,8 @@
                                 New University Name <span class="text-red-500">*</span>
                             </label>
                             <div class="relative">
-                                <input type="text" 
-                                       name="new_university_name" 
+                                <input type="text"
+                                       name="new_university_name"
                                        id="new_university_name"
                                        placeholder="Enter university name"
                                        class="block w-full px-4 py-3 border-2 border-indigo-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200 bg-indigo-50 focus:bg-white @error('new_university_name') border-red-300 focus:ring-red-500 focus:border-red-500 @enderror">
@@ -220,6 +220,40 @@
                                 </p>
                             @enderror
                         </div>
+                    </div>
+
+                    <!-- Required Training Hours (Students Only) -->
+                    <div class="space-y-2" id="required_training_hours_wrapper"
+                         @if(old('role') === 'student') style="" @else style="display:none;" @endif>
+                        <label for="required_training_hours" class="block text-sm font-semibold text-gray-700">
+                            Required Training Hours (Time Needed to Acquire)
+                        </label>
+                        <div class="relative group">
+                            <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                                <svg class="w-5 h-5 text-gray-400 group-focus-within:text-indigo-500 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                </svg>
+                            </div>
+                            <input type="number"
+                                   step="0.01"
+                                   min="0"
+                                   name="required_training_hours"
+                                   id="required_training_hours"
+                                   value="{{ old('required_training_hours') }}"
+                                   placeholder="e.g. 160 (for 160 hours)"
+                                   class="block w-full pl-12 pr-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200 bg-gray-50 focus:bg-white @error('required_training_hours') border-red-300 focus:ring-red-500 focus:border-red-500 @enderror">
+                        </div>
+                        <p class="text-xs text-gray-500 mt-1">
+                            Optional. For <span class="font-semibold">students</span>, this is the total hours they need to acquire via DTR.
+                        </p>
+                        @error('required_training_hours')
+                            <p class="text-sm text-red-600 flex items-center mt-1">
+                                <svg class="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd"></path>
+                                </svg>
+                                {{ $message }}
+                            </p>
+                        @enderror
                     </div>
                 </div>
             </div>
@@ -250,13 +284,13 @@
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path>
                                 </svg>
                             </div>
-                            <input type="password" 
-                                   id="password" 
-                                   name="password" 
+                            <input type="password"
+                                   id="password"
+                                   name="password"
                                    required
                                    placeholder="Enter secure password"
                                    class="block w-full pl-12 pr-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200 bg-gray-50 focus:bg-white @error('password') border-red-300 focus:ring-red-500 focus:border-red-500 @enderror">
-                            <button type="button" 
+                            <button type="button"
                                     onclick="togglePassword('password')"
                                     class="absolute inset-y-0 right-0 pr-4 flex items-center text-gray-400 hover:text-gray-600">
                                 <svg id="password-eye" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -295,13 +329,13 @@
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                                 </svg>
                             </div>
-                            <input type="password" 
-                                   id="password_confirmation" 
-                                   name="password_confirmation" 
+                            <input type="password"
+                                   id="password_confirmation"
+                                   name="password_confirmation"
                                    required
                                    placeholder="Re-enter password"
                                    class="block w-full pl-12 pr-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200 bg-gray-50 focus:bg-white @error('password_confirmation') border-red-300 focus:ring-red-500 focus:border-red-500 @enderror">
-                            <button type="button" 
+                            <button type="button"
                                     onclick="togglePassword('password_confirmation')"
                                     class="absolute inset-y-0 right-0 pr-4 flex items-center text-gray-400 hover:text-gray-600">
                                 <svg id="password_confirmation-eye" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -347,10 +381,10 @@
                 <div class="bg-gradient-to-r from-green-50 to-emerald-50 border-2 border-green-200 rounded-xl p-6">
                     <label class="flex items-start space-x-4 cursor-pointer group">
                         <div class="relative flex-shrink-0">
-                            <input type="checkbox" 
-                                   name="is_active" 
-                                   id="is_active" 
-                                   value="1" 
+                            <input type="checkbox"
+                                   name="is_active"
+                                   id="is_active"
+                                   value="1"
                                    {{ old('is_active', true) ? 'checked' : '' }}
                                    class="sr-only peer">
                             <div class="w-14 h-7 bg-gray-300 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-green-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-[4px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-6 after:w-6 after:transition-all peer-checked:bg-green-600"></div>
@@ -370,14 +404,14 @@
             <!-- Action Buttons -->
             <div class="p-8 bg-gray-50 border-t border-gray-200">
                 <div class="flex flex-col sm:flex-row justify-end space-y-3 sm:space-y-0 sm:space-x-4">
-                    <a href="{{ route('users.index') }}" 
+                    <a href="{{ route('users.index') }}"
                        class="inline-flex items-center justify-center px-6 py-3 border-2 border-gray-300 rounded-xl font-semibold text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 transition-all duration-200">
                         <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
                         </svg>
                         Cancel
                     </a>
-                    <button type="submit" 
+                    <button type="submit"
                             class="inline-flex items-center justify-center px-8 py-3 border border-transparent rounded-xl font-semibold text-white bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200">
                         <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
@@ -405,6 +439,8 @@ document.addEventListener('DOMContentLoaded', function() {
     const passwordMatchDiv = document.getElementById('password-match');
     const matchIcon = document.getElementById('match-icon');
     const matchText = document.getElementById('match-text');
+    const roleSelect = document.getElementById('role');
+    const requiredHoursWrapper = document.getElementById('required_training_hours_wrapper');
 
     // University selection toggle
     if (universitySelect && newUniversityContainer && newUniversityInput) {
@@ -427,6 +463,21 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
+    // Show Required Training Hours only for students
+    if (roleSelect && requiredHoursWrapper) {
+        function toggleRequiredHours() {
+            if (roleSelect.value === 'student') {
+                requiredHoursWrapper.style.display = '';
+            } else {
+                requiredHoursWrapper.style.display = 'none';
+            }
+        }
+
+        roleSelect.addEventListener('change', toggleRequiredHours);
+        // Initialize on load
+        toggleRequiredHours();
+    }
+
     // Password strength checker
     if (passwordInput && passwordStrengthDiv) {
         passwordInput.addEventListener('input', function() {
@@ -446,7 +497,7 @@ document.addEventListener('DOMContentLoaded', function() {
         function checkPasswordMatch() {
             const password = passwordInput.value;
             const confirmation = passwordConfirmationInput.value;
-            
+
             if (confirmation.length > 0) {
                 passwordMatchDiv.classList.remove('hidden');
                 if (password === confirmation && password.length > 0) {
@@ -494,7 +545,7 @@ document.addEventListener('DOMContentLoaded', function() {
 function togglePassword(fieldId) {
     const field = document.getElementById(fieldId);
     const eye = document.getElementById(fieldId + '-eye');
-    
+
     if (field.type === 'password') {
         field.type = 'text';
         eye.innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.29 3.29m0 0a9.953 9.953 0 015.07-1.458M6.29 6.29L12 12m6.71-5.71a9.953 9.953 0 011.458 5.07M18.71 18.71A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029"></path>';
@@ -506,14 +557,14 @@ function togglePassword(fieldId) {
 
 function calculatePasswordStrength(password) {
     let strength = 0;
-    
+
     if (password.length >= 8) strength += 1;
     if (password.length >= 12) strength += 1;
     if (/[a-z]/.test(password)) strength += 1;
     if (/[A-Z]/.test(password)) strength += 1;
     if (/\d/.test(password)) strength += 1;
     if (/[^a-zA-Z\d]/.test(password)) strength += 1;
-    
+
     return Math.min(strength, 4);
 }
 
@@ -521,7 +572,7 @@ function updatePasswordStrength(strength) {
     const colors = ['bg-red-500', 'bg-orange-500', 'bg-yellow-500', 'bg-green-500'];
     const texts = ['Very Weak', 'Weak', 'Fair', 'Strong', 'Very Strong'];
     const widths = ['25%', '50%', '75%', '100%'];
-    
+
     passwordStrengthBar.className = `h-full transition-all duration-300 rounded-full ${colors[strength - 1] || colors[0]}`;
     passwordStrengthBar.style.width = widths[strength - 1] || widths[0];
     passwordStrengthText.textContent = texts[strength] || texts[0];

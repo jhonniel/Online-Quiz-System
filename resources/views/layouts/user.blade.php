@@ -122,8 +122,8 @@
                             </span>
                         </a>
 
-                        <!-- Leave Requests (Employee Only) -->
-                        @if(auth()->user()->role === 'employee')
+                        <!-- Leave Requests (Employee & Student) -->
+                        @if(in_array(auth()->user()->role, ['employee', 'student']))
                         <a href="{{ route('user.leave-requests.index') }}"
                            class="group flex items-center px-2 py-2 text-sm font-medium rounded-md transition-colors duration-200 {{ request()->routeIs('user.leave-requests.*') ? 'bg-indigo-700 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white' }}"
                            :class="sidebarCollapsed ? 'justify-center' : ''"
@@ -303,6 +303,16 @@
                             Feedback
                         </a>
 
+                        @if(in_array(auth()->user()->role, ['employee', 'student']))
+                        <a href="{{ route('user.leave-requests.index') }}"
+                           @click="sidebarOpen = false"
+                           class="group flex items-center px-2 py-2 text-sm font-medium rounded-md transition-colors duration-200 {{ request()->routeIs('user.leave-requests.*') ? 'bg-indigo-700 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white' }}">
+                            <svg class="mr-3 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                            </svg>
+                            Leave Requests
+                        </a>
+                        @endif
 
                         <a href="{{ route('user-chat.index') }}"
                            @click="sidebarOpen = false"

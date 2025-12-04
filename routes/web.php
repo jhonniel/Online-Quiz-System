@@ -14,6 +14,8 @@ use App\Http\Controllers\Admin\ContactMessageController as AdminContactMessageCo
 use App\Http\Controllers\Admin\LiveChatController as AdminLiveChatController;
 use App\Http\Controllers\ChatController;
 use App\Http\Controllers\StatusController;
+use App\Http\Controllers\Admin\StudentDashboardController;
+use App\Http\Controllers\Admin\ErrorLogController;
 use App\Http\Controllers\User\DashboardController as UserDashboardController;
 use App\Http\Controllers\User\QuizController as UserQuizController;
 use Illuminate\Support\Facades\Route;
@@ -86,6 +88,11 @@ Route::prefix('admin')->middleware(['auth', 'admin'])->group(function () {
     Route::get('quizzes/import/form', [AdminQuizController::class, 'importForm'])->name('admin.quizzes.import-form');
     Route::post('quizzes/import', [AdminQuizController::class, 'import'])->name('admin.quizzes.import');
     Route::get('quizzes/import/template', [AdminQuizController::class, 'downloadTemplate'])->name('admin.quizzes.download-template');
+    
+    // Import Management (Standalone Import Page)
+    Route::get('import', [AdminImportController::class, 'index'])->name('admin.import');
+    Route::post('import', [AdminImportController::class, 'import'])->name('admin.import.process');
+    Route::get('import/template', [AdminImportController::class, 'downloadTemplate'])->name('admin.import.template');
 
     // Settings Management
     Route::get('/settings', [AdminSettingsController::class, 'index'])->name('admin.settings.index');
@@ -109,6 +116,9 @@ Route::prefix('admin')->middleware(['auth', 'admin'])->group(function () {
     Route::get('/student-dtr/{dtr}/edit', [App\Http\Controllers\Admin\DtrController::class, 'studentEdit'])->name('admin.student-dtr.edit');
     Route::put('/student-dtr/{dtr}', [App\Http\Controllers\Admin\DtrController::class, 'studentUpdate'])->name('admin.student-dtr.update');
     Route::get('/student-dtr/export/pdf', [App\Http\Controllers\Admin\DtrController::class, 'studentExportPdf'])->name('admin.student-dtr.export-pdf');
+
+    // Student Management Dashboard
+    Route::get('/student-management/dashboard', [StudentDashboardController::class, 'index'])->name('admin.student-management.dashboard');
 
     // Leave Requests Management (Employees)
     Route::get('/leave-requests', [App\Http\Controllers\Admin\LeaveRequestController::class, 'index'])->name('admin.leave-requests.index');
@@ -193,6 +203,7 @@ Route::prefix('admin')->middleware(['auth', 'admin'])->group(function () {
         Route::get('analytics/quiz/{quizId}', [App\Http\Controllers\Admin\AnalyticsController::class, 'getQuizDetails'])->name('admin.analytics.quiz-details');
         Route::get('analytics/student/{userId}', [App\Http\Controllers\Admin\AnalyticsController::class, 'getStudentDetails'])->name('admin.analytics.student-details');
         Route::get('analytics/topic/{topic}', [App\Http\Controllers\Admin\AnalyticsController::class, 'getTopicDetails'])->name('admin.analytics.topic-details')->where('topic', '.*');
+        Route::get('analytics/error-logs', [ErrorLogController::class, 'index'])->name('admin.analytics.error-logs');
 
         // Feedback Management
         Route::resource('feedback', App\Http\Controllers\Admin\FeedbackController::class)->names('admin.feedback');

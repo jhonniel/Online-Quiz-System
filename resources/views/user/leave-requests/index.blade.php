@@ -101,76 +101,139 @@
         </div>
     </div>
 
-    <!-- Leave Balance & Overtime -->
-    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 px-4 pb-4">
-        <!-- Vacation Leave Balance -->
-        <div class="bg-white rounded-lg shadow p-4 border border-indigo-200">
-            <div class="flex items-center">
-                <div class="flex-shrink-0 bg-indigo-100 rounded-lg p-3">
-                    <svg class="h-6 w-6 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
-                    </svg>
+    <!-- Leave Balance & Overtime / Student Time -->
+    @if(auth()->user()->role === 'employee')
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 px-4 pb-4">
+            <!-- Vacation Leave Balance -->
+            <div class="bg-white rounded-lg shadow p-4 border border-indigo-200">
+                <div class="flex items-center">
+                    <div class="flex-shrink-0 bg-indigo-100 rounded-lg p-3">
+                        <svg class="h-6 w-6 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                        </svg>
+                    </div>
+                    <div class="ml-4">
+                        <p class="text-sm font-medium text-gray-500">Vacation Balance</p>
+                        <p class="text-xl font-bold text-gray-900">
+                            {{ $balances['vacation']['remaining'] }} / {{ $balances['vacation']['allowance'] }} days
+                        </p>
+                        <p class="text-xs text-gray-500 mt-1">
+                            Used: {{ $balances['vacation']['used'] }} {{ $balances['vacation']['used'] == 1 ? 'day' : 'days' }} this year
+                        </p>
+                    </div>
                 </div>
-                <div class="ml-4">
-                    <p class="text-sm font-medium text-gray-500">Vacation Balance</p>
-                    <p class="text-xl font-bold text-gray-900">
-                        {{ $balances['vacation']['remaining'] }} / {{ $balances['vacation']['allowance'] }} days
-                    </p>
-                    <p class="text-xs text-gray-500 mt-1">
-                        Used: {{ $balances['vacation']['used'] }} {{ $balances['vacation']['used'] == 1 ? 'day' : 'days' }} this year
-                    </p>
+            </div>
+
+            <!-- Sick Leave Balance -->
+            <div class="bg-white rounded-lg shadow p-4 border border-blue-200">
+                <div class="flex items-center">
+                    <div class="flex-shrink-0 bg-blue-100 rounded-lg p-3">
+                        <svg class="h-6 w-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-3-3v6m9-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                        </svg>
+                    </div>
+                    <div class="ml-4">
+                        <p class="text-sm font-medium text-gray-500">Sick Leave Balance</p>
+                        <p class="text-xl font-bold text-gray-900">
+                            {{ $balances['sick']['remaining'] }} / {{ $balances['sick']['allowance'] }} days
+                        </p>
+                        <p class="text-xs text-gray-500 mt-1">
+                            Used: {{ $balances['sick']['used'] }} {{ $balances['sick']['used'] == 1 ? 'day' : 'days' }} this year
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Overtime Summary -->
+            <div class="bg-white rounded-lg shadow p-4 border border-emerald-200">
+                <div class="flex items-center">
+                    <div class="flex-shrink-0 bg-emerald-100 rounded-lg p-3">
+                        <svg class="h-6 w-6 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m3-4h-4a2 2 0 00-2 2v6a2 2 0 002 2h3l2 2 2-2h1a2 2 0 002-2v-3a8 8 0 10-4 0v1"></path>
+                        </svg>
+                    </div>
+                    <div class="ml-4">
+                        <p class="text-sm font-medium text-gray-500">
+                            Overtime ({{ $overtimeWindowLabel ?? 'This Year' }})
+                        </p>
+                        <p class="text-xl">
+                            <span class="font-bold {{ str_starts_with($overtimeFormatted, '-') ? 'text-red-600' : 'text-gray-900' }}">
+                                {{ $overtimeFormatted }}
+                            </span>
+                        </p>
+                        <p class="text-xs text-gray-500 mt-1">
+                            @if(str_starts_with($overtimeFormatted, '-'))
+                                Negative balance due to deficit hours deducted
+                            @else
+                                Based on approved DTR and overtime records within this window
+                            @endif
+                        </p>
+                    </div>
                 </div>
             </div>
         </div>
-
-        <!-- Sick Leave Balance -->
-        <div class="bg-white rounded-lg shadow p-4 border border-blue-200">
-            <div class="flex items-center">
-                <div class="flex-shrink-0 bg-blue-100 rounded-lg p-3">
-                    <svg class="h-6 w-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-3-3v6m9-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                    </svg>
-                </div>
-                <div class="ml-4">
-                    <p class="text-sm font-medium text-gray-500">Sick Leave Balance</p>
-                    <p class="text-xl font-bold text-gray-900">
-                        {{ $balances['sick']['remaining'] }} / {{ $balances['sick']['allowance'] }} days
-                    </p>
-                    <p class="text-xs text-gray-500 mt-1">
-                        Used: {{ $balances['sick']['used'] }} {{ $balances['sick']['used'] == 1 ? 'day' : 'days' }} this year
-                    </p>
+    @elseif(auth()->user()->role === 'student' && isset($studentTime))
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 px-4 pb-4">
+            <!-- Total Time from DTR -->
+            <div class="bg-white rounded-lg shadow p-4 border border-indigo-200">
+                <div class="flex items-center">
+                    <div class="flex-shrink-0 bg-indigo-100 rounded-lg p-3">
+                        <svg class="h-6 w-6 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                        </svg>
+                    </div>
+                    <div class="ml-4">
+                        <p class="text-sm font-medium text-gray-500">Total Time from DTR</p>
+                        <p class="text-xl font-bold text-gray-900">
+                            {{ $studentTime['total_dtr_hours_formatted'] }} hours
+                        </p>
+                        <p class="text-xs text-gray-500 mt-1">
+                            Sum of all your recorded DTR hours
+                        </p>
+                    </div>
                 </div>
             </div>
-        </div>
 
-        <!-- Overtime Summary -->
-        <div class="bg-white rounded-lg shadow p-4 border border-emerald-200">
-            <div class="flex items-center">
-                <div class="flex-shrink-0 bg-emerald-100 rounded-lg p-3">
-                    <svg class="h-6 w-6 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m3-4h-4a2 2 0 00-2 2v6a2 2 0 002 2h3l2 2 2-2h1a2 2 0 002-2v-3a8 8 0 10-4 0v1"></path>
-                    </svg>
-                </div>
-                <div class="ml-4">
-                    <p class="text-sm font-medium text-gray-500">
-                        Overtime ({{ $overtimeWindowLabel ?? 'This Year' }})
-                    </p>
-                    <p class="text-xl">
-                        <span class="font-bold {{ str_starts_with($overtimeFormatted, '-') ? 'text-red-600' : 'text-gray-900' }}">
-                            {{ $overtimeFormatted }}
-                        </span>
-                    </p>
-                    <p class="text-xs text-gray-500 mt-1">
-                        @if(str_starts_with($overtimeFormatted, '-'))
-                            Negative balance due to deficit hours deducted
+            <!-- Remaining Time Needed -->
+            <div class="bg-white rounded-lg shadow p-4 border border-blue-200">
+                <div class="flex items-center">
+                    <div class="flex-shrink-0 bg-blue-100 rounded-lg p-3">
+                        <svg class="h-6 w-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-3-3v6m9-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                        </svg>
+                    </div>
+                    <div class="ml-4">
+                        <p class="text-sm font-medium text-gray-500">Remaining Time Needed</p>
+                        @if($studentTime['required_hours'] > 0 && $studentTime['remaining_hours_formatted'])
+                            @php $hasRemaining = $studentTime['remaining_hours'] > 0; @endphp
+                            <p class="text-xl font-bold {{ $hasRemaining ? 'text-red-600' : 'text-green-600' }}">
+                                {{ $studentTime['remaining_hours_formatted'] }} hours
+                            </p>
+                            <p class="text-xs mt-1 {{ $hasRemaining ? 'text-red-500' : 'text-green-500' }}">
+                                {{ $hasRemaining ? 'You still need to complete this time.' : 'You have met or exceeded the required time.' }}
+                            </p>
+                            <p class="text-xs text-gray-500 mt-1">
+                                Time Needed to Acquire:
+                                <span class="font-semibold">
+                                    {{ $studentTime['required_hours_formatted'] ?? 'Not set' }}
+                                </span>
+                                @if(!empty($studentTime['required_hours_formatted']))
+                                    hours
+                                @endif
+                            </p>
                         @else
-                            Based on approved DTR and overtime records within this window
+                            <p class="text-xl font-bold text-gray-500">
+                                Not set
+                            </p>
+                            <p class="text-xs text-gray-400 mt-1">
+                                Required hours not configured. Please contact admin.
+                            </p>
                         @endif
-                    </p>
+                    </div>
                 </div>
             </div>
         </div>
-    </div>
+    @endif
 
     <!-- Leave Requests Table -->
     <div class="flex-1 overflow-y-auto p-4">

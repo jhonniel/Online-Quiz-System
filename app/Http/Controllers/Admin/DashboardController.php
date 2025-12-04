@@ -10,6 +10,8 @@ use App\Models\QuizAttempt;
 use App\Models\University;
 use App\Models\UserActivity;
 use App\Models\UserSession;
+use App\Models\Dtr;
+use App\Models\LeaveRequest;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -21,6 +23,40 @@ class DashboardController extends Controller
         $totalQuizzes = Quiz::count();
         $disabledUsers = User::where('role', 'user')->where('is_active', false)->count();
         $activeUsers = User::where('role', 'user')->where('is_active', true)->count();
+        
+        // Employee and Student Statistics
+        $totalEmployees = User::where('role', 'employee')->count();
+        $totalStudents = User::where('role', 'student')->count();
+        $activeEmployees = User::where('role', 'employee')->where('is_active', true)->count();
+        $activeStudents = User::where('role', 'student')->where('is_active', true)->count();
+        
+        // DTR Statistics
+        $totalDtrRecords = Dtr::count();
+        $employeeDtrRecords = Dtr::whereHas('user', function($q) {
+            $q->where('role', 'employee');
+        })->count();
+        $studentDtrRecords = Dtr::whereHas('user', function($q) {
+            $q->where('role', 'student');
+        })->count();
+        $todayDtrRecords = Dtr::whereDate('date', today())->count();
+        
+        // Leave Request Statistics
+        $totalLeaveRequests = LeaveRequest::count();
+        $pendingLeaveRequests = LeaveRequest::where('status', 'pending')->count();
+        $approvedLeaveRequests = LeaveRequest::where('status', 'approved')->count();
+        $rejectedLeaveRequests = LeaveRequest::where('status', 'rejected')->count();
+        $employeeLeaveRequests = LeaveRequest::whereHas('user', function($q) {
+            $q->where('role', 'employee');
+        })->where('status', 'pending')->count();
+        $studentLeaveRequests = LeaveRequest::whereHas('user', function($q) {
+            $q->where('role', 'student');
+        })->where('status', 'pending')->count();
+        
+        // Recent Leave Requests
+        $recentLeaveRequests = LeaveRequest::with('user')
+            ->latest()
+            ->take(5)
+            ->get();
 
         $recentQuizzes = Quiz::with('creator')->latest()->take(5)->get();
         $recentUsers = User::where('role', 'user')->latest()->take(5)->get();
@@ -93,6 +129,21 @@ class DashboardController extends Controller
             'totalQuizzes',
             'disabledUsers',
             'activeUsers',
+            'totalEmployees',
+            'totalStudents',
+            'activeEmployees',
+            'activeStudents',
+            'totalDtrRecords',
+            'employeeDtrRecords',
+            'studentDtrRecords',
+            'todayDtrRecords',
+            'totalLeaveRequests',
+            'pendingLeaveRequests',
+            'approvedLeaveRequests',
+            'rejectedLeaveRequests',
+            'employeeLeaveRequests',
+            'studentLeaveRequests',
+            'recentLeaveRequests',
             'recentQuizzes',
             'recentUsers',
             'quizStats',

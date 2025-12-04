@@ -3,26 +3,27 @@
 @section('content')
 <div class="space-y-6">
     <!-- Page Header -->
-    <div class="bg-gradient-to-br from-indigo-600 via-indigo-700 to-purple-700 rounded-2xl shadow-xl p-8 text-white">
-        <div class="flex items-center justify-between">
-            <div class="flex items-center space-x-4">
-                <div class="flex-shrink-0 bg-white/20 backdrop-blur-sm rounded-2xl p-4">
-                    <svg class="h-10 w-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <div class="bg-gradient-to-br from-indigo-600 via-indigo-700 to-purple-700 rounded-2xl shadow-xl px-4 py-6 sm:px-6 sm:py-8 text-white">
+        <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+            <div class="flex items-center space-x-3 sm:space-x-4">
+                <div class="flex-shrink-0 bg-white/20 backdrop-blur-sm rounded-2xl p-3 sm:p-4">
+                    <svg class="h-8 w-8 sm:h-10 sm:w-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
                     </svg>
                 </div>
                 <div>
-                    <h1 class="text-3xl font-bold">Leave Request Details</h1>
-                    <p class="text-indigo-100 mt-1">Review and manage this leave request</p>
+                    <h1 class="text-2xl sm:text-3xl font-bold">Leave Request Details</h1>
+                    <p class="text-sm sm:text-base text-indigo-100 mt-1">Review and manage this leave request</p>
                 </div>
             </div>
             <a href="{{ route('admin.leave-requests.index') }}"
-               class="inline-flex items-center px-4 py-2 bg-white/10 backdrop-blur-sm border border-white/20 rounded-lg text-white hover:bg-white/20 transition duration-200">
-                <svg class="h-5 w-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+               class="inline-flex items-center justify-center px-3 py-2 sm:px-4 sm:py-2 text-xs sm:text-sm bg-white/10 backdrop-blur-sm border border-white/20 rounded-lg text-white hover:bg-white/20 transition duration-200">
+                <svg class="h-4 w-4 sm:h-5 sm:w-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
                 </svg>
-                Back to List
+                <span class="hidden sm:inline">Back to List</span>
+                <span class="sm:hidden">Back</span>
             </a>
         </div>
     </div>
@@ -43,14 +44,14 @@
         </div>
     @endif
 
-    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
         <!-- Main Details -->
-        <div class="lg:col-span-2 space-y-6">
+        <div class="lg:col-span-2 space-y-4 sm:space-y-6">
             <!-- Request Information -->
-            <div class="bg-white rounded-lg shadow border border-gray-200 p-6">
-                <h2 class="text-xl font-bold text-gray-900 mb-4">Request Information</h2>
+            <div class="bg-white rounded-lg shadow border border-gray-200 p-4 sm:p-6">
+                <h2 class="text-lg sm:text-xl font-bold text-gray-900 mb-3 sm:mb-4">Request Information</h2>
 
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
                     <div>
                         <label class="block text-sm font-medium text-gray-500 mb-1">Employee</label>
                         <p class="text-sm font-semibold text-gray-900">{{ $leaveRequest->user->name }}</p>
@@ -142,7 +143,7 @@
                         );
                     @endphp
 
-                    <div class="mt-6 grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div class="mt-4 sm:mt-6 grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
                         <div>
                             <label class="block text-sm font-medium text-gray-500 mb-1">Total Overtime Hours</label>
                             <p class="text-sm font-semibold text-gray-900">{{ $otHours }}</p>
@@ -199,7 +200,7 @@
                         );
                     @endphp
 
-                    <div class="mt-6 grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div class="mt-4 sm:mt-6 grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
                         <div>
                             <label class="block text-sm font-medium text-gray-500 mb-1">Work Mode</label>
                             <p class="text-sm font-semibold text-gray-900">{{ $mode }}</p>
@@ -249,7 +250,7 @@
                         $employee = $leaveRequest->user;
                     @endphp
 
-                    <div class="mt-6 border border-gray-300 rounded-lg p-6 space-y-4 bg-white">
+                    <div class="mt-4 sm:mt-6 border border-gray-300 rounded-lg p-4 sm:p-6 space-y-3 sm:space-y-4 bg-white">
                         <!-- Effective Date -->
                         <p class="text-xs font-semibold tracking-wide text-gray-700 uppercase">
                             {{ $effectiveDate }}
@@ -371,7 +372,7 @@
                         );
                     @endphp
 
-                    <div class="mt-6 border border-gray-300 rounded-lg p-6 space-y-4 bg-white">
+                    <div class="mt-4 sm:mt-6 border border-gray-300 rounded-lg p-4 sm:p-6 space-y-3 sm:space-y-4 bg-white">
                         <!-- Effective Date -->
                         <p class="text-xs font-semibold tracking-wide text-gray-700 uppercase">
                             {{ $effectiveDate }}
@@ -478,7 +479,7 @@
                         }
                     @endphp
 
-                    <div class="mt-6 border border-gray-300 rounded-lg p-6 space-y-4 bg-white">
+                    <div class="mt-4 sm:mt-6 border border-gray-300 rounded-lg p-4 sm:p-6 space-y-3 sm:space-y-4 bg-white">
                         <!-- Effective Date -->
                         <p class="text-xs font-semibold tracking-wide text-gray-700 uppercase">
                             {{ $effectiveDate }}
@@ -570,21 +571,59 @@
 
             <!-- Admin Notes -->
             @if($leaveRequest->admin_notes)
-                <div class="bg-white rounded-lg shadow border border-gray-200 p-6">
-                    <h2 class="text-xl font-bold text-gray-900 mb-4">Admin Notes</h2>
-                    <p class="text-sm text-gray-900 bg-blue-50 p-4 rounded-lg border border-blue-200 whitespace-pre-line">
+                <div class="bg-white rounded-lg shadow border border-gray-200 p-4 sm:p-6">
+                    <h2 class="text-lg sm:text-xl font-bold text-gray-900 mb-3 sm:mb-4">Admin Notes</h2>
+                    <p class="text-xs sm:text-sm text-gray-900 bg-blue-50 p-3 sm:p-4 rounded-lg border border-blue-200 whitespace-pre-line">
                         {{ $leaveRequest->admin_notes }}
                     </p>
                 </div>
             @endif
         </div>
 
-        <!-- Side Panel: Balances + Actions -->
-        <div class="space-y-6">
-            @isset($balances)
-                <!-- Leave Balances & Overtime -->
-                <div class="bg-white rounded-lg shadow border border-gray-200 p-6 space-y-4">
-                    <h3 class="text-lg font-bold text-gray-900 mb-2">Employee Balances ({{ now()->year }})</h3>
+        <!-- Side Panel: Balances / Student Time + Actions -->
+        <div class="space-y-4 sm:space-y-6">
+            @if(isset($studentTime) && $leaveRequest->user->role === 'student')
+                <!-- Student DTR Time Summary -->
+                <div class="bg-white rounded-lg shadow border border-gray-200 p-4 sm:p-6 space-y-3 sm:space-y-4">
+                    <h3 class="text-base sm:text-lg font-bold text-gray-900 mb-2">Student Time Summary</h3>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div class="border border-gray-100 rounded-lg px-3 py-2">
+                            <p class="text-xs font-semibold text-gray-500 uppercase tracking-wide">Total Time from DTR</p>
+                            <p class="text-sm text-gray-900">
+                                <span class="font-bold">{{ $studentTime['total_dtr_hours_formatted'] }}</span> hours
+                            </p>
+                            <p class="text-xs text-gray-500">Sum of all recorded DTR hours</p>
+                        </div>
+                        <div class="border border-gray-100 rounded-lg px-3 py-2">
+                            <p class="text-xs font-semibold text-gray-500 uppercase tracking-wide">Remaining Time Needed</p>
+                            @if($studentTime['required_hours'] > 0 && $studentTime['remaining_hours_formatted'])
+                                @php $hasRemaining = $studentTime['remaining_hours'] > 0; @endphp
+                                <p class="text-sm">
+                                    <span class="font-bold {{ $hasRemaining ? 'text-red-600' : 'text-green-600' }}">
+                                        {{ $studentTime['remaining_hours_formatted'] }}
+                                    </span> hours
+                                </p>
+                                <p class="text-xs mt-0.5 {{ $hasRemaining ? 'text-red-500' : 'text-green-500' }}">
+                                    {{ $hasRemaining ? 'Student still needs to complete this time.' : 'Student has met or exceeded the required time.' }}
+                                </p>
+                                <p class="text-xs text-gray-500 mt-1">
+                                    Time Needed: <span class="font-semibold">{{ $studentTime['required_hours_formatted'] }}</span> hours
+                                </p>
+                            @else
+                                <p class="text-sm text-gray-500">
+                                    Not set
+                                </p>
+                                <p class="text-xs text-gray-400 mt-0.5">
+                                    Required time has not been configured yet for this student.
+                                </p>
+                            @endif
+                        </div>
+                    </div>
+                </div>
+            @elseif(isset($balances))
+                <!-- Employee Balances & Overtime -->
+                <div class="bg-white rounded-lg shadow border border-gray-200 p-4 sm:p-6 space-y-3 sm:space-y-4">
+                    <h3 class="text-base sm:text-lg font-bold text-gray-900 mb-2">Employee Balances ({{ now()->year }})</h3>
                     <div class="grid grid-cols-1 gap-3">
                         <div class="border border-gray-100 rounded-lg px-3 py-2">
                             <p class="text-xs font-semibold text-gray-500 uppercase tracking-wide">Vacation Leave</p>
@@ -615,24 +654,24 @@
                         </div>
                     </div>
                 </div>
-            @endisset
+            @endif
 
             <!-- Action Panel -->
             @if($leaveRequest->isPending())
                 <!-- Approve Form -->
-                <div class="bg-white rounded-lg shadow border border-gray-200 p-6">
-                    <h3 class="text-lg font-bold text-gray-900 mb-4">Approve Request</h3>
-                    <form action="{{ route('admin.leave-requests.approve', $leaveRequest) }}" method="POST" class="space-y-4">
+                <div class="bg-white rounded-lg shadow border border-gray-200 p-4 sm:p-6">
+                    <h3 class="text-base sm:text-lg font-bold text-gray-900 mb-3 sm:mb-4">Approve Request</h3>
+                    <form action="{{ route('admin.leave-requests.approve', $leaveRequest) }}" method="POST" class="space-y-3 sm:space-y-4">
                         @csrf
                         <div>
-                            <label for="approve_notes" class="block text-sm font-medium text-gray-700 mb-2">Notes (Optional)</label>
+                            <label for="approve_notes" class="block text-xs sm:text-sm font-medium text-gray-700 mb-2">Notes (Optional)</label>
                             <textarea name="admin_notes" id="approve_notes" rows="3"
                                       placeholder="Add any notes about this approval..."
-                                      class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"></textarea>
+                                      class="w-full px-3 sm:px-4 py-2 text-sm sm:text-base border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"></textarea>
                         </div>
                         <button type="submit"
-                                class="w-full px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500">
-                            <svg class="h-5 w-5 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                class="w-full px-4 py-2 text-sm sm:text-base bg-green-600 text-white rounded-lg hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500">
+                            <svg class="h-4 w-4 sm:h-5 sm:w-5 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
                             </svg>
                             Approve Request
@@ -641,19 +680,19 @@
                 </div>
 
                 <!-- Reject Form -->
-                <div class="bg-white rounded-lg shadow border border-gray-200 p-6">
-                    <h3 class="text-lg font-bold text-gray-900 mb-4">Reject Request</h3>
-                    <form action="{{ route('admin.leave-requests.reject', $leaveRequest) }}" method="POST" class="space-y-4">
+                <div class="bg-white rounded-lg shadow border border-gray-200 p-4 sm:p-6">
+                    <h3 class="text-base sm:text-lg font-bold text-gray-900 mb-3 sm:mb-4">Reject Request</h3>
+                    <form action="{{ route('admin.leave-requests.reject', $leaveRequest) }}" method="POST" class="space-y-3 sm:space-y-4">
                         @csrf
                         <div>
-                            <label for="reject_notes" class="block text-sm font-medium text-gray-700 mb-2">Reason for Rejection</label>
+                            <label for="reject_notes" class="block text-xs sm:text-sm font-medium text-gray-700 mb-2">Reason for Rejection</label>
                             <textarea name="admin_notes" id="reject_notes" rows="3"
                                       placeholder="Please provide a reason for rejection..."
-                                      class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500"></textarea>
+                                      class="w-full px-3 sm:px-4 py-2 text-sm sm:text-base border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500"></textarea>
                         </div>
                         <button type="submit"
-                                class="w-full px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500">
-                            <svg class="h-5 w-5 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                class="w-full px-4 py-2 text-sm sm:text-base bg-red-600 text-white rounded-lg hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500">
+                            <svg class="h-4 w-4 sm:h-5 sm:w-5 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
                             </svg>
                             Reject Request
@@ -662,20 +701,20 @@
                 </div>
 
                 <!-- Resubmit Form -->
-                <div class="bg-white rounded-lg shadow border border-gray-200 p-6">
-                    <h3 class="text-lg font-bold text-gray-900 mb-4">Request Resubmission</h3>
-                    <p class="text-sm text-gray-600 mb-4">If there are errors in the request, you can ask the employee to resubmit it.</p>
-                    <form action="{{ route('admin.leave-requests.resubmit', $leaveRequest) }}" method="POST" class="space-y-4">
+                <div class="bg-white rounded-lg shadow border border-gray-200 p-4 sm:p-6">
+                    <h3 class="text-base sm:text-lg font-bold text-gray-900 mb-3 sm:mb-4">Request Resubmission</h3>
+                    <p class="text-xs sm:text-sm text-gray-600 mb-3 sm:mb-4">If there are errors in the request, you can ask the employee to resubmit it.</p>
+                    <form action="{{ route('admin.leave-requests.resubmit', $leaveRequest) }}" method="POST" class="space-y-3 sm:space-y-4">
                         @csrf
                         <div>
-                            <label for="resubmit_notes" class="block text-sm font-medium text-gray-700 mb-2">What needs to be corrected?</label>
+                            <label for="resubmit_notes" class="block text-xs sm:text-sm font-medium text-gray-700 mb-2">What needs to be corrected?</label>
                             <textarea name="admin_notes" id="resubmit_notes" rows="3"
                                       placeholder="Describe what errors need to be fixed..."
-                                      class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500"></textarea>
+                                      class="w-full px-3 sm:px-4 py-2 text-sm sm:text-base border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500"></textarea>
                         </div>
                         <button type="submit"
-                                class="w-full px-4 py-2 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-yellow-500">
-                            <svg class="h-5 w-5 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                class="w-full px-4 py-2 text-sm sm:text-base bg-yellow-600 text-white rounded-lg hover:bg-yellow-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-yellow-500">
+                            <svg class="h-4 w-4 sm:h-5 sm:w-5 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
                             </svg>
                             Request Resubmission
@@ -684,27 +723,27 @@
                 </div>
             @else
                 <!-- Status Info -->
-                <div class="bg-white rounded-lg shadow border border-gray-200 p-6">
-                    <h3 class="text-lg font-bold text-gray-900 mb-4">Request Status</h3>
-                    <div class="text-center py-4">
-                        <span class="px-4 py-2 inline-flex text-lg leading-5 font-semibold rounded-full {{ $leaveRequest->status_badge_class }}">
+                <div class="bg-white rounded-lg shadow border border-gray-200 p-4 sm:p-6">
+                    <h3 class="text-base sm:text-lg font-bold text-gray-900 mb-3 sm:mb-4">Request Status</h3>
+                    <div class="text-center py-3 sm:py-4">
+                        <span class="px-3 sm:px-4 py-2 inline-flex text-base sm:text-lg leading-5 font-semibold rounded-full {{ $leaveRequest->status_badge_class }}">
                             {{ $leaveRequest->display_status }}
                         </span>
-                        <p class="text-sm text-gray-500 mt-4">
+                        <p class="text-xs sm:text-sm text-gray-500 mt-3 sm:mt-4">
                             This request has already been {{ $leaveRequest->status }}.
                         </p>
                         @if($leaveRequest->isRejected() || $leaveRequest->isApproved())
-                            <form action="{{ route('admin.leave-requests.resubmit', $leaveRequest) }}" method="POST" class="mt-4">
+                            <form action="{{ route('admin.leave-requests.resubmit', $leaveRequest) }}" method="POST" class="mt-3 sm:mt-4">
                                 @csrf
-                                <div class="mb-4">
-                                    <label for="resubmit_notes_existing" class="block text-sm font-medium text-gray-700 mb-2">Notes for Resubmission</label>
+                                <div class="mb-3 sm:mb-4">
+                                    <label for="resubmit_notes_existing" class="block text-xs sm:text-sm font-medium text-gray-700 mb-2">Notes for Resubmission</label>
                                     <textarea name="admin_notes" id="resubmit_notes_existing" rows="3"
                                               placeholder="Add notes about what needs to be corrected..."
-                                              class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500"></textarea>
+                                              class="w-full px-3 sm:px-4 py-2 text-sm sm:text-base border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500"></textarea>
                                 </div>
                                 <button type="submit"
-                                        class="w-full px-4 py-2 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-yellow-500">
-                                    <svg class="h-5 w-5 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        class="w-full px-4 py-2 text-sm sm:text-base bg-yellow-600 text-white rounded-lg hover:bg-yellow-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-yellow-500">
+                                    <svg class="h-4 w-4 sm:h-5 sm:w-5 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
                                     </svg>
                                     Request Resubmission

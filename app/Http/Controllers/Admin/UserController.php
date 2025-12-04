@@ -61,6 +61,7 @@ class UserController extends Controller
             'university_id' => 'nullable',
             'new_university_name' => 'nullable|string|max:255',
             'is_active' => 'boolean',
+            'required_training_hours' => 'nullable|numeric|min:0',
         ]);
 
         // Custom validation for new university
@@ -90,6 +91,7 @@ class UserController extends Controller
             'role' => $request->role,
             'university_id' => $universityId,
             'is_active' => $request->has('is_active'),
+            'required_training_hours' => $request->required_training_hours,
         ]);
 
         return redirect()->route('users.index')
@@ -307,6 +309,7 @@ class UserController extends Controller
             'university_id' => 'nullable',
             'new_university_name' => 'nullable|string|max:255',
             'is_active' => 'boolean',
+            'required_training_hours' => 'nullable|numeric|min:0',
         ]);
 
         // Custom validation for new university
@@ -339,6 +342,12 @@ class UserController extends Controller
 
         if ($request->filled('password')) {
             $data['password'] = Hash::make($request->password);
+        }
+
+        if ($request->filled('required_training_hours')) {
+            $data['required_training_hours'] = $request->required_training_hours;
+        } else {
+            $data['required_training_hours'] = null;
         }
 
         $user->update($data);

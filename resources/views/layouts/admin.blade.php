@@ -65,7 +65,15 @@
         }
     </style>
 </head>
-<body class="font-sans antialiased bg-gray-100" x-data="{ sidebarOpen: true, sidebarCollapsed: false }">
+<body class="font-sans antialiased bg-gray-100" 
+      x-data="{ sidebarCollapsed: false }"
+      x-init="
+          $store.sidebar = { collapsed: sidebarCollapsed }; 
+          $watch('sidebarCollapsed', value => {
+              $store.sidebar = { collapsed: value };
+              window.dispatchEvent(new CustomEvent('sidebar-collapse-changed', { detail: value }));
+          });
+      ">
     <div class="flex h-screen">
         <!-- Admin Sidebar -->
         @include('components.admin-sidebar')
@@ -397,5 +405,14 @@
 
     <!-- Seasonal Effects -->
     @include('components.seasonal-effects')
+
+    <!-- Initialize Alpine Store for Sidebar -->
+    <script>
+        document.addEventListener('alpine:init', () => {
+            Alpine.store('sidebar', {
+                collapsed: false
+            });
+        });
+    </script>
 </body>
 </html>

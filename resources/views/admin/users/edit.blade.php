@@ -111,6 +111,30 @@
                         @enderror
                     </div>
 
+                    <!-- Required Training Hours (Time Needed to Acquire) -->
+                    <div id="required_training_hours_wrapper"
+                         @if(old('role', $user->role) === 'student') style="" @else style="display:none;" @endif>
+                        <label for="required_training_hours" class="block text-sm font-medium text-gray-700">
+                            Required Training Hours (Time Needed to Acquire)
+                        </label>
+                        <div class="mt-1 relative">
+                            <input type="number"
+                                   name="required_training_hours"
+                                   id="required_training_hours"
+                                   step="0.01"
+                                   min="0"
+                                   value="{{ old('required_training_hours', $user->required_training_hours) }}"
+                                   class="shadow-sm focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-gray-300 rounded-md"
+                                   placeholder="e.g. 160 (for 160 hours)">
+                        </div>
+                        <p class="mt-1 text-xs text-gray-500">
+                            Optional. Primarily used for <span class="font-semibold">students</span> to indicate the total hours they need to complete via DTR.
+                        </p>
+                        @error('required_training_hours')
+                            <p class="mt-2 text-sm text-red-600">{{ $message }}</p>
+                        @enderror
+                    </div>
+
                     <!-- Active Status -->
                     <div class="flex items-center">
                         <input type="checkbox" name="is_active" id="is_active" value="1" {{ old('is_active', $user->is_active) ? 'checked' : '' }}
@@ -143,6 +167,8 @@
 document.addEventListener('DOMContentLoaded', function() {
     const universitySelect = document.getElementById('university_select');
     const newUniversityInput = document.getElementById('new_university_name');
+    const roleSelect = document.getElementById('role');
+    const requiredHoursWrapper = document.getElementById('required_training_hours_wrapper');
 
     if (universitySelect && newUniversityInput) {
         universitySelect.addEventListener('change', function() {
@@ -179,6 +205,21 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     } else {
         console.error('University select or input not found');
+    }
+
+    // Show Required Training Hours only for students
+    if (roleSelect && requiredHoursWrapper) {
+        function toggleRequiredHours() {
+            if (roleSelect.value === 'student') {
+                requiredHoursWrapper.style.display = '';
+            } else {
+                requiredHoursWrapper.style.display = 'none';
+            }
+        }
+
+        roleSelect.addEventListener('change', toggleRequiredHours);
+        // Initialize on load
+        toggleRequiredHours();
     }
 });
 </script>

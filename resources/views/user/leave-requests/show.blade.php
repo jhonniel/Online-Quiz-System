@@ -112,6 +112,7 @@
                     @endif
                 </div>
 
+
                 <!-- Vacation / Sick Leave / Offset Letter-style View (matches provided template) -->
                 @if(in_array($leaveRequest->type, ['vacation_leave', 'sick_leave', 'offset']))
                     @php

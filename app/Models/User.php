@@ -34,6 +34,7 @@ class User extends Authenticatable
         'cover_photo',
         'bio',
         'overtime_months_credited',
+        'required_training_hours',
     ];
 
     /**

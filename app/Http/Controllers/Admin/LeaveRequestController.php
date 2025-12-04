@@ -20,7 +20,10 @@ class LeaveRequestController extends Controller
      */
     public function index(Request $request)
     {
-        $query = LeaveRequest::with(['user', 'reviewer']);
+        $query = LeaveRequest::with(['user', 'reviewer'])
+            ->whereHas('user', function($q) {
+                $q->where('role', 'employee');
+            });
 
         // Filter by status
         if ($request->has('status') && $request->status) {
@@ -41,15 +44,20 @@ class LeaveRequestController extends Controller
         if ($request->has('search') && $request->search) {
             $search = $request->search;
             $query->whereHas('user', function($q) use ($search) {
-                $q->where('name', 'like', "%{$search}%")
-                  ->orWhere('email', 'like', "%{$search}%");
+                $q->where('role', 'employee')
+                  ->where(function($subQ) use ($search) {
+                      $subQ->where('name', 'like', "%{$search}%")
+                           ->orWhere('email', 'like', "%{$search}%");
+                  });
             });
         }
 
         $leaveRequests = $query->orderBy('created_at', 'desc')->paginate(20);
 
-        // Statistics
-        $baseQuery = LeaveRequest::query();
+        // Statistics - only for employees
+        $baseQuery = LeaveRequest::whereHas('user', function($q) {
+            $q->where('role', 'employee');
+        });
         if ($request->has('employee') && $request->employee) {
             $baseQuery->where('user_id', $request->employee);
         }
@@ -79,133 +87,165 @@ class LeaveRequestController extends Controller
     {
         $leaveRequest->load(['user', 'reviewer']);
 
-        // Compute current-year leave balances and overtime for this employee
-        $employee = $leaveRequest->user;
-        $currentYear = now()->year;
-        $months = $employee->overtime_months_credited ?? 12;
+        $user = $leaveRequest->user;
+        $balances = null;
+        $overtimeFormatted = null;
+        $studentTime = null;
 
-        if ($months === 12) {
-            $fromDate = now()->copy()->startOfYear();
-        } else {
-            $fromDate = now()->copy()->subMonths($months)->startOfDay();
-        }
+        if ($user->role === 'employee') {
+            // Compute current-year leave balances and overtime for this employee
+            $currentYear = now()->year;
+            $months = $user->overtime_months_credited ?? 12;
 
-        $defaultVacation = (float) \App\Models\Setting::get('default_vacation_balance', 15);
-        $defaultSick = (float) \App\Models\Setting::get('default_sick_leave_balance', 10);
-        
-        $leaveBalance = \App\Models\LeaveBalance::firstOrCreate(
-            ['user_id' => $employee->id, 'year' => $currentYear],
-            [
-                'vacation_allowance' => $defaultVacation,
-                'sick_allowance' => $defaultSick,
-            ]
-        );
-
-        $usedVacation = LeaveRequest::where('user_id', $employee->id)
-            ->where('type', 'vacation_leave')
-            ->where('status', 'approved')
-            ->whereYear('start_date', $currentYear)
-            ->get()
-            ->sum->days;
-
-        $usedSick = LeaveRequest::where('user_id', $employee->id)
-            ->where('type', 'sick_leave')
-            ->where('status', 'approved')
-            ->whereYear('start_date', $currentYear)
-            ->get()
-            ->sum->days;
-
-        $balances = [
-            'vacation' => [
-                'allowance' => (float) $leaveBalance->vacation_allowance,
-                'used' => $usedVacation,
-                'remaining' => max((float) $leaveBalance->vacation_allowance - $usedVacation, 0),
-            ],
-            'sick' => [
-                'allowance' => (float) $leaveBalance->sick_allowance,
-                'used' => $usedSick,
-                'remaining' => max((float) $leaveBalance->sick_allowance - $usedSick, 0),
-            ],
-        ];
-
-        $dtrOvertimeQuery = \App\Models\Dtr::where('user_id', $employee->id);
-        if ($months === 12) {
-            $dtrOvertimeQuery->whereYear('date', $currentYear);
-        } else {
-            $dtrOvertimeQuery->whereDate('date', '>=', $fromDate->toDateString());
-        }
-        $totalOvertimeHours = $dtrOvertimeQuery->sum('overtime_hours');
-
-        // Add overtime coming from approved overtime leave requests (HH:MM in reason)
-        $approvedOvertimeRequestsQuery = LeaveRequest::where('user_id', $employee->id)
-            ->where('type', 'overtime')
-            ->where('status', 'approved');
-
-        if ($months === 12) {
-            $approvedOvertimeRequestsQuery->whereYear('start_date', $currentYear);
-        } else {
-            $approvedOvertimeRequestsQuery->whereDate('start_date', '>=', $fromDate->toDateString());
-        }
-
-        $approvedOvertimeRequests = $approvedOvertimeRequestsQuery->get();
-
-        $overtimeFromLeavesMinutes = 0;
-        foreach ($approvedOvertimeRequests as $otRequest) {
-            $raw = $otRequest->reason ?? '';
-            if (preg_match('/Total Overtime Hours:\s*([0-9]{2}:[0-9]{2})/', $raw, $m)) {
-                [$h, $mPart] = array_map('intval', explode(':', $m[1]));
-                $overtimeFromLeavesMinutes += $h * 60 + $mPart;
-            }
-        }
-
-        $totalOvertimeHours += $overtimeFromLeavesMinutes / 60;
-
-        // Subtract deficit hours from overtime balance (allow negative values)
-        $deficitQuery = \App\Models\DtrDeficit::where('user_id', $employee->id)
-            ->where('is_applied', true);
-        
-        if ($months === 12) {
-            $deficitQuery->whereYear('week_start_date', $currentYear);
-        } else {
-            $deficitQuery->whereDate('week_start_date', '>=', $fromDate->toDateString());
-        }
-        
-        $totalDeficitHours = $deficitQuery->sum('deficit_hours');
-        $totalOvertimeHours = $totalOvertimeHours - $totalDeficitHours;
-
-        $approvedOffsetQuery = LeaveRequest::where('user_id', $employee->id)
-            ->where('type', 'offset')
-            ->where('status', 'approved');
-
-        if ($months === 12) {
-            $approvedOffsetQuery->whereYear('start_date', $currentYear);
-        } else {
-            $approvedOffsetQuery->whereDate('start_date', '>=', $fromDate->toDateString());
-        }
-
-        $approvedOffsetRequests = $approvedOffsetQuery->get();
-
-        // Parse offset hours from reason field (each offset may have different hours)
-        $offsetHoursUsed = 0;
-        foreach ($approvedOffsetRequests as $offsetRequest) {
-            $raw = $offsetRequest->reason ?? '';
-            if (preg_match('/Hours to Deduct:\s*([0-9]{2}:[0-9]{2})/', $raw, $m)) {
-                [$h, $mPart] = array_map('intval', explode(':', $m[1]));
-                $offsetHoursUsed += $h + ($mPart / 60);
+            if ($months === 12) {
+                $fromDate = now()->copy()->startOfYear();
             } else {
-                // Fallback: if format not found, use 8 hours (for old records)
-                $offsetHoursUsed += 8;
+                $fromDate = now()->copy()->subMonths($months)->startOfDay();
             }
+
+            $defaultVacation = (float) \App\Models\Setting::get('default_vacation_balance', 15);
+            $defaultSick = (float) \App\Models\Setting::get('default_sick_leave_balance', 10);
+            
+            $leaveBalance = \App\Models\LeaveBalance::firstOrCreate(
+                ['user_id' => $user->id, 'year' => $currentYear],
+                [
+                    'vacation_allowance' => $defaultVacation,
+                    'sick_allowance' => $defaultSick,
+                ]
+            );
+
+            $usedVacation = LeaveRequest::where('user_id', $user->id)
+                ->where('type', 'vacation_leave')
+                ->where('status', 'approved')
+                ->whereYear('start_date', $currentYear)
+                ->get()
+                ->sum->days;
+
+            $usedSick = LeaveRequest::where('user_id', $user->id)
+                ->where('type', 'sick_leave')
+                ->where('status', 'approved')
+                ->whereYear('start_date', $currentYear)
+                ->get()
+                ->sum->days;
+
+            $balances = [
+                'vacation' => [
+                    'allowance' => (float) $leaveBalance->vacation_allowance,
+                    'used' => $usedVacation,
+                    'remaining' => max((float) $leaveBalance->vacation_allowance - $usedVacation, 0),
+                ],
+                'sick' => [
+                    'allowance' => (float) $leaveBalance->sick_allowance,
+                    'used' => $usedSick,
+                    'remaining' => max((float) $leaveBalance->sick_allowance - $usedSick, 0),
+                ],
+            ];
+
+            $dtrOvertimeQuery = \App\Models\Dtr::where('user_id', $user->id);
+            if ($months === 12) {
+                $dtrOvertimeQuery->whereYear('date', $currentYear);
+            } else {
+                $dtrOvertimeQuery->whereDate('date', '>=', $fromDate->toDateString());
+            }
+            $totalOvertimeHours = $dtrOvertimeQuery->sum('overtime_hours');
+
+            // Add overtime coming from approved overtime leave requests (HH:MM in reason)
+            $approvedOvertimeRequestsQuery = LeaveRequest::where('user_id', $user->id)
+                ->where('type', 'overtime')
+                ->where('status', 'approved');
+
+            if ($months === 12) {
+                $approvedOvertimeRequestsQuery->whereYear('start_date', $currentYear);
+            } else {
+                $approvedOvertimeRequestsQuery->whereDate('start_date', '>=', $fromDate->toDateString());
+            }
+
+            $approvedOvertimeRequests = $approvedOvertimeRequestsQuery->get();
+
+            $overtimeFromLeavesMinutes = 0;
+            foreach ($approvedOvertimeRequests as $otRequest) {
+                $raw = $otRequest->reason ?? '';
+                if (preg_match('/Total Overtime Hours:\s*([0-9]{2}:[0-9]{2})/', $raw, $m)) {
+                    [$h, $mPart] = array_map('intval', explode(':', $m[1]));
+                    $overtimeFromLeavesMinutes += $h * 60 + $mPart;
+                }
+            }
+
+            $totalOvertimeHours += $overtimeFromLeavesMinutes / 60;
+
+            // Subtract deficit hours from overtime balance (allow negative values)
+            $deficitQuery = \App\Models\DtrDeficit::where('user_id', $user->id)
+                ->where('is_applied', true);
+            
+            if ($months === 12) {
+                $deficitQuery->whereYear('week_start_date', $currentYear);
+            } else {
+                $deficitQuery->whereDate('week_start_date', '>=', $fromDate->toDateString());
+            }
+            
+            $totalDeficitHours = $deficitQuery->sum('deficit_hours');
+            $totalOvertimeHours = $totalOvertimeHours - $totalDeficitHours;
+
+            $approvedOffsetQuery = LeaveRequest::where('user_id', $user->id)
+                ->where('type', 'offset')
+                ->where('status', 'approved');
+
+            if ($months === 12) {
+                $approvedOffsetQuery->whereYear('start_date', $currentYear);
+            } else {
+                $approvedOffsetQuery->whereDate('start_date', '>=', $fromDate->toDateString());
+            }
+
+            $approvedOffsetRequests = $approvedOffsetQuery->get();
+
+            // Parse offset hours from reason field (each offset may have different hours)
+            $offsetHoursUsed = 0;
+            foreach ($approvedOffsetRequests as $offsetRequest) {
+                $raw = $offsetRequest->reason ?? '';
+                if (preg_match('/Hours to Deduct:\s*([0-9]{2}:[0-9]{2})/', $raw, $m)) {
+                    [$h, $mPart] = array_map('intval', explode(':', $m[1]));
+                    $offsetHoursUsed += $h + ($mPart / 60);
+                } else {
+                    // Fallback: if format not found, use 8 hours (for old records)
+                    $offsetHoursUsed += 8;
+                }
+            }
+
+            $netOvertimeHours = $totalOvertimeHours - $offsetHoursUsed;
+
+            // Format overtime (handle negative values)
+            $isNegative = $netOvertimeHours < 0;
+            $absOvertimeMinutes = (int) round(abs($netOvertimeHours) * 60);
+            $overtimeHoursPart = intdiv($absOvertimeMinutes, 60);
+            $overtimeMinutesPart = $absOvertimeMinutes % 60;
+            $overtimeFormatted = ($isNegative ? '-' : '') . sprintf('%02d:%02d', $overtimeHoursPart, $overtimeMinutesPart);
+        } elseif ($user->role === 'student') {
+            // Student: show total DTR time vs required time set by admin
+            $requiredHours = (float) ($user->required_training_hours ?? 0);
+
+            // Sum all DTR total_hours for this student
+            $totalDtrHours = \App\Models\Dtr::where('user_id', $user->id)->sum('total_hours');
+
+            // Remaining balance time = Time need - Total Time from DTR (can be negative)
+            $remainingHours = $requiredHours - $totalDtrHours;
+
+            $formatHours = function ($decimal) {
+                $sign = $decimal < 0 ? '-' : '';
+                $minutes = (int) round(abs($decimal) * 60);
+                $h = intdiv($minutes, 60);
+                $m = $minutes % 60;
+                return $sign . sprintf('%02d:%02d', $h, $m);
+            };
+
+            $studentTime = [
+                'required_hours' => $requiredHours,
+                'required_hours_formatted' => $requiredHours > 0 ? $formatHours($requiredHours) : null,
+                'total_dtr_hours' => $totalDtrHours,
+                'total_dtr_hours_formatted' => $formatHours($totalDtrHours),
+                'remaining_hours' => $remainingHours,
+                'remaining_hours_formatted' => $requiredHours > 0 ? $formatHours($remainingHours) : null,
+            ];
         }
-
-        $netOvertimeHours = $totalOvertimeHours - $offsetHoursUsed;
-
-        // Format overtime (handle negative values)
-        $isNegative = $netOvertimeHours < 0;
-        $absOvertimeMinutes = (int) round(abs($netOvertimeHours) * 60);
-        $overtimeHoursPart = intdiv($absOvertimeMinutes, 60);
-        $overtimeMinutesPart = $absOvertimeMinutes % 60;
-        $overtimeFormatted = ($isNegative ? '-' : '') . sprintf('%02d:%02d', $overtimeHoursPart, $overtimeMinutesPart);
 
         // Get signatory names from settings
         $signatories = [
@@ -214,7 +254,7 @@ class LeaveRequestController extends Controller
             'cto' => \App\Models\Setting::get('leave_cto', 'NITISH KHEMANI'),
         ];
 
-        return view('admin.leave-requests.show', compact('leaveRequest', 'balances', 'overtimeFormatted', 'signatories'));
+        return view('admin.leave-requests.show', compact('leaveRequest', 'balances', 'overtimeFormatted', 'signatories', 'studentTime'));
     }
 
     /**
@@ -241,8 +281,12 @@ class LeaveRequestController extends Controller
         $endOfCalendar = $endOfMonth->copy()->endOfWeek(Carbon::SUNDAY);
 
         // Base query for leave requests that intersect the calendar range
+        // Only show employee leave requests
         // Wrap OR conditions in a single group so employee filter applies to all.
         $leaveQuery = LeaveRequest::with('user')
+            ->whereHas('user', function($q) {
+                $q->where('role', 'employee');
+            })
             ->where(function ($outer) use ($startOfCalendar, $endOfCalendar) {
                 $outer->where(function ($q) use ($startOfCalendar, $endOfCalendar) {
                     // Requests with a start and end date that overlap the calendar window
