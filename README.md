@@ -2,6 +2,13 @@
 
 A comprehensive Laravel-based online quiz platform with advanced features for educational institutions, training centers, and organizations.
 
+## 🆕 Latest Updates
+
+- ✅ **PHP 8.3 Compatible** - Fully tested and optimized for PHP 8.3 and 8.4
+- ✅ **Laravel 12.41.1** - Latest Laravel framework with all security updates
+- ✅ **Modern Dependencies** - All packages updated to latest compatible versions
+- ✅ **Optimized Setup** - Streamlined installation and configuration process
+
 ## 📋 Table of Contents
 
 - [Features](#-features)
@@ -141,8 +148,11 @@ php artisan key:generate
 touch database/database.sqlite
 php artisan migrate --seed
 
-# 5. Build and run
+# 5. Complete system setup
+php artisan optimize:clear
 npm run build
+
+# 6. Start the server
 php artisan serve --host=0.0.0.0 --port=8000
 ```
 
@@ -151,20 +161,47 @@ php artisan serve --host=0.0.0.0 --port=8000
 - Network: http://YOUR_IP:8000
 - Admin: admin@quiz.com / password
 
+**Note:** This system requires PHP 8.2+ (8.3 recommended) and is fully compatible with PHP 8.3 and 8.4.
+
 ## 📋 Complete Installation Commands
+
+### 🔧 Run Everything Needed for the System
+
+To set up and configure everything needed for the system, run these commands in order:
+
+```bash
+# 1. Install/Update PHP dependencies
+composer install
+composer update
+
+# 2. Install Node.js dependencies
+npm install
+
+# 3. Clear all caches and optimize
+php artisan optimize:clear
+
+# 4. Run database migrations
+php artisan migrate --force
+
+# 5. Build frontend assets
+npm run build
+
+# 6. Verify system status
+php artisan about
+```
 
 ### One-Line Installation Script
 
 ```bash
 # Complete setup in one command (for Linux/macOS)
-git clone https://github.com/yourusername/online-quiz-system.git && cd online-quiz-system && composer install && npm install && cp .env.example .env && php artisan key:generate && touch database/database.sqlite && php artisan migrate --seed && npm run build && echo "✅ Installation complete! Run: php artisan serve --host=0.0.0.0 --port=8000"
+git clone https://github.com/yourusername/online-quiz-system.git && cd online-quiz-system && composer install && npm install && cp .env.example .env && php artisan key:generate && touch database/database.sqlite && php artisan migrate --seed && npm run build && php artisan optimize:clear && echo "✅ Installation complete! Run: php artisan serve --host=0.0.0.0 --port=8000"
 ```
 
 ### Step-by-Step Commands
 
 #### 1. **System Requirements Check**
 ```bash
-# Check PHP version (requires 8.1+)
+# Check PHP version (requires 8.2+)
 php -v
 
 # Check Composer
@@ -244,11 +281,8 @@ php artisan storage:link
 chmod -R 775 storage bootstrap/cache
 chown -R $USER:www-data storage bootstrap/cache
 
-# Clear and cache configurations
-php artisan config:clear
-php artisan cache:clear
-php artisan route:clear
-php artisan view:clear
+# Clear all caches and optimize
+php artisan optimize:clear
 ```
 
 #### 6. **Frontend Build**
@@ -291,14 +325,26 @@ php -d memory_limit=512M artisan serve --host=0.0.0.0 --port=8000
 # Start development server
 php artisan serve --host=0.0.0.0 --port=8000
 
-# Clear all caches
-php artisan cache:clear && php artisan config:clear && php artisan route:clear && php artisan view:clear
+# Clear all caches (optimized command)
+php artisan optimize:clear
 
 # Rebuild frontend assets
 npm run build
 
 # Check application status
 php artisan about
+```
+
+#### **Complete Setup Command (Run Everything)**
+```bash
+# Install/update all dependencies and setup system
+composer install          # Install PHP dependencies
+composer update           # Update to latest compatible versions
+npm install              # Install Node.js dependencies
+php artisan optimize:clear  # Clear all caches
+php artisan migrate --force  # Run database migrations
+npm run build            # Build production assets
+php artisan about        # Verify system status
 ```
 
 #### **Database Commands**
@@ -422,16 +468,56 @@ pkill -f "php artisan serve"
 ### Prerequisites
 
 **Required Software:**
-- **PHP 8.1+** with extensions: BCMath, Ctype, cURL, DOM, Fileinfo, JSON, Mbstring, OpenSSL, PCRE, PDO, Tokenizer, XML, GD
-- **Composer** (PHP dependency manager)
-- **Node.js 16+** and NPM
+- **PHP 8.2+** (8.3 recommended, fully tested with PHP 8.4) with extensions: BCMath, Ctype, cURL, DOM, Fileinfo, JSON, Mbstring, OpenSSL, PCRE, PDO, Tokenizer, XML, GD
+- **Composer** (PHP dependency manager) - Version 2.x recommended
+- **Node.js 16+** and NPM (Node.js 18+ recommended)
 - **MySQL 5.7+** or MariaDB 10.3+ (or SQLite for development)
 - **Git** (for cloning the repository)
 
+**PHP 8.3 Compatibility:**
+- ✅ Fully compatible with PHP 8.3 and 8.4
+- ✅ All dependencies updated for PHP 8.3 support
+- ✅ No deprecated features used
+- ✅ Optimized for PHP 8.3 performance improvements
+
 **System Requirements:**
-- **RAM**: 2GB minimum, 4GB recommended
-- **Storage**: 1GB free space
+
+**Minimum Requirements:**
+- **RAM**: 2GB (4GB recommended for production)
+- **Storage**: 1GB free space (5GB+ recommended for production with file uploads)
+- **CPU**: 1 core (2+ cores recommended)
 - **OS**: Windows 10+, macOS 10.15+, or Linux (Ubuntu 18.04+)
+- **Web Server**: Apache 2.4+ or Nginx 1.18+ (for production)
+- **PHP Extensions**: All required extensions must be enabled
+
+**Recommended for Production:**
+- **RAM**: 4GB or more
+- **Storage**: 10GB+ (for database, uploads, and logs)
+- **CPU**: 2+ cores
+- **Database**: MySQL 8.0+ or MariaDB 10.5+ (SQLite for development only)
+- **SSL Certificate**: Required for HTTPS
+- **Backup System**: Automated daily backups recommended
+
+**PHP Extensions Required:**
+- `bcmath` - For mathematical operations
+- `ctype` - Character type checking
+- `curl` - HTTP client functionality
+- `dom` - XML/HTML parsing
+- `fileinfo` - File type detection
+- `json` - JSON encoding/decoding
+- `mbstring` - Multibyte string handling
+- `openssl` - Encryption and SSL support
+- `pcre` - Regular expressions
+- `pdo` - Database abstraction layer
+- `pdo_mysql` or `pdo_sqlite` - Database drivers
+- `tokenizer` - Code parsing
+- `xml` - XML processing
+- `gd` or `imagick` - Image processing (for profile pictures, uploads)
+
+**Verify PHP Extensions:**
+```bash
+php -m | grep -E "(bcmath|ctype|curl|dom|fileinfo|json|mbstring|openssl|pcre|pdo|tokenizer|xml|gd)"
+```
 
 ### Step 1: Environment Setup
 
@@ -447,7 +533,7 @@ pkill -f "php artisan serve"
 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
 
 # Install required software
-brew install php@8.1 composer node mysql
+brew install php@8.3 composer node mysql
 brew services start mysql
 ```
 
@@ -457,7 +543,7 @@ brew services start mysql
 sudo apt update && sudo apt upgrade -y
 
 # Install PHP and extensions
-sudo apt install php8.1 php8.1-cli php8.1-mysql php8.1-xml php8.1-mbstring php8.1-curl php8.1-gd php8.1-zip php8.1-bcmath
+sudo apt install php8.3 php8.3-cli php8.3-mysql php8.3-xml php8.3-mbstring php8.3-curl php8.3-gd php8.3-zip php8.3-bcmath
 
 # Install other requirements
 sudo apt install composer nodejs npm mysql-server git
@@ -537,15 +623,25 @@ php artisan db:seed
 php artisan storage:link
 ```
 
-### Step 6: Build Frontend Assets
+### Step 6: Complete System Setup
+
+Run all necessary commands to set up the system:
 
 ```bash
-# For production
+# Clear all caches
+php artisan optimize:clear
+
+# Run migrations (if not already done)
+php artisan migrate --force
+
+# Build frontend assets
 npm run build
 
-# For development (with hot reload)
-npm run dev
+# Verify system status
+php artisan about
 ```
+
+**Note:** The `optimize:clear` command clears all caches (config, cache, routes, views, events, and compiled files) in one command, which is more efficient than clearing them individually.
 
 ### Step 7: Set Permissions (Linux/macOS)
 
@@ -673,7 +769,7 @@ Deploy your quiz system to a production server for public access.
 #### Option 1: Shared Hosting (cPanel/WHM)
 
 **Requirements:**
-- PHP 8.1+ with required extensions
+- PHP 8.2+ (8.3 recommended) with required extensions
 - MySQL 5.7+ or MariaDB 10.3+
 - SSL certificate (Let's Encrypt recommended)
 - 2GB+ RAM, 10GB+ storage
@@ -744,7 +840,7 @@ Deploy your quiz system to a production server for public access.
 2. **Install LAMP Stack:**
    ```bash
    # Install Apache, MySQL, PHP
-   sudo apt install apache2 mysql-server php8.1 php8.1-cli php8.1-mysql php8.1-xml php8.1-mbstring php8.1-curl php8.1-gd php8.1-zip php8.1-bcmath php8.1-intl php8.1-xmlrpc php8.1-soap
+   sudo apt install apache2 mysql-server php8.3 php8.3-cli php8.3-mysql php8.3-xml php8.3-mbstring php8.3-curl php8.3-gd php8.3-zip php8.3-bcmath php8.3-intl php8.3-xmlrpc php8.3-soap
    
    # Install Composer
    curl -sS https://getcomposer.org/installer | php
@@ -843,7 +939,7 @@ Deploy your quiz system to a production server for public access.
 
 1. **Create Dockerfile:**
    ```dockerfile
-   FROM php:8.1-apache
+   FROM php:8.3-apache
    
    # Install system dependencies
    RUN apt-get update && apt-get install -y \
@@ -1062,26 +1158,430 @@ memory_limit = 512M
 max_execution_time = 300
 ```
 
-## 📱 Usage
+## 📱 Usage Guide
 
-### For Administrators
+### 🔐 Getting Started
 
-1. **Login** to the admin panel
-2. **Manage Users** - Create, edit, and approve user accounts
-3. **Create Quizzes** - Set up quizzes with questions and time limits
-4. **Assign Quizzes** - Assign quizzes to specific users or groups
-5. **Monitor Performance** - View analytics and reports
-6. **Manage System** - Configure settings and handle support
+#### First-Time Setup
 
-### For Users
+1. **Access the System**
+   - Navigate to `http://localhost:8000` (or your server URL)
+   - You'll see the landing page with system information
 
-1. **Register** for an account (requires admin approval)
-2. **Login** to access the dashboard
-3. **Take Quizzes** - Enter quiz codes or access assigned quizzes
-4. **View Results** - Check quiz scores and feedback
-5. **Manage Profile** - Update personal information and photos
-6. **Connect with Friends** - Add friends and send messages
-7. **Participate in Forums** - Join discussions and share content
+2. **Default Admin Login**
+   - **Email**: `admin@quiz.com`
+   - **Password**: `password`
+   - ⚠️ **Important**: Change this password immediately after first login!
+
+3. **Initial Configuration**
+   - Go to **Admin Panel → System → Settings**
+   - Configure system name, logo, and contact information
+   - Set up email configuration for notifications
+   - Configure default leave balances (for employee management)
+
+---
+
+### 👨‍💼 For Administrators
+
+#### Dashboard Overview
+
+The admin dashboard provides:
+- **Real-time Statistics**: Total users, quizzes, active sessions
+- **Quick Actions**: Create quiz, add user, view reports
+- **Recent Activity**: Latest user registrations, quiz completions
+- **System Health**: Server status, PHP version, database connection
+
+#### User Management
+
+**1. Approve New Users**
+   - Navigate to **User Management → Pending Approvals**
+   - Review user registration details
+   - Click **Approve** or **Reject** with optional notes
+   - Approved users receive email notification
+
+**2. Create New User**
+   - Go to **User Management → Create User**
+   - Fill in: Name, Email, Password, Role (Admin/Employee/Student)
+   - Select University/Institution (if applicable)
+   - Set Active status and Approval status
+   - Click **Create User**
+
+**3. Manage Existing Users**
+   - **User Management → Users List**
+   - Click on any user to view/edit profile
+   - **Edit**: Update information, change password, upload profile picture
+   - **Deactivate**: Temporarily disable user access
+   - **Delete**: Permanently remove user (use with caution)
+   - **View Profile**: See user's quiz history, leave requests, DTR records
+
+**4. User Roles**
+   - **Admin**: Full system access
+   - **Employee**: Access to DTR, leave requests, quizzes
+   - **Student**: Access to quizzes, student-specific features
+
+#### Quiz Management
+
+**1. Create a New Quiz**
+   - Go to **Content Management → Quizzes → Create Quiz**
+   - Enter quiz details:
+     - **Title**: Quiz name
+     - **Description**: Brief description
+     - **Time Limit**: Duration in minutes
+     - **Passing Score**: Minimum score to pass (percentage)
+   - Click **Create Quiz**
+
+**2. Add Questions**
+   - Open the quiz you created
+   - Click **Add Question**
+   - Enter question text
+   - Add multiple choice options (minimum 2)
+   - Mark the correct answer
+   - Set point value (default: 1)
+   - Click **Save Question**
+   - Repeat for all questions
+
+**3. Import Questions (Bulk)**
+   - Go to **Content Management → Import Questions**
+   - Download the CSV template
+   - Fill in questions following the format:
+     - Question, Option A, Option B, Option C, Option D, Correct Answer, Points
+   - Upload the CSV file
+   - Select or create a quiz
+   - Click **Import Questions**
+
+**4. Assign Quizzes**
+   - Go to **Content Management → Quiz Assignments**
+   - Click **Assign Quiz**
+   - Select quiz from dropdown
+   - Choose assignment type:
+     - **All Users**: Assign to everyone
+     - **Specific Users**: Select individual users
+     - **By University**: Assign to users from specific institutions
+   - Set start and end dates
+   - Click **Assign**
+
+**5. View Quiz Results**
+   - Go to **Analytics & Reports → Quiz Results**
+   - Filter by quiz, user, or date range
+   - View individual attempts, scores, and time taken
+   - Export results to PDF or Excel
+
+#### Employee Management (DTR & Leave)
+
+**1. Daily Time Records (DTR)**
+   - **Employee Management → DTR (Time Records)**
+   - **Create DTR**: Add time records for employees
+   - **View Records**: See grouped records by month/week/employee
+   - **Export**: Download reports as PDF
+   - **Mark as Travel**: Checkbox to mark travel days (auto-fills 8 hours)
+
+**2. Leave Requests**
+   - **Employee Management → Leave Requests**
+   - View all pending, approved, and rejected requests
+   - **Approve/Reject**: Review and take action on requests
+   - **Add Notes**: Provide feedback to employees
+   - Employees receive email notifications on status changes
+
+**3. Leave Calendar**
+   - **Employee Management → Leave Calendar**
+   - Visual calendar view of all approved leaves
+   - Filter by employee or date range
+   - See overlapping leaves and availability
+
+#### Student Management
+
+**1. Student DTR**
+   - **Student Management → DTR (Time Records)**
+   - Manage time records specifically for students
+   - Filter by school/university and student
+   - Export PDF reports with filtering options
+
+**2. Student Leave Requests**
+   - **Student Management → Student Leave Requests**
+   - Students can request: Additional Time, Absent, Other
+   - Approve/reject student leave requests
+   - View student leave calendar
+
+#### System Settings
+
+**1. General Settings**
+   - **System → Settings → General**
+   - Update system name, logo, and icon
+   - Configure maintenance mode
+   - Set default vacation and sick leave balances
+
+**2. Email Configuration**
+   - **System → Settings → Email**
+   - Configure SMTP settings:
+     - Mail driver (SMTP/Log)
+     - Host, Port, Username, Password
+     - Encryption (TLS/SSL)
+   - Test email configuration
+   - View current email setup
+
+**3. Contact Information**
+   - **System → Settings → Contact**
+   - Set contact email, phone, live chat details
+   - Configure FAQ link
+   - Set support hours for different channels
+
+#### Analytics & Reports
+
+**1. Student Performance**
+   - **Analytics & Reports → Student Performance**
+   - View individual student scores
+   - Track performance by topic/subject
+   - See rankings and statistics
+
+**2. Quiz Analytics**
+   - **Analytics & Reports → Quiz Analytics**
+   - Completion rates
+   - Average scores
+   - Most difficult questions
+   - Time analysis
+
+**3. University Rankings**
+   - **Analytics & Reports → University Rankings**
+   - Compare performance across institutions
+   - View top-performing universities
+   - Export ranking reports
+
+#### Communication Features
+
+**1. Live Chat Support**
+   - **Communication → Live Chat**
+   - View active chat tickets
+   - Respond to user inquiries
+   - Use pre-loaded messages for quick responses
+   - Close tickets when resolved
+
+**2. Contact Messages**
+   - **Communication → Contact Messages**
+   - View inquiries from landing page
+   - Respond to contact form submissions
+   - Mark messages as read/unread
+
+**3. Notifications**
+   - **Communication → Notifications**
+   - Send system-wide notifications
+   - Target specific user groups
+   - Schedule notifications
+
+---
+
+### 👤 For Regular Users (Employees/Students)
+
+#### Registration & Login
+
+**1. Register for Account**
+   - Click **Register** on the landing page
+   - Fill in registration form:
+     - Name, Email, Password
+     - University/Institution (if applicable)
+   - Submit registration
+   - Wait for admin approval (you'll receive email notification)
+
+**2. Login**
+   - Go to login page
+   - Enter email and password
+   - Check **Remember Me** to stay logged in
+   - Click **Login**
+
+**3. Forgot Password**
+   - Click **Forgot Password** on login page
+   - Enter your email address
+   - Check email for password reset link
+   - Click link and set new password
+
+#### Dashboard
+
+Your dashboard shows:
+- **Available Quizzes**: Quizzes assigned to you
+- **Recent Activity**: Your quiz attempts and results
+- **Statistics**: Your overall performance
+- **Notifications**: Latest updates and messages
+
+#### Taking Quizzes
+
+**1. Access a Quiz**
+   - **Method 1**: Click on quiz from **Available Quizzes** section
+   - **Method 2**: Enter quiz code in the **Enter Quiz Code** modal
+   - **Method 3**: Click on assigned quiz notification
+
+**2. Taking the Quiz**
+   - Read instructions and time limit
+   - Click **Start Quiz**
+   - Answer questions one at a time
+   - Use **Previous** and **Next** buttons to navigate
+   - Timer shows remaining time (auto-submits when time expires)
+   - Review answers before submitting
+   - Click **Submit Quiz** when done
+
+**3. View Results**
+   - After submission, see immediate results
+   - View correct/incorrect answers
+   - See your score and passing status
+   - Check detailed feedback for each question
+
+#### Profile Management
+
+**1. Edit Profile**
+   - Click on your name → **Profile**
+   - Update personal information:
+     - Name, Email, Bio
+     - University/Institution
+   - Upload profile picture (recommended: square image, max 2MB)
+   - Upload cover photo (recommended: 1200x300px)
+   - Click **Save Changes**
+
+**2. Change Password**
+   - Go to **Profile → Security**
+   - Enter current password
+   - Enter new password (minimum 8 characters)
+   - Confirm new password
+   - Click **Update Password**
+
+#### Daily Time Records (Employees)
+
+**1. View DTR Records**
+   - **Dashboard → My DTR Records**
+   - View your time records grouped by month/week
+   - See total hours, overtime, and deficits
+   - Check weekly summaries
+
+**2. Request Leave**
+   - **Dashboard → Leave Requests → New Request**
+   - Select leave type:
+     - **Vacation Leave**: Paid time off
+     - **Sick Leave**: Medical leave
+     - **Work From Home**: Remote work
+     - **Absent**: Unpaid absence
+     - **Overtime**: Request overtime credit
+     - **Offset**: Use overtime balance for time off
+   - Enter start and end dates
+   - Add reason/notes
+   - For Offset: Specify hours to deduct (defaults to 8 hours per day)
+   - Submit request
+   - Wait for admin approval
+
+**3. View Leave Balance**
+   - **Dashboard → Profile**
+   - See available vacation and sick leave balances
+   - View overtime balance (can be negative if deficits exist)
+   - Check leave request history
+
+#### Student Features
+
+**1. Student Leave Requests**
+   - **Dashboard → Leave Requests → New Request**
+   - Available types:
+     - **Additional Time**: Request extra time for activities
+     - **Absent**: Report absence
+     - **Other**: Other leave types
+   - Submit with dates and reason
+
+**2. View Student DTR**
+   - **Dashboard → My DTR Records**
+   - View time records specific to students
+   - See weekly summaries and totals
+
+#### Communication Features
+
+**1. Live Chat Support**
+   - **Dashboard → Live Chat**
+   - Click **New Ticket** to start chat
+   - Describe your issue or question
+   - Chat with admin support in real-time
+   - Receive notifications when admin responds
+   - Close ticket when issue is resolved
+
+**2. Friends & Messaging**
+   - **Dashboard → Friends**
+   - **Add Friend**: Search and send friend requests
+   - **Accept Requests**: Approve incoming friend requests
+   - **Send Messages**: Private chat with friends
+   - **View Messages**: Check conversation history
+
+**3. Forum Participation**
+   - **Dashboard → Forum**
+   - **Browse Threads**: View all discussion topics
+   - **Create Thread**: Start new discussion
+   - **Like & Comment**: Engage with posts
+   - **Share**: Share interesting threads
+   - **Upload Images**: Add images to posts/comments (up to 5 images)
+
+**4. Notifications**
+   - Click bell icon in top navigation
+   - View all notifications:
+     - Quiz assignments
+     - Friend requests
+     - Messages
+     - Leave request updates
+     - Forum mentions
+   - Mark as read/unread
+   - Clear notifications
+
+#### Feedback & Support
+
+**1. Submit Feedback**
+   - **Dashboard → Feedback**
+   - Click **Submit Feedback**
+   - Select feedback type
+   - Describe your feedback
+   - Upload images (up to 5 images, max 2MB each)
+   - Submit for admin review
+
+**2. View Feedback Status**
+   - Check your submitted feedback
+   - See admin responses
+   - Track feedback resolution status
+
+---
+
+### 🎯 Quick Reference
+
+#### Common Admin Tasks
+
+| Task | Location | Steps |
+|------|----------|-------|
+| Create Quiz | Content Management → Quizzes | Create → Add Questions → Assign |
+| Approve User | User Management → Pending | Review → Approve/Reject |
+| View Reports | Analytics & Reports | Select report type → Filter → Export |
+| Configure Email | System → Settings → Email | Enter SMTP details → Save |
+| Manage DTR | Employee Management → DTR | Create/View/Export records |
+
+#### Common User Tasks
+
+| Task | Location | Steps |
+|------|----------|-------|
+| Take Quiz | Dashboard → Available Quizzes | Click quiz → Start → Answer → Submit |
+| Request Leave | Dashboard → Leave Requests | New Request → Fill form → Submit |
+| Update Profile | Profile → Edit | Update info → Upload photos → Save |
+| Chat Support | Dashboard → Live Chat | New Ticket → Chat → Close |
+| Add Friend | Dashboard → Friends | Search → Send Request → Accept |
+
+---
+
+### 💡 Tips & Best Practices
+
+**For Administrators:**
+- Regularly backup the database
+- Monitor system logs for errors
+- Keep dependencies updated
+- Review and approve users promptly
+- Set clear quiz time limits
+- Use bulk import for large question sets
+- Configure email properly for notifications
+- Regularly check system health
+
+**For Users:**
+- Complete quizzes before deadline
+- Keep profile information updated
+- Request leaves in advance
+- Use live chat for quick support
+- Participate in forums for community engagement
+- Check notifications regularly
+- Review quiz results to improve performance
 
 ## 🔌 API Documentation
 
