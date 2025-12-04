@@ -6,10 +6,12 @@ use App\Http\Controllers\Controller;
 use App\Models\Dtr;
 use App\Models\DtrDeficit;
 use App\Models\User;
+use App\Models\University;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
+use Barryvdh\DomPDF\Facade\Pdf;
 
 class DtrController extends Controller
 {
@@ -107,7 +109,10 @@ class DtrController extends Controller
             ->orderBy('name')
             ->get();
 
-        return view('admin.dtr.create', compact('employees'));
+        // Determine if sections should be collapsed by default (only for students)
+        $collapseByDefault = auth()->check() && auth()->user()->role === 'student';
+
+        return view('admin.dtr.create', compact('employees', 'collapseByDefault'));
     }
 
     /**
@@ -573,5 +578,420 @@ class DtrController extends Controller
                 'date' => $date->toDateString(),
             ]);
         }
+    }
+
+    /**
+     * Display a listing of all student time records.
+     */
+    public function studentIndex(Request $request)
+    {
+        $query = Dtr::with(['user.university'])
+            ->whereHas('user', function($q) {
+                $q->where('role', 'student');
+            });
+
+        // Filter by university
+        if ($request->filled('university_id')) {
+            $query->whereHas('user', function($q) use ($request) {
+                $q->where('university_id', $request->university_id);
+            });
+        }
+
+        // Filter by student
+        if ($request->filled('student_id')) {
+            $query->where('user_id', $request->student_id);
+        }
+
+        // Filter by date range
+        if ($request->filled('date_from')) {
+            $query->whereDate('date', '>=', $request->date_from);
+        }
+        if ($request->filled('date_to')) {
+            $query->whereDate('date', '<=', $request->date_to);
+        }
+
+        // Filter by status
+        if ($request->filled('status')) {
+            $query->where('status', $request->status);
+        }
+
+        // Get universities for filter dropdown
+        $universities = University::where('is_active', true)
+            ->orderBy('name')
+            ->get();
+
+        // Get students for filter dropdown (only students, optionally filtered by university)
+        $studentsQuery = User::where('role', 'student')
+            ->where('is_active', true);
+        
+        if ($request->filled('university_id')) {
+            $studentsQuery->where('university_id', $request->university_id);
+        }
+        
+        $students = $studentsQuery->orderBy('name')->get();
+
+        $dtrs = $query->orderBy('date', 'desc')
+            ->orderBy('user_id')
+            ->get();
+
+        $totalRecords = $dtrs->count();
+
+        // Group DTRs by Month -> ISO Week -> Student
+        $groupedDtrs = [];
+
+        foreach ($dtrs as $dtr) {
+            $monthKey = $dtr->date->format('Y-m');
+            $monthLabel = $dtr->date->format('F Y');
+
+            $isoYear = $dtr->date->format('o');
+            $weekNumber = $dtr->date->isoWeek;
+            $weekKey = $isoYear . '-W' . $weekNumber;
+
+            $weekStart = $dtr->date->copy()->startOfWeek();
+            $weekEnd = $dtr->date->copy()->endOfWeek();
+            $weekLabel = 'Week ' . $weekNumber . ' (' . $weekStart->format('M d') . ' - ' . $weekEnd->format('M d') . ')';
+
+            $studentId = $dtr->user_id;
+
+            if (!isset($groupedDtrs[$monthKey])) {
+                $groupedDtrs[$monthKey] = [
+                    'label' => $monthLabel,
+                    'weeks' => [],
+                ];
+            }
+
+            if (!isset($groupedDtrs[$monthKey]['weeks'][$weekKey])) {
+                $groupedDtrs[$monthKey]['weeks'][$weekKey] = [
+                    'label' => $weekLabel,
+                    'students' => [],
+                ];
+            }
+
+            if (!isset($groupedDtrs[$monthKey]['weeks'][$weekKey]['students'][$studentId])) {
+                $groupedDtrs[$monthKey]['weeks'][$weekKey]['students'][$studentId] = [
+                    'student' => $dtr->user,
+                    'records' => [],
+                ];
+            }
+
+            $groupedDtrs[$monthKey]['weeks'][$weekKey]['students'][$studentId]['records'][] = $dtr;
+        }
+
+        return view('admin.dtr.student-index', compact('groupedDtrs', 'students', 'universities', 'totalRecords'));
+    }
+
+    /**
+     * Show the form for creating a new student DTR record.
+     */
+    public function studentCreate()
+    {
+        $students = User::where('role', 'student')
+            ->where('is_active', true)
+            ->orderBy('name')
+            ->get();
+
+        // Determine if sections should be collapsed by default (only for students)
+        $collapseByDefault = true; // Always collapsed for student DTR creation
+
+        return view('admin.dtr.student-create', compact('students', 'collapseByDefault'));
+    }
+
+    /**
+     * Store a newly created student DTR record.
+     */
+    public function studentStore(Request $request)
+    {
+        $request->validate([
+            'user_id' => 'required|exists:users,id',
+            'date' => 'required|date',
+            'added_time_from_note' => 'nullable|date_format:H:i',
+            'total_hours' => 'required|date_format:H:i',
+            'overtime_hours' => 'nullable|date_format:H:i',
+            'status' => 'required|in:present,absent,late,half_day,on_leave,travel',
+            'remarks' => 'nullable|string|max:1000',
+        ]);
+
+        // Verify user is a student
+        $student = User::where('id', $request->user_id)
+            ->where('role', 'student')
+            ->first();
+
+        if (!$student) {
+            return redirect()->back()
+                ->withErrors(['user_id' => 'Selected user is not a student.'])
+                ->withInput();
+        }
+
+        // Check if record already exists for this date
+        $existingDtr = Dtr::where('user_id', $request->user_id)
+            ->whereDate('date', $request->date)
+            ->first();
+
+        if ($existingDtr) {
+            return redirect()->back()
+                ->withErrors(['date' => 'A DTR record already exists for this student on this date.'])
+                ->withInput();
+        }
+
+        try {
+            // Convert HH:MM inputs to decimal hours
+            $workedDecimal = 0;
+            $addedDecimal = 0;
+            $overtimeDecimal = 0;
+
+            if ($request->filled('total_hours')) {
+                [$h, $m] = explode(':', $request->total_hours);
+                $workedDecimal = ((int) $h) + ((int) $m / 60);
+            }
+
+            if ($request->filled('added_time_from_note')) {
+                [$eh, $em] = explode(':', $request->added_time_from_note);
+                $addedDecimal = ((int) $eh) + ((int) $em / 60);
+            }
+
+            // Total hours for the day = Worked + Added
+            $totalDecimal = $workedDecimal + $addedDecimal;
+
+            // Overtime is any hours beyond the standard 8:00
+            $standardDecimal = 8.0;
+            $overtimeDecimal = $totalDecimal > $standardDecimal
+                ? $totalDecimal - $standardDecimal
+                : 0;
+
+            $dtr = Dtr::create([
+                'user_id' => $request->user_id,
+                'date' => $request->date,
+                'added_time_from_note' => $addedDecimal,
+                'total_hours' => $totalDecimal,
+                'overtime_hours' => $overtimeDecimal,
+                'status' => $request->status,
+                'remarks' => $request->remarks,
+            ]);
+
+            // Calculate and store weekly deficit
+            $this->calculateAndStoreWeeklyDeficit($request->user_id, Carbon::parse($request->date));
+
+            return redirect()->route('admin.student-dtr.index')
+                ->with('success', 'Student DTR record added successfully.');
+        } catch (\Exception $e) {
+            Log::error('Student DTR creation failed: ' . $e->getMessage());
+
+            return redirect()->back()
+                ->withErrors(['error' => 'Failed to create student DTR record: ' . $e->getMessage()])
+                ->withInput();
+        }
+    }
+
+    /**
+     * Show the form for editing the specified student DTR resource.
+     */
+    public function studentEdit(Dtr $dtr)
+    {
+        // Verify this is a student DTR
+        if ($dtr->user->role !== 'student') {
+            abort(404, 'DTR record not found for students.');
+        }
+
+        $students = User::where('role', 'student')
+            ->where('is_active', true)
+            ->orderBy('name')
+            ->get();
+
+        // Determine if sections should be collapsed by default
+        $collapseByDefault = true;
+
+        return view('admin.dtr.student-edit', compact('dtr', 'students', 'collapseByDefault'));
+    }
+
+    /**
+     * Update the specified student DTR resource in storage.
+     */
+    public function studentUpdate(Request $request, Dtr $dtr)
+    {
+        // Verify this is a student DTR
+        if ($dtr->user->role !== 'student') {
+            abort(404, 'DTR record not found for students.');
+        }
+
+        $request->validate([
+            'user_id' => 'required|exists:users,id',
+            'date' => 'required|date',
+            'added_time_from_note' => 'nullable|date_format:H:i',
+            'total_hours' => 'required|date_format:H:i',
+            'status' => 'required|in:present,absent,late,half_day,on_leave,travel',
+            'remarks' => 'nullable|string|max:1000',
+        ]);
+
+        // Verify user is a student
+        $student = User::where('id', $request->user_id)
+            ->where('role', 'student')
+            ->first();
+
+        if (!$student) {
+            return redirect()->back()
+                ->withErrors(['user_id' => 'Selected user is not a student.'])
+                ->withInput();
+        }
+
+        try {
+            // Convert HH:MM inputs to decimal hours
+            $workedDecimal = 0;
+            $addedDecimal = 0;
+
+            if ($request->filled('total_hours')) {
+                [$h, $m] = explode(':', $request->total_hours);
+                $workedDecimal = ((int) $h) + ((int) $m / 60);
+            }
+
+            if ($request->filled('added_time_from_note')) {
+                [$eh, $em] = explode(':', $request->added_time_from_note);
+                $addedDecimal = ((int) $eh) + ((int) $em / 60);
+            }
+
+            $totalDecimal = $workedDecimal + $addedDecimal;
+
+            // Overtime is any hours beyond the standard 8:00
+            $standardDecimal = 8.0;
+            $overtimeDecimal = $totalDecimal > $standardDecimal
+                ? $totalDecimal - $standardDecimal
+                : 0;
+
+            $dtr->update([
+                'user_id' => $request->user_id,
+                'date' => $request->date,
+                'added_time_from_note' => $addedDecimal,
+                'total_hours' => $totalDecimal,
+                'overtime_hours' => $overtimeDecimal,
+                'status' => $request->status,
+                'remarks' => $request->remarks,
+            ]);
+
+            // Calculate and store weekly deficit
+            $this->calculateAndStoreWeeklyDeficit($request->user_id, Carbon::parse($request->date));
+
+            return redirect()->route('admin.student-dtr.index')
+                ->with('success', 'Student DTR record updated successfully.');
+        } catch (\Exception $e) {
+            Log::error('Student DTR update failed: ' . $e->getMessage());
+
+            return redirect()->back()
+                ->withErrors(['error' => 'Failed to update student DTR record: ' . $e->getMessage()])
+                ->withInput();
+        }
+    }
+
+    /**
+     * Export student DTR records as PDF.
+     */
+    public function studentExportPdf(Request $request)
+    {
+        $query = Dtr::with(['user.university'])
+            ->whereHas('user', function($q) {
+                $q->where('role', 'student');
+            });
+
+        // Filter by university
+        $selectedUniversity = null;
+        if ($request->filled('university_id')) {
+            $selectedUniversity = University::find($request->university_id);
+            $query->whereHas('user', function($q) use ($request) {
+                $q->where('university_id', $request->university_id);
+            });
+        }
+
+        // Filter by student
+        $selectedStudent = null;
+        if ($request->filled('student_id')) {
+            $selectedStudent = User::find($request->student_id);
+            $query->where('user_id', $request->student_id);
+        }
+
+        // Filter by date range
+        $dateFrom = $request->filled('date_from') ? $request->date_from : null;
+        $dateTo = $request->filled('date_to') ? $request->date_to : null;
+        
+        if ($dateFrom) {
+            $query->whereDate('date', '>=', $dateFrom);
+        }
+        if ($dateTo) {
+            $query->whereDate('date', '<=', $dateTo);
+        }
+
+        // Filter by status
+        if ($request->filled('status')) {
+            $query->where('status', $request->status);
+        }
+
+        $dtrs = $query->orderBy('date', 'asc')
+            ->orderBy('user_id')
+            ->get();
+
+        // Calculate totals
+        $totalHours = 0;
+        $totalOvertime = 0;
+        $totalRecords = $dtrs->count();
+
+        foreach ($dtrs as $dtr) {
+            $totalHours += ($dtr->total_hours ?? 0);
+            $totalOvertime += ($dtr->overtime_hours ?? 0);
+        }
+
+        // Format totals
+        $totalMinutes = (int) round($totalHours * 60);
+        $totalH = intdiv($totalMinutes, 60);
+        $totalM = $totalMinutes % 60;
+        $totalHoursFormatted = sprintf('%02d:%02d', $totalH, $totalM);
+
+        $totalOvertimeMinutes = (int) round($totalOvertime * 60);
+        $totalOvertimeH = intdiv($totalOvertimeMinutes, 60);
+        $totalOvertimeM = $totalOvertimeMinutes % 60;
+        $totalOvertimeFormatted = sprintf('%02d:%02d', $totalOvertimeH, $totalOvertimeM);
+
+        // Group by student for better organization
+        $groupedByStudent = [];
+        foreach ($dtrs as $dtr) {
+            $studentId = $dtr->user_id;
+            if (!isset($groupedByStudent[$studentId])) {
+                $groupedByStudent[$studentId] = [
+                    'student' => $dtr->user,
+                    'records' => [],
+                    'total_hours' => 0,
+                    'total_overtime' => 0,
+                ];
+            }
+            $groupedByStudent[$studentId]['records'][] = $dtr;
+            $groupedByStudent[$studentId]['total_hours'] += ($dtr->total_hours ?? 0);
+            $groupedByStudent[$studentId]['total_overtime'] += ($dtr->overtime_hours ?? 0);
+        }
+
+        // Format student totals
+        foreach ($groupedByStudent as &$group) {
+            $studentTotalMinutes = (int) round($group['total_hours'] * 60);
+            $studentTotalH = intdiv($studentTotalMinutes, 60);
+            $studentTotalM = $studentTotalMinutes % 60;
+            $group['total_hours_formatted'] = sprintf('%02d:%02d', $studentTotalH, $studentTotalM);
+
+            $studentOvertimeMinutes = (int) round($group['total_overtime'] * 60);
+            $studentOvertimeH = intdiv($studentOvertimeMinutes, 60);
+            $studentOvertimeM = $studentOvertimeMinutes % 60;
+            $group['total_overtime_formatted'] = sprintf('%02d:%02d', $studentOvertimeH, $studentOvertimeM);
+        }
+
+        $data = [
+            'dtrs' => $dtrs,
+            'groupedByStudent' => $groupedByStudent,
+            'totalRecords' => $totalRecords,
+            'totalHoursFormatted' => $totalHoursFormatted,
+            'totalOvertimeFormatted' => $totalOvertimeFormatted,
+            'dateFrom' => $dateFrom ? Carbon::parse($dateFrom)->format('F d, Y') : 'All Time',
+            'dateTo' => $dateTo ? Carbon::parse($dateTo)->format('F d, Y') : 'All Time',
+            'selectedStudent' => $selectedStudent,
+            'selectedUniversity' => $selectedUniversity,
+        ];
+
+        $pdf = Pdf::loadView('admin.dtr.student-export-pdf', $data)->setPaper('a4', 'landscape');
+        
+        $filename = 'student_dtr_export_' . ($dateFrom ? Carbon::parse($dateFrom)->format('Y-m-d') : 'all') . '_' . ($dateTo ? Carbon::parse($dateTo)->format('Y-m-d') : 'all') . '.pdf';
+        return $pdf->download($filename);
     }
 }

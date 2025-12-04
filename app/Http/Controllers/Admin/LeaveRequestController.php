@@ -422,4 +422,177 @@ class LeaveRequestController extends Controller
         return redirect()->route('admin.leave-requests.show', $leaveRequest)
             ->with('success', 'Leave request marked for resubmission. The employee will need to correct any errors.');
     }
+
+    /**
+     * Display a listing of all student leave requests.
+     */
+    public function studentIndex(Request $request)
+    {
+        $query = LeaveRequest::with(['user', 'reviewer'])
+            ->whereHas('user', function($q) {
+                $q->where('role', 'student');
+            });
+
+        // Filter by status
+        if ($request->has('status') && $request->status) {
+            $query->where('status', $request->status);
+        }
+
+        // Filter by type
+        if ($request->has('type') && $request->type) {
+            $query->where('type', $request->type);
+        }
+
+        // Filter by student
+        if ($request->has('student') && $request->student) {
+            $query->where('user_id', $request->student);
+        }
+
+        // Search by student name or email
+        if ($request->has('search') && $request->search) {
+            $search = $request->search;
+            $query->whereHas('user', function($q) use ($search) {
+                $q->where('name', 'like', "%{$search}%")
+                  ->orWhere('email', 'like', "%{$search}%");
+            });
+        }
+
+        $leaveRequests = $query->orderBy('created_at', 'desc')->paginate(20);
+
+        // Statistics
+        $baseQuery = LeaveRequest::whereHas('user', function($q) {
+            $q->where('role', 'student');
+        });
+        if ($request->has('student') && $request->student) {
+            $baseQuery->where('user_id', $request->student);
+        }
+        if ($request->has('type') && $request->type) {
+            $baseQuery->where('type', $request->type);
+        }
+
+        $stats = [
+            'total' => (clone $baseQuery)->count(),
+            'pending' => (clone $baseQuery)->where('status', 'pending')->count(),
+            'approved' => (clone $baseQuery)->where('status', 'approved')->count(),
+            'rejected' => (clone $baseQuery)->where('status', 'rejected')->count(),
+        ];
+
+        $students = \App\Models\User::where('role', 'student')
+            ->where('is_active', true)
+            ->orderBy('name')
+            ->get();
+
+        return view('admin.leave-requests.student-index', compact('leaveRequests', 'stats', 'students'));
+    }
+
+    /**
+     * Calendar view of student leave requests for easier tracking.
+     */
+    public function studentCalendar(Request $request)
+    {
+        // Use Manila timezone for current date/month context
+        $nowManila = Carbon::now('Asia/Manila');
+        $monthParam = $request->input('month', $nowManila->format('Y-m'));
+        $studentId = $request->input('student');
+
+        try {
+            $currentMonth = Carbon::createFromFormat('Y-m', $monthParam, 'Asia/Manila')->startOfMonth();
+        } catch (\Exception $e) {
+            $currentMonth = $nowManila->copy()->startOfMonth();
+        }
+
+        $startOfMonth = $currentMonth->copy()->startOfMonth();
+        $endOfMonth = $currentMonth->copy()->endOfMonth();
+
+        // Extend to full weeks for calendar grid
+        $startOfCalendar = $startOfMonth->copy()->startOfWeek(Carbon::MONDAY);
+        $endOfCalendar = $endOfMonth->copy()->endOfWeek(Carbon::SUNDAY);
+
+        // Base query for leave requests that intersect the calendar range (students only)
+        $leaveQuery = LeaveRequest::with('user')
+            ->whereHas('user', function($q) {
+                $q->where('role', 'student');
+            })
+            ->where(function ($outer) use ($startOfCalendar, $endOfCalendar) {
+                $outer->where(function ($q) use ($startOfCalendar, $endOfCalendar) {
+                    // Requests with a start and end date that overlap the calendar window
+                    $q->whereDate('start_date', '<=', $endOfCalendar->toDateString())
+                      ->whereDate('end_date', '>=', $startOfCalendar->toDateString());
+                })->orWhere(function ($q) use ($startOfCalendar, $endOfCalendar) {
+                    // Handle single-day requests where end_date is null
+                    $q->whereNull('end_date')
+                      ->whereDate('start_date', '>=', $startOfCalendar->toDateString())
+                      ->whereDate('start_date', '<=', $endOfCalendar->toDateString());
+                });
+            });
+
+        if ($studentId) {
+            $leaveQuery->where('user_id', $studentId);
+        }
+
+        $leaveRequests = $leaveQuery->get();
+
+        // Prepare map of day => leave entries
+        $days = [];
+        $period = CarbonPeriod::create($startOfCalendar, $endOfCalendar);
+
+        foreach ($period as $date) {
+            $key = $date->toDateString();
+            $days[$key] = [
+                'date' => $date->copy(),
+                'requests' => [],
+            ];
+        }
+
+        foreach ($leaveRequests as $requestItem) {
+            $rangeStart = $requestItem->start_date->copy()->max($startOfCalendar);
+            $rangeEnd = ($requestItem->end_date ?? $requestItem->start_date)->copy()->min($endOfCalendar);
+
+            $dayPeriod = CarbonPeriod::create($rangeStart, $rangeEnd);
+            foreach ($dayPeriod as $day) {
+                $key = $day->toDateString();
+                if (!isset($days[$key])) {
+                    continue;
+                }
+
+                $days[$key]['requests'][] = [
+                    'id' => $requestItem->id,
+                    'student' => $requestItem->user,
+                    'type_label' => $requestItem->type_label,
+                    'status' => $requestItem->status,
+                ];
+            }
+        }
+
+        $weeks = [];
+        $week = [];
+        foreach ($days as $day) {
+            $week[] = $day;
+            if (count($week) === 7) {
+                $weeks[] = $week;
+                $week = [];
+            }
+        }
+        if (!empty($week)) {
+            $weeks[] = $week;
+        }
+
+        $prevMonth = $currentMonth->copy()->subMonth()->format('Y-m');
+        $nextMonth = $currentMonth->copy()->addMonth()->format('Y-m');
+
+        // Students list for sidebar filter (students only)
+        $students = \App\Models\User::where('role', 'student')
+            ->where('is_active', true)
+            ->orderBy('name')
+            ->get();
+
+        return view('admin.leave-requests.student-calendar', [
+            'currentMonth' => $currentMonth,
+            'weeks' => $weeks,
+            'prevMonth' => $prevMonth,
+            'nextMonth' => $nextMonth,
+            'students' => $students,
+            'selectedStudent' => $studentId,
+        ]);
+    }
 }

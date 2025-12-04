@@ -38,8 +38,8 @@
                         </div>
                         <div>
                             <h3 class="text-lg font-semibold text-gray-900">Email Support</h3>
-                            <p class="text-gray-600">support@quizsystem.com</p>
-                            <p class="text-sm text-gray-500">We typically respond within 24 hours</p>
+                            <p class="text-gray-600">{{ $settings['contact_email'] ?? 'support@quizsystem.com' }}</p>
+                            <p class="text-sm text-gray-500">{{ $settings['contact_email_response_time'] ?? 'We typically respond within 24 hours' }}</p>
                         </div>
                     </div>
 
@@ -54,8 +54,8 @@
                         </div>
                         <div>
                             <h3 class="text-lg font-semibold text-gray-900">Phone Support</h3>
-                            <p class="text-gray-600">+1 (555) 123-4567</p>
-                            <p class="text-sm text-gray-500">Monday - Friday, 9 AM - 6 PM EST</p>
+                            <p class="text-gray-600">{{ $settings['contact_phone'] ?? '+1 (555) 123-4567' }}</p>
+                            <p class="text-sm text-gray-500">{{ $settings['contact_phone_hours'] ?? 'Monday - Friday, 9 AM - 6 PM EST' }}</p>
                         </div>
                     </div>
 
@@ -70,18 +70,20 @@
                         </div>
                         <div>
                             <h3 class="text-lg font-semibold text-gray-900">Live Chat</h3>
-                            <p class="text-gray-600">Available on our platform</p>
-                            <p class="text-sm text-gray-500">Get instant help while using the system</p>
+                            <p class="text-gray-600">{{ $settings['contact_live_chat_description'] ?? 'Available on our platform' }}</p>
+                            <p class="text-sm text-gray-500">{{ $settings['contact_live_chat_hours'] ?? 'Get instant help while using the system' }}</p>
                         </div>
                     </div>
                 </div>
 
                 <!-- FAQ Link -->
+                @if($settings['contact_faq_url'] ?? '#')
                 <div class="mt-8 p-6 bg-gray-50 rounded-lg">
                     <h3 class="text-lg font-semibold text-gray-900 mb-2">Frequently Asked Questions</h3>
                     <p class="text-gray-600 mb-4">Check out our FAQ section for quick answers to common questions.</p>
-                    <a href="#" class="text-primary hover:underline font-medium">View FAQ →</a>
+                    <a href="{{ $settings['contact_faq_url'] ?? '#' }}" class="text-primary hover:underline font-medium">{{ $settings['contact_faq_text'] ?? 'View FAQ →' }}</a>
                 </div>
+                @endif
             </div>
 
             <!-- Contact Form -->
@@ -176,20 +178,20 @@
         <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
             <div class="bg-white p-6 rounded-lg shadow-lg text-center">
                 <h3 class="text-lg font-semibold text-gray-900 mb-2">Email Support</h3>
-                <p class="text-gray-600 mb-2">24/7 Available</p>
-                <p class="text-sm text-gray-500">Response within 24 hours</p>
+                <p class="text-gray-600 mb-2">{{ $settings['contact_email_support_hours'] ?? '24/7 Available' }}</p>
+                <p class="text-sm text-gray-500">{{ $settings['contact_email_support_response'] ?? 'Response within 24 hours' }}</p>
             </div>
 
             <div class="bg-white p-6 rounded-lg shadow-lg text-center">
                 <h3 class="text-lg font-semibold text-gray-900 mb-2">Phone Support</h3>
-                <p class="text-gray-600 mb-2">Monday - Friday</p>
-                <p class="text-sm text-gray-500">9:00 AM - 6:00 PM EST</p>
+                <p class="text-gray-600 mb-2">{{ $settings['contact_phone_support_days'] ?? 'Monday - Friday' }}</p>
+                <p class="text-sm text-gray-500">{{ $settings['contact_phone_support_time'] ?? '9:00 AM - 6:00 PM EST' }}</p>
             </div>
 
             <div class="bg-white p-6 rounded-lg shadow-lg text-center">
                 <h3 class="text-lg font-semibold text-gray-900 mb-2">Live Chat</h3>
-                <p class="text-gray-600 mb-2">Monday - Friday</p>
-                <p class="text-sm text-gray-500">10:00 AM - 5:00 PM EST</p>
+                <p class="text-gray-600 mb-2">{{ $settings['contact_live_chat_days'] ?? 'Monday - Friday' }}</p>
+                <p class="text-sm text-gray-500">{{ $settings['contact_live_chat_time'] ?? '10:00 AM - 5:00 PM EST' }}</p>
             </div>
         </div>
     </div>

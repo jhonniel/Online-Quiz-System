@@ -97,6 +97,14 @@
                         <span>Email</span>
                     </div>
                 </button>
+                <button type="button" onclick="showTab('contact')" id="tab-contact" class="settings-tab">
+                    <div class="flex items-center space-x-2">
+                        <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 4.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path>
+                        </svg>
+                        <span>Contact</span>
+                    </div>
+                </button>
                 <button type="button" onclick="showTab('health')" id="tab-health" class="settings-tab">
                     <div class="flex items-center space-x-2">
                         <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -782,6 +790,175 @@
                                         </div>
                                     </div>
                                     <div id="test-email-result" class="mt-4 hidden"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Contact Information Tab -->
+                <div id="content-contact" class="tab-content hidden">
+                    <div class="p-6">
+                        <div class="space-y-6">
+                            <!-- Contact Information Section -->
+                            <div class="form-section">
+                                <div class="flex items-center space-x-3 mb-6">
+                                    <div class="flex-shrink-0 bg-blue-100 rounded-lg p-2">
+                                        <svg class="h-6 w-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 4.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path>
+                                        </svg>
+                                    </div>
+                                    <div>
+                                        <h3 class="text-lg font-semibold text-gray-900">Contact Information</h3>
+                                        <p class="text-sm text-gray-500">Configure contact details displayed on the landing page</p>
+                                    </div>
+                                </div>
+
+                                <div class="space-y-6">
+                                    <!-- Email Contact -->
+                                    <div>
+                                        <label for="contact_email" class="block text-sm font-medium text-gray-700 mb-2">Email Address</label>
+                                        <input type="email" name="contact_email" id="contact_email"
+                                               value="{{ $settings['contact_email'] ?? 'support@quizsystem.com' }}"
+                                               placeholder="support@example.com"
+                                               class="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                                        <p class="mt-1 text-xs text-gray-500">Email address displayed on the contact page</p>
+                                    </div>
+
+                                    <div>
+                                        <label for="contact_email_response_time" class="block text-sm font-medium text-gray-700 mb-2">Email Response Time Message</label>
+                                        <input type="text" name="contact_email_response_time" id="contact_email_response_time"
+                                               value="{{ $settings['contact_email_response_time'] ?? 'We typically respond within 24 hours' }}"
+                                               placeholder="We typically respond within 24 hours"
+                                               class="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                                    </div>
+
+                                    <!-- Phone Contact -->
+                                    <div>
+                                        <label for="contact_phone" class="block text-sm font-medium text-gray-700 mb-2">Phone Number</label>
+                                        <input type="text" name="contact_phone" id="contact_phone"
+                                               value="{{ $settings['contact_phone'] ?? '+1 (555) 123-4567' }}"
+                                               placeholder="+1 (555) 123-4567"
+                                               class="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                                    </div>
+
+                                    <div>
+                                        <label for="contact_phone_hours" class="block text-sm font-medium text-gray-700 mb-2">Phone Support Hours</label>
+                                        <input type="text" name="contact_phone_hours" id="contact_phone_hours"
+                                               value="{{ $settings['contact_phone_hours'] ?? 'Monday - Friday, 9 AM - 6 PM EST' }}"
+                                               placeholder="Monday - Friday, 9 AM - 6 PM EST"
+                                               class="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                                    </div>
+
+                                    <!-- Live Chat -->
+                                    <div>
+                                        <label for="contact_live_chat_description" class="block text-sm font-medium text-gray-700 mb-2">Live Chat Description</label>
+                                        <input type="text" name="contact_live_chat_description" id="contact_live_chat_description"
+                                               value="{{ $settings['contact_live_chat_description'] ?? 'Available on our platform' }}"
+                                               placeholder="Available on our platform"
+                                               class="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                                    </div>
+
+                                    <div>
+                                        <label for="contact_live_chat_hours" class="block text-sm font-medium text-gray-700 mb-2">Live Chat Hours Description</label>
+                                        <input type="text" name="contact_live_chat_hours" id="contact_live_chat_hours"
+                                               value="{{ $settings['contact_live_chat_hours'] ?? 'Get instant help while using the system' }}"
+                                               placeholder="Get instant help while using the system"
+                                               class="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                                    </div>
+
+                                    <!-- FAQ -->
+                                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                        <div>
+                                            <label for="contact_faq_url" class="block text-sm font-medium text-gray-700 mb-2">FAQ URL</label>
+                                            <input type="text" name="contact_faq_url" id="contact_faq_url"
+                                                   value="{{ $settings['contact_faq_url'] ?? '#' }}"
+                                                   placeholder="# or /faq"
+                                                   class="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                                        </div>
+
+                                        <div>
+                                            <label for="contact_faq_text" class="block text-sm font-medium text-gray-700 mb-2">FAQ Link Text</label>
+                                            <input type="text" name="contact_faq_text" id="contact_faq_text"
+                                                   value="{{ $settings['contact_faq_text'] ?? 'View FAQ →' }}"
+                                                   placeholder="View FAQ →"
+                                                   class="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Support Hours Section -->
+                            <div class="form-section">
+                                <div class="flex items-center space-x-3 mb-6">
+                                    <div class="flex-shrink-0 bg-green-100 rounded-lg p-2">
+                                        <svg class="h-6 w-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                        </svg>
+                                    </div>
+                                    <div>
+                                        <h3 class="text-lg font-semibold text-gray-900">Support Hours</h3>
+                                        <p class="text-sm text-gray-500">Configure support hours displayed on the contact page</p>
+                                    </div>
+                                </div>
+
+                                <div class="space-y-6">
+                                    <!-- Email Support Hours -->
+                                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                        <div>
+                                            <label for="contact_email_support_hours" class="block text-sm font-medium text-gray-700 mb-2">Email Support Hours</label>
+                                            <input type="text" name="contact_email_support_hours" id="contact_email_support_hours"
+                                                   value="{{ $settings['contact_email_support_hours'] ?? '24/7 Available' }}"
+                                                   placeholder="24/7 Available"
+                                                   class="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                                        </div>
+
+                                        <div>
+                                            <label for="contact_email_support_response" class="block text-sm font-medium text-gray-700 mb-2">Email Response Time</label>
+                                            <input type="text" name="contact_email_support_response" id="contact_email_support_response"
+                                                   value="{{ $settings['contact_email_support_response'] ?? 'Response within 24 hours' }}"
+                                                   placeholder="Response within 24 hours"
+                                                   class="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                                        </div>
+                                    </div>
+
+                                    <!-- Phone Support Hours -->
+                                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                        <div>
+                                            <label for="contact_phone_support_days" class="block text-sm font-medium text-gray-700 mb-2">Phone Support Days</label>
+                                            <input type="text" name="contact_phone_support_days" id="contact_phone_support_days"
+                                                   value="{{ $settings['contact_phone_support_days'] ?? 'Monday - Friday' }}"
+                                                   placeholder="Monday - Friday"
+                                                   class="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                                        </div>
+
+                                        <div>
+                                            <label for="contact_phone_support_time" class="block text-sm font-medium text-gray-700 mb-2">Phone Support Time</label>
+                                            <input type="text" name="contact_phone_support_time" id="contact_phone_support_time"
+                                                   value="{{ $settings['contact_phone_support_time'] ?? '9:00 AM - 6:00 PM EST' }}"
+                                                   placeholder="9:00 AM - 6:00 PM EST"
+                                                   class="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                                        </div>
+                                    </div>
+
+                                    <!-- Live Chat Support Hours -->
+                                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                        <div>
+                                            <label for="contact_live_chat_days" class="block text-sm font-medium text-gray-700 mb-2">Live Chat Support Days</label>
+                                            <input type="text" name="contact_live_chat_days" id="contact_live_chat_days"
+                                                   value="{{ $settings['contact_live_chat_days'] ?? 'Monday - Friday' }}"
+                                                   placeholder="Monday - Friday"
+                                                   class="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                                        </div>
+
+                                        <div>
+                                            <label for="contact_live_chat_time" class="block text-sm font-medium text-gray-700 mb-2">Live Chat Support Time</label>
+                                            <input type="text" name="contact_live_chat_time" id="contact_live_chat_time"
+                                                   value="{{ $settings['contact_live_chat_time'] ?? '10:00 AM - 5:00 PM EST' }}"
+                                                   placeholder="10:00 AM - 5:00 PM EST"
+                                                   class="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                         </div>

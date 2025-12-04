@@ -1,32 +1,32 @@
 @extends('layouts.user')
 
 @section('content')
-<div class="max-w-4xl mx-auto">
+<div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6">
     <div class="bg-white shadow rounded-lg">
-        <div class="px-4 py-5 sm:p-6">
+        <div class="px-4 py-4 sm:px-6 sm:py-5">
             <!-- Quiz Header -->
-            <div class="mb-6">
-                <div class="flex justify-between items-start">
-                    <div>
-                        <h1 class="text-2xl font-bold text-gray-900">{{ $quiz->title }}</h1>
+            <div class="mb-4 sm:mb-6">
+                <div class="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4">
+                    <div class="flex-1 min-w-0">
+                        <h1 class="text-xl sm:text-2xl font-bold text-gray-900 break-words">{{ $quiz->title }}</h1>
                         @if($quiz->description)
-                            <p class="mt-2 text-gray-600">{{ $quiz->description }}</p>
+                            <p class="mt-2 text-sm sm:text-base text-gray-600 break-words">{{ $quiz->description }}</p>
                         @endif
-                        <div class="mt-4 flex items-center space-x-4 text-sm text-gray-500">
-                            <span>{{ $quiz->total_questions }} questions</span>
+                        <div class="mt-3 sm:mt-4 flex flex-wrap items-center gap-2 sm:gap-4 text-xs sm:text-sm text-gray-500">
+                            <span class="whitespace-nowrap">{{ $quiz->total_questions }} questions</span>
                             @if($quiz->time_limit)
-                                <span>{{ $quiz->time_limit }} minutes</span>
+                                <span class="whitespace-nowrap">{{ $quiz->time_limit }} minutes</span>
                             @endif
-                            <span>Quiz Code: {{ $quiz->quiz_code }}</span>
+                            <span class="whitespace-nowrap break-all">Quiz Code: {{ $quiz->quiz_code }}</span>
                         </div>
                     </div>
 
                     @if($quiz->time_limit && isset($remainingTime))
                         <!-- Timer Display -->
-                        <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                        <div class="bg-blue-50 border border-blue-200 rounded-lg p-3 sm:p-4 flex-shrink-0">
                             <div class="text-center">
-                                <div class="text-sm font-medium text-blue-800">Time Remaining</div>
-                                <div id="header-timer" class="text-2xl font-bold text-blue-900">{{ floor($remainingTime / 60) }}:{{ str_pad($remainingTime % 60, 2, '0', STR_PAD_LEFT) }}</div>
+                                <div class="text-xs sm:text-sm font-medium text-blue-800">Time Remaining</div>
+                                <div id="header-timer" class="text-xl sm:text-2xl font-bold text-blue-900 mt-1">{{ floor($remainingTime / 60) }}:{{ str_pad($remainingTime % 60, 2, '0', STR_PAD_LEFT) }}</div>
                             </div>
                         </div>
                     @endif
@@ -34,8 +34,8 @@
             </div>
 
             <!-- Progress Bar -->
-            <div class="mb-6">
-                <div class="flex justify-between text-sm text-gray-600 mb-2">
+            <div class="mb-4 sm:mb-6">
+                <div class="flex justify-between text-xs sm:text-sm text-gray-600 mb-2">
                     <span>Progress</span>
                     <span id="progress-text">Question 1 of {{ $quiz->total_questions }}</span>
                 </div>
@@ -48,39 +48,40 @@
                 @csrf
 
                 <!-- Question Container -->
-                <div id="question-container" class="mb-8 question-transition">
+                <div id="question-container" class="mb-6 sm:mb-8 question-transition">
                     <!-- Questions will be dynamically loaded here -->
                 </div>
 
                 <!-- Navigation Buttons -->
-                <div class="flex justify-between items-center">
+                <div class="flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-3 sm:gap-0">
                     <button type="button" id="cancel-quiz-btn"
-                            class="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md shadow-sm text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
-                        <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            class="inline-flex items-center justify-center px-3 sm:px-4 py-2 border border-gray-300 text-xs sm:text-sm font-medium rounded-md shadow-sm text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                        <svg class="w-4 h-4 sm:mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
                         </svg>
-                        Cancel Quiz
+                        <span class="hidden sm:inline">Cancel Quiz</span>
+                        <span class="sm:hidden">Cancel</span>
                     </button>
 
-                    <div class="flex space-x-3">
+                    <div class="flex flex-col sm:flex-row gap-2 sm:gap-3 sm:flex-shrink-0">
                         <button type="button" id="prev-btn"
-                                class="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md shadow-sm text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 hidden">
-                            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                class="inline-flex items-center justify-center px-3 sm:px-4 py-2 border border-gray-300 text-xs sm:text-sm font-medium rounded-md shadow-sm text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 hidden">
+                            <svg class="w-4 h-4 sm:mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
                             </svg>
                             Previous
                         </button>
 
                         <button type="button" id="next-btn"
-                                class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
-                            Next
-                            <svg class="w-4 h-4 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                class="inline-flex items-center justify-center px-3 sm:px-4 py-2 border border-transparent text-xs sm:text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                            <span>Next</span>
+                            <svg class="w-4 h-4 sm:ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
                             </svg>
                         </button>
 
                         <button type="submit" id="submit-btn"
-                                class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 hidden">
+                                class="inline-flex items-center justify-center px-3 sm:px-4 py-2 border border-transparent text-xs sm:text-sm font-medium rounded-md shadow-sm text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 hidden">
                             Submit Quiz
                         </button>
                     </div>
@@ -115,28 +116,28 @@ document.addEventListener('DOMContentLoaded', function() {
 
         setTimeout(() => {
             container.innerHTML = `
-            <div class="border-b border-gray-200 pb-8">
+            <div class="border-b border-gray-200 pb-6 sm:pb-8">
                 <div class="mb-4">
-                    <h3 class="text-lg font-medium text-gray-900">
+                    <h3 class="text-base sm:text-lg font-medium text-gray-900">
                         Question ${index + 1} of ${totalQuestions}
                     </h3>
-                    <p class="mt-2 text-gray-700">${question.question_text}</p>
+                    <p class="mt-2 text-sm sm:text-base text-gray-700 break-words">${question.question_text}</p>
                     <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 mt-2">
                         ${question.points} point${question.points > 1 ? 's' : ''}
                     </span>
                 </div>
 
-                <div class="space-y-3">
+                <div class="space-y-2 sm:space-y-3">
                     ${generateQuestionHTML(question)}
                 </div>
 
             ${question.question_type === 'true_false' ? `
                 <div class="mt-4 p-3 bg-green-50 border border-green-200 rounded-lg">
                     <div class="flex items-center">
-                        <svg class="w-4 h-4 text-green-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <svg class="w-4 h-4 text-green-600 mr-2 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                         </svg>
-                        <span class="text-sm text-green-800 font-medium">Select either True or False for this question</span>
+                        <span class="text-xs sm:text-sm text-green-800 font-medium">Select either True or False for this question</span>
                     </div>
                 </div>
                 ` : ''}
@@ -175,61 +176,63 @@ document.addEventListener('DOMContentLoaded', function() {
                 // Always use the label (A, B, C, D) as the value, not the text
                 const optionId = option.label || option.id || ['A', 'B', 'C', 'D'][index];
                 return `
-                    <label class="flex items-center p-3 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer transition-colors duration-200 group">
+                    <label class="flex items-start sm:items-center p-2.5 sm:p-3 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer transition-colors duration-200 group">
                         <input type="radio"
                                name="answers[${question.id}]"
                                value="${optionId}"
-                               class="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300">
-                        <span class="ml-3 text-gray-700 group-hover:text-gray-900">${optionText}</span>
+                               class="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 mt-0.5 sm:mt-0 flex-shrink-0">
+                        <span class="ml-2 sm:ml-3 text-sm sm:text-base text-gray-700 group-hover:text-gray-900 break-words">${optionText}</span>
                     </label>
                 `;
             }).join('');
         } else if (question.question_type === 'true_false') {
             // Handle true/false questions with proper True/False options
             return `
-                <label class="flex items-center p-3 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer transition-colors duration-200 group">
+                <label class="flex items-center p-2.5 sm:p-3 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer transition-colors duration-200 group">
                     <input type="radio"
                            name="answers[${question.id}]"
                            value="A"
-                           class="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300">
-                    <span class="ml-3 text-gray-700 group-hover:text-gray-900 font-medium">True</span>
+                           class="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 flex-shrink-0">
+                    <span class="ml-2 sm:ml-3 text-sm sm:text-base text-gray-700 group-hover:text-gray-900 font-medium">True</span>
                 </label>
-                <label class="flex items-center p-3 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer transition-colors duration-200 group">
+                <label class="flex items-center p-2.5 sm:p-3 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer transition-colors duration-200 group">
                     <input type="radio"
                            name="answers[${question.id}]"
                            value="B"
-                           class="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300">
-                    <span class="ml-3 text-gray-700 group-hover:text-gray-900 font-medium">False</span>
+                           class="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 flex-shrink-0">
+                    <span class="ml-2 sm:ml-3 text-sm sm:text-base text-gray-700 group-hover:text-gray-900 font-medium">False</span>
                 </label>
             `;
         } else if (question.question_type === 'text') {
             return `
                 <textarea name="answers[${question.id}]"
                           rows="4"
-                          class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                          class="w-full px-3 py-2 text-sm sm:text-base border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
                           placeholder="Enter your answer here..."></textarea>
             `;
         } else if (question.question_type === 'fill_blank') {
             return `
-                <div class="space-y-4">
+                <div class="space-y-3 sm:space-y-4">
                     <div>
-                        <label for="fill_blank_${question.id}" class="block text-sm font-medium text-gray-700 mb-2">
+                        <label for="fill_blank_${question.id}" class="block text-xs sm:text-sm font-medium text-gray-700 mb-2">
                             Your Answer:
                         </label>
                         <input type="text"
                                name="answers[${question.id}]"
                                id="fill_blank_${question.id}"
-                               class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-lg"
+                               class="w-full px-3 py-2 text-base sm:text-lg border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
                                placeholder="Type your answer here...">
                     </div>
-                    <div class="p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
-                        <div class="flex items-center">
-                            <svg class="w-4 h-4 text-yellow-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <div class="p-2.5 sm:p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+                        <div class="flex items-start sm:items-center">
+                            <svg class="w-4 h-4 text-yellow-600 mr-2 flex-shrink-0 mt-0.5 sm:mt-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z"></path>
                             </svg>
-                            <span class="text-sm text-yellow-800 font-medium">This question requires manual grading</span>
+                            <div class="flex-1">
+                                <span class="text-xs sm:text-sm text-yellow-800 font-medium">This question requires manual grading</span>
+                                <p class="text-xs text-yellow-700 mt-1">Your answer will be reviewed by an instructor after submission.</p>
+                            </div>
                         </div>
-                        <p class="text-xs text-yellow-700 mt-1">Your answer will be reviewed by an instructor after submission.</p>
                     </div>
                 </div>
             `;
@@ -364,11 +367,12 @@ document.addEventListener('DOMContentLoaded', function() {
             const originalText = submitBtn.innerHTML;
             submitBtn.disabled = true;
             submitBtn.innerHTML = `
-                <svg class="animate-spin -ml-1 mr-2 h-4 w-4 text-white inline" fill="none" viewBox="0 0 24 24">
+                <svg class="animate-spin -ml-1 mr-2 h-3 w-3 sm:h-4 sm:w-4 text-white inline" fill="none" viewBox="0 0 24 24">
                     <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
                     <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                 </svg>
-                Submitting...
+                <span class="hidden sm:inline">Submitting...</span>
+                <span class="sm:hidden">Submitting</span>
             `;
 
             // Get CSRF token
@@ -450,11 +454,12 @@ document.addEventListener('DOMContentLoaded', function() {
                 // Show loading state
                 cancelButton.disabled = true;
                 cancelButton.innerHTML = `
-                    <svg class="animate-spin -ml-1 mr-2 h-4 w-4 text-gray-600 inline" fill="none" viewBox="0 0 24 24">
+                    <svg class="animate-spin -ml-1 mr-2 h-3 w-3 sm:h-4 sm:w-4 text-gray-600 inline" fill="none" viewBox="0 0 24 24">
                         <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
                         <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                     </svg>
-                    Cancelling...
+                    <span class="hidden sm:inline">Cancelling...</span>
+                    <span class="sm:hidden">Cancelling</span>
                 `;
 
                 // Get CSRF token
@@ -494,8 +499,8 @@ document.addEventListener('DOMContentLoaded', function() {
     @if($quiz->time_limit && isset($remainingTime))
         let timeLeft = {{ $remainingTime }}; // Use server-calculated remaining time
         const timerElement = document.createElement('div');
-        timerElement.className = 'fixed top-4 right-4 bg-red-600 text-white px-4 py-2 rounded-lg shadow-lg z-50';
-        timerElement.innerHTML = `<span class="font-bold">Time Left: </span><span id="timer">${formatTime(timeLeft)}</span>`;
+        timerElement.className = 'fixed top-2 right-2 sm:top-4 sm:right-4 bg-red-600 text-white px-2 py-1.5 sm:px-4 sm:py-2 rounded-lg shadow-lg z-50 text-xs sm:text-sm';
+        timerElement.innerHTML = `<span class="font-bold hidden sm:inline">Time Left: </span><span class="font-bold sm:hidden">Time: </span><span id="timer">${formatTime(timeLeft)}</span>`;
         document.body.appendChild(timerElement);
 
         // Check if time has already expired
@@ -519,16 +524,16 @@ document.addEventListener('DOMContentLoaded', function() {
 
             // Change color when time is running low
             if (timeLeft <= 60) { // Last minute
-                timerElement.className = 'fixed top-4 right-4 bg-red-800 text-white px-4 py-2 rounded-lg shadow-lg z-50 animate-pulse';
+                timerElement.className = 'fixed top-2 right-2 sm:top-4 sm:right-4 bg-red-800 text-white px-2 py-1.5 sm:px-4 sm:py-2 rounded-lg shadow-lg z-50 text-xs sm:text-sm animate-pulse';
                 if (headerTimer) {
-                    headerTimer.parentElement.parentElement.className = 'bg-red-50 border border-red-200 rounded-lg p-4 animate-pulse';
-                    headerTimer.className = 'text-2xl font-bold text-red-900';
+                    headerTimer.parentElement.parentElement.className = 'bg-red-50 border border-red-200 rounded-lg p-3 sm:p-4 animate-pulse';
+                    headerTimer.className = 'text-xl sm:text-2xl font-bold text-red-900';
                 }
             } else if (timeLeft <= 300) { // Last 5 minutes
-                timerElement.className = 'fixed top-4 right-4 bg-orange-600 text-white px-4 py-2 rounded-lg shadow-lg z-50';
+                timerElement.className = 'fixed top-2 right-2 sm:top-4 sm:right-4 bg-orange-600 text-white px-2 py-1.5 sm:px-4 sm:py-2 rounded-lg shadow-lg z-50 text-xs sm:text-sm';
                 if (headerTimer) {
-                    headerTimer.parentElement.parentElement.className = 'bg-orange-50 border border-orange-200 rounded-lg p-4';
-                    headerTimer.className = 'text-2xl font-bold text-orange-900';
+                    headerTimer.parentElement.parentElement.className = 'bg-orange-50 border border-orange-200 rounded-lg p-3 sm:p-4';
+                    headerTimer.className = 'text-xl sm:text-2xl font-bold text-orange-900';
                 }
             }
 

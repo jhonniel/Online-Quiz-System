@@ -16,9 +16,10 @@ class LeaveRequestController extends Controller
      */
     public function index()
     {
-        // Only allow employees to access
-        if (Auth::user()->role !== 'employee') {
-            abort(403, 'Only employees can access leave requests.');
+        // Allow employees and students to access
+        $user = Auth::user();
+        if (!in_array($user->role, ['employee', 'student'])) {
+            abort(403, 'Only employees and students can access leave requests.');
         }
 
         $user = Auth::user();
@@ -189,8 +190,9 @@ class LeaveRequestController extends Controller
     public function create()
     {
         // Only allow employees to access
-        if (Auth::user()->role !== 'employee') {
-            abort(403, 'Only employees can create leave requests.');
+        $user = Auth::user();
+        if (!in_array($user->role, ['employee', 'student'])) {
+            abort(403, 'Only employees and students can create leave requests.');
         }
 
         return view('user.leave-requests.create');
@@ -201,13 +203,20 @@ class LeaveRequestController extends Controller
      */
     public function store(Request $request)
     {
-        // Only allow employees to access
-        if (Auth::user()->role !== 'employee') {
-            abort(403, 'Only employees can create leave requests.');
+        $user = Auth::user();
+        
+        // Allow employees and students to access
+        if (!in_array($user->role, ['employee', 'student'])) {
+            abort(403, 'Only employees and students can create leave requests.');
         }
 
+        // Define allowed types based on role
+        $allowedTypes = $user->role === 'student' 
+            ? ['additional_time', 'absent', 'other']
+            : ['vacation_leave', 'sick_leave', 'work_from_home', 'absent', 'overtime', 'offset'];
+
         $validated = $request->validate([
-            'type' => 'required|in:vacation_leave,sick_leave,work_from_home,absent,overtime,offset',
+            'type' => ['required', 'in:' . implode(',', $allowedTypes)],
             'start_date' => 'required|date|after_or_equal:today',
             'end_date' => 'nullable|date|after_or_equal:start_date',
             // Reason is REQUIRED for overtime (used as the clear explanation of extra hours)
@@ -325,8 +334,9 @@ class LeaveRequestController extends Controller
     public function edit(LeaveRequest $leaveRequest)
     {
         // Only allow employees to access
-        if (Auth::user()->role !== 'employee') {
-            abort(403, 'Only employees can edit leave requests.');
+        $user = Auth::user();
+        if (!in_array($user->role, ['employee', 'student'])) {
+            abort(403, 'Only employees and students can edit leave requests.');
         }
 
         // Ensure the user can only edit their own requests
@@ -405,8 +415,9 @@ class LeaveRequestController extends Controller
     public function update(Request $request, LeaveRequest $leaveRequest)
     {
         // Only allow employees to access
-        if (Auth::user()->role !== 'employee') {
-            abort(403, 'Only employees can update leave requests.');
+        $user = Auth::user();
+        if (!in_array($user->role, ['employee', 'student'])) {
+            abort(403, 'Only employees and students can update leave requests.');
         }
 
         // Ensure the user can only update their own requests
@@ -420,8 +431,13 @@ class LeaveRequestController extends Controller
                 ->withErrors(['error' => 'You can only update leave requests that have been requested for resubmission.']);
         }
 
+        // Define allowed types based on role
+        $allowedTypes = $user->role === 'student' 
+            ? ['additional_time', 'absent', 'other']
+            : ['vacation_leave', 'sick_leave', 'work_from_home', 'absent', 'overtime', 'offset'];
+
         $validated = $request->validate([
-            'type' => 'required|in:vacation_leave,sick_leave,work_from_home,absent,overtime,offset',
+            'type' => ['required', 'in:' . implode(',', $allowedTypes)],
             'start_date' => 'required|date',
             'end_date' => 'nullable|date|after_or_equal:start_date',
             'reason' => 'nullable|string|max:1000',
@@ -514,8 +530,9 @@ class LeaveRequestController extends Controller
     public function destroy(LeaveRequest $leaveRequest)
     {
         // Only allow employees to access
-        if (Auth::user()->role !== 'employee') {
-            abort(403, 'Only employees can delete leave requests.');
+        $user = Auth::user();
+        if (!in_array($user->role, ['employee', 'student'])) {
+            abort(403, 'Only employees and students can delete leave requests.');
         }
 
         // Ensure the user can only delete their own requests

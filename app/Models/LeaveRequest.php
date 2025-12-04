@@ -53,6 +53,8 @@ class LeaveRequest extends Model
             'absent' => 'Absent',
             'overtime' => 'Overtime',
             'offset' => 'Offset',
+            'additional_time' => 'Additional Time',
+            'other' => 'Other',
             default => ucfirst(str_replace('_', ' ', $this->type)),
         };
     }

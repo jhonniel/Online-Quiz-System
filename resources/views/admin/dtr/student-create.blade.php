@@ -12,16 +12,16 @@
                     </svg>
                 </div>
                 <div>
-                    <h1 class="text-3xl font-bold">Add DTR Record</h1>
-                    <p class="text-indigo-100 mt-1">Manually add a new employee time record</p>
+                    <h1 class="text-3xl font-bold">Add Student DTR Record</h1>
+                    <p class="text-indigo-100 mt-1">Manually add a new student time record</p>
                 </div>
             </div>
-            <a href="{{ route('admin.dtr.index') }}" 
+            <a href="{{ route('admin.student-dtr.index') }}"
                class="inline-flex items-center px-4 py-2 bg-white/10 backdrop-blur-sm border border-white/20 rounded-lg text-white hover:bg-white/20 transition duration-200">
                 <svg class="h-5 w-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
                 </svg>
-                Back to DTR List
+                Back to Student DTR List
             </a>
         </div>
     </div>
@@ -51,7 +51,7 @@
 
     <!-- Form -->
     <div class="bg-white rounded-2xl shadow-xl border border-gray-200 p-8">
-        <form action="{{ route('admin.dtr.store') }}" method="POST" class="space-y-6">
+        <form action="{{ route('admin.student-dtr.store') }}" method="POST" class="space-y-6">
             @csrf
 
 
@@ -71,17 +71,17 @@
                 <div class="border-t border-gray-200 {{ $collapseByDefault ? 'hidden' : '' }}" data-section="basic-info" style="{{ $collapseByDefault ? 'display: none;' : '' }}">
                     <div class="p-6 space-y-6">
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            <!-- Employee Selection -->
+                            <!-- Student Selection -->
                             <div>
                                 <label for="user_id" class="block text-sm font-medium text-gray-700 mb-2">
-                                    Employee <span class="text-red-500">*</span>
+                                    Student <span class="text-red-500">*</span>
                                 </label>
                                 <select name="user_id" id="user_id" required
                                         class="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
-                                    <option value="">Select Employee</option>
-                                    @foreach($employees as $employee)
-                                        <option value="{{ $employee->id }}" {{ old('user_id') == $employee->id ? 'selected' : '' }}>
-                                            {{ $employee->name }} ({{ $employee->email }})
+                                    <option value="">Select Student</option>
+                                    @foreach($students as $student)
+                                        <option value="{{ $student->id }}" {{ old('user_id') == $student->id ? 'selected' : '' }}>
+                                            {{ $student->name }} ({{ $student->email }})
                                         </option>
                                     @endforeach
                                 </select>
@@ -235,7 +235,7 @@
 
             <!-- Form Actions -->
             <div class="flex items-center justify-end space-x-3 pt-6 border-t border-gray-200">
-                <a href="{{ route('admin.dtr.index') }}"
+                <a href="{{ route('admin.student-dtr.index') }}"
                    class="inline-flex items-center px-6 py-3 border border-gray-300 text-sm font-medium rounded-lg text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition duration-200">
                     <svg class="h-5 w-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>

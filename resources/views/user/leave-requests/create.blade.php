@@ -41,12 +41,18 @@
                         <select name="type" id="type" required
                                 class="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
                             <option value="">Select Request Type</option>
-                            <option value="vacation_leave" {{ old('type') == 'vacation_leave' ? 'selected' : '' }}>Vacation Leave</option>
-                            <option value="sick_leave" {{ old('type') == 'sick_leave' ? 'selected' : '' }}>Sick Leave</option>
-                            <option value="work_from_home" {{ old('type') == 'work_from_home' ? 'selected' : '' }}>Work From Home</option>
-                            <option value="absent" {{ old('type') == 'absent' ? 'selected' : '' }}>Absent</option>
-                            <option value="overtime" {{ old('type') == 'overtime' ? 'selected' : '' }}>Overtime</option>
-                            <option value="offset" {{ old('type') == 'offset' ? 'selected' : '' }}>Offset</option>
+                            @if(auth()->user()->role === 'student')
+                                <option value="additional_time" {{ old('type') == 'additional_time' ? 'selected' : '' }}>Additional Time</option>
+                                <option value="absent" {{ old('type') == 'absent' ? 'selected' : '' }}>Absent</option>
+                                <option value="other" {{ old('type') == 'other' ? 'selected' : '' }}>Other</option>
+                            @else
+                                <option value="vacation_leave" {{ old('type') == 'vacation_leave' ? 'selected' : '' }}>Vacation Leave</option>
+                                <option value="sick_leave" {{ old('type') == 'sick_leave' ? 'selected' : '' }}>Sick Leave</option>
+                                <option value="work_from_home" {{ old('type') == 'work_from_home' ? 'selected' : '' }}>Work From Home</option>
+                                <option value="absent" {{ old('type') == 'absent' ? 'selected' : '' }}>Absent</option>
+                                <option value="overtime" {{ old('type') == 'overtime' ? 'selected' : '' }}>Overtime</option>
+                                <option value="offset" {{ old('type') == 'offset' ? 'selected' : '' }}>Offset</option>
+                            @endif
                         </select>
                         @error('type')
                             <p class="mt-1 text-sm text-red-600">{{ $message }}</p>

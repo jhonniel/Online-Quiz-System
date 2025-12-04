@@ -93,7 +93,7 @@ Route::prefix('admin')->middleware(['auth', 'admin'])->group(function () {
     Route::get('/settings/health', [AdminSettingsController::class, 'getHealth'])->name('admin.settings.health');
     Route::post('/settings/test-email', [AdminSettingsController::class, 'testEmail'])->name('admin.settings.test-email');
 
-    // DTR Management
+    // DTR Management (Employees)
     Route::get('/dtr', [App\Http\Controllers\Admin\DtrController::class, 'index'])->name('admin.dtr.index');
     Route::get('/dtr/create', [App\Http\Controllers\Admin\DtrController::class, 'create'])->name('admin.dtr.create');
     Route::post('/dtr', [App\Http\Controllers\Admin\DtrController::class, 'store'])->name('admin.dtr.store');
@@ -102,13 +102,25 @@ Route::prefix('admin')->middleware(['auth', 'admin'])->group(function () {
     Route::post('/dtr/import', [App\Http\Controllers\Admin\DtrController::class, 'import'])->name('admin.dtr.import');
     Route::get('/dtr/template', [App\Http\Controllers\Admin\DtrController::class, 'downloadTemplate'])->name('admin.dtr.template');
 
-    // Leave Requests Management
+    // Student DTR Management
+    Route::get('/student-dtr', [App\Http\Controllers\Admin\DtrController::class, 'studentIndex'])->name('admin.student-dtr.index');
+    Route::get('/student-dtr/create', [App\Http\Controllers\Admin\DtrController::class, 'studentCreate'])->name('admin.student-dtr.create');
+    Route::post('/student-dtr', [App\Http\Controllers\Admin\DtrController::class, 'studentStore'])->name('admin.student-dtr.store');
+    Route::get('/student-dtr/{dtr}/edit', [App\Http\Controllers\Admin\DtrController::class, 'studentEdit'])->name('admin.student-dtr.edit');
+    Route::put('/student-dtr/{dtr}', [App\Http\Controllers\Admin\DtrController::class, 'studentUpdate'])->name('admin.student-dtr.update');
+    Route::get('/student-dtr/export/pdf', [App\Http\Controllers\Admin\DtrController::class, 'studentExportPdf'])->name('admin.student-dtr.export-pdf');
+
+    // Leave Requests Management (Employees)
     Route::get('/leave-requests', [App\Http\Controllers\Admin\LeaveRequestController::class, 'index'])->name('admin.leave-requests.index');
     Route::get('/leave-calendar', [App\Http\Controllers\Admin\LeaveRequestController::class, 'calendar'])->name('admin.leave-requests.calendar');
     Route::get('/leave-requests/{leaveRequest}', [App\Http\Controllers\Admin\LeaveRequestController::class, 'show'])->name('admin.leave-requests.show');
     Route::post('/leave-requests/{leaveRequest}/approve', [App\Http\Controllers\Admin\LeaveRequestController::class, 'approve'])->name('admin.leave-requests.approve');
     Route::post('/leave-requests/{leaveRequest}/reject', [App\Http\Controllers\Admin\LeaveRequestController::class, 'reject'])->name('admin.leave-requests.reject');
     Route::post('/leave-requests/{leaveRequest}/resubmit', [App\Http\Controllers\Admin\LeaveRequestController::class, 'resubmit'])->name('admin.leave-requests.resubmit');
+
+    // Student Leave Requests Management
+    Route::get('/student-leave-requests', [App\Http\Controllers\Admin\LeaveRequestController::class, 'studentIndex'])->name('admin.student-leave-requests.index');
+    Route::get('/student-leave-calendar', [App\Http\Controllers\Admin\LeaveRequestController::class, 'studentCalendar'])->name('admin.student-leave-requests.calendar');
 
     // Hiring Process Management
     Route::get('/hiring-process', [App\Http\Controllers\Admin\HiringProcessController::class, 'index'])->name('admin.hiring-process.index');

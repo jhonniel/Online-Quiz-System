@@ -207,6 +207,21 @@ class SettingsController extends Controller
             'leave_hr_admin' => 'nullable|string|max:255',
             'leave_cto' => 'nullable|string|max:255',
             'default_vacation_balance' => 'nullable|numeric|min:0|max:365',
+            // Contact Information
+            'contact_email' => 'nullable|email|max:255',
+            'contact_phone' => 'nullable|string|max:255',
+            'contact_phone_hours' => 'nullable|string|max:255',
+            'contact_email_response_time' => 'nullable|string|max:255',
+            'contact_live_chat_description' => 'nullable|string|max:255',
+            'contact_live_chat_hours' => 'nullable|string|max:255',
+            'contact_faq_url' => 'nullable|string|max:500',
+            'contact_faq_text' => 'nullable|string|max:255',
+            'contact_email_support_hours' => 'nullable|string|max:255',
+            'contact_email_support_response' => 'nullable|string|max:255',
+            'contact_phone_support_days' => 'nullable|string|max:255',
+            'contact_phone_support_time' => 'nullable|string|max:255',
+            'contact_live_chat_days' => 'nullable|string|max:255',
+            'contact_live_chat_time' => 'nullable|string|max:255',
             'default_sick_leave_balance' => 'nullable|numeric|min:0|max:365',
             // Email Configuration
             'mail_mailer' => 'nullable|string|in:smtp,sendmail,mailgun,ses,postmark,resend,log,array',
@@ -374,6 +389,22 @@ class SettingsController extends Controller
 
         $mailFromName = $request->mail_from_name ?? '';
         Setting::set('mail_from_name', $mailFromName, 'text', 'Default "From" name');
+
+        // Contact Information Settings
+        Setting::set('contact_email', $request->contact_email ?? 'support@quizsystem.com', 'text', 'Contact email address');
+        Setting::set('contact_phone', $request->contact_phone ?? '+1 (555) 123-4567', 'text', 'Contact phone number');
+        Setting::set('contact_phone_hours', $request->contact_phone_hours ?? 'Monday - Friday, 9 AM - 6 PM EST', 'text', 'Phone support hours');
+        Setting::set('contact_email_response_time', $request->contact_email_response_time ?? 'We typically respond within 24 hours', 'text', 'Email response time message');
+        Setting::set('contact_live_chat_description', $request->contact_live_chat_description ?? 'Available on our platform', 'text', 'Live chat description');
+        Setting::set('contact_live_chat_hours', $request->contact_live_chat_hours ?? 'Get instant help while using the system', 'text', 'Live chat hours description');
+        Setting::set('contact_faq_url', $request->contact_faq_url ?? '#', 'text', 'FAQ page URL');
+        Setting::set('contact_faq_text', $request->contact_faq_text ?? 'View FAQ →', 'text', 'FAQ link text');
+        Setting::set('contact_email_support_hours', $request->contact_email_support_hours ?? '24/7 Available', 'text', 'Email support hours');
+        Setting::set('contact_email_support_response', $request->contact_email_support_response ?? 'Response within 24 hours', 'text', 'Email support response time');
+        Setting::set('contact_phone_support_days', $request->contact_phone_support_days ?? 'Monday - Friday', 'text', 'Phone support days');
+        Setting::set('contact_phone_support_time', $request->contact_phone_support_time ?? '9:00 AM - 6:00 PM EST', 'text', 'Phone support time');
+        Setting::set('contact_live_chat_days', $request->contact_live_chat_days ?? 'Monday - Friday', 'text', 'Live chat support days');
+        Setting::set('contact_live_chat_time', $request->contact_live_chat_time ?? '10:00 AM - 5:00 PM EST', 'text', 'Live chat support time');
 
         // Clear cache to ensure changes are reflected immediately
         Setting::clearCache();
