@@ -89,7 +89,7 @@ return new class extends Migration
             INSERT INTO dtrs_original (id, user_id, date, time_in, time_out, break_start, break_end, total_hours, overtime_hours, remarks, status, added_time_from_note, created_at, updated_at)
             SELECT id, user_id, date, time_in, time_out, break_start, break_end, total_hours, overtime_hours, remarks, status, added_time_from_note, created_at, updated_at
             FROM dtrs
-            WHERE status != "travel"
+            WHERE status != 'travel'
         ');
 
         Schema::drop('dtrs');
