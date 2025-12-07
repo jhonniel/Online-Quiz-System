@@ -366,11 +366,16 @@
                                     <label for="overtime_months_credited" class="block text-sm font-medium text-gray-700 mb-2">
                                         Overtime Credited Window
                                     </label>
+                                    @php
+                                        // Get value directly from settings array - ensure it exists
+                                        $currentWindow = isset($settings['overtime_months_credited']) ? (int)$settings['overtime_months_credited'] : 12;
+                                        // Override with old() only if validation error
+                                        if (old('overtime_months_credited') !== null) {
+                                            $currentWindow = (int) old('overtime_months_credited');
+                                        }
+                                    @endphp
                                     <select id="overtime_months_credited" name="overtime_months_credited"
                                             class="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
-                                        @php
-                                            $currentWindow = $settings['overtime_months_credited'] ?? 12;
-                                        @endphp
                                         <option value="12" {{ $currentWindow == 12 ? 'selected' : '' }}>Current Year (12 months)</option>
                                         <option value="9" {{ $currentWindow == 9 ? 'selected' : '' }}>Last 9 months</option>
                                         <option value="6" {{ $currentWindow == 6 ? 'selected' : '' }}>Last 6 months</option>
@@ -404,8 +409,14 @@
                                     <label for="leave_immediate_supervisor" class="block text-sm font-medium text-gray-700 mb-2">
                                         Immediate Supervisor Name
                                     </label>
+                                    @php
+                                        $supervisorValue = isset($settings['leave_immediate_supervisor']) ? $settings['leave_immediate_supervisor'] : 'CHARMAINE JOY ROSATACE';
+                                        if (old('leave_immediate_supervisor') !== null) {
+                                            $supervisorValue = old('leave_immediate_supervisor');
+                                        }
+                                    @endphp
                                     <input type="text" id="leave_immediate_supervisor" name="leave_immediate_supervisor"
-                                           value="{{ $settings['leave_immediate_supervisor'] ?? 'CHARMAINE JOY ROSATACE' }}"
+                                           value="{{ $supervisorValue }}"
                                            class="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
                                     <p class="mt-2 text-xs text-gray-500">
                                         Name displayed as "IMMEDIATE SUPERVISOR" in leave request letters.
@@ -415,8 +426,14 @@
                                     <label for="leave_hr_admin" class="block text-sm font-medium text-gray-700 mb-2">
                                         HR Admin Name
                                     </label>
+                                    @php
+                                        $hrAdminValue = isset($settings['leave_hr_admin']) ? $settings['leave_hr_admin'] : 'MAY GRACE ACOSTA';
+                                        if (old('leave_hr_admin') !== null) {
+                                            $hrAdminValue = old('leave_hr_admin');
+                                        }
+                                    @endphp
                                     <input type="text" id="leave_hr_admin" name="leave_hr_admin"
-                                           value="{{ $settings['leave_hr_admin'] ?? 'MAY GRACE ACOSTA' }}"
+                                           value="{{ $hrAdminValue }}"
                                            class="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
                                     <p class="mt-2 text-xs text-gray-500">
                                         Name displayed as "HR ADMIN" in leave request letters.
@@ -426,11 +443,29 @@
                                     <label for="leave_cto" class="block text-sm font-medium text-gray-700 mb-2">
                                         Chief Technology Officer Name
                                     </label>
+                                    @php
+                                        $ctoValue = isset($settings['leave_cto']) ? $settings['leave_cto'] : 'NITISH KHEMANI';
+                                        if (old('leave_cto') !== null) {
+                                            $ctoValue = old('leave_cto');
+                                        }
+                                    @endphp
                                     <input type="text" id="leave_cto" name="leave_cto"
-                                           value="{{ $settings['leave_cto'] ?? 'NITISH KHEMANI' }}"
+                                           value="{{ $ctoValue }}"
                                            class="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
                                     <p class="mt-2 text-xs text-gray-500">
                                         Name displayed as "CHIEF TECHNOLOGY OFFICER" in leave request letters.
+                                    </p>
+                                </div>
+                                <div>
+                                    <label for="leave_admin_notification_email" class="block text-sm font-medium text-gray-700 mb-2">
+                                        Admin Notification Email
+                                    </label>
+                                    <input type="email" id="leave_admin_notification_email" name="leave_admin_notification_email"
+                                           value="{{ old('leave_admin_notification_email', $settings['leave_admin_notification_email'] ?? '') }}"
+                                           placeholder="admin@example.com"
+                                           class="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                                    <p class="mt-2 text-xs text-gray-500">
+                                        Email address to receive notifications when employees submit leave requests. Leave empty to disable notifications.
                                     </p>
                                 </div>
                             </div>
@@ -460,8 +495,19 @@
                                             Default Vacation Balance (Days)
                                         </span>
                                     </label>
+                                    @php
+                                        // Get the value - check if it exists in settings array
+                                        $vacationValue = 0;
+                                        if (isset($settings['default_vacation_balance'])) {
+                                            $vacationValue = (float) $settings['default_vacation_balance'];
+                                        }
+                                        // Override with old() only if validation error
+                                        if (old('default_vacation_balance') !== null) {
+                                            $vacationValue = (float) old('default_vacation_balance');
+                                        }
+                                    @endphp
                                     <input type="number" id="default_vacation_balance" name="default_vacation_balance"
-                                           value="{{ $settings['default_vacation_balance'] ?? 15 }}"
+                                           value="{{ $vacationValue }}"
                                            min="0" max="365" step="0.5"
                                            class="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
                                     <p class="mt-2 text-xs text-gray-500">
@@ -477,8 +523,19 @@
                                             Default Sick Leave Balance (Days)
                                         </span>
                                     </label>
+                                    @php
+                                        // Get the value - check if it exists in settings array
+                                        $sickValue = 0;
+                                        if (isset($settings['default_sick_leave_balance'])) {
+                                            $sickValue = (float) $settings['default_sick_leave_balance'];
+                                        }
+                                        // Override with old() only if validation error
+                                        if (old('default_sick_leave_balance') !== null) {
+                                            $sickValue = (float) old('default_sick_leave_balance');
+                                        }
+                                    @endphp
                                     <input type="number" id="default_sick_leave_balance" name="default_sick_leave_balance"
-                                           value="{{ $settings['default_sick_leave_balance'] ?? 10 }}"
+                                           value="{{ $sickValue }}"
                                            min="0" max="365" step="0.5"
                                            class="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
                                     <p class="mt-2 text-xs text-gray-500">
@@ -511,8 +568,11 @@
                                     <label for="hiring_process_enabled" class="block text-sm font-medium text-gray-700 mb-2">Enable Hiring Process</label>
                                     <select name="hiring_process_enabled" id="hiring_process_enabled"
                                             class="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
-                                        <option value="enabled" {{ ($settings['hiring_process_enabled'] ?? 'enabled') == 'enabled' ? 'selected' : '' }}>Enabled</option>
-                                        <option value="disabled" {{ ($settings['hiring_process_enabled'] ?? 'enabled') == 'disabled' ? 'selected' : '' }}>Disabled</option>
+                                        @php
+                                            $hiringProcessEnabledValue = old('hiring_process_enabled', $settings['hiring_process_enabled'] ?? 'enabled');
+                                        @endphp
+                                        <option value="enabled" {{ $hiringProcessEnabledValue == 'enabled' ? 'selected' : '' }}>Enabled</option>
+                                        <option value="disabled" {{ $hiringProcessEnabledValue == 'disabled' ? 'selected' : '' }}>Disabled</option>
                                     </select>
                                 </div>
 
@@ -520,7 +580,7 @@
                                     <label for="hiring_process_description" class="block text-sm font-medium text-gray-700 mb-2">Hiring Process Description</label>
                                     <textarea name="hiring_process_description" id="hiring_process_description" rows="4"
                                               class="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                                              placeholder="Describe your hiring process workflow...">{{ $settings['hiring_process_description'] ?? '' }}</textarea>
+                                              placeholder="Describe your hiring process workflow...">{{ old('hiring_process_description', $settings['hiring_process_description'] ?? '') }}</textarea>
                                 </div>
 
                                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -528,7 +588,7 @@
                                         <label for="minimum_quiz_score" class="block text-sm font-medium text-gray-700 mb-2">Minimum Quiz Score (%)</label>
                                         <input type="number" name="minimum_quiz_score" id="minimum_quiz_score" min="0" max="100"
                                                class="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                                               value="{{ $settings['minimum_quiz_score'] ?? 70 }}">
+                                               value="{{ old('minimum_quiz_score', $settings['minimum_quiz_score'] ?? 70) }}">
                                         <p class="mt-2 text-xs text-gray-500">Minimum score required to pass</p>
                                     </div>
 
@@ -536,7 +596,7 @@
                                         <label for="auto_approve_score" class="block text-sm font-medium text-gray-700 mb-2">Auto-Approve Score (%)</label>
                                         <input type="number" name="auto_approve_score" id="auto_approve_score" min="0" max="100"
                                                class="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                                               value="{{ $settings['auto_approve_score'] ?? '' }}">
+                                               value="{{ old('auto_approve_score', $settings['auto_approve_score'] ?? '') }}">
                                         <p class="mt-2 text-xs text-gray-500">Score threshold for automatic approval</p>
                                     </div>
                                 </div>
@@ -545,7 +605,7 @@
                                     <label for="hiring_stages" class="block text-sm font-medium text-gray-700 mb-2">Hiring Process Stages</label>
                                     <textarea name="hiring_stages" id="hiring_stages" rows="5"
                                               class="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                                              placeholder="Stage 1: Application Review&#10;Stage 2: Quiz Assessment&#10;Stage 3: Technical Interview&#10;Stage 4: Final Decision">{{ $settings['hiring_stages'] ?? '' }}</textarea>
+                                              placeholder="Stage 1: Application Review&#10;Stage 2: Quiz Assessment&#10;Stage 3: Technical Interview&#10;Stage 4: Final Decision">{{ old('hiring_stages', $settings['hiring_stages'] ?? '') }}</textarea>
                                     <p class="mt-2 text-xs text-gray-500">List the stages of your hiring process (one per line)</p>
                     </div>
 
@@ -553,8 +613,11 @@
                                     <label for="hiring_email_notifications" class="block text-sm font-medium text-gray-700 mb-2">Email Notifications</label>
                                     <select name="hiring_email_notifications" id="hiring_email_notifications"
                                             class="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
-                                        <option value="enabled" {{ ($settings['hiring_email_notifications'] ?? 'enabled') == 'enabled' ? 'selected' : '' }}>Enabled</option>
-                                        <option value="disabled" {{ ($settings['hiring_email_notifications'] ?? 'enabled') == 'disabled' ? 'selected' : '' }}>Disabled</option>
+                                        @php
+                                            $hiringEmailNotificationsValue = old('hiring_email_notifications', $settings['hiring_email_notifications'] ?? 'enabled');
+                                        @endphp
+                                        <option value="enabled" {{ $hiringEmailNotificationsValue == 'enabled' ? 'selected' : '' }}>Enabled</option>
+                                        <option value="disabled" {{ $hiringEmailNotificationsValue == 'disabled' ? 'selected' : '' }}>Disabled</option>
                                     </select>
                                 </div>
 
@@ -562,15 +625,18 @@
                                     <label for="hiring_instructions" class="block text-sm font-medium text-gray-700 mb-2">Instructions for Applicants</label>
                                     <textarea name="hiring_instructions" id="hiring_instructions" rows="4"
                                               class="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                                              placeholder="Instructions that will be shown to applicants...">{{ $settings['hiring_instructions'] ?? '' }}</textarea>
+                                              placeholder="Instructions that will be shown to applicants...">{{ old('hiring_instructions', $settings['hiring_instructions'] ?? '') }}</textarea>
                             </div>
 
                                 <div>
                                     <label for="hiring_application_public_access" class="block text-sm font-medium text-gray-700 mb-2">Public Application Access</label>
                                     <select name="hiring_application_public_access" id="hiring_application_public_access"
                                             class="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
-                                        <option value="disabled" {{ ($settings['hiring_application_public_access'] ?? 'disabled') == 'disabled' ? 'selected' : '' }}>Disabled</option>
-                                        <option value="enabled" {{ ($settings['hiring_application_public_access'] ?? 'disabled') == 'enabled' ? 'selected' : '' }}>Enabled</option>
+                                        @php
+                                            $hiringApplicationPublicAccessValue = old('hiring_application_public_access', $settings['hiring_application_public_access'] ?? 'disabled');
+                                        @endphp
+                                        <option value="disabled" {{ $hiringApplicationPublicAccessValue == 'disabled' ? 'selected' : '' }}>Disabled</option>
+                                        <option value="enabled" {{ $hiringApplicationPublicAccessValue == 'enabled' ? 'selected' : '' }}>Enabled</option>
                                     </select>
                                 </div>
 
@@ -581,7 +647,7 @@
                                             {{ url('/') }}/
                                         </span>
                                         <input type="text" name="hiring_application_url" id="hiring_application_url"
-                                               value="{{ $settings['hiring_application_url'] ?? 'hiring/apply' }}"
+                                               value="{{ old('hiring_application_url', $settings['hiring_application_url'] ?? 'hiring/apply') }}"
                                                placeholder="hiring/apply"
                                                class="flex-1 min-w-0 block w-full px-4 py-3 rounded-r-lg border border-gray-300 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
                                     </div>
@@ -664,16 +730,22 @@
                             <div class="space-y-6">
                                 <div>
                                     <label for="mail_mailer" class="block text-sm font-medium text-gray-700 mb-2">Mail Driver</label>
+                                    @php
+                                        $mailMailerValue = isset($settings['mail_mailer']) ? $settings['mail_mailer'] : 'log';
+                                        if (old('mail_mailer') !== null) {
+                                            $mailMailerValue = old('mail_mailer');
+                                        }
+                                    @endphp
                                     <select name="mail_mailer" id="mail_mailer"
                                             class="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
-                                        <option value="smtp" {{ ($settings['mail_mailer'] ?? 'log') == 'smtp' ? 'selected' : '' }}>SMTP</option>
-                                        <option value="sendmail" {{ ($settings['mail_mailer'] ?? 'log') == 'sendmail' ? 'selected' : '' }}>Sendmail</option>
-                                        <option value="mailgun" {{ ($settings['mail_mailer'] ?? 'log') == 'mailgun' ? 'selected' : '' }}>Mailgun</option>
-                                        <option value="ses" {{ ($settings['mail_mailer'] ?? 'log') == 'ses' ? 'selected' : '' }}>Amazon SES</option>
-                                        <option value="postmark" {{ ($settings['mail_mailer'] ?? 'log') == 'postmark' ? 'selected' : '' }}>Postmark</option>
-                                        <option value="resend" {{ ($settings['mail_mailer'] ?? 'log') == 'resend' ? 'selected' : '' }}>Resend</option>
-                                        <option value="log" {{ ($settings['mail_mailer'] ?? 'log') == 'log' ? 'selected' : '' }}>Log (Testing)</option>
-                                        <option value="array" {{ ($settings['mail_mailer'] ?? 'log') == 'array' ? 'selected' : '' }}>Array (Testing)</option>
+                                        <option value="smtp" {{ $mailMailerValue == 'smtp' ? 'selected' : '' }}>SMTP</option>
+                                        <option value="sendmail" {{ $mailMailerValue == 'sendmail' ? 'selected' : '' }}>Sendmail</option>
+                                        <option value="mailgun" {{ $mailMailerValue == 'mailgun' ? 'selected' : '' }}>Mailgun</option>
+                                        <option value="ses" {{ $mailMailerValue == 'ses' ? 'selected' : '' }}>Amazon SES</option>
+                                        <option value="postmark" {{ $mailMailerValue == 'postmark' ? 'selected' : '' }}>Postmark</option>
+                                        <option value="resend" {{ $mailMailerValue == 'resend' ? 'selected' : '' }}>Resend</option>
+                                        <option value="log" {{ $mailMailerValue == 'log' ? 'selected' : '' }}>Log (Testing)</option>
+                                        <option value="array" {{ $mailMailerValue == 'array' ? 'selected' : '' }}>Array (Testing)</option>
                                     </select>
                                     <p class="mt-2 text-xs text-gray-500">Select the mail driver. Use "Log" for testing</p>
                                 </div>
@@ -681,16 +753,28 @@
                                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                                     <div>
                                         <label for="mail_host" class="block text-sm font-medium text-gray-700 mb-2">SMTP Host</label>
+                                        @php
+                                            $mailHostValue = isset($settings['mail_host']) ? $settings['mail_host'] : '';
+                                            if (old('mail_host') !== null) {
+                                                $mailHostValue = old('mail_host');
+                                            }
+                                        @endphp
                                         <input type="text" name="mail_host" id="mail_host"
-                                               value="{{ $settings['mail_host'] ?? '' }}"
+                                               value="{{ $mailHostValue }}"
                                                placeholder="smtp.gmail.com"
                                                class="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
                                     </div>
 
                                     <div>
                                         <label for="mail_port" class="block text-sm font-medium text-gray-700 mb-2">SMTP Port</label>
+                                        @php
+                                            $mailPortValue = isset($settings['mail_port']) ? $settings['mail_port'] : '587';
+                                            if (old('mail_port') !== null) {
+                                                $mailPortValue = old('mail_port');
+                                            }
+                                        @endphp
                                         <input type="number" name="mail_port" id="mail_port"
-                                               value="{{ $settings['mail_port'] ?? '587' }}"
+                                               value="{{ $mailPortValue }}"
                                                placeholder="587"
                                                min="1" max="65535"
                                                class="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
@@ -700,8 +784,14 @@
                                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                                     <div>
                                         <label for="mail_username" class="block text-sm font-medium text-gray-700 mb-2">SMTP Username</label>
+                                        @php
+                                            $mailUsernameValue = isset($settings['mail_username']) ? $settings['mail_username'] : '';
+                                            if (old('mail_username') !== null) {
+                                                $mailUsernameValue = old('mail_username');
+                                            }
+                                        @endphp
                                         <input type="text" name="mail_username" id="mail_username"
-                                               value="{{ $settings['mail_username'] ?? '' }}"
+                                               value="{{ $mailUsernameValue }}"
                                                placeholder="your-email@gmail.com"
                                                class="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
                                     </div>
@@ -720,27 +810,45 @@
 
                                 <div>
                                     <label for="mail_encryption" class="block text-sm font-medium text-gray-700 mb-2">Encryption</label>
+                                    @php
+                                        $mailEncryptionValue = isset($settings['mail_encryption']) ? $settings['mail_encryption'] : 'tls';
+                                        if (old('mail_encryption') !== null) {
+                                            $mailEncryptionValue = old('mail_encryption');
+                                        }
+                                    @endphp
                                     <select name="mail_encryption" id="mail_encryption"
                                             class="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
-                                        <option value="tls" {{ ($settings['mail_encryption'] ?? 'tls') == 'tls' ? 'selected' : '' }}>TLS</option>
-                                        <option value="ssl" {{ ($settings['mail_encryption'] ?? 'tls') == 'ssl' ? 'selected' : '' }}>SSL</option>
-                                        <option value="null" {{ ($settings['mail_encryption'] ?? 'tls') == 'null' ? 'selected' : '' }}>None</option>
+                                        <option value="tls" {{ $mailEncryptionValue == 'tls' ? 'selected' : '' }}>TLS</option>
+                                        <option value="ssl" {{ $mailEncryptionValue == 'ssl' ? 'selected' : '' }}>SSL</option>
+                                        <option value="null" {{ $mailEncryptionValue == 'null' ? 'selected' : '' }}>None</option>
                                     </select>
                                 </div>
 
                                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                                     <div>
                                         <label for="mail_from_address" class="block text-sm font-medium text-gray-700 mb-2">From Email Address</label>
+                                        @php
+                                            $mailFromAddressValue = isset($settings['mail_from_address']) ? $settings['mail_from_address'] : '';
+                                            if (old('mail_from_address') !== null) {
+                                                $mailFromAddressValue = old('mail_from_address');
+                                            }
+                                        @endphp
                                         <input type="email" name="mail_from_address" id="mail_from_address"
-                                               value="{{ $settings['mail_from_address'] ?? '' }}"
+                                               value="{{ $mailFromAddressValue }}"
                                                placeholder="noreply@example.com"
                                                class="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
                                     </div>
 
                                     <div>
                                         <label for="mail_from_name" class="block text-sm font-medium text-gray-700 mb-2">From Name</label>
+                                        @php
+                                            $mailFromNameValue = isset($settings['mail_from_name']) ? $settings['mail_from_name'] : '';
+                                            if (old('mail_from_name') !== null) {
+                                                $mailFromNameValue = old('mail_from_name');
+                                            }
+                                        @endphp
                                         <input type="text" name="mail_from_name" id="mail_from_name"
-                                               value="{{ $settings['mail_from_name'] ?? '' }}"
+                                               value="{{ $mailFromNameValue }}"
                                                placeholder="{{ $settings['system_name'] ?? 'System' }}"
                                                class="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
                                     </div>
@@ -819,7 +927,7 @@
                                     <div>
                                         <label for="contact_email" class="block text-sm font-medium text-gray-700 mb-2">Email Address</label>
                                         <input type="email" name="contact_email" id="contact_email"
-                                               value="{{ $settings['contact_email'] ?? 'support@quizsystem.com' }}"
+                                               value="{{ old('contact_email', $settings['contact_email'] ?? 'support@quizsystem.com') }}"
                                                placeholder="support@example.com"
                                                class="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
                                         <p class="mt-1 text-xs text-gray-500">Email address displayed on the contact page</p>
@@ -828,7 +936,7 @@
                                     <div>
                                         <label for="contact_email_response_time" class="block text-sm font-medium text-gray-700 mb-2">Email Response Time Message</label>
                                         <input type="text" name="contact_email_response_time" id="contact_email_response_time"
-                                               value="{{ $settings['contact_email_response_time'] ?? 'We typically respond within 24 hours' }}"
+                                               value="{{ old('contact_email_response_time', $settings['contact_email_response_time'] ?? 'We typically respond within 24 hours') }}"
                                                placeholder="We typically respond within 24 hours"
                                                class="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
                                     </div>
@@ -837,7 +945,7 @@
                                     <div>
                                         <label for="contact_phone" class="block text-sm font-medium text-gray-700 mb-2">Phone Number</label>
                                         <input type="text" name="contact_phone" id="contact_phone"
-                                               value="{{ $settings['contact_phone'] ?? '+1 (555) 123-4567' }}"
+                                               value="{{ old('contact_phone', $settings['contact_phone'] ?? '+1 (555) 123-4567') }}"
                                                placeholder="+1 (555) 123-4567"
                                                class="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
                                     </div>
@@ -845,7 +953,7 @@
                                     <div>
                                         <label for="contact_phone_hours" class="block text-sm font-medium text-gray-700 mb-2">Phone Support Hours</label>
                                         <input type="text" name="contact_phone_hours" id="contact_phone_hours"
-                                               value="{{ $settings['contact_phone_hours'] ?? 'Monday - Friday, 9 AM - 6 PM EST' }}"
+                                               value="{{ old('contact_phone_hours', $settings['contact_phone_hours'] ?? 'Monday - Friday, 9 AM - 6 PM EST') }}"
                                                placeholder="Monday - Friday, 9 AM - 6 PM EST"
                                                class="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
                                     </div>
@@ -854,7 +962,7 @@
                                     <div>
                                         <label for="contact_live_chat_description" class="block text-sm font-medium text-gray-700 mb-2">Live Chat Description</label>
                                         <input type="text" name="contact_live_chat_description" id="contact_live_chat_description"
-                                               value="{{ $settings['contact_live_chat_description'] ?? 'Available on our platform' }}"
+                                               value="{{ old('contact_live_chat_description', $settings['contact_live_chat_description'] ?? 'Available on our platform') }}"
                                                placeholder="Available on our platform"
                                                class="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
                                     </div>
@@ -862,7 +970,7 @@
                                     <div>
                                         <label for="contact_live_chat_hours" class="block text-sm font-medium text-gray-700 mb-2">Live Chat Hours Description</label>
                                         <input type="text" name="contact_live_chat_hours" id="contact_live_chat_hours"
-                                               value="{{ $settings['contact_live_chat_hours'] ?? 'Get instant help while using the system' }}"
+                                               value="{{ old('contact_live_chat_hours', $settings['contact_live_chat_hours'] ?? 'Get instant help while using the system') }}"
                                                placeholder="Get instant help while using the system"
                                                class="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
                                     </div>
@@ -872,7 +980,7 @@
                                         <div>
                                             <label for="contact_faq_url" class="block text-sm font-medium text-gray-700 mb-2">FAQ URL</label>
                                             <input type="text" name="contact_faq_url" id="contact_faq_url"
-                                                   value="{{ $settings['contact_faq_url'] ?? '#' }}"
+                                                   value="{{ old('contact_faq_url', $settings['contact_faq_url'] ?? '#') }}"
                                                    placeholder="# or /faq"
                                                    class="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
                                         </div>
@@ -880,7 +988,7 @@
                                         <div>
                                             <label for="contact_faq_text" class="block text-sm font-medium text-gray-700 mb-2">FAQ Link Text</label>
                                             <input type="text" name="contact_faq_text" id="contact_faq_text"
-                                                   value="{{ $settings['contact_faq_text'] ?? 'View FAQ →' }}"
+                                                   value="{{ old('contact_faq_text', $settings['contact_faq_text'] ?? 'View FAQ →') }}"
                                                    placeholder="View FAQ →"
                                                    class="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
                                         </div>
@@ -908,7 +1016,7 @@
                                         <div>
                                             <label for="contact_email_support_hours" class="block text-sm font-medium text-gray-700 mb-2">Email Support Hours</label>
                                             <input type="text" name="contact_email_support_hours" id="contact_email_support_hours"
-                                                   value="{{ $settings['contact_email_support_hours'] ?? '24/7 Available' }}"
+                                                   value="{{ old('contact_email_support_hours', $settings['contact_email_support_hours'] ?? '24/7 Available') }}"
                                                    placeholder="24/7 Available"
                                                    class="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
                                         </div>
@@ -916,7 +1024,7 @@
                                         <div>
                                             <label for="contact_email_support_response" class="block text-sm font-medium text-gray-700 mb-2">Email Response Time</label>
                                             <input type="text" name="contact_email_support_response" id="contact_email_support_response"
-                                                   value="{{ $settings['contact_email_support_response'] ?? 'Response within 24 hours' }}"
+                                                   value="{{ old('contact_email_support_response', $settings['contact_email_support_response'] ?? 'Response within 24 hours') }}"
                                                    placeholder="Response within 24 hours"
                                                    class="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
                                         </div>
@@ -927,7 +1035,7 @@
                                         <div>
                                             <label for="contact_phone_support_days" class="block text-sm font-medium text-gray-700 mb-2">Phone Support Days</label>
                                             <input type="text" name="contact_phone_support_days" id="contact_phone_support_days"
-                                                   value="{{ $settings['contact_phone_support_days'] ?? 'Monday - Friday' }}"
+                                                   value="{{ old('contact_phone_support_days', $settings['contact_phone_support_days'] ?? 'Monday - Friday') }}"
                                                    placeholder="Monday - Friday"
                                                    class="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
                                         </div>
@@ -935,7 +1043,7 @@
                                         <div>
                                             <label for="contact_phone_support_time" class="block text-sm font-medium text-gray-700 mb-2">Phone Support Time</label>
                                             <input type="text" name="contact_phone_support_time" id="contact_phone_support_time"
-                                                   value="{{ $settings['contact_phone_support_time'] ?? '9:00 AM - 6:00 PM EST' }}"
+                                                   value="{{ old('contact_phone_support_time', $settings['contact_phone_support_time'] ?? '9:00 AM - 6:00 PM EST') }}"
                                                    placeholder="9:00 AM - 6:00 PM EST"
                                                    class="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
                                         </div>
@@ -946,7 +1054,7 @@
                                         <div>
                                             <label for="contact_live_chat_days" class="block text-sm font-medium text-gray-700 mb-2">Live Chat Support Days</label>
                                             <input type="text" name="contact_live_chat_days" id="contact_live_chat_days"
-                                                   value="{{ $settings['contact_live_chat_days'] ?? 'Monday - Friday' }}"
+                                                   value="{{ old('contact_live_chat_days', $settings['contact_live_chat_days'] ?? 'Monday - Friday') }}"
                                                    placeholder="Monday - Friday"
                                                    class="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
                                         </div>
@@ -954,7 +1062,7 @@
                                         <div>
                                             <label for="contact_live_chat_time" class="block text-sm font-medium text-gray-700 mb-2">Live Chat Support Time</label>
                                             <input type="text" name="contact_live_chat_time" id="contact_live_chat_time"
-                                                   value="{{ $settings['contact_live_chat_time'] ?? '10:00 AM - 5:00 PM EST' }}"
+                                                   value="{{ old('contact_live_chat_time', $settings['contact_live_chat_time'] ?? '10:00 AM - 5:00 PM EST') }}"
                                                    placeholder="10:00 AM - 5:00 PM EST"
                                                    class="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
                                         </div>

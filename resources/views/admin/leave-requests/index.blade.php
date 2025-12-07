@@ -117,6 +117,7 @@
                         <option value="work_from_home" {{ request('type') == 'work_from_home' ? 'selected' : '' }}>Work From Home</option>
                         <option value="absent" {{ request('type') == 'absent' ? 'selected' : '' }}>Absent</option>
                         <option value="overtime" {{ request('type') == 'overtime' ? 'selected' : '' }}>Overtime</option>
+                        <option value="offset" {{ request('type') == 'offset' ? 'selected' : '' }}>Offset</option>
                     </select>
                 </div>
 

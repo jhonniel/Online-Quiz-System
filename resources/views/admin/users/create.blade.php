@@ -255,6 +255,79 @@
                             </p>
                         @enderror
                     </div>
+
+                    <!-- Leave Balances (Employees Only) -->
+                    @php
+                        $currentYear = now()->year;
+                    @endphp
+                    <div class="space-y-2" id="leave_balances_wrapper"
+                         @if(old('role') === 'employee') style="" @else style="display:none;" @endif>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div>
+                                <label for="vacation_allowance" class="block text-sm font-semibold text-gray-700">
+                                    Vacation Leave Balance (Days)
+                                </label>
+                                <div class="relative group">
+                                    <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                                        <svg class="w-5 h-5 text-gray-400 group-focus-within:text-indigo-500 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                                        </svg>
+                                    </div>
+                                    <input type="number"
+                                           step="0.01"
+                                           min="0"
+                                           name="vacation_allowance"
+                                           id="vacation_allowance"
+                                           value="{{ old('vacation_allowance') }}"
+                                           placeholder="e.g. 15"
+                                           class="block w-full pl-12 pr-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200 bg-gray-50 focus:bg-white @error('vacation_allowance') border-red-300 focus:ring-red-500 focus:border-red-500 @enderror">
+                                </div>
+                                <p class="text-xs text-gray-500 mt-1">
+                                    Vacation leave balance for {{ $currentYear }}.
+                                </p>
+                                @error('vacation_allowance')
+                                    <p class="text-sm text-red-600 flex items-center mt-1">
+                                        <svg class="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                                            <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd"></path>
+                                        </svg>
+                                        {{ $message }}
+                                    </p>
+                                @enderror
+                            </div>
+
+                            <div>
+                                <label for="sick_allowance" class="block text-sm font-semibold text-gray-700">
+                                    Sick Leave Balance (Days)
+                                </label>
+                                <div class="relative group">
+                                    <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                                        <svg class="w-5 h-5 text-gray-400 group-focus-within:text-indigo-500 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                                        </svg>
+                                    </div>
+                                    <input type="number"
+                                           step="0.01"
+                                           min="0"
+                                           name="sick_allowance"
+                                           id="sick_allowance"
+                                           value="{{ old('sick_allowance') }}"
+                                           placeholder="e.g. 10"
+                                           class="block w-full pl-12 pr-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200 bg-gray-50 focus:bg-white @error('sick_allowance') border-red-300 focus:ring-red-500 focus:border-red-500 @enderror">
+                                </div>
+                                <p class="text-xs text-gray-500 mt-1">
+                                    Sick leave balance for {{ $currentYear }}.
+                                </p>
+                                @error('sick_allowance')
+                                    <p class="text-sm text-red-600 flex items-center mt-1">
+                                        <svg class="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                                            <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd"></path>
+                                        </svg>
+                                        {{ $message }}
+                                    </p>
+                                @enderror
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
 
@@ -476,6 +549,22 @@ document.addEventListener('DOMContentLoaded', function() {
         roleSelect.addEventListener('change', toggleRequiredHours);
         // Initialize on load
         toggleRequiredHours();
+    }
+
+    // Show Leave Balances only for employees
+    const leaveBalancesWrapper = document.getElementById('leave_balances_wrapper');
+    if (roleSelect && leaveBalancesWrapper) {
+        function toggleLeaveBalances() {
+            if (roleSelect.value === 'employee') {
+                leaveBalancesWrapper.style.display = '';
+            } else {
+                leaveBalancesWrapper.style.display = 'none';
+            }
+        }
+
+        roleSelect.addEventListener('change', toggleLeaveBalances);
+        // Initialize on load
+        toggleLeaveBalances();
     }
 
     // Password strength checker

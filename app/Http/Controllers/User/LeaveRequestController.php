@@ -6,8 +6,12 @@ use App\Http\Controllers\Controller;
 use App\Models\LeaveRequest;
 use App\Models\LeaveBalance;
 use App\Models\Dtr;
+use App\Services\MailConfigService;
+use App\Mail\LeaveRequestNotification;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Log;
 
 class LeaveRequestController extends Controller
 {
@@ -297,14 +301,9 @@ class LeaveRequestController extends Controller
                 : $startDate;
             $days = $startDate->diffInDays($endDate) + 1; // +1 to include both start and end dates
 
-            // If offset_hours is provided, use it; otherwise calculate as days * 8 hours
-            if (!empty($validated['offset_hours'])) {
-                $offsetHours = $validated['offset_hours'];
-            } else {
-                // Calculate: 1 day = 08:00
-                $totalHours = $days * 8;
-                $offsetHours = sprintf('%02d:00', $totalHours);
-            }
+            // Always calculate offset hours from days: 1 day = 8 hours
+            $totalHours = $days * 8;
+            $offsetHours = sprintf('%02d:00', $totalHours);
 
             $details = "Offset Request Details:\n";
             $details .= "Duration: " . $days . " " . ($days == 1 ? 'day' : 'days') . "\n";
@@ -317,7 +316,74 @@ class LeaveRequestController extends Controller
             $reasonToStore = $details;
         }
 
-        LeaveRequest::create([
+        // Validate balance for vacation_leave and sick_leave (employees only)
+        if (in_array($validated['type'], ['vacation_leave', 'sick_leave']) && $user->role === 'employee') {
+            // Calculate number of days requested (1 day = 1 leave credit)
+            $startDate = \Carbon\Carbon::parse($validated['start_date']);
+            $endDate = $validated['end_date'] 
+                ? \Carbon\Carbon::parse($validated['end_date'])
+                : $startDate;
+            $daysRequested = $startDate->diffInDays($endDate) + 1; // +1 to include both start and end dates
+
+            // Get current year and leave balance
+            $currentYear = now()->year;
+            $defaultVacation = (float) \App\Models\Setting::get('default_vacation_balance', 15);
+            $defaultSick = (float) \App\Models\Setting::get('default_sick_leave_balance', 10);
+            
+            $leaveBalance = LeaveBalance::firstOrCreate(
+                ['user_id' => $user->id, 'year' => $currentYear],
+                [
+                    'vacation_allowance' => $defaultVacation,
+                    'sick_allowance' => $defaultSick,
+                ]
+            );
+
+            // Calculate used leave days for the current year (approved only)
+            $usedVacation = LeaveRequest::where('user_id', $user->id)
+                ->where('type', 'vacation_leave')
+                ->where('status', 'approved')
+                ->whereYear('start_date', $currentYear)
+                ->get()
+                ->sum->days;
+
+            $usedSick = LeaveRequest::where('user_id', $user->id)
+                ->where('type', 'sick_leave')
+                ->where('status', 'approved')
+                ->whereYear('start_date', $currentYear)
+                ->get()
+                ->sum->days;
+
+            // Calculate remaining balance
+            $remainingVacation = max((float) $leaveBalance->vacation_allowance - $usedVacation, 0);
+            $remainingSick = max((float) $leaveBalance->sick_allowance - $usedSick, 0);
+
+            // Check if balance is sufficient
+            if ($validated['type'] === 'vacation_leave') {
+                if ($remainingVacation <= 0) {
+                    return redirect()->back()
+                        ->withErrors(['type' => 'You cannot request Vacation Leave because your balance is 0.'])
+                        ->withInput();
+                }
+                if ($daysRequested > $remainingVacation) {
+                    return redirect()->back()
+                        ->withErrors(['end_date' => "You only have {$remainingVacation} day(s) of Vacation Leave remaining. You cannot request {$daysRequested} day(s)."])
+                        ->withInput();
+                }
+            } elseif ($validated['type'] === 'sick_leave') {
+                if ($remainingSick <= 0) {
+                    return redirect()->back()
+                        ->withErrors(['type' => 'You cannot request Sick Leave because your balance is 0.'])
+                        ->withInput();
+                }
+                if ($daysRequested > $remainingSick) {
+                    return redirect()->back()
+                        ->withErrors(['end_date' => "You only have {$remainingSick} day(s) of Sick Leave remaining. You cannot request {$daysRequested} day(s)."])
+                        ->withInput();
+                }
+            }
+        }
+
+        $leaveRequest = LeaveRequest::create([
             'user_id' => Auth::id(),
             'type' => $validated['type'],
             'start_date' => $validated['start_date'],
@@ -325,6 +391,22 @@ class LeaveRequestController extends Controller
             'reason' => $reasonToStore,
             'status' => 'pending',
         ]);
+
+        // Send email notification to admin if setting is configured (only for employees)
+        if ($user->role === 'employee') {
+            $adminEmail = \App\Models\Setting::get('leave_admin_notification_email', '');
+            if (!empty($adminEmail) && filter_var($adminEmail, FILTER_VALIDATE_EMAIL)) {
+                try {
+                    MailConfigService::configure();
+                    Mail::to($adminEmail)->send(
+                        new LeaveRequestNotification($leaveRequest)
+                    );
+                } catch (\Exception $e) {
+                    Log::error('Failed to send leave request notification email to admin: ' . $e->getMessage());
+                    // Don't fail the request if email fails
+                }
+            }
+        }
 
         return redirect()->route('user.leave-requests.index')
             ->with('success', 'Leave request submitted successfully. It will be reviewed by an administrator.');
@@ -546,14 +628,9 @@ class LeaveRequestController extends Controller
                 : $startDate;
             $days = $startDate->diffInDays($endDate) + 1; // +1 to include both start and end dates
 
-            // If offset_hours is provided, use it; otherwise calculate as days * 8 hours
-            if (!empty($validated['offset_hours'])) {
-                $offsetHours = $validated['offset_hours'];
-            } else {
-                // Calculate: 1 day = 08:00
-                $totalHours = $days * 8;
-                $offsetHours = sprintf('%02d:00', $totalHours);
-            }
+            // Always calculate offset hours from days: 1 day = 8 hours
+            $totalHours = $days * 8;
+            $offsetHours = sprintf('%02d:00', $totalHours);
 
             $details = "Offset Request Details:\n";
             $details .= "Duration: " . $days . " " . ($days == 1 ? 'day' : 'days') . "\n";

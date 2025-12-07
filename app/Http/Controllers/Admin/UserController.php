@@ -62,6 +62,8 @@ class UserController extends Controller
             'new_university_name' => 'nullable|string|max:255',
             'is_active' => 'boolean',
             'required_training_hours' => 'nullable|numeric|min:0',
+            'vacation_allowance' => 'nullable|numeric|min:0|max:365',
+            'sick_allowance' => 'nullable|numeric|min:0|max:365',
         ]);
 
         // Custom validation for new university
@@ -84,7 +86,7 @@ class UserController extends Controller
             $universityId = $request->university_id;
         }
 
-        User::create([
+        $user = User::create([
             'name' => $request->name,
             'email' => $request->email,
             'password' => Hash::make($request->password),
@@ -93,6 +95,20 @@ class UserController extends Controller
             'is_active' => $request->has('is_active'),
             'required_training_hours' => $request->required_training_hours,
         ]);
+
+        // Handle leave balances for employees
+        if ($request->role === 'employee' && ($request->filled('vacation_allowance') || $request->filled('sick_allowance'))) {
+            $currentYear = now()->year;
+            $defaultVacation = (float) \App\Models\Setting::get('default_vacation_balance', 0);
+            $defaultSick = (float) \App\Models\Setting::get('default_sick_leave_balance', 0);
+            
+            LeaveBalance::create([
+                'user_id' => $user->id,
+                'year' => $currentYear,
+                'vacation_allowance' => $request->filled('vacation_allowance') ? (float) $request->vacation_allowance : $defaultVacation,
+                'sick_allowance' => $request->filled('sick_allowance') ? (float) $request->sick_allowance : $defaultSick,
+            ]);
+        }
 
         return redirect()->route('users.index')
             ->with('success', 'User created successfully.');
@@ -310,6 +326,8 @@ class UserController extends Controller
             'new_university_name' => 'nullable|string|max:255',
             'is_active' => 'boolean',
             'required_training_hours' => 'nullable|numeric|min:0',
+            'vacation_allowance' => 'nullable|numeric|min:0|max:365',
+            'sick_allowance' => 'nullable|numeric|min:0|max:365',
         ]);
 
         // Custom validation for new university
@@ -351,6 +369,34 @@ class UserController extends Controller
         }
 
         $user->update($data);
+
+        // Handle leave balances for employees
+        if ($request->role === 'employee' && ($request->has('vacation_allowance') || $request->has('sick_allowance'))) {
+            $currentYear = now()->year;
+            $defaultVacation = (float) \App\Models\Setting::get('default_vacation_balance', 0);
+            $defaultSick = (float) \App\Models\Setting::get('default_sick_leave_balance', 0);
+            
+            $leaveBalance = LeaveBalance::firstOrCreate(
+                ['user_id' => $user->id, 'year' => $currentYear],
+                [
+                    'vacation_allowance' => $defaultVacation,
+                    'sick_allowance' => $defaultSick,
+                ]
+            );
+
+            // Update only if values are provided
+            $updateData = [];
+            if ($request->has('vacation_allowance')) {
+                $updateData['vacation_allowance'] = $request->filled('vacation_allowance') ? (float) $request->vacation_allowance : $defaultVacation;
+            }
+            if ($request->has('sick_allowance')) {
+                $updateData['sick_allowance'] = $request->filled('sick_allowance') ? (float) $request->sick_allowance : $defaultSick;
+            }
+            
+            if (!empty($updateData)) {
+                $leaveBalance->update($updateData);
+            }
+        }
 
         return redirect()->route('users.index')
             ->with('success', 'User updated successfully.');

@@ -22,8 +22,13 @@ class SettingsServiceProvider extends ServiceProvider
     public function boot(): void
     {
         // Share settings with all views
+        // IMPORTANT: Merge with existing settings if they exist, don't overwrite
         View::composer('*', function ($view) {
-            $view->with('settings', [
+            // Get existing settings from view data if they exist
+            $existingSettings = $view->getData()['settings'] ?? [];
+            
+            // Base settings that should be available in all views
+            $baseSettings = [
                 'system_name' => Setting::get('system_name', 'Quiz System'),
                 'system_logo' => Setting::get('system_logo'),
                 'system_icon' => Setting::get('system_icon'),
@@ -47,7 +52,13 @@ class SettingsServiceProvider extends ServiceProvider
                 'contact_phone_support_time' => Setting::get('contact_phone_support_time', '9:00 AM - 6:00 PM EST'),
                 'contact_live_chat_days' => Setting::get('contact_live_chat_days', 'Monday - Friday'),
                 'contact_live_chat_time' => Setting::get('contact_live_chat_time', '10:00 AM - 5:00 PM EST'),
-            ]);
+            ];
+            
+            // Merge existing settings (from controller) with base settings
+            // Existing settings take precedence to preserve controller values
+            $mergedSettings = array_merge($baseSettings, $existingSettings);
+            
+            $view->with('settings', $mergedSettings);
         });
     }
 }

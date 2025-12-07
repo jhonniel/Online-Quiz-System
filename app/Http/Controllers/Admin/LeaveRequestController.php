@@ -219,6 +219,13 @@ class LeaveRequestController extends Controller
             $overtimeHoursPart = intdiv($absOvertimeMinutes, 60);
             $overtimeMinutesPart = $absOvertimeMinutes % 60;
             $overtimeFormatted = ($isNegative ? '-' : '') . sprintf('%02d:%02d', $overtimeHoursPart, $overtimeMinutesPart);
+            
+            // Check if this is an offset request and if employee currently has negative overtime balance
+            $hasNegativeBalance = false;
+            if ($leaveRequest->type === 'offset' && $leaveRequest->isPending()) {
+                // Check if current net overtime balance is negative
+                $hasNegativeBalance = $netOvertimeHours < 0;
+            }
         } elseif ($user->role === 'student') {
             // Student: show total DTR time vs required time set by admin
             $requiredHours = (float) ($user->required_training_hours ?? 0);
@@ -254,7 +261,7 @@ class LeaveRequestController extends Controller
             'cto' => \App\Models\Setting::get('leave_cto', 'NITISH KHEMANI'),
         ];
 
-        return view('admin.leave-requests.show', compact('leaveRequest', 'balances', 'overtimeFormatted', 'signatories', 'studentTime'));
+        return view('admin.leave-requests.show', compact('leaveRequest', 'balances', 'overtimeFormatted', 'signatories', 'studentTime', 'hasNegativeBalance'));
     }
 
     /**
@@ -399,6 +406,50 @@ class LeaveRequestController extends Controller
 
         return redirect()->route('admin.leave-requests.show', $leaveRequest)
             ->with('success', 'Leave request approved successfully.');
+    }
+
+    /**
+     * Force approve an offset leave request when employee has negative overtime balance.
+     * This allows approving offset requests even when it would make the balance more negative.
+     */
+    public function forceAccept(Request $request, LeaveRequest $leaveRequest)
+    {
+        // Only allow force accept for offset requests
+        if ($leaveRequest->type !== 'offset') {
+            return redirect()->route('admin.leave-requests.show', $leaveRequest)
+                ->with('error', 'Force accept is only available for offset requests.');
+        }
+
+        // Only allow for pending requests
+        if (!$leaveRequest->isPending()) {
+            return redirect()->route('admin.leave-requests.show', $leaveRequest)
+                ->with('error', 'This request has already been processed.');
+        }
+
+        $request->validate([
+            'admin_notes' => 'nullable|string|max:1000',
+        ]);
+
+        $leaveRequest->update([
+            'status' => 'approved',
+            'admin_notes' => ($request->admin_notes ?? '') . ' [Force Accepted - Negative Balance]',
+            'reviewed_by' => Auth::id(),
+            'reviewed_at' => now(),
+        ]);
+
+        // Send email notification to employee
+        try {
+            MailConfigService::configure();
+            Mail::to($leaveRequest->user->email)->send(
+                new LeaveRequestStatusUpdate($leaveRequest, 'approved', $request->admin_notes)
+            );
+        } catch (\Exception $e) {
+            Log::error('Failed to send leave request force acceptance email: ' . $e->getMessage());
+            // Don't fail the request if email fails
+        }
+
+        return redirect()->route('admin.leave-requests.show', $leaveRequest)
+            ->with('success', 'Offset request force accepted. Negative balance will be applied to employee account.');
     }
 
     /**

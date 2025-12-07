@@ -659,25 +659,59 @@
             <!-- Action Panel -->
             @if($leaveRequest->isPending())
                 <!-- Approve Form -->
-                <div class="bg-white rounded-lg shadow border border-gray-200 p-4 sm:p-6">
-                    <h3 class="text-base sm:text-lg font-bold text-gray-900 mb-3 sm:mb-4">Approve Request</h3>
-                    <form action="{{ route('admin.leave-requests.approve', $leaveRequest) }}" method="POST" class="space-y-3 sm:space-y-4">
-                        @csrf
-                        <div>
-                            <label for="approve_notes" class="block text-xs sm:text-sm font-medium text-gray-700 mb-2">Notes (Optional)</label>
-                            <textarea name="admin_notes" id="approve_notes" rows="3"
-                                      placeholder="Add any notes about this approval..."
-                                      class="w-full px-3 sm:px-4 py-2 text-sm sm:text-base border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"></textarea>
+                @if($leaveRequest->type === 'offset' && isset($hasNegativeBalance) && $hasNegativeBalance)
+                    <!-- Force Accept Form (for offset with negative balance) -->
+                    <div class="bg-white rounded-lg shadow border border-orange-200 p-4 sm:p-6">
+                        <div class="mb-3 sm:mb-4 p-3 bg-orange-50 border border-orange-200 rounded-lg">
+                            <div class="flex items-start">
+                                <svg class="h-5 w-5 text-orange-600 mt-0.5 mr-2 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
+                                </svg>
+                                <div class="text-xs sm:text-sm text-orange-800">
+                                    <strong>Warning:</strong> This employee has a negative overtime balance. Approving this offset request will add to the negative balance.
+                                </div>
+                            </div>
                         </div>
-                        <button type="submit"
-                                class="w-full px-4 py-2 text-sm sm:text-base bg-green-600 text-white rounded-lg hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500">
-                            <svg class="h-4 w-4 sm:h-5 sm:w-5 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
-                            </svg>
-                            Approve Request
-                        </button>
-                    </form>
-                </div>
+                        <h3 class="text-base sm:text-lg font-bold text-gray-900 mb-3 sm:mb-4">Force Accept Request</h3>
+                        <form action="{{ route('admin.leave-requests.force-accept', $leaveRequest) }}" method="POST" class="space-y-3 sm:space-y-4">
+                            @csrf
+                            <div>
+                                <label for="force_accept_notes" class="block text-xs sm:text-sm font-medium text-gray-700 mb-2">Notes (Optional)</label>
+                                <textarea name="admin_notes" id="force_accept_notes" rows="3"
+                                          placeholder="Add any notes about this force acceptance..."
+                                          class="w-full px-3 sm:px-4 py-2 text-sm sm:text-base border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500"></textarea>
+                            </div>
+                            <button type="submit"
+                                    class="w-full px-4 py-2 text-sm sm:text-base bg-orange-600 text-white rounded-lg hover:bg-orange-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-orange-500">
+                                <svg class="h-4 w-4 sm:h-5 sm:w-5 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+                                </svg>
+                                Force Accept Request
+                            </button>
+                        </form>
+                    </div>
+                @else
+                    <!-- Normal Approve Form -->
+                    <div class="bg-white rounded-lg shadow border border-gray-200 p-4 sm:p-6">
+                        <h3 class="text-base sm:text-lg font-bold text-gray-900 mb-3 sm:mb-4">Approve Request</h3>
+                        <form action="{{ route('admin.leave-requests.approve', $leaveRequest) }}" method="POST" class="space-y-3 sm:space-y-4">
+                            @csrf
+                            <div>
+                                <label for="approve_notes" class="block text-xs sm:text-sm font-medium text-gray-700 mb-2">Notes (Optional)</label>
+                                <textarea name="admin_notes" id="approve_notes" rows="3"
+                                          placeholder="Add any notes about this approval..."
+                                          class="w-full px-3 sm:px-4 py-2 text-sm sm:text-base border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"></textarea>
+                            </div>
+                            <button type="submit"
+                                    class="w-full px-4 py-2 text-sm sm:text-base bg-green-600 text-white rounded-lg hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500">
+                                <svg class="h-4 w-4 sm:h-5 sm:w-5 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                                </svg>
+                                Approve Request
+                            </button>
+                        </form>
+                    </div>
+                @endif
 
                 <!-- Reject Form -->
                 <div class="bg-white rounded-lg shadow border border-gray-200 p-4 sm:p-6">

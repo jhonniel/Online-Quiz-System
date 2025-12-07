@@ -135,6 +135,64 @@
                         @enderror
                     </div>
 
+                    <!-- Leave Balances (Employees Only) -->
+                    @php
+                        $currentYear = now()->year;
+                        $leaveBalance = \App\Models\LeaveBalance::where('user_id', $user->id)
+                            ->where('year', $currentYear)
+                            ->first();
+                        $vacationAllowance = old('vacation_allowance', $leaveBalance ? $leaveBalance->vacation_allowance : '');
+                        $sickAllowance = old('sick_allowance', $leaveBalance ? $leaveBalance->sick_allowance : '');
+                    @endphp
+                    <div id="leave_balances_wrapper"
+                         @if(old('role', $user->role) === 'employee') style="" @else style="display:none;" @endif>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <label for="vacation_allowance" class="block text-sm font-medium text-gray-700">
+                                    Vacation Leave Balance (Days)
+                                </label>
+                                <div class="mt-1 relative">
+                                    <input type="number"
+                                           name="vacation_allowance"
+                                           id="vacation_allowance"
+                                           step="0.01"
+                                           min="0"
+                                           value="{{ $vacationAllowance }}"
+                                           class="shadow-sm focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-gray-300 rounded-md"
+                                           placeholder="e.g. 15">
+                                </div>
+                                <p class="mt-1 text-xs text-gray-500">
+                                    Vacation leave balance for {{ $currentYear }}.
+                                </p>
+                                @error('vacation_allowance')
+                                    <p class="mt-2 text-sm text-red-600">{{ $message }}</p>
+                                @enderror
+                            </div>
+
+                            <div>
+                                <label for="sick_allowance" class="block text-sm font-medium text-gray-700">
+                                    Sick Leave Balance (Days)
+                                </label>
+                                <div class="mt-1 relative">
+                                    <input type="number"
+                                           name="sick_allowance"
+                                           id="sick_allowance"
+                                           step="0.01"
+                                           min="0"
+                                           value="{{ $sickAllowance }}"
+                                           class="shadow-sm focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-gray-300 rounded-md"
+                                           placeholder="e.g. 10">
+                                </div>
+                                <p class="mt-1 text-xs text-gray-500">
+                                    Sick leave balance for {{ $currentYear }}.
+                                </p>
+                                @error('sick_allowance')
+                                    <p class="mt-2 text-sm text-red-600">{{ $message }}</p>
+                                @enderror
+                            </div>
+                        </div>
+                    </div>
+
                     <!-- Active Status -->
                     <div class="flex items-center">
                         <input type="checkbox" name="is_active" id="is_active" value="1" {{ old('is_active', $user->is_active) ? 'checked' : '' }}
@@ -220,6 +278,22 @@ document.addEventListener('DOMContentLoaded', function() {
         roleSelect.addEventListener('change', toggleRequiredHours);
         // Initialize on load
         toggleRequiredHours();
+    }
+
+    // Show Leave Balances only for employees
+    const leaveBalancesWrapper = document.getElementById('leave_balances_wrapper');
+    if (roleSelect && leaveBalancesWrapper) {
+        function toggleLeaveBalances() {
+            if (roleSelect.value === 'employee') {
+                leaveBalancesWrapper.style.display = '';
+            } else {
+                leaveBalancesWrapper.style.display = 'none';
+            }
+        }
+
+        roleSelect.addEventListener('change', toggleLeaveBalances);
+        // Initialize on load
+        toggleLeaveBalances();
     }
 });
 </script>
