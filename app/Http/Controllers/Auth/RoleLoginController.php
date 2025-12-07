@@ -47,37 +47,40 @@ class RoleLoginController extends Controller
         $credentials = $request->only('email', 'password');
         $remember = $request->boolean('remember');
 
+        // Check if user exists before attempting authentication
+        $user = \App\Models\User::where('email', $request->email)->first();
+
+        // If user exists but is not approved, show approval message
+        if ($user && !$user->is_approved) {
+            if ($request->ajax() || $request->expectsJson()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Contact admin to activate your account',
+                    'type' => 'error'
+                ], 403);
+            }
+            return redirect()->back()
+                ->withInput($request->only('email'))
+                ->withErrors(['login' => ['Contact admin to activate your account']]);
+        }
+
+        // Attempt authentication
         if (Auth::attempt($credentials, $remember)) {
             $user = Auth::user();
 
             // Check if user is active
             if (!$user->is_active) {
                 Auth::logout();
-                if ($request->ajax()) {
+                if ($request->ajax() || $request->expectsJson()) {
                     return response()->json([
                         'success' => false,
                         'message' => 'Your account has been disabled. Please contact an administrator.',
                         'type' => 'error'
                     ], 403);
                 }
-                throw ValidationException::withMessages([
-                    'email' => ['Your account has been disabled. Please contact an administrator.'],
-                ]);
-            }
-
-            // Check if user is approved
-            if (!$user->is_approved) {
-                Auth::logout();
-                if ($request->ajax()) {
-                    return response()->json([
-                        'success' => false,
-                        'message' => 'Your account is pending admin approval. Please wait for approval before logging in.',
-                        'type' => 'warning'
-                    ], 403);
-                }
-                throw ValidationException::withMessages([
-                    'email' => ['Your account is pending admin approval. Please wait for approval before logging in.'],
-                ]);
+                return redirect()->back()
+                    ->withInput($request->only('email'))
+                    ->withErrors(['login' => ['Your account has been disabled. Please contact an administrator.']]);
             }
 
             $request->session()->regenerate();
@@ -100,17 +103,18 @@ class RoleLoginController extends Controller
             }
         }
 
-        if ($request->ajax()) {
+        // Credentials don't match
+        if ($request->ajax() || $request->expectsJson()) {
             return response()->json([
                 'success' => false,
-                'message' => 'The provided credentials do not match our records.',
+                'message' => 'Email and password is not match',
                 'type' => 'error'
             ], 422);
         }
 
-        throw ValidationException::withMessages([
-            'email' => ['The provided credentials do not match our records.'],
-        ]);
+        return redirect()->back()
+            ->withInput($request->only('email'))
+            ->withErrors(['login' => ['Email and password is not match']]);
     }
 
     public function logout(Request $request)

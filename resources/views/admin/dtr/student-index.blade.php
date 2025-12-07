@@ -96,15 +96,26 @@
     @endif
 
     <!-- Import Section -->
-    <div class="bg-white rounded-2xl shadow-xl border border-gray-200 p-4 sm:p-6">
-        <div class="flex items-center justify-between mb-4">
+    <div class="bg-white rounded-2xl shadow-xl border border-gray-200 overflow-hidden">
+        <!-- Collapsible Header -->
+        <button type="button" 
+                class="w-full flex items-center justify-between px-4 sm:px-6 py-4 bg-gray-50 hover:bg-gray-100 transition text-left"
+                onclick="toggleImportSection()"
+                aria-expanded="false"
+                aria-controls="import-section">
             <div>
                 <h2 class="text-lg font-semibold text-gray-900">Import DTR Records</h2>
                 <p class="text-sm text-gray-600 mt-1">Upload a CSV file to import multiple student time records at once</p>
             </div>
-        </div>
+            <svg id="import-chevron" class="h-5 w-5 text-gray-500 transform transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+            </svg>
+        </button>
 
-        <form action="{{ route('admin.dtr.import') }}" method="POST" enctype="multipart/form-data" class="space-y-4">
+        <!-- Collapsible Content -->
+        <div id="import-section" class="hidden border-t border-gray-200">
+            <div class="p-4 sm:p-6">
+                <form action="{{ route('admin.dtr.import') }}" method="POST" enctype="multipart/form-data" class="space-y-4">
             @csrf
             <div class="flex flex-col sm:flex-row sm:items-end gap-4">
                 <div class="sm:flex-1">
@@ -137,19 +148,30 @@
                             <ul class="list-disc list-inside space-y-1">
                                 <li><strong>Student Email</strong> - Must match an existing student email</li>
                                 <li><strong>Date</strong> - Format: YYYY-MM-DD (e.g., 2024-12-01)</li>
-                                <li><strong>Worked Hours</strong> - Base hours worked for that day in <strong>HH:MM</strong> (e.g., 08:00, 07:30)</li>
-                                <li><strong>Added Time From Note</strong> - Extra hours to add in <strong>HH:MM</strong> (e.g., 01:15)</li>
-                                <li><strong>Total Hours</strong> - Optional, will be recalculated as Worked Hours + Added Time From Note</li>
-                                <li><strong>Overtime Hours</strong> - Optional, system will recalculate as (Total Hours − 08:00) when Total Hours &gt; 08:00</li>
-                                <li><strong>Status</strong> - present, absent, late, half_day, on_leave (optional, defaults to present)</li>
+                                <li><strong>Worked Hours</strong> - Base hours worked for that day in <strong>HH:MM</strong> format (e.g., 08:00, 07:30)</li>
+                                <li><strong>Added Time From Note</strong> - Extra hours to add in <strong>HH:MM</strong> format (e.g., 01:15, 00:00)</li>
+                                <li><strong>Total Hours</strong> - <em>Optional, ignored</em> - System will automatically calculate as: <strong>Worked Hours + Added Time From Note</strong></li>
+                                <li><strong>Overtime Hours</strong> - <em>Optional, ignored</em> - System will automatically calculate as: <strong>(Total Hours − 08:00)</strong> when Total Hours &gt; 08:00, otherwise 00:00</li>
+                                <li><strong>Status</strong> - One of: <strong>present</strong>, <strong>absent</strong>, <strong>late</strong>, <strong>half_day</strong>, <strong>on_leave</strong>, <strong>travel</strong> (optional, defaults to "present" if invalid)</li>
                                 <li><strong>Remarks</strong> - Any additional notes (optional)</li>
                             </ul>
+                            <div class="mt-3 p-2 bg-blue-100 rounded border border-blue-200">
+                                <p class="font-semibold text-blue-900 mb-1">Important Notes:</p>
+                                <ul class="list-disc list-inside space-y-1 text-blue-800">
+                                    <li>Import uses the <strong>same calculation logic as manual entry</strong></li>
+                                    <li>If a DTR record already exists for a student on a given date, it will be <strong>skipped</strong> (not updated)</li>
+                                    <li>Total Hours and Overtime Hours columns are ignored - they are automatically recalculated</li>
+                                    <li>Weekly deficit is automatically calculated for each imported record</li>
+                                </ul>
+                            </div>
                             <p class="mt-2">Download the template CSV file for reference.</p>
                         </div>
                     </div>
                 </div>
             </div>
-        </form>
+                </form>
+            </div>
+        </div>
     </div>
 
     <!-- Filters -->
@@ -472,6 +494,27 @@
 </div>
 
 <script>
+    // Toggle Import Section
+    function toggleImportSection() {
+        const section = document.getElementById('import-section');
+        const chevron = document.getElementById('import-chevron');
+        const button = event.currentTarget;
+        
+        if (section && chevron) {
+            const isHidden = section.classList.contains('hidden');
+            
+            if (isHidden) {
+                section.classList.remove('hidden');
+                chevron.classList.add('rotate-180');
+                button.setAttribute('aria-expanded', 'true');
+            } else {
+                section.classList.add('hidden');
+                chevron.classList.remove('rotate-180');
+                button.setAttribute('aria-expanded', 'false');
+            }
+        }
+    }
+
     document.addEventListener('DOMContentLoaded', function () {
         const root = document.getElementById('dtr-groups-root');
         if (!root) {

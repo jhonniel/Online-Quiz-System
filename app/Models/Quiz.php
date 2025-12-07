@@ -16,6 +16,7 @@ class Quiz extends Model
         'quiz_code',
         'time_limit',
         'total_questions',
+        'questions_to_show',
         'is_active',
         'created_by',
     ];

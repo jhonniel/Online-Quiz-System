@@ -57,6 +57,7 @@ class QuizController extends Controller
             'description' => 'nullable|string',
             'time_limit' => 'nullable|integer|min:1',
             'topic' => 'nullable|string',
+            'questions_to_show' => 'nullable|integer|min:1',
             'is_active' => 'required|in:0,1',
             'questions' => 'required|array|min:1',
             'questions.*.question_text' => 'required|string',
@@ -69,12 +70,21 @@ class QuizController extends Controller
             'questions.*.correct_answer' => 'required_if:questions.*.question_type,multiple_choice|nullable|in:A,B,C,D',
         ]);
 
+        // Validate questions_to_show doesn't exceed total questions
+        $totalQuestions = count($request->questions);
+        if ($request->filled('questions_to_show') && $request->questions_to_show > $totalQuestions) {
+            return redirect()->back()
+                ->withErrors(['questions_to_show' => "Questions to show ({$request->questions_to_show}) cannot exceed the total number of questions ({$totalQuestions})."])
+                ->withInput();
+        }
+
         $quiz = Quiz::create([
             'title' => $request->title,
             'description' => $request->description,
             'quiz_code' => $this->generateQuizCode(),
             'time_limit' => $request->time_limit,
             'topic' => $request->topic,
+            'questions_to_show' => $request->filled('questions_to_show') ? (int) $request->questions_to_show : null,
             'is_active' => (bool) $request->is_active,
             'total_questions' => count($request->questions),
             'created_by' => Auth::id(),
@@ -122,6 +132,7 @@ class QuizController extends Controller
             'description' => 'nullable|string',
             'time_limit' => 'nullable|integer|min:1',
             'topic' => 'nullable|string',
+            'questions_to_show' => 'nullable|integer|min:1',
             'is_active' => 'required|in:0,1',
             'questions' => 'nullable|array',
             'questions.*.question_text' => 'required|string',
@@ -134,11 +145,20 @@ class QuizController extends Controller
             'questions.*.correct_answer' => 'required_if:questions.*.question_type,multiple_choice|nullable|in:A,B,C,D',
         ]);
 
+        // Validate questions_to_show doesn't exceed total questions
+        $totalQuestions = $quiz->questions()->count();
+        if ($request->filled('questions_to_show') && $request->questions_to_show > $totalQuestions) {
+            return redirect()->back()
+                ->withErrors(['questions_to_show' => "Questions to show ({$request->questions_to_show}) cannot exceed the total number of questions ({$totalQuestions})."])
+                ->withInput();
+        }
+
         $quiz->update([
             'title' => $request->title,
             'description' => $request->description,
             'time_limit' => $request->time_limit,
             'topic' => $request->topic,
+            'questions_to_show' => $request->filled('questions_to_show') ? (int) $request->questions_to_show : null,
             'is_active' => (bool) $request->is_active,
         ]);
 

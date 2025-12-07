@@ -156,7 +156,7 @@
                         <input id="password" name="password" type="password" autocomplete="current-password" required
                                class="block w-full pl-10 pr-10 py-4 border-2 border-gray-300 rounded-lg placeholder-gray-500 text-lg font-medium focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500 transition-colors duration-200"
                                placeholder="Enter your password">
-                        <button type="button" onclick="togglePassword()" class="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600 transition-colors duration-200">
+                        <button type="button" onclick="return togglePassword(event);" class="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600 transition-colors duration-200" aria-label="Toggle password visibility">
                             <svg id="eye-icon" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
@@ -191,11 +191,34 @@
                 </div>
 
                 <!-- Submit Button -->
-                <div class="mb-6">
+                <div class="mb-4">
                     <button type="submit"
                             class="w-full flex justify-center items-center py-4 px-6 border border-transparent rounded-lg shadow-lg text-lg font-bold text-white bg-gradient-to-r from-pink-500 to-pink-600 hover:from-pink-600 hover:to-pink-700 focus:outline-none focus:ring-2 focus:ring-pink-500 focus:ring-offset-2 transition-all duration-200">
                         LOGIN
                     </button>
+                </div>
+                
+                <!-- Error Message Below Login Button -->
+                <div id="login-error-below-button" class="mb-6">
+                    @if($errors->has('login'))
+                        <div class="p-3 bg-red-50 border border-red-200 rounded-lg">
+                            <div class="flex items-center">
+                                <svg class="w-5 h-5 text-red-500 mr-2 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd" />
+                                </svg>
+                                <span class="text-sm text-red-700 font-medium">{{ $errors->first('login') }}</span>
+                            </div>
+                        </div>
+                    @elseif(session('errors') && session('errors')->has('login'))
+                        <div class="p-3 bg-red-50 border border-red-200 rounded-lg">
+                            <div class="flex items-center">
+                                <svg class="w-5 h-5 text-red-500 mr-2 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd" />
+                                </svg>
+                                <span class="text-sm text-red-700 font-medium">{{ session('errors')->first('login') }}</span>
+                            </div>
+                        </div>
+                    @endif
                 </div>
                 </form>
                 </div>
@@ -216,42 +239,167 @@
 </div>
 
 <script>
+// Password toggle functionality for login - defined globally
+function togglePassword(event) {
+    if (event) {
+        event.preventDefault();
+        event.stopPropagation();
+    }
+    
+    const passwordInput = document.getElementById('password');
+    const eyeIcon = document.getElementById('eye-icon');
+
+    if (!passwordInput) {
+        console.error('Password input not found');
+        return false;
+    }
+    
+    if (!eyeIcon) {
+        console.error('Eye icon not found');
+        return false;
+    }
+
+    // Store current value to preserve it
+    const currentValue = passwordInput.value;
+
+    // Toggle password visibility
+    if (passwordInput.type === 'password') {
+        passwordInput.type = 'text';
+        // Show eye-slash icon (password is visible)
+        eyeIcon.innerHTML = `
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.878 9.878L3 3m6.878 6.878L21 21" />
+        `;
+    } else {
+        passwordInput.type = 'password';
+        // Show normal eye icon (password is hidden)
+        eyeIcon.innerHTML = `
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+        `;
+    }
+    
+    // Restore value (in case browser cleared it)
+    passwordInput.value = currentValue;
+    
+    // Focus back on input
+    passwordInput.focus();
+    
+    console.log('Password type changed to:', passwordInput.type, 'Value length:', passwordInput.value.length);
+    
+    return false;
+}
+
 document.addEventListener('DOMContentLoaded', function() {
     // Add loading state to submit button
     const form = document.querySelector('form');
     const submitButton = document.querySelector('button[type="submit"]');
 
-    form.addEventListener('submit', function() {
-        submitButton.disabled = true;
-        submitButton.innerHTML = `
-            <svg class="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-            </svg>
-            Signing in...
-        `;
-    });
+    if (form && submitButton) {
+        form.addEventListener('submit', function() {
+            submitButton.disabled = true;
+            submitButton.innerHTML = `
+                <svg class="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                Signing in...
+            `;
+        });
+    }
+
+    // Also add event listener for password toggle button as fallback
+    const togglePasswordBtn = document.querySelector('button[onclick="togglePassword()"]');
+    if (togglePasswordBtn) {
+        togglePasswordBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            console.log('Toggle button clicked via event listener');
+            togglePassword();
+        });
+    } else {
+        // Try alternative selector
+        const passwordField = document.getElementById('password');
+        if (passwordField) {
+            const parentDiv = passwordField.closest('.relative');
+            if (parentDiv) {
+                const toggleBtn = parentDiv.querySelector('button[type="button"]');
+                if (toggleBtn) {
+                    toggleBtn.addEventListener('click', function(e) {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        console.log('Toggle button clicked via alternative selector');
+                        togglePassword();
+                    });
+                }
+            }
+        }
+    }
 });
 
     // Simple Error Hint System
     function showErrorHint(errorText, isLogin = true) {
-        const errorHint = document.getElementById(isLogin ? 'login-error-hint' : 'register-error-hint');
-        const errorTextElement = document.getElementById(isLogin ? 'login-error-text' : 'register-error-text');
-
-        if (errorHint && errorTextElement && errorText) {
-            errorTextElement.textContent = errorText;
-            errorHint.classList.remove('hidden');
+        if (isLogin) {
+            // Show error below the LOGIN button
+            const errorBelowButton = document.getElementById('login-error-below-button');
+            if (errorBelowButton && errorText) {
+                errorBelowButton.innerHTML = `
+                    <div class="p-3 bg-red-50 border border-red-200 rounded-lg">
+                        <div class="flex items-center">
+                            <svg class="w-5 h-5 text-red-500 mr-2 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                                <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd" />
+                            </svg>
+                            <span class="text-sm text-red-700 font-medium">${errorText}</span>
+                        </div>
+                    </div>
+                `;
+            }
+        } else {
+            // For register form, use the existing error hint
+            const errorHint = document.getElementById('register-error-hint');
+            const errorTextElement = document.getElementById('register-error-text');
+            if (errorHint && errorTextElement && errorText) {
+                errorTextElement.textContent = errorText;
+                errorHint.classList.remove('hidden');
+            }
         }
     }
 
     function hideErrorHint(isLogin = true) {
-        const errorHint = document.getElementById(isLogin ? 'login-error-hint' : 'register-error-hint');
-        if (errorHint) {
-            errorHint.classList.add('hidden');
+        if (isLogin) {
+            // Clear error below the LOGIN button
+            const errorBelowButton = document.getElementById('login-error-below-button');
+            if (errorBelowButton) {
+                errorBelowButton.innerHTML = '';
+            }
+        } else {
+            const errorHint = document.getElementById('register-error-hint');
+            if (errorHint) {
+                errorHint.classList.add('hidden');
+            }
         }
     }
 
     function checkForErrors() {
+        // Check for login error specifically (below login button)
+        const loginErrorBelowButton = document.querySelector('#login-error-below-button .text-red-700');
+        if (loginErrorBelowButton) {
+            const errorText = loginErrorBelowButton.textContent.trim();
+            if (errorText) {
+                // Error already displayed below button, no need to show again
+                return;
+            }
+        }
+
+        // Check for login error in the form (from server-side validation)
+        const loginErrorElement = document.querySelector('#login-form .text-red-700');
+        if (loginErrorElement) {
+            const errorText = loginErrorElement.textContent.trim();
+            if (errorText) {
+                showErrorHint(errorText, true);
+                return;
+            }
+        }
+
         // Find all error messages on the page
         const allErrorElements = document.querySelectorAll('.text-red-600, .text-red-500');
 
@@ -437,24 +585,6 @@ document.addEventListener('DOMContentLoaded', function() {
         console.error('Register tab element not found!');
     }
 
-    // Password toggle functionality for login
-    function togglePassword() {
-        const passwordInput = document.getElementById('password');
-        const eyeIcon = document.getElementById('eye-icon');
-
-        if (passwordInput.type === 'password') {
-            passwordInput.type = 'text';
-            eyeIcon.innerHTML = `
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.878 9.878L3 3m6.878 6.878L21 21" />
-            `;
-        } else {
-            passwordInput.type = 'password';
-            eyeIcon.innerHTML = `
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-            `;
-        }
-    }
 
     // Password toggle functionality for registration
     function toggleRegPassword() {
@@ -563,13 +693,20 @@ document.addEventListener('DOMContentLoaded', function() {
                         'X-Requested-With': 'XMLHttpRequest'
                     }
                 })
-                .then(response => {
+                .then(async response => {
+                    const data = await response.json();
+                    
                     if (!response.ok) {
-                        throw new Error(`HTTP error! status: ${response.status}`);
+                        // Show error message below login button
+                        const errorMessage = data.message || 'An error occurred during login. Please try again.';
+                        showErrorHint(errorMessage, true);
+                        
+                        // Reset button state
+                        submitButton.disabled = false;
+                        submitButton.innerHTML = originalText;
+                        return;
                     }
-                    return response.json();
-                })
-                .then(data => {
+                    
                     if (data.success) {
                         ToastNotification.success(data.message);
                         // Redirect after successful login
@@ -577,12 +714,8 @@ document.addEventListener('DOMContentLoaded', function() {
                             window.location.href = data.redirect_url || '/dashboard';
                         }, 1000);
                     } else {
-                        // Show error/warning toast
-                        if (data.type === 'warning') {
-                            ToastNotification.warning(data.message);
-                        } else {
-                            ToastNotification.error(data.message);
-                        }
+                        // Show error message below login button
+                        showErrorHint(data.message, true);
 
                         // Reset button state
                         submitButton.disabled = false;
@@ -607,14 +740,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     }
 
                     let errorMessage = 'An error occurred during login. Please try again.';
-
-                    if (error.message.includes('422')) {
-                        errorMessage = 'Invalid credentials. Please check your email and password.';
-                    } else if (error.message.includes('403')) {
-                        errorMessage = 'Account access denied. Please contact an administrator.';
-                    }
-
-                    ToastNotification.error(errorMessage);
+                    showErrorHint(errorMessage, true);
 
                     // Reset button state
                     submitButton.disabled = false;

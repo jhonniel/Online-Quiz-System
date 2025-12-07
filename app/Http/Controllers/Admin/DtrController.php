@@ -128,8 +128,15 @@ class DtrController extends Controller
             // Overtime is auto-computed as (Total Hours - 8:00) when Total Hours > 8:00
             'overtime_hours' => 'nullable|date_format:H:i',
             'status' => 'required|in:present,absent,late,half_day,on_leave,travel',
+            'is_travel' => 'nullable|boolean',
             'remarks' => 'nullable|string|max:1000',
         ]);
+
+        // Handle travel checkbox - override status if is_travel is checked
+        $status = $request->status;
+        if ($request->boolean('is_travel')) {
+            $status = 'travel';
+        }
 
         // Verify user is an employee
         $employee = User::where('id', $request->user_id)
@@ -184,7 +191,7 @@ class DtrController extends Controller
                 'added_time_from_note' => $addedDecimal,
                 'total_hours' => $totalDecimal,
                 'overtime_hours' => $overtimeDecimal,
-                'status' => $request->status,
+                'status' => $status,
                 'remarks' => $request->remarks,
             ]);
 
@@ -238,8 +245,15 @@ class DtrController extends Controller
             'added_time_from_note' => 'nullable|date_format:H:i',
             'total_hours' => 'required|date_format:H:i',
             'status' => 'required|in:present,absent,late,half_day,on_leave,travel',
+            'is_travel' => 'nullable|boolean',
             'remarks' => 'nullable|string|max:1000',
         ]);
+
+        // Handle travel checkbox - override status if is_travel is checked
+        $status = $request->status;
+        if ($request->boolean('is_travel')) {
+            $status = 'travel';
+        }
 
         // Verify user is an employee
         $employee = User::where('id', $request->user_id)
@@ -281,7 +295,7 @@ class DtrController extends Controller
                 'added_time_from_note' => $addedDecimal,
                 'total_hours' => $totalDecimal,
                 'overtime_hours' => $overtimeDecimal,
-                'status' => $request->status,
+                'status' => $status,
                 'remarks' => $request->remarks,
             ]);
 
@@ -337,10 +351,11 @@ class DtrController extends Controller
                 }
 
                 try {
-                    // Expected CSV format:
+                    // Expected CSV format (same calculation logic as manual creation):
                     // Employee Email, Date (YYYY-MM-DD), Worked Hours (HH:MM), Added Time From Note (HH:MM),
-                    // Total Hours (HH:MM - optional, will be recalculated), Overtime (HH:MM - optional),
-                    // Status, Remarks
+                    // Total Hours (HH:MM - optional, ignored, will be recalculated as Worked + Added),
+                    // Overtime (HH:MM - optional, ignored, will be recalculated as Total - 8:00 if > 8:00),
+                    // Status (present/absent/late/half_day/on_leave/travel), Remarks
                     $email = trim($row[0] ?? '');
                     $date = trim($row[1] ?? '');
                     $workedHours = trim($row[2] ?? '00:00');
@@ -408,38 +423,37 @@ class DtrController extends Controller
                         ? $totalHoursValue - $standardHours
                         : 0;
 
-                    // Validate status
-                    $validStatuses = ['present', 'absent', 'late', 'half_day', 'on_leave'];
+                    // Validate status - same as manual creation
+                    $validStatuses = ['present', 'absent', 'late', 'half_day', 'on_leave', 'travel'];
                     if (!in_array($status, $validStatuses)) {
+                        $errors[] = "Invalid status for {$email} on {$date}: {$status}. Using 'present' as default.";
                         $status = 'present';
                     }
 
-                    // Check if record already exists
+                    // Check if record already exists - same behavior as manual creation (skip/error instead of update)
                     $existingDtr = Dtr::where('user_id', $employee->id)
                         ->whereDate('date', $dateObj->format('Y-m-d'))
                         ->first();
 
                     if ($existingDtr) {
-                        // Update existing record
-                        $existingDtr->update([
-                            'added_time_from_note' => $addedTimeFromNoteValue,
-                            'total_hours' => $totalHoursValue,
-                            'overtime_hours' => $overtimeHoursValue,
-                            'status' => $status,
-                            'remarks' => $remarks,
-                        ]);
-                    } else {
-                        // Create new record
-                        Dtr::create([
-                            'user_id' => $employee->id,
-                            'date' => $dateObj->format('Y-m-d'),
-                            'added_time_from_note' => $addedTimeFromNoteValue,
-                            'total_hours' => $totalHoursValue,
-                            'overtime_hours' => $overtimeHoursValue,
-                            'status' => $status,
-                            'remarks' => $remarks,
-                        ]);
+                        $errors[] = "DTR record already exists for {$email} on {$date}. Skipping.";
+                        $skipped++;
+                        continue;
                     }
+
+                    // Create new record - same logic as manual creation
+                    Dtr::create([
+                        'user_id' => $employee->id,
+                        'date' => $dateObj->format('Y-m-d'),
+                        'added_time_from_note' => $addedTimeFromNoteValue,
+                        'total_hours' => $totalHoursValue,
+                        'overtime_hours' => $overtimeHoursValue,
+                        'status' => $status,
+                        'remarks' => $remarks,
+                    ]);
+
+                    // Calculate and store weekly deficit - same as manual creation
+                    $this->calculateAndStoreWeeklyDeficit($employee->id, $dateObj);
 
                     // Track affected user
                     if (!in_array($employee->id, $affectedUserIds)) {
@@ -457,21 +471,8 @@ class DtrController extends Controller
             fclose($handle);
             DB::commit();
 
-            // Recalculate deficits for all affected users and weeks
-            foreach ($affectedUserIds as $userId) {
-                // Get all unique weeks for this user that have DTR records
-                $weeks = Dtr::where('user_id', $userId)
-                    ->get()
-                    ->map(function($dtr) {
-                        return $dtr->date->copy()->startOfWeek()->format('Y-m-d');
-                    })
-                    ->unique()
-                    ->values();
-
-                foreach ($weeks as $weekStart) {
-                    $this->calculateAndStoreWeeklyDeficit($userId, Carbon::parse($weekStart));
-                }
-            }
+            // Note: Weekly deficits are already calculated per record (same as manual creation)
+            // No need to recalculate all weeks since we calculate for each imported record
 
             $message = "Successfully imported {$imported} DTR record(s).";
             if ($skipped > 0) {
@@ -502,14 +503,16 @@ class DtrController extends Controller
                 'Date (YYYY-MM-DD)',
                 'Worked Hours (HH:MM)',
                 'Added Time From Note (HH:MM)',
-                'Total Hours (HH:MM, optional)',
-                'Overtime (HH:MM, optional)',
-                'Status',
+                'Total Hours (HH:MM, ignored - auto-calculated)',
+                'Overtime (HH:MM, ignored - auto-calculated)',
+                'Status (present/absent/late/half_day/on_leave/travel)',
                 'Remarks',
             ],
-            ['employee@example.com', '2024-12-01', '08:00', '00:00', '08:00', '00:00', 'present', 'Regular work day'],
-            ['employee@example.com', '2024-12-02', '08:00', '02:00', '10:00', '02:00', 'present', 'Overtime work'],
-            ['employee@example.com', '2024-12-03', '04:00', '00:00', '04:00', '00:00', 'half_day', 'Left early'],
+            ['employee@example.com', '2024-12-01', '08:00', '00:00', '', '', 'present', 'Regular work day'],
+            ['employee@example.com', '2024-12-02', '08:00', '02:00', '', '', 'present', 'Overtime work - Total will be 10:00, Overtime will be 02:00'],
+            ['employee@example.com', '2024-12-03', '04:00', '00:00', '', '', 'half_day', 'Left early'],
+            ['employee@example.com', '2024-12-04', '08:00', '00:00', '', '', 'on_leave', 'Vacation leave'],
+            ['employee@example.com', '2024-12-05', '08:00', '00:00', '', '', 'travel', 'Business trip'],
         ];
 
         $filename = 'dtr_import_template_' . date('Y-m-d') . '.csv';

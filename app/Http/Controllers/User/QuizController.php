@@ -125,8 +125,18 @@ class QuizController extends Controller
 
         $quiz->load(['questions.answers']);
 
-        // Randomize questions order for each user
-        $questions = $quiz->questions->shuffle();
+        // Get all questions
+        $allQuestions = $quiz->questions;
+        
+        // If questions_to_show is set, randomly select that many questions
+        // Otherwise, show all questions
+        if ($quiz->questions_to_show && $quiz->questions_to_show > 0 && $quiz->questions_to_show < $allQuestions->count()) {
+            // Randomly select the specified number of questions
+            $questions = $allQuestions->shuffle()->take($quiz->questions_to_show);
+        } else {
+            // Show all questions (shuffled)
+            $questions = $allQuestions->shuffle();
+        }
 
         // Randomize answer choices for each question and create randomized options
         $questions->each(function ($question) {
