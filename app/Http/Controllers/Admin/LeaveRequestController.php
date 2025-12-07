@@ -91,6 +91,7 @@ class LeaveRequestController extends Controller
         $balances = null;
         $overtimeFormatted = null;
         $studentTime = null;
+        $hasNegativeBalance = false;
 
         if ($user->role === 'employee') {
             // Compute current-year leave balances and overtime for this employee

@@ -681,12 +681,21 @@
                                           placeholder="Add any notes about this force approval..."
                                           class="w-full px-3 sm:px-4 py-2 text-sm sm:text-base border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500"></textarea>
                             </div>
-                            <button type="submit"
-                                    class="w-full px-4 py-2 text-sm sm:text-base bg-orange-600 text-white rounded-lg hover:bg-orange-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-orange-500">
-                                <svg class="h-4 w-4 sm:h-5 sm:w-5 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
-                                </svg>
-                                Force Approve Request
+                            <button type="submit" id="force-approve-btn"
+                                    class="w-full px-4 py-2 text-sm sm:text-base bg-orange-600 text-white rounded-lg hover:bg-orange-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-orange-500 disabled:opacity-50 disabled:cursor-not-allowed">
+                                <span class="force-approve-content flex items-center justify-center">
+                                    <svg class="h-4 w-4 sm:h-5 sm:w-5 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+                                    </svg>
+                                    Force Approve Request
+                                </span>
+                                <span class="force-approve-loading hidden flex items-center justify-center">
+                                    <svg class="animate-spin h-4 w-4 sm:h-5 sm:w-5 mr-2 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                    </svg>
+                                    Processing...
+                                </span>
                             </button>
                         </form>
                     </div>
@@ -702,12 +711,21 @@
                                           placeholder="Add any notes about this approval..."
                                           class="w-full px-3 sm:px-4 py-2 text-sm sm:text-base border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"></textarea>
                             </div>
-                            <button type="submit"
-                                    class="w-full px-4 py-2 text-sm sm:text-base bg-green-600 text-white rounded-lg hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500">
-                                <svg class="h-4 w-4 sm:h-5 sm:w-5 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
-                                </svg>
-                                Approve Request
+                            <button type="submit" id="approve-btn"
+                                    class="w-full px-4 py-2 text-sm sm:text-base bg-green-600 text-white rounded-lg hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 disabled:opacity-50 disabled:cursor-not-allowed">
+                                <span class="approve-content flex items-center justify-center">
+                                    <svg class="h-4 w-4 sm:h-5 sm:w-5 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                                    </svg>
+                                    Approve Request
+                                </span>
+                                <span class="approve-loading hidden flex items-center justify-center">
+                                    <svg class="animate-spin h-4 w-4 sm:h-5 sm:w-5 mr-2 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                    </svg>
+                                    Processing...
+                                </span>
                             </button>
                         </form>
                     </div>
@@ -724,12 +742,21 @@
                                       placeholder="Please provide a reason for rejection..."
                                       class="w-full px-3 sm:px-4 py-2 text-sm sm:text-base border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500"></textarea>
                         </div>
-                        <button type="submit"
-                                class="w-full px-4 py-2 text-sm sm:text-base bg-red-600 text-white rounded-lg hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500">
-                            <svg class="h-4 w-4 sm:h-5 sm:w-5 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-                            </svg>
-                            Reject Request
+                        <button type="submit" id="reject-btn"
+                                class="w-full px-4 py-2 text-sm sm:text-base bg-red-600 text-white rounded-lg hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 disabled:opacity-50 disabled:cursor-not-allowed">
+                            <span class="reject-content flex items-center justify-center">
+                                <svg class="h-4 w-4 sm:h-5 sm:w-5 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                                </svg>
+                                Reject Request
+                            </span>
+                            <span class="reject-loading hidden flex items-center justify-center">
+                                <svg class="animate-spin h-4 w-4 sm:h-5 sm:w-5 mr-2 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                </svg>
+                                Processing...
+                            </span>
                         </button>
                     </form>
                 </div>
@@ -746,12 +773,21 @@
                                       placeholder="Describe what errors need to be fixed..."
                                       class="w-full px-3 sm:px-4 py-2 text-sm sm:text-base border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500"></textarea>
                         </div>
-                        <button type="submit"
-                                class="w-full px-4 py-2 text-sm sm:text-base bg-yellow-600 text-white rounded-lg hover:bg-yellow-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-yellow-500">
-                            <svg class="h-4 w-4 sm:h-5 sm:w-5 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
-                            </svg>
-                            Request Resubmission
+                        <button type="submit" id="resubmit-btn"
+                                class="w-full px-4 py-2 text-sm sm:text-base bg-yellow-600 text-white rounded-lg hover:bg-yellow-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-yellow-500 disabled:opacity-50 disabled:cursor-not-allowed">
+                            <span class="resubmit-content flex items-center justify-center">
+                                <svg class="h-4 w-4 sm:h-5 sm:w-5 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+                                </svg>
+                                Request Resubmission
+                            </span>
+                            <span class="resubmit-loading hidden flex items-center justify-center">
+                                <svg class="animate-spin h-4 w-4 sm:h-5 sm:w-5 mr-2 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                </svg>
+                                Processing...
+                            </span>
                         </button>
                     </form>
                 </div>
@@ -775,12 +811,21 @@
                                               placeholder="Add notes about what needs to be corrected..."
                                               class="w-full px-3 sm:px-4 py-2 text-sm sm:text-base border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500"></textarea>
                                 </div>
-                                <button type="submit"
-                                        class="w-full px-4 py-2 text-sm sm:text-base bg-yellow-600 text-white rounded-lg hover:bg-yellow-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-yellow-500">
-                                    <svg class="h-4 w-4 sm:h-5 sm:w-5 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
-                                    </svg>
-                                    Request Resubmission
+                                <button type="submit" id="resubmit-existing-btn"
+                                        class="w-full px-4 py-2 text-sm sm:text-base bg-yellow-600 text-white rounded-lg hover:bg-yellow-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-yellow-500 disabled:opacity-50 disabled:cursor-not-allowed">
+                                    <span class="resubmit-existing-content flex items-center justify-center">
+                                        <svg class="h-4 w-4 sm:h-5 sm:w-5 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+                                        </svg>
+                                        Request Resubmission
+                                    </span>
+                                    <span class="resubmit-existing-loading hidden flex items-center justify-center">
+                                        <svg class="animate-spin h-4 w-4 sm:h-5 sm:w-5 mr-2 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                        </svg>
+                                        Processing...
+                                    </span>
                                 </button>
                             </form>
                         @endif
@@ -790,5 +835,69 @@
         </div>
     </div>
 </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Handle Force Approve form
+    const forceApproveForm = document.querySelector('form[action*="force-accept"]');
+    if (forceApproveForm) {
+        forceApproveForm.addEventListener('submit', function(e) {
+            const btn = document.getElementById('force-approve-btn');
+            if (btn) {
+                btn.disabled = true;
+                const content = btn.querySelector('.force-approve-content');
+                const loading = btn.querySelector('.force-approve-loading');
+                if (content) content.classList.add('hidden');
+                if (loading) loading.classList.remove('hidden');
+            }
+        });
+    }
+
+    // Handle Approve form
+    const approveForm = document.querySelector('form[action*="approve"]:not([action*="force-accept"])');
+    if (approveForm) {
+        approveForm.addEventListener('submit', function(e) {
+            const btn = document.getElementById('approve-btn');
+            if (btn) {
+                btn.disabled = true;
+                const content = btn.querySelector('.approve-content');
+                const loading = btn.querySelector('.approve-loading');
+                if (content) content.classList.add('hidden');
+                if (loading) loading.classList.remove('hidden');
+            }
+        });
+    }
+
+    // Handle Reject form
+    const rejectForm = document.querySelector('form[action*="reject"]');
+    if (rejectForm) {
+        rejectForm.addEventListener('submit', function(e) {
+            const btn = document.getElementById('reject-btn');
+            if (btn) {
+                btn.disabled = true;
+                const content = btn.querySelector('.reject-content');
+                const loading = btn.querySelector('.reject-loading');
+                if (content) content.classList.add('hidden');
+                if (loading) loading.classList.remove('hidden');
+            }
+        });
+    }
+
+    // Handle Resubmit forms (both pending and existing)
+    const resubmitForms = document.querySelectorAll('form[action*="resubmit"]');
+    resubmitForms.forEach(function(form) {
+        form.addEventListener('submit', function(e) {
+            const btn = form.querySelector('button[type="submit"]');
+            if (btn) {
+                btn.disabled = true;
+                const content = btn.querySelector('.resubmit-content, .resubmit-existing-content');
+                const loading = btn.querySelector('.resubmit-loading, .resubmit-existing-loading');
+                if (content) content.classList.add('hidden');
+                if (loading) loading.classList.remove('hidden');
+            }
+        });
+    });
+});
+</script>
 @endsection
 
