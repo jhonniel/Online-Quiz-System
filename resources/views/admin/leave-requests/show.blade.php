@@ -660,7 +660,7 @@
             @if($leaveRequest->isPending())
                 <!-- Approve Form -->
                 @if($leaveRequest->type === 'offset' && isset($hasNegativeBalance) && $hasNegativeBalance)
-                    <!-- Force Accept Form (for offset with negative balance) -->
+                    <!-- Force Approve Form (for offset when duration exceeds overtime balance) -->
                     <div class="bg-white rounded-lg shadow border border-orange-200 p-4 sm:p-6">
                         <div class="mb-3 sm:mb-4 p-3 bg-orange-50 border border-orange-200 rounded-lg">
                             <div class="flex items-start">
@@ -668,17 +668,17 @@
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
                                 </svg>
                                 <div class="text-xs sm:text-sm text-orange-800">
-                                    <strong>Warning:</strong> This employee has a negative overtime balance. Approving this offset request will add to the negative balance.
+                                    <strong>Warning:</strong> The offset duration ({{ $leaveRequest->days }} days = {{ $leaveRequest->days * 8 }} hours) exceeds the employee's current overtime balance. Approving this request will result in a negative overtime balance.
                                 </div>
                             </div>
                         </div>
-                        <h3 class="text-base sm:text-lg font-bold text-gray-900 mb-3 sm:mb-4">Force Accept Request</h3>
+                        <h3 class="text-base sm:text-lg font-bold text-gray-900 mb-3 sm:mb-4">Force Approve Request</h3>
                         <form action="{{ route('admin.leave-requests.force-accept', $leaveRequest) }}" method="POST" class="space-y-3 sm:space-y-4">
                             @csrf
                             <div>
                                 <label for="force_accept_notes" class="block text-xs sm:text-sm font-medium text-gray-700 mb-2">Notes (Optional)</label>
                                 <textarea name="admin_notes" id="force_accept_notes" rows="3"
-                                          placeholder="Add any notes about this force acceptance..."
+                                          placeholder="Add any notes about this force approval..."
                                           class="w-full px-3 sm:px-4 py-2 text-sm sm:text-base border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500"></textarea>
                             </div>
                             <button type="submit"
@@ -686,7 +686,7 @@
                                 <svg class="h-4 w-4 sm:h-5 sm:w-5 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
                                 </svg>
-                                Force Accept Request
+                                Force Approve Request
                             </button>
                         </form>
                     </div>

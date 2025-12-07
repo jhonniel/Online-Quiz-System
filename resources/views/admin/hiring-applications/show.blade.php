@@ -18,25 +18,21 @@
             </div>
             <div class="flex items-center space-x-3">
                 @if($application->status == 'pending')
-                    <form action="{{ route('admin.hiring-applications.accept', $application) }}" method="POST" class="inline">
-                        @csrf
-                        <button type="submit" class="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-green-600 hover:bg-green-700">
-                            Accept
-                        </button>
-                    </form>
-                    <form action="{{ route('admin.hiring-applications.reject', $application) }}" method="POST" class="inline">
-                        @csrf
-                        <button type="submit" class="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-red-600 hover:bg-red-700">
-                            Reject
-                        </button>
-                    </form>
+                    <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-yellow-100 text-yellow-800">
+                        Pending Review
+                    </span>
                 @elseif($application->status == 'accepted')
-                    <form action="{{ route('admin.hiring-applications.schedule-interview', $application) }}" method="POST" class="inline">
-                        @csrf
-                        <button type="submit" class="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700">
-                            Schedule Interview
-                        </button>
-                    </form>
+                    <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800">
+                        Accepted
+                    </span>
+                @elseif($application->status == 'rejected')
+                    <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-red-100 text-red-800">
+                        Rejected
+                    </span>
+                @elseif($application->status == 'interview_scheduled')
+                    <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800">
+                        Interview Scheduled
+                    </span>
                 @endif
             </div>
         </div>
@@ -165,6 +161,12 @@
                         <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800">
                             Accepted
                         </span>
+                        @if($application->interview_date)
+                            <div class="mt-3">
+                                <label class="text-sm font-medium text-gray-500">Interview Date</label>
+                                <p class="mt-1 text-sm text-gray-900">{{ $application->interview_date->format('F j, Y') }}</p>
+                            </div>
+                        @endif
                     @elseif($application->status == 'rejected')
                         <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-red-100 text-red-800">
                             Rejected
@@ -242,11 +244,37 @@
                     @if($application->status == 'pending')
                         <form action="{{ route('admin.hiring-applications.accept', $application) }}" method="POST">
                             @csrf
-                            <textarea name="admin_notes" rows="3" placeholder="Add notes (optional)" 
-                                      class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm mb-3"></textarea>
+                            <div class="mb-3">
+                                <label for="interview_date" class="block text-sm font-medium text-gray-700 mb-1">
+                                    Interview Date <span class="text-red-500">*</span>
+                                </label>
+                                <input type="date" 
+                                       name="interview_date" 
+                                       id="interview_date"
+                                       required
+                                       min="{{ date('Y-m-d') }}"
+                                       value="{{ old('interview_date') }}"
+                                       class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm @error('interview_date') border-red-500 @enderror">
+                                @error('interview_date')
+                                    <p class="mt-1 text-xs text-red-600">{{ $message }}</p>
+                                @enderror
+                            </div>
+                            <div class="mb-3">
+                                <label for="admin_notes" class="block text-sm font-medium text-gray-700 mb-1">
+                                    Notes (Optional)
+                                </label>
+                                <textarea name="admin_notes" 
+                                          id="admin_notes"
+                                          rows="3" 
+                                          placeholder="Add notes (optional)" 
+                                          class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"></textarea>
+                            </div>
                             <button type="submit" class="w-full inline-flex justify-center items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-green-600 hover:bg-green-700">
-                                Accept Application
+                                Accept Application & Send Credentials
                             </button>
+                            <p class="mt-2 text-xs text-gray-500">
+                                A user account will be automatically created with role "Applicant" and credentials will be sent via email.
+                            </p>
                         </form>
                         <form action="{{ route('admin.hiring-applications.reject', $application) }}" method="POST">
                             @csrf

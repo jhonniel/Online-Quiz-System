@@ -245,6 +245,9 @@ Route::middleware(['auth'])->group(function () {
     // Leave Requests (Employee Only)
     Route::resource('leave-requests', App\Http\Controllers\User\LeaveRequestController::class)->names('user.leave-requests');
 
+    // Hiring Application (Applicant Only)
+    Route::get('/hiring-application', [App\Http\Controllers\User\HiringApplicationController::class, 'show'])->name('user.hiring-application.show');
+
     // Friendship Routes
     Route::get('/friends', [App\Http\Controllers\FriendshipController::class, 'index'])->name('friends.index');
     Route::get('/test-friends', function() {

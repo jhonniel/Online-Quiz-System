@@ -36,7 +36,7 @@
     <!-- Filters -->
     <div class="bg-white shadow rounded-lg p-4 sm:p-6 mb-6">
         <form method="GET" action="{{ route('admin.time-report.index') }}" class="space-y-4">
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                 <div>
                     <label for="employee_id" class="block text-sm font-medium text-gray-700 mb-2">Filter by Employee</label>
                     <select name="employee_id" id="employee_id" class="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
@@ -49,9 +49,20 @@
                     </select>
                 </div>
                 <div>
-                    <label for="week_start" class="block text-sm font-medium text-gray-700 mb-2">Week</label>
+                    <label for="start_date" class="block text-sm font-medium text-gray-700 mb-2">Start Date</label>
+                    <input type="date" name="start_date" id="start_date" value="{{ $startDate ?? $weekStartDate->format('Y-m-d') }}" 
+                           class="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
+                </div>
+                <div>
+                    <label for="end_date" class="block text-sm font-medium text-gray-700 mb-2">End Date</label>
+                    <input type="date" name="end_date" id="end_date" value="{{ $endDate ?? $weekEndDate->format('Y-m-d') }}" 
+                           class="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
+                </div>
+                <div>
+                    <label for="week_start" class="block text-sm font-medium text-gray-700 mb-2">Or Select Week</label>
                     <input type="date" name="week_start" id="week_start" value="{{ $weekStartDate->format('Y-m-d') }}" 
                            class="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
+                    <p class="mt-1 text-xs text-gray-500">Leave date range empty to use week</p>
                 </div>
             </div>
             <div class="flex items-center gap-2">
@@ -64,7 +75,8 @@
             </div>
         </form>
         
-        <!-- Week Navigation -->
+        <!-- Week Navigation (only show if not using custom date range) -->
+        @if(!$startDate || !$endDate)
         <div class="mt-4 flex items-center justify-between">
             @php
                 $prevWeekParams = array_merge(request()->query(), ['week_start' => $previousWeek]);
@@ -78,7 +90,11 @@
                 Previous Week
             </a>
             <div class="text-sm font-medium text-gray-700">
-                Week of {{ $weekStartDate->format('M d') }} - {{ $weekEndDate->format('M d, Y') }}
+                @if($startDate && $endDate)
+                    Date Range: {{ $weekStartDate->format('M d, Y') }} - {{ $weekEndDate->format('M d, Y') }}
+                @else
+                    Week of {{ $weekStartDate->format('M d') }} - {{ $weekEndDate->format('M d, Y') }}
+                @endif
             </div>
             <a href="{{ route('admin.time-report.index', $nextWeekParams) }}" 
                class="inline-flex items-center px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50">
@@ -88,6 +104,13 @@
                 </svg>
             </a>
         </div>
+        @else
+        <div class="mt-4 text-center">
+            <div class="text-sm font-medium text-gray-700">
+                Date Range: {{ $weekStartDate->format('M d, Y') }} - {{ $weekEndDate->format('M d, Y') }}
+            </div>
+        </div>
+        @endif
     </div>
 
     <!-- Overall Statistics -->
@@ -166,71 +189,81 @@
     </div>
 
     <!-- Weekly Report Tiles -->
-    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         @forelse($weeklyReports as $report)
             <div class="bg-white shadow rounded-lg overflow-hidden">
                 <!-- Employee Header -->
-                <div class="bg-gradient-to-r from-indigo-600 to-purple-600 px-6 py-4">
+                <div class="bg-gradient-to-r from-indigo-600 to-purple-600 px-4 py-3">
                     <div class="flex items-center justify-between">
-                        <div>
-                            <h3 class="text-lg font-semibold text-white">{{ $report['employee']->name }}</h3>
-                            <p class="text-sm text-indigo-100">{{ $report['employee']->email }}</p>
+                        <div class="flex-1 min-w-0">
+                            <h3 class="text-base font-semibold text-white truncate">{{ $report['employee']->name }}</h3>
+                            <p class="text-xs text-indigo-100 truncate">{{ $report['employee']->email }}</p>
                         </div>
-                        <div class="text-right">
-                            <div class="text-2xl font-bold text-white">{{ number_format($report['total_hours'], 2) }}</div>
-                            <div class="text-xs text-indigo-100">Total Hours (Week)</div>
+                        <div class="text-right ml-2 flex-shrink-0">
+                            <div class="text-xl font-bold text-white">{{ number_format($report['total_hours'], 2) }}</div>
+                            <div class="text-xs text-indigo-100">Total Hours</div>
                         </div>
                     </div>
                 </div>
 
                 <!-- Statistics -->
-                <div class="p-6">
-                    <div class="grid grid-cols-2 gap-4 mb-6">
-                        <div class="bg-gray-50 rounded-lg p-4">
-                            <div class="text-sm font-medium text-gray-500">Overtime Hours</div>
-                            <div class="text-2xl font-bold text-yellow-600 mt-1">{{ number_format($report['total_overtime'], 2) }}</div>
+                <div class="p-4">
+                    <div class="grid grid-cols-2 gap-2 mb-4">
+                        <div class="bg-gray-50 rounded-lg p-3">
+                            <div class="text-xs font-medium text-gray-500">Overtime</div>
+                            <div class="text-lg font-bold text-yellow-600 mt-1">{{ number_format($report['total_overtime'], 2) }}</div>
                         </div>
-                        <div class="bg-gray-50 rounded-lg p-4">
-                            <div class="text-sm font-medium text-gray-500">Days Present</div>
-                            <div class="text-2xl font-bold text-green-600 mt-1">{{ $report['days_present'] }}</div>
+                        <div class="bg-gray-50 rounded-lg p-3">
+                            <div class="text-xs font-medium text-gray-500">Absent</div>
+                            <div class="text-lg font-bold text-red-600 mt-1">{{ $report['days_absent'] }}</div>
                         </div>
-                        <div class="bg-gray-50 rounded-lg p-4">
-                            <div class="text-sm font-medium text-gray-500">Days Absent</div>
-                            <div class="text-2xl font-bold text-red-600 mt-1">{{ $report['days_absent'] }}</div>
+                        @if(isset($report['days_on_leave']) && $report['days_on_leave'] > 0)
+                        <div class="bg-gray-50 rounded-lg p-3">
+                            <div class="text-xs font-medium text-gray-500">On Leave</div>
+                            <div class="text-lg font-bold text-blue-600 mt-1">{{ $report['days_on_leave'] }}</div>
                         </div>
-                        <div class="bg-gray-50 rounded-lg p-4">
-                            <div class="text-sm font-medium text-gray-500">Days Late</div>
-                            <div class="text-2xl font-bold text-orange-600 mt-1">{{ $report['days_late'] }}</div>
-                        </div>
+                        @endif
                     </div>
 
                     <!-- Daily Breakdown -->
-                    <div class="border-t pt-4">
-                        <h4 class="text-sm font-semibold text-gray-700 mb-3">Daily Breakdown</h4>
-                        <div class="space-y-2">
+                    <div class="border-t pt-3">
+                        <h4 class="text-xs font-semibold text-gray-700 mb-2">Daily Breakdown</h4>
+                        <div class="space-y-1.5">
                             @foreach($report['daily_breakdown'] as $day)
-                                <div class="flex items-center justify-between p-2 rounded-md {{ $day['dtr'] ? 'bg-green-50' : 'bg-gray-50' }}">
-                                    <div class="flex items-center space-x-3">
-                                        <div class="text-sm font-medium text-gray-700 w-24">
+                                <div class="flex items-center justify-between p-1.5 rounded-md {{ $day['total_hours'] > 0 ? 'bg-green-50' : 'bg-gray-50' }}">
+                                    <div class="flex items-center space-x-2 min-w-0 flex-1">
+                                        <div class="text-xs font-medium text-gray-700 w-20 flex-shrink-0">
                                             {{ $day['date']->format('D, M d') }}
                                         </div>
-                                        <div class="flex items-center space-x-2">
-                                            @if($day['dtr'])
-                                                <span class="px-2 py-1 text-xs font-medium rounded-full {{ $day['dtr']->getStatusBadgeClass() }}">
-                                                    {{ ucfirst(str_replace('_', ' ', $day['status'])) }}
+                                        <div class="flex items-center space-x-1 min-w-0">
+                                            @if(isset($day['status_label']))
+                                                <span class="px-1.5 py-0.5 text-xs font-medium rounded-full {{ $day['status_badge_class'] }}">
+                                                    @if($day['status_label'] === 'completed')
+                                                        Completed
+                                                    @elseif($day['status_label'] === 'under_time')
+                                                        Under Time
+                                                    @else
+                                                        Absent
+                                                    @endif
                                                 </span>
                                             @else
-                                                <span class="px-2 py-1 text-xs font-medium rounded-full bg-red-100 text-red-800">
-                                                    Absent
+                                                <span class="px-1.5 py-0.5 text-xs font-medium rounded-full {{ $day['total_hours'] > 0 ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800' }}">
+                                                    @if($day['total_hours'] >= 8.0)
+                                                        Completed
+                                                    @elseif($day['total_hours'] > 0)
+                                                        Under Time
+                                                    @else
+                                                        Absent
+                                                    @endif
                                                 </span>
                                             @endif
                                         </div>
                                     </div>
-                                    <div class="text-sm font-medium text-gray-900">
-                                        @if($day['dtr'])
+                                    <div class="text-xs font-medium text-gray-900 ml-2 flex-shrink-0">
+                                        @if($day['total_hours'] > 0)
                                             {{ number_format($day['total_hours'], 2) }}h
                                             @if($day['overtime_hours'] > 0)
-                                                <span class="text-yellow-600">(+{{ number_format($day['overtime_hours'], 2) }}h OT)</span>
+                                                <span class="text-yellow-600">(+{{ number_format($day['overtime_hours'], 2) }}h)</span>
                                             @endif
                                         @else
                                             <span class="text-gray-400">0h</span>
@@ -243,7 +276,7 @@
                 </div>
             </div>
         @empty
-            <div class="col-span-2 bg-white shadow rounded-lg p-12 text-center">
+            <div class="col-span-full bg-white shadow rounded-lg p-12 text-center">
                 <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
                 </svg>
@@ -253,5 +286,32 @@
         @endforelse
     </div>
 </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const startDateInput = document.getElementById('start_date');
+    const endDateInput = document.getElementById('end_date');
+    const weekStartInput = document.getElementById('week_start');
+
+    // When date range is changed, clear week filter
+    function handleDateRangeChange() {
+        if (startDateInput.value && endDateInput.value) {
+            weekStartInput.value = '';
+        }
+    }
+
+    // When week is changed, clear date range
+    function handleWeekChange() {
+        if (weekStartInput.value) {
+            startDateInput.value = '';
+            endDateInput.value = '';
+        }
+    }
+
+    startDateInput.addEventListener('change', handleDateRangeChange);
+    endDateInput.addEventListener('change', handleDateRangeChange);
+    weekStartInput.addEventListener('change', handleWeekChange);
+});
+</script>
 @endsection
 

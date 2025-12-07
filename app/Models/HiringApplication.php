@@ -26,12 +26,14 @@ class HiringApplication extends Model
         'acceptance_token',
         'token_expires_at',
         'user_id',
+        'interview_date',
     ];
 
     protected $casts = [
         'birth_date' => 'date',
         'reviewed_at' => 'datetime',
         'token_expires_at' => 'datetime',
+        'interview_date' => 'date',
     ];
 
     // Relationships

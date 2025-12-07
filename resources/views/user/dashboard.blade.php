@@ -3,6 +3,7 @@
 @section('content')
 <div class="h-full flex flex-col min-h-0">
     <!-- Search and Filter Bar -->
+    @if(auth()->user()->role !== 'applicant')
     <div class="bg-white shadow-sm border-b border-gray-200 p-4 flex-shrink-0">
         <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
             <!-- Search -->
@@ -37,6 +38,7 @@
             </div>
         </div>
     </div>
+    @endif
 
     <!-- Page Header -->
     <div class="bg-gradient-to-r from-indigo-500 to-indigo-600 shadow-sm p-4 flex-shrink-0">
@@ -92,6 +94,7 @@
     @endif
 
     <!-- Stats Cards -->
+    @if(auth()->user()->role !== 'applicant')
     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 sm:gap-3 lg:gap-4 flex-shrink-0 p-4">
         <!-- Total Quizzes -->
         <div class="bg-white overflow-hidden shadow-sm rounded-lg border border-gray-200">
@@ -150,8 +153,10 @@
             </div>
         </div>
     </div>
+    @endif
 
     <!-- Available Quizzes -->
+    @if(auth()->user()->role !== 'applicant')
     <div class="bg-white shadow-sm border-t border-gray-200 overflow-hidden flex-1 flex flex-col">
 
         @if($allQuizzes->count() > 0)
@@ -296,6 +301,7 @@
             @endif
         </div>
     </div>
+    @endif
 </div>
 
 <!-- Quiz Code Modal -->

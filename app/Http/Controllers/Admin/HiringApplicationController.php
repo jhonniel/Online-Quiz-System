@@ -16,22 +16,22 @@ class HiringApplicationController extends Controller
     public function index(Request $request)
     {
         $query = HiringApplication::with(['reviewer', 'user', 'hiringPosition']);
-        
+
         // Filter by position if provided
         if ($request->has('position') && $request->position) {
             $query->where('hiring_position_id', $request->position);
         }
-        
+
         $applications = $query->orderBy('created_at', 'desc')->paginate(20);
 
         $positionFilter = $request->position;
         $positions = \App\Models\HiringPosition::orderBy('title')->get();
-        
+
         $baseQuery = HiringApplication::query();
         if ($positionFilter) {
             $baseQuery->where('hiring_position_id', $positionFilter);
         }
-        
+
         $stats = [
             'total' => $baseQuery->count(),
             'pending' => (clone $baseQuery)->where('status', 'pending')->count(),
@@ -53,34 +53,65 @@ class HiringApplicationController extends Controller
     {
         $request->validate([
             'admin_notes' => 'nullable|string|max:1000',
+            'interview_date' => 'required|date|after_or_equal:today',
         ]);
 
+        // Generate a random password for the applicant
+        $password = \Illuminate\Support\Str::random(12);
+
+        // Check if user already exists with this email
+        $user = \App\Models\User::where('email', $application->email)->first();
+
+        if (!$user) {
+            // Create new user account with role 'applicant'
+            $user = \App\Models\User::create([
+                'name' => $application->full_name,
+                'email' => $application->email,
+                'password' => \Illuminate\Support\Facades\Hash::make($password),
+                'role' => 'applicant',
+                'is_active' => true,
+                'is_approved' => true,
+            ]);
+        } else {
+            // Update existing user to applicant role and activate
+            $user->update([
+                'role' => 'applicant',
+                'is_active' => true,
+                'is_approved' => true,
+                'password' => \Illuminate\Support\Facades\Hash::make($password), // Reset password
+            ]);
+        }
+
+        // Update application
         $application->update([
             'status' => 'accepted',
             'admin_notes' => $request->admin_notes,
             'reviewed_by' => Auth::id(),
             'reviewed_at' => now(),
+            'interview_date' => $request->interview_date,
+            'user_id' => $user->id,
         ]);
 
-        // Generate acceptance token
+        // Generate acceptance token (for backward compatibility)
         $token = $application->generateAcceptanceToken();
 
-        // Send email notification to applicant if enabled
+        // Send email with credentials
         $emailNotificationsEnabled = \App\Models\Setting::get('hiring_email_notifications', 'enabled');
         if ($emailNotificationsEnabled === 'enabled') {
             try {
                 // Ensure mail configuration is up to date from settings
                 MailConfigService::configure();
-                
+
                 Mail::to($application->email)
-                    ->send(new \App\Mail\HiringApplicationStatusUpdate(
+                    ->send(new \App\Mail\HiringApplicationCredentials(
                         $application,
-                        'accepted',
-                        $request->admin_notes,
+                        $application->email,
+                        $password,
+                        $request->interview_date,
                         $application->hiringPosition
                     ));
             } catch (\Exception $e) {
-                Log::error('Failed to send acceptance email', [
+                Log::error('Failed to send credentials email', [
                     'error' => $e->getMessage(),
                     'application_id' => $application->id
                 ]);
@@ -88,7 +119,7 @@ class HiringApplicationController extends Controller
         }
 
         return redirect()->route('admin.hiring-applications.show', $application)
-            ->with('success', 'Application accepted. Acceptance link generated.');
+            ->with('success', 'Application accepted. User account created and credentials sent via email.');
     }
 
     public function reject(Request $request, HiringApplication $application)
@@ -110,7 +141,7 @@ class HiringApplicationController extends Controller
             try {
                 // Ensure mail configuration is up to date from settings
                 MailConfigService::configure();
-                
+
                 Mail::to($application->email)
                     ->send(new \App\Mail\HiringApplicationStatusUpdate(
                         $application,
@@ -153,7 +184,7 @@ class HiringApplicationController extends Controller
             abort(404, 'Resume not found.');
         }
 
-        return Storage::disk('public')->download($application->resume_path, 
+        return Storage::disk('public')->download($application->resume_path,
             $application->full_name . '_resume.' . pathinfo($application->resume_path, PATHINFO_EXTENSION));
     }
 

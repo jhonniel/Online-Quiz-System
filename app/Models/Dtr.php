@@ -46,6 +46,7 @@ class Dtr extends Model
             'late' => 'bg-yellow-100 text-yellow-800',
             'half_day' => 'bg-orange-100 text-orange-800',
             'on_leave' => 'bg-blue-100 text-blue-800',
+            'travel' => 'bg-purple-100 text-purple-800',
             default => 'bg-gray-100 text-gray-800',
         };
     }

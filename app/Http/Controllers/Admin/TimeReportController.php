@@ -15,10 +15,31 @@ class TimeReportController extends Controller
      */
     public function index(Request $request)
     {
-        // Get the week start date (default to current week)
-        $weekStart = $request->get('week_start', now()->startOfWeek()->format('Y-m-d'));
-        $weekStartDate = Carbon::parse($weekStart)->startOfWeek();
-        $weekEndDate = $weekStartDate->copy()->endOfWeek();
+        // Get date range filter (if provided)
+        $startDate = $request->get('start_date');
+        $endDate = $request->get('end_date');
+        
+        // Determine date range: prioritize custom range if provided, otherwise use week filter
+        if ($startDate && $endDate) {
+            $startDateObj = Carbon::parse($startDate)->startOfDay();
+            $endDateObj = Carbon::parse($endDate)->endOfDay();
+            
+            // Validate that end date is after start date
+            if ($endDateObj->lt($startDateObj)) {
+                return redirect()->back()->withErrors(['end_date' => 'End date must be after start date.']);
+            }
+            
+            $weekStartDate = $startDateObj->copy();
+            $weekEndDate = $endDateObj->copy();
+        } else {
+            // Get the week start date (default to current week)
+            $weekStart = $request->get('week_start', now()->startOfWeek()->format('Y-m-d'));
+            $weekStartDate = Carbon::parse($weekStart)->startOfWeek();
+            $weekEndDate = $weekStartDate->copy()->endOfWeek();
+            // Clear date range values when using week filter
+            $startDate = null;
+            $endDate = null;
+        }
 
         // Get all active employees
         $employees = User::where('role', 'employee')
@@ -45,27 +66,45 @@ class TimeReportController extends Controller
                 $dtrMap[$dateKey] = $dtr;
             }
 
+            // Calculate total hours from all DTR records (including weekends)
+            $totalHours = $dtrs->sum('total_hours');
+            $totalOvertime = $dtrs->sum('overtime_hours');
+            
+            // Daily breakdown - only show weekdays (Monday-Friday)
             $dailyBreakdown = [];
-            $totalHours = 0;
-            $totalOvertime = 0;
             $currentDate = $weekStartDate->copy();
             while ($currentDate <= $weekEndDate) {
-                $dateKey = $currentDate->format('Y-m-d');
-                $dtr = $dtrMap[$dateKey] ?? null;
-                
-                $dayHours = $dtr ? (float) $dtr->total_hours : 0;
-                $dayOvertime = $dtr ? (float) $dtr->overtime_hours : 0;
-                
-                $totalHours += $dayHours;
-                $totalOvertime += $dayOvertime;
-                
-                $dailyBreakdown[] = [
-                    'date' => $currentDate->copy(),
-                    'dtr' => $dtr,
-                    'total_hours' => $dayHours,
-                    'overtime_hours' => $dayOvertime,
-                    'status' => $dtr ? $dtr->status : 'absent',
-                ];
+                // Skip Saturday (6) and Sunday (0)
+                $dayOfWeek = $currentDate->dayOfWeek;
+                if ($dayOfWeek !== Carbon::SATURDAY && $dayOfWeek !== Carbon::SUNDAY) {
+                    $dateKey = $currentDate->format('Y-m-d');
+                    $dtr = $dtrMap[$dateKey] ?? null;
+                    
+                    $dayHours = $dtr ? (float) $dtr->total_hours : 0;
+                    $dayOvertime = $dtr ? (float) $dtr->overtime_hours : 0;
+                    
+                    // Determine status label based on hours
+                    if ($dayHours >= 8.0) {
+                        $statusLabel = 'completed';
+                        $statusBadgeClass = 'bg-green-100 text-green-800';
+                    } elseif ($dayHours > 0 && $dayHours < 8.0) {
+                        $statusLabel = 'under_time';
+                        $statusBadgeClass = 'bg-yellow-100 text-yellow-800';
+                    } else {
+                        $statusLabel = 'absent';
+                        $statusBadgeClass = 'bg-red-100 text-red-800';
+                    }
+                    
+                    $dailyBreakdown[] = [
+                        'date' => $currentDate->copy(),
+                        'dtr' => $dtr,
+                        'total_hours' => $dayHours,
+                        'overtime_hours' => $dayOvertime,
+                        'status' => $dtr ? $dtr->status : 'absent',
+                        'status_label' => $statusLabel,
+                        'status_badge_class' => $statusBadgeClass,
+                    ];
+                }
                 $currentDate->addDay();
             }
 
@@ -74,6 +113,7 @@ class TimeReportController extends Controller
             $daysLate = $dtrs->where('status', 'late')->count();
             $daysOnLeave = $dtrs->where('status', 'on_leave')->count();
             $daysHalfDay = $dtrs->where('status', 'half_day')->count();
+            $daysTravel = $dtrs->where('status', 'travel')->count();
             $totalDays = $dtrs->count();
 
             $weeklyReports[] = [
@@ -85,6 +125,7 @@ class TimeReportController extends Controller
                 'days_late' => $daysLate,
                 'days_on_leave' => $daysOnLeave,
                 'days_half_day' => $daysHalfDay,
+                'days_travel' => $daysTravel,
                 'total_days' => $totalDays,
                 'daily_breakdown' => $dailyBreakdown,
             ];
@@ -107,9 +148,13 @@ class TimeReportController extends Controller
             'total_days_absent' => array_sum(array_column($weeklyReports, 'days_absent')),
         ];
 
-        // Previous and next week dates
-        $previousWeek = $weekStartDate->copy()->subWeek()->format('Y-m-d');
-        $nextWeek = $weekStartDate->copy()->addWeek()->format('Y-m-d');
+        // Previous and next week dates (only if not using custom date range)
+        $previousWeek = null;
+        $nextWeek = null;
+        if (!$startDate || !$endDate) {
+            $previousWeek = $weekStartDate->copy()->subWeek()->format('Y-m-d');
+            $nextWeek = $weekStartDate->copy()->addWeek()->format('Y-m-d');
+        }
 
         return view('admin.time-report.index', compact(
             'weeklyReports',
@@ -119,7 +164,9 @@ class TimeReportController extends Controller
             'weekEndDate',
             'previousWeek',
             'nextWeek',
-            'overallStats'
+            'overallStats',
+            'startDate',
+            'endDate'
         ));
     }
 }

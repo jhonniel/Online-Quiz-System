@@ -220,11 +220,15 @@ class LeaveRequestController extends Controller
             $overtimeMinutesPart = $absOvertimeMinutes % 60;
             $overtimeFormatted = ($isNegative ? '-' : '') . sprintf('%02d:%02d', $overtimeHoursPart, $overtimeMinutesPart);
             
-            // Check if this is an offset request and if employee currently has negative overtime balance
+            // Check if this is an offset request and if the duration exceeds overtime balance
             $hasNegativeBalance = false;
             if ($leaveRequest->type === 'offset' && $leaveRequest->isPending()) {
-                // Check if current net overtime balance is negative
-                $hasNegativeBalance = $netOvertimeHours < 0;
+                // Calculate offset hours needed (days * 8 hours per day)
+                $offsetHoursNeeded = $leaveRequest->days * 8;
+                
+                // Check if offset hours needed exceeds current overtime balance
+                // If yes, approving will result in negative balance
+                $hasNegativeBalance = $offsetHoursNeeded > $netOvertimeHours;
             }
         } elseif ($user->role === 'student') {
             // Student: show total DTR time vs required time set by admin
