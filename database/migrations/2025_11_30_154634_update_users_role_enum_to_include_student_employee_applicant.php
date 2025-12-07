@@ -12,21 +12,20 @@ return new class extends Migration
      */
     public function up(): void
     {
-        // For SQLite, we need to recreate the column
-        // For MySQL, we can modify the enum
-        $driver = DB::getDriverName();
+        $driver = Schema::getConnection()->getDriverName();
         
         if ($driver === 'sqlite') {
             // SQLite doesn't support ALTER COLUMN for enum, so we'll use string
-            Schema::table('users', function (Blueprint $table) {
-                // Change role to string type to support new roles
-                // SQLite will handle this as text
-            });
-            
-            // Update existing 'user' role to 'student' if needed, or keep as is
-            // We'll handle validation in the model/controller
+            // SQLite will handle this as text - validation handled in model/controller
+        } elseif ($driver === 'pgsql') {
+            // For PostgreSQL, we need to alter the column type or use a check constraint
+            // First, change the column to varchar and add a check constraint
+            DB::statement("ALTER TABLE users DROP CONSTRAINT IF EXISTS users_role_check");
+            DB::statement("ALTER TABLE users ALTER COLUMN role TYPE VARCHAR(255)");
+            DB::statement("ALTER TABLE users ADD CONSTRAINT users_role_check CHECK (role IN ('admin', 'user', 'student', 'employee', 'applicant'))");
+            DB::statement("ALTER TABLE users ALTER COLUMN role SET DEFAULT 'student'");
         } else {
-            // For MySQL/PostgreSQL, modify the enum
+            // For MySQL, modify the enum
             DB::statement("ALTER TABLE users MODIFY COLUMN role ENUM('admin', 'user', 'student', 'employee', 'applicant') DEFAULT 'student'");
         }
     }
@@ -36,12 +35,17 @@ return new class extends Migration
      */
     public function down(): void
     {
-        $driver = DB::getDriverName();
+        $driver = Schema::getConnection()->getDriverName();
         
         if ($driver === 'sqlite') {
             // No need to revert for SQLite
+        } elseif ($driver === 'pgsql') {
+            // Revert PostgreSQL changes
+            DB::statement("ALTER TABLE users DROP CONSTRAINT IF EXISTS users_role_check");
+            DB::statement("ALTER TABLE users ADD CONSTRAINT users_role_check CHECK (role IN ('admin', 'user'))");
+            DB::statement("ALTER TABLE users ALTER COLUMN role SET DEFAULT 'user'");
         } else {
-            // Revert to original enum values
+            // Revert to original enum values for MySQL
             DB::statement("ALTER TABLE users MODIFY COLUMN role ENUM('admin', 'user') DEFAULT 'user'");
         }
     }

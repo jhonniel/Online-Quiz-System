@@ -25,6 +25,7 @@ class TestDataSeeder extends Seeder
             'password' => Hash::make('password'),
             'role' => 'user',
             'is_active' => true,
+            'is_approved' => true,
             'email_verified_at' => now(),
         ]);
 
@@ -34,6 +35,7 @@ class TestDataSeeder extends Seeder
             'password' => Hash::make('password'),
             'role' => 'user',
             'is_active' => true,
+            'is_approved' => true,
             'email_verified_at' => now(),
         ]);
 
@@ -42,7 +44,8 @@ class TestDataSeeder extends Seeder
             'email' => 'bob@example.com',
             'password' => Hash::make('password'),
             'role' => 'user',
-            'is_active' => false, // Disabled user
+            'is_active' => true,
+            'is_approved' => true,
             'email_verified_at' => now(),
         ]);
 
