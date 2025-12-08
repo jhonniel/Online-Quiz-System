@@ -12,6 +12,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Validation\Rule;
 
 class LeaveRequestController extends Controller
 {
@@ -248,9 +249,14 @@ class LeaveRequestController extends Controller
             ? ['additional_time', 'absent', 'other']
             : ['vacation_leave', 'sick_leave', 'work_from_home', 'absent', 'overtime', 'offset'];
 
+        $startDateRules = ['required', 'date'];
+        if (!($user->role === 'student' && $request->input('type') === 'additional_time')) {
+            $startDateRules[] = 'after_or_equal:today';
+        }
+
         $validated = $request->validate([
             'type' => ['required', 'in:' . implode(',', $allowedTypes)],
-            'start_date' => 'required|date|after_or_equal:today',
+            'start_date' => $startDateRules,
             'end_date' => 'nullable|date|after_or_equal:start_date',
             // Reason is REQUIRED for overtime (used as the clear explanation of extra hours)
             'reason' => 'nullable|string|max:1000',
@@ -576,9 +582,14 @@ class LeaveRequestController extends Controller
             ? ['additional_time', 'absent', 'other']
             : ['vacation_leave', 'sick_leave', 'work_from_home', 'absent', 'overtime', 'offset'];
 
+        $startDateRules = ['required', 'date'];
+        if (!($user->role === 'student' && $request->input('type') === 'additional_time')) {
+            $startDateRules[] = 'after_or_equal:today';
+        }
+
         $validated = $request->validate([
             'type' => ['required', 'in:' . implode(',', $allowedTypes)],
-            'start_date' => 'required|date',
+            'start_date' => $startDateRules,
             'end_date' => 'nullable|date|after_or_equal:start_date',
             'reason' => 'nullable|string|max:1000',
             'overtime_hours' => 'required_if:type,overtime|nullable|regex:/^\\d{2}:\\d{2}$/',
