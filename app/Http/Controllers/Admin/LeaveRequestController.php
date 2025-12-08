@@ -756,12 +756,12 @@ class LeaveRequestController extends Controller
         $students = $allStudents->filter(function ($student) use ($totalsByStudent) {
             $requiredHours = (float) ($student->required_training_hours ?? 0);
             $totalDtrHours = (float) ($totalsByStudent[$student->id] ?? 0);
-            
+
             // If no required hours set, show the student (they haven't met undefined requirement)
             if ($requiredHours <= 0) {
                 return true;
             }
-            
+
             // Only show if total DTR hours < required hours (hasn't met requirement)
             return $totalDtrHours < $requiredHours;
         })->sortBy('name')->values();
