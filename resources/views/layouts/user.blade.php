@@ -1167,14 +1167,15 @@
                     loadFirstTicket();
                     loadNotificationCounts();
 
+                    // Polling disabled to reduce server load
                     // Poll for new messages every 10 seconds
-                    setInterval(function() {
-                        if (!chatWindow.classList.contains('hidden')) {
-                            loadMessages();
-                        } else {
-                            updateUnreadCount();
-                        }
-                    }, 10000);
+                    // setInterval(function() {
+                    //     if (!chatWindow.classList.contains('hidden')) {
+                    //         loadMessages();
+                    //     } else {
+                    //         updateUnreadCount();
+                    //     }
+                    // }, 10000);
                 });
 
                 // User Status Tracking
@@ -1229,8 +1230,9 @@
                     document.addEventListener(event, trackActivity, true);
                 });
 
+                // Polling disabled to reduce server load
                 // Check idle status every minute
-                statusUpdateInterval = setInterval(checkIdleStatus, 60000);
+                // statusUpdateInterval = setInterval(checkIdleStatus, 60000);
 
                 // Set user as online when page loads
                 updateUserStatus('online');
@@ -1260,7 +1262,8 @@
 
                         init() {
                             this.loadNotifications();
-                            this.startPolling();
+                            // Polling disabled to reduce server load
+                            // this.startPolling();
                         },
 
                         toggleNotifications() {

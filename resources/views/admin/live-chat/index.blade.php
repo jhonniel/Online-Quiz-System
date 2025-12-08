@@ -270,11 +270,12 @@ document.addEventListener('DOMContentLoaded', function() {
     updateUnreadCount();
     updatePresenceCounts();
 
+    // Polling disabled to reduce server load
     // Update counts every 30 seconds
-    setInterval(() => {
-        updateUnreadCount();
-        updatePresenceCounts();
-    }, 30000);
+    // setInterval(() => {
+    //     updateUnreadCount();
+    //     updatePresenceCounts();
+    // }, 30000);
 });
 </script>
 @endsection

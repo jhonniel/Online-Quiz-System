@@ -321,12 +321,13 @@ function stopNotificationPolling() {
     }
 }
 
+// Polling disabled to reduce server load
 // Start notification polling when page loads
 document.addEventListener('DOMContentLoaded', function() {
-    startNotificationPolling();
+    // startNotificationPolling();
 
     // Stop polling when page is unloaded
-    window.addEventListener('beforeunload', stopNotificationPolling);
+    // window.addEventListener('beforeunload', stopNotificationPolling);
 });
 </script>
 @endsection

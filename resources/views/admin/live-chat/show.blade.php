@@ -475,18 +475,19 @@ document.addEventListener('DOMContentLoaded', function() {
 
 
 
+    // Polling disabled to reduce server load
     // Poll for new messages every 5 seconds
-    setInterval(function() {
-        fetch(`{{ route('live-chat.messages', $ticket->ticket_number) }}`)
-            .then(response => response.json())
-            .then(messages => {
-                // This is a simple implementation - in a real app you'd want to track the last message ID
-                // and only add new messages to avoid duplicates
-            })
-            .catch(error => {
-                console.error('Error fetching messages:', error);
-            });
-    }, 5000);
+    // setInterval(function() {
+    //     fetch(`{{ route('live-chat.messages', $ticket->ticket_number) }}`)
+    //         .then(response => response.json())
+    //         .then(messages => {
+    //             // This is a simple implementation - in a real app you'd want to track the last message ID
+    //             // and only add new messages to avoid duplicates
+    //         })
+    //         .catch(error => {
+    //             console.error('Error fetching messages:', error);
+    //         });
+    // }, 5000);
 });
 </script>
 @endsection

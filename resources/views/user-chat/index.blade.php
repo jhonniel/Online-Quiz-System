@@ -235,8 +235,9 @@
             // Load unread counts
             loadUnreadCounts();
 
+            // Polling disabled to reduce server load
             // Poll for new messages every 3 seconds
-            setInterval(loadUnreadCounts, 3000);
+            // setInterval(loadUnreadCounts, 3000);
         });
 
         function selectFriend(friendId, friendName) {

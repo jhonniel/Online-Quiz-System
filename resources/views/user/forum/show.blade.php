@@ -627,8 +627,9 @@ function stopNotificationPolling() {
 
 // User mention functionality and Enter key support
 document.addEventListener('DOMContentLoaded', function() {
+    // Polling disabled to reduce server load
     // Start notification polling when page loads
-    startNotificationPolling();
+    // startNotificationPolling();
 
     // Stop polling when page is unloaded
     window.addEventListener('beforeunload', stopNotificationPolling);

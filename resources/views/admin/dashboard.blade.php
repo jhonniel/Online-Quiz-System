@@ -992,8 +992,9 @@ document.addEventListener('DOMContentLoaded', function() {
             });
     }
 
+    // Polling disabled to reduce server load
     // Update activity data every 10 seconds
-    setInterval(updateActivityData, 10000);
+    // setInterval(updateActivityData, 10000);
 
     // Initial load
     updateActivityData();

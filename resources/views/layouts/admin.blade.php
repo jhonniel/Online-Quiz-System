@@ -65,10 +65,10 @@
         }
     </style>
 </head>
-<body class="font-sans antialiased bg-gray-100" 
+<body class="font-sans antialiased bg-gray-100"
       x-data="{ sidebarCollapsed: false }"
       x-init="
-          $store.sidebar = { collapsed: sidebarCollapsed }; 
+          $store.sidebar = { collapsed: sidebarCollapsed };
           $watch('sidebarCollapsed', value => {
               $store.sidebar = { collapsed: value };
               window.dispatchEvent(new CustomEvent('sidebar-collapse-changed', { detail: value }));
@@ -292,7 +292,8 @@
 
                 init() {
                     this.loadNotifications();
-                    this.startPolling();
+                    // Polling disabled to reduce server load
+                    // this.startPolling();
                 },
 
                 toggleNotifications() {
