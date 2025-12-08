@@ -406,7 +406,7 @@ class LeaveRequestController extends Controller
                 $validEmails = array_filter($adminEmails, function($email) {
                     return filter_var($email, FILTER_VALIDATE_EMAIL);
                 });
-                
+
                 if (!empty($validEmails)) {
                     try {
                         MailConfigService::configure();

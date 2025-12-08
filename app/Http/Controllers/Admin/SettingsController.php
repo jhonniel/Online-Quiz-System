@@ -38,14 +38,14 @@ class SettingsController extends Controller
         $sickSetting = Setting::withoutGlobalScopes()
             ->where('key', 'default_sick_leave_balance')
             ->first();
-        
+
         // Use database value if it exists and is not empty, otherwise default to 0
         if ($vacationSetting && $vacationSetting->value !== null && $vacationSetting->value !== '') {
             $settings['default_vacation_balance'] = (float) $vacationSetting->value;
         } else {
             $settings['default_vacation_balance'] = 0.0;
         }
-        
+
         if ($sickSetting && $sickSetting->value !== null && $sickSetting->value !== '') {
             $settings['default_sick_leave_balance'] = (float) $sickSetting->value;
         } else {
@@ -56,7 +56,7 @@ class SettingsController extends Controller
 
         // CRITICAL: Set overtime, leave balances, and signatories at the VERY END to ensure they're not overwritten
         // Reload directly from database one more time to be absolutely sure we have the latest values
-        
+
         // Overtime months credited
         $overtimeSetting = Setting::where('key', 'overtime_months_credited')->first();
         if ($overtimeSetting && $overtimeSetting->value !== null && $overtimeSetting->value !== '' && trim($overtimeSetting->value) !== '') {
@@ -64,30 +64,30 @@ class SettingsController extends Controller
         } else {
             $settings['overtime_months_credited'] = 12;
         }
-        
+
         // Leave Request Signatories
         $leaveSupervisorSetting = Setting::where('key', 'leave_immediate_supervisor')->first();
         $leaveHrSetting = Setting::where('key', 'leave_hr_admin')->first();
         $leaveCtoSetting = Setting::where('key', 'leave_cto')->first();
-        
+
         if ($leaveSupervisorSetting && $leaveSupervisorSetting->value !== null && $leaveSupervisorSetting->value !== '' && trim($leaveSupervisorSetting->value) !== '') {
             $settings['leave_immediate_supervisor'] = $leaveSupervisorSetting->value;
         } else {
             $settings['leave_immediate_supervisor'] = 'CHARMAINE JOY ROSATACE';
         }
-        
+
         if ($leaveHrSetting && $leaveHrSetting->value !== null && $leaveHrSetting->value !== '' && trim($leaveHrSetting->value) !== '') {
             $settings['leave_hr_admin'] = $leaveHrSetting->value;
         } else {
             $settings['leave_hr_admin'] = 'MAY GRACE ACOSTA';
         }
-        
+
         if ($leaveCtoSetting && $leaveCtoSetting->value !== null && $leaveCtoSetting->value !== '' && trim($leaveCtoSetting->value) !== '') {
             $settings['leave_cto'] = $leaveCtoSetting->value;
         } else {
             $settings['leave_cto'] = 'NITISH KHEMANI';
         }
-        
+
         // Leave Admin Notification Email
         $leaveAdminNotificationEmailSetting = Setting::where('key', 'leave_admin_notification_email')->first();
         if ($leaveAdminNotificationEmailSetting && $leaveAdminNotificationEmailSetting->value !== null && trim($leaveAdminNotificationEmailSetting->value) !== '') {
@@ -95,11 +95,11 @@ class SettingsController extends Controller
         } else {
             $settings['leave_admin_notification_email'] = '';
         }
-        
+
         // Default leave balances - use database value if it exists and is not empty, otherwise default to 0
         $vacationSetting = Setting::where('key', 'default_vacation_balance')->first();
         $sickSetting = Setting::where('key', 'default_sick_leave_balance')->first();
-        
+
         // Final check - use database value if it exists and is not empty, otherwise default to 0
         // Be very explicit about checking for empty values
         if ($vacationSetting && $vacationSetting->value !== null && $vacationSetting->value !== '' && trim($vacationSetting->value) !== '') {
@@ -107,13 +107,13 @@ class SettingsController extends Controller
         } else {
             $settings['default_vacation_balance'] = 0.0;
         }
-        
+
         if ($sickSetting && $sickSetting->value !== null && $sickSetting->value !== '' && trim($sickSetting->value) !== '') {
             $settings['default_sick_leave_balance'] = (float) $sickSetting->value;
         } else {
             $settings['default_sick_leave_balance'] = 0.0;
         }
-        
+
         // Contact Information Settings - reload directly from database
         $contactEmailSetting = Setting::where('key', 'contact_email')->first();
         $contactPhoneSetting = Setting::where('key', 'contact_phone')->first();
@@ -129,7 +129,7 @@ class SettingsController extends Controller
         $contactPhoneSupportTimeSetting = Setting::where('key', 'contact_phone_support_time')->first();
         $contactLiveChatDaysSetting = Setting::where('key', 'contact_live_chat_days')->first();
         $contactLiveChatTimeSetting = Setting::where('key', 'contact_live_chat_time')->first();
-        
+
         // Set contact information values
         $settings['contact_email'] = ($contactEmailSetting && $contactEmailSetting->value !== null && trim($contactEmailSetting->value) !== '') ? $contactEmailSetting->value : 'support@quizsystem.com';
         $settings['contact_phone'] = ($contactPhoneSetting && $contactPhoneSetting->value !== null && trim($contactPhoneSetting->value) !== '') ? $contactPhoneSetting->value : '+1 (555) 123-4567';
@@ -145,7 +145,7 @@ class SettingsController extends Controller
         $settings['contact_phone_support_time'] = ($contactPhoneSupportTimeSetting && $contactPhoneSupportTimeSetting->value !== null && trim($contactPhoneSupportTimeSetting->value) !== '') ? $contactPhoneSupportTimeSetting->value : '9:00 AM - 6:00 PM EST';
         $settings['contact_live_chat_days'] = ($contactLiveChatDaysSetting && $contactLiveChatDaysSetting->value !== null && trim($contactLiveChatDaysSetting->value) !== '') ? $contactLiveChatDaysSetting->value : 'Monday - Friday';
         $settings['contact_live_chat_time'] = ($contactLiveChatTimeSetting && $contactLiveChatTimeSetting->value !== null && trim($contactLiveChatTimeSetting->value) !== '') ? $contactLiveChatTimeSetting->value : '10:00 AM - 5:00 PM EST';
-        
+
         // Email Configuration Settings - reload directly from database
         $mailMailerSetting = Setting::where('key', 'mail_mailer')->first();
         $mailHostSetting = Setting::where('key', 'mail_host')->first();
@@ -155,56 +155,56 @@ class SettingsController extends Controller
         $mailEncryptionSetting = Setting::where('key', 'mail_encryption')->first();
         $mailFromAddressSetting = Setting::where('key', 'mail_from_address')->first();
         $mailFromNameSetting = Setting::where('key', 'mail_from_name')->first();
-        
+
         if ($mailMailerSetting && $mailMailerSetting->value !== null && $mailMailerSetting->value !== '' && trim($mailMailerSetting->value) !== '') {
             $settings['mail_mailer'] = $mailMailerSetting->value;
         } else {
             $settings['mail_mailer'] = 'log';
         }
-        
+
         if ($mailHostSetting && $mailHostSetting->value !== null && $mailHostSetting->value !== '' && trim($mailHostSetting->value) !== '') {
             $settings['mail_host'] = $mailHostSetting->value;
         } else {
             $settings['mail_host'] = '';
         }
-        
+
         if ($mailPortSetting && $mailPortSetting->value !== null && $mailPortSetting->value !== '' && trim($mailPortSetting->value) !== '') {
             $settings['mail_port'] = $mailPortSetting->value;
         } else {
             $settings['mail_port'] = '587';
         }
-        
+
         if ($mailUsernameSetting && $mailUsernameSetting->value !== null && $mailUsernameSetting->value !== '' && trim($mailUsernameSetting->value) !== '') {
             $settings['mail_username'] = $mailUsernameSetting->value;
         } else {
             $settings['mail_username'] = '';
         }
-        
+
         // Password - only set if exists (for security, don't display in view)
         if ($mailPasswordSetting && $mailPasswordSetting->value !== null && $mailPasswordSetting->value !== '' && trim($mailPasswordSetting->value) !== '') {
             $settings['mail_password'] = $mailPasswordSetting->value;
         } else {
             $settings['mail_password'] = '';
         }
-        
+
         if ($mailEncryptionSetting && $mailEncryptionSetting->value !== null && $mailEncryptionSetting->value !== '' && trim($mailEncryptionSetting->value) !== '') {
             $settings['mail_encryption'] = $mailEncryptionSetting->value;
         } else {
             $settings['mail_encryption'] = 'tls';
         }
-        
+
         if ($mailFromAddressSetting && $mailFromAddressSetting->value !== null && $mailFromAddressSetting->value !== '' && trim($mailFromAddressSetting->value) !== '') {
             $settings['mail_from_address'] = $mailFromAddressSetting->value;
         } else {
             $settings['mail_from_address'] = '';
         }
-        
+
         if ($mailFromNameSetting && $mailFromNameSetting->value !== null && $mailFromNameSetting->value !== '' && trim($mailFromNameSetting->value) !== '') {
             $settings['mail_from_name'] = $mailFromNameSetting->value;
         } else {
             $settings['mail_from_name'] = '';
         }
-        
+
         // Hiring Process Configuration Settings - reload directly from database
         $hiringProcessEnabledSetting = Setting::where('key', 'hiring_process_enabled')->first();
         $hiringProcessDescriptionSetting = Setting::where('key', 'hiring_process_description')->first();
@@ -215,7 +215,7 @@ class SettingsController extends Controller
         $hiringInstructionsSetting = Setting::where('key', 'hiring_instructions')->first();
         $hiringApplicationPublicAccessSetting = Setting::where('key', 'hiring_application_public_access')->first();
         $hiringApplicationUrlSetting = Setting::where('key', 'hiring_application_url')->first();
-        
+
         // Set hiring process configuration values
         $settings['hiring_process_enabled'] = ($hiringProcessEnabledSetting && $hiringProcessEnabledSetting->value !== null && trim($hiringProcessEnabledSetting->value) !== '') ? $hiringProcessEnabledSetting->value : 'enabled';
         $settings['hiring_process_description'] = ($hiringProcessDescriptionSetting && $hiringProcessDescriptionSetting->value !== null && trim($hiringProcessDescriptionSetting->value) !== '') ? $hiringProcessDescriptionSetting->value : '';
@@ -226,7 +226,7 @@ class SettingsController extends Controller
         $settings['hiring_instructions'] = ($hiringInstructionsSetting && $hiringInstructionsSetting->value !== null && trim($hiringInstructionsSetting->value) !== '') ? $hiringInstructionsSetting->value : '';
         $settings['hiring_application_public_access'] = ($hiringApplicationPublicAccessSetting && $hiringApplicationPublicAccessSetting->value !== null && trim($hiringApplicationPublicAccessSetting->value) !== '') ? $hiringApplicationPublicAccessSetting->value : 'disabled';
         $settings['hiring_application_url'] = ($hiringApplicationUrlSetting && $hiringApplicationUrlSetting->value !== null && trim($hiringApplicationUrlSetting->value) !== '') ? $hiringApplicationUrlSetting->value : 'hiring/apply';
-        
+
         // Debug: Log what we're passing to the view - this will help us see what's happening
         \Log::info('Settings Controller - Final values being passed to view', [
             'default_vacation_balance' => $settings['default_vacation_balance'],
@@ -376,11 +376,11 @@ class SettingsController extends Controller
     private function formatBytes($bytes, $precision = 2)
     {
         $units = ['B', 'KB', 'MB', 'GB', 'TB'];
-        
+
         for ($i = 0; $bytes > 1024 && $i < count($units) - 1; $i++) {
             $bytes /= 1024;
         }
-        
+
         return round($bytes, $precision) . ' ' . $units[$i];
     }
 
@@ -574,16 +574,16 @@ class SettingsController extends Controller
         // Get values from request - if empty, use 0
         $vacationBalance = $request->input('default_vacation_balance');
         $sickLeaveBalance = $request->input('default_sick_leave_balance');
-        
+
         // Save vacation balance - use form value or 0 if empty
-        $vacationValue = ($vacationBalance !== null && $vacationBalance !== '') 
-            ? (float) $vacationBalance 
+        $vacationValue = ($vacationBalance !== null && $vacationBalance !== '')
+            ? (float) $vacationBalance
             : 0.0;
         Setting::set('default_vacation_balance', $vacationValue, 'number', 'Default vacation leave balance in days for new employees');
-        
+
         // Save sick leave balance - use form value or 0 if empty
-        $sickValue = ($sickLeaveBalance !== null && $sickLeaveBalance !== '') 
-            ? (float) $sickLeaveBalance 
+        $sickValue = ($sickLeaveBalance !== null && $sickLeaveBalance !== '')
+            ? (float) $sickLeaveBalance
             : 0.0;
         Setting::set('default_sick_leave_balance', $sickValue, 'number', 'Default sick leave balance in days for new employees');
 
@@ -618,43 +618,43 @@ class SettingsController extends Controller
         // Contact Information Settings - save directly from request
         $contactEmail = $request->contact_email ?? '';
         Setting::set('contact_email', $contactEmail, 'text', 'Contact email address');
-        
+
         $contactPhone = $request->contact_phone ?? '';
         Setting::set('contact_phone', $contactPhone, 'text', 'Contact phone number');
-        
+
         $contactPhoneHours = $request->contact_phone_hours ?? '';
         Setting::set('contact_phone_hours', $contactPhoneHours, 'text', 'Phone support hours');
-        
+
         $contactEmailResponseTime = $request->contact_email_response_time ?? '';
         Setting::set('contact_email_response_time', $contactEmailResponseTime, 'text', 'Email response time message');
-        
+
         $contactLiveChatDescription = $request->contact_live_chat_description ?? '';
         Setting::set('contact_live_chat_description', $contactLiveChatDescription, 'text', 'Live chat description');
-        
+
         $contactLiveChatHours = $request->contact_live_chat_hours ?? '';
         Setting::set('contact_live_chat_hours', $contactLiveChatHours, 'text', 'Live chat hours description');
-        
+
         $contactFaqUrl = $request->contact_faq_url ?? '';
         Setting::set('contact_faq_url', $contactFaqUrl, 'text', 'FAQ page URL');
-        
+
         $contactFaqText = $request->contact_faq_text ?? '';
         Setting::set('contact_faq_text', $contactFaqText, 'text', 'FAQ link text');
-        
+
         $contactEmailSupportHours = $request->contact_email_support_hours ?? '';
         Setting::set('contact_email_support_hours', $contactEmailSupportHours, 'text', 'Email support hours');
-        
+
         $contactEmailSupportResponse = $request->contact_email_support_response ?? '';
         Setting::set('contact_email_support_response', $contactEmailSupportResponse, 'text', 'Email support response time');
-        
+
         $contactPhoneSupportDays = $request->contact_phone_support_days ?? '';
         Setting::set('contact_phone_support_days', $contactPhoneSupportDays, 'text', 'Phone support days');
-        
+
         $contactPhoneSupportTime = $request->contact_phone_support_time ?? '';
         Setting::set('contact_phone_support_time', $contactPhoneSupportTime, 'text', 'Phone support time');
-        
+
         $contactLiveChatDays = $request->contact_live_chat_days ?? '';
         Setting::set('contact_live_chat_days', $contactLiveChatDays, 'text', 'Live chat support days');
-        
+
         $contactLiveChatTime = $request->contact_live_chat_time ?? '';
         Setting::set('contact_live_chat_time', $contactLiveChatTime, 'text', 'Live chat support time');
 
@@ -762,7 +762,7 @@ class SettingsController extends Controller
             ]);
         } catch (\Exception $e) {
             Log::error('Test email failed: ' . $e->getMessage());
-            
+
             return response()->json([
                 'success' => false,
                 'message' => 'Failed to send test email: ' . $e->getMessage()

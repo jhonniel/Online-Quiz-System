@@ -753,7 +753,13 @@ class LeaveRequestController extends Controller
 
         // Filter students: only show those who haven't met their required time
         // (total DTR hours < required_training_hours, or required_training_hours is null/0)
+        // Also exclude disabled accounts
         $students = $allStudents->filter(function ($student) use ($totalsByStudent) {
+            // Exclude disabled accounts
+            if (!$student->is_active) {
+                return false;
+            }
+
             $requiredHours = (float) ($student->required_training_hours ?? 0);
             $totalDtrHours = (float) ($totalsByStudent[$student->id] ?? 0);
 
