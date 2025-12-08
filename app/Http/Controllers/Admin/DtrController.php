@@ -331,6 +331,9 @@ class DtrController extends Controller
         ]);
 
         try {
+            $importType = $request->input('type') === 'student' ? 'student' : 'employee';
+            $importRoleLabel = $importType === 'student' ? 'Student' : 'Employee';
+
             $file = $request->file('csv_file');
             $handle = fopen($file->getRealPath(), 'r');
 
@@ -352,7 +355,7 @@ class DtrController extends Controller
 
                 try {
                     // Expected CSV format (same calculation logic as manual creation):
-                    // Employee Email, Date (YYYY-MM-DD), Worked Hours (HH:MM), Added Time From Note (HH:MM),
+                    // [Student|Employee] Email, Date (YYYY-MM-DD), Worked Hours (HH:MM), Added Time From Note (HH:MM),
                     // Total Hours (HH:MM - optional, ignored, will be recalculated as Worked + Added),
                     // Overtime (HH:MM - optional, ignored, will be recalculated as Total - 8:00 if > 8:00),
                     // Status (present/absent/late/half_day/on_leave/travel), Remarks
@@ -371,13 +374,13 @@ class DtrController extends Controller
                         continue;
                     }
 
-                    // Find employee by email
-                    $employee = User::where('email', $email)
-                        ->where('role', 'employee')
+                    // Find user by email and role (student vs employee)
+                    $user = User::where('email', $email)
+                        ->where('role', $importType)
                         ->first();
 
-                    if (!$employee) {
-                        $errors[] = "Employee not found: {$email}";
+                    if (!$user) {
+                        $errors[] = "{$importRoleLabel} not found: {$email}";
                         $skipped++;
                         continue;
                     }
@@ -431,7 +434,7 @@ class DtrController extends Controller
                     }
 
                     // Check if record already exists - same behavior as manual creation (skip/error instead of update)
-                    $existingDtr = Dtr::where('user_id', $employee->id)
+                    $existingDtr = Dtr::where('user_id', $user->id)
                         ->whereDate('date', $dateObj->format('Y-m-d'))
                         ->first();
 
@@ -443,7 +446,7 @@ class DtrController extends Controller
 
                     // Create new record - same logic as manual creation
                     Dtr::create([
-                        'user_id' => $employee->id,
+                        'user_id' => $user->id,
                         'date' => $dateObj->format('Y-m-d'),
                         'added_time_from_note' => $addedTimeFromNoteValue,
                         'total_hours' => $totalHoursValue,
@@ -453,11 +456,11 @@ class DtrController extends Controller
                     ]);
 
                     // Calculate and store weekly deficit - same as manual creation
-                    $this->calculateAndStoreWeeklyDeficit($employee->id, $dateObj);
+                    $this->calculateAndStoreWeeklyDeficit($user->id, $dateObj);
 
                     // Track affected user
-                    if (!in_array($employee->id, $affectedUserIds)) {
-                        $affectedUserIds[] = $employee->id;
+                    if (!in_array($user->id, $affectedUserIds)) {
+                        $affectedUserIds[] = $user->id;
                     }
 
                     $imported++;
@@ -474,12 +477,14 @@ class DtrController extends Controller
             // Note: Weekly deficits are already calculated per record (same as manual creation)
             // No need to recalculate all weeks since we calculate for each imported record
 
-            $message = "Successfully imported {$imported} DTR record(s).";
+            $message = "Successfully imported {$imported} {$importRoleLabel} DTR record(s).";
             if ($skipped > 0) {
                 $message .= " {$skipped} record(s) skipped.";
             }
 
-            return redirect()->route('admin.dtr.index')
+            $redirectRoute = $importType === 'student' ? 'admin.student-dtr.index' : 'admin.dtr.index';
+
+            return redirect()->route($redirectRoute)
                 ->with('success', $message)
                 ->with('import_errors', $errors);
 
@@ -487,7 +492,9 @@ class DtrController extends Controller
             DB::rollBack();
             Log::error('DTR import failed: ' . $e->getMessage());
 
-            return redirect()->route('admin.dtr.index')
+            $redirectRoute = $request->input('type') === 'student' ? 'admin.student-dtr.index' : 'admin.dtr.index';
+
+            return redirect()->route($redirectRoute)
                 ->with('error', 'Import failed: ' . $e->getMessage());
         }
     }

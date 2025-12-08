@@ -117,6 +117,7 @@
             <div class="p-4 sm:p-6">
                 <form action="{{ route('admin.dtr.import') }}" method="POST" enctype="multipart/form-data" class="space-y-4">
             @csrf
+            <input type="hidden" name="type" value="student">
             <div class="flex flex-col sm:flex-row sm:items-end gap-4">
                 <div class="sm:flex-1">
                     <label for="csv_file" class="block text-sm font-medium text-gray-700 mb-2">CSV File</label>
