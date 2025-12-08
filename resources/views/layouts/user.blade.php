@@ -179,6 +179,22 @@
                             </span>
                         </a>
 
+                        <!-- Admin Access (for employees with permissions) -->
+                        @if(auth()->user()->isEmployee() && auth()->user()->hasAnyAdminPermission())
+                        <div class="pt-4 mt-4 border-t border-gray-700">
+                            <a href="{{ route('admin.dashboard') }}"
+                               class="group flex items-center px-2 py-2 text-sm font-medium rounded-md transition-colors duration-200 {{ request()->routeIs('admin.*') ? 'bg-purple-700 text-white' : 'text-purple-300 hover:bg-purple-700 hover:text-white' }}"
+                               :class="sidebarCollapsed ? 'justify-center' : ''"
+                               :title="sidebarCollapsed ? 'Admin Access' : ''">
+                                <svg class="h-5 w-5" :class="sidebarCollapsed ? '' : 'mr-3'" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path>
+                                </svg>
+                                <span class="transition-opacity duration-300" :class="sidebarCollapsed ? 'opacity-0 w-0 overflow-hidden' : 'opacity-100'">
+                                    Admin Access
+                                </span>
+                            </a>
+                        </div>
+                        @endif
 
                     </nav>
 
@@ -341,6 +357,20 @@
                             </svg>
                             Feedback
                         </a>
+
+                        <!-- Admin Access (for employees with permissions) -->
+                        @if(auth()->user()->isEmployee() && auth()->user()->hasAnyAdminPermission())
+                        <div class="pt-4 mt-4 border-t border-gray-700">
+                            <a href="{{ route('admin.dashboard') }}"
+                               @click="sidebarOpen = false"
+                               class="group flex items-center px-2 py-2 text-sm font-medium rounded-md transition-colors duration-200 {{ request()->routeIs('admin.*') ? 'bg-purple-700 text-white' : 'text-purple-300 hover:bg-purple-700 hover:text-white' }}">
+                                <svg class="mr-3 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path>
+                                </svg>
+                                Admin Access
+                            </a>
+                        </div>
+                        @endif
 
                     </nav>
 

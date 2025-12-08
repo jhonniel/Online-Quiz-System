@@ -65,9 +65,8 @@
                             <label for="start_date" class="block text-sm font-medium text-gray-700 mb-2">
                                 Start Date <span class="text-red-500">*</span>
                             </label>
-                            <input type="date" name="start_date" id="start_date" 
-                                   value="{{ old('start_date') }}" 
-                                   min="{{ date('Y-m-d') }}"
+                            <input type="date" name="start_date" id="start_date"
+                                   value="{{ old('start_date') }}"
                                    required
                                    class="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
                             @error('start_date')
@@ -79,8 +78,8 @@
                             <label for="end_date" class="block text-sm font-medium text-gray-700 mb-2">
                                 End Date <span class="text-gray-400">(Optional)</span>
                             </label>
-                            <input type="date" name="end_date" id="end_date" 
-                                   value="{{ old('end_date') }}" 
+                            <input type="date" name="end_date" id="end_date"
+                                   value="{{ old('end_date') }}"
                                    class="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
                             <p class="mt-1 text-xs text-gray-500">Leave blank for single day requests</p>
                             @error('end_date')
@@ -186,7 +185,7 @@
                                    placeholder="08:00"
                                    class="time-input w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
                             <p class="mt-1 text-xs text-gray-500">
-                                Enter custom hours to deduct in <strong>HH:MM</strong> format (e.g., 08:00, 04:30). 
+                                Enter custom hours to deduct in <strong>HH:MM</strong> format (e.g., 08:00, 04:30).
                                 If left blank, it will automatically calculate as <strong>1 day = 08:00</strong> based on your request duration.
                             </p>
                             @error('offset_hours')
@@ -299,10 +298,17 @@
     const offsetSection = document.getElementById('offset-section');
 
     function updateRequestTypeSections() {
+        const startDateInput = document.getElementById('start_date');
+        const today = new Date().toISOString().split('T')[0];
+
         if (typeSelect.value === 'overtime') {
             overtimeSection.classList.remove('hidden');
+            // Remove min restriction for overtime to allow past dates
+            startDateInput.removeAttribute('min');
         } else {
             overtimeSection.classList.add('hidden');
+            // Set min to today for other request types
+            startDateInput.setAttribute('min', today);
         }
 
         if (typeSelect.value === 'work_from_home') {
@@ -320,6 +326,13 @@
 
     typeSelect.addEventListener('change', updateRequestTypeSections);
     // Initialize on page load (for validation errors / old input)
+    // Set initial min date based on old input or default to today
+    const startDateInput = document.getElementById('start_date');
+    const today = new Date().toISOString().split('T')[0];
+    const oldType = '{{ old("type") }}';
+    if (oldType !== 'overtime') {
+        startDateInput.setAttribute('min', today);
+    }
     updateRequestTypeSections();
 
     // Simple time input formatter (HH:MM), max 4 digits, no AM/PM

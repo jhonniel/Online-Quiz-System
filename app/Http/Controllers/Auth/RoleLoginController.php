@@ -14,7 +14,7 @@ class RoleLoginController extends Controller
         // If user is already authenticated, redirect to their dashboard
         if (Auth::check()) {
             $user = Auth::user();
-            
+
             // Check if user is active and approved
             if ($user->is_active && $user->is_approved) {
                 if ($user->isAdmin()) {
@@ -86,8 +86,12 @@ class RoleLoginController extends Controller
             $request->session()->regenerate();
 
             // Redirect based on user's actual role
+            // Admins go to admin dashboard
+            // Employees with permissions can access admin, but default to user dashboard
+            // Other users go to user dashboard
+            $redirectUrl = $user->isAdmin() ? route('admin.dashboard') : route('user.dashboard');
+
             if ($request->ajax()) {
-                $redirectUrl = $user->isAdmin() ? route('admin.dashboard') : route('user.dashboard');
                 return response()->json([
                     'success' => true,
                     'message' => 'Login successful! Redirecting...',
@@ -96,11 +100,7 @@ class RoleLoginController extends Controller
                 ]);
             }
 
-            if ($user->isAdmin()) {
-                return redirect()->intended(route('admin.dashboard'));
-            } else {
-                return redirect()->intended(route('user.dashboard'));
-            }
+            return redirect()->intended($redirectUrl);
         }
 
         // Credentials don't match

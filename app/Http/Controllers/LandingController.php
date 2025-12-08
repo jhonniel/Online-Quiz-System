@@ -18,7 +18,7 @@ class LandingController extends Controller
         // If user is already authenticated, redirect to their dashboard
         if (Auth::check()) {
             $user = Auth::user();
-            
+
             // Check if user is active and approved
             if ($user->is_active && $user->is_approved) {
                 if ($user->isAdmin()) {

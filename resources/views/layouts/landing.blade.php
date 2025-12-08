@@ -102,7 +102,7 @@
                         @endif
 
                         @auth
-                            @if(auth()->user()->isAdmin())
+                            @if(auth()->user()->isAdmin() || (auth()->user()->isEmployee() && auth()->user()->hasAnyAdminPermission()))
                                 <a href="{{ route('admin.dashboard') }}" class="bg-primary text-white px-4 py-2 rounded-lg hover:opacity-90 transition-opacity">
                                     Go To Dashboard
                                 </a>
@@ -141,7 +141,7 @@
                     @endif
 
                     @auth
-                        @if(auth()->user()->isAdmin())
+                        @if(auth()->user()->isAdmin() || (auth()->user()->isEmployee() && auth()->user()->hasAnyAdminPermission()))
                             <a href="{{ route('admin.dashboard') }}" class="block px-3 py-2 bg-primary text-white rounded-lg mx-3 text-center">
                                 Go To Dashboard
                             </a>
@@ -194,7 +194,7 @@
                         <h3 class="text-lg font-semibold mb-4">Access</h3>
                         <ul class="space-y-2">
                             @auth
-                                @if(auth()->user()->isAdmin())
+                                @if(auth()->user()->isAdmin() || (auth()->user()->isEmployee() && auth()->user()->hasAnyAdminPermission()))
                                     <li><a href="{{ route('admin.dashboard') }}" class="text-gray-400 hover:text-white transition-colors">Admin Dashboard</a></li>
                                 @else
                                     <li><a href="{{ route('user.dashboard') }}" class="text-gray-400 hover:text-white transition-colors">User Dashboard</a></li>

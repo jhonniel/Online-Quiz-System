@@ -7,7 +7,7 @@
              // Initialize sidebar state based on screen size
              this.isDesktop = window.innerWidth >= 1024;
              this.sidebarOpen = this.isDesktop;
-             
+
              // Ensure Alpine store is initialized
              if (typeof Alpine !== 'undefined') {
                  if (!Alpine.store('sidebar')) {
@@ -16,7 +16,7 @@
                  // Sync local variable with store
                  this.sidebarCollapsed = Alpine.store('sidebar').collapsed || false;
              }
-             
+
              // Debounce resize handler to avoid too many updates
              let resizeTimeout;
              const handleResize = () => {
@@ -24,7 +24,7 @@
                  resizeTimeout = setTimeout(() => {
                      const wasDesktop = this.isDesktop;
                      this.isDesktop = window.innerWidth >= 1024;
-                     
+
                      // Only auto-manage sidebar when transitioning between desktop/mobile
                      if (this.isDesktop && !wasDesktop) {
                          // Transitioning from mobile to desktop - open sidebar
@@ -36,7 +36,7 @@
                      // If staying on same device type, respect current state
                  }, 150);
              };
-             
+
              window.addEventListener('resize', handleResize);
          },
          closeSidebar() {
@@ -50,7 +50,7 @@
          }"
      @sidebar-toggle.window="toggleSidebar()"
      @close-sidebar.window="closeSidebar()">
-    
+
     <!-- Mobile Sidebar Overlay -->
     <div x-show="sidebarOpen"
          x-transition:enter="transition-opacity ease-linear duration-300"
@@ -112,11 +112,11 @@
                class="flex items-center px-2 py-2 text-sm font-medium rounded-md transition-colors duration-200 {{ request()->routeIs('admin.dashboard') ? 'bg-indigo-700 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white' }}"
                :class="sidebarCollapsed ? 'justify-center px-2' : 'px-3'"
                :title="sidebarCollapsed ? 'Dashboard' : ''">
-                <svg class="h-6 w-6 flex-shrink-0" 
-                     style="min-width: 1.5rem; min-height: 1.5rem; display: block !important; visibility: visible !important; opacity: 1 !important;" 
-                     :class="sidebarCollapsed ? '' : 'mr-3'" 
-                     fill="none" 
-                     stroke="currentColor" 
+                <svg class="h-6 w-6 flex-shrink-0"
+                     style="min-width: 1.5rem; min-height: 1.5rem; display: block !important; visibility: visible !important; opacity: 1 !important;"
+                     :class="sidebarCollapsed ? '' : 'mr-3'"
+                     fill="none"
+                     stroke="currentColor"
                      viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2H5a2 2 0 00-2-2z"></path>
                 </svg>
@@ -127,14 +127,15 @@
         </div>
 
         <!-- Content Management -->
-        <div class="mb-6" x-data="{ 
+        @if(auth()->user()->canAccessContentManagement())
+        <div class="mb-6" x-data="{
             open: (localStorage.getItem('nav-content-management') || 'true') === 'true',
             toggle() {
                 this.open = !this.open;
                 localStorage.setItem('nav-content-management', this.open);
             }
         }">
-            <button @click="toggle()" 
+            <button @click="toggle()"
                     class="w-full flex items-center justify-between px-3 py-2 text-xs font-semibold text-gray-400 uppercase tracking-wider hover:text-gray-300 transition-opacity duration-300"
                     :class="sidebarCollapsed ? 'opacity-0 h-0 overflow-hidden pointer-events-none' : 'opacity-100'">
                 <span>Content Management</span>
@@ -178,16 +179,18 @@
                 </a>
             </div>
         </div>
+        @endif
 
         <!-- Analytics & Reports -->
-        <div class="mb-6" x-data="{ 
+        @if(auth()->user()->canAccessAnalyticsReports())
+        <div class="mb-6" x-data="{
             open: (localStorage.getItem('nav-analytics-reports') || 'true') === 'true',
             toggle() {
                 this.open = !this.open;
                 localStorage.setItem('nav-analytics-reports', this.open);
             }
         }">
-            <button @click="toggle()" 
+            <button @click="toggle()"
                     class="w-full flex items-center justify-between px-3 py-2 text-xs font-semibold text-gray-400 uppercase tracking-wider hover:text-gray-300 transition-opacity duration-300"
                     :class="sidebarCollapsed ? 'opacity-0 h-0 overflow-hidden pointer-events-none' : 'opacity-100'">
                 <span>Analytics & Reports</span>
@@ -232,16 +235,18 @@
                 </a>
             </div>
         </div>
+        @endif
 
         <!-- Employee Management -->
-        <div class="mb-6" x-data="{ 
+        @if(auth()->user()->canAccessEmployeeManagement())
+        <div class="mb-6" x-data="{
             open: (localStorage.getItem('nav-employee-management') || 'true') === 'true',
             toggle() {
                 this.open = !this.open;
                 localStorage.setItem('nav-employee-management', this.open);
             }
         }">
-            <button @click="toggle()" 
+            <button @click="toggle()"
                     class="w-full flex items-center justify-between px-3 py-2 text-xs font-semibold text-gray-400 uppercase tracking-wider hover:text-gray-300 transition-opacity duration-300"
                     :class="sidebarCollapsed ? 'opacity-0 h-0 overflow-hidden pointer-events-none' : 'opacity-100'">
                 <span>Employee Management</span>
@@ -296,16 +301,18 @@
                 </a>
             </div>
         </div>
+        @endif
 
         <!-- Student Management -->
-        <div class="mb-6" x-data="{ 
+        @if(auth()->user()->canAccessStudentManagement())
+        <div class="mb-6" x-data="{
             open: (localStorage.getItem('nav-student-management') || 'true') === 'true',
             toggle() {
                 this.open = !this.open;
                 localStorage.setItem('nav-student-management', this.open);
             }
         }">
-            <button @click="toggle()" 
+            <button @click="toggle()"
                     class="w-full flex items-center justify-between px-3 py-2 text-xs font-semibold text-gray-400 uppercase tracking-wider hover:text-gray-300 transition-opacity duration-300"
                     :class="sidebarCollapsed ? 'opacity-0 h-0 overflow-hidden pointer-events-none' : 'opacity-100'">
                 <span>Student Management</span>
@@ -360,16 +367,18 @@
                 </a>
             </div>
         </div>
+        @endif
 
         <!-- Hiring Process -->
-        <div class="mb-6" x-data="{ 
+        @if(auth()->user()->canAccessHiringProcess())
+        <div class="mb-6" x-data="{
             open: (localStorage.getItem('nav-hiring-process') || 'true') === 'true',
             toggle() {
                 this.open = !this.open;
                 localStorage.setItem('nav-hiring-process', this.open);
             }
         }">
-            <button @click="toggle()" 
+            <button @click="toggle()"
                     class="w-full flex items-center justify-between px-3 py-2 text-xs font-semibold text-gray-400 uppercase tracking-wider hover:text-gray-300 transition-opacity duration-300"
                     :class="sidebarCollapsed ? 'opacity-0 h-0 overflow-hidden pointer-events-none' : 'opacity-100'">
                 <span>Hiring Process</span>
@@ -413,16 +422,18 @@
                 </a>
             </div>
         </div>
+        @endif
 
         <!-- Communication -->
-        <div class="mb-6" x-data="{ 
+        @if(auth()->user()->canAccessCommunication())
+        <div class="mb-6" x-data="{
             open: (localStorage.getItem('nav-communication') || 'true') === 'true',
             toggle() {
                 this.open = !this.open;
                 localStorage.setItem('nav-communication', this.open);
             }
         }">
-            <button @click="toggle()" 
+            <button @click="toggle()"
                     class="w-full flex items-center justify-between px-3 py-2 text-xs font-semibold text-gray-400 uppercase tracking-wider hover:text-gray-300 transition-opacity duration-300"
                     :class="sidebarCollapsed ? 'opacity-0 h-0 overflow-hidden pointer-events-none' : 'opacity-100'">
                 <span>Communication</span>
@@ -466,16 +477,18 @@
                 </a>
             </div>
         </div>
+        @endif
 
         <!-- User Management -->
-        <div class="mb-6" x-data="{ 
+        @if(auth()->user()->canAccessUserManagement())
+        <div class="mb-6" x-data="{
             open: (localStorage.getItem('nav-user-management') || 'true') === 'true',
             toggle() {
                 this.open = !this.open;
                 localStorage.setItem('nav-user-management', this.open);
             }
         }">
-            <button @click="toggle()" 
+            <button @click="toggle()"
                     class="w-full flex items-center justify-between px-3 py-2 text-xs font-semibold text-gray-400 uppercase tracking-wider hover:text-gray-300 transition-opacity duration-300"
                     :class="sidebarCollapsed ? 'opacity-0 h-0 overflow-hidden pointer-events-none' : 'opacity-100'">
                 <span>User Management</span>
@@ -508,16 +521,18 @@
                 </a>
             </div>
         </div>
+        @endif
 
         <!-- System -->
-        <div class="mb-6" x-data="{ 
+        @if(auth()->user()->canAccessSystem())
+        <div class="mb-6" x-data="{
             open: (localStorage.getItem('nav-system') || 'true') === 'true',
             toggle() {
                 this.open = !this.open;
                 localStorage.setItem('nav-system', this.open);
             }
         }">
-            <button @click="toggle()" 
+            <button @click="toggle()"
                     class="w-full flex items-center justify-between px-3 py-2 text-xs font-semibold text-gray-400 uppercase tracking-wider hover:text-gray-300 transition-opacity duration-300"
                     :class="sidebarCollapsed ? 'opacity-0 h-0 overflow-hidden pointer-events-none' : 'opacity-100'">
                 <span>System</span>
@@ -538,6 +553,134 @@
                         Settings
                     </span>
                 </a>
+                @if(auth()->user()->canAccessSystem())
+                <a href="{{ route('admin.admin-permissions.index') }}"
+                   class="flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors duration-200 {{ request()->routeIs('admin.admin-permissions.*') ? 'bg-indigo-700 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white' }}"
+                   :class="sidebarCollapsed ? 'justify-center' : ''"
+                   :title="sidebarCollapsed ? 'Admin Permissions' : ''">
+                    <svg class="h-5 w-5 flex-shrink-0" :class="sidebarCollapsed ? '' : 'mr-3'" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path>
+                    </svg>
+                    <span class="transition-opacity duration-300" :class="sidebarCollapsed ? 'opacity-0 w-0 overflow-hidden' : 'opacity-100'">
+                        Admin Permissions
+                    </span>
+                </a>
+                @endif
+            </div>
+        </div>
+        @endif
+
+        <!-- User Features (Default Access) -->
+        <div class="mb-6" x-data="{
+            open: (localStorage.getItem('nav-user-features') || 'true') === 'true',
+            toggle() {
+                this.open = !this.open;
+                localStorage.setItem('nav-user-features', this.open);
+            }
+        }">
+            <button @click="toggle()"
+                    class="w-full flex items-center justify-between px-3 py-2 text-xs font-semibold text-gray-400 uppercase tracking-wider hover:text-gray-300 transition-opacity duration-300"
+                    :class="sidebarCollapsed ? 'opacity-0 h-0 overflow-hidden pointer-events-none' : 'opacity-100'">
+                <span>User Features</span>
+                <svg class="w-4 h-4 transition-transform duration-200" :class="{ 'rotate-180': open }" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                </svg>
+            </button>
+            <div class="space-y-1" x-show="sidebarCollapsed ? true : open" x-transition:enter="transition ease-out duration-100" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100" x-transition:leave="transition ease-in duration-75" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0">
+                <!-- User Dashboard -->
+                <a href="{{ route('user.dashboard') }}"
+                   class="flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors duration-200 {{ request()->routeIs('user.dashboard') ? 'bg-indigo-700 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white' }}"
+                   :class="sidebarCollapsed ? 'justify-center' : ''"
+                   :title="sidebarCollapsed ? 'User Dashboard' : ''">
+                    <svg class="h-5 w-5 flex-shrink-0" :class="sidebarCollapsed ? '' : 'mr-3'" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
+                    </svg>
+                    <span class="transition-opacity duration-300" :class="sidebarCollapsed ? 'opacity-0 w-0 overflow-hidden' : 'opacity-100'">
+                        User Dashboard
+                    </span>
+                </a>
+
+                <!-- Quizzes -->
+                <a href="{{ route('user.quizzes.index') }}"
+                   class="flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors duration-200 {{ request()->routeIs('user.quizzes.*') ? 'bg-indigo-700 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white' }}"
+                   :class="sidebarCollapsed ? 'justify-center' : ''"
+                   :title="sidebarCollapsed ? 'Quizzes' : ''">
+                    <svg class="h-5 w-5 flex-shrink-0" :class="sidebarCollapsed ? '' : 'mr-3'" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                    </svg>
+                    <span class="transition-opacity duration-300" :class="sidebarCollapsed ? 'opacity-0 w-0 overflow-hidden' : 'opacity-100'">
+                        Quizzes
+                    </span>
+                </a>
+
+                <!-- Leave Requests (Employee & Student) -->
+                @if(in_array(auth()->user()->role, ['employee', 'student']))
+                <a href="{{ route('user.leave-requests.index') }}"
+                   class="flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors duration-200 {{ request()->routeIs('user.leave-requests.*') ? 'bg-indigo-700 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white' }}"
+                   :class="sidebarCollapsed ? 'justify-center' : ''"
+                   :title="sidebarCollapsed ? 'Leave Requests' : ''">
+                    <svg class="h-5 w-5 flex-shrink-0" :class="sidebarCollapsed ? '' : 'mr-3'" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                    </svg>
+                    <span class="transition-opacity duration-300" :class="sidebarCollapsed ? 'opacity-0 w-0 overflow-hidden' : 'opacity-100'">
+                        Leave Requests
+                    </span>
+                </a>
+                @endif
+
+                <!-- Chat -->
+                <a href="{{ route('user-chat.index') }}"
+                   class="flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors duration-200 {{ request()->routeIs('user-chat.*') ? 'bg-indigo-700 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white' }}"
+                   :class="sidebarCollapsed ? 'justify-center' : ''"
+                   :title="sidebarCollapsed ? 'Chat' : ''">
+                    <svg class="h-5 w-5 flex-shrink-0" :class="sidebarCollapsed ? '' : 'mr-3'" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path>
+                    </svg>
+                    <span class="transition-opacity duration-300" :class="sidebarCollapsed ? 'opacity-0 w-0 overflow-hidden' : 'opacity-100'">
+                        Chat
+                    </span>
+                </a>
+
+                <!-- Forum -->
+                <a href="{{ route('forum.index') }}"
+                   class="flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors duration-200 {{ request()->routeIs('forum.*') ? 'bg-indigo-700 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white' }}"
+                   :class="sidebarCollapsed ? 'justify-center' : ''"
+                   :title="sidebarCollapsed ? 'Forum' : ''">
+                    <svg class="h-5 w-5 flex-shrink-0" :class="sidebarCollapsed ? '' : 'mr-3'" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z"></path>
+                    </svg>
+                    <span class="transition-opacity duration-300" :class="sidebarCollapsed ? 'opacity-0 w-0 overflow-hidden' : 'opacity-100'">
+                        Forum
+                    </span>
+                </a>
+
+                <!-- Feedback -->
+                <a href="{{ route('user.feedback.index') }}"
+                   class="flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors duration-200 {{ request()->routeIs('user.feedback.*') ? 'bg-indigo-700 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white' }}"
+                   :class="sidebarCollapsed ? 'justify-center' : ''"
+                   :title="sidebarCollapsed ? 'Feedback' : ''">
+                    <svg class="h-5 w-5 flex-shrink-0" :class="sidebarCollapsed ? '' : 'mr-3'" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z"></path>
+                    </svg>
+                    <span class="transition-opacity duration-300" :class="sidebarCollapsed ? 'opacity-0 w-0 overflow-hidden' : 'opacity-100'">
+                        Feedback
+                    </span>
+                </a>
+
+                <!-- Application (Applicant) -->
+                @if(auth()->user()->role === 'applicant')
+                <a href="{{ route('user.hiring-application.show') }}"
+                   class="flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors duration-200 {{ request()->routeIs('user.hiring-application.*') ? 'bg-indigo-700 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white' }}"
+                   :class="sidebarCollapsed ? 'justify-center' : ''"
+                   :title="sidebarCollapsed ? 'Application' : ''">
+                    <svg class="h-5 w-5 flex-shrink-0" :class="sidebarCollapsed ? '' : 'mr-3'" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                    </svg>
+                    <span class="transition-opacity duration-300" :class="sidebarCollapsed ? 'opacity-0 w-0 overflow-hidden' : 'opacity-100'">
+                        Application
+                    </span>
+                </a>
+                @endif
             </div>
         </div>
     </nav>
@@ -552,7 +695,7 @@
             </div>
             <div class="flex-1 min-w-0 transition-opacity duration-300" :class="sidebarCollapsed ? 'opacity-0 w-0 overflow-hidden' : 'opacity-100'">
                 <p class="text-sm font-medium text-white truncate">{{ auth()->user()->name }}</p>
-                <p class="text-xs text-gray-400 truncate">Administrator</p>
+                <p class="text-xs text-gray-400 truncate">{{ auth()->user()->getRoleLabel() }}</p>
             </div>
                 <form method="POST" action="{{ route('logout') }}" :class="sidebarCollapsed ? 'ml-0' : ''">
                 @csrf

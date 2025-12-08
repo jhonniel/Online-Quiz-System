@@ -6,14 +6,15 @@ use Closure;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
 
-class AdminMiddleware
+class CheckAdminPermission
 {
     /**
      * Handle an incoming request.
      *
      * @param  \Closure(\Illuminate\Http\Request): (\Symfony\Component\HttpFoundation\Response)  $next
+     * @param  string  $permission  The permission to check (e.g., 'content_management', 'analytics_reports')
      */
-    public function handle(Request $request, Closure $next): Response
+    public function handle(Request $request, Closure $next, string $permission): Response
     {
         if (!auth()->check()) {
             return redirect()->route('login');
@@ -21,19 +22,14 @@ class AdminMiddleware
 
         $user = auth()->user();
 
-        // Allow admin users and employees with any admin permission
+        // Check if user is admin or employee
         if (!$user->isAdmin() && !$user->isEmployee()) {
             abort(403, 'Access denied. Admin or Employee privileges required.');
         }
 
-        // Load adminPermission relationship if not already loaded
-        if (!$user->relationLoaded('adminPermission')) {
-            $user->load('adminPermission');
-        }
-
-        // If user is employee, they must have at least one admin permission
-        if ($user->isEmployee() && !$user->hasAnyAdminPermission()) {
-            abort(403, 'Access denied. You do not have permission to access admin features.');
+        // Check if user has the specific permission
+        if (!$user->hasAdminPermission($permission)) {
+            abort(403, 'Access denied. You do not have permission to access this feature.');
         }
 
         return $next($request);

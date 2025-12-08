@@ -26,7 +26,7 @@ class SettingsServiceProvider extends ServiceProvider
         View::composer('*', function ($view) {
             // Get existing settings from view data if they exist
             $existingSettings = $view->getData()['settings'] ?? [];
-            
+
             // Base settings that should be available in all views
             $baseSettings = [
                 'system_name' => Setting::get('system_name', 'Quiz System'),
@@ -53,12 +53,22 @@ class SettingsServiceProvider extends ServiceProvider
                 'contact_live_chat_days' => Setting::get('contact_live_chat_days', 'Monday - Friday'),
                 'contact_live_chat_time' => Setting::get('contact_live_chat_time', '10:00 AM - 5:00 PM EST'),
             ];
-            
+
             // Merge existing settings (from controller) with base settings
             // Existing settings take precedence to preserve controller values
             $mergedSettings = array_merge($baseSettings, $existingSettings);
-            
+
             $view->with('settings', $mergedSettings);
+        });
+
+        // Ensure adminPermission relationship is loaded for authenticated users in admin views
+        View::composer('layouts.admin', function ($view) {
+            if (auth()->check()) {
+                $user = auth()->user();
+                if (!$user->relationLoaded('adminPermission')) {
+                    $user->load('adminPermission');
+                }
+            }
         });
     }
 }

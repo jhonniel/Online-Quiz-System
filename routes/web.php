@@ -16,6 +16,7 @@ use App\Http\Controllers\ChatController;
 use App\Http\Controllers\StatusController;
 use App\Http\Controllers\Admin\StudentDashboardController;
 use App\Http\Controllers\Admin\ErrorLogController;
+use App\Http\Controllers\Admin\AdminPermissionController;
 use App\Http\Controllers\User\DashboardController as UserDashboardController;
 use App\Http\Controllers\User\QuizController as UserQuizController;
 use Illuminate\Support\Facades\Route;
@@ -48,22 +49,36 @@ Route::prefix('admin')->middleware(['auth', 'admin'])->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('admin.dashboard');
     Route::get('/activity-data', [DashboardController::class, 'getActivityData'])->name('admin.activity-data');
 
+    // Admin Permissions Management (System access required)
+    Route::middleware(['admin.permission:system'])->group(function () {
+        Route::get('admin-permissions', [AdminPermissionController::class, 'index'])->name('admin.admin-permissions.index');
+        Route::get('admin-permissions/create', [AdminPermissionController::class, 'create'])->name('admin.admin-permissions.create');
+        Route::post('admin-permissions', [AdminPermissionController::class, 'store'])->name('admin.admin-permissions.store');
+        Route::get('admin-permissions/{user}/edit', [AdminPermissionController::class, 'edit'])->name('admin.admin-permissions.edit');
+        Route::put('admin-permissions/{user}', [AdminPermissionController::class, 'update'])->name('admin.admin-permissions.update');
+        Route::delete('admin-permissions/{user}', [AdminPermissionController::class, 'destroy'])->name('admin.admin-permissions.destroy');
+    });
+
     // User Management
-    Route::get('users/api', [AdminUserController::class, 'api'])->name('admin.users.api');
-    Route::resource('users', AdminUserController::class);
-    Route::patch('users/{user}/toggle-status', [AdminUserController::class, 'toggleStatus'])->name('admin.users.toggle-status');
-    Route::patch('users/{user}/approve', [AdminUserController::class, 'approve'])->name('admin.users.approve');
-    Route::patch('users/{user}/disapprove', [AdminUserController::class, 'disapprove'])->name('admin.users.disapprove');
-    Route::patch('users/{user}/overtime-window', [AdminUserController::class, 'updateOvertimeWindow'])->name('admin.users.overtime-window');
-    Route::patch('users/{user}/leave-balance', [AdminUserController::class, 'updateLeaveBalance'])->name('admin.users.leave-balance');
-    Route::post('users/bulk-assign-role', [AdminUserController::class, 'bulkAssignRole'])->name('admin.users.bulk-assign-role');
+    Route::middleware(['admin.permission:user_management'])->group(function () {
+        Route::get('users/api', [AdminUserController::class, 'api'])->name('admin.users.api');
+        Route::resource('users', AdminUserController::class);
+        Route::patch('users/{user}/toggle-status', [AdminUserController::class, 'toggleStatus'])->name('admin.users.toggle-status');
+        Route::patch('users/{user}/approve', [AdminUserController::class, 'approve'])->name('admin.users.approve');
+        Route::patch('users/{user}/disapprove', [AdminUserController::class, 'disapprove'])->name('admin.users.disapprove');
+        Route::patch('users/{user}/overtime-window', [AdminUserController::class, 'updateOvertimeWindow'])->name('admin.users.overtime-window');
+        Route::patch('users/{user}/leave-balance', [AdminUserController::class, 'updateLeaveBalance'])->name('admin.users.leave-balance');
+        Route::post('users/bulk-assign-role', [AdminUserController::class, 'bulkAssignRole'])->name('admin.users.bulk-assign-role');
+    });
 
-    // University Management
-    Route::resource('universities', UniversityController::class);
-    Route::patch('universities/{university}/toggle-status', [UniversityController::class, 'toggleStatus'])->name('admin.universities.toggle-status');
+    // Content Management (Quizzes, Forum, Universities)
+    Route::middleware(['admin.permission:content_management'])->group(function () {
+        // University Management
+        Route::resource('universities', UniversityController::class);
+        Route::patch('universities/{university}/toggle-status', [UniversityController::class, 'toggleStatus'])->name('admin.universities.toggle-status');
 
-    // Quiz Management
-    Route::resource('quizzes', AdminQuizController::class);
+        // Quiz Management
+        Route::resource('quizzes', AdminQuizController::class);
     Route::get('quizzes/{quiz}/export-history/pdf', [AdminQuizController::class, 'exportQuizHistoryPdf'])->name('admin.quizzes.export-history-pdf');
     Route::post('quizzes/{quiz}/assign', [AdminQuizController::class, 'assignToUsers'])->name('admin.quizzes.assign');
     Route::get('quizzes/{quiz}/assigned-users', [AdminQuizController::class, 'getAssignedUsers'])->name('admin.quizzes.assigned-users');
@@ -84,23 +99,36 @@ Route::prefix('admin')->middleware(['auth', 'admin'])->group(function () {
     Route::get('all-text-attempts', [AdminQuizController::class, 'allTextAttempts'])->name('admin.all-text-attempts');
     Route::post('quiz-attempts/{attempt}/grade', [AdminQuizController::class, 'gradeAttempt'])->name('admin.quiz-attempts.grade');
 
-    // Quiz Import Routes
-    Route::get('quizzes/import/form', [AdminQuizController::class, 'importForm'])->name('admin.quizzes.import-form');
-    Route::post('quizzes/import', [AdminQuizController::class, 'import'])->name('admin.quizzes.import');
-    Route::get('quizzes/import/template', [AdminQuizController::class, 'downloadTemplate'])->name('admin.quizzes.download-template');
-    
-    // Import Management (Standalone Import Page)
-    Route::get('import', [AdminImportController::class, 'index'])->name('admin.import');
-    Route::post('import', [AdminImportController::class, 'import'])->name('admin.import.process');
-    Route::get('import/template', [AdminImportController::class, 'downloadTemplate'])->name('admin.import.template');
+        // Quiz Import Routes
+        Route::get('quizzes/import/form', [AdminQuizController::class, 'importForm'])->name('admin.quizzes.import-form');
+        Route::post('quizzes/import', [AdminQuizController::class, 'import'])->name('admin.quizzes.import');
+        Route::get('quizzes/import/template', [AdminQuizController::class, 'downloadTemplate'])->name('admin.quizzes.download-template');
 
-    // Settings Management
-    Route::get('/settings', [AdminSettingsController::class, 'index'])->name('admin.settings.index');
-    Route::post('/settings', [AdminSettingsController::class, 'update'])->name('admin.settings.update');
-    Route::get('/settings/health', [AdminSettingsController::class, 'getHealth'])->name('admin.settings.health');
-    Route::post('/settings/test-email', [AdminSettingsController::class, 'testEmail'])->name('admin.settings.test-email');
+        // Import Management (Standalone Import Page)
+        Route::get('import', [AdminImportController::class, 'index'])->name('admin.import');
+        Route::post('import', [AdminImportController::class, 'import'])->name('admin.import.process');
+        Route::get('import/template', [AdminImportController::class, 'downloadTemplate'])->name('admin.import.template');
 
-    // DTR Management (Employees)
+        // Forum Management
+        Route::resource('forum', App\Http\Controllers\Admin\ForumController::class)->names('admin.forum');
+        Route::patch('forum/{forum}/toggle-publish', [App\Http\Controllers\Admin\ForumController::class, 'togglePublish'])->name('admin.forum.toggle-publish');
+        Route::patch('forum/{forum}/toggle-pin', [App\Http\Controllers\Admin\ForumController::class, 'togglePin'])->name('admin.forum.toggle-pin');
+        Route::post('forum/comment', [App\Http\Controllers\Admin\ForumController::class, 'comment'])->name('admin.forum.comment');
+        Route::post('forum/comment/like', [App\Http\Controllers\Admin\ForumController::class, 'likeComment'])->name('admin.forum.comment.like');
+    });
+
+    // Analytics & Reports
+    Route::middleware(['admin.permission:analytics_reports'])->group(function () {
+        Route::get('analytics', [App\Http\Controllers\Admin\AnalyticsController::class, 'index'])->name('admin.analytics.index');
+        Route::get('analytics/quiz/{quizId}', [App\Http\Controllers\Admin\AnalyticsController::class, 'getQuizDetails'])->name('admin.analytics.quiz-details');
+        Route::get('analytics/student/{userId}', [App\Http\Controllers\Admin\AnalyticsController::class, 'getStudentDetails'])->name('admin.analytics.student-details');
+        Route::get('analytics/topic/{topic}', [App\Http\Controllers\Admin\AnalyticsController::class, 'getTopicDetails'])->name('admin.analytics.topic-details')->where('topic', '.*');
+        Route::get('analytics/error-logs', [ErrorLogController::class, 'index'])->name('admin.analytics.error-logs');
+    });
+
+    // Employee Management
+    Route::middleware(['admin.permission:employee_management'])->group(function () {
+        // DTR Management (Employees)
     Route::get('/dtr', [App\Http\Controllers\Admin\DtrController::class, 'index'])->name('admin.dtr.index');
     Route::get('/dtr/create', [App\Http\Controllers\Admin\DtrController::class, 'create'])->name('admin.dtr.create');
     Route::post('/dtr', [App\Http\Controllers\Admin\DtrController::class, 'store'])->name('admin.dtr.store');
@@ -120,23 +148,29 @@ Route::prefix('admin')->middleware(['auth', 'admin'])->group(function () {
     // Student Management Dashboard
     Route::get('/student-management/dashboard', [StudentDashboardController::class, 'index'])->name('admin.student-management.dashboard');
 
-    // Time Report (Employees)
-    Route::get('/time-report', [App\Http\Controllers\Admin\TimeReportController::class, 'index'])->name('admin.time-report.index');
+        // Time Report (Employees)
+        Route::get('/time-report', [App\Http\Controllers\Admin\TimeReportController::class, 'index'])->name('admin.time-report.index');
 
-    // Leave Requests Management (Employees)
-    Route::get('/leave-requests', [App\Http\Controllers\Admin\LeaveRequestController::class, 'index'])->name('admin.leave-requests.index');
-    Route::get('/leave-calendar', [App\Http\Controllers\Admin\LeaveRequestController::class, 'calendar'])->name('admin.leave-requests.calendar');
-    Route::get('/leave-requests/{leaveRequest}', [App\Http\Controllers\Admin\LeaveRequestController::class, 'show'])->name('admin.leave-requests.show');
-    Route::post('/leave-requests/{leaveRequest}/approve', [App\Http\Controllers\Admin\LeaveRequestController::class, 'approve'])->name('admin.leave-requests.approve');
-    Route::post('/leave-requests/{leaveRequest}/force-accept', [App\Http\Controllers\Admin\LeaveRequestController::class, 'forceAccept'])->name('admin.leave-requests.force-accept');
-    Route::post('/leave-requests/{leaveRequest}/reject', [App\Http\Controllers\Admin\LeaveRequestController::class, 'reject'])->name('admin.leave-requests.reject');
-    Route::post('/leave-requests/{leaveRequest}/resubmit', [App\Http\Controllers\Admin\LeaveRequestController::class, 'resubmit'])->name('admin.leave-requests.resubmit');
+        // Leave Requests Management (Employees)
+        Route::get('/leave-requests', [App\Http\Controllers\Admin\LeaveRequestController::class, 'index'])->name('admin.leave-requests.index');
+        Route::get('/leave-calendar', [App\Http\Controllers\Admin\LeaveRequestController::class, 'calendar'])->name('admin.leave-requests.calendar');
+        Route::get('/leave-requests/{leaveRequest}', [App\Http\Controllers\Admin\LeaveRequestController::class, 'show'])->name('admin.leave-requests.show');
+        Route::post('/leave-requests/{leaveRequest}/approve', [App\Http\Controllers\Admin\LeaveRequestController::class, 'approve'])->name('admin.leave-requests.approve');
+        Route::post('/leave-requests/{leaveRequest}/force-accept', [App\Http\Controllers\Admin\LeaveRequestController::class, 'forceAccept'])->name('admin.leave-requests.force-accept');
+        Route::post('/leave-requests/{leaveRequest}/reject', [App\Http\Controllers\Admin\LeaveRequestController::class, 'reject'])->name('admin.leave-requests.reject');
+        Route::post('/leave-requests/{leaveRequest}/resubmit', [App\Http\Controllers\Admin\LeaveRequestController::class, 'resubmit'])->name('admin.leave-requests.resubmit');
+    });
 
-    // Student Leave Requests Management
-    Route::get('/student-leave-requests', [App\Http\Controllers\Admin\LeaveRequestController::class, 'studentIndex'])->name('admin.student-leave-requests.index');
-    Route::get('/student-leave-calendar', [App\Http\Controllers\Admin\LeaveRequestController::class, 'studentCalendar'])->name('admin.student-leave-requests.calendar');
+    // Student Management
+    Route::middleware(['admin.permission:student_management'])->group(function () {
+
+        // Student Leave Requests Management
+        Route::get('/student-leave-requests', [App\Http\Controllers\Admin\LeaveRequestController::class, 'studentIndex'])->name('admin.student-leave-requests.index');
+        Route::get('/student-leave-calendar', [App\Http\Controllers\Admin\LeaveRequestController::class, 'studentCalendar'])->name('admin.student-leave-requests.calendar');
+    });
 
     // Hiring Process Management
+    Route::middleware(['admin.permission:hiring_process'])->group(function () {
     Route::get('/hiring-process', [App\Http\Controllers\Admin\HiringProcessController::class, 'index'])->name('admin.hiring-process.index');
     Route::get('/hiring-process/applicants', [App\Http\Controllers\Admin\HiringProcessController::class, 'applicants'])->name('admin.hiring-process.applicants');
 
@@ -144,46 +178,53 @@ Route::prefix('admin')->middleware(['auth', 'admin'])->group(function () {
     Route::resource('hiring-positions', App\Http\Controllers\Admin\HiringPositionController::class)->names('admin.hiring-positions');
     Route::patch('hiring-positions/{hiringPosition}/toggle-status', [App\Http\Controllers\Admin\HiringPositionController::class, 'toggleStatus'])->name('admin.hiring-positions.toggle-status');
 
-    // Hiring Applications Management
-    Route::get('/hiring-applications', [App\Http\Controllers\Admin\HiringApplicationController::class, 'index'])->name('admin.hiring-applications.index');
-    Route::get('/hiring-applications/{application}', [App\Http\Controllers\Admin\HiringApplicationController::class, 'show'])->name('admin.hiring-applications.show');
-    Route::post('/hiring-applications/{application}/accept', [App\Http\Controllers\Admin\HiringApplicationController::class, 'accept'])->name('admin.hiring-applications.accept');
-    Route::post('/hiring-applications/{application}/reject', [App\Http\Controllers\Admin\HiringApplicationController::class, 'reject'])->name('admin.hiring-applications.reject');
-    Route::post('/hiring-applications/{application}/schedule-interview', [App\Http\Controllers\Admin\HiringApplicationController::class, 'scheduleInterview'])->name('admin.hiring-applications.schedule-interview');
-    Route::get('/hiring-applications/{application}/download-resume', [App\Http\Controllers\Admin\HiringApplicationController::class, 'downloadResume'])->name('admin.hiring-applications.download-resume');
-    Route::delete('/hiring-applications/{application}', [App\Http\Controllers\Admin\HiringApplicationController::class, 'destroy'])->name('admin.hiring-applications.destroy');
+        // Hiring Applications Management
+        Route::get('/hiring-applications', [App\Http\Controllers\Admin\HiringApplicationController::class, 'index'])->name('admin.hiring-applications.index');
+        Route::get('/hiring-applications/{application}', [App\Http\Controllers\Admin\HiringApplicationController::class, 'show'])->name('admin.hiring-applications.show');
+        Route::post('/hiring-applications/{application}/accept', [App\Http\Controllers\Admin\HiringApplicationController::class, 'accept'])->name('admin.hiring-applications.accept');
+        Route::post('/hiring-applications/{application}/reject', [App\Http\Controllers\Admin\HiringApplicationController::class, 'reject'])->name('admin.hiring-applications.reject');
+        Route::post('/hiring-applications/{application}/schedule-interview', [App\Http\Controllers\Admin\HiringApplicationController::class, 'scheduleInterview'])->name('admin.hiring-applications.schedule-interview');
+        Route::get('/hiring-applications/{application}/download-resume', [App\Http\Controllers\Admin\HiringApplicationController::class, 'downloadResume'])->name('admin.hiring-applications.download-resume');
+        Route::delete('/hiring-applications/{application}', [App\Http\Controllers\Admin\HiringApplicationController::class, 'destroy'])->name('admin.hiring-applications.destroy');
+    });
 
-    // Forum Management
-    Route::resource('forum', App\Http\Controllers\Admin\ForumController::class)->names('admin.forum');
-    Route::patch('forum/{forum}/toggle-publish', [App\Http\Controllers\Admin\ForumController::class, 'togglePublish'])->name('admin.forum.toggle-publish');
-    Route::patch('forum/{forum}/toggle-pin', [App\Http\Controllers\Admin\ForumController::class, 'togglePin'])->name('admin.forum.toggle-pin');
-    Route::post('forum/comment', [App\Http\Controllers\Admin\ForumController::class, 'comment'])->name('admin.forum.comment');
-    Route::post('forum/comment/like', [App\Http\Controllers\Admin\ForumController::class, 'likeComment'])->name('admin.forum.comment.like');
+    // Communication
+    Route::middleware(['admin.permission:communication'])->group(function () {
 
-    // Notification Management
-    Route::get('notifications/recent', [App\Http\Controllers\Admin\NotificationController::class, 'getRecent'])->name('admin.notifications.recent');
-    Route::get('notifications/unread-count', [App\Http\Controllers\Admin\NotificationController::class, 'getUnreadCount'])->name('admin.notifications.unread-count');
-    Route::post('notifications/mark-read', [App\Http\Controllers\Admin\NotificationController::class, 'markAsRead'])->name('admin.notifications.mark-read');
-    Route::post('notifications/send-to-all', [App\Http\Controllers\Admin\NotificationController::class, 'sendToAll'])->name('admin.notifications.send-to-all');
-    Route::post('notifications/bulk-delete', [App\Http\Controllers\Admin\NotificationController::class, 'bulkDelete'])->name('admin.notifications.bulk-delete');
-    Route::post('notifications/mark-all-read', [App\Http\Controllers\Admin\NotificationController::class, 'markAllAsRead'])->name('admin.notifications.mark-all-read');
-    Route::get('notifications/stats', [App\Http\Controllers\Admin\NotificationController::class, 'getStats'])->name('admin.notifications.stats');
-    Route::resource('notifications', App\Http\Controllers\Admin\NotificationController::class)->names('admin.notifications');
+        // Notification Management
+        Route::get('notifications/recent', [App\Http\Controllers\Admin\NotificationController::class, 'getRecent'])->name('admin.notifications.recent');
+        Route::get('notifications/unread-count', [App\Http\Controllers\Admin\NotificationController::class, 'getUnreadCount'])->name('admin.notifications.unread-count');
+        Route::post('notifications/mark-read', [App\Http\Controllers\Admin\NotificationController::class, 'markAsRead'])->name('admin.notifications.mark-read');
+        Route::post('notifications/send-to-all', [App\Http\Controllers\Admin\NotificationController::class, 'sendToAll'])->name('admin.notifications.send-to-all');
+        Route::post('notifications/bulk-delete', [App\Http\Controllers\Admin\NotificationController::class, 'bulkDelete'])->name('admin.notifications.bulk-delete');
+        Route::post('notifications/mark-all-read', [App\Http\Controllers\Admin\NotificationController::class, 'markAllAsRead'])->name('admin.notifications.mark-all-read');
+        Route::get('notifications/stats', [App\Http\Controllers\Admin\NotificationController::class, 'getStats'])->name('admin.notifications.stats');
+        Route::resource('notifications', App\Http\Controllers\Admin\NotificationController::class)->names('admin.notifications');
 
-    // Contact Messages Management
-    Route::resource('contact-messages', AdminContactMessageController::class)->only(['index', 'show', 'destroy']);
-    Route::post('contact-messages/{contactMessage}/reply', [AdminContactMessageController::class, 'reply'])->name('contact-messages.reply');
-    Route::patch('contact-messages/{contactMessage}/close', [AdminContactMessageController::class, 'close'])->name('contact-messages.close');
+        // Contact Messages Management
+        Route::resource('contact-messages', AdminContactMessageController::class)->only(['index', 'show', 'destroy']);
+        Route::post('contact-messages/{contactMessage}/reply', [AdminContactMessageController::class, 'reply'])->name('contact-messages.reply');
+        Route::patch('contact-messages/{contactMessage}/close', [AdminContactMessageController::class, 'close'])->name('contact-messages.close');
 
-    // Live Chat Management
+        // Live Chat Management
     Route::get('live-chat', [AdminLiveChatController::class, 'index'])->name('live-chat.index');
     Route::get('live-chat/{ticketNumber}', [AdminLiveChatController::class, 'show'])->name('live-chat.show');
 
-    // User Activity Management
-    Route::get('user-activity', [App\Http\Controllers\Admin\UserActivityController::class, 'index'])->name('admin.user-activity.index');
-    Route::get('user-activity/sessions', [App\Http\Controllers\Admin\UserActivityController::class, 'sessions'])->name('admin.user-activity.sessions');
-    Route::get('user-activity/statistics', [App\Http\Controllers\Admin\UserActivityController::class, 'statistics'])->name('admin.user-activity.statistics');
-    Route::post('user-activity/cleanup', [App\Http\Controllers\Admin\UserActivityController::class, 'cleanup'])->name('admin.user-activity.cleanup');
+    });
+
+    // System Management
+    Route::middleware(['admin.permission:system'])->group(function () {
+        // Settings Management
+        Route::get('/settings', [AdminSettingsController::class, 'index'])->name('admin.settings.index');
+        Route::post('/settings', [AdminSettingsController::class, 'update'])->name('admin.settings.update');
+        Route::get('/settings/health', [AdminSettingsController::class, 'getHealth'])->name('admin.settings.health');
+        Route::post('/settings/test-email', [AdminSettingsController::class, 'testEmail'])->name('admin.settings.test-email');
+
+        // User Activity Management
+        Route::get('user-activity', [App\Http\Controllers\Admin\UserActivityController::class, 'index'])->name('admin.user-activity.index');
+        Route::get('user-activity/sessions', [App\Http\Controllers\Admin\UserActivityController::class, 'sessions'])->name('admin.user-activity.sessions');
+        Route::get('user-activity/statistics', [App\Http\Controllers\Admin\UserActivityController::class, 'statistics'])->name('admin.user-activity.statistics');
+        Route::post('user-activity/cleanup', [App\Http\Controllers\Admin\UserActivityController::class, 'cleanup'])->name('admin.user-activity.cleanup');
     Route::post('live-chat/{ticketNumber}/message', [AdminLiveChatController::class, 'store'])->name('live-chat.store');
     Route::get('live-chat/{ticketNumber}/messages', [AdminLiveChatController::class, 'getMessages'])->name('live-chat.messages');
     Route::get('live-chat/{ticketNumber}/new-messages', [AdminLiveChatController::class, 'getNewMessages'])->name('live-chat.new-messages');
@@ -196,24 +237,18 @@ Route::prefix('admin')->middleware(['auth', 'admin'])->group(function () {
     Route::post('live-chat/{ticketNumber}/typing/stop', [AdminLiveChatController::class, 'stopTyping'])->name('live-chat.typing.stop');
     Route::get('live-chat/{ticketNumber}/typing', [AdminLiveChatController::class, 'getTypingIndicators'])->name('live-chat.typing');
 
-    // Status Management
-    Route::get('status/online-users', [StatusController::class, 'getOnlineUsers'])->name('status.online-users');
-    Route::get('status/away-users', [StatusController::class, 'getAwayUsers'])->name('status.away-users');
-    Route::get('status/idle-users', [StatusController::class, 'getIdleUsers'])->name('status.idle-users');
-    Route::get('status/all-users', [StatusController::class, 'getAllUserStatuses'])->name('status.all-users');
+        // Status Management
+        Route::get('status/online-users', [StatusController::class, 'getOnlineUsers'])->name('status.online-users');
+        Route::get('status/away-users', [StatusController::class, 'getAwayUsers'])->name('status.away-users');
+        Route::get('status/idle-users', [StatusController::class, 'getIdleUsers'])->name('status.idle-users');
+        Route::get('status/all-users', [StatusController::class, 'getAllUserStatuses'])->name('status.all-users');
+    });
 
-        // Analytics Dashboard
-        Route::get('analytics', [App\Http\Controllers\Admin\AnalyticsController::class, 'index'])->name('admin.analytics.index');
-        Route::get('analytics/quiz/{quizId}', [App\Http\Controllers\Admin\AnalyticsController::class, 'getQuizDetails'])->name('admin.analytics.quiz-details');
-        Route::get('analytics/student/{userId}', [App\Http\Controllers\Admin\AnalyticsController::class, 'getStudentDetails'])->name('admin.analytics.student-details');
-        Route::get('analytics/topic/{topic}', [App\Http\Controllers\Admin\AnalyticsController::class, 'getTopicDetails'])->name('admin.analytics.topic-details')->where('topic', '.*');
-        Route::get('analytics/error-logs', [ErrorLogController::class, 'index'])->name('admin.analytics.error-logs');
-
-        // Feedback Management
-        Route::resource('feedback', App\Http\Controllers\Admin\FeedbackController::class)->names('admin.feedback');
-        Route::post('feedback/{feedback}/assign', [App\Http\Controllers\Admin\FeedbackController::class, 'assign'])->name('admin.feedback.assign');
-        Route::get('feedback-stats', [App\Http\Controllers\Admin\FeedbackController::class, 'getStats'])->name('admin.feedback.stats');
-        Route::get('feedback-admins', [App\Http\Controllers\Admin\FeedbackController::class, 'getAdmins'])->name('admin.feedback.admins');
+    // Feedback Management (available to all admins)
+    Route::resource('feedback', App\Http\Controllers\Admin\FeedbackController::class)->names('admin.feedback');
+    Route::post('feedback/{feedback}/assign', [App\Http\Controllers\Admin\FeedbackController::class, 'assign'])->name('admin.feedback.assign');
+    Route::get('feedback-stats', [App\Http\Controllers\Admin\FeedbackController::class, 'getStats'])->name('admin.feedback.stats');
+    Route::get('feedback-admins', [App\Http\Controllers\Admin\FeedbackController::class, 'getAdmins'])->name('admin.feedback.admins');
     });
 
 // User Routes

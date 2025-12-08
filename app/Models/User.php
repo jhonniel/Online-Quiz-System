@@ -540,6 +540,141 @@ class User extends Authenticatable
         return $this->hasMany(LeaveRequest::class);
     }
 
+    public function adminPermission()
+    {
+        return $this->hasOne(AdminPermission::class);
+    }
+
+    /**
+     * Check if user has access to a specific admin feature.
+     * Super admins/employees (users without permission records) have access to all features.
+     */
+    public function hasAdminPermission(string $permission): bool
+    {
+        // If user is not an admin or employee, they don't have any admin permissions
+        if (!$this->isAdmin() && !$this->isEmployee()) {
+            return false;
+        }
+
+        // Load the relationship if not already loaded
+        if (!$this->relationLoaded('adminPermission')) {
+            $this->load('adminPermission');
+        }
+
+        // If user doesn't have a permission record, they are a super admin/employee with full access
+        $adminPermission = $this->adminPermission;
+        if (!$adminPermission) {
+            return true;
+        }
+
+        // Check the specific permission
+        return $adminPermission->$permission ?? false;
+    }
+
+    /**
+     * Check if user has access to Content Management.
+     */
+    public function canAccessContentManagement(): bool
+    {
+        return $this->hasAdminPermission('content_management');
+    }
+
+    /**
+     * Check if user has access to Analytics & Reports.
+     */
+    public function canAccessAnalyticsReports(): bool
+    {
+        return $this->hasAdminPermission('analytics_reports');
+    }
+
+    /**
+     * Check if user has access to Employee Management.
+     */
+    public function canAccessEmployeeManagement(): bool
+    {
+        return $this->hasAdminPermission('employee_management');
+    }
+
+    /**
+     * Check if user has access to Student Management.
+     */
+    public function canAccessStudentManagement(): bool
+    {
+        return $this->hasAdminPermission('student_management');
+    }
+
+    /**
+     * Check if user has access to Hiring Process.
+     */
+    public function canAccessHiringProcess(): bool
+    {
+        return $this->hasAdminPermission('hiring_process');
+    }
+
+    /**
+     * Check if user has access to Communication.
+     */
+    public function canAccessCommunication(): bool
+    {
+        return $this->hasAdminPermission('communication');
+    }
+
+    /**
+     * Check if user has access to User Management.
+     */
+    public function canAccessUserManagement(): bool
+    {
+        return $this->hasAdminPermission('user_management');
+    }
+
+    /**
+     * Check if user has access to System.
+     */
+    public function canAccessSystem(): bool
+    {
+        return $this->hasAdminPermission('system');
+    }
+
+    /**
+     * Check if user is a super admin/employee (no permission restrictions).
+     */
+    public function isSuperAdmin(): bool
+    {
+        return ($this->isAdmin() || $this->isEmployee()) && !$this->adminPermission;
+    }
+
+    /**
+     * Check if user has any admin permission assigned.
+     */
+    public function hasAnyAdminPermission(): bool
+    {
+        // If user is not an admin or employee, they don't have any admin permissions
+        if (!$this->isAdmin() && !$this->isEmployee()) {
+            return false;
+        }
+
+        // Load the relationship if not already loaded
+        if (!$this->relationLoaded('adminPermission')) {
+            $this->load('adminPermission');
+        }
+
+        // If user doesn't have a permission record, they are a super admin/employee with full access
+        $adminPermission = $this->adminPermission;
+        if (!$adminPermission) {
+            return true; // Super admin/employee has all permissions
+        }
+
+        // Check if user has at least one permission enabled
+        return $adminPermission->content_management ||
+               $adminPermission->analytics_reports ||
+               $adminPermission->employee_management ||
+               $adminPermission->student_management ||
+               $adminPermission->hiring_process ||
+               $adminPermission->communication ||
+               $adminPermission->user_management ||
+               $adminPermission->system;
+    }
+
     /**
      * Send the password reset notification.
      *
