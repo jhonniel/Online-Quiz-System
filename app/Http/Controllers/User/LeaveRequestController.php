@@ -47,7 +47,7 @@ class LeaveRequestController extends Controller
         // Ensure a leave balance record exists for this user & year (auto-recurring each year)
         $defaultVacation = (float) \App\Models\Setting::get('default_vacation_balance', 15);
         $defaultSick = (float) \App\Models\Setting::get('default_sick_leave_balance', 10);
-        
+
         $leaveBalance = LeaveBalance::firstOrCreate(
             ['user_id' => $userId, 'year' => $currentYear],
             [
@@ -134,13 +134,13 @@ class LeaveRequestController extends Controller
             // Subtract deficit hours from overtime balance (allow negative values)
             $deficitQuery = \App\Models\DtrDeficit::where('user_id', $userId)
                 ->where('is_applied', true);
-            
+
             if ($months === 12) {
                 $deficitQuery->whereYear('week_start_date', $currentYear);
             } else {
                 $deficitQuery->whereDate('week_start_date', '>=', $fromDate->toDateString());
             }
-            
+
             $totalDeficitHours = $deficitQuery->sum('deficit_hours');
             $totalOvertimeHours = $totalOvertimeHours - $totalDeficitHours;
 
@@ -238,14 +238,14 @@ class LeaveRequestController extends Controller
     public function store(Request $request)
     {
         $user = Auth::user();
-        
+
         // Allow employees and students to access
         if (!in_array($user->role, ['employee', 'student'])) {
             abort(403, 'Only employees and students can create leave requests.');
         }
 
         // Define allowed types based on role
-        $allowedTypes = $user->role === 'student' 
+        $allowedTypes = $user->role === 'student'
             ? ['additional_time', 'absent', 'other']
             : ['vacation_leave', 'sick_leave', 'work_from_home', 'absent', 'overtime', 'offset'];
 
@@ -302,7 +302,7 @@ class LeaveRequestController extends Controller
         } elseif ($validated['type'] === 'offset') {
             // Calculate duration in days
             $startDate = \Carbon\Carbon::parse($validated['start_date']);
-            $endDate = $validated['end_date'] 
+            $endDate = $validated['end_date']
                 ? \Carbon\Carbon::parse($validated['end_date'])
                 : $startDate;
             $days = $startDate->diffInDays($endDate) + 1; // +1 to include both start and end dates
@@ -326,7 +326,7 @@ class LeaveRequestController extends Controller
         if (in_array($validated['type'], ['vacation_leave', 'sick_leave']) && $user->role === 'employee') {
             // Calculate number of days requested (1 day = 1 leave credit)
             $startDate = \Carbon\Carbon::parse($validated['start_date']);
-            $endDate = $validated['end_date'] 
+            $endDate = $validated['end_date']
                 ? \Carbon\Carbon::parse($validated['end_date'])
                 : $startDate;
             $daysRequested = $startDate->diffInDays($endDate) + 1; // +1 to include both start and end dates
@@ -335,7 +335,7 @@ class LeaveRequestController extends Controller
             $currentYear = now()->year;
             $defaultVacation = (float) \App\Models\Setting::get('default_vacation_balance', 15);
             $defaultSick = (float) \App\Models\Setting::get('default_sick_leave_balance', 10);
-            
+
             $leaveBalance = LeaveBalance::firstOrCreate(
                 ['user_id' => $user->id, 'year' => $currentYear],
                 [
@@ -512,7 +512,7 @@ class LeaveRequestController extends Controller
         ];
 
         $raw = $leaveRequest->reason ?? '';
-        
+
         if ($leaveRequest->type === 'overtime') {
             if (preg_match('/Total Overtime Hours:\s*(.+)/', $raw, $m)) {
                 $editData['overtime_hours'] = trim($m[1]);
@@ -578,7 +578,7 @@ class LeaveRequestController extends Controller
         }
 
         // Define allowed types based on role
-        $allowedTypes = $user->role === 'student' 
+        $allowedTypes = $user->role === 'student'
             ? ['additional_time', 'absent', 'other']
             : ['vacation_leave', 'sick_leave', 'work_from_home', 'absent', 'overtime', 'offset'];
 
@@ -634,7 +634,7 @@ class LeaveRequestController extends Controller
         } elseif ($validated['type'] === 'offset') {
             // Calculate duration in days
             $startDate = \Carbon\Carbon::parse($validated['start_date']);
-            $endDate = $validated['end_date'] 
+            $endDate = $validated['end_date']
                 ? \Carbon\Carbon::parse($validated['end_date'])
                 : $startDate;
             $days = $startDate->diffInDays($endDate) + 1; // +1 to include both start and end dates
