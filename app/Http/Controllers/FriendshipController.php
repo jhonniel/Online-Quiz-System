@@ -36,15 +36,16 @@ class FriendshipController extends Controller
             return response()->json([]);
         }
 
-        $users = User::where('role', 'user')
-            ->where('id', '!=', $currentUserId)
+        $users = User::where('id', '!=', $currentUserId)
+            ->where('is_active', true)
+            ->where('is_approved', true)
             ->where(function ($q) use ($query) {
                 $q->where('name', 'like', "%{$query}%")
                   ->orWhere('email', 'like', "%{$query}%");
             })
             ->with('university')
             ->limit(10)
-            ->get(['id', 'name', 'email', 'profile_picture', 'university_id']);
+            ->get(['id', 'name', 'email', 'profile_picture', 'university_id', 'role']);
 
         // Add friendship status and additional data to each user
         $users->each(function ($user) use ($currentUserId) {

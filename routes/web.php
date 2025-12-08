@@ -285,6 +285,12 @@ Route::middleware(['auth'])->group(function () {
 
     // Friendship Routes
     Route::get('/friends', [App\Http\Controllers\FriendshipController::class, 'index'])->name('friends.index');
+    Route::get('/friends/search', [App\Http\Controllers\FriendshipController::class, 'search'])->name('friends.search');
+    Route::post('/friends/send-request', [App\Http\Controllers\FriendshipController::class, 'sendRequest'])->name('friends.send-request');
+    Route::post('/friends/{friendshipId}/accept', [App\Http\Controllers\FriendshipController::class, 'acceptRequest'])->name('friends.accept');
+    Route::post('/friends/{friendshipId}/reject', [App\Http\Controllers\FriendshipController::class, 'rejectRequest'])->name('friends.reject');
+    Route::post('/friends/{friendId}/remove', [App\Http\Controllers\FriendshipController::class, 'removeFriend'])->name('friends.remove');
+    Route::post('/friends/{userId}/block', [App\Http\Controllers\FriendshipController::class, 'blockUser'])->name('friends.block');
     Route::get('/test-friends', function() {
         return view('friends.index', [
             'friends' => collect(),
