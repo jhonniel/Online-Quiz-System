@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\LeaveRequest;
 use App\Models\LeaveRequestLog;
+use App\Models\Dtr;
 use App\Mail\LeaveRequestStatusUpdate;
 use App\Services\MailConfigService;
 use Illuminate\Http\Request;
@@ -414,6 +415,11 @@ class LeaveRequestController extends Controller
             'performed_by' => Auth::id(),
         ]);
 
+        // If Additional Time, credit 1 day = 8 hours to DTR per date
+        if ($leaveRequest->type === 'additional_time') {
+            $this->applyAdditionalTimeToDtr($leaveRequest);
+        }
+
         // Send email notification to employee
         try {
             MailConfigService::configure();
@@ -746,5 +752,35 @@ class LeaveRequestController extends Controller
             'students' => $students,
             'selectedStudent' => $studentId,
         ]);
+    }
+
+    /**
+     * Credit Additional Time leave requests to DTR total hours.
+     * 1 day = 8.00 hours added to total_hours; overtime recalculated.
+     */
+    private function applyAdditionalTimeToDtr(LeaveRequest $leaveRequest): void
+    {
+        $start = Carbon::parse($leaveRequest->start_date);
+        $end = $leaveRequest->end_date ? Carbon::parse($leaveRequest->end_date) : $start;
+        $period = CarbonPeriod::create($start, $end);
+
+        foreach ($period as $date) {
+            $dtr = Dtr::firstOrNew([
+                'user_id' => $leaveRequest->user_id,
+                'date' => $date->toDateString(),
+            ]);
+
+            // Default status for new records
+            if (!$dtr->exists) {
+                $dtr->status = $dtr->status ?? 'present';
+            }
+
+            $existingTotal = (float) $dtr->total_hours;
+            $newTotal = $existingTotal + 8.0; // 1 day = 8 hours
+            $dtr->total_hours = $newTotal;
+            $dtr->overtime_hours = max($newTotal - 8.0, 0);
+
+            $dtr->save();
+        }
     }
 }

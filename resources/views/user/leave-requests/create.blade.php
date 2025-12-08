@@ -276,39 +276,47 @@
 </div>
 
 <script>
-    // Auto-set end_date to start_date if not provided
-    document.getElementById('start_date').addEventListener('change', function() {
-        const endDateInput = document.getElementById('end_date');
-        if (!endDateInput.value) {
-            endDateInput.min = this.value;
-        }
-    });
-
-    document.getElementById('end_date').addEventListener('focus', function() {
-        const startDate = document.getElementById('start_date').value;
-        if (startDate) {
-            this.min = startDate;
-        }
-    });
-
-    // Toggle overtime section based on request type
+    const startDateInput = document.getElementById('start_date');
+    const endDateInput = document.getElementById('end_date');
     const typeSelect = document.getElementById('type');
     const overtimeSection = document.getElementById('overtime-section');
     const wfhSection = document.getElementById('wfh-section');
     const offsetSection = document.getElementById('offset-section');
+    const today = new Date().toISOString().split('T')[0];
+
+    // Auto-set end_date min to start_date when relevant
+    function syncEndDateMin() {
+        if (!endDateInput) return;
+        const startDate = startDateInput.value;
+        if (typeSelect.value === 'overtime' || typeSelect.value === 'additional_time') {
+            endDateInput.removeAttribute('min'); // allow past ranges
+        } else if (startDate) {
+            endDateInput.min = startDate;
+        } else {
+            endDateInput.min = today;
+        }
+    }
+
+    startDateInput.addEventListener('change', function() {
+        if (!endDateInput.value) {
+            syncEndDateMin();
+        }
+    });
+
+    endDateInput.addEventListener('focus', syncEndDateMin);
 
     function updateRequestTypeSections() {
-        const startDateInput = document.getElementById('start_date');
-        const today = new Date().toISOString().split('T')[0];
+        if (typeSelect.value === 'overtime' || typeSelect.value === 'additional_time') {
+            // Allow past dates for overtime and additional time
+            startDateInput.removeAttribute('min');
+        } else {
+            startDateInput.setAttribute('min', today);
+        }
 
         if (typeSelect.value === 'overtime') {
             overtimeSection.classList.remove('hidden');
-            // Remove min restriction for overtime to allow past dates
-            startDateInput.removeAttribute('min');
         } else {
             overtimeSection.classList.add('hidden');
-            // Set min to today for other request types
-            startDateInput.setAttribute('min', today);
         }
 
         if (typeSelect.value === 'work_from_home') {
@@ -322,15 +330,15 @@
         } else {
             offsetSection.classList.add('hidden');
         }
+
+        syncEndDateMin();
     }
 
     typeSelect.addEventListener('change', updateRequestTypeSections);
+
     // Initialize on page load (for validation errors / old input)
-    // Set initial min date based on old input or default to today
-    const startDateInput = document.getElementById('start_date');
-    const today = new Date().toISOString().split('T')[0];
     const oldType = '{{ old("type") }}';
-    if (oldType !== 'overtime') {
+    if (oldType !== 'overtime' && oldType !== 'additional_time') {
         startDateInput.setAttribute('min', today);
     }
     updateRequestTypeSections();
