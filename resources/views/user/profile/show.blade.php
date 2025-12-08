@@ -345,7 +345,7 @@
                                         </a>
                                         <button onclick="removeFriend({{ $friend->id }})"
                                                 class="bg-red-500 text-white px-3 py-1 rounded-md text-xs font-medium hover:bg-red-600 focus:outline-none focus:ring-2 focus:ring-red-500 transition-colors duration-200">
-                                            Remove
+                                            Unfriend
                                         </button>
                                     </div>
                                 </div>
@@ -669,7 +669,7 @@
     }
 
     function removeFriend(friendshipId) {
-        if (confirm('Are you sure you want to remove this friend?')) {
+        if (confirm('Are you sure you want to unfriend this user?')) {
             showLoading();
 
             fetch(`{{ url('friends') }}/${friendshipId}/remove`, {
@@ -683,16 +683,16 @@
             .then(data => {
                 hideLoading();
                 if (data.success) {
-                    showNotification('Friend removed successfully', 'info');
+                    showNotification('User unfriended successfully', 'info');
                     setTimeout(() => location.reload(), 1500);
                 } else {
-                    showNotification(data.error || 'Error removing friend', 'error');
+                    showNotification(data.error || 'Error unfriending user', 'error');
                 }
             })
             .catch(error => {
                 hideLoading();
                 console.error('Error:', error);
-                showNotification('Error removing friend', 'error');
+                showNotification('Error unfriending user', 'error');
             });
         }
     }
