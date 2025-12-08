@@ -254,7 +254,7 @@
                                                class="h-14 w-20 border-2 border-gray-300 rounded-lg cursor-pointer shadow-sm"
                                                value="{{ $settings['primary_color'] ?? '#4F46E5' }}">
                                         <div class="flex-1">
-                                            <input type="text" value="{{ $settings['primary_color'] ?? '#4F46E5' }}" 
+                                            <input type="text" value="{{ $settings['primary_color'] ?? '#4F46E5' }}"
                                                    class="w-full px-3 py-2 border border-gray-300 rounded-lg font-mono text-sm" readonly>
                             </div>
                                     </div>
@@ -268,7 +268,7 @@
                                                class="h-14 w-20 border-2 border-gray-300 rounded-lg cursor-pointer shadow-sm"
                                                value="{{ $settings['secondary_color'] ?? '#6366F1' }}">
                                         <div class="flex-1">
-                                            <input type="text" value="{{ $settings['secondary_color'] ?? '#6366F1' }}" 
+                                            <input type="text" value="{{ $settings['secondary_color'] ?? '#6366F1' }}"
                                                    class="w-full px-3 py-2 border border-gray-300 rounded-lg font-mono text-sm" readonly>
                             </div>
                                     </div>
@@ -477,13 +477,13 @@
                                         @endphp
                                         @foreach($emailArray as $index => $email)
                                             <div class="email-input-group flex items-center space-x-2">
-                                                <input type="email" 
-                                                       name="leave_admin_notification_email[]" 
+                                                <input type="email"
+                                                       name="leave_admin_notification_email[]"
                                                        value="{{ $email }}"
                                                        placeholder="admin@example.com"
                                                        class="flex-1 px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
                                                 @if($index === 0)
-                                                    <button type="button" 
+                                                    <button type="button"
                                                             onclick="addEmailField()"
                                                             class="px-4 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500">
                                                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -491,7 +491,7 @@
                                                         </svg>
                                                     </button>
                                                 @else
-                                                    <button type="button" 
+                                                    <button type="button"
                                                             onclick="removeEmailField(this)"
                                                             class="px-4 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500">
                                                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -917,11 +917,11 @@
                                     <div>
                                         <h4 class="text-sm font-semibold text-gray-900 mb-1">Test Email Configuration</h4>
                                         <p class="text-xs text-gray-600 mb-4">Send a test email to verify your email settings are working correctly</p>
-                                        
+
                                         <div class="flex items-end space-x-3">
                                             <div class="flex-1">
                                                 <label for="test_email_address" class="block text-xs font-medium text-gray-700 mb-2">Test Email Address</label>
-                                                <input type="email" id="test_email_address" 
+                                                <input type="email" id="test_email_address"
                                                        value="{{ auth()->user()->email ?? '' }}"
                                                        placeholder="Enter email address to test"
                                                        class="w-full px-4 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm">
@@ -1461,17 +1461,17 @@
 // Make showTab globally accessible
 window.showTab = function(tabName) {
     console.log('Switching to tab:', tabName); // Debug log
-    
+
     // Hide all tab contents
     document.querySelectorAll('.tab-content').forEach(content => {
         content.classList.add('hidden');
     });
-    
+
     // Remove active class from all tabs
     document.querySelectorAll('.settings-tab').forEach(tab => {
         tab.classList.remove('active');
     });
-    
+
     // Show selected tab content
     const contentElement = document.getElementById('content-' + tabName);
     if (contentElement) {
@@ -1480,7 +1480,7 @@ window.showTab = function(tabName) {
     } else {
         console.error('Tab content not found:', 'content-' + tabName);
     }
-    
+
     // Add active class to selected tab
     const tabElement = document.getElementById('tab-' + tabName);
     if (tabElement) {
@@ -1597,7 +1597,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     function refreshHealth() {
         if (isRefreshing) return;
-        
+
         isRefreshing = true;
         const refreshBtn = document.querySelector('button[onclick="refreshHealth()"]');
         if (refreshBtn) {
@@ -1643,16 +1643,16 @@ document.addEventListener('DOMContentLoaded', function() {
         // Update status
         const statusSection = document.querySelector('#content-health .form-section');
         if (statusSection && data.status) {
-            statusSection.className = 'form-section ' + 
-                (data.status === 'healthy' ? 'bg-gradient-to-br from-green-50 to-emerald-50 border-green-200' : 
-                 data.status === 'warning' ? 'bg-gradient-to-br from-yellow-50 to-amber-50 border-yellow-200' : 
+            statusSection.className = 'form-section ' +
+                (data.status === 'healthy' ? 'bg-gradient-to-br from-green-50 to-emerald-50 border-green-200' :
+                 data.status === 'warning' ? 'bg-gradient-to-br from-yellow-50 to-amber-50 border-yellow-200' :
                  'bg-gradient-to-br from-red-50 to-rose-50 border-red-200');
-            
+
             const statusText = statusSection.querySelector('h3');
             if (statusText) {
                 statusText.textContent = 'System Status: ' + data.status.charAt(0).toUpperCase() + data.status.slice(1);
-                statusText.className = 'text-2xl font-bold ' + 
-                    (data.status === 'healthy' ? 'text-green-900' : 
+                statusText.className = 'text-2xl font-bold ' +
+                    (data.status === 'healthy' ? 'text-green-900' :
                      data.status === 'warning' ? 'text-yellow-900' : 'text-red-900');
             }
 
@@ -1661,8 +1661,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 statusDesc.textContent = data.status === 'healthy' ? 'All systems are operating normally' :
                                         data.status === 'warning' ? 'Some systems may need attention' :
                                         'Critical issues detected';
-                statusDesc.className = 'text-sm mt-1 ' + 
-                    (data.status === 'healthy' ? 'text-green-700' : 
+                statusDesc.className = 'text-sm mt-1 ' +
+                    (data.status === 'healthy' ? 'text-green-700' :
                      data.status === 'warning' ? 'text-yellow-700' : 'text-red-700');
             }
         }
@@ -1693,16 +1693,16 @@ document.addEventListener('DOMContentLoaded', function() {
                 updateElement('exec-time', data.server.php_max_execution_time + 's');
             }
             updateElement('upload-size', data.server.php_upload_max_filesize);
-            
+
             if (data.server.disk_total) {
                 updateElement('disk-space', (data.server.disk_free || 'Unknown') + ' / ' + data.server.disk_total);
             }
-            
+
             if (data.server.disk_used_percent !== undefined) {
                 const progressBar = document.querySelector('.disk-progress-bar');
                 const diskPercent = document.getElementById('disk-percent');
                 if (progressBar) {
-                    const color = data.server.disk_used_percent > 90 ? 'red' : 
+                    const color = data.server.disk_used_percent > 90 ? 'red' :
                                   data.server.disk_used_percent > 70 ? 'yellow' : 'green';
                     progressBar.className = 'bg-' + color + '-600 h-2 rounded-full disk-progress-bar';
                     progressBar.style.width = data.server.disk_used_percent + '%';
@@ -1720,22 +1720,22 @@ document.addEventListener('DOMContentLoaded', function() {
             const title = card.querySelector('h4');
             if (title && title.textContent.toLowerCase().includes(serviceName)) {
                 const isOk = isHealthy !== false;
-                card.className = 'bg-white rounded-xl border-2 ' + 
+                card.className = 'bg-white rounded-xl border-2 ' +
                     (isOk ? 'border-green-200 bg-green-50' : 'border-red-200 bg-red-50') + ' p-6';
-                
+
                 const icon = card.querySelector('svg');
                 if (icon) {
                     icon.className = 'h-5 w-5 ' + (isOk ? 'text-green-600' : 'text-red-600');
-                    icon.innerHTML = isOk ? 
+                    icon.innerHTML = isOk ?
                         '<path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>' :
                         '<path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"/>';
                 }
-                
+
                 const statusText = card.querySelector('p.text-xs.text-gray-600');
                 if (statusText && status) {
                     statusText.textContent = status;
                 }
-                
+
                 const driverText = card.querySelectorAll('p.text-xs.text-gray-500')[1];
                 if (driverText && driver) {
                     driverText.textContent = driver ? (driver.charAt(0).toUpperCase() + driver.slice(1)) : '';
@@ -1754,7 +1754,7 @@ document.addEventListener('DOMContentLoaded', function() {
         if (currentValue === target) return;
 
         element.setAttribute('data-value', target);
-        
+
         const duration = 1000; // 1 second
         const startTime = Date.now();
         const startValue = currentValue;
@@ -1762,13 +1762,13 @@ document.addEventListener('DOMContentLoaded', function() {
         function updateCounter() {
             const elapsed = Date.now() - startTime;
             const progress = Math.min(elapsed / duration, 1);
-            
+
             // Easing function (ease-out)
             const easeOut = 1 - Math.pow(1 - progress, 3);
             const current = Math.floor(startValue + (target - startValue) * easeOut);
-            
+
             element.textContent = current.toLocaleString();
-            
+
             if (progress < 1) {
                 requestAnimationFrame(updateCounter);
             } else {
@@ -1794,7 +1794,7 @@ document.addEventListener('DOMContentLoaded', function() {
             if (originalShowTab) {
                 originalShowTab(tabName);
             }
-            
+
             // Additional functionality for health tab
             if (tabName === 'health') {
                 startLiveStats();
@@ -1817,14 +1817,14 @@ document.addEventListener('DOMContentLoaded', function() {
         const testEmailBtn = document.getElementById('test-email-btn');
         const testEmailBtnText = document.getElementById('test-email-btn-text');
         const resultDiv = document.getElementById('test-email-result');
-        
+
         if (!emailInput || !emailInput.value) {
             alert('Please enter an email address to test');
             return;
         }
 
         const email = emailInput.value.trim();
-        
+
         // Validate email format
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
         if (!emailRegex.test(email)) {
@@ -1836,7 +1836,7 @@ document.addEventListener('DOMContentLoaded', function() {
         testEmailBtn.disabled = true;
         testEmailBtn.classList.add('opacity-50', 'cursor-not-allowed');
         testEmailBtnText.innerHTML = '<svg class="h-4 w-4 mr-2 animate-spin inline" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>Sending...';
-        
+
         // Hide previous result
         resultDiv.classList.add('hidden');
 
@@ -1858,10 +1858,10 @@ document.addEventListener('DOMContentLoaded', function() {
             testEmailBtn.disabled = false;
             testEmailBtn.classList.remove('opacity-50', 'cursor-not-allowed');
             testEmailBtnText.textContent = 'Send Test Email';
-            
+
             // Show result
             resultDiv.classList.remove('hidden');
-            
+
             if (data.success) {
                 resultDiv.className = 'mt-4 p-4 rounded-lg bg-green-50 border border-green-200';
                 resultDiv.innerHTML = `
@@ -1896,7 +1896,7 @@ document.addEventListener('DOMContentLoaded', function() {
             testEmailBtn.disabled = false;
             testEmailBtn.classList.remove('opacity-50', 'cursor-not-allowed');
             testEmailBtnText.textContent = 'Send Test Email';
-            
+
             // Show error
             resultDiv.classList.remove('hidden');
             resultDiv.className = 'mt-4 p-4 rounded-lg bg-red-50 border border-red-200';
@@ -1911,23 +1911,29 @@ document.addEventListener('DOMContentLoaded', function() {
                     </div>
                 </div>
             `;
-            
+
             console.error('Test email error:', error);
         });
-    };
+    });
+</script>
 
-    // Add email field
+<script>
+    // Add email field - must be in global scope for onclick handlers
     function addEmailField() {
         const container = document.getElementById('email-list-container');
+        if (!container) {
+            console.error('Email list container not found');
+            return;
+        }
         const newField = document.createElement('div');
         newField.className = 'email-input-group flex items-center space-x-2';
         newField.innerHTML = `
-            <input type="email" 
-                   name="leave_admin_notification_email[]" 
+            <input type="email"
+                   name="leave_admin_notification_email[]"
                    value=""
                    placeholder="admin@example.com"
                    class="flex-1 px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
-            <button type="button" 
+            <button type="button"
                     onclick="removeEmailField(this)"
                     class="px-4 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500">
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1938,14 +1944,19 @@ document.addEventListener('DOMContentLoaded', function() {
         container.appendChild(newField);
     }
 
-    // Remove email field
+    // Remove email field - must be in global scope for onclick handlers
     function removeEmailField(button) {
         const container = document.getElementById('email-list-container');
+        if (!container) {
+            console.error('Email list container not found');
+            return;
+        }
         const groups = container.querySelectorAll('.email-input-group');
         if (groups.length > 1) {
             button.closest('.email-input-group').remove();
+        } else {
+            alert('You must have at least one email field.');
         }
     }
-});
 </script>
 @endsection
