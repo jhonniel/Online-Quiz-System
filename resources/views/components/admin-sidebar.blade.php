@@ -570,7 +570,8 @@
         </div>
         @endif
 
-        <!-- User Features (Default Access) -->
+        <!-- User Features (Default Access) - Only visible to employees, not admins -->
+        @if(auth()->user()->isEmployee())
         <div class="mb-6" x-data="{
             open: (localStorage.getItem('nav-user-features') || 'true') === 'true',
             toggle() {
@@ -683,6 +684,7 @@
                 @endif
             </div>
         </div>
+        @endif
     </nav>
 
     <!-- User Info at Bottom -->

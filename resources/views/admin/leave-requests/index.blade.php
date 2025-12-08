@@ -154,6 +154,7 @@
                             <th class="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden sm:table-cell">Date Range</th>
                             <th class="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Days</th>
                             <th class="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                            <th class="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden lg:table-cell">Reviewed By</th>
                             <th class="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden lg:table-cell">Submitted</th>
                             <th class="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                         </tr>
@@ -194,6 +195,26 @@
                                     <span class="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full {{ $request->status_badge_class }}">
                                         {{ $request->display_status }}
                                     </span>
+                                </td>
+                                <td class="px-3 sm:px-6 py-4 hidden lg:table-cell text-xs sm:text-sm text-gray-500">
+                                    @if($request->status === 'approved' && $request->approvedBy && $request->approvedBy->performer)
+                                        <div class="text-xs">
+                                            <div class="font-medium text-gray-900">{{ $request->approvedBy->performer->name }}</div>
+                                            <div class="text-gray-500">{{ $request->approvedBy->created_at->format('M d, Y') }}</div>
+                                        </div>
+                                    @elseif($request->status === 'rejected' && $request->rejectedBy && $request->rejectedBy->performer)
+                                        <div class="text-xs">
+                                            <div class="font-medium text-gray-900">{{ $request->rejectedBy->performer->name }}</div>
+                                            <div class="text-gray-500">{{ $request->rejectedBy->created_at->format('M d, Y') }}</div>
+                                        </div>
+                                    @elseif($request->status === 'pending' && $request->reviewed_at && $request->resubmissionRequestedBy && $request->resubmissionRequestedBy->performer)
+                                        <div class="text-xs">
+                                            <div class="font-medium text-gray-900">{{ $request->resubmissionRequestedBy->performer->name }}</div>
+                                            <div class="text-gray-500">{{ $request->resubmissionRequestedBy->created_at->format('M d, Y') }}</div>
+                                        </div>
+                                    @else
+                                        <span class="text-gray-400">-</span>
+                                    @endif
                                 </td>
                                 <td class="px-3 sm:px-6 py-4 hidden lg:table-cell text-xs sm:text-sm text-gray-500">
                                     {{ $request->created_at->format('M d, Y') }}

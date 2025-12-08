@@ -899,5 +899,55 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 });
 </script>
+
+<!-- Activity Log Section -->
+<div class="bg-white rounded-lg shadow border border-gray-200 p-4 sm:p-6 mt-6">
+    <h2 class="text-lg sm:text-xl font-semibold text-gray-900 mb-4">Activity Log</h2>
+    <p class="text-sm text-gray-500 mb-4">Track all updates and actions performed on this leave request.</p>
+
+    @if($leaveRequest->logs && $leaveRequest->logs->count() > 0)
+        <div class="space-y-4">
+            @foreach($leaveRequest->logs as $log)
+                <div class="border-l-4 {{ $log->action === 'approved' ? 'border-green-500' : ($log->action === 'rejected' ? 'border-red-500' : ($log->action === 'resubmission_requested' ? 'border-yellow-500' : 'border-gray-400')) }} pl-4 py-2">
+                    <div class="flex items-start justify-between">
+                        <div class="flex-1">
+                            <div class="flex items-center space-x-2">
+                                <span class="px-2 py-1 text-xs font-semibold rounded-full {{ $log->action === 'approved' ? 'bg-green-100 text-green-800' : ($log->action === 'rejected' ? 'bg-red-100 text-red-800' : ($log->action === 'resubmission_requested' ? 'bg-yellow-100 text-yellow-800' : 'bg-gray-100 text-gray-800')) }}">
+                                    {{ $log->action_label }}
+                                </span>
+                                @if($log->status_before && $log->status_after)
+                                    <span class="text-xs text-gray-500">
+                                        {{ ucfirst($log->status_before) }} → {{ ucfirst($log->status_after) }}
+                                    </span>
+                                @endif
+                            </div>
+                            <div class="mt-2 text-sm text-gray-700">
+                                @if($log->performer)
+                                    <span class="font-medium">{{ $log->performer->name }}</span>
+                                    <span class="text-gray-500">performed this action</span>
+                                @endif
+                            </div>
+                            @if($log->notes)
+                                <div class="mt-2 text-sm text-gray-600 bg-gray-50 rounded p-2">
+                                    {{ $log->notes }}
+                                </div>
+                            @endif
+                        </div>
+                        <div class="text-xs text-gray-500 ml-4">
+                            {{ $log->created_at->format('M d, Y h:i A') }}
+                        </div>
+                    </div>
+                </div>
+            @endforeach
+        </div>
+    @else
+        <div class="text-center py-8 text-gray-500">
+            <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+            </svg>
+            <p class="mt-2 text-sm">No activity log entries yet.</p>
+        </div>
+    @endif
+</div>
 @endsection
 

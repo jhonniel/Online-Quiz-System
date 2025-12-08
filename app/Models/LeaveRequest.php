@@ -42,6 +42,44 @@ class LeaveRequest extends Model
     }
 
     /**
+     * Get all logs for this leave request.
+     */
+    public function logs()
+    {
+        return $this->hasMany(LeaveRequestLog::class)->orderBy('created_at', 'desc');
+    }
+
+    /**
+     * Get the log entry for approval (most recent).
+     */
+    public function approvedBy()
+    {
+        return $this->hasOne(LeaveRequestLog::class)
+            ->where('action', 'approved')
+            ->latest();
+    }
+
+    /**
+     * Get the log entry for rejection (most recent).
+     */
+    public function rejectedBy()
+    {
+        return $this->hasOne(LeaveRequestLog::class)
+            ->where('action', 'rejected')
+            ->latest();
+    }
+
+    /**
+     * Get the log entry for resubmission request (most recent).
+     */
+    public function resubmissionRequestedBy()
+    {
+        return $this->hasOne(LeaveRequestLog::class)
+            ->where('action', 'resubmission_requested')
+            ->latest();
+    }
+
+    /**
      * Get the type label.
      */
     public function getTypeLabelAttribute(): string
@@ -119,7 +157,7 @@ class LeaveRequest extends Model
         if (!$this->end_date) {
             return 1;
         }
-        
+
         return $this->start_date->diffInDays($this->end_date) + 1;
     }
 }

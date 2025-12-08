@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\LeaveRequest;
+use App\Models\LeaveRequestLog;
 use App\Mail\LeaveRequestStatusUpdate;
 use App\Services\MailConfigService;
 use Illuminate\Http\Request;
@@ -20,7 +21,7 @@ class LeaveRequestController extends Controller
      */
     public function index(Request $request)
     {
-        $query = LeaveRequest::with(['user', 'reviewer'])
+        $query = LeaveRequest::with(['user', 'reviewer', 'approvedBy.performer', 'rejectedBy.performer', 'resubmissionRequestedBy.performer'])
             ->whereHas('user', function($q) {
                 $q->where('role', 'employee');
             });
@@ -106,7 +107,7 @@ class LeaveRequestController extends Controller
 
             $defaultVacation = (float) \App\Models\Setting::get('default_vacation_balance', 15);
             $defaultSick = (float) \App\Models\Setting::get('default_sick_leave_balance', 10);
-            
+
             $leaveBalance = \App\Models\LeaveBalance::firstOrCreate(
                 ['user_id' => $user->id, 'year' => $currentYear],
                 [
@@ -177,13 +178,13 @@ class LeaveRequestController extends Controller
             // Subtract deficit hours from overtime balance (allow negative values)
             $deficitQuery = \App\Models\DtrDeficit::where('user_id', $user->id)
                 ->where('is_applied', true);
-            
+
             if ($months === 12) {
                 $deficitQuery->whereYear('week_start_date', $currentYear);
             } else {
                 $deficitQuery->whereDate('week_start_date', '>=', $fromDate->toDateString());
             }
-            
+
             $totalDeficitHours = $deficitQuery->sum('deficit_hours');
             $totalOvertimeHours = $totalOvertimeHours - $totalDeficitHours;
 
@@ -220,13 +221,13 @@ class LeaveRequestController extends Controller
             $overtimeHoursPart = intdiv($absOvertimeMinutes, 60);
             $overtimeMinutesPart = $absOvertimeMinutes % 60;
             $overtimeFormatted = ($isNegative ? '-' : '') . sprintf('%02d:%02d', $overtimeHoursPart, $overtimeMinutesPart);
-            
+
             // Check if this is an offset request and if the duration exceeds overtime balance
             $hasNegativeBalance = false;
             if ($leaveRequest->type === 'offset' && $leaveRequest->isPending()) {
                 // Calculate offset hours needed (days * 8 hours per day)
                 $offsetHoursNeeded = $leaveRequest->days * 8;
-                
+
                 // Check if offset hours needed exceeds current overtime balance
                 // If yes, approving will result in negative balance
                 $hasNegativeBalance = $offsetHoursNeeded > $netOvertimeHours;
@@ -265,6 +266,9 @@ class LeaveRequestController extends Controller
             'hr_admin' => \App\Models\Setting::get('leave_hr_admin', 'MAY GRACE ACOSTA'),
             'cto' => \App\Models\Setting::get('leave_cto', 'NITISH KHEMANI'),
         ];
+
+        // Load logs with performer relationship
+        $leaveRequest->load(['logs.performer']);
 
         return view('admin.leave-requests.show', compact('leaveRequest', 'balances', 'overtimeFormatted', 'signatories', 'studentTime', 'hasNegativeBalance'));
     }
@@ -391,11 +395,23 @@ class LeaveRequestController extends Controller
             'admin_notes' => 'nullable|string|max:1000',
         ]);
 
+        $statusBefore = $leaveRequest->status;
+
         $leaveRequest->update([
             'status' => 'approved',
             'admin_notes' => $request->admin_notes,
             'reviewed_by' => Auth::id(),
             'reviewed_at' => now(),
+        ]);
+
+        // Log the approval action
+        LeaveRequestLog::create([
+            'leave_request_id' => $leaveRequest->id,
+            'action' => 'approved',
+            'status_before' => $statusBefore,
+            'status_after' => 'approved',
+            'notes' => $request->admin_notes,
+            'performed_by' => Auth::id(),
         ]);
 
         // Send email notification to employee
@@ -435,11 +451,23 @@ class LeaveRequestController extends Controller
             'admin_notes' => 'nullable|string|max:1000',
         ]);
 
+        $statusBefore = $leaveRequest->status;
+
         $leaveRequest->update([
             'status' => 'approved',
             'admin_notes' => ($request->admin_notes ?? '') . ' [Force Accepted - Negative Balance]',
             'reviewed_by' => Auth::id(),
             'reviewed_at' => now(),
+        ]);
+
+        // Log the force approval action
+        LeaveRequestLog::create([
+            'leave_request_id' => $leaveRequest->id,
+            'action' => 'approved',
+            'status_before' => $statusBefore,
+            'status_after' => 'approved',
+            'notes' => ($request->admin_notes ?? '') . ' [Force Accepted - Negative Balance]',
+            'performed_by' => Auth::id(),
         ]);
 
         // Send email notification to employee
@@ -466,11 +494,23 @@ class LeaveRequestController extends Controller
             'admin_notes' => 'nullable|string|max:1000',
         ]);
 
+        $statusBefore = $leaveRequest->status;
+
         $leaveRequest->update([
             'status' => 'rejected',
             'admin_notes' => $request->admin_notes,
             'reviewed_by' => Auth::id(),
             'reviewed_at' => now(),
+        ]);
+
+        // Log the rejection action
+        LeaveRequestLog::create([
+            'leave_request_id' => $leaveRequest->id,
+            'action' => 'rejected',
+            'status_before' => $statusBefore,
+            'status_after' => 'rejected',
+            'notes' => $request->admin_notes,
+            'performed_by' => Auth::id(),
         ]);
 
         // Send email notification to employee
@@ -497,7 +537,9 @@ class LeaveRequestController extends Controller
             'admin_notes' => 'nullable|string|max:1000',
         ]);
 
-        $adminNotes = $request->admin_notes 
+        $statusBefore = $leaveRequest->status;
+
+        $adminNotes = $request->admin_notes
             ? ($leaveRequest->admin_notes ? $leaveRequest->admin_notes . "\n\n[Resubmission Request]: " . $request->admin_notes : $request->admin_notes)
             : $leaveRequest->admin_notes;
 
@@ -506,6 +548,16 @@ class LeaveRequestController extends Controller
             'admin_notes' => $adminNotes,
             'reviewed_by' => Auth::id(),
             'reviewed_at' => now(),
+        ]);
+
+        // Log the resubmission request action
+        LeaveRequestLog::create([
+            'leave_request_id' => $leaveRequest->id,
+            'action' => 'resubmission_requested',
+            'status_before' => $statusBefore,
+            'status_after' => 'pending',
+            'notes' => $request->admin_notes,
+            'performed_by' => Auth::id(),
         ]);
 
         // Send email notification to employee
