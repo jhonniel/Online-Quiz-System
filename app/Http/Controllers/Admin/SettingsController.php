@@ -411,7 +411,8 @@ class SettingsController extends Controller
             'leave_immediate_supervisor' => 'nullable|string|max:255',
             'leave_hr_admin' => 'nullable|string|max:255',
             'leave_cto' => 'nullable|string|max:255',
-            'leave_admin_notification_email' => 'nullable|email|max:255',
+            'leave_admin_notification_email' => 'nullable|array',
+            'leave_admin_notification_email.*' => 'nullable|email|max:255',
             'default_vacation_balance' => 'nullable|numeric|min:0|max:365',
             // Contact Information
             'contact_email' => 'nullable|email|max:255',
@@ -561,8 +562,12 @@ class SettingsController extends Controller
         $leaveCto = $request->leave_cto ?? 'NITISH KHEMANI';
         Setting::set('leave_cto', $leaveCto, 'text', 'Name for Chief Technology Officer in leave request letters');
 
-        $leaveAdminNotificationEmail = $request->leave_admin_notification_email ?? '';
-        Setting::set('leave_admin_notification_email', $leaveAdminNotificationEmail, 'text', 'Email address to receive notifications when employees submit leave requests');
+        // Handle multiple admin notification emails
+        $adminEmails = $request->leave_admin_notification_email ?? [];
+        $adminEmails = is_array($adminEmails) ? $adminEmails : [$adminEmails];
+        $adminEmails = array_filter(array_map('trim', $adminEmails)); // Remove empty values and trim
+        $leaveAdminNotificationEmail = !empty($adminEmails) ? implode(',', $adminEmails) : '';
+        Setting::set('leave_admin_notification_email', $leaveAdminNotificationEmail, 'text', 'Email addresses (comma-separated) to receive notifications when employees submit leave requests');
 
         // Default Leave Balances
         // Always save these values - form fields are always present in the form

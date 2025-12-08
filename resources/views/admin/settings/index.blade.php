@@ -458,14 +458,52 @@
                                 </div>
                                 <div>
                                     <label for="leave_admin_notification_email" class="block text-sm font-medium text-gray-700 mb-2">
-                                        Admin Notification Email
+                                        Admin Notification Emails
                                     </label>
-                                    <input type="email" id="leave_admin_notification_email" name="leave_admin_notification_email"
-                                           value="{{ old('leave_admin_notification_email', $settings['leave_admin_notification_email'] ?? '') }}"
-                                           placeholder="admin@example.com"
-                                           class="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                                    <div id="email-list-container" class="space-y-2 mb-2">
+                                        @php
+                                            $oldEmails = old('leave_admin_notification_email');
+                                            if (is_array($oldEmails)) {
+                                                $emailArray = array_filter(array_map('trim', $oldEmails));
+                                            } else {
+                                                $emails = $oldEmails ?? ($settings['leave_admin_notification_email'] ?? '');
+                                                $emailArray = !empty($emails) ? explode(',', $emails) : [''];
+                                                $emailArray = array_map('trim', $emailArray);
+                                                $emailArray = array_filter($emailArray);
+                                            }
+                                            if (empty($emailArray)) {
+                                                $emailArray = [''];
+                                            }
+                                        @endphp
+                                        @foreach($emailArray as $index => $email)
+                                            <div class="email-input-group flex items-center space-x-2">
+                                                <input type="email" 
+                                                       name="leave_admin_notification_email[]" 
+                                                       value="{{ $email }}"
+                                                       placeholder="admin@example.com"
+                                                       class="flex-1 px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                                                @if($index === 0)
+                                                    <button type="button" 
+                                                            onclick="addEmailField()"
+                                                            class="px-4 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                                                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+                                                        </svg>
+                                                    </button>
+                                                @else
+                                                    <button type="button" 
+                                                            onclick="removeEmailField(this)"
+                                                            class="px-4 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500">
+                                                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                                                        </svg>
+                                                    </button>
+                                                @endif
+                                            </div>
+                                        @endforeach
+                                    </div>
                                     <p class="mt-2 text-xs text-gray-500">
-                                        Email address to receive notifications when employees submit leave requests. Leave empty to disable notifications.
+                                        Email addresses to receive notifications when employees submit leave requests. You can add multiple emails. Leave empty to disable notifications.
                                     </p>
                                 </div>
                             </div>
@@ -1877,6 +1915,37 @@ document.addEventListener('DOMContentLoaded', function() {
             console.error('Test email error:', error);
         });
     };
+
+    // Add email field
+    function addEmailField() {
+        const container = document.getElementById('email-list-container');
+        const newField = document.createElement('div');
+        newField.className = 'email-input-group flex items-center space-x-2';
+        newField.innerHTML = `
+            <input type="email" 
+                   name="leave_admin_notification_email[]" 
+                   value=""
+                   placeholder="admin@example.com"
+                   class="flex-1 px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+            <button type="button" 
+                    onclick="removeEmailField(this)"
+                    class="px-4 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                </svg>
+            </button>
+        `;
+        container.appendChild(newField);
+    }
+
+    // Remove email field
+    function removeEmailField(button) {
+        const container = document.getElementById('email-list-container');
+        const groups = container.querySelectorAll('.email-input-group');
+        if (groups.length > 1) {
+            button.closest('.email-input-group').remove();
+        }
+    }
 });
 </script>
 @endsection

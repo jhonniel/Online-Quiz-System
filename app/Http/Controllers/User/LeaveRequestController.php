@@ -398,18 +398,27 @@ class LeaveRequestController extends Controller
             'status' => 'pending',
         ]);
 
-        // Send email notification to admin if setting is configured (only for employees)
+        // Send email notification to admin(s) if setting is configured (only for employees)
         if ($user->role === 'employee') {
-            $adminEmail = \App\Models\Setting::get('leave_admin_notification_email', '');
-            if (!empty($adminEmail) && filter_var($adminEmail, FILTER_VALIDATE_EMAIL)) {
-                try {
-                    MailConfigService::configure();
-                    Mail::to($adminEmail)->send(
-                        new LeaveRequestNotification($leaveRequest)
-                    );
-                } catch (\Exception $e) {
-                    Log::error('Failed to send leave request notification email to admin: ' . $e->getMessage());
-                    // Don't fail the request if email fails
+            $adminEmailsStr = \App\Models\Setting::get('leave_admin_notification_email', '');
+            if (!empty($adminEmailsStr)) {
+                $adminEmails = array_filter(array_map('trim', explode(',', $adminEmailsStr)));
+                $validEmails = array_filter($adminEmails, function($email) {
+                    return filter_var($email, FILTER_VALIDATE_EMAIL);
+                });
+                
+                if (!empty($validEmails)) {
+                    try {
+                        MailConfigService::configure();
+                        foreach ($validEmails as $email) {
+                            Mail::to($email)->send(
+                                new LeaveRequestNotification($leaveRequest)
+                            );
+                        }
+                    } catch (\Exception $e) {
+                        Log::error('Failed to send leave request notification email to admin(s): ' . $e->getMessage());
+                        // Don't fail the request if email fails
+                    }
                 }
             }
         }
