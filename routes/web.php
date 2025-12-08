@@ -317,6 +317,7 @@ Route::middleware(['auth'])->group(function () {
     Route::post('/friends/send-request', [App\Http\Controllers\FriendshipController::class, 'sendRequest'])->name('friends.send-request');
     Route::post('/friends/{friendship}/accept', [App\Http\Controllers\FriendshipController::class, 'acceptRequest'])->name('friends.accept');
     Route::post('/friends/{friendship}/reject', [App\Http\Controllers\FriendshipController::class, 'rejectRequest'])->name('friends.reject');
+    Route::post('/friends/{friendship}/cancel', [App\Http\Controllers\FriendshipController::class, 'cancelRequest'])->name('friends.cancel');
     Route::delete('/friends/{friend}/remove', [App\Http\Controllers\FriendshipController::class, 'removeFriend'])->name('friends.remove');
     Route::post('/friends/{user}/block', [App\Http\Controllers\FriendshipController::class, 'blockUser'])->name('friends.block');
 

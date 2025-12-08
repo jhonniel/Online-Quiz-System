@@ -222,14 +222,21 @@
                                         <p class="text-xs text-gray-500 truncate">{{ $request->user->email }}</p>
                                     </div>
                                     <div class="flex flex-col space-y-1">
-                                        <button onclick="acceptRequest({{ $request->id }})"
-                                                class="bg-green-500 text-white px-3 py-1 rounded-md text-xs font-medium hover:bg-green-600 focus:outline-none focus:ring-2 focus:ring-green-500 transition-colors duration-200">
-                                            Accept
-                                        </button>
-                                        <button onclick="rejectRequest({{ $request->id }})"
-                                                class="bg-red-500 text-white px-3 py-1 rounded-md text-xs font-medium hover:bg-red-600 focus:outline-none focus:ring-2 focus:ring-red-500 transition-colors duration-200">
-                                            Reject
-                                        </button>
+                                        @if($request->status === 'accepted')
+                                            <a href="{{ route('user-chat.index') }}?friend={{ $request->user->id }}"
+                                               class="bg-indigo-500 text-white px-3 py-1 rounded-md text-xs font-medium hover:bg-indigo-600 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-colors duration-200 text-center">
+                                                Chat
+                                            </a>
+                                        @else
+                                            <button onclick="acceptRequest({{ $request->id }})"
+                                                    class="bg-green-500 text-white px-3 py-1 rounded-md text-xs font-medium hover:bg-green-600 focus:outline-none focus:ring-2 focus:ring-green-500 transition-colors duration-200">
+                                                Accept
+                                            </button>
+                                            <button onclick="rejectRequest({{ $request->id }})"
+                                                    class="bg-red-500 text-white px-3 py-1 rounded-md text-xs font-medium hover:bg-red-600 focus:outline-none focus:ring-2 focus:ring-red-500 transition-colors duration-200">
+                                                Reject
+                                            </button>
+                                        @endif
                                     </div>
                                 </div>
                             </div>
@@ -270,13 +277,22 @@
                                     <div class="flex-1 min-w-0">
                                         <p class="text-sm font-medium text-gray-900 truncate">{{ $request->friend->name }}</p>
                                         <p class="text-xs text-gray-500 truncate">{{ $request->friend->email }}</p>
-                                        <p class="text-xs text-blue-600 font-medium">Pending</p>
+                                        <p class="text-xs {{ $request->status === 'accepted' ? 'text-green-600' : 'text-blue-600' }} font-medium">
+                                            {{ $request->status === 'accepted' ? 'Accepted' : 'Pending' }}
+                                        </p>
                                     </div>
                                     <div class="flex flex-col">
-                                        <button onclick="cancelRequest({{ $request->id }})"
-                                                class="bg-red-500 text-white px-3 py-1 rounded-md text-xs font-medium hover:bg-red-600 focus:outline-none focus:ring-2 focus:ring-red-500 transition-colors duration-200">
-                                            Cancel
-                                        </button>
+                                        @if($request->status === 'accepted')
+                                            <a href="{{ route('user-chat.index') }}?friend={{ $request->friend->id }}"
+                                               class="bg-indigo-500 text-white px-3 py-1 rounded-md text-xs font-medium hover:bg-indigo-600 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-colors duration-200 text-center">
+                                                Chat
+                                            </a>
+                                        @else
+                                            <button onclick="cancelRequest({{ $request->id }})"
+                                                    class="bg-red-500 text-white px-3 py-1 rounded-md text-xs font-medium hover:bg-red-600 focus:outline-none focus:ring-2 focus:ring-red-500 transition-colors duration-200">
+                                                Cancel
+                                            </button>
+                                        @endif
                                     </div>
                                 </div>
                             </div>
@@ -453,7 +469,7 @@
                                 Found ${users.length} user${users.length === 1 ? '' : 's'}
                             </div>
                             ${users.map(user => `
-                                <div class="p-3 hover:bg-indigo-50 cursor-pointer border-b border-gray-100 last:border-b-0 transition-colors duration-150 active:bg-indigo-100" onclick="selectUser(${user.id}, '${user.name}', '${user.email}', '${user.friendship_status}', ${user.friendship_id || 'null'})">
+                                <div class="p-3 hover:bg-indigo-50 border-b border-gray-100 last:border-b-0 transition-colors duration-150">
                                     <div class="flex items-center space-x-3">
                                         <div class="flex-shrink-0">
                                             ${user.profile_picture ?
@@ -469,9 +485,18 @@
                                             ${user.university ? `<p class="text-xs text-gray-400 truncate mt-1">${user.university}</p>` : ''}
                                         </div>
                                         <div class="flex-shrink-0">
-                                            <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getStatusClass(user.friendship_status)}">
-                                                ${getStatusText(user.friendship_status)}
-                                            </span>
+                                            ${user.friendship_status === 'accepted' ?
+                                                `<a href="{{ route('user-chat.index') }}?friend=${user.id}" class="inline-flex items-center px-3 py-1.5 rounded-md text-xs font-medium bg-indigo-500 text-white hover:bg-indigo-600 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-colors duration-200">
+                                                    Chat
+                                                </a>` :
+                                                user.friendship_status === 'pending' ?
+                                                `<span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getStatusClass(user.friendship_status)}">
+                                                    ${getStatusText(user.friendship_status)}
+                                                </span>` :
+                                                `<button onclick="selectUser(${user.id}, '${user.name}', '${user.email}', '${user.friendship_status}', ${user.friendship_id || 'null'})" class="inline-flex items-center px-3 py-1.5 rounded-md text-xs font-medium bg-indigo-500 text-white hover:bg-indigo-600 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-colors duration-200">
+                                                    Add Friend
+                                                </button>`
+                                            }
                                         </div>
                                     </div>
                                 </div>
@@ -521,7 +546,8 @@
         } else if (status === 'pending') {
             showNotification('Friend request already sent', 'warning');
         } else if (status === 'accepted') {
-            showNotification('Already friends', 'info');
+            // Navigate to chat with the friend
+            window.location.href = '{{ route("user-chat.index") }}?friend=' + userId;
         } else if (status === 'blocked') {
             showNotification('User is blocked', 'error');
         }
@@ -560,13 +586,13 @@
     function acceptRequest(friendshipId) {
         showLoading();
 
-        fetch(`{{ url('friends') }}/${friendshipId}/accept`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
-            }
-        })
+            fetch(`{{ url('friends') }}/${friendshipId}/accept`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+                }
+            })
         .then(response => response.json())
         .then(data => {
             hideLoading();

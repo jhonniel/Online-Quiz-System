@@ -13,12 +13,14 @@ class ProfileController extends Controller
     {
         $user = auth()->user();
 
-        // Get friend request data
-        $pendingRequests = $user->friendRequests()->with('user')->get();
+        // Get friend request data - only pending requests
+        $pendingRequests = $user->pendingFriendRequests()->with('user')->get();
         $sentRequests = $user->sentFriendRequests()->with('friend')->get();
 
-        // Get friends list
-        $allFriends = $user->friends()->get();
+        // Get friends list from both directions
+        $friendsAsUser = $user->friends()->get();
+        $friendsAsFriend = $user->acceptedFriends()->get();
+        $allFriends = $friendsAsUser->merge($friendsAsFriend)->unique('id');
 
         return view('user.profile.show', compact('user', 'pendingRequests', 'sentRequests', 'allFriends'));
     }

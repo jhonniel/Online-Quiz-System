@@ -147,6 +147,28 @@ class FriendshipController extends Controller
         ]);
     }
 
+    /**
+     * Cancel a sent friend request.
+     */
+    public function cancelRequest(Request $request, $friendshipId): JsonResponse
+    {
+        $friendship = Friendship::where('id', $friendshipId)
+            ->where('user_id', auth()->id())
+            ->where('status', 'pending')
+            ->first();
+
+        if (!$friendship) {
+            return response()->json(['error' => 'Friend request not found'], 404);
+        }
+
+        $friendship->delete();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Friend request cancelled',
+        ]);
+    }
+
     public function removeFriend(Request $request, $friendId): JsonResponse
     {
         $currentUserId = auth()->id();
