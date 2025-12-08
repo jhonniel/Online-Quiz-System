@@ -98,7 +98,7 @@
     <!-- Import Section -->
     <div class="bg-white rounded-2xl shadow-xl border border-gray-200 overflow-hidden">
         <!-- Collapsible Header -->
-        <button type="button" 
+        <button type="button"
                 class="w-full flex items-center justify-between px-4 sm:px-6 py-4 bg-gray-50 hover:bg-gray-100 transition text-left"
                 onclick="toggleImportSection()"
                 aria-expanded="false"
@@ -414,13 +414,13 @@
                                                 $weeklyTotalH = intdiv($weeklyTotalMinutes, 60);
                                                 $weeklyTotalM = $weeklyTotalMinutes % 60;
                                                 $weeklyTotalFormatted = sprintf('%02d:%02d', $weeklyTotalH, $weeklyTotalM);
-                                                
+
                                                 // Calculate total weekly overtime
                                                 $weeklyOvertimeMinutes = (int) round($weeklyOvertimeHours * 60);
                                                 $weeklyOvertimeH = intdiv($weeklyOvertimeMinutes, 60);
                                                 $weeklyOvertimeM = $weeklyOvertimeMinutes % 60;
                                                 $weeklyOvertimeFormatted = sprintf('%02d:%02d', $weeklyOvertimeH, $weeklyOvertimeM);
-                                                
+
                                                 // Calculate deficit: Weekly Total Base (40:00) - Weekly Total
                                                 $weeklyBaseMinutes = 40 * 60; // 40:00 = 2400 minutes
                                                 $deficitMinutes = max(0, $weeklyBaseMinutes - $weeklyTotalMinutes);
@@ -500,10 +500,10 @@
         const section = document.getElementById('import-section');
         const chevron = document.getElementById('import-chevron');
         const button = event.currentTarget;
-        
+
         if (section && chevron) {
             const isHidden = section.classList.contains('hidden');
-            
+
             if (isHidden) {
                 section.classList.remove('hidden');
                 chevron.classList.add('rotate-180');
@@ -525,7 +525,7 @@
 
         function toggleVisibility(element, chevron) {
             if (!element) return;
-            
+
             const isHidden = element.classList.contains('hidden');
             if (isHidden) {
                 element.classList.remove('hidden');
@@ -543,7 +543,7 @@
             const button = monthGroup.querySelector('[data-toggle="month"]');
             const content = monthGroup.querySelector('[data-month-content]');
             const chevron = monthGroup.querySelector('[data-month-chevron]');
-            
+
             if (!button || !content) {
                 console.warn('Month toggle elements not found', { button: !!button, content: !!content });
                 return;
@@ -566,7 +566,7 @@
             const button = weekGroup.querySelector('[data-toggle="week"]');
             const content = weekGroup.querySelector('[data-week-content]');
             const chevron = weekGroup.querySelector('[data-week-chevron]');
-            
+
             if (!button || !content) {
                 console.warn('Week toggle elements not found', { button: !!button, content: !!content });
                 return;

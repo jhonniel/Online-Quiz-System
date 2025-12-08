@@ -633,11 +633,11 @@ class DtrController extends Controller
         // Get students for filter dropdown (only students, optionally filtered by university)
         $studentsQuery = User::where('role', 'student')
             ->where('is_active', true);
-        
+
         if ($request->filled('university_id')) {
             $studentsQuery->where('university_id', $request->university_id);
         }
-        
+
         $students = $studentsQuery->orderBy('name')->get();
 
         $dtrs = $query->orderBy('date', 'desc')
@@ -919,7 +919,7 @@ class DtrController extends Controller
         // Filter by date range
         $dateFrom = $request->filled('date_from') ? $request->date_from : null;
         $dateTo = $request->filled('date_to') ? $request->date_to : null;
-        
+
         if ($dateFrom) {
             $query->whereDate('date', '>=', $dateFrom);
         }
@@ -1000,7 +1000,7 @@ class DtrController extends Controller
         ];
 
         $pdf = Pdf::loadView('admin.dtr.student-export-pdf', $data)->setPaper('a4', 'landscape');
-        
+
         $filename = 'student_dtr_export_' . ($dateFrom ? Carbon::parse($dateFrom)->format('Y-m-d') : 'all') . '_' . ($dateTo ? Carbon::parse($dateTo)->format('Y-m-d') : 'all') . '.pdf';
         return $pdf->download($filename);
     }
