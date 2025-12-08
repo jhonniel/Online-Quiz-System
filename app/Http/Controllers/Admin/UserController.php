@@ -6,8 +6,12 @@ use App\Http\Controllers\Controller;
 use App\Models\User;
 use App\Models\University;
 use App\Models\LeaveBalance;
+use App\Mail\UserCredentials;
+use App\Services\MailConfigService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\Rule;
 
 class UserController extends Controller
@@ -101,7 +105,7 @@ class UserController extends Controller
             $currentYear = now()->year;
             $defaultVacation = (float) \App\Models\Setting::get('default_vacation_balance', 0);
             $defaultSick = (float) \App\Models\Setting::get('default_sick_leave_balance', 0);
-            
+
             LeaveBalance::create([
                 'user_id' => $user->id,
                 'year' => $currentYear,
@@ -142,7 +146,7 @@ class UserController extends Controller
 
             $defaultVacation = (float) \App\Models\Setting::get('default_vacation_balance', 15);
             $defaultSick = (float) \App\Models\Setting::get('default_sick_leave_balance', 10);
-            
+
             $leaveBalance = \App\Models\LeaveBalance::firstOrCreate(
                 ['user_id' => $user->id, 'year' => $currentYear],
                 [
@@ -213,16 +217,16 @@ class UserController extends Controller
             // Subtract deficit hours from overtime balance (allow negative values)
             $deficitQuery = \App\Models\DtrDeficit::where('user_id', $user->id)
                 ->where('is_applied', true);
-            
+
             if ($months === 12) {
                 $deficitQuery->whereYear('week_start_date', $currentYear);
             } else {
                 $deficitQuery->whereDate('week_start_date', '>=', $fromDate->toDateString());
             }
-            
+
             $totalDeficitHours = $deficitQuery->sum('deficit_hours');
             $totalOvertimeHours = $totalOvertimeHours - $totalDeficitHours;
-            
+
             // Format total deficit hours for display
             $totalDeficitMinutes = (int) round($totalDeficitHours * 60);
             $deficitHoursPart = intdiv($totalDeficitMinutes, 60);
@@ -375,7 +379,7 @@ class UserController extends Controller
             $currentYear = now()->year;
             $defaultVacation = (float) \App\Models\Setting::get('default_vacation_balance', 0);
             $defaultSick = (float) \App\Models\Setting::get('default_sick_leave_balance', 0);
-            
+
             $leaveBalance = LeaveBalance::firstOrCreate(
                 ['user_id' => $user->id, 'year' => $currentYear],
                 [
@@ -392,7 +396,7 @@ class UserController extends Controller
             if ($request->has('sick_allowance')) {
                 $updateData['sick_allowance'] = $request->filled('sick_allowance') ? (float) $request->sick_allowance : $defaultSick;
             }
-            
+
             if (!empty($updateData)) {
                 $leaveBalance->update($updateData);
             }
@@ -476,7 +480,7 @@ class UserController extends Controller
         if (auth()->check() && auth()->user()->isAdmin() && $role !== 'admin') {
             $query = $query->where('id', '!=', auth()->id());
         }
-        
+
         $updated = $query->update(['role' => $role]);
 
         if ($updated > 0) {
@@ -488,12 +492,102 @@ class UserController extends Controller
                 'user' => 'User',
                 default => ucfirst($role),
             };
-            
+
             return redirect()->back()
                 ->with('success', "Successfully assigned role '{$roleLabel}' to {$updated} user(s).");
         } else {
             return redirect()->back()
                 ->with('error', 'No users were updated. Please check your selection.');
+        }
+    }
+
+    /**
+     * Send credentials email to a single user.
+     */
+    public function sendCredentials(Request $request, User $user)
+    {
+        $request->validate([
+            'password' => 'required|string|min:8',
+        ]);
+
+        try {
+            MailConfigService::configure();
+
+            Mail::to($user->email)->send(
+                new UserCredentials($user, $user->email, $request->password)
+            );
+
+            return redirect()->back()
+                ->with('success', "Credentials email sent successfully to {$user->name}.");
+        } catch (\Exception $e) {
+            Log::error('Failed to send credentials email', [
+                'error' => $e->getMessage(),
+                'user_id' => $user->id
+            ]);
+
+            return redirect()->back()
+                ->with('error', 'Failed to send credentials email: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Send credentials email to multiple users in bulk.
+     */
+    public function sendBulkCredentials(Request $request)
+    {
+        $request->validate([
+            'user_ids' => 'required|array|min:1',
+            'user_ids.*' => 'exists:users,id',
+            'password' => 'required|string|min:8',
+        ]);
+
+        $userIds = $request->user_ids;
+        $password = $request->password;
+        $users = User::whereIn('id', $userIds)->get();
+
+        if ($users->isEmpty()) {
+            return redirect()->back()
+                ->with('error', 'No users selected.');
+        }
+
+        $successCount = 0;
+        $failCount = 0;
+        $failedUsers = [];
+
+        try {
+            MailConfigService::configure();
+
+            foreach ($users as $user) {
+                try {
+                    Mail::to($user->email)->send(
+                        new UserCredentials($user, $user->email, $password)
+                    );
+                    $successCount++;
+                } catch (\Exception $e) {
+                    $failCount++;
+                    $failedUsers[] = $user->name;
+                    Log::error('Failed to send credentials email to user', [
+                        'error' => $e->getMessage(),
+                        'user_id' => $user->id,
+                        'user_email' => $user->email
+                    ]);
+                }
+            }
+
+            $message = "Credentials email sent to {$successCount} user(s).";
+            if ($failCount > 0) {
+                $message .= " Failed to send to {$failCount} user(s): " . implode(', ', $failedUsers);
+            }
+
+            return redirect()->back()
+                ->with($failCount > 0 ? 'warning' : 'success', $message);
+        } catch (\Exception $e) {
+            Log::error('Failed to send bulk credentials emails', [
+                'error' => $e->getMessage()
+            ]);
+
+            return redirect()->back()
+                ->with('error', 'Failed to send credentials emails: ' . $e->getMessage());
         }
     }
 }

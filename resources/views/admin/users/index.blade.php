@@ -82,6 +82,13 @@
                     </svg>
                     <span class="hidden sm:inline">Filter</span>
                 </button>
+                <button id="send-credentials-btn" type="button" disabled
+                        class="inline-flex items-center px-3 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 disabled:opacity-50 disabled:cursor-not-allowed">
+                    <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path>
+                    </svg>
+                    <span class="hidden sm:inline">Send Credentials</span>
+                </button>
                 <a href="{{ route('users.create') }}" class="inline-flex items-center px-3 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
                     <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
@@ -110,7 +117,7 @@
     <!-- Bulk Action Bar (Hidden by default) -->
     <div id="bulk-action-bar" class="hidden bg-indigo-50 border border-indigo-200 rounded-lg shadow-sm p-4 flex-shrink-0 mx-2 sm:mx-3 lg:mx-4 xl:mx-6">
         <div class="flex items-center justify-between">
-            <div class="flex items-center space-x-4">
+            <div class="flex items-center space-x-4 flex-wrap gap-2">
                 <span id="selected-count" class="text-sm font-medium text-indigo-900">0 users selected</span>
                 <div class="flex items-center space-x-2">
                     <label for="bulk-role-select" class="text-sm font-medium text-indigo-900">Assign Role:</label>
@@ -150,7 +157,7 @@
                     <thead class="bg-gray-50 sticky top-0 z-10">
                         <tr>
                             <th scope="col" class="px-3 sm:px-4 lg:px-6 py-3 text-left">
-                                <input type="checkbox" id="select-all" 
+                                <input type="checkbox" id="select-all"
                                        class="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded">
                             </th>
                             <th scope="col" class="px-3 sm:px-4 lg:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -184,7 +191,7 @@
                         @foreach($users as $index => $user)
                             <tr class="hover:bg-gray-50 transition-colors duration-150">
                                 <td class="px-3 sm:px-4 lg:px-6 py-4 whitespace-nowrap">
-                                    <input type="checkbox" name="selected_users[]" value="{{ $user->id }}" 
+                                    <input type="checkbox" name="selected_users[]" value="{{ $user->id }}"
                                            class="user-checkbox h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded">
                                 </td>
                                 <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
@@ -315,6 +322,16 @@
                                                     @endif
                                                 </button>
                                             </form>
+
+                                            <div class="border-t border-gray-100"></div>
+
+                                            <button onclick="openSendCredentialsModal({{ $user->id }}, '{{ $user->name }}', '{{ $user->email }}')"
+                                                    class="w-full text-left px-4 py-2 text-sm text-blue-700 hover:bg-blue-50 flex items-center">
+                                                <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path>
+                                                </svg>
+                                                Send Credentials
+                                            </button>
 
                                             <div class="border-t border-gray-100"></div>
 
@@ -501,7 +518,7 @@
             if (confirm(confirmMessage)) {
                 // Remove existing user_ids inputs
                 bulkRoleForm.querySelectorAll('input[name="user_ids[]"]').forEach(input => input.remove());
-                
+
                 // Add each user ID as a separate input field
                 selectedUserIds.forEach(userId => {
                     const input = document.createElement('input');
@@ -510,11 +527,128 @@
                     input.value = userId;
                     bulkRoleForm.appendChild(input);
                 });
-                
+
                 roleInput.value = selectedRole;
                 bulkRoleForm.submit();
             }
         });
+
+        // Send Credentials Button
+        const sendCredentialsBtn = document.getElementById('send-credentials-btn');
+        sendCredentialsBtn.addEventListener('click', function() {
+            const selectedCheckboxes = document.querySelectorAll('.user-checkbox:checked');
+            const selectedUserIds = Array.from(selectedCheckboxes).map(cb => cb.value);
+
+            if (selectedUserIds.length === 0) {
+                alert('Please select at least one user to send credentials.');
+                return;
+            }
+
+            openBulkSendCredentialsModal(selectedUserIds);
+        });
+
+        // Update send credentials button state
+        function updateSendCredentialsButton() {
+            const selectedCheckboxes = document.querySelectorAll('.user-checkbox:checked');
+            sendCredentialsBtn.disabled = selectedCheckboxes.length === 0;
+        }
+
+        // Update send credentials button when selection changes
+        userCheckboxes.forEach(checkbox => {
+            checkbox.addEventListener('change', function() {
+                updateSelection();
+                updateSendCredentialsButton();
+            });
+        });
+
+        if (selectAllCheckbox) {
+            selectAllCheckbox.addEventListener('change', function() {
+                updateSendCredentialsButton();
+            });
+        }
+
+        clearSelectionBtn.addEventListener('click', function() {
+            updateSendCredentialsButton();
+        });
     });
+
+    // Single User Send Credentials Modal
+    function openSendCredentialsModal(userId, userName, userEmail) {
+        const password = prompt(`Enter password for ${userName} (${userEmail}):\n\nPassword must be at least 8 characters.`, '');
+
+        if (password === null) {
+            return; // User cancelled
+        }
+
+        if (password.length < 8) {
+            alert('Password must be at least 8 characters long.');
+            return;
+        }
+
+        if (confirm(`Send credentials email to ${userName} (${userEmail})?`)) {
+            const form = document.createElement('form');
+            form.method = 'POST';
+            form.action = `{{ url('admin/users') }}/${userId}/send-credentials`;
+
+            const csrfToken = document.createElement('input');
+            csrfToken.type = 'hidden';
+            csrfToken.name = '_token';
+            csrfToken.value = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+
+            const passwordInput = document.createElement('input');
+            passwordInput.type = 'hidden';
+            passwordInput.name = 'password';
+            passwordInput.value = password;
+
+            form.appendChild(csrfToken);
+            form.appendChild(passwordInput);
+            document.body.appendChild(form);
+            form.submit();
+        }
+    }
+
+    // Bulk Send Credentials Modal
+    function openBulkSendCredentialsModal(userIds) {
+        const password = prompt(`Enter password for ${userIds.length} selected user(s):\n\nThis password will be sent to all selected users.\nPassword must be at least 8 characters.`, '');
+
+        if (password === null) {
+            return; // User cancelled
+        }
+
+        if (password.length < 8) {
+            alert('Password must be at least 8 characters long.');
+            return;
+        }
+
+        if (confirm(`Send credentials email to ${userIds.length} selected user(s)?`)) {
+            const form = document.createElement('form');
+            form.method = 'POST';
+            form.action = '{{ route("admin.users.send-bulk-credentials") }}';
+
+            const csrfToken = document.createElement('input');
+            csrfToken.type = 'hidden';
+            csrfToken.name = '_token';
+            csrfToken.value = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+
+            const passwordInput = document.createElement('input');
+            passwordInput.type = 'hidden';
+            passwordInput.name = 'password';
+            passwordInput.value = password;
+
+            form.appendChild(csrfToken);
+            form.appendChild(passwordInput);
+
+            userIds.forEach(userId => {
+                const input = document.createElement('input');
+                input.type = 'hidden';
+                input.name = 'user_ids[]';
+                input.value = userId;
+                form.appendChild(input);
+            });
+
+            document.body.appendChild(form);
+            form.submit();
+        }
+    }
 </script>
 @endsection
