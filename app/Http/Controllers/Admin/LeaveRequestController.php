@@ -739,10 +739,32 @@ class LeaveRequestController extends Controller
         $nextMonth = $currentMonth->copy()->addMonth()->format('Y-m');
 
         // Students list for sidebar filter (students only)
-        $students = \App\Models\User::where('role', 'student')
+        // Only show students who haven't met their required training hours
+        $allStudents = \App\Models\User::where('role', 'student')
             ->where('is_active', true)
-            ->orderBy('name')
             ->get();
+
+        // Get total DTR hours for all students
+        $studentIds = $allStudents->pluck('id');
+        $totalsByStudent = \App\Models\Dtr::whereIn('user_id', $studentIds)
+            ->selectRaw('user_id, COALESCE(SUM(total_hours), 0) as total_hours_sum')
+            ->groupBy('user_id')
+            ->pluck('total_hours_sum', 'user_id');
+
+        // Filter students: only show those who haven't met their required time
+        // (total DTR hours < required_training_hours, or required_training_hours is null/0)
+        $students = $allStudents->filter(function ($student) use ($totalsByStudent) {
+            $requiredHours = (float) ($student->required_training_hours ?? 0);
+            $totalDtrHours = (float) ($totalsByStudent[$student->id] ?? 0);
+            
+            // If no required hours set, show the student (they haven't met undefined requirement)
+            if ($requiredHours <= 0) {
+                return true;
+            }
+            
+            // Only show if total DTR hours < required hours (hasn't met requirement)
+            return $totalDtrHours < $requiredHours;
+        })->sortBy('name')->values();
 
         return view('admin.leave-requests.student-calendar', [
             'currentMonth' => $currentMonth,
