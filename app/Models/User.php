@@ -547,7 +547,8 @@ class User extends Authenticatable
 
     /**
      * Check if user has access to a specific admin feature.
-     * Super admins/employees (users without permission records) have access to all features.
+     * Super admins (admins without permission records) have access to all features.
+     * Employees must have explicit permission records with the specific permission enabled.
      */
     public function hasAdminPermission(string $permission): bool
     {
@@ -561,14 +562,24 @@ class User extends Authenticatable
             $this->load('adminPermission');
         }
 
-        // If user doesn't have a permission record, they are a super admin/employee with full access
         $adminPermission = $this->adminPermission;
-        if (!$adminPermission) {
+
+        // If user is an admin without a permission record, they are a super admin with full access
+        if ($this->isAdmin() && !$adminPermission) {
             return true;
         }
 
-        // Check the specific permission
-        return $adminPermission->$permission ?? false;
+        // If user is an employee without a permission record, they have NO access
+        if ($this->isEmployee() && !$adminPermission) {
+            return false;
+        }
+
+        // If user has a permission record, check the specific permission
+        if ($adminPermission) {
+            return $adminPermission->$permission ?? false;
+        }
+
+        return false;
     }
 
     /**
@@ -640,7 +651,9 @@ class User extends Authenticatable
      */
     public function isSuperAdmin(): bool
     {
-        return ($this->isAdmin() || $this->isEmployee()) && !$this->adminPermission;
+        // Only admins without permission records are super admins
+        // Employees without permission records are NOT super admins
+        return $this->isAdmin() && !$this->adminPermission;
     }
 
     /**
@@ -658,10 +671,28 @@ class User extends Authenticatable
             $this->load('adminPermission');
         }
 
-        // If user doesn't have a permission record, they are a super admin/employee with full access
         $adminPermission = $this->adminPermission;
-        if (!$adminPermission) {
-            return true; // Super admin/employee has all permissions
+
+        // If user is an admin without a permission record, they are a super admin with full access
+        if ($this->isAdmin() && !$adminPermission) {
+            return true; // Super admin has all permissions
+        }
+
+        // If user is an employee without a permission record, they have NO access
+        if ($this->isEmployee() && !$adminPermission) {
+            return false;
+        }
+
+        // If user has a permission record, check if they have at least one permission enabled
+        if ($adminPermission) {
+            return $adminPermission->content_management ||
+                   $adminPermission->analytics_reports ||
+                   $adminPermission->employee_management ||
+                   $adminPermission->student_management ||
+                   $adminPermission->hiring_process ||
+                   $adminPermission->communication ||
+                   $adminPermission->user_management ||
+                   $adminPermission->system;
         }
 
         // Check if user has at least one permission enabled

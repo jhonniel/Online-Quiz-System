@@ -27,6 +27,11 @@ class CheckAdminPermission
             abort(403, 'Access denied. Admin or Employee privileges required.');
         }
 
+        // Load adminPermission relationship if not already loaded
+        if (!$user->relationLoaded('adminPermission')) {
+            $user->load('adminPermission');
+        }
+
         // Check if user has the specific permission
         if (!$user->hasAdminPermission($permission)) {
             abort(403, 'Access denied. You do not have permission to access this feature.');
