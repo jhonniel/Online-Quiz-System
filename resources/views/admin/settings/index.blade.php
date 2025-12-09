@@ -1460,70 +1460,79 @@
 <script>
 // Make showTab globally accessible
 window.showTab = function(tabName) {
-    console.log('showTab called with:', tabName); // Debug log
+    console.log('showTab called with:', tabName);
 
     // Hide all tab contents
-    const allContents = document.querySelectorAll('.tab-content');
-    console.log('Found tab contents:', allContents.length);
-    allContents.forEach(content => {
+    document.querySelectorAll('.tab-content').forEach(content => {
         content.classList.add('hidden');
     });
 
     // Remove active class from all tabs
-    const allTabs = document.querySelectorAll('.settings-tab');
-    console.log('Found tab buttons:', allTabs.length);
-    allTabs.forEach(tab => {
+    document.querySelectorAll('.settings-tab').forEach(tab => {
         tab.classList.remove('active');
     });
 
     // Show selected tab content
     const contentElement = document.getElementById('content-' + tabName);
-    console.log('Looking for content element: content-' + tabName, contentElement);
     if (contentElement) {
         contentElement.classList.remove('hidden');
         console.log('Tab content shown:', 'content-' + tabName);
     } else {
         console.error('Tab content not found:', 'content-' + tabName);
-        // List all available content elements for debugging
-        const allContentIds = Array.from(document.querySelectorAll('.tab-content')).map(el => el.id);
-        console.error('Available content IDs:', allContentIds);
     }
 
     // Add active class to selected tab
     const tabElement = document.getElementById('tab-' + tabName);
-    console.log('Looking for tab button: tab-' + tabName, tabElement);
     if (tabElement) {
         tabElement.classList.add('active');
         console.log('Tab button activated:', 'tab-' + tabName);
     } else {
         console.error('Tab button not found:', 'tab-' + tabName);
-        // List all available tab buttons for debugging
-        const allTabIds = Array.from(document.querySelectorAll('[data-tab]')).map(el => el.id);
-        console.error('Available tab IDs:', allTabIds);
     }
-
-    // Prevent any default behavior
-    return false;
 };
 
-document.addEventListener('DOMContentLoaded', function() {
-    // Set up tab click event listeners
-    document.querySelectorAll('[data-tab]').forEach(button => {
-        button.addEventListener('click', function(e) {
-            e.preventDefault();
-            e.stopPropagation();
-            e.stopImmediatePropagation();
-            const tabName = this.getAttribute('data-tab');
-            console.log('Tab button clicked:', tabName);
-            if (tabName) {
-                showTab(tabName);
+// Use event delegation on the nav element - works even if buttons are added dynamically
+function initTabListeners() {
+    const navElement = document.querySelector('nav[aria-label="Tabs"]');
+    if (navElement) {
+        // Remove any existing listeners by cloning
+        const newNav = navElement.cloneNode(true);
+        navElement.parentNode.replaceChild(newNav, navElement);
+        
+        // Add event delegation
+        newNav.addEventListener('click', function(e) {
+            const button = e.target.closest('[data-tab]');
+            if (button) {
+                e.preventDefault();
+                e.stopPropagation();
+                e.stopImmediatePropagation();
+                const tabName = button.getAttribute('data-tab');
+                console.log('Tab clicked via delegation:', tabName);
+                if (tabName && window.showTab) {
+                    window.showTab(tabName);
+                }
+                return false;
             }
-            return false;
         });
-    });
-    
-    // Also make showTab available immediately (not just in DOMContentLoaded)
-    console.log('Tab event listeners initialized');
+        console.log('Tab event delegation initialized');
+    } else {
+        console.error('Nav element not found');
+    }
+}
+
+// Try multiple times to ensure it works
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initTabListeners);
+} else {
+    // DOM is already ready
+    initTabListeners();
+}
+
+// Also try after a short delay as fallback
+setTimeout(initTabListeners, 100);
+
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('DOMContentLoaded fired');
 
     // Update preview when form fields change
     const systemNameInput = document.getElementById('system_name');
