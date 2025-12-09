@@ -167,6 +167,7 @@
                             </div>
                         @endif
                     </div>
+
                 @elseif($leaveRequest->type === 'work_from_home')
                     @php
                         $raw = $leaveRequest->reason ?? '';
@@ -228,6 +229,40 @@
                             </div>
                         @endif
                     </div>
+                @endif
+
+                @if($leaveRequest->supporting_document_path)
+                    @php
+                        $docUrl = null;
+                        try {
+                            $docUrl = \Illuminate\Support\Facades\Storage::disk('digitalocean')
+                                ->temporaryUrl(
+                                    $leaveRequest->supporting_document_path,
+                                    now()->addMinutes(30),
+                                    ['ResponseContentDisposition' => 'inline']
+                                );
+                        } catch (\Throwable $e) {
+                            try {
+                                $docUrl = \Illuminate\Support\Facades\Storage::url($leaveRequest->supporting_document_path);
+                            } catch (\Throwable $e) {
+                                $docUrl = null;
+                            }
+                        }
+                    @endphp
+                    @if($docUrl)
+                        <div class="mt-4 sm:mt-6 p-4 bg-indigo-50 border border-indigo-100 rounded-lg">
+                            <div class="flex items-center space-x-3">
+                                <svg class="h-5 w-5 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+                                </svg>
+                                <div>
+                                    <p class="text-sm font-semibold text-gray-900">Supporting Document</p>
+                                    <a href="{{ $docUrl }}" target="_blank" rel="noopener"
+                                       class="text-sm text-indigo-700 underline break-words">View / Download</a>
+                                </div>
+                            </div>
+                        </div>
+                    @endif
                 @endif
 
                 @if($leaveRequest->reason && !in_array($leaveRequest->type, ['vacation_leave', 'sick_leave', 'work_from_home', 'overtime']))

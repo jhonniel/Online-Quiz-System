@@ -250,7 +250,9 @@ class LeaveRequestController extends Controller
             : ['vacation_leave', 'sick_leave', 'work_from_home', 'absent', 'overtime', 'offset'];
 
         $startDateRules = ['required', 'date'];
-        if (!($user->role === 'student' && $request->input('type') === 'additional_time')) {
+        $typeInput = $request->input('type');
+        // Allow past dates for sick leave, overtime, and student additional_time; otherwise enforce today-or-future
+        if (!($typeInput === 'sick_leave' || $typeInput === 'overtime' || ($user->role === 'student' && $typeInput === 'additional_time'))) {
             $startDateRules[] = 'after_or_equal:today';
         }
 
@@ -260,6 +262,7 @@ class LeaveRequestController extends Controller
             'end_date' => 'nullable|date|after_or_equal:start_date',
             // Reason is REQUIRED for overtime (used as the clear explanation of extra hours)
             'reason' => 'nullable|string|max:1000',
+            'supporting_document' => 'nullable|file|mimes:pdf,jpg,jpeg,png|max:5120',
             'overtime_hours' => 'required_if:type,overtime|nullable|regex:/^\\d{2}:\\d{2}$/',
             'overtime_dates' => 'required_if:type,overtime|nullable|string|max:255',
             'overtime_tasks' => 'required_if:type,overtime|nullable|string|max:2000',
@@ -389,12 +392,22 @@ class LeaveRequestController extends Controller
             }
         }
 
+        // Handle supporting document (only stored if provided)
+        $supportingPath = null;
+        if ($request->hasFile('supporting_document')) {
+            $assetDisk = 'digitalocean';
+            $assetRoot = trim(env('DIGITALOCEAN_SPACES_ROOT_PATH', ''), '/');
+            $supportDir = $assetRoot ? $assetRoot . '/leave-supporting-docs' : 'leave-supporting-docs';
+            $supportingPath = $request->file('supporting_document')->store($supportDir, $assetDisk);
+        }
+
         $leaveRequest = LeaveRequest::create([
             'user_id' => Auth::id(),
             'type' => $validated['type'],
             'start_date' => $validated['start_date'],
             'end_date' => $validated['end_date'] ?? $validated['start_date'],
             'reason' => $reasonToStore,
+            'supporting_document_path' => $supportingPath,
             'status' => 'pending',
         ]);
 
@@ -588,7 +601,9 @@ class LeaveRequestController extends Controller
             : ['vacation_leave', 'sick_leave', 'work_from_home', 'absent', 'overtime', 'offset'];
 
         $startDateRules = ['required', 'date'];
-        if (!($user->role === 'student' && $request->input('type') === 'additional_time')) {
+        $typeInput = $request->input('type');
+        // Allow past dates for sick leave, overtime, and student additional_time; otherwise enforce today-or-future
+        if (!($typeInput === 'sick_leave' || $typeInput === 'overtime' || ($user->role === 'student' && $typeInput === 'additional_time'))) {
             $startDateRules[] = 'after_or_equal:today';
         }
 
@@ -597,6 +612,7 @@ class LeaveRequestController extends Controller
             'start_date' => $startDateRules,
             'end_date' => 'nullable|date|after_or_equal:start_date',
             'reason' => 'nullable|string|max:1000',
+            'supporting_document' => 'nullable|file|mimes:pdf,jpg,jpeg,png|max:5120',
             'overtime_hours' => 'required_if:type,overtime|nullable|regex:/^\\d{2}:\\d{2}$/',
             'overtime_dates' => 'required_if:type,overtime|nullable|string|max:255',
             'overtime_tasks' => 'required_if:type,overtime|nullable|string|max:2000',
@@ -659,12 +675,31 @@ class LeaveRequestController extends Controller
             $reasonToStore = $details;
         }
 
+        // Handle supporting document (replace if new one provided)
+        $supportingPath = $leaveRequest->supporting_document_path;
+        if ($request->hasFile('supporting_document')) {
+            $assetDisk = 'digitalocean';
+            $assetRoot = trim(env('DIGITALOCEAN_SPACES_ROOT_PATH', ''), '/');
+            $supportDir = $assetRoot ? $assetRoot . '/leave-supporting-docs' : 'leave-supporting-docs';
+
+            if ($supportingPath) {
+                try {
+                    \Illuminate\Support\Facades\Storage::disk($assetDisk)->delete($supportingPath);
+                } catch (\Throwable $e) {
+                    // ignore delete errors
+                }
+            }
+
+            $supportingPath = $request->file('supporting_document')->store($supportDir, $assetDisk);
+        }
+
         // Clear review information when resubmitting
         $leaveRequest->update([
             'type' => $validated['type'],
             'start_date' => $validated['start_date'],
             'end_date' => $validated['end_date'] ?? $validated['start_date'],
             'reason' => $reasonToStore,
+            'supporting_document_path' => $supportingPath,
             'status' => 'pending',
             'reviewed_by' => null,
             'reviewed_at' => null,

@@ -85,7 +85,7 @@
     <div class="flex items-center justify-between h-16 px-6 bg-gray-800 flex-shrink-0">
         <div class="flex items-center space-x-2" :class="sidebarCollapsed ? 'justify-center' : ''">
             @if($settings['system_logo'])
-                <img src="{{ Storage::disk('digitalocean')->url($settings['system_logo']) }}"
+                <img src="{{ $settings['system_logo_url'] ?? '' }}"
                      alt="{{ $settings['system_name'] }}"
                      class="h-8 w-auto object-contain">
             @endif

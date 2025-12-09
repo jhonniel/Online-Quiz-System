@@ -26,3 +26,4 @@ If you have any questions or need assistance, please contact the administrator.
 Best regards,<br>
 {{ config('app.name') }}
 </x-mail::message>
+

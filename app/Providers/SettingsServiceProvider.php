@@ -4,6 +4,7 @@ namespace App\Providers;
 
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Facades\View;
+use Illuminate\Support\Facades\Storage;
 use App\Models\Setting;
 
 class SettingsServiceProvider extends ServiceProvider
@@ -27,11 +28,43 @@ class SettingsServiceProvider extends ServiceProvider
             // Get existing settings from view data if they exist
             $existingSettings = $view->getData()['settings'] ?? [];
 
+            // Helper to build URL with DigitalOcean disk first, fallback to public/local
+            $buildUrl = function ($path) {
+                if (!$path) {
+                    return null;
+                }
+
+                // Try digitalocean disk
+                try {
+                    return Storage::disk('digitalocean')->url($path);
+                } catch (\Throwable $e) {
+                    // Ignore and fallback
+                }
+
+                // Fallback to public disk if file exists
+                try {
+                    if (Storage::disk('public')->exists($path)) {
+                        return Storage::disk('public')->url($path);
+                    }
+                } catch (\Throwable $e) {
+                    // Ignore and fallback
+                }
+
+                // Last resort: Storage::url (may use default disk)
+                try {
+                    return Storage::url($path);
+                } catch (\Throwable $e) {
+                    return null;
+                }
+            };
+
             // Base settings that should be available in all views
             $baseSettings = [
                 'system_name' => Setting::get('system_name', 'Quiz System'),
                 'system_logo' => Setting::get('system_logo'),
                 'system_icon' => Setting::get('system_icon'),
+                'system_logo_url' => $buildUrl(Setting::get('system_logo')),
+                'system_icon_url' => $buildUrl(Setting::get('system_icon')),
                 'system_description' => Setting::get('system_description', 'Online Quiz Management System'),
                 'primary_color' => Setting::get('primary_color', '#4F46E5'),
                 'secondary_color' => Setting::get('secondary_color', '#6B7280'),

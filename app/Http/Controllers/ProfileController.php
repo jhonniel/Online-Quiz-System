@@ -50,13 +50,22 @@ class ProfileController extends Controller
 
         $user = $request->user();
 
+        // Use cloud disk + root path
+        $assetDisk = 'digitalocean';
+        $assetRoot = trim(env('DIGITALOCEAN_SPACES_ROOT_PATH', ''), '/');
+        $profileDir = $assetRoot ? $assetRoot . '/profile-pictures' : 'profile-pictures';
+
         // Delete old profile picture if exists
         if ($user->profile_picture) {
-            Storage::disk('public')->delete($user->profile_picture);
+            try {
+                Storage::disk($assetDisk)->delete($user->profile_picture);
+            } catch (\Throwable $e) {
+                // ignore delete errors
+            }
         }
 
         // Store new profile picture
-        $path = $request->file('profile_picture')->store('profile-pictures', 'public');
+        $path = $request->file('profile_picture')->store($profileDir, $assetDisk);
         $user->profile_picture = $path;
         $user->save();
 
@@ -71,7 +80,11 @@ class ProfileController extends Controller
         $user = $request->user();
 
         if ($user->profile_picture) {
-            Storage::disk('public')->delete($user->profile_picture);
+            try {
+                Storage::disk('digitalocean')->delete($user->profile_picture);
+            } catch (\Throwable $e) {
+                // ignore
+            }
             $user->profile_picture = null;
             $user->save();
         }

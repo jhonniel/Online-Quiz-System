@@ -9,7 +9,7 @@
         'hiring_stages' => '',
         'hiring_application_url' => 'hiring/apply',
     ]);
-    
+
     // Ensure all required keys exist
     $settings = array_merge([
         'hiring_process_description' => '',
@@ -17,25 +17,25 @@
         'hiring_stages' => '',
         'hiring_application_url' => 'hiring/apply',
     ], $settings);
-    
+
     // Get errors - Laravel should automatically share $errors with all views via ShareErrorsFromSession middleware
     // But we'll also check session as fallback
     if (!isset($errors)) {
         $errors = session()->get('errors');
     }
-    
+
     // Ensure $errors is always a ViewErrorBag instance
     if (!$errors || !($errors instanceof \Illuminate\Support\ViewErrorBag)) {
         $errors = new \Illuminate\Support\ViewErrorBag();
     }
-    
+
     // Set formErrors for use in the form
     $formErrors = $errors;
-    
+
     // Debug: Log if we have errors
     if ($formErrors->any()) {
         \Log::info('Form errors found in view', [
-            'errors' => $formErrors->all(), 
+            'errors' => $formErrors->all(),
             'has_email_error' => $formErrors->has('email'),
             'email_error' => $formErrors->has('email') ? $formErrors->first('email') : null
         ]);
@@ -69,7 +69,7 @@
                         <p class="text-lg text-gray-800 mb-4 leading-relaxed">
                             Your application has been successfully submitted and received by our team.
                         </p>
-                        
+
                         <!-- Next Steps -->
                         <div class="text-left space-y-4 mt-6">
                             <div class="flex items-start space-x-3">
@@ -142,7 +142,7 @@
             <!-- Position Details -->
             <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-8">
                 <h2 class="text-2xl font-bold text-gray-900 mb-4">{{ $position->title }}</h2>
-                
+
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                     @if($position->department)
                         <div>
@@ -345,16 +345,41 @@
                     <p class="mt-1 text-sm text-gray-500">Optional: Share your motivation and why you'd be a great fit.</p>
                 </div>
 
-                <!-- Resume Link -->
+                <div>
+                    <label for="cover_letter_file" class="block text-sm font-medium text-gray-700 mb-2">
+                        Upload Cover Letter (Optional)
+                    </label>
+                    <input type="file" name="cover_letter_file" id="cover_letter_file" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
+                           class="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100">
+                    <p class="mt-1 text-xs text-gray-500">PDF/DOC/DOCX/JPG/PNG up to 5MB.</p>
+                    @if($formErrors && $formErrors->has('cover_letter_file'))
+                        <p class="mt-1 text-sm text-red-600">{{ $formErrors->first('cover_letter_file') }}</p>
+                    @endif
+                </div>
+
+                <!-- Resume Upload (Required) -->
+                <div>
+                    <label for="resume_file" class="block text-sm font-medium text-gray-700 mb-2">
+                        Upload Resume <span class="text-red-500">*</span>
+                    </label>
+                    <input type="file" name="resume_file" id="resume_file" required accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
+                           class="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100">
+                    <p class="mt-1 text-xs text-gray-500">PDF/DOC/DOCX/JPG/PNG up to 5MB.</p>
+                    @if($formErrors && $formErrors->has('resume_file'))
+                        <p class="mt-1 text-sm text-red-600">{{ $formErrors->first('resume_file') }}</p>
+                    @endif
+                </div>
+
+                <!-- Resume Link (Optional) -->
                 <div>
                     <label for="resume_link" class="block text-sm font-medium text-gray-700 mb-2">
-                        Resume/CV (Link) <span class="text-red-500">*</span>
+                        Resume/CV (Link)
                     </label>
-                    <input type="url" name="resume_link" id="resume_link" required
+                    <input type="url" name="resume_link" id="resume_link"
                            value="{{ old('resume_link') }}"
-                           placeholder="https://example.com/resume.pdf or https://drive.google.com/..."
+                           placeholder="Optional: https://example.com/resume.pdf or Drive link"
                            class="w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500">
-                    <p class="mt-1 text-sm text-gray-500">Provide a link to your resume (Google Drive, Dropbox, personal website, etc.)</p>
+                    <p class="mt-1 text-sm text-gray-500">You can also share a link to your resume (optional).</p>
                     @if($formErrors && $formErrors->has('resume_link'))
                         <p class="mt-1 text-sm text-red-600">{{ $formErrors->first('resume_link') }}</p>
                     @endif
@@ -392,21 +417,21 @@
                     </div>
                 @endif
             </form>
-            
+
             <!-- Error Messages (shown below form, outside form tag) -->
             @php
                 // Get errors from multiple sources - Laravel should share $errors automatically
                 $errorBag = null;
-                
+
                 // Try to get errors from Laravel's shared $errors variable first
                 if (isset($errors) && $errors instanceof \Illuminate\Support\ViewErrorBag) {
                     $errorBag = $errors;
-                } 
+                }
                 // Fallback to session errors
                 elseif (session()->has('errors')) {
                     $errorBag = session()->get('errors');
                 }
-                
+
                 // Debug logging
                 if ($errorBag && method_exists($errorBag, 'any') && $errorBag->any()) {
                     \Log::info('Displaying errors in view', [
@@ -416,7 +441,7 @@
                     ]);
                 }
             @endphp
-            
+
             @if($errorBag && method_exists($errorBag, 'any') && $errorBag->any())
                 <div class="mt-4 bg-red-50 border-2 border-red-300 rounded-lg p-6">
                     <div class="flex">
@@ -486,14 +511,14 @@ document.addEventListener('DOMContentLoaded', function() {
             }
 
             const particleCount = 50 * (timeLeft / duration);
-            
+
             // Launch confetti from left
             confetti({
                 ...defaults,
                 particleCount,
                 origin: { x: randomInRange(0.1, 0.3), y: Math.random() - 0.2 }
             });
-            
+
             // Launch confetti from right
             confetti({
                 ...defaults,

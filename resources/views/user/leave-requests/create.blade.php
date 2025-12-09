@@ -30,7 +30,7 @@
     <div class="flex-1 overflow-y-auto p-4">
         <div class="max-w-3xl mx-auto">
             <div class="bg-white rounded-lg shadow border border-gray-200 p-6">
-                <form action="{{ route('user.leave-requests.store') }}" method="POST" class="space-y-6">
+                <form action="{{ route('user.leave-requests.store') }}" method="POST" enctype="multipart/form-data" class="space-y-6">
                     @csrf
 
                     <!-- Request Type -->
@@ -100,6 +100,19 @@
                             Provide additional details about your request. For <strong>Overtime</strong>, if provided, this will appear as the explanation for extra hours. If not provided, it will be left blank.
                         </p>
                         @error('reason')
+                            <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                        @enderror
+                    </div>
+
+                    <!-- Supporting Document (Optional for any type) -->
+                    <div id="supporting-section">
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            Supporting Document (e.g., Medical Certificate, Proof, Attachments)
+                        </label>
+                        <input type="file" name="supporting_document" accept=".pdf,.jpg,.jpeg,.png"
+                               class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100">
+                        <p class="mt-1 text-xs text-gray-500">Optional, PDF/JPG/PNG up to 5MB. Attach for any request type.</p>
+                        @error('supporting_document')
                             <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
                         @enderror
                     </div>
@@ -306,7 +319,7 @@
     endDateInput.addEventListener('focus', syncEndDateMin);
 
     function updateRequestTypeSections() {
-        if (typeSelect.value === 'overtime' || typeSelect.value === 'additional_time') {
+        if (typeSelect.value === 'overtime' || typeSelect.value === 'additional_time' || typeSelect.value === 'sick_leave') {
             // Allow past dates for overtime and additional time
             startDateInput.removeAttribute('min');
         } else {

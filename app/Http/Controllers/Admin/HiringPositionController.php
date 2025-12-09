@@ -45,7 +45,17 @@ class HiringPositionController extends Controller
             'salary_max' => 'nullable|numeric|min:0|gte:salary_min',
             'is_active' => 'boolean',
             'application_deadline' => 'nullable|date|after:today',
+            'thumbnail' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:5120',
         ]);
+
+        $assetDisk = 'digitalocean';
+        $assetRoot = trim(env('DIGITALOCEAN_SPACES_ROOT_PATH', ''), '/');
+        $thumbDir = $assetRoot ? $assetRoot . '/hiring/thumbnails' : 'hiring/thumbnails';
+
+        $thumbnailPath = null;
+        if ($request->hasFile('thumbnail')) {
+            $thumbnailPath = $request->file('thumbnail')->store($thumbDir, $assetDisk);
+        }
 
         $position = HiringPosition::create([
             'title' => $request->title,
@@ -61,6 +71,7 @@ class HiringPositionController extends Controller
             'is_active' => $request->has('is_active'),
             'application_deadline' => $request->application_deadline,
             'created_by' => Auth::id(),
+            'thumbnail_path' => $thumbnailPath,
         ]);
 
         return redirect()->route('admin.hiring-positions.index')
@@ -93,7 +104,24 @@ class HiringPositionController extends Controller
             'salary_max' => 'nullable|numeric|min:0|gte:salary_min',
             'is_active' => 'boolean',
             'application_deadline' => 'nullable|date',
+            'thumbnail' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:5120',
         ]);
+
+        $assetDisk = 'digitalocean';
+        $assetRoot = trim(env('DIGITALOCEAN_SPACES_ROOT_PATH', ''), '/');
+        $thumbDir = $assetRoot ? $assetRoot . '/hiring/thumbnails' : 'hiring/thumbnails';
+
+        $thumbnailPath = $hiringPosition->thumbnail_path;
+        if ($request->hasFile('thumbnail')) {
+            if ($thumbnailPath) {
+                try {
+                    \Storage::disk($assetDisk)->delete($thumbnailPath);
+                } catch (\Throwable $e) {
+                    // ignore
+                }
+            }
+            $thumbnailPath = $request->file('thumbnail')->store($thumbDir, $assetDisk);
+        }
 
         $hiringPosition->update([
             'title' => $request->title,
@@ -108,6 +136,7 @@ class HiringPositionController extends Controller
             'salary_max' => $request->salary_max,
             'is_active' => $request->has('is_active'),
             'application_deadline' => $request->application_deadline,
+            'thumbnail_path' => $thumbnailPath,
         ]);
 
         return redirect()->route('admin.hiring-positions.index')

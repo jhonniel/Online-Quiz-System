@@ -55,16 +55,26 @@ class ProfileController extends Controller
                 'bio' => $request->bio,
             ];
 
+            // Cloud disk + root path
+            $assetDisk = 'digitalocean';
+            $assetRoot = trim(env('DIGITALOCEAN_SPACES_ROOT_PATH', ''), '/');
+            $profileDir = $assetRoot ? $assetRoot . '/profile-pictures' : 'profile-pictures';
+            $coverDir = $assetRoot ? $assetRoot . '/cover-photos' : 'cover-photos';
+
             // Handle profile picture upload
             if ($request->hasFile('profile_picture')) {
                 // Delete old profile picture if exists
                 if ($user->profile_picture) {
-                    Storage::disk('public')->delete($user->profile_picture);
+                    try {
+                        Storage::disk($assetDisk)->delete($user->profile_picture);
+                    } catch (\Throwable $e) {
+                        // ignore
+                    }
                 }
 
                 $profilePicture = $request->file('profile_picture');
                 $profilePictureName = time() . '_' . Str::random(10) . '.' . $profilePicture->getClientOriginalExtension();
-                $profilePicturePath = $profilePicture->storeAs('profile-pictures', $profilePictureName, 'public');
+                $profilePicturePath = $profilePicture->storeAs($profileDir, $profilePictureName, $assetDisk);
                 $data['profile_picture'] = $profilePicturePath;
             }
 
@@ -72,12 +82,16 @@ class ProfileController extends Controller
             if ($request->hasFile('cover_photo')) {
                 // Delete old cover photo if exists
                 if ($user->cover_photo) {
-                    Storage::disk('public')->delete($user->cover_photo);
+                    try {
+                        Storage::disk($assetDisk)->delete($user->cover_photo);
+                    } catch (\Throwable $e) {
+                        // ignore
+                    }
                 }
 
                 $coverPhoto = $request->file('cover_photo');
                 $coverPhotoName = time() . '_' . Str::random(10) . '.' . $coverPhoto->getClientOriginalExtension();
-                $coverPhotoPath = $coverPhoto->storeAs('cover-photos', $coverPhotoName, 'public');
+                $coverPhotoPath = $coverPhoto->storeAs($coverDir, $coverPhotoName, $assetDisk);
                 $data['cover_photo'] = $coverPhotoPath;
             }
 
@@ -123,7 +137,11 @@ class ProfileController extends Controller
         $user = auth()->user();
 
         if ($user->profile_picture) {
-            Storage::disk('public')->delete($user->profile_picture);
+            try {
+                Storage::disk('digitalocean')->delete($user->profile_picture);
+            } catch (\Throwable $e) {
+                // ignore
+            }
             $user->update(['profile_picture' => null]);
         }
 
@@ -139,7 +157,11 @@ class ProfileController extends Controller
         $user = auth()->user();
 
         if ($user->cover_photo) {
-            Storage::disk('public')->delete($user->cover_photo);
+            try {
+                Storage::disk('digitalocean')->delete($user->cover_photo);
+            } catch (\Throwable $e) {
+                // ignore
+            }
             $user->update(['cover_photo' => null]);
         }
 

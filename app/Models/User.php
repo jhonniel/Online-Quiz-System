@@ -392,18 +392,42 @@ class User extends Authenticatable
 
     public function getProfilePictureUrl(): string
     {
-        if ($this->profile_picture) {
-            return \Storage::url($this->profile_picture);
-        }
-        return '';
+        return $this->buildStorageUrl($this->profile_picture);
     }
 
     public function getCoverPhotoUrl(): string
     {
-        if ($this->cover_photo) {
-            return \Storage::url($this->cover_photo);
+        return $this->buildStorageUrl($this->cover_photo);
+    }
+
+    protected function buildStorageUrl(?string $path): string
+    {
+        if (!$path) {
+            return '';
         }
-        return '';
+
+        // Try digitalocean disk first
+        try {
+            return \Storage::disk('digitalocean')->url($path);
+        } catch (\Throwable $e) {
+            // ignore
+        }
+
+        // Fallback to public disk if exists
+        try {
+            if (\Storage::disk('public')->exists($path)) {
+                return \Storage::disk('public')->url($path);
+            }
+        } catch (\Throwable $e) {
+            // ignore
+        }
+
+        // Last resort
+        try {
+            return \Storage::url($path);
+        } catch (\Throwable $e) {
+            return '';
+        }
     }
 
     public function hasCoverPhoto(): bool

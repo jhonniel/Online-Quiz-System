@@ -19,7 +19,7 @@
 
     <!-- Form -->
     <div class="bg-white shadow-sm rounded-lg border border-gray-200 overflow-hidden">
-        <form action="{{ route('admin.hiring-positions.store') }}" method="POST" class="p-6 space-y-6">
+        <form action="{{ route('admin.hiring-positions.store') }}" method="POST" enctype="multipart/form-data" class="p-6 space-y-6">
             @csrf
 
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -110,6 +110,17 @@
                     <label for="description" class="block text-sm font-medium text-gray-700 mb-2">Description</label>
                     <textarea name="description" id="description" rows="4"
                               class="w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500">{{ old('description') }}</textarea>
+                </div>
+
+                <!-- Thumbnail -->
+                <div class="md:col-span-2">
+                    <label for="thumbnail" class="block text-sm font-medium text-gray-700 mb-2">Thumbnail (Optional)</label>
+                    <input type="file" name="thumbnail" id="thumbnail" accept="image/*"
+                           class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100">
+                    <p class="mt-1 text-xs text-gray-500">Upload an image for the position tile. Max 5MB.</p>
+                    @error('thumbnail')
+                        <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                    @enderror
                 </div>
 
                 <!-- Requirements -->

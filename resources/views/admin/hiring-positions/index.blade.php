@@ -130,8 +130,19 @@
                     @forelse($positions as $position)
                         <tr class="hover:bg-gray-50">
                             <td class="px-6 py-4">
-                                <div class="text-sm font-medium text-gray-900">{{ $position->title }}</div>
-                                <div class="text-sm text-gray-500">{{ $position->employment_type ?: 'N/A' }}</div>
+                                <div class="flex items-center space-x-3">
+                                    @if($position->thumbnail_url)
+                                        <img src="{{ $position->thumbnail_url }}" alt="{{ $position->title }}" class="h-12 w-12 rounded-lg object-cover border border-gray-200">
+                                    @else
+                                        <div class="h-12 w-12 rounded-lg bg-indigo-100 flex items-center justify-center text-indigo-600 font-semibold border border-gray-200">
+                                            {{ strtoupper(substr($position->title,0,1)) }}
+                                        </div>
+                                    @endif
+                                    <div>
+                                        <div class="text-sm font-medium text-gray-900">{{ $position->title }}</div>
+                                        <div class="text-sm text-gray-500">{{ $position->employment_type ?: 'N/A' }}</div>
+                                    </div>
+                                </div>
                             </td>
                             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                                 {{ $position->department ?: 'N/A' }}

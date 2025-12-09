@@ -17,6 +17,7 @@ class HiringApplication extends Model
         'address',
         'position_applied',
         'cover_letter',
+        'cover_letter_path',
         'resume_path',
         'resume_link',
         'status',
@@ -83,8 +84,8 @@ class HiringApplication extends Model
 
     public function isTokenValid()
     {
-        return $this->acceptance_token && 
-               $this->token_expires_at && 
+        return $this->acceptance_token &&
+               $this->token_expires_at &&
                $this->token_expires_at->isFuture();
     }
 }

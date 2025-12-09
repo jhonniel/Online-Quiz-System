@@ -9,8 +9,8 @@
 
         <!-- Favicon -->
         @if(isset($settings['system_icon']) && $settings['system_icon'])
-            <link rel="icon" type="image/x-icon" href="{{ Storage::disk('digitalocean')->url($settings['system_icon']) }}">
-            <link rel="shortcut icon" type="image/x-icon" href="{{ Storage::disk('digitalocean')->url($settings['system_icon']) }}">
+            <link rel="icon" type="image/x-icon" href="{{ $settings['system_icon_url'] ?? '' }}">
+            <link rel="shortcut icon" type="image/x-icon" href="{{ $settings['system_icon_url'] ?? '' }}">
         @endif
 
         <!-- Fonts -->
@@ -80,7 +80,7 @@
                             <div class="shrink-0 flex items-center">
                                 <a href="{{ route('home') }}" class="flex items-center space-x-2">
                                     @if($settings['system_logo'])
-                                    <img src="{{ Storage::disk('digitalocean')->url($settings['system_logo']) }}"
+                                    <img src="{{ $settings['system_logo_url'] ?? '' }}"
                                              alt="{{ $settings['system_name'] }}"
                                              class="h-8 w-auto object-contain">
                                     @endif

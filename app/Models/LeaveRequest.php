@@ -13,6 +13,7 @@ class LeaveRequest extends Model
         'start_date',
         'end_date',
         'reason',
+        'supporting_document_path',
         'status',
         'admin_notes',
         'reviewed_by',

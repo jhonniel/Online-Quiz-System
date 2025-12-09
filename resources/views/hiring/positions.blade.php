@@ -13,10 +13,21 @@
             <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                 @foreach($positions as $position)
                     <div class="bg-white rounded-xl shadow-md border border-gray-200 overflow-hidden hover:shadow-lg transition-all duration-300 flex flex-col">
+                        <div class="h-48 bg-gray-100 overflow-hidden">
+                            @if($position->thumbnail_url)
+                                <a href="{{ $position->thumbnail_url }}" target="_blank" rel="noopener" class="block w-full h-full">
+                                    <img src="{{ $position->thumbnail_url }}" alt="{{ $position->title }}" class="w-full h-full object-cover">
+                                </a>
+                            @else
+                                <div class="w-full h-full flex items-center justify-center bg-gradient-to-br from-indigo-50 to-indigo-100 text-indigo-500 text-lg font-semibold">
+                                    {{ strtoupper(Str::limit($position->title, 1, '')) }}
+                                </div>
+                            @endif
+                        </div>
                         <!-- Card Header -->
                         <div class="p-6 pb-4">
                             <h2 class="text-xl font-bold text-gray-900 mb-3 line-clamp-2">{{ $position->title }}</h2>
-                            
+
                             <div class="flex flex-col gap-2 mb-4">
                                 @if($position->department)
                                     <span class="flex items-center text-sm text-gray-600">
@@ -74,7 +85,7 @@
 
                             <div class="flex items-center justify-between">
                                 <span class="text-xs text-gray-500">{{ $position->application_count }} application(s)</span>
-                                <a href="{{ url('/' . ltrim($settings['hiring_application_url'] ?? 'hiring/apply', '/') . '/' . $position->slug) }}" 
+                                <a href="{{ url('/' . ltrim($settings['hiring_application_url'] ?? 'hiring/apply', '/') . '/' . $position->slug) }}"
                                    class="inline-flex items-center px-4 py-2 text-sm font-medium rounded-lg shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors">
                                     Apply Now
                                     <svg class="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
