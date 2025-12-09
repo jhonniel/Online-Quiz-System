@@ -92,30 +92,22 @@
         pointer-events: auto !important;
         position: relative;
     }
-    
-    /* Ensure settings container and tabs are properly positioned - above sidebar */
+
+    /* Ensure settings container and tabs are properly positioned */
+    /* Remove z-index fixes - the issue is positioning, not z-index */
     .bg-white.rounded-2xl.shadow-xl {
         position: relative;
-        z-index: 51 !important; /* Higher than sidebar z-50 */
     }
     
-    /* Tab navigation wrapper - ensure it's above content and sidebar */
+    /* Tab navigation wrapper */
     .border-b.border-gray-200.bg-gray-50 {
         position: relative;
-        z-index: 52 !important; /* Higher than container */
         overflow: visible;
     }
     
     /* Ensure nav element is properly positioned */
     nav[aria-label="Tabs"] {
         position: relative;
-        z-index: 52 !important;
-    }
-    
-    /* Ensure tab buttons are clickable and visible */
-    .settings-tab {
-        position: relative;
-        z-index: 53 !important;
     }
     .form-section {
         @apply bg-gradient-to-br from-gray-50 to-white border border-gray-200 rounded-xl p-6 shadow-sm;
@@ -154,7 +146,7 @@ if (!window.showTab) {
     console.log('showTab defined inline');
 }
 </script>
-<div class="space-y-6" style="position: relative; z-index: 1;">
+<div class="space-y-6 px-2 sm:px-3 lg:px-4 xl:px-6">
     <!-- Enhanced Page Header -->
     <div class="bg-gradient-to-br from-indigo-600 via-indigo-700 to-purple-700 rounded-2xl shadow-xl p-8 text-white">
         <div class="flex items-center justify-between">
