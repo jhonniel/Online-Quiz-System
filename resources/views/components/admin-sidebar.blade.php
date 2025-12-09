@@ -614,6 +614,21 @@
                     </span>
                 </a>
 
+                <!-- DTR (Employee Only) -->
+                @if(auth()->user()->role === 'employee')
+                <a href="{{ route('user.dtr.index') }}"
+                   class="flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors duration-200 {{ request()->routeIs('user.dtr.*') ? 'bg-indigo-700 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white' }}"
+                   :class="sidebarCollapsed ? 'justify-center' : ''"
+                   :title="sidebarCollapsed ? 'DTR' : ''">
+                    <svg class="h-5 w-5 flex-shrink-0" :class="sidebarCollapsed ? '' : 'mr-3'" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                    </svg>
+                    <span class="transition-opacity duration-300" :class="sidebarCollapsed ? 'opacity-0 w-0 overflow-hidden' : 'opacity-100'">
+                        DTR
+                    </span>
+                </a>
+                @endif
+
                 <!-- Leave Requests (Employee & Student) -->
                 @if(in_array(auth()->user()->role, ['employee', 'student']))
                 <a href="{{ route('user.leave-requests.index') }}"
