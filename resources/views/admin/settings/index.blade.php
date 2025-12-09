@@ -101,24 +101,11 @@
     .input-with-icon {
         @apply pl-10;
     }
-    
-    /* Force content to respect parent container - prevent overlap with sidebar */
-    .content-wrapper {
-        margin-left: 0 !important;
-        padding-left: 0 !important;
-        position: relative !important;
-        left: 0 !important;
-        transform: none !important;
-        width: 100%;
-        max-width: 100%;
-        box-sizing: border-box;
-    }
 </style>
 @endpush
 
 
 @section('content')
-<div class="content-wrapper">
 <script>
 // Define showTab immediately at the start of content - ensures it's available
 if (!window.showTab) {
@@ -139,7 +126,7 @@ if (!window.showTab) {
     console.log('showTab defined inline');
 }
 </script>
-<div class="space-y-4 sm:space-y-6 px-2 sm:px-3 lg:px-4 xl:px-6 py-4" style="position: relative; width: 100%; max-width: 100%; box-sizing: border-box; margin-left: 0; left: 0;">
+<div class="space-y-4 sm:space-y-6 px-2 sm:px-3 lg:px-4 xl:px-6 py-4">
     <!-- Enhanced Page Header -->
     <div class="bg-gradient-to-br from-indigo-600 via-indigo-700 to-purple-700 rounded-2xl shadow-xl p-8 text-white">
         <div class="flex items-center justify-between">
@@ -2124,5 +2111,4 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 </script>
-</div>
 @endsection
