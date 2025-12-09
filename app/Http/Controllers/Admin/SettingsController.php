@@ -457,6 +457,9 @@ class SettingsController extends Controller
 
         // Use cloud disk for branding assets
         $assetDisk = 'digitalocean';
+        $assetRoot = trim(env('DIGITALOCEAN_SPACES_ROOT_PATH', ''), '/');
+        $logoDir = $assetRoot ? $assetRoot . '/logos' : 'logos';
+        $iconDir = $assetRoot ? $assetRoot . '/icons' : 'icons';
 
         // Handle logo upload
         if ($request->hasFile('system_logo')) {
@@ -466,8 +469,8 @@ class SettingsController extends Controller
                 Storage::disk($assetDisk)->delete($oldLogo);
             }
 
-            // Store new logo
-            $logoPath = $request->file('system_logo')->store('logos', $assetDisk);
+            // Store new logo (respect root path prefix)
+            $logoPath = $request->file('system_logo')->store($logoDir, $assetDisk);
             Setting::set('system_logo', $logoPath, 'image', 'The system logo');
         }
 
@@ -488,8 +491,8 @@ class SettingsController extends Controller
                 Storage::disk($assetDisk)->delete($oldIcon);
             }
 
-            // Store new icon
-            $iconPath = $request->file('system_icon')->store('icons', $assetDisk);
+            // Store new icon (respect root path prefix)
+            $iconPath = $request->file('system_icon')->store($iconDir, $assetDisk);
             Setting::set('system_icon', $iconPath, 'image', 'The system icon/favicon');
         }
 
