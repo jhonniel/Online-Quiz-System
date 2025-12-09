@@ -1633,16 +1633,17 @@ function initTabListeners() {
     }
 }
 
-// Try multiple times to ensure it works
-if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', initTabListeners);
-} else {
-    // DOM is already ready
-    initTabListeners();
-}
+        // Try multiple times to ensure it works
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', initTabListeners);
+        } else {
+            // DOM is already ready
+            initTabListeners();
+        }
 
-// Also try after a short delay as fallback
-setTimeout(initTabListeners, 100);
+        // Also try after a short delay as fallback
+        setTimeout(initTabListeners, 100);
+    }); // Close DOMContentLoaded function
 
 document.addEventListener('DOMContentLoaded', function() {
     console.log('DOMContentLoaded fired');
