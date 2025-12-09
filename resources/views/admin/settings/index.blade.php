@@ -1,41 +1,8 @@
 @extends('layouts.admin')
 
-
-@push('styles')
-<style>
-    .settings-tab {
-        @apply px-6 py-3 text-sm font-medium rounded-t-lg transition-all duration-200;
-    }
-    .settings-tab.active {
-        @apply bg-white text-indigo-600 border-b-2 border-indigo-600;
-    }
-    .settings-tab:not(.active) {
-        @apply text-gray-600 hover:text-gray-900 hover:bg-gray-50;
-    }
-    .settings-tab {
-        cursor: pointer !important;
-        pointer-events: auto !important;
-        position: relative;
-        z-index: 10;
-    }
-    .form-section {
-        @apply bg-gradient-to-br from-gray-50 to-white border border-gray-200 rounded-xl p-6 shadow-sm;
-    }
-    .input-group {
-        @apply relative;
-    }
-    .input-icon {
-        @apply absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400;
-    }
-    .input-with-icon {
-        @apply pl-10;
-    }
-</style>
-@endpush
-
-@push('scripts')
+@section('scripts')
 <script>
-// Define showTab function immediately in head - before page loads
+// Define showTab function immediately - must be available before buttons are clicked
 (function() {
     'use strict';
     
@@ -104,10 +71,43 @@
         }
     };
     
-    console.log('showTab function defined in head and ready');
+    console.log('showTab function defined and ready');
 })();
 </script>
+@endsection
+
+@push('styles')
+<style>
+    .settings-tab {
+        @apply px-6 py-3 text-sm font-medium rounded-t-lg transition-all duration-200;
+    }
+    .settings-tab.active {
+        @apply bg-white text-indigo-600 border-b-2 border-indigo-600;
+    }
+    .settings-tab:not(.active) {
+        @apply text-gray-600 hover:text-gray-900 hover:bg-gray-50;
+    }
+    .settings-tab {
+        cursor: pointer !important;
+        pointer-events: auto !important;
+        position: relative;
+        z-index: 10;
+    }
+    .form-section {
+        @apply bg-gradient-to-br from-gray-50 to-white border border-gray-200 rounded-xl p-6 shadow-sm;
+    }
+    .input-group {
+        @apply relative;
+    }
+    .input-icon {
+        @apply absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400;
+    }
+    .input-with-icon {
+        @apply pl-10;
+    }
+</style>
 @endpush
+
 
 @section('content')
 <div class="space-y-6">
