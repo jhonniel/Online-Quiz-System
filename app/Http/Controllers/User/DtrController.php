@@ -61,6 +61,13 @@ class DtrController extends Controller
         $totalOvertimeM = $totalOvertimeMinutes % 60;
         $totalOvertimeFormatted = sprintf('%02d:%02d', $totalOvertimeH, $totalOvertimeM);
 
+        // Calculate absent count for current year
+        $currentYear = now()->year;
+        $absentCount = Dtr::where('user_id', $user->id)
+            ->where('status', 'absent')
+            ->whereYear('date', $currentYear)
+            ->count();
+
         // Group DTRs by Month -> ISO Week
         $groupedDtrs = [];
 
@@ -93,6 +100,6 @@ class DtrController extends Controller
             $groupedDtrs[$monthKey]['weeks'][$weekKey]['records'][] = $dtr;
         }
 
-        return view('user.dtr.index', compact('groupedDtrs', 'totalRecords', 'totalHoursFormatted', 'totalOvertimeFormatted'));
+        return view('user.dtr.index', compact('groupedDtrs', 'totalRecords', 'totalHoursFormatted', 'totalOvertimeFormatted', 'absentCount', 'currentYear'));
     }
 }

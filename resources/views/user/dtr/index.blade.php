@@ -51,7 +51,7 @@
     @endif
 
     <!-- Summary Cards -->
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mx-2 sm:mx-3 lg:mx-4 xl:mx-6 mt-4">
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mx-2 sm:mx-3 lg:mx-4 xl:mx-6 mt-4">
         <div class="bg-white rounded-lg shadow border border-gray-200 p-4">
             <div class="flex items-center">
                 <div class="flex-shrink-0 bg-indigo-100 rounded-lg p-3">
@@ -90,6 +90,20 @@
                 <div class="ml-4">
                     <p class="text-sm font-medium text-gray-500">Total Overtime</p>
                     <p class="text-2xl font-bold text-gray-900">{{ $totalOvertimeFormatted }}</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-lg shadow border border-gray-200 p-4">
+            <div class="flex items-center">
+                <div class="flex-shrink-0 bg-red-100 rounded-lg p-3">
+                    <svg class="h-6 w-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                </div>
+                <div class="ml-4">
+                    <p class="text-sm font-medium text-gray-500">Absent Count ({{ $currentYear }})</p>
+                    <p class="text-2xl font-bold text-gray-900">{{ $absentCount }}</p>
                 </div>
             </div>
         </div>
