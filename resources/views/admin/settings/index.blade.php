@@ -101,7 +101,6 @@
     .input-with-icon {
         @apply pl-10;
     }
-
 </style>
 @endpush
 
@@ -127,7 +126,7 @@ if (!window.showTab) {
     console.log('showTab defined inline');
 }
 </script>
-<div class="settings-content-wrapper space-y-4 sm:space-y-6 px-2 sm:px-3 lg:px-4 xl:px-6 py-4">
+<div class="space-y-4 sm:space-y-6 px-2 sm:px-3 lg:px-4 xl:px-6 py-4" style="position: relative; width: 100%; max-width: 100%; box-sizing: border-box;">
     <!-- Enhanced Page Header -->
     <div class="bg-gradient-to-br from-indigo-600 via-indigo-700 to-purple-700 rounded-2xl shadow-xl p-8 text-white">
         <div class="flex items-center justify-between">
