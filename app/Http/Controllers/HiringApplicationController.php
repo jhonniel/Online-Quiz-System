@@ -286,17 +286,41 @@ class HiringApplicationController extends Controller
             // Update position application count
             $position->increment('application_count');
 
-            // Send notification email to admin if email notifications are enabled
+            // Send notification email to admin(s) if email notifications are enabled
             $emailNotificationsEnabled = \App\Models\Setting::get('hiring_email_notifications', 'enabled');
             if ($emailNotificationsEnabled === 'enabled') {
                 try {
-                    // Get admin email or use system default
-                    $adminEmail = \App\Models\Setting::get('mail_from_address', config('mail.from.address'));
+                    // Get admin notification emails (comma-separated) or fallback to single admin email
+                    $adminEmailsStr = \App\Models\Setting::get('hiring_admin_notification_email', '');
 
-                    if ($adminEmail) {
-                        \Illuminate\Support\Facades\Mail::to($adminEmail)
-                            ->send(new \App\Mail\HiringApplicationReceived($application, $position));
-                        Log::info('Admin notification email sent', ['admin_email' => $adminEmail]);
+                    // If no hiring-specific admin emails, try leave admin notification emails as fallback
+                    if (empty($adminEmailsStr)) {
+                        $adminEmailsStr = \App\Models\Setting::get('leave_admin_notification_email', '');
+                    }
+
+                    // If still empty, use system default email
+                    if (empty($adminEmailsStr)) {
+                        $adminEmailsStr = \App\Models\Setting::get('mail_from_address', config('mail.from.address'));
+                    }
+
+                    if (!empty($adminEmailsStr)) {
+                        // Parse comma-separated emails
+                        $adminEmails = array_filter(array_map('trim', explode(',', $adminEmailsStr)));
+                        $validEmails = array_filter($adminEmails, function ($email) {
+                            return filter_var($email, FILTER_VALIDATE_EMAIL);
+                        });
+
+                        if (!empty($validEmails)) {
+                            \App\Services\MailConfigService::configure();
+                            foreach ($validEmails as $email) {
+                                \Illuminate\Support\Facades\Mail::to($email)
+                                    ->send(new \App\Mail\HiringApplicationReceived($application, $position));
+                            }
+                            Log::info('Admin notification emails sent', [
+                                'emails' => $validEmails,
+                                'application_id' => $application->id
+                            ]);
+                        }
                     }
                 } catch (\Exception $e) {
                     Log::error('Failed to send admin notification email', [
