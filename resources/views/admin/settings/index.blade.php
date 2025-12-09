@@ -91,7 +91,19 @@
         cursor: pointer !important;
         pointer-events: auto !important;
         position: relative;
-        z-index: 10;
+        z-index: 1;
+    }
+    
+    /* Ensure tab navigation container doesn't get hidden behind sidebar */
+    .bg-white.rounded-2xl {
+        position: relative;
+        z-index: 1;
+    }
+    
+    /* Tab navigation wrapper */
+    .border-b.border-gray-200.bg-gray-50 {
+        position: relative;
+        z-index: 2;
     }
     .form-section {
         @apply bg-gradient-to-br from-gray-50 to-white border border-gray-200 rounded-xl p-6 shadow-sm;
@@ -173,8 +185,8 @@ if (!window.showTab) {
     <!-- Settings Form with Tabs -->
     <div class="bg-white rounded-2xl shadow-xl border border-gray-200 overflow-hidden">
         <!-- Tab Navigation (Outside form to prevent interference) -->
-        <div class="border-b border-gray-200 bg-gray-50 px-6">
-            <nav class="flex space-x-1 -mb-px" aria-label="Tabs" style="position: relative; z-index: 100;">
+        <div class="border-b border-gray-200 bg-gray-50 px-6" style="position: relative; z-index: 1;">
+            <nav class="flex space-x-1 -mb-px" aria-label="Tabs" style="position: relative; z-index: 1;">
                 <button type="button" onclick="event.preventDefault(); event.stopPropagation(); if(window.showTab) window.showTab('general'); return false;" id="tab-general" class="settings-tab active">
                     <div class="flex items-center space-x-2">
                         <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
