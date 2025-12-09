@@ -88,8 +88,11 @@
                     </svg>
                 </div>
                 <div class="ml-4">
-                    <p class="text-sm font-medium text-gray-500">Total Overtime</p>
-                    <p class="text-2xl font-bold text-gray-900">{{ $totalOvertimeFormatted }}</p>
+                    <p class="text-sm font-medium text-gray-500">Overtime ({{ $overtimeWindowLabel ?? 'This Year' }})</p>
+                    <p class="text-2xl font-bold {{ str_starts_with($totalOvertimeFormatted, '-') ? 'text-red-600' : 'text-gray-900' }}">{{ $totalOvertimeFormatted }}</p>
+                    @if(str_starts_with($totalOvertimeFormatted, '-'))
+                        <p class="text-xs text-red-500 mt-1">Negative balance</p>
+                    @endif
                 </div>
             </div>
         </div>

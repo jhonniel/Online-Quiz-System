@@ -4,6 +4,7 @@ namespace App\Http\Controllers\User;
 
 use App\Http\Controllers\Controller;
 use App\Models\Dtr;
+use App\Models\LeaveRequest;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Carbon\Carbon;
@@ -41,7 +42,7 @@ class DtrController extends Controller
 
         $totalRecords = $dtrs->count();
 
-        // Calculate totals
+        // Calculate totals for displayed records
         $totalHours = 0;
         $totalOvertime = 0;
 
@@ -56,13 +57,104 @@ class DtrController extends Controller
         $totalM = $totalMinutes % 60;
         $totalHoursFormatted = sprintf('%02d:%02d', $totalH, $totalM);
 
-        $totalOvertimeMinutes = (int) round($totalOvertime * 60);
-        $totalOvertimeH = intdiv($totalOvertimeMinutes, 60);
-        $totalOvertimeM = $totalOvertimeMinutes % 60;
-        $totalOvertimeFormatted = sprintf('%02d:%02d', $totalOvertimeH, $totalOvertimeM);
+        // Calculate net overtime balance (same as leave requests page)
+        $currentYear = now()->year;
+        $months = $user->overtime_months_credited ?? 12;
+        if ($months === 12) {
+            $fromDate = now()->copy()->startOfYear();
+        } else {
+            $fromDate = now()->copy()->subMonths($months)->startOfDay();
+        }
+
+        // Overtime summary from DTR + approved overtime leave requests for the configured window,
+        // minus any approved Offset requests and deficit hours
+        $dtrOvertimeQuery = Dtr::where('user_id', $user->id);
+        if ($months === 12) {
+            $dtrOvertimeQuery->whereYear('date', $currentYear);
+        } else {
+            $dtrOvertimeQuery->whereDate('date', '>=', $fromDate->toDateString());
+        }
+        $netOvertimeHours = $dtrOvertimeQuery->sum('overtime_hours');
+
+        // Add overtime coming from approved overtime leave requests (HH:MM in reason)
+        $approvedOvertimeRequestsQuery = LeaveRequest::where('user_id', $user->id)
+            ->where('type', 'overtime')
+            ->where('status', 'approved');
+
+        if ($months === 12) {
+            $approvedOvertimeRequestsQuery->whereYear('start_date', $currentYear);
+        } else {
+            $approvedOvertimeRequestsQuery->whereDate('start_date', '>=', $fromDate->toDateString());
+        }
+
+        $approvedOvertimeRequests = $approvedOvertimeRequestsQuery->get();
+
+        $overtimeFromLeavesMinutes = 0;
+        foreach ($approvedOvertimeRequests as $otRequest) {
+            $raw = $otRequest->reason ?? '';
+            if (preg_match('/Total Overtime Hours:\s*([0-9]{2}:[0-9]{2})/', $raw, $m)) {
+                [$h, $mPart] = array_map('intval', explode(':', $m[1]));
+                $overtimeFromLeavesMinutes += $h * 60 + $mPart;
+            }
+        }
+
+        $netOvertimeHours += $overtimeFromLeavesMinutes / 60;
+
+        // Subtract deficit hours from overtime balance (allow negative values)
+        $deficitQuery = \App\Models\DtrDeficit::where('user_id', $user->id)
+            ->where('is_applied', true);
+
+        if ($months === 12) {
+            $deficitQuery->whereYear('week_start_date', $currentYear);
+        } else {
+            $deficitQuery->whereDate('week_start_date', '>=', $fromDate->toDateString());
+        }
+
+        $totalDeficitHours = $deficitQuery->sum('deficit_hours');
+        $netOvertimeHours = $netOvertimeHours - $totalDeficitHours;
+
+        $approvedOffsetQuery = LeaveRequest::where('user_id', $user->id)
+            ->where('type', 'offset')
+            ->where('status', 'approved');
+
+        if ($months === 12) {
+            $approvedOffsetQuery->whereYear('start_date', $currentYear);
+        } else {
+            $approvedOffsetQuery->whereDate('start_date', '>=', $fromDate->toDateString());
+        }
+
+        $approvedOffsetRequests = $approvedOffsetQuery->get();
+
+        // Parse offset hours from reason field (each offset may have different hours)
+        $offsetHoursUsed = 0;
+        foreach ($approvedOffsetRequests as $offsetRequest) {
+            $raw = $offsetRequest->reason ?? '';
+            if (preg_match('/Hours to Deduct:\s*([0-9]{2}:[0-9]{2})/', $raw, $m)) {
+                [$h, $mPart] = array_map('intval', explode(':', $m[1]));
+                $offsetHoursUsed += $h + ($mPart / 60);
+            } else {
+                // Fallback: if format not found, use 8 hours (for old records)
+                $offsetHoursUsed += 8;
+            }
+        }
+
+        $netOvertimeHours = $netOvertimeHours - $offsetHoursUsed;
+
+        // Format net overtime (handle negative values)
+        $isNegative = $netOvertimeHours < 0;
+        $absOvertimeMinutes = (int) round(abs($netOvertimeHours) * 60);
+        $overtimeHoursPart = intdiv($absOvertimeMinutes, 60);
+        $overtimeMinutesPart = $absOvertimeMinutes % 60;
+        $totalOvertimeFormatted = ($isNegative ? '-' : '') . sprintf('%02d:%02d', $overtimeHoursPart, $overtimeMinutesPart);
+
+        // Build label for the overtime window
+        if ($months === 12) {
+            $overtimeWindowLabel = 'This Year';
+        } else {
+            $overtimeWindowLabel = "Last {$months} month(s)";
+        }
 
         // Calculate absent count for current year
-        $currentYear = now()->year;
         $absentCount = Dtr::where('user_id', $user->id)
             ->where('status', 'absent')
             ->whereYear('date', $currentYear)
@@ -100,6 +192,6 @@ class DtrController extends Controller
             $groupedDtrs[$monthKey]['weeks'][$weekKey]['records'][] = $dtr;
         }
 
-        return view('user.dtr.index', compact('groupedDtrs', 'totalRecords', 'totalHoursFormatted', 'totalOvertimeFormatted', 'absentCount', 'currentYear'));
+        return view('user.dtr.index', compact('groupedDtrs', 'totalRecords', 'totalHoursFormatted', 'totalOvertimeFormatted', 'absentCount', 'currentYear', 'overtimeWindowLabel'));
     }
 }
