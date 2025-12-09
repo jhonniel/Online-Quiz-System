@@ -139,8 +139,8 @@ if (!window.showTab) {
                 </svg>
             </div>
                 <div>
-                    <h1 class="text-3xl font-bold">System Settings</h1>
-                    <p class="text-indigo-100 mt-1">Configure and customize your quiz system</p>
+                    <h1 class="text-2xl sm:text-3xl font-bold">Settings</h1>
+                    <p class="text-sm sm:text-base text-indigo-100 mt-1">Customize your quiz system</p>
                 </div>
             </div>
             <div class="hidden md:block">
@@ -168,9 +168,9 @@ if (!window.showTab) {
     @endif
 
     <!-- Settings Form with Tabs -->
-    <div class="bg-white rounded-2xl shadow-xl border border-gray-200 overflow-hidden">
+    <div class="bg-white rounded-2xl shadow-xl border border-gray-200 overflow-hidden mt-6">
         <!-- Tab Navigation (Outside form to prevent interference) -->
-        <div class="border-b border-gray-200 bg-gray-50 px-6">
+        <div class="border-b border-gray-200 bg-gray-50 px-4 sm:px-6">
             <nav class="flex space-x-1 -mb-px" aria-label="Tabs">
                 <button type="button" onclick="event.preventDefault(); event.stopPropagation(); if(window.showTab) window.showTab('general'); return false;" id="tab-general" class="settings-tab active">
                     <div class="flex items-center space-x-2">
