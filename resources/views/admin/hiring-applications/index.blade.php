@@ -119,27 +119,46 @@
     </div>
 
     <!-- Filters -->
-    @if(isset($positions) && $positions->count() > 0)
-        <div class="bg-white shadow-sm rounded-lg border border-gray-200 p-4">
-            <form method="GET" action="{{ route('admin.hiring-applications.index') }}" class="flex items-center justify-between">
-                <div class="flex items-center space-x-4">
-                    <label for="position" class="text-sm font-medium text-gray-700">Filter by Position:</label>
-                    <select name="position" id="position" onchange="this.form.submit()"
+    <div class="bg-white shadow-sm rounded-lg border border-gray-200 p-4">
+        <form method="GET" action="{{ route('admin.hiring-applications.index') }}" class="flex items-center justify-between flex-wrap gap-4">
+            <div class="flex items-center space-x-4 flex-wrap">
+                @if(isset($positions) && $positions->count() > 0)
+                    <div class="flex items-center space-x-2">
+                        <label for="position" class="text-sm font-medium text-gray-700">Filter by Position:</label>
+                        <select name="position" id="position" onchange="this.form.submit()"
+                                class="px-3 py-2 border border-gray-300 rounded-md shadow-sm text-sm focus:ring-indigo-500 focus:border-indigo-500">
+                            <option value="">All Positions</option>
+                            @foreach($positions as $pos)
+                                <option value="{{ $pos->id }}" {{ ($positionFilter ?? '') == $pos->id ? 'selected' : '' }}>
+                                    {{ $pos->title }}
+                                </option>
+                            @endforeach
+                        </select>
+                        @if(request('per_page'))
+                            <input type="hidden" name="per_page" value="{{ request('per_page') }}">
+                        @endif
+                    </div>
+                @endif
+                <div class="flex items-center space-x-2">
+                    <label for="per_page" class="text-sm font-medium text-gray-700">Show:</label>
+                    <select name="per_page" id="per_page" onchange="this.form.submit()"
                             class="px-3 py-2 border border-gray-300 rounded-md shadow-sm text-sm focus:ring-indigo-500 focus:border-indigo-500">
-                        <option value="">All Positions</option>
-                        @foreach($positions as $pos)
-                            <option value="{{ $pos->id }}" {{ ($positionFilter ?? '') == $pos->id ? 'selected' : '' }}>
-                                {{ $pos->title }}
-                            </option>
-                        @endforeach
+                        <option value="10" {{ request('per_page', 20) == 10 ? 'selected' : '' }}>10</option>
+                        <option value="20" {{ request('per_page', 20) == 20 ? 'selected' : '' }}>20</option>
+                        <option value="50" {{ request('per_page', 20) == 50 ? 'selected' : '' }}>50</option>
+                        <option value="100" {{ request('per_page', 20) == 100 ? 'selected' : '' }}>100</option>
                     </select>
+                    <span class="text-sm text-gray-500">per page</span>
+                    @if(request('position'))
+                        <input type="hidden" name="position" value="{{ request('position') }}">
+                    @endif
                 </div>
-                <div class="text-sm text-gray-500">
-                    Showing: {{ $applications->total() }} applications
-                </div>
-            </form>
-        </div>
-    @endif
+            </div>
+            <div class="text-sm text-gray-500">
+                Showing {{ $applications->firstItem() ?? 0 }}-{{ $applications->lastItem() ?? 0 }} of {{ $applications->total() }} applications
+            </div>
+        </form>
+    </div>
 
     <!-- Applications Table -->
     <div class="bg-white shadow-sm rounded-lg border border-gray-200 overflow-hidden">

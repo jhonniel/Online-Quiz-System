@@ -22,7 +22,11 @@ class HiringApplicationController extends Controller
             $query->where('hiring_position_id', $request->position);
         }
 
-        $applications = $query->orderBy('created_at', 'desc')->paginate(20);
+        // Get per page value (default 20, options: 10, 20, 50, 100)
+        $perPage = $request->get('per_page', 20);
+        $perPage = in_array($perPage, [10, 20, 50, 100]) ? $perPage : 20;
+
+        $applications = $query->orderBy('created_at', 'desc')->paginate($perPage)->withQueryString();
 
         $positionFilter = $request->position;
         $positions = \App\Models\HiringPosition::orderBy('title')->get();
@@ -40,7 +44,7 @@ class HiringApplicationController extends Controller
             'interview_scheduled' => (clone $baseQuery)->where('status', 'interview_scheduled')->count(),
         ];
 
-        return view('admin.hiring-applications.index', compact('applications', 'stats', 'positions', 'positionFilter'));
+        return view('admin.hiring-applications.index', compact('applications', 'stats', 'positions', 'positionFilter', 'perPage'));
     }
 
     public function show(HiringApplication $application)

@@ -245,7 +245,7 @@
         @if(!session('success'))
         <!-- Application Form -->
         <div id="application-form-container" class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-            <form action="{{ isset($position) && $position ? route('hiring.apply.position.store', $position->slug) : route('hiring.apply') }}" method="POST" enctype="multipart/form-data" class="space-y-6">
+            <form id="hiring-application-form" action="{{ isset($position) && $position ? route('hiring.apply.position.store', $position->slug) : route('hiring.apply') }}" method="POST" enctype="multipart/form-data" class="space-y-6">
                 @csrf
 
                 <!-- Name Fields -->
@@ -281,6 +281,9 @@
                         @if($formErrors && $formErrors->has('email'))
                             <p class="mt-1 text-sm text-red-600 font-medium">{{ $formErrors->first('email') }}</p>
                         @endif
+                        <p class="mt-1 text-xs text-amber-600 bg-amber-50 border border-amber-200 rounded px-2 py-1">
+                            <strong>Note:</strong> Please make sure this email address is active and accessible. If your application is accepted, your account credentials will be sent to this email address.
+                        </p>
                     </div>
 
                     <div>
@@ -395,9 +398,16 @@
                     <p class="text-sm text-gray-500">
                         By submitting this form, you agree to our privacy policy and terms of service.
                     </p>
-                    <button type="submit"
-                            class="inline-flex items-center px-6 py-3 border border-transparent text-base font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
-                        Submit Application
+                    <button type="submit" id="submit-btn"
+                            class="inline-flex items-center px-6 py-3 border border-transparent text-base font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed">
+                        <span id="submit-text">Submit Application</span>
+                        <span id="submit-loading" class="hidden">
+                            <svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                            </svg>
+                            Uploading...
+                        </span>
                     </button>
                 </div>
 
@@ -467,6 +477,7 @@
                 </div>
             @endif
         </div>
+
         @endif
 
         @if(!session('success'))
@@ -486,6 +497,34 @@
             </div>
         </div>
         @endif
+    </div>
+</div>
+
+<!-- Loading Overlay (always available) -->
+<div id="loading-overlay" class="hidden fixed inset-0 bg-black bg-opacity-50 z-[9999] flex items-center justify-center">
+    <div class="bg-white rounded-lg shadow-xl p-8 max-w-md w-full mx-4">
+        <div class="text-center">
+            <!-- Upload Animation -->
+            <div class="mb-6">
+                <div class="relative inline-block">
+                    <svg class="animate-spin h-16 w-16 text-indigo-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    <div class="absolute inset-0 flex items-center justify-center">
+                        <svg class="h-8 w-8 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path>
+                        </svg>
+                    </div>
+                </div>
+            </div>
+            <h3 class="text-xl font-semibold text-gray-900 mb-2">Uploading Your Application</h3>
+            <p class="text-gray-600 mb-4">Please wait while we upload your files and submit your application...</p>
+            <div class="w-full bg-gray-200 rounded-full h-2.5">
+                <div id="upload-progress" class="bg-indigo-600 h-2.5 rounded-full transition-all duration-300" style="width: 0%"></div>
+            </div>
+            <p id="upload-status" class="text-sm text-gray-500 mt-3">Preparing files...</p>
+        </div>
     </div>
 </div>
 
@@ -521,6 +560,40 @@ document.addEventListener('DOMContentLoaded', function() {
     toggleSchoolOther();
     if (schoolSelect) {
         schoolSelect.addEventListener('change', toggleSchoolOther);
+    }
+
+    // Form submission with loading animation
+    const form = document.getElementById('hiring-application-form');
+    const submitBtn = document.getElementById('submit-btn');
+    const submitText = document.getElementById('submit-text');
+    const submitLoading = document.getElementById('submit-loading');
+    const loadingOverlay = document.getElementById('loading-overlay');
+    const uploadProgress = document.getElementById('upload-progress');
+    const uploadStatus = document.getElementById('upload-status');
+
+    if (form) {
+        let isSubmitting = false;
+
+        form.addEventListener('submit', function(e) {
+            // Prevent double submission
+            if (isSubmitting) {
+                e.preventDefault();
+                return false;
+            }
+
+            isSubmitting = true;
+
+            // Show loading state on button immediately
+            if (submitBtn) {
+                submitBtn.disabled = true;
+                if (submitText) submitText.classList.add('hidden');
+                if (submitLoading) submitLoading.classList.remove('hidden');
+            }
+
+            // Let form submit normally - button will show loading state
+            // When page reloads with success, success message will be displayed
+            // If there are errors, button will reset on page reload
+        });
     }
 
     // Check if form was successfully submitted

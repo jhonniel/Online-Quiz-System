@@ -335,13 +335,13 @@ class HiringApplicationController extends Controller
                 'position_title' => $position->title
             ]);
 
-            // Redirect to success page with application ID as query parameter
-            // This ensures the data is available even if session fails
+            // Redirect to success page with application ID and position title
             return redirect()->route('hiring.application.success', [
                 'application_id' => $application->id,
                 'position_title' => $position->title
             ])->with('application_id', $application->id)
-              ->with('position_title', $position->title);
+              ->with('position_title', $position->title)
+              ->with('success', true);
         } catch (\Exception $e) {
             Log::error('Error creating hiring application', [
                 'message' => $e->getMessage(),
