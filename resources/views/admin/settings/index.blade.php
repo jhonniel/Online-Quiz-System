@@ -1495,12 +1495,14 @@ window.showTab = function(tabName) {
 function initTabListeners() {
     const navElement = document.querySelector('nav[aria-label="Tabs"]');
     if (navElement) {
-        // Remove any existing listeners by cloning
-        const newNav = navElement.cloneNode(true);
-        navElement.parentNode.replaceChild(newNav, navElement);
+        // Check if listener already exists
+        if (navElement.hasAttribute('data-tab-listener')) {
+            return; // Already initialized
+        }
+        navElement.setAttribute('data-tab-listener', 'true');
         
         // Add event delegation
-        newNav.addEventListener('click', function(e) {
+        navElement.addEventListener('click', function(e) {
             const button = e.target.closest('[data-tab]');
             if (button) {
                 e.preventDefault();
@@ -1513,10 +1515,26 @@ function initTabListeners() {
                 }
                 return false;
             }
-        });
+        }, true); // Use capture phase to catch events early
         console.log('Tab event delegation initialized');
     } else {
         console.error('Nav element not found');
+        // Fallback: try direct listeners
+        setTimeout(function() {
+            document.querySelectorAll('[data-tab]').forEach(button => {
+                button.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    const tabName = this.getAttribute('data-tab');
+                    console.log('Tab clicked (fallback):', tabName);
+                    if (tabName && window.showTab) {
+                        window.showTab(tabName);
+                    }
+                    return false;
+                }, true);
+            });
+            console.log('Fallback tab listeners initialized');
+        }, 200);
     }
 }
 
