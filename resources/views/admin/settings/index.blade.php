@@ -1464,38 +1464,77 @@
 </div>
 
 <script>
-// Make showTab globally accessible
-window.showTab = function(tabName) {
-    console.log('showTab called with:', tabName);
+// Make showTab globally accessible - define it immediately
+(function() {
+    'use strict';
+    
+    window.showTab = function(tabName) {
+        console.log('=== showTab called with:', tabName, '===');
+        
+        try {
+            // Hide all tab contents
+            const allContents = document.querySelectorAll('.tab-content');
+            console.log('Found', allContents.length, 'tab content elements');
+            allContents.forEach(function(content) {
+                content.classList.add('hidden');
+                content.style.display = 'none';
+            });
 
-    // Hide all tab contents
-    document.querySelectorAll('.tab-content').forEach(content => {
-        content.classList.add('hidden');
-    });
+            // Remove active class from all tabs
+            const allTabs = document.querySelectorAll('.settings-tab');
+            console.log('Found', allTabs.length, 'tab buttons');
+            allTabs.forEach(function(tab) {
+                tab.classList.remove('active');
+            });
 
-    // Remove active class from all tabs
-    document.querySelectorAll('.settings-tab').forEach(tab => {
-        tab.classList.remove('active');
-    });
+            // Show selected tab content
+            const contentId = 'content-' + tabName;
+            const contentElement = document.getElementById(contentId);
+            console.log('Looking for element with ID:', contentId);
+            console.log('Element found:', contentElement);
+            
+            if (contentElement) {
+                contentElement.classList.remove('hidden');
+                contentElement.style.display = '';
+                console.log('✓ Tab content shown:', contentId);
+            } else {
+                console.error('✗ Tab content NOT found:', contentId);
+                // List all available content IDs
+                const allContentIds = [];
+                document.querySelectorAll('.tab-content').forEach(function(el) {
+                    allContentIds.push(el.id);
+                });
+                console.error('Available content IDs:', allContentIds);
+                alert('Tab content not found: ' + contentId + '\nAvailable: ' + allContentIds.join(', '));
+                return false;
+            }
 
-    // Show selected tab content
-    const contentElement = document.getElementById('content-' + tabName);
-    if (contentElement) {
-        contentElement.classList.remove('hidden');
-        console.log('Tab content shown:', 'content-' + tabName);
-    } else {
-        console.error('Tab content not found:', 'content-' + tabName);
-    }
-
-    // Add active class to selected tab
-    const tabElement = document.getElementById('tab-' + tabName);
-    if (tabElement) {
-        tabElement.classList.add('active');
-        console.log('Tab button activated:', 'tab-' + tabName);
-    } else {
-        console.error('Tab button not found:', 'tab-' + tabName);
-    }
-};
+            // Add active class to selected tab
+            const tabId = 'tab-' + tabName;
+            const tabElement = document.getElementById(tabId);
+            console.log('Looking for tab button with ID:', tabId);
+            console.log('Tab button found:', tabElement);
+            
+            if (tabElement) {
+                tabElement.classList.add('active');
+                console.log('✓ Tab button activated:', tabId);
+            } else {
+                console.error('✗ Tab button NOT found:', tabId);
+                alert('Tab button not found: ' + tabId);
+                return false;
+            }
+            
+            console.log('=== Tab switch completed successfully ===');
+            return true;
+        } catch (error) {
+            console.error('Error in showTab:', error);
+            alert('Error switching tab: ' + error.message);
+            return false;
+        }
+    };
+    
+    console.log('showTab function defined and ready');
+})();
 
 // Use event delegation on the nav element - works even if buttons are added dynamically
 function initTabListeners() {
