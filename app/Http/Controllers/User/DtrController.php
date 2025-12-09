@@ -42,13 +42,33 @@ class DtrController extends Controller
 
         $totalRecords = $dtrs->count();
 
-        // Calculate totals for displayed records
-        $totalHours = 0;
-        $totalOvertime = 0;
-
-        foreach ($dtrs as $dtr) {
-            $totalHours += ($dtr->total_hours ?? 0);
-            $totalOvertime += ($dtr->overtime_hours ?? 0);
+        // Calculate Total Hours:
+        // - Default: current week only
+        // - With filters: filtered date range
+        $hasDateFilters = $request->filled('date_from') || $request->filled('date_to');
+        
+        if ($hasDateFilters) {
+            // Use filtered records for total hours
+            $totalHours = 0;
+            foreach ($dtrs as $dtr) {
+                $totalHours += ($dtr->total_hours ?? 0);
+            }
+            $totalHoursLabel = 'Filtered Range';
+        } else {
+            // Default: current week only
+            $weekStart = now()->copy()->startOfWeek();
+            $weekEnd = now()->copy()->endOfWeek();
+            
+            $currentWeekDtrs = Dtr::where('user_id', $user->id)
+                ->whereDate('date', '>=', $weekStart->toDateString())
+                ->whereDate('date', '<=', $weekEnd->toDateString())
+                ->get();
+            
+            $totalHours = 0;
+            foreach ($currentWeekDtrs as $dtr) {
+                $totalHours += ($dtr->total_hours ?? 0);
+            }
+            $totalHoursLabel = 'Current Week';
         }
 
         // Format totals
@@ -192,6 +212,6 @@ class DtrController extends Controller
             $groupedDtrs[$monthKey]['weeks'][$weekKey]['records'][] = $dtr;
         }
 
-        return view('user.dtr.index', compact('groupedDtrs', 'totalRecords', 'totalHoursFormatted', 'totalOvertimeFormatted', 'absentCount', 'currentYear', 'overtimeWindowLabel'));
+        return view('user.dtr.index', compact('groupedDtrs', 'totalRecords', 'totalHoursFormatted', 'totalOvertimeFormatted', 'absentCount', 'currentYear', 'overtimeWindowLabel', 'totalHoursLabel'));
     }
 }

@@ -60,7 +60,7 @@
                     </svg>
                 </div>
                 <div class="ml-4">
-                    <p class="text-sm font-medium text-gray-500">Total Hours</p>
+                    <p class="text-sm font-medium text-gray-500">Total Hours ({{ $totalHoursLabel }})</p>
                     <p class="text-2xl font-bold text-gray-900">{{ $totalHoursFormatted }}</p>
                 </div>
             </div>
