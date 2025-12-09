@@ -217,10 +217,10 @@ Route::prefix('admin')->middleware(['auth', 'admin'])->group(function () {
     // System Management
     Route::middleware(['admin.permission:system'])->group(function () {
         // Settings Management
-        Route::get('/settings', [AdminSettingsController::class, 'index'])->name('admin.settings.index');
-        Route::post('/settings', [AdminSettingsController::class, 'update'])->name('admin.settings.update');
-        Route::get('/settings/health', [AdminSettingsController::class, 'getHealth'])->name('admin.settings.health');
-        Route::post('/settings/test-email', [AdminSettingsController::class, 'testEmail'])->name('admin.settings.test-email');
+        Route::get('/settings', [\App\Http\Controllers\Admin\SettingsController::class, 'index'])->name('admin.settings.index');
+        Route::post('/settings', [\App\Http\Controllers\Admin\SettingsController::class, 'update'])->name('admin.settings.update');
+        Route::get('/settings/health', [\App\Http\Controllers\Admin\SettingsController::class, 'getHealth'])->name('admin.settings.health');
+        Route::post('/settings/test-email', [\App\Http\Controllers\Admin\SettingsController::class, 'testEmail'])->name('admin.settings.test-email');
 
         // User Activity Management
         Route::get('user-activity', [App\Http\Controllers\Admin\UserActivityController::class, 'index'])->name('admin.user-activity.index');

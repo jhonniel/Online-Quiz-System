@@ -1,93 +1,21 @@
 @extends('layouts.admin')
 
-@section('scripts')
-<script>
-// Define showTab function immediately - must be available before buttons are clicked
-(function() {
-    'use strict';
-
-    window.showTab = function(tabName) {
-        console.log('=== showTab called with:', tabName, '===');
-
-        try {
-            // Hide all tab contents
-            const allContents = document.querySelectorAll('.tab-content');
-            console.log('Found', allContents.length, 'tab content elements');
-            allContents.forEach(function(content) {
-                content.classList.add('hidden');
-                content.style.display = 'none';
-            });
-
-            // Remove active class from all tabs
-            const allTabs = document.querySelectorAll('.settings-tab');
-            console.log('Found', allTabs.length, 'tab buttons');
-            allTabs.forEach(function(tab) {
-                tab.classList.remove('active');
-            });
-
-            // Show selected tab content
-            const contentId = 'content-' + tabName;
-            const contentElement = document.getElementById(contentId);
-            console.log('Looking for element with ID:', contentId);
-            console.log('Element found:', contentElement);
-
-            if (contentElement) {
-                contentElement.classList.remove('hidden');
-                contentElement.style.display = '';
-                console.log('✓ Tab content shown:', contentId);
-            } else {
-                console.error('✗ Tab content NOT found:', contentId);
-                // List all available content IDs
-                const allContentIds = [];
-                document.querySelectorAll('.tab-content').forEach(function(el) {
-                    allContentIds.push(el.id);
-                });
-                console.error('Available content IDs:', allContentIds);
-                alert('Tab content not found: ' + contentId + '\nAvailable: ' + allContentIds.join(', '));
-                return false;
-            }
-
-            // Add active class to selected tab
-            const tabId = 'tab-' + tabName;
-            const tabElement = document.getElementById(tabId);
-            console.log('Looking for tab button with ID:', tabId);
-            console.log('Tab button found:', tabElement);
-
-            if (tabElement) {
-                tabElement.classList.add('active');
-                console.log('✓ Tab button activated:', tabId);
-            } else {
-                console.error('✗ Tab button NOT found:', tabId);
-                alert('Tab button not found: ' + tabId);
-                return false;
-            }
-
-            console.log('=== Tab switch completed successfully ===');
-            return true;
-        } catch (error) {
-            console.error('Error in showTab:', error);
-            alert('Error switching tab: ' + error.message);
-            return false;
-        }
-    };
-
-    console.log('showTab function defined and ready');
-})();
-</script>
-@endsection
-
 @push('styles')
 <style>
     .settings-tab {
         @apply px-6 py-3 text-sm font-medium rounded-t-lg transition-all duration-200;
-        cursor: pointer !important;
-        pointer-events: auto !important;
     }
     .settings-tab.active {
         @apply bg-white text-indigo-600 border-b-2 border-indigo-600;
     }
     .settings-tab:not(.active) {
         @apply text-gray-600 hover:text-gray-900 hover:bg-gray-50;
+    }
+    .settings-tab {
+        cursor: pointer !important;
+        pointer-events: auto !important;
+        position: relative;
+        z-index: 10;
     }
     .form-section {
         @apply bg-gradient-to-br from-gray-50 to-white border border-gray-200 rounded-xl p-6 shadow-sm;
@@ -101,35 +29,13 @@
     .input-with-icon {
         @apply pl-10;
     }
-
 </style>
 @endpush
 
-
 @section('content')
-<script>
-// Define showTab immediately at the start of content - ensures it's available
-if (!window.showTab) {
-    window.showTab = function(tabName) {
-        console.log('showTab called:', tabName);
-        document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
-        document.querySelectorAll('.settings-tab').forEach(el => el.classList.remove('active'));
-        const content = document.getElementById('content-' + tabName);
-        const tab = document.getElementById('tab-' + tabName);
-        if (content) {
-            content.classList.remove('hidden');
-            content.style.display = '';
-        }
-        if (tab) {
-            tab.classList.add('active');
-        }
-    };
-    console.log('showTab defined inline');
-}
-</script>
 <div class="space-y-6">
     <!-- Enhanced Page Header -->
-    <div class="bg-gradient-to-br from-indigo-600 via-indigo-700 to-purple-700 rounded-2xl shadow-xl px-4 py-6 sm:px-6 sm:py-8 text-white">
+    <div class="bg-gradient-to-br from-indigo-600 via-indigo-700 to-purple-700 rounded-2xl shadow-xl p-8 text-white">
         <div class="flex items-center justify-between">
             <div class="flex items-center space-x-4">
                 <div class="flex-shrink-0 bg-white/20 backdrop-blur-sm rounded-2xl p-4">
@@ -139,8 +45,8 @@ if (!window.showTab) {
                 </svg>
             </div>
                 <div>
-                    <h1 class="text-2xl sm:text-3xl font-bold">Settings</h1>
-                    <p class="text-sm sm:text-base text-indigo-100 mt-1">Customize your quiz system</p>
+                    <h1 class="text-3xl font-bold">System Settings</h1>
+                    <p class="text-indigo-100 mt-1">Configure and customize your quiz system</p>
                 </div>
             </div>
             <div class="hidden md:block">
@@ -168,11 +74,11 @@ if (!window.showTab) {
     @endif
 
     <!-- Settings Form with Tabs -->
-    <div class="bg-white rounded-2xl shadow-xl border border-gray-200 overflow-hidden mt-6">
+    <div class="bg-white rounded-2xl shadow-xl border border-gray-200 overflow-hidden">
         <!-- Tab Navigation (Outside form to prevent interference) -->
-        <div class="border-b border-gray-200 bg-gray-50 px-4 sm:px-6">
-            <nav class="flex space-x-1 -mb-px" aria-label="Tabs">
-                <button type="button" onclick="event.preventDefault(); event.stopPropagation(); if(window.showTab) window.showTab('general'); return false;" id="tab-general" class="settings-tab active">
+        <div class="border-b border-gray-200 bg-gray-50 px-6">
+            <nav class="flex space-x-1 -mb-px" aria-label="Tabs" style="position: relative; z-index: 100;">
+                <button type="button" onclick="if(window.showTab) window.showTab('general'); return false;" id="tab-general" class="settings-tab active" data-tab="general">
                     <div class="flex items-center space-x-2">
                         <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 5a1 1 0 011-1h14a1 1 0 011 1v2a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM4 13a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H5a1 1 0 01-1-1v-6zM14 13a1 1 0 011-1h4a1 1 0 011 1v6a1 1 0 01-1 1h-4a1 1 0 01-1-1v-6z"></path>
@@ -180,7 +86,7 @@ if (!window.showTab) {
                         <span>General</span>
                     </div>
                 </button>
-                <button type="button" onclick="console.log('HIRING BUTTON CLICKED!'); event.preventDefault(); event.stopPropagation(); event.stopImmediatePropagation(); if(window.showTab) { console.log('Calling showTab...'); window.showTab('hiring'); } else { console.error('showTab function not found!'); alert('showTab function not found!'); } return false;" id="tab-hiring" class="settings-tab">
+                <button type="button" onclick="if(window.showTab) window.showTab('hiring'); return false;" id="tab-hiring" class="settings-tab" data-tab="hiring">
                     <div class="flex items-center space-x-2">
                         <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path>
@@ -188,7 +94,7 @@ if (!window.showTab) {
                         <span>Hiring Process</span>
                     </div>
                 </button>
-                <button type="button" onclick="event.preventDefault(); event.stopPropagation(); if(window.showTab) window.showTab('email'); return false;" id="tab-email" class="settings-tab">
+                <button type="button" onclick="if(window.showTab) window.showTab('email'); return false;" id="tab-email" class="settings-tab" data-tab="email">
                     <div class="flex items-center space-x-2">
                         <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path>
@@ -196,7 +102,7 @@ if (!window.showTab) {
                         <span>Email</span>
                     </div>
                 </button>
-                <button type="button" onclick="event.preventDefault(); event.stopPropagation(); if(window.showTab) window.showTab('contact'); return false;" id="tab-contact" class="settings-tab">
+                <button type="button" onclick="if(window.showTab) window.showTab('contact'); return false;" id="tab-contact" class="settings-tab" data-tab="contact">
                     <div class="flex items-center space-x-2">
                         <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 4.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path>
@@ -204,7 +110,7 @@ if (!window.showTab) {
                         <span>Contact</span>
                     </div>
                 </button>
-                <button type="button" onclick="event.preventDefault(); event.stopPropagation(); if(window.showTab) window.showTab('health'); return false;" id="tab-health" class="settings-tab">
+                <button type="button" onclick="if(window.showTab) window.showTab('health'); return false;" id="tab-health" class="settings-tab" data-tab="health">
                     <div class="flex items-center space-x-2">
                         <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
@@ -212,7 +118,7 @@ if (!window.showTab) {
                         <span>System Health</span>
                     </div>
                 </button>
-                <button type="button" onclick="event.preventDefault(); event.stopPropagation(); if(window.showTab) window.showTab('maintenance'); return false;" id="tab-maintenance" class="settings-tab">
+                <button type="button" onclick="if(window.showTab) window.showTab('maintenance'); return false;" id="tab-maintenance" class="settings-tab" data-tab="maintenance">
                     <div class="flex items-center space-x-2">
                         <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path>
@@ -1557,91 +1463,6 @@ if (!window.showTab) {
 </div>
 
 <script>
-// showTab is already defined in @section('scripts') above
-// Just verify it exists and add any additional initialization
-document.addEventListener('DOMContentLoaded', function() {
-    console.log('DOMContentLoaded - checking showTab:', typeof window.showTab);
-    if (!window.showTab) {
-        console.error('showTab function still not found after DOMContentLoaded!');
-        // Fallback definition
-        window.showTab = function(tabName) {
-            console.log('showTab fallback called for:', tabName);
-            const content = document.getElementById('content-' + tabName);
-            const tab = document.getElementById('tab-' + tabName);
-            if (content) {
-                document.querySelectorAll('.tab-content').forEach(el => {
-                    el.classList.add('hidden');
-                    el.style.display = 'none';
-                });
-                content.classList.remove('hidden');
-                content.style.display = '';
-            }
-            if (tab) {
-                document.querySelectorAll('.settings-tab').forEach(el => el.classList.remove('active'));
-                tab.classList.add('active');
-            }
-        };
-    }
-
-// Use event delegation on the nav element - works even if buttons are added dynamically
-function initTabListeners() {
-    const navElement = document.querySelector('nav[aria-label="Tabs"]');
-    if (navElement) {
-        // Check if listener already exists
-        if (navElement.hasAttribute('data-tab-listener')) {
-            return; // Already initialized
-        }
-        navElement.setAttribute('data-tab-listener', 'true');
-
-        // Add event delegation
-        navElement.addEventListener('click', function(e) {
-            const button = e.target.closest('[data-tab]');
-            if (button) {
-                e.preventDefault();
-                e.stopPropagation();
-                e.stopImmediatePropagation();
-                const tabName = button.getAttribute('data-tab');
-                console.log('Tab clicked via delegation:', tabName);
-                if (tabName && window.showTab) {
-                    window.showTab(tabName);
-                }
-                return false;
-            }
-        }, true); // Use capture phase to catch events early
-        console.log('Tab event delegation initialized');
-    } else {
-        console.error('Nav element not found');
-        // Fallback: try direct listeners
-        setTimeout(function() {
-            document.querySelectorAll('[data-tab]').forEach(button => {
-                button.addEventListener('click', function(e) {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    const tabName = this.getAttribute('data-tab');
-                    console.log('Tab clicked (fallback):', tabName);
-                    if (tabName && window.showTab) {
-                        window.showTab(tabName);
-                    }
-                    return false;
-                }, true);
-            });
-            console.log('Fallback tab listeners initialized');
-        }, 200);
-    }
-}
-
-        // Try multiple times to ensure it works
-        if (document.readyState === 'loading') {
-            document.addEventListener('DOMContentLoaded', initTabListeners);
-        } else {
-            // DOM is already ready
-            initTabListeners();
-        }
-
-        // Also try after a short delay as fallback
-        setTimeout(initTabListeners, 100);
-    }); // Close DOMContentLoaded function
-
 document.addEventListener('DOMContentLoaded', function() {
     console.log('DOMContentLoaded fired');
 
@@ -1755,7 +1576,7 @@ document.addEventListener('DOMContentLoaded', function() {
         const refreshBtn = document.querySelector('button[onclick="refreshHealth()"]');
         if (refreshBtn) {
             refreshBtn.disabled = true;
-            refreshBtn.innerHTML = '<svg class="h-3 w-3 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>';
+            refreshBtn.innerHTML = '';
         }
 
         fetch('{{ route("admin.settings.health") }}', {
@@ -1772,7 +1593,7 @@ document.addEventListener('DOMContentLoaded', function() {
             isRefreshing = false;
             if (refreshBtn) {
                 refreshBtn.disabled = false;
-                refreshBtn.innerHTML = '<svg class="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg><span>Refresh</span>';
+                refreshBtn.innerHTML = 'Refresh';
             }
         })
         .catch(error => {
@@ -1780,7 +1601,7 @@ document.addEventListener('DOMContentLoaded', function() {
             isRefreshing = false;
             if (refreshBtn) {
                 refreshBtn.disabled = false;
-                refreshBtn.innerHTML = '<svg class="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg><span>Refresh</span>';
+                refreshBtn.innerHTML = 'Refresh';
             }
         });
     }
@@ -1939,24 +1760,28 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
-    // Enhance showTab to start/stop live stats (only if showTab exists)
-    if (typeof window.showTab === 'function') {
+    // Enhance showTab to start/stop live stats (only if showTab exists and startLiveStats is defined)
+    if (typeof window.showTab === 'function' && typeof startLiveStats === 'function') {
         const originalShowTab = window.showTab;
-        window.showTab = function(tabName) {
-            // Call the original showTab function
+        const enhancedShowTab = function(tabName) {
+            // Call the original showTab function first
             if (originalShowTab) {
                 originalShowTab(tabName);
             }
 
             // Additional functionality for health tab
             if (tabName === 'health') {
-                startLiveStats();
+                if (typeof startLiveStats === 'function') {
+                    startLiveStats();
+                }
             } else {
-                if (healthRefreshInterval) {
+                if (typeof healthRefreshInterval !== 'undefined' && healthRefreshInterval) {
                     clearInterval(healthRefreshInterval);
                 }
             }
         };
+        // Only override if startLiveStats is available
+        window.showTab = enhancedShowTab;
     }
 
     // Start if health tab is already active
@@ -1988,7 +1813,7 @@ document.addEventListener('DOMContentLoaded', function() {
         // Disable button and show loading state
         testEmailBtn.disabled = true;
         testEmailBtn.classList.add('opacity-50', 'cursor-not-allowed');
-        testEmailBtnText.innerHTML = '<svg class="h-4 w-4 mr-2 animate-spin inline" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>Sending...';
+        testEmailBtnText.innerHTML = 'Sending...';
 
         // Hide previous result
         resultDiv.classList.add('hidden');
@@ -2068,6 +1893,36 @@ document.addEventListener('DOMContentLoaded', function() {
             console.error('Test email error:', error);
         });
     });
+
+    // Tab button event delegation - more reliable than inline handlers
+    console.log('Setting up tab button event delegation');
+    const tabNav = document.querySelector('nav[aria-label="Tabs"]');
+    if (tabNav) {
+        tabNav.addEventListener('click', function(e) {
+            const button = e.target.closest('.settings-tab');
+            if (button) {
+                e.preventDefault();
+                e.stopPropagation();
+                e.stopImmediatePropagation();
+
+                // Get tab name from data-tab attribute or id
+                const tabName = button.getAttribute('data-tab') || button.id.replace('tab-', '');
+                console.log('Tab button clicked via delegation:', tabName);
+
+                if (window.showTab && typeof window.showTab === 'function') {
+                    window.showTab(tabName);
+                } else {
+                    console.error('showTab function not available!');
+                }
+
+                return false;
+            }
+        });
+        console.log('Tab event delegation set up successfully');
+    } else {
+        console.error('Tab navigation not found!');
+    }
+});
 </script>
 
 <script>
@@ -2111,5 +1966,183 @@ document.addEventListener('DOMContentLoaded', function() {
             alert('You must have at least one email field.');
         }
     }
+
+// Define showTab function - must be available before buttons are clicked
+window.showTab = function(tabName) {
+    try {
+        console.log('showTab called with:', tabName);
+
+        // Hide all tab contents
+        const allContents = document.querySelectorAll('.tab-content');
+        allContents.forEach(function(content) {
+            content.classList.add('hidden');
+            content.style.display = 'none';
+        });
+
+        // Remove active class from all tabs
+        const allTabs = document.querySelectorAll('.settings-tab');
+        allTabs.forEach(function(tab) {
+            tab.classList.remove('active');
+        });
+
+        // Show selected tab content
+        const contentId = 'content-' + tabName;
+        const contentElement = document.getElementById(contentId);
+        console.log('Looking for content element:', contentId, contentElement);
+
+        if (contentElement) {
+            contentElement.classList.remove('hidden');
+            contentElement.style.display = '';
+            console.log('Tab content shown:', contentId);
+        } else {
+            console.error('Tab content not found:', contentId);
+            return false;
+        }
+
+        // Add active class to selected tab
+        const tabId = 'tab-' + tabName;
+        const tabElement = document.getElementById(tabId);
+        console.log('Looking for tab button:', tabId, tabElement);
+
+        if (tabElement) {
+            tabElement.classList.add('active');
+            console.log('Tab button activated:', tabId);
+        } else {
+            console.error('Tab button not found:', tabId);
+            return false;
+        }
+
+        return true;
+    } catch (error) {
+        console.error('Error in showTab:', error);
+        return false;
+    }
+};
+
+</script>
+
+{{-- Ensure sendTestEmail is globally available even before DOMContentLoaded --}}
+<script>
+window.sendTestEmail = function() {
+    const emailInput = document.getElementById('test_email_address');
+    const testEmailBtn = document.getElementById('test-email-btn');
+    const testEmailBtnText = document.getElementById('test-email-btn-text');
+    const resultDiv = document.getElementById('test-email-result');
+
+    if (!emailInput || !emailInput.value) {
+        alert('Please enter an email address to test');
+        return;
+    }
+
+    const email = emailInput.value.trim();
+
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+        alert('Please enter a valid email address');
+        return;
+    }
+
+    // Disable button and show loading state
+    if (testEmailBtn) {
+        testEmailBtn.disabled = true;
+        testEmailBtn.classList.add('opacity-50', 'cursor-not-allowed');
+    }
+    if (testEmailBtnText) {
+        testEmailBtnText.innerHTML = 'Sending...';
+    }
+
+    // Hide previous result
+    if (resultDiv) {
+        resultDiv.classList.add('hidden');
+    }
+
+    fetch('{{ route("admin.settings.test-email") }}', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-Requested-With': 'XMLHttpRequest',
+            'Accept': 'application/json',
+            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || document.querySelector('input[name="_token"]')?.value || ''
+        },
+        body: JSON.stringify({
+            test_email: email
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        // Re-enable button
+        if (testEmailBtn) {
+            testEmailBtn.disabled = false;
+            testEmailBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+        }
+        if (testEmailBtnText) {
+            testEmailBtnText.textContent = 'Send Test Email';
+        }
+
+        // Show result
+        if (resultDiv) {
+            resultDiv.classList.remove('hidden');
+
+            if (data.success) {
+                resultDiv.className = 'mt-4 p-4 rounded-lg bg-green-50 border border-green-200';
+                resultDiv.innerHTML = `
+                    <div class="flex items-start">
+                        <svg class="h-5 w-5 text-green-600 mr-3 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                        </svg>
+                        <div>
+                            <h4 class="text-sm font-semibold text-green-800">Test Email Sent Successfully!</h4>
+                            <p class="text-sm text-green-700 mt-1">${data.message}</p>
+                        </div>
+                    </div>
+                `;
+            } else {
+                resultDiv.className = 'mt-4 p-4 rounded-lg bg-red-50 border border-red-200';
+                resultDiv.innerHTML = `
+                    <div class="flex items-start">
+                        <svg class="h-5 w-5 text-red-600 mr-3 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                        </svg>
+                        <div>
+                            <h4 class="text-sm font-semibold text-red-800">Failed to Send Test Email</h4>
+                            <p class="text-sm text-red-700 mt-1">${data.message}</p>
+                            <p class="text-xs text-red-600 mt-2">Please check your email configuration settings and try again.</p>
+                        </div>
+                    </div>
+                `;
+            }
+        }
+    })
+    .catch(error => {
+        // Re-enable button
+        if (testEmailBtn) {
+            testEmailBtn.disabled = false;
+            testEmailBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+        }
+        if (testEmailBtnText) {
+            testEmailBtnText.textContent = 'Send Test Email';
+        }
+
+        if (resultDiv) {
+            // Show error
+            resultDiv.classList.remove('hidden');
+            resultDiv.className = 'mt-4 p-4 rounded-lg bg-red-50 border border-red-200';
+            resultDiv.innerHTML = `
+                <div class="flex items-start">
+                    <svg class="h-5 w-5 text-red-600 mr-3 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                    </svg>
+                    <div>
+                        <h4 class="text-sm font-semibold text-red-800">Error</h4>
+                        <p class="text-sm text-red-700 mt-1">An error occurred while sending the test email. Please try again.</p>
+                    </div>
+                </div>
+            `;
+        }
+
+        console.error('Test email error:', error);
+    });
+};
 </script>
 @endsection
