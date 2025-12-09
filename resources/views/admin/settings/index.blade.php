@@ -93,23 +93,29 @@
         position: relative;
     }
     
-    /* Ensure settings container and tabs are properly positioned */
+    /* Ensure settings container and tabs are properly positioned - above sidebar */
     .bg-white.rounded-2xl.shadow-xl {
         position: relative;
-        z-index: 1;
+        z-index: 51 !important; /* Higher than sidebar z-50 */
     }
     
-    /* Tab navigation wrapper - ensure it's above content */
+    /* Tab navigation wrapper - ensure it's above content and sidebar */
     .border-b.border-gray-200.bg-gray-50 {
         position: relative;
-        z-index: 2;
+        z-index: 52 !important; /* Higher than container */
         overflow: visible;
     }
     
     /* Ensure nav element is properly positioned */
     nav[aria-label="Tabs"] {
         position: relative;
-        z-index: 2;
+        z-index: 52 !important;
+    }
+    
+    /* Ensure tab buttons are clickable and visible */
+    .settings-tab {
+        position: relative;
+        z-index: 53 !important;
     }
     .form-section {
         @apply bg-gradient-to-br from-gray-50 to-white border border-gray-200 rounded-xl p-6 shadow-sm;
