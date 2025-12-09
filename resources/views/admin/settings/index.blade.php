@@ -110,6 +110,26 @@
 
 
 @section('content')
+<script>
+// Define showTab immediately at the start of content - ensures it's available
+if (!window.showTab) {
+    window.showTab = function(tabName) {
+        console.log('showTab called:', tabName);
+        document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+        document.querySelectorAll('.settings-tab').forEach(el => el.classList.remove('active'));
+        const content = document.getElementById('content-' + tabName);
+        const tab = document.getElementById('tab-' + tabName);
+        if (content) {
+            content.classList.remove('hidden');
+            content.style.display = '';
+        }
+        if (tab) {
+            tab.classList.add('active');
+        }
+    };
+    console.log('showTab defined inline');
+}
+</script>
 <div class="space-y-6">
     <!-- Enhanced Page Header -->
     <div class="bg-gradient-to-br from-indigo-600 via-indigo-700 to-purple-700 rounded-2xl shadow-xl p-8 text-white">
