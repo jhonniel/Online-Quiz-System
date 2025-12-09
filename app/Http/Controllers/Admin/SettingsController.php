@@ -455,24 +455,27 @@ class SettingsController extends Controller
             Setting::set('secondary_color', $request->secondary_color, 'color', 'Secondary color for the system');
         }
 
+        // Use cloud disk for branding assets
+        $assetDisk = 'digitalocean';
+
         // Handle logo upload
         if ($request->hasFile('system_logo')) {
             // Delete old logo if exists
             $oldLogo = Setting::get('system_logo');
-            if ($oldLogo && Storage::disk('public')->exists($oldLogo)) {
-                Storage::disk('public')->delete($oldLogo);
+            if ($oldLogo && Storage::disk($assetDisk)->exists($oldLogo)) {
+                Storage::disk($assetDisk)->delete($oldLogo);
             }
 
             // Store new logo
-            $logoPath = $request->file('system_logo')->store('logos', 'public');
+            $logoPath = $request->file('system_logo')->store('logos', $assetDisk);
             Setting::set('system_logo', $logoPath, 'image', 'The system logo');
         }
 
         // Handle logo removal
         if ($request->has('remove_logo') && $request->remove_logo) {
             $oldLogo = Setting::get('system_logo');
-            if ($oldLogo && Storage::disk('public')->exists($oldLogo)) {
-                Storage::disk('public')->delete($oldLogo);
+            if ($oldLogo && Storage::disk($assetDisk)->exists($oldLogo)) {
+                Storage::disk($assetDisk)->delete($oldLogo);
             }
             Setting::set('system_logo', null, 'image', 'The system logo');
         }
@@ -481,20 +484,20 @@ class SettingsController extends Controller
         if ($request->hasFile('system_icon')) {
             // Delete old icon if exists
             $oldIcon = Setting::get('system_icon');
-            if ($oldIcon && Storage::disk('public')->exists($oldIcon)) {
-                Storage::disk('public')->delete($oldIcon);
+            if ($oldIcon && Storage::disk($assetDisk)->exists($oldIcon)) {
+                Storage::disk($assetDisk)->delete($oldIcon);
             }
 
             // Store new icon
-            $iconPath = $request->file('system_icon')->store('icons', 'public');
+            $iconPath = $request->file('system_icon')->store('icons', $assetDisk);
             Setting::set('system_icon', $iconPath, 'image', 'The system icon/favicon');
         }
 
         // Handle icon removal
         if ($request->has('remove_icon') && $request->remove_icon) {
             $oldIcon = Setting::get('system_icon');
-            if ($oldIcon && Storage::disk('public')->exists($oldIcon)) {
-                Storage::disk('public')->delete($oldIcon);
+            if ($oldIcon && Storage::disk($assetDisk)->exists($oldIcon)) {
+                Storage::disk($assetDisk)->delete($oldIcon);
             }
             Setting::set('system_icon', null, 'image', 'The system icon/favicon');
         }

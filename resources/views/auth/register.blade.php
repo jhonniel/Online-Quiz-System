@@ -75,7 +75,7 @@
             <!-- Logo -->
             <div class="text-center mb-8">
                 @if($settings['system_logo'])
-                    <img src="{{ Storage::url($settings['system_logo']) }}"
+                    <img src="{{ Storage::disk('digitalocean')->url($settings['system_logo']) }}"
                          alt="{{ $settings['system_name'] }}"
                          class="h-16 w-auto mx-auto mb-4">
                 @else

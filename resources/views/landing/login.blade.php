@@ -75,7 +75,7 @@
             <!-- Logo -->
             <div class="text-center mb-8">
                 @if($settings['system_logo'])
-                    <img src="{{ Storage::url($settings['system_logo']) }}"
+                    <img src="{{ Storage::disk('digitalocean')->url($settings['system_logo']) }}"
                          alt="{{ $settings['system_name'] }}"
                          class="h-16 w-auto mx-auto mb-4">
                 @else
@@ -197,7 +197,7 @@
                         LOGIN
                     </button>
                 </div>
-                
+
                 <!-- Error Message Below Login Button -->
                 <div id="login-error-below-button" class="mb-6">
                     @if($errors->has('login'))
@@ -245,7 +245,7 @@ function togglePassword(event) {
         event.preventDefault();
         event.stopPropagation();
     }
-    
+
     const passwordInput = document.getElementById('password');
     const eyeIcon = document.getElementById('eye-icon');
 
@@ -253,7 +253,7 @@ function togglePassword(event) {
         console.error('Password input not found');
         return false;
     }
-    
+
     if (!eyeIcon) {
         console.error('Eye icon not found');
         return false;
@@ -277,15 +277,15 @@ function togglePassword(event) {
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
         `;
     }
-    
+
     // Restore value (in case browser cleared it)
     passwordInput.value = currentValue;
-    
+
     // Focus back on input
     passwordInput.focus();
-    
+
     console.log('Password type changed to:', passwordInput.type, 'Value length:', passwordInput.value.length);
-    
+
     return false;
 }
 
@@ -695,18 +695,18 @@ document.addEventListener('DOMContentLoaded', function() {
                 })
                 .then(async response => {
                     const data = await response.json();
-                    
+
                     if (!response.ok) {
                         // Show error message below login button
                         const errorMessage = data.message || 'An error occurred during login. Please try again.';
                         showErrorHint(errorMessage, true);
-                        
+
                         // Reset button state
                         submitButton.disabled = false;
                         submitButton.innerHTML = originalText;
                         return;
                     }
-                    
+
                     if (data.success) {
                         ToastNotification.success(data.message);
                         // Redirect after successful login

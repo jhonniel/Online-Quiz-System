@@ -193,7 +193,7 @@
                                         </label>
                             @if($settings['system_logo'])
                                             <div class="mb-3 p-4 bg-gray-50 rounded-lg border border-gray-200">
-                                                <img src="{{ Storage::url($settings['system_logo']) }}" alt="Current Logo" class="h-16 w-auto object-contain mx-auto">
+                                                <img src="{{ Storage::disk('digitalocean')->url($settings['system_logo']) }}" alt="Current Logo" class="h-16 w-auto object-contain mx-auto">
                                 </div>
                             @endif
                                         <div class="mt-2">
@@ -219,7 +219,7 @@
                                         </label>
                             @if(isset($settings['system_icon']) && $settings['system_icon'])
                                             <div class="mb-3 p-4 bg-gray-50 rounded-lg border border-gray-200">
-                                                <img src="{{ Storage::url($settings['system_icon']) }}" alt="Current Icon" class="h-8 w-8 object-contain mx-auto">
+                                                <img src="{{ Storage::disk('digitalocean')->url($settings['system_icon']) }}" alt="Current Icon" class="h-8 w-8 object-contain mx-auto">
                                 </div>
                             @endif
                                         <div class="mt-2">
@@ -326,7 +326,7 @@
                             <div class="bg-white rounded-lg p-6 border border-indigo-200">
                                 <div class="flex items-center space-x-3 mb-4">
                                     @if($settings['system_logo'])
-                                        <img src="{{ Storage::url($settings['system_logo']) }}" alt="Logo Preview" class="h-10 w-auto object-contain" id="preview-logo">
+                                        <img src="{{ Storage::disk('digitalocean')->url($settings['system_logo']) }}" alt="Logo Preview" class="h-10 w-auto object-contain" id="preview-logo">
                                     @else
                                         <div class="h-10 w-10 bg-gray-200 rounded-lg flex items-center justify-center" id="preview-logo-placeholder">
                                             <svg class="h-6 w-6 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -339,7 +339,7 @@
                                 <p class="text-sm text-gray-600 mb-4" id="preview-description">{{ $settings['system_description'] }}</p>
                                 <div class="flex items-center space-x-2 pt-4 border-t border-gray-200">
                                     @if(isset($settings['system_icon']) && $settings['system_icon'])
-                                        <img src="{{ Storage::url($settings['system_icon']) }}" alt="Icon Preview" class="h-6 w-6 object-contain" id="preview-icon">
+                                        <img src="{{ Storage::disk('digitalocean')->url($settings['system_icon']) }}" alt="Icon Preview" class="h-6 w-6 object-contain" id="preview-icon">
                                     @else
                                         <div class="h-6 w-6 bg-gray-200 rounded flex items-center justify-center" id="preview-icon-placeholder">
                                             <svg class="h-4 w-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">

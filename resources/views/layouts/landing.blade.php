@@ -77,7 +77,7 @@
                         <!-- Logo -->
                         <a href="{{ route('landing.index') }}" class="flex items-center space-x-2">
                             @if($settings['system_logo'])
-                                <img src="{{ Storage::url($settings['system_logo']) }}"
+                                <img src="{{ Storage::disk('digitalocean')->url($settings['system_logo']) }}"
                                      alt="{{ $settings['system_name'] }}"
                                      class="h-10 w-auto object-contain">
                             @else
@@ -171,7 +171,7 @@
                     <div class="col-span-1 md:col-span-2">
                         <div class="flex items-center space-x-2 mb-4">
                             @if($settings['system_logo'])
-                                <img src="{{ Storage::url($settings['system_logo']) }}"
+                                <img src="{{ Storage::disk('digitalocean')->url($settings['system_logo']) }}"
                                      alt="{{ $settings['system_name'] }}"
                                      class="h-8 w-auto object-contain">
                             @endif

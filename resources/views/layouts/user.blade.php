@@ -8,9 +8,9 @@
     <title>@yield('title', $settings['system_name'])</title>
 
     <!-- Favicon -->
-    @if(isset($settings['system_icon']) && $settings['system_icon'])
-        <link rel="icon" type="image/x-icon" href="{{ Storage::url($settings['system_icon']) }}">
-        <link rel="shortcut icon" type="image/x-icon" href="{{ Storage::url($settings['system_icon']) }}">
+        @if(isset($settings['system_icon']) && $settings['system_icon'])
+            <link rel="icon" type="image/x-icon" href="{{ Storage::disk('digitalocean')->url($settings['system_icon']) }}">
+            <link rel="shortcut icon" type="image/x-icon" href="{{ Storage::disk('digitalocean')->url($settings['system_icon']) }}">
     @endif
 
     <!-- Fonts -->
@@ -82,7 +82,7 @@
                 <div class="flex items-center h-16 flex-shrink-0 px-4 bg-indigo-600">
                     <div class="flex items-center" :class="sidebarCollapsed ? 'justify-center' : ''">
                         @if($settings['system_logo'])
-                            <img src="{{ Storage::url($settings['system_logo']) }}"
+                            <img src="{{ Storage::disk('digitalocean')->url($settings['system_logo']) }}"
                                  alt="{{ $settings['system_name'] }}"
                                  class="h-8 w-auto object-contain" :class="sidebarCollapsed ? '' : 'mr-2'">
                         @endif
@@ -312,7 +312,7 @@
                     <div class="flex items-center justify-between h-16 px-4 bg-indigo-600">
                         <div class="flex items-center">
                             @if($settings['system_logo'])
-                                <img src="{{ Storage::url($settings['system_logo']) }}"
+                                <img src="{{ Storage::disk('digitalocean')->url($settings['system_logo']) }}"
                                      alt="{{ $settings['system_name'] }}"
                                      class="h-8 w-auto object-contain">
                             @endif

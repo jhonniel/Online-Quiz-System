@@ -7,8 +7,8 @@
 
     <!-- Favicon -->
     @if(isset($settings['system_icon']) && $settings['system_icon'])
-        <link rel="icon" type="image/x-icon" href="{{ Storage::url($settings['system_icon']) }}">
-        <link rel="shortcut icon" type="image/x-icon" href="{{ Storage::url($settings['system_icon']) }}">
+        <link rel="icon" type="image/x-icon" href="{{ Storage::disk('digitalocean')->url($settings['system_icon']) }}">
+        <link rel="shortcut icon" type="image/x-icon" href="{{ Storage::disk('digitalocean')->url($settings['system_icon']) }}">
     @endif
 
     <!-- Fonts -->
@@ -48,7 +48,7 @@
             <!-- Logo -->
             <div class="mb-8">
                 @if(isset($settings['system_logo']) && $settings['system_logo'])
-                    <img src="{{ Storage::url($settings['system_logo']) }}"
+                    <img src="{{ Storage::disk('digitalocean')->url($settings['system_logo']) }}"
                          alt="{{ $settings['system_name'] ?? 'Quiz System' }}"
                          class="h-20 w-auto mx-auto maintenance-animation">
                 @else

@@ -9,8 +9,8 @@
 
     <!-- Favicon -->
     @if(isset($settings['system_icon']) && $settings['system_icon'])
-        <link rel="icon" type="image/x-icon" href="{{ Storage::url($settings['system_icon']) }}">
-        <link rel="shortcut icon" type="image/x-icon" href="{{ Storage::url($settings['system_icon']) }}">
+        <link rel="icon" type="image/x-icon" href="{{ Storage::disk('digitalocean')->url($settings['system_icon']) }}">
+        <link rel="shortcut icon" type="image/x-icon" href="{{ Storage::disk('digitalocean')->url($settings['system_icon']) }}">
     @endif
 
     <!-- Fonts -->
