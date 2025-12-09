@@ -102,6 +102,13 @@
         @apply pl-10;
     }
     
+    /* Ensure content wrapper doesn't break out of parent container */
+    .settings-content {
+        position: relative;
+        width: 100%;
+        max-width: 100%;
+        box-sizing: border-box;
+    }
 </style>
 @endpush
 
