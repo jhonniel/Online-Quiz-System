@@ -101,7 +101,7 @@
         max-width: 100%;
         box-sizing: border-box;
     }
-    
+
     /* Tab navigation wrapper */
     .border-b.border-gray-200.bg-gray-50 {
         position: relative;
@@ -109,14 +109,14 @@
         width: 100%;
         box-sizing: border-box;
     }
-    
+
     /* Ensure nav element is properly positioned */
     nav[aria-label="Tabs"] {
         position: relative;
         width: 100%;
         box-sizing: border-box;
     }
-    
+
     /* Ensure content wrapper respects container */
     .space-y-6 {
         width: 100%;
