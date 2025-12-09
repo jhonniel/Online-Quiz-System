@@ -148,7 +148,7 @@ if (!window.showTab) {
     console.log('showTab defined inline');
 }
 </script>
-<div class="space-y-6">
+<div class="space-y-6" style="position: relative; z-index: 1;">
     <!-- Enhanced Page Header -->
     <div class="bg-gradient-to-br from-indigo-600 via-indigo-700 to-purple-700 rounded-2xl shadow-xl p-8 text-white">
         <div class="flex items-center justify-between">
