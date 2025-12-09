@@ -94,20 +94,36 @@
     }
 
     /* Ensure settings container and tabs are properly positioned */
-    /* Remove z-index fixes - the issue is positioning, not z-index */
+    /* Content should respect parent container margins */
     .bg-white.rounded-2xl.shadow-xl {
         position: relative;
+        width: 100%;
+        max-width: 100%;
+        box-sizing: border-box;
     }
     
     /* Tab navigation wrapper */
     .border-b.border-gray-200.bg-gray-50 {
         position: relative;
         overflow: visible;
+        width: 100%;
+        box-sizing: border-box;
     }
     
     /* Ensure nav element is properly positioned */
     nav[aria-label="Tabs"] {
         position: relative;
+        width: 100%;
+        box-sizing: border-box;
+    }
+    
+    /* Ensure content wrapper respects container */
+    .space-y-6 {
+        width: 100%;
+        max-width: 100%;
+        box-sizing: border-box;
+        margin-left: 0;
+        margin-right: 0;
     }
     .form-section {
         @apply bg-gradient-to-br from-gray-50 to-white border border-gray-200 rounded-xl p-6 shadow-sm;
@@ -146,7 +162,7 @@ if (!window.showTab) {
     console.log('showTab defined inline');
 }
 </script>
-<div class="space-y-6 px-2 sm:px-3 lg:px-4 xl:px-6 py-4">
+<div class="space-y-6 px-2 sm:px-3 lg:px-4 xl:px-6 py-4 w-full max-w-full overflow-x-hidden">
     <!-- Enhanced Page Header -->
     <div class="bg-gradient-to-br from-indigo-600 via-indigo-700 to-purple-700 rounded-2xl shadow-xl p-8 text-white">
         <div class="flex items-center justify-between">
@@ -187,7 +203,7 @@ if (!window.showTab) {
     @endif
 
     <!-- Settings Form with Tabs -->
-    <div class="bg-white rounded-2xl shadow-xl border border-gray-200 overflow-hidden">
+    <div class="bg-white rounded-2xl shadow-xl border border-gray-200 overflow-hidden w-full">
         <!-- Tab Navigation (Outside form to prevent interference) -->
         <div class="border-b border-gray-200 bg-gray-50 px-6">
             <nav class="flex space-x-1 -mb-px" aria-label="Tabs">
