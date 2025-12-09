@@ -80,41 +80,14 @@
 <style>
     .settings-tab {
         @apply px-6 py-3 text-sm font-medium rounded-t-lg transition-all duration-200;
+        cursor: pointer !important;
+        pointer-events: auto !important;
     }
     .settings-tab.active {
         @apply bg-white text-indigo-600 border-b-2 border-indigo-600;
     }
     .settings-tab:not(.active) {
         @apply text-gray-600 hover:text-gray-900 hover:bg-gray-50;
-    }
-    .settings-tab {
-        cursor: pointer !important;
-        pointer-events: auto !important;
-        position: relative;
-    }
-
-    /* Ensure settings container and tabs are properly positioned */
-    /* Content should respect parent container margins - only on settings page */
-    .settings-page .bg-white.rounded-2xl.shadow-xl {
-        position: relative;
-        width: 100%;
-        max-width: 100%;
-        box-sizing: border-box;
-    }
-
-    /* Tab navigation wrapper - only on settings page */
-    .settings-page .border-b.border-gray-200.bg-gray-50 {
-        position: relative;
-        overflow: visible;
-        width: 100%;
-        box-sizing: border-box;
-    }
-
-    /* Ensure nav element is properly positioned - only on settings page */
-    .settings-page nav[aria-label="Tabs"] {
-        position: relative;
-        width: 100%;
-        box-sizing: border-box;
     }
     .form-section {
         @apply bg-gradient-to-br from-gray-50 to-white border border-gray-200 rounded-xl p-6 shadow-sm;
@@ -153,7 +126,7 @@ if (!window.showTab) {
     console.log('showTab defined inline');
 }
 </script>
-<div class="settings-page space-y-6 px-2 sm:px-3 lg:px-4 xl:px-6 py-4 w-full max-w-full overflow-x-hidden">
+<div class="space-y-4 sm:space-y-6 px-2 sm:px-3 lg:px-4 xl:px-6 py-4">
     <!-- Enhanced Page Header -->
     <div class="bg-gradient-to-br from-indigo-600 via-indigo-700 to-purple-700 rounded-2xl shadow-xl p-8 text-white">
         <div class="flex items-center justify-between">
@@ -194,7 +167,7 @@ if (!window.showTab) {
     @endif
 
     <!-- Settings Form with Tabs -->
-    <div class="bg-white rounded-2xl shadow-xl border border-gray-200 overflow-hidden w-full">
+    <div class="bg-white rounded-2xl shadow-xl border border-gray-200 overflow-hidden">
         <!-- Tab Navigation (Outside form to prevent interference) -->
         <div class="border-b border-gray-200 bg-gray-50 px-6">
             <nav class="flex space-x-1 -mb-px" aria-label="Tabs">
