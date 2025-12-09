@@ -101,13 +101,7 @@
     .input-with-icon {
         @apply pl-10;
     }
-    
-    /* Ensure settings page content doesn't overlap with fixed sidebar */
-    .settings-content-wrapper {
-        position: relative;
-        width: 100%;
-        max-width: 100%;
-    }
+
 </style>
 @endpush
 
