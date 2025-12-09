@@ -280,6 +280,9 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/chat/tickets/{ticketNumber}/typing', [ChatController::class, 'getTypingIndicators'])->name('chat.typing');
 
     // Leave Requests (Employee Only)
+    // DTR (Employee Only)
+    Route::get('/dtr', [App\Http\Controllers\User\DtrController::class, 'index'])->name('user.dtr.index');
+
     Route::resource('leave-requests', App\Http\Controllers\User\LeaveRequestController::class)->names('user.leave-requests');
 
     // Hiring Application (Applicant Only)
