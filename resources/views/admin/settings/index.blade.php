@@ -70,7 +70,7 @@
 
     <!-- Settings Form with Tabs -->
     <div class="bg-white rounded-2xl shadow-xl border border-gray-200 overflow-hidden">
-        <!-- Tab Navigation -->
+        <!-- Tab Navigation (Outside form to prevent interference) -->
         <div class="border-b border-gray-200 bg-gray-50 px-6">
             <nav class="flex space-x-1 -mb-px" aria-label="Tabs">
                 <button type="button" data-tab="general" id="tab-general" class="settings-tab active">
@@ -1460,34 +1460,46 @@
 <script>
 // Make showTab globally accessible
 window.showTab = function(tabName) {
-    console.log('Switching to tab:', tabName); // Debug log
+    console.log('showTab called with:', tabName); // Debug log
 
     // Hide all tab contents
-    document.querySelectorAll('.tab-content').forEach(content => {
+    const allContents = document.querySelectorAll('.tab-content');
+    console.log('Found tab contents:', allContents.length);
+    allContents.forEach(content => {
         content.classList.add('hidden');
     });
 
     // Remove active class from all tabs
-    document.querySelectorAll('.settings-tab').forEach(tab => {
+    const allTabs = document.querySelectorAll('.settings-tab');
+    console.log('Found tab buttons:', allTabs.length);
+    allTabs.forEach(tab => {
         tab.classList.remove('active');
     });
 
     // Show selected tab content
     const contentElement = document.getElementById('content-' + tabName);
+    console.log('Looking for content element: content-' + tabName, contentElement);
     if (contentElement) {
         contentElement.classList.remove('hidden');
         console.log('Tab content shown:', 'content-' + tabName);
     } else {
         console.error('Tab content not found:', 'content-' + tabName);
+        // List all available content elements for debugging
+        const allContentIds = Array.from(document.querySelectorAll('.tab-content')).map(el => el.id);
+        console.error('Available content IDs:', allContentIds);
     }
 
     // Add active class to selected tab
     const tabElement = document.getElementById('tab-' + tabName);
+    console.log('Looking for tab button: tab-' + tabName, tabElement);
     if (tabElement) {
         tabElement.classList.add('active');
         console.log('Tab button activated:', 'tab-' + tabName);
     } else {
         console.error('Tab button not found:', 'tab-' + tabName);
+        // List all available tab buttons for debugging
+        const allTabIds = Array.from(document.querySelectorAll('[data-tab]')).map(el => el.id);
+        console.error('Available tab IDs:', allTabIds);
     }
 
     // Prevent any default behavior
@@ -1500,12 +1512,18 @@ document.addEventListener('DOMContentLoaded', function() {
         button.addEventListener('click', function(e) {
             e.preventDefault();
             e.stopPropagation();
+            e.stopImmediatePropagation();
             const tabName = this.getAttribute('data-tab');
+            console.log('Tab button clicked:', tabName);
             if (tabName) {
                 showTab(tabName);
             }
+            return false;
         });
     });
+    
+    // Also make showTab available immediately (not just in DOMContentLoaded)
+    console.log('Tab event listeners initialized');
 
     // Update preview when form fields change
     const systemNameInput = document.getElementById('system_name');
