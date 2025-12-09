@@ -319,6 +319,38 @@
                     <p class="mt-1 text-sm text-gray-500">Optional: Your complete address</p>
                 </div>
 
+                @if(isset($position) && $position && strcasecmp($position->employment_type, 'Internship') === 0)
+                    <div>
+                        <label for="school" class="block text-sm font-medium text-gray-700 mb-2">
+                            School <span class="text-red-500">*</span>
+                        </label>
+                        <select name="school" id="school"
+                                class="w-full px-4 py-2 border {{ $formErrors && $formErrors->has('school') ? 'border-red-500' : 'border-gray-300' }} rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500">
+                            <option value="">Select your school</option>
+                            @foreach(($schoolOptions ?? []) as $school)
+                                <option value="{{ $school }}" {{ old('school') === $school ? 'selected' : '' }}>{{ $school }}</option>
+                            @endforeach
+                            <option value="__other" {{ old('school') === '__other' ? 'selected' : '' }}>Other (enter below)</option>
+                        </select>
+                        @if($formErrors && $formErrors->has('school'))
+                            <p class="mt-1 text-sm text-red-600">{{ $formErrors->first('school') }}</p>
+                        @endif
+
+                        <div id="school-other-wrap" class="mt-3 {{ old('school') === '__other' ? '' : 'hidden' }}">
+                            <label for="school_other" class="block text-sm font-medium text-gray-700 mb-2">
+                                Enter your school
+                            </label>
+                            <input type="text" name="school_other" id="school_other"
+                                   value="{{ old('school_other') }}"
+                                   class="w-full px-4 py-2 border {{ $formErrors && $formErrors->has('school_other') ? 'border-red-500' : 'border-gray-300' }} rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500">
+                            @if($formErrors && $formErrors->has('school_other'))
+                                <p class="mt-1 text-sm text-red-600">{{ $formErrors->first('school_other') }}</p>
+                            @endif
+                        </div>
+                        <p class="mt-1 text-sm text-gray-500">Required for internship applicants.</p>
+                    </div>
+                @endif
+
                 @if(!isset($position) || !$position)
                     <!-- Position -->
                     <div>
@@ -345,18 +377,6 @@
                     <p class="mt-1 text-sm text-gray-500">Optional: Share your motivation and why you'd be a great fit.</p>
                 </div>
 
-                <div>
-                    <label for="cover_letter_file" class="block text-sm font-medium text-gray-700 mb-2">
-                        Upload Cover Letter (Optional)
-                    </label>
-                    <input type="file" name="cover_letter_file" id="cover_letter_file" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
-                           class="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100">
-                    <p class="mt-1 text-xs text-gray-500">PDF/DOC/DOCX/JPG/PNG up to 5MB.</p>
-                    @if($formErrors && $formErrors->has('cover_letter_file'))
-                        <p class="mt-1 text-sm text-red-600">{{ $formErrors->first('cover_letter_file') }}</p>
-                    @endif
-                </div>
-
                 <!-- Resume Upload (Required) -->
                 <div>
                     <label for="resume_file" class="block text-sm font-medium text-gray-700 mb-2">
@@ -367,21 +387,6 @@
                     <p class="mt-1 text-xs text-gray-500">PDF/DOC/DOCX/JPG/PNG up to 5MB.</p>
                     @if($formErrors && $formErrors->has('resume_file'))
                         <p class="mt-1 text-sm text-red-600">{{ $formErrors->first('resume_file') }}</p>
-                    @endif
-                </div>
-
-                <!-- Resume Link (Optional) -->
-                <div>
-                    <label for="resume_link" class="block text-sm font-medium text-gray-700 mb-2">
-                        Resume/CV (Link)
-                    </label>
-                    <input type="url" name="resume_link" id="resume_link"
-                           value="{{ old('resume_link') }}"
-                           placeholder="Optional: https://example.com/resume.pdf or Drive link"
-                           class="w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500">
-                    <p class="mt-1 text-sm text-gray-500">You can also share a link to your resume (optional).</p>
-                    @if($formErrors && $formErrors->has('resume_link'))
-                        <p class="mt-1 text-sm text-red-600">{{ $formErrors->first('resume_link') }}</p>
                     @endif
                 </div>
 
@@ -492,6 +497,32 @@
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
+    // Internship school toggle
+    const schoolSelect = document.getElementById('school');
+    const schoolOtherWrap = document.getElementById('school-other-wrap');
+    const schoolOtherInput = document.getElementById('school_other');
+
+    function toggleSchoolOther() {
+        if (!schoolSelect || !schoolOtherWrap) return;
+        const isOther = schoolSelect.value === '__other';
+        if (isOther) {
+            schoolOtherWrap.classList.remove('hidden');
+            if (schoolOtherInput) {
+                schoolOtherInput.setAttribute('required', 'required');
+            }
+        } else {
+            schoolOtherWrap.classList.add('hidden');
+            if (schoolOtherInput) {
+                schoolOtherInput.removeAttribute('required');
+            }
+        }
+    }
+
+    toggleSchoolOther();
+    if (schoolSelect) {
+        schoolSelect.addEventListener('change', toggleSchoolOther);
+    }
+
     // Check if form was successfully submitted
     @if(session('success'))
         // Trigger confetti animation

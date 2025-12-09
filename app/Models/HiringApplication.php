@@ -20,6 +20,7 @@ class HiringApplication extends Model
         'cover_letter_path',
         'resume_path',
         'resume_link',
+        'school',
         'status',
         'admin_notes',
         'reviewed_by',

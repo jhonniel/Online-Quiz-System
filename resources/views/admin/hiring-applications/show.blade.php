@@ -85,6 +85,12 @@
                             <p class="mt-1 text-sm text-gray-900 whitespace-pre-wrap">{{ $application->address }}</p>
                         </div>
                     @endif
+                    @if($application->hiringPosition && strcasecmp($application->hiringPosition->employment_type ?? '', 'Internship') === 0 && $application->school)
+                        <div>
+                            <label class="text-sm font-medium text-gray-500">School</label>
+                            <p class="mt-1 text-sm text-gray-900">{{ $application->school }}</p>
+                        </div>
+                    @endif
                     @if($application->position_applied)
                         <div>
                             <label class="text-sm font-medium text-gray-500">Position Applied For</label>
@@ -109,27 +115,36 @@
             <!-- Resume -->
             @if($application->resume_path || $application->resume_link)
                 <div class="bg-white shadow-sm rounded-lg border border-gray-200 overflow-hidden">
-                    <div class="px-6 py-4 border-b border-gray-200">
+                    <div class="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
                         <h2 class="text-lg font-medium text-gray-900">Resume</h2>
+                        @if($application->resume_path)
+                            <a href="{{ route('admin.hiring-applications.download-resume', $application) }}"
+                               class="inline-flex items-center px-3 py-1.5 border border-gray-300 rounded-md shadow-sm text-xs font-medium text-gray-700 bg-white hover:bg-gray-50">
+                                <svg class="w-3 h-3 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                                </svg>
+                                Download
+                            </a>
+                        @endif
                     </div>
                     <div class="px-6 py-6 space-y-4">
                         @if($application->resume_path)
                             <div>
                                 <label class="text-sm font-medium text-gray-500 block mb-2">Uploaded Resume</label>
-                                <a href="{{ route('admin.hiring-applications.download-resume', $application) }}" 
-                                   class="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50">
-                                    <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
-                                    </svg>
-                                    Download Resume
-                                </a>
+                                <div class="border border-gray-300 rounded-lg overflow-hidden bg-gray-50">
+                                    <iframe src="{{ route('admin.hiring-applications.view-resume', $application) }}"
+                                            class="w-full h-[600px] border-0"
+                                            title="Resume Preview">
+                                    </iframe>
+                                </div>
+                                <p class="mt-2 text-xs text-gray-500">If the resume doesn't display, you can download it using the button above.</p>
                             </div>
                         @endif
                         @if($application->resume_link)
                             <div>
                                 <label class="text-sm font-medium text-gray-500 block mb-2">Resume Link</label>
-                                <a href="{{ $application->resume_link }}" 
-                                   target="_blank" 
+                                <a href="{{ $application->resume_link }}"
+                                   target="_blank"
                                    rel="noopener noreferrer"
                                    class="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-indigo-700 bg-indigo-50 hover:bg-indigo-100">
                                     <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -181,9 +196,9 @@
                         <div class="mt-4 pt-4 border-t border-gray-200">
                             <label class="text-sm font-medium text-gray-500">Acceptance Link</label>
                             <div class="mt-2 flex">
-                                <input type="text" readonly value="{{ route('hiring.accept', $application->acceptance_token) }}" 
+                                <input type="text" readonly value="{{ route('hiring.accept', $application->acceptance_token) }}"
                                        class="flex-1 px-3 py-2 text-xs border border-gray-300 rounded-l-md bg-gray-50">
-                                <button onclick="copyToClipboard(this.previousElementSibling.value)" 
+                                <button onclick="copyToClipboard(this.previousElementSibling.value)"
                                         class="px-3 py-2 border border-l-0 border-gray-300 rounded-r-md bg-gray-50 hover:bg-gray-100">
                                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path>
@@ -248,8 +263,8 @@
                                 <label for="interview_date" class="block text-sm font-medium text-gray-700 mb-1">
                                     Interview Date <span class="text-red-500">*</span>
                                 </label>
-                                <input type="date" 
-                                       name="interview_date" 
+                                <input type="date"
+                                       name="interview_date"
                                        id="interview_date"
                                        required
                                        min="{{ date('Y-m-d') }}"
@@ -263,10 +278,10 @@
                                 <label for="admin_notes" class="block text-sm font-medium text-gray-700 mb-1">
                                     Notes (Optional)
                                 </label>
-                                <textarea name="admin_notes" 
+                                <textarea name="admin_notes"
                                           id="admin_notes"
-                                          rows="3" 
-                                          placeholder="Add notes (optional)" 
+                                          rows="3"
+                                          placeholder="Add notes (optional)"
                                           class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"></textarea>
                             </div>
                             <button type="submit" class="w-full inline-flex justify-center items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-green-600 hover:bg-green-700">
@@ -278,7 +293,7 @@
                         </form>
                         <form action="{{ route('admin.hiring-applications.reject', $application) }}" method="POST">
                             @csrf
-                            <textarea name="admin_notes" rows="3" placeholder="Add notes (optional)" 
+                            <textarea name="admin_notes" rows="3" placeholder="Add notes (optional)"
                                       class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm mb-3"></textarea>
                             <button type="submit" class="w-full inline-flex justify-center items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-red-600 hover:bg-red-700">
                                 Reject Application
@@ -287,7 +302,7 @@
                     @elseif($application->status == 'accepted')
                         <form action="{{ route('admin.hiring-applications.schedule-interview', $application) }}" method="POST">
                             @csrf
-                            <textarea name="admin_notes" rows="3" placeholder="Add interview notes (optional)" 
+                            <textarea name="admin_notes" rows="3" placeholder="Add interview notes (optional)"
                                       class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm mb-3"></textarea>
                             <button type="submit" class="w-full inline-flex justify-center items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700">
                                 Schedule Interview

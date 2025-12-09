@@ -45,7 +45,7 @@ class HiringApplicationController extends Controller
 
     public function show(HiringApplication $application)
     {
-        $application->load(['reviewer', 'user']);
+        $application->load(['reviewer', 'user', 'hiringPosition']);
         return view('admin.hiring-applications.show', compact('application'));
     }
 
@@ -180,12 +180,63 @@ class HiringApplicationController extends Controller
 
     public function downloadResume(HiringApplication $application)
     {
-        if (!$application->resume_path || !Storage::disk('public')->exists($application->resume_path)) {
+        if (!$application->resume_path) {
             abort(404, 'Resume not found.');
         }
 
-        return Storage::disk('public')->download($application->resume_path,
-            $application->full_name . '_resume.' . pathinfo($application->resume_path, PATHINFO_EXTENSION));
+        // Try digitalocean disk first
+        try {
+            if (Storage::disk('digitalocean')->exists($application->resume_path)) {
+                return Storage::disk('digitalocean')->download(
+                    $application->resume_path,
+                    $application->full_name . '_resume.' . pathinfo($application->resume_path, PATHINFO_EXTENSION)
+                );
+            }
+        } catch (\Throwable $e) {
+            // Fallback to public disk
+        }
+
+        // Fallback to public disk
+        if (Storage::disk('public')->exists($application->resume_path)) {
+            return Storage::disk('public')->download(
+                $application->resume_path,
+                $application->full_name . '_resume.' . pathinfo($application->resume_path, PATHINFO_EXTENSION)
+            );
+        }
+
+        abort(404, 'Resume not found.');
+    }
+
+    public function viewResume(HiringApplication $application)
+    {
+        if (!$application->resume_path) {
+            abort(404, 'Resume not found.');
+        }
+
+        // Try digitalocean disk first
+        try {
+            if (Storage::disk('digitalocean')->exists($application->resume_path)) {
+                $url = Storage::disk('digitalocean')->temporaryUrl(
+                    $application->resume_path,
+                    now()->addMinutes(30),
+                    ['ResponseContentDisposition' => 'inline']
+                );
+                return redirect($url);
+            }
+        } catch (\Throwable $e) {
+            // Fallback to public disk
+        }
+
+        // Fallback to public disk
+        if (Storage::disk('public')->exists($application->resume_path)) {
+            return Storage::disk('public')->response(
+                $application->resume_path,
+                null,
+                ['Content-Disposition' => 'inline']
+            );
+        }
+
+        abort(404, 'Resume not found.');
     }
 
     public function destroy(HiringApplication $application)

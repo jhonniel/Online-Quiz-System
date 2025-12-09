@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\HiringApplication;
 use App\Models\Setting;
+use App\Models\University;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Mail;
@@ -68,7 +69,17 @@ class HiringApplicationController extends Controller
             $errors = new \Illuminate\Support\ViewErrorBag();
         }
 
-        return view('hiring.apply', compact('position', 'settings', 'errors'));
+        // School options for internship applicants pulled from universities table
+        $schoolOptions = University::active()
+            ->orderBy('name')
+            ->get()
+            ->map(function ($u) {
+                return $u->full_name;
+            })
+            ->values()
+            ->all();
+
+        return view('hiring.apply', compact('position', 'settings', 'errors', 'schoolOptions'));
     }
 
     /**
@@ -92,6 +103,16 @@ class HiringApplicationController extends Controller
             'hiring_application_url' => Setting::get('hiring_application_url', 'hiring/apply') ?? 'hiring/apply',
         ];
 
+        // Basic school options for internship applicants; can be extended later
+        $schoolOptions = University::active()
+            ->orderBy('name')
+            ->get()
+            ->map(function ($u) {
+                return $u->full_name;
+            })
+            ->values()
+            ->all();
+
         // Check if public access to hiring applications is enabled
         $publicAccessEnabled = Setting::get('hiring_application_public_access', 'disabled');
 
@@ -109,7 +130,7 @@ class HiringApplicationController extends Controller
 
         if (!$slug) {
             Log::warning('No slug found');
-            return back()->withErrors(['error' => 'Invalid position.'])->withInput()->with('settings', $settings);
+            return back()->withErrors(['error' => 'Invalid position.'])->withInput()->with('settings', $settings)->with('schoolOptions', $schoolOptions);
         }
 
         // Find position
@@ -121,7 +142,7 @@ class HiringApplicationController extends Controller
 
         if (!$position) {
             Log::warning('Position not found', ['slug' => $slug]);
-            return back()->withErrors(['error' => 'Position not found or is no longer available.'])->withInput()->with('settings', $settings);
+            return back()->withErrors(['error' => 'Position not found or is no longer available.'])->withInput()->with('settings', $settings)->with('schoolOptions', $schoolOptions);
         }
 
         if (!$position->isAcceptingApplications()) {
@@ -137,21 +158,39 @@ class HiringApplicationController extends Controller
                 'phone' => 'required|string|max:20',
                 'birth_date' => 'nullable|date|before:today',
                 'address' => 'nullable|string|max:1000',
+                'school' => [
+                    'nullable',
+                    'string',
+                    'max:255',
+                    \Illuminate\Validation\Rule::requiredIf(function () use ($position, $request) {
+                        return strcasecmp($position->employment_type ?? '', 'Internship') === 0
+                            && !$request->filled('school_other');
+                    }),
+                    \Illuminate\Validation\Rule::in(array_merge($schoolOptions, ['__other'])),
+                ],
+                'school_other' => [
+                    'nullable',
+                    'string',
+                    'max:255',
+                    \Illuminate\Validation\Rule::requiredIf(function () use ($position, $request) {
+                        return strcasecmp($position->employment_type ?? '', 'Internship') === 0
+                            && $request->input('school') === '__other';
+                    }),
+                ],
                 'cover_letter' => 'nullable|string|max:5000',
-                'cover_letter_file' => 'nullable|file|mimes:pdf,doc,docx,jpg,jpeg,png|max:5120',
-                'resume_link' => 'nullable|url|max:500',
                 'resume_file' => 'required|file|mimes:pdf,doc,docx,jpg,jpeg,png|max:5120',
             ], [
                 'phone.required' => 'Phone number is required.',
                 'birth_date.before' => 'Birth date must be in the past.',
-                'resume_link.url' => 'Please provide a valid URL for the resume link.',
                 'resume_file.required' => 'Please upload your resume.',
+                'school.required' => 'Please select your school.',
+                'school_other.required' => 'Please enter your school name.',
             ]);
 
             Log::info('Validation passed', ['validated_data' => $validated]);
         } catch (\Illuminate\Validation\ValidationException $e) {
             Log::error('Validation failed', ['errors' => $e->errors()]);
-            return back()->withErrors($e->errors())->withInput()->with('settings', $settings);
+            return back()->withErrors($e->errors())->withInput()->with('settings', $settings)->with('schoolOptions', $schoolOptions);
         }
 
         // Check if email already applied to this position (case-insensitive)
@@ -192,16 +231,36 @@ class HiringApplicationController extends Controller
             $assetDisk = 'digitalocean';
             $assetRoot = trim(env('DIGITALOCEAN_SPACES_ROOT_PATH', ''), '/');
             $resumeDir = $assetRoot ? $assetRoot . '/hiring/resumes' : 'hiring/resumes';
-            $coverDir = $assetRoot ? $assetRoot . '/hiring/cover-letters' : 'hiring/cover-letters';
 
             $resumePath = null;
             if ($request->hasFile('resume_file')) {
                 $resumePath = $request->file('resume_file')->store($resumeDir, $assetDisk);
             }
 
-            $coverLetterPath = null;
-            if ($request->hasFile('cover_letter_file')) {
-                $coverLetterPath = $request->file('cover_letter_file')->store($coverDir, $assetDisk);
+            // Handle school selection - if "Other", create or find university
+            $schoolName = null;
+            if ($request->school === '__other' && $request->filled('school_other')) {
+                $customSchoolName = trim($request->school_other);
+                // Check if university already exists (case-insensitive)
+                $university = University::whereRaw('LOWER(TRIM(name)) = ?', [strtolower($customSchoolName)])
+                    ->first();
+
+                if (!$university) {
+                    // Create new university
+                    $university = University::create([
+                        'name' => $customSchoolName,
+                        'code' => Str::upper(Str::limit(Str::slug($customSchoolName), 10, '')),
+                        'is_active' => true,
+                    ]);
+                    Log::info('New university created from application', [
+                        'university_id' => $university->id,
+                        'name' => $customSchoolName,
+                    ]);
+                }
+
+                $schoolName = $university->full_name;
+            } elseif ($request->filled('school') && $request->school !== '__other') {
+                $schoolName = $request->school;
             }
 
             // Create new application (normalize email to lowercase for consistency)
@@ -213,11 +272,12 @@ class HiringApplicationController extends Controller
                 'phone' => $request->phone,
                 'birth_date' => $request->birth_date ?: null,
                 'address' => $request->address ?: null,
+                'school' => $schoolName,
                 'position_applied' => $position->title,
                 'cover_letter' => $request->cover_letter ?: null,
-                'cover_letter_path' => $coverLetterPath,
+                'cover_letter_path' => null,
                 'resume_path' => $resumePath,
-                'resume_link' => $request->resume_link,
+                'resume_link' => null,
                 'status' => 'pending',
             ]);
 
