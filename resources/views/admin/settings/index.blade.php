@@ -103,13 +103,10 @@
     }
     
     /* Ensure settings page content doesn't overlap with fixed sidebar */
-    @media (min-width: 1024px) {
-        .settings-content-wrapper {
-            margin-left: 0 !important;
-            padding-left: 0 !important;
-            position: relative;
-            z-index: 1;
-        }
+    .settings-content-wrapper {
+        position: relative;
+        width: 100%;
+        max-width: 100%;
     }
 </style>
 @endpush
