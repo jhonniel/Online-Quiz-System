@@ -146,7 +146,7 @@ if (!window.showTab) {
     console.log('showTab defined inline');
 }
 </script>
-<div class="space-y-6 px-2 sm:px-3 lg:px-4 xl:px-6">
+<div class="space-y-6 px-2 sm:px-3 lg:px-4 xl:px-6 py-4">
     <!-- Enhanced Page Header -->
     <div class="bg-gradient-to-br from-indigo-600 via-indigo-700 to-purple-700 rounded-2xl shadow-xl p-8 text-white">
         <div class="flex items-center justify-between">
@@ -187,10 +187,10 @@ if (!window.showTab) {
     @endif
 
     <!-- Settings Form with Tabs -->
-    <div class="bg-white rounded-2xl shadow-xl border border-gray-200 overflow-hidden" style="position: relative; z-index: 1;">
+    <div class="bg-white rounded-2xl shadow-xl border border-gray-200 overflow-hidden">
         <!-- Tab Navigation (Outside form to prevent interference) -->
-        <div class="border-b border-gray-200 bg-gray-50 px-6" style="position: relative; z-index: 2; overflow: visible;">
-            <nav class="flex space-x-1 -mb-px" aria-label="Tabs" style="position: relative; z-index: 2;">
+        <div class="border-b border-gray-200 bg-gray-50 px-6">
+            <nav class="flex space-x-1 -mb-px" aria-label="Tabs">
                 <button type="button" onclick="event.preventDefault(); event.stopPropagation(); if(window.showTab) window.showTab('general'); return false;" id="tab-general" class="settings-tab active">
                     <div class="flex items-center space-x-2">
                         <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
