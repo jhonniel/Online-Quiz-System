@@ -5,10 +5,10 @@
 // Define showTab function immediately - must be available before buttons are clicked
 (function() {
     'use strict';
-    
+
     window.showTab = function(tabName) {
         console.log('=== showTab called with:', tabName, '===');
-        
+
         try {
             // Hide all tab contents
             const allContents = document.querySelectorAll('.tab-content');
@@ -30,7 +30,7 @@
             const contentElement = document.getElementById(contentId);
             console.log('Looking for element with ID:', contentId);
             console.log('Element found:', contentElement);
-            
+
             if (contentElement) {
                 contentElement.classList.remove('hidden');
                 contentElement.style.display = '';
@@ -52,7 +52,7 @@
             const tabElement = document.getElementById(tabId);
             console.log('Looking for tab button with ID:', tabId);
             console.log('Tab button found:', tabElement);
-            
+
             if (tabElement) {
                 tabElement.classList.add('active');
                 console.log('✓ Tab button activated:', tabId);
@@ -61,7 +61,7 @@
                 alert('Tab button not found: ' + tabId);
                 return false;
             }
-            
+
             console.log('=== Tab switch completed successfully ===');
             return true;
         } catch (error) {
@@ -70,7 +70,7 @@
             return false;
         }
     };
-    
+
     console.log('showTab function defined and ready');
 })();
 </script>
@@ -1560,7 +1560,7 @@ if (!window.showTab) {
 </div>
 
 <script>
-// showTab is already defined in @push('scripts') above
+// showTab is already defined in @section('scripts') above
 // Just verify it exists and add any additional initialization
 document.addEventListener('DOMContentLoaded', function() {
     console.log('DOMContentLoaded - checking showTab:', typeof window.showTab);
@@ -1568,12 +1568,16 @@ document.addEventListener('DOMContentLoaded', function() {
         console.error('showTab function still not found after DOMContentLoaded!');
         // Fallback definition
         window.showTab = function(tabName) {
-            alert('showTab fallback called for: ' + tabName);
+            console.log('showTab fallback called for:', tabName);
             const content = document.getElementById('content-' + tabName);
             const tab = document.getElementById('tab-' + tabName);
             if (content) {
-                document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+                document.querySelectorAll('.tab-content').forEach(el => {
+                    el.classList.add('hidden');
+                    el.style.display = 'none';
+                });
                 content.classList.remove('hidden');
+                content.style.display = '';
             }
             if (tab) {
                 document.querySelectorAll('.settings-tab').forEach(el => el.classList.remove('active'));
