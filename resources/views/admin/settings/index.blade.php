@@ -91,17 +91,23 @@
         cursor: pointer !important;
         pointer-events: auto !important;
         position: relative;
-        z-index: 1;
     }
     
-    /* Ensure tab navigation container doesn't get hidden behind sidebar */
-    .bg-white.rounded-2xl {
+    /* Ensure settings container and tabs are properly positioned */
+    .bg-white.rounded-2xl.shadow-xl {
         position: relative;
         z-index: 1;
     }
     
-    /* Tab navigation wrapper */
+    /* Tab navigation wrapper - ensure it's above content */
     .border-b.border-gray-200.bg-gray-50 {
+        position: relative;
+        z-index: 2;
+        overflow: visible;
+    }
+    
+    /* Ensure nav element is properly positioned */
+    nav[aria-label="Tabs"] {
         position: relative;
         z-index: 2;
     }
@@ -183,10 +189,10 @@ if (!window.showTab) {
     @endif
 
     <!-- Settings Form with Tabs -->
-    <div class="bg-white rounded-2xl shadow-xl border border-gray-200 overflow-hidden">
+    <div class="bg-white rounded-2xl shadow-xl border border-gray-200 overflow-hidden" style="position: relative; z-index: 1;">
         <!-- Tab Navigation (Outside form to prevent interference) -->
-        <div class="border-b border-gray-200 bg-gray-50 px-6" style="position: relative; z-index: 1;">
-            <nav class="flex space-x-1 -mb-px" aria-label="Tabs" style="position: relative; z-index: 1;">
+        <div class="border-b border-gray-200 bg-gray-50 px-6" style="position: relative; z-index: 2; overflow: visible;">
+            <nav class="flex space-x-1 -mb-px" aria-label="Tabs" style="position: relative; z-index: 2;">
                 <button type="button" onclick="event.preventDefault(); event.stopPropagation(); if(window.showTab) window.showTab('general'); return false;" id="tab-general" class="settings-tab active">
                     <div class="flex items-center space-x-2">
                         <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
