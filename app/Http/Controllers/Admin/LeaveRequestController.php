@@ -7,12 +7,16 @@ use App\Models\LeaveRequest;
 use App\Models\LeaveRequestLog;
 use App\Models\Dtr;
 use App\Models\Department;
+use App\Models\User;
+use App\Models\LeaveBalance;
+use App\Models\Setting;
 use App\Mail\LeaveRequestStatusUpdate;
 use App\Services\MailConfigService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Validation\Rule;
 use Carbon\Carbon;
 use Carbon\CarbonPeriod;
 
@@ -418,6 +422,115 @@ class LeaveRequestController extends Controller
             'selectedEmployeeId' => $employeeId,
             'selectedDepartmentId' => $departmentId,
         ]);
+    }
+
+    /**
+     * Allow admins to file a leave request on behalf of an employee (calendar page).
+     */
+    public function storeForEmployee(Request $request)
+    {
+        $validated = $request->validate([
+            'user_id' => [
+                'required',
+                Rule::exists('users', 'id')->where(function ($q) {
+                    $q->where('role', 'employee')->where('is_active', true);
+                }),
+            ],
+            'type' => ['required', Rule::in(['vacation_leave', 'sick_leave', 'work_from_home', 'absent', 'overtime', 'offset'])],
+            'start_date' => ['required', 'date'],
+            'end_date' => ['nullable', 'date', 'after_or_equal:start_date'],
+            'reason' => ['nullable', 'string', 'max:1000'],
+        ]);
+
+        $employee = User::findOrFail($validated['user_id']);
+
+        // Allow past dates only for sick_leave and overtime; others must be today or future
+        $typeInput = $validated['type'];
+        if (!($typeInput === 'sick_leave' || $typeInput === 'overtime')) {
+            // Re-run validation for start_date with today-or-future rule
+            $request->validate([
+                'start_date' => ['required', 'date', 'after_or_equal:today'],
+            ]);
+        }
+
+        // Basic balance check for vacation and sick leave
+        if (in_array($validated['type'], ['vacation_leave', 'sick_leave'])) {
+            $startDate = Carbon::parse($validated['start_date']);
+            $endDate = $validated['end_date']
+                ? Carbon::parse($validated['end_date'])
+                : $startDate;
+            $daysRequested = $startDate->diffInDays($endDate) + 1;
+
+            $currentYear = now()->year;
+            $defaultVacation = (float) Setting::get('default_vacation_balance', 15);
+            $defaultSick = (float) Setting::get('default_sick_leave_balance', 10);
+
+            $leaveBalance = LeaveBalance::firstOrCreate(
+                ['user_id' => $employee->id, 'year' => $currentYear],
+                [
+                    'vacation_allowance' => $defaultVacation,
+                    'sick_allowance' => $defaultSick,
+                ]
+            );
+
+            $usedVacation = LeaveRequest::where('user_id', $employee->id)
+                ->where('type', 'vacation_leave')
+                ->where('status', 'approved')
+                ->whereYear('start_date', $currentYear)
+                ->get()
+                ->sum->days;
+
+            $usedSick = LeaveRequest::where('user_id', $employee->id)
+                ->where('type', 'sick_leave')
+                ->where('status', 'approved')
+                ->whereYear('start_date', $currentYear)
+                ->get()
+                ->sum->days;
+
+            $remainingVacation = max((float) $leaveBalance->vacation_allowance - $usedVacation, 0);
+            $remainingSick = max((float) $leaveBalance->sick_allowance - $usedSick, 0);
+
+            if ($validated['type'] === 'vacation_leave' && $daysRequested > $remainingVacation) {
+                return back()->withErrors([
+                    'end_date' => "Employee only has {$remainingVacation} day(s) of Vacation Leave remaining. Requested {$daysRequested} day(s).",
+                ])->withInput();
+            }
+
+            if ($validated['type'] === 'sick_leave' && $daysRequested > $remainingSick) {
+                return back()->withErrors([
+                    'end_date' => "Employee only has {$remainingSick} day(s) of Sick Leave remaining. Requested {$daysRequested} day(s).",
+                ])->withInput();
+            }
+        }
+
+        $leaveRequest = LeaveRequest::create([
+            'user_id' => $employee->id,
+            'type' => $validated['type'],
+            'start_date' => $validated['start_date'],
+            'end_date' => $validated['end_date'] ?? $validated['start_date'],
+            'reason' => $validated['reason'] ?? '',
+            'status' => 'pending',
+            'reviewed_by' => null,
+            'reviewed_at' => null,
+        ]);
+
+        // Log that an admin filed this request on behalf of the employee
+        LeaveRequestLog::create([
+            'leave_request_id' => $leaveRequest->id,
+            'action' => 'filed_by_admin',
+            'status_before' => null,
+            'status_after' => 'pending',
+            'notes' => 'Filed by admin on behalf of employee',
+            'performed_by' => Auth::id(),
+        ]);
+
+        Log::info('Admin filed leave request for employee', [
+            'leave_request_id' => $leaveRequest->id,
+            'employee_id' => $employee->id,
+            'admin_id' => Auth::id(),
+        ]);
+
+        return redirect()->back()->with('success', 'Leave request filed for employee and will appear in their account.');
     }
 
     /**

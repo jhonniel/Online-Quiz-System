@@ -160,6 +160,7 @@ Route::prefix('admin')->middleware(['auth', 'admin'])->group(function () {
         // Leave Requests Management (Employees)
         Route::get('/leave-requests', [App\Http\Controllers\Admin\LeaveRequestController::class, 'index'])->name('admin.leave-requests.index');
         Route::get('/leave-calendar', [App\Http\Controllers\Admin\LeaveRequestController::class, 'calendar'])->name('admin.leave-requests.calendar');
+        Route::post('/leave-requests/create-for-employee', [App\Http\Controllers\Admin\LeaveRequestController::class, 'storeForEmployee'])->name('admin.leave-requests.store-for-employee');
         Route::get('/leave-requests/{leaveRequest}', [App\Http\Controllers\Admin\LeaveRequestController::class, 'show'])->name('admin.leave-requests.show');
         Route::post('/leave-requests/{leaveRequest}/approve', [App\Http\Controllers\Admin\LeaveRequestController::class, 'approve'])->name('admin.leave-requests.approve');
         Route::post('/leave-requests/{leaveRequest}/force-accept', [App\Http\Controllers\Admin\LeaveRequestController::class, 'forceAccept'])->name('admin.leave-requests.force-accept');

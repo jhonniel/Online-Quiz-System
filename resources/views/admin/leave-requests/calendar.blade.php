@@ -76,6 +76,53 @@
                     @endforeach
                 </div>
             </div>
+
+            <!-- Quick Create Leave for Employee -->
+            <div class="bg-white rounded-2xl shadow border border-gray-200 p-3 sm:p-4">
+                <h2 class="text-xs sm:text-sm font-bold text-gray-900 mb-2">File Leave for Employee</h2>
+                <form action="{{ route('admin.leave-requests.store-for-employee') }}" method="POST" class="space-y-3">
+                    @csrf
+                    <div class="space-y-1">
+                        <label for="create_user_id" class="block text-xs font-medium text-gray-700">Employee</label>
+                        <select name="user_id" id="create_user_id" required class="w-full px-2.5 py-1.5 text-xs border border-gray-300 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                            <option value="">Select employee</option>
+                            @foreach($employees as $employee)
+                                <option value="{{ $employee->id }}">{{ $employee->name }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                    <div class="space-y-1">
+                        <label for="create_type" class="block text-xs font-medium text-gray-700">Type</label>
+                        <select name="type" id="create_type" required class="w-full px-2.5 py-1.5 text-xs border border-gray-300 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                            <option value="">Select type</option>
+                            <option value="vacation_leave">Vacation Leave</option>
+                            <option value="sick_leave">Sick Leave</option>
+                            <option value="work_from_home">Work From Home</option>
+                            <option value="absent">Absent</option>
+                            <option value="overtime">Overtime</option>
+                            <option value="offset">Offset</option>
+                        </select>
+                    </div>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                        <div class="space-y-1">
+                            <label for="create_start_date" class="block text-xs font-medium text-gray-700">Start Date</label>
+                            <input type="date" name="start_date" id="create_start_date" required class="w-full px-2.5 py-1.5 text-xs border border-gray-300 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                        </div>
+                        <div class="space-y-1">
+                            <label for="create_end_date" class="block text-xs font-medium text-gray-700">End Date</label>
+                            <input type="date" name="end_date" id="create_end_date" class="w-full px-2.5 py-1.5 text-xs border border-gray-300 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                        </div>
+                    </div>
+                    <div class="space-y-1">
+                        <label for="create_reason" class="block text-xs font-medium text-gray-700">Reason (optional)</label>
+                        <textarea name="reason" id="create_reason" rows="3" class="w-full px-2.5 py-1.5 text-xs border border-gray-300 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500" placeholder="Add brief notes"></textarea>
+                    </div>
+                    <button type="submit" class="w-full inline-flex items-center justify-center px-3 py-1.5 text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded-md shadow focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                        File Leave
+                    </button>
+                    <p class="text-[11px] text-gray-500">Creates a pending request that appears on the employee account and calendar.</p>
+                </form>
+            </div>
         </div>
 
         <!-- Month Navigation + Calendar -->

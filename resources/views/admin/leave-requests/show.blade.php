@@ -958,8 +958,13 @@ document.addEventListener('DOMContentLoaded', function() {
                             </div>
                             <div class="mt-2 text-sm text-gray-700">
                                 @if($log->performer)
-                                    <span class="font-medium">{{ $log->performer->name }}</span>
-                                    <span class="text-gray-500">performed this action</span>
+                                    @if($log->action === 'filed_by_admin' && $leaveRequest->user_id !== $log->performed_by)
+                                        <span class="font-medium">{{ $log->performer->name }}</span>
+                                        <span class="text-gray-500">filed this leave request on behalf of the employee</span>
+                                    @else
+                                        <span class="font-medium">{{ $log->performer->name }}</span>
+                                        <span class="text-gray-500">performed this action</span>
+                                    @endif
                                 @endif
                             </div>
                             @if($log->notes)
