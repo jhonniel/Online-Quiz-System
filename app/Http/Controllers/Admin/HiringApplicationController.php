@@ -96,6 +96,9 @@ class HiringApplicationController extends Controller
             'user_id' => $user->id,
         ]);
 
+        // Refresh to get the properly formatted datetime
+        $application->refresh();
+
         // Generate acceptance token (for backward compatibility)
         $token = $application->generateAcceptanceToken();
 
@@ -111,7 +114,7 @@ class HiringApplicationController extends Controller
                         $application,
                         $application->email,
                         $password,
-                        $request->interview_date,
+                        $application->interview_date,
                         $application->hiringPosition
                     ));
             } catch (\Exception $e) {
