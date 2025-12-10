@@ -34,8 +34,12 @@ class LeaveRequestStatusUpdate extends Mailable
     public function envelope(): Envelope
     {
         $statusLabel = ucfirst($this->status);
-        if ($this->status === 'pending' && $this->leaveRequest->reviewed_at) {
+        if ($this->status === 'resubmission_requested' || ($this->status === 'pending' && $this->leaveRequest->reviewed_at)) {
             $statusLabel = 'Resubmission Required';
+        } elseif ($this->status === 'approved') {
+            $statusLabel = 'Approved';
+        } elseif ($this->status === 'rejected') {
+            $statusLabel = 'Rejected';
         }
 
         return new Envelope(

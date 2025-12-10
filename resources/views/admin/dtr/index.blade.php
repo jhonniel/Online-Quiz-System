@@ -91,7 +91,7 @@
     <!-- Import Section -->
     <div class="bg-white rounded-2xl shadow-xl border border-gray-200 overflow-hidden">
         <!-- Collapsible Header -->
-        <button type="button" 
+        <button type="button"
                 class="w-full flex items-center justify-between px-6 py-4 bg-gray-50 hover:bg-gray-100 transition text-left"
                 onclick="toggleImportSection()"
                 aria-expanded="false"
@@ -143,9 +143,6 @@
                                 <li><strong>Date</strong> - Format: YYYY-MM-DD (e.g., 2024-12-01)</li>
                                 <li><strong>Worked Hours</strong> - Base hours worked for that day in <strong>HH:MM</strong> format (e.g., 08:00, 07:30)</li>
                                 <li><strong>Added Time From Note</strong> - Extra hours to add in <strong>HH:MM</strong> format (e.g., 01:15, 00:00)</li>
-                                <li><strong>Total Hours</strong> - <em>Optional, ignored</em> - System will automatically calculate as: <strong>Worked Hours + Added Time From Note</strong></li>
-                                <li><strong>Overtime Hours</strong> - <em>Optional, ignored</em> - System will automatically calculate as: <strong>(Total Hours − 08:00)</strong> when Total Hours &gt; 08:00, otherwise 00:00</li>
-                                <li><strong>Status</strong> - One of: <strong>present</strong>, <strong>absent</strong>, <strong>late</strong>, <strong>half_day</strong>, <strong>on_leave</strong>, <strong>travel</strong> (optional, defaults to "present" if invalid)</li>
                                 <li><strong>Remarks</strong> - Any additional notes (optional)</li>
                             </ul>
                             <div class="mt-3 p-2 bg-blue-100 rounded border border-blue-200">
@@ -153,7 +150,8 @@
                                 <ul class="list-disc list-inside space-y-1 text-blue-800">
                                     <li>Import uses the <strong>same calculation logic as manual entry</strong></li>
                                     <li>If a DTR record already exists for an employee on a given date, it will be <strong>skipped</strong> (not updated)</li>
-                                    <li>Total Hours and Overtime Hours columns are ignored - they are automatically recalculated</li>
+                                    <li><strong>Total Hours</strong> and <strong>Overtime Hours</strong> are automatically calculated by the system</li>
+                                    <li><strong>Status</strong> is automatically determined by the system based on the hours worked</li>
                                     <li>Weekly deficit is automatically calculated for each imported record</li>
                                 </ul>
                             </div>
@@ -170,7 +168,20 @@
     <!-- Filters -->
     <div class="bg-white rounded-2xl shadow-xl border border-gray-200 p-4 sm:p-6">
         <form method="GET" action="{{ route('admin.dtr.index') }}" class="space-y-4">
-            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+                <!-- Department Filter -->
+                <div>
+                    <label for="department_id" class="block text-sm font-medium text-gray-700 mb-2">Department</label>
+                    <select name="department_id" id="department_id" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                        <option value="">All Departments</option>
+                        @foreach($departments ?? [] as $department)
+                            <option value="{{ $department->id }}" {{ request('department_id') == $department->id ? 'selected' : '' }}>
+                                {{ $department->name }}
+                            </option>
+                        @endforeach
+                    </select>
+                </div>
+
                 <!-- Employee Filter -->
                 <div>
                     <label for="employee_id" class="block text-sm font-medium text-gray-700 mb-2">Employee</label>
@@ -393,13 +404,13 @@
                                                 $weeklyTotalH = intdiv($weeklyTotalMinutes, 60);
                                                 $weeklyTotalM = $weeklyTotalMinutes % 60;
                                                 $weeklyTotalFormatted = sprintf('%02d:%02d', $weeklyTotalH, $weeklyTotalM);
-                                                
+
                                                 // Calculate total weekly overtime
                                                 $weeklyOvertimeMinutes = (int) round($weeklyOvertimeHours * 60);
                                                 $weeklyOvertimeH = intdiv($weeklyOvertimeMinutes, 60);
                                                 $weeklyOvertimeM = $weeklyOvertimeMinutes % 60;
                                                 $weeklyOvertimeFormatted = sprintf('%02d:%02d', $weeklyOvertimeH, $weeklyOvertimeM);
-                                                
+
                                                 // Calculate deficit: Weekly Total Base (40:00) - Weekly Total
                                                 $weeklyBaseMinutes = 40 * 60; // 40:00 = 2400 minutes
                                                 $deficitMinutes = max(0, $weeklyBaseMinutes - $weeklyTotalMinutes);
@@ -479,10 +490,10 @@
         const section = document.getElementById('import-section');
         const chevron = document.getElementById('import-chevron');
         const button = event.currentTarget;
-        
+
         if (section && chevron) {
             const isHidden = section.classList.contains('hidden');
-            
+
             if (isHidden) {
                 section.classList.remove('hidden');
                 chevron.classList.add('rotate-180');
@@ -504,7 +515,7 @@
 
         function toggleVisibility(element, chevron) {
             if (!element) return;
-            
+
             const isHidden = element.classList.contains('hidden');
             if (isHidden) {
                 element.classList.remove('hidden');
@@ -522,7 +533,7 @@
             const button = monthGroup.querySelector('[data-toggle="month"]');
             const content = monthGroup.querySelector('[data-month-content]');
             const chevron = monthGroup.querySelector('[data-month-chevron]');
-            
+
             if (!button || !content) {
                 console.warn('Month toggle elements not found', { button: !!button, content: !!content });
                 return;
@@ -545,7 +556,7 @@
             const button = weekGroup.querySelector('[data-toggle="week"]');
             const content = weekGroup.querySelector('[data-week-content]');
             const chevron = weekGroup.querySelector('[data-week-chevron]');
-            
+
             if (!button || !content) {
                 console.warn('Week toggle elements not found', { button: !!button, content: !!content });
                 return;

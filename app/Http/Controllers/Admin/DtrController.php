@@ -7,6 +7,7 @@ use App\Models\Dtr;
 use App\Models\DtrDeficit;
 use App\Models\User;
 use App\Models\University;
+use App\Models\Department;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\DB;
@@ -24,6 +25,13 @@ class DtrController extends Controller
             ->whereHas('user', function($q) {
                 $q->where('role', 'employee');
             });
+
+        // Filter by department
+        if ($request->filled('department_id')) {
+            $query->whereHas('user', function($q) use ($request) {
+                $q->where('department_id', $request->department_id);
+            });
+        }
 
         // Filter by employee
         if ($request->filled('employee_id')) {
@@ -46,6 +54,11 @@ class DtrController extends Controller
         // Get employees for filter dropdown (only employees)
         $employees = User::where('role', 'employee')
             ->where('is_active', true)
+            ->orderBy('name')
+            ->get();
+
+        // Get departments for filter dropdown
+        $departments = Department::active()
             ->orderBy('name')
             ->get();
 
@@ -96,7 +109,7 @@ class DtrController extends Controller
             $groupedDtrs[$monthKey]['weeks'][$weekKey]['employees'][$employeeId]['records'][] = $dtr;
         }
 
-        return view('admin.dtr.index', compact('groupedDtrs', 'employees', 'totalRecords'));
+        return view('admin.dtr.index', compact('groupedDtrs', 'employees', 'departments', 'totalRecords'));
     }
 
     /**
@@ -348,25 +361,22 @@ class DtrController extends Controller
             DB::beginTransaction();
 
             while (($row = fgetcsv($handle)) !== false) {
-                if (count($row) < 3) {
+                // Require at least 4 columns: Email, Date, Worked Hours, Added Time From Note
+                // Remarks is optional (5th column)
+                if (count($row) < 4) {
                     $skipped++;
                     continue;
                 }
 
                 try {
                     // Expected CSV format (same calculation logic as manual creation):
-                    // [Student|Employee] Email, Date (YYYY-MM-DD), Worked Hours (HH:MM), Added Time From Note (HH:MM),
-                    // Total Hours (HH:MM - optional, ignored, will be recalculated as Worked + Added),
-                    // Overtime (HH:MM - optional, ignored, will be recalculated as Total - 8:00 if > 8:00),
-                    // Status (present/absent/late/half_day/on_leave/travel), Remarks
+                    // [Student|Employee] Email, Date (YYYY-MM-DD), Worked Hours (HH:MM), Added Time From Note (HH:MM), Remarks
+                    // Total Hours, Overtime Hours, and Status are automatically calculated/determined by the system
                     $email = trim($row[0] ?? '');
                     $date = trim($row[1] ?? '');
                     $workedHours = trim($row[2] ?? '00:00');
                     $addedTimeFromNote = trim($row[3] ?? '00:00');
-                    $csvTotalHours = trim($row[4] ?? '00:00');      // not strictly needed, kept for compatibility
-                    $csvOvertime = trim($row[5] ?? '00:00');        // not used; we recalc overtime
-                    $status = trim($row[6] ?? 'present');
-                    $remarks = trim($row[7] ?? '');
+                    $remarks = trim($row[4] ?? '');
 
                     // Validate required fields
                     if (empty($email) || empty($date)) {
@@ -426,10 +436,15 @@ class DtrController extends Controller
                         ? $totalHoursValue - $standardHours
                         : 0;
 
-                    // Validate status - same as manual creation
-                    $validStatuses = ['present', 'absent', 'late', 'half_day', 'on_leave', 'travel'];
-                    if (!in_array($status, $validStatuses)) {
-                        $errors[] = "Invalid status for {$email} on {$date}: {$status}. Using 'present' as default.";
+                    // Automatically determine status based on total hours
+                    // If total hours is 0, status is 'absent'
+                    // If total hours > 0 and < 4, status is 'half_day'
+                    // If total hours >= 4, status is 'present'
+                    if ($totalHoursValue == 0) {
+                        $status = 'absent';
+                    } elseif ($totalHoursValue > 0 && $totalHoursValue < 4) {
+                        $status = 'half_day';
+                    } else {
                         $status = 'present';
                     }
 
@@ -510,16 +525,13 @@ class DtrController extends Controller
                 'Date (YYYY-MM-DD)',
                 'Worked Hours (HH:MM)',
                 'Added Time From Note (HH:MM)',
-                'Total Hours (HH:MM, ignored - auto-calculated)',
-                'Overtime (HH:MM, ignored - auto-calculated)',
-                'Status (present/absent/late/half_day/on_leave/travel)',
                 'Remarks',
             ],
-            ['employee@example.com', '2024-12-01', '08:00', '00:00', '', '', 'present', 'Regular work day'],
-            ['employee@example.com', '2024-12-02', '08:00', '02:00', '', '', 'present', 'Overtime work - Total will be 10:00, Overtime will be 02:00'],
-            ['employee@example.com', '2024-12-03', '04:00', '00:00', '', '', 'half_day', 'Left early'],
-            ['employee@example.com', '2024-12-04', '08:00', '00:00', '', '', 'on_leave', 'Vacation leave'],
-            ['employee@example.com', '2024-12-05', '08:00', '00:00', '', '', 'travel', 'Business trip'],
+            ['employee@example.com', '2024-12-01', '08:00', '00:00', 'Regular work day'],
+            ['employee@example.com', '2024-12-02', '08:00', '02:00', 'Overtime work - Total will be 10:00, Overtime will be 02:00'],
+            ['employee@example.com', '2024-12-03', '04:00', '00:00', 'Half day - Status will be automatically determined'],
+            ['employee@example.com', '2024-12-04', '00:00', '00:00', 'Absent - Status will be automatically determined'],
+            ['employee@example.com', '2024-12-05', '08:00', '00:00', 'Full day work'],
         ];
 
         $filename = 'dtr_import_template_' . date('Y-m-d') . '.csv';

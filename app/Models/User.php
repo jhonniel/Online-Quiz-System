@@ -27,6 +27,7 @@ class User extends Authenticatable
         'is_active',
         'is_approved',
         'university_id',
+        'department_id',
         'status',
         'last_activity',
         'last_seen',
@@ -120,6 +121,11 @@ class User extends Authenticatable
     public function university()
     {
         return $this->belongsTo(University::class);
+    }
+
+    public function department()
+    {
+        return $this->belongsTo(Department::class);
     }
 
     public function feedbacks()

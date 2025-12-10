@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\User;
 use App\Models\University;
+use App\Models\Department;
 use App\Models\LeaveBalance;
 use App\Mail\UserCredentials;
 use App\Services\MailConfigService;
@@ -18,7 +19,7 @@ class UserController extends Controller
 {
     public function index()
     {
-        $users = User::with('university')
+        $users = User::with(['university', 'department'])
             ->orderBy('is_approved', 'asc') // Show pending users first
             ->orderBy('created_at', 'desc')
             ->paginate(10);
@@ -29,8 +30,8 @@ class UserController extends Controller
     {
         $users = User::where('is_active', true)
             ->where('role', '!=', 'admin') // Exclude admins from assignment
-            ->with('university')
-            ->select('id', 'name', 'email', 'university_id', 'role')
+            ->with(['university', 'department'])
+            ->select('id', 'name', 'email', 'university_id', 'department_id', 'role')
             ->get();
 
         // If quiz_id is provided, include assignment information
@@ -52,7 +53,8 @@ class UserController extends Controller
     public function create()
     {
         $universities = University::active()->orderBy('name')->get();
-        return view('admin.users.create', compact('universities'));
+        $departments = Department::active()->orderBy('name')->get();
+        return view('admin.users.create', compact('universities', 'departments'));
     }
 
     public function store(Request $request)
@@ -64,6 +66,13 @@ class UserController extends Controller
             'role' => 'required|string|in:admin,user,student,employee,applicant',
             'university_id' => 'nullable',
             'new_university_name' => 'nullable|string|max:255',
+            'department_id' => [
+                'nullable',
+                Rule::requiredIf(function () use ($request) {
+                    return $request->role === 'employee';
+                }),
+                'exists:departments,id',
+            ],
             'is_active' => 'boolean',
             'required_training_hours' => 'nullable|numeric|min:0',
             'vacation_allowance' => 'nullable|numeric|min:0|max:365',
@@ -96,6 +105,7 @@ class UserController extends Controller
             'password' => Hash::make($request->password),
             'role' => $request->role,
             'university_id' => $universityId,
+            'department_id' => $request->role === 'employee' ? $request->department_id : null,
             'is_active' => $request->has('is_active'),
             'required_training_hours' => $request->required_training_hours,
         ]);
@@ -316,7 +326,8 @@ class UserController extends Controller
     public function edit(User $user)
     {
         $universities = University::active()->orderBy('name')->get();
-        return view('admin.users.edit', compact('user', 'universities'));
+        $departments = Department::active()->orderBy('name')->get();
+        return view('admin.users.edit', compact('user', 'universities', 'departments'));
     }
 
     public function update(Request $request, User $user)
@@ -328,6 +339,13 @@ class UserController extends Controller
             'role' => 'required|string|in:admin,user,student,employee,applicant',
             'university_id' => 'nullable',
             'new_university_name' => 'nullable|string|max:255',
+            'department_id' => [
+                'nullable',
+                Rule::requiredIf(function () use ($request) {
+                    return $request->role === 'employee';
+                }),
+                'exists:departments,id',
+            ],
             'is_active' => 'boolean',
             'required_training_hours' => 'nullable|numeric|min:0',
             'vacation_allowance' => 'nullable|numeric|min:0|max:365',
@@ -359,6 +377,7 @@ class UserController extends Controller
             'email' => $request->email,
             'role' => $request->role,
             'university_id' => $universityId,
+            'department_id' => $request->role === 'employee' ? $request->department_id : null,
             'is_active' => $request->has('is_active'),
         ];
 

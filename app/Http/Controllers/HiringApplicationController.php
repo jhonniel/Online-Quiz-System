@@ -290,34 +290,113 @@ class HiringApplicationController extends Controller
             $emailNotificationsEnabled = \App\Models\Setting::get('hiring_email_notifications', 'enabled');
             if ($emailNotificationsEnabled === 'enabled') {
                 try {
+                    // Clear cache first to ensure we get the latest settings
+                    \Illuminate\Support\Facades\Cache::forget('setting.hiring_admin_notification_email');
+                    \Illuminate\Support\Facades\Cache::forget('setting.leave_admin_notification_email');
+
                     // Get admin notification emails (comma-separated) or fallback to single admin email
                     $adminEmailsStr = \App\Models\Setting::get('hiring_admin_notification_email', '');
 
-                    // If no hiring-specific admin emails, try leave admin notification emails as fallback
+                    // Also try direct database query as fallback
                     if (empty($adminEmailsStr)) {
+                        $setting = \App\Models\Setting::where('key', 'hiring_admin_notification_email')->first();
+                        $adminEmailsStr = $setting ? $setting->value : '';
+                    }
+
+                    Log::info('Hiring application notification - checking admin emails', [
+                        'hiring_admin_emails' => $adminEmailsStr,
+                        'application_id' => $application->id
+                    ]);
+
+                    // If no hiring-specific admin emails, try leave admin notification emails as fallback
+                    if (empty($adminEmailsStr) || trim($adminEmailsStr) === '') {
                         $adminEmailsStr = \App\Models\Setting::get('leave_admin_notification_email', '');
+                        // Also try direct database query as fallback
+                        if (empty($adminEmailsStr)) {
+                            $setting = \App\Models\Setting::where('key', 'leave_admin_notification_email')->first();
+                            $adminEmailsStr = $setting ? $setting->value : '';
+                        }
+                        Log::info('Hiring application notification - using leave admin emails as fallback', [
+                            'leave_admin_emails' => $adminEmailsStr,
+                            'application_id' => $application->id
+                        ]);
                     }
 
                     // If still empty, use system default email
-                    if (empty($adminEmailsStr)) {
+                    if (empty($adminEmailsStr) || trim($adminEmailsStr) === '') {
                         $adminEmailsStr = \App\Models\Setting::get('mail_from_address', config('mail.from.address'));
+                        Log::info('Hiring application notification - using system default email', [
+                            'default_email' => $adminEmailsStr,
+                            'application_id' => $application->id
+                        ]);
                     }
 
-                    if (!empty($adminEmailsStr)) {
+                    if (!empty($adminEmailsStr) && trim($adminEmailsStr) !== '') {
                         // Parse comma-separated emails
                         $adminEmails = array_filter(array_map('trim', explode(',', $adminEmailsStr)));
                         $validEmails = array_filter($adminEmails, function ($email) {
                             return filter_var($email, FILTER_VALIDATE_EMAIL);
                         });
 
+                        Log::info('Hiring application notification - parsed emails', [
+                            'total_emails' => count($adminEmails),
+                            'valid_emails' => count($validEmails),
+                            'valid_emails_list' => $validEmails,
+                            'application_id' => $application->id
+                        ]);
+
                         if (!empty($validEmails)) {
+                            // Configure mail settings before sending
                             \App\Services\MailConfigService::configure();
+
+                            // Log mail configuration for debugging
+                            Log::info('Hiring application notification - mail configuration', [
+                                'mail_driver' => config('mail.default'),
+                                'mail_from' => config('mail.from.address'),
+                                'valid_emails_count' => count($validEmails)
+                            ]);
+
+                            $sentCount = 0;
+                            $failedCount = 0;
                             foreach ($validEmails as $email) {
-                                \Illuminate\Support\Facades\Mail::to($email)
-                                    ->send(new \App\Mail\HiringApplicationReceived($application, $position));
+                                try {
+                                    // Send email synchronously (not queued) to ensure immediate delivery
+                                    \Illuminate\Support\Facades\Mail::to($email)
+                                        ->send(new \App\Mail\HiringApplicationReceived($application, $position));
+                                    $sentCount++;
+                                    Log::info('Hiring application notification email sent successfully', [
+                                        'email' => $email,
+                                        'application_id' => $application->id
+                                    ]);
+                                } catch (\Exception $emailException) {
+                                    $failedCount++;
+                                    Log::error('Failed to send hiring application notification email to individual admin', [
+                                        'email' => $email,
+                                        'error' => $emailException->getMessage(),
+                                        'application_id' => $application->id,
+                                        'trace' => $emailException->getTraceAsString()
+                                    ]);
+                                    // Continue sending to other emails even if one fails
+                                }
                             }
-                            Log::info('Admin notification emails sent', [
-                                'emails' => $validEmails,
+                            if ($sentCount > 0) {
+                                Log::info('Hiring application notification emails sent', [
+                                    'sent' => $sentCount,
+                                    'failed' => $failedCount,
+                                    'total' => count($validEmails),
+                                    'application_id' => $application->id
+                                ]);
+                            } else {
+                                Log::warning('Hiring application notification - no valid emails found after parsing', [
+                                    'admin_emails_str' => $adminEmailsStr,
+                                    'parsed_emails' => $adminEmails,
+                                    'valid_emails' => $validEmails,
+                                    'application_id' => $application->id
+                                ]);
+                            }
+                        } else {
+                            Log::info('Hiring application notification - no admin emails found in settings', [
+                                'admin_emails_str' => $adminEmailsStr,
                                 'application_id' => $application->id
                             ]);
                         }
@@ -325,7 +404,8 @@ class HiringApplicationController extends Controller
                 } catch (\Exception $e) {
                     Log::error('Failed to send admin notification email', [
                         'error' => $e->getMessage(),
-                        'application_id' => $application->id
+                        'application_id' => $application->id,
+                        'trace' => $e->getTraceAsString()
                     ]);
                 }
             }

@@ -111,6 +111,31 @@
                         @enderror
                     </div>
 
+                    <!-- Department (Employees Only) -->
+                    <div id="department_wrapper"
+                         @if(old('role', $user->role) === 'employee') style="" @else style="display:none;" @endif>
+                        <label for="department_id" class="block text-sm font-medium text-gray-700">
+                            Department <span class="text-red-500">*</span>
+                        </label>
+                        <div class="mt-1 relative">
+                            <select name="department_id" id="department_id"
+                                    class="shadow-sm focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-gray-300 rounded-md @error('department_id') border-red-300 @enderror">
+                                <option value="">Select a department</option>
+                                @foreach($departments ?? [] as $department)
+                                    <option value="{{ $department->id }}" {{ old('department_id', $user->department_id) == $department->id ? 'selected' : '' }}>
+                                        {{ $department->name }}
+                                    </option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <p class="mt-1 text-xs text-gray-500">
+                            <a href="{{ route('admin.departments.create') }}" target="_blank" class="text-indigo-600 hover:text-indigo-800 underline">Create new department</a> if not in the list
+                        </p>
+                        @error('department_id')
+                            <p class="mt-2 text-sm text-red-600">{{ $message }}</p>
+                        @enderror
+                    </div>
+
                     <!-- Required Training Hours (Time Needed to Acquire) -->
                     <div id="required_training_hours_wrapper"
                          @if(old('role', $user->role) === 'student') style="" @else style="display:none;" @endif>
@@ -294,6 +319,30 @@ document.addEventListener('DOMContentLoaded', function() {
         roleSelect.addEventListener('change', toggleLeaveBalances);
         // Initialize on load
         toggleLeaveBalances();
+    }
+
+    // Show Department only for employees
+    const departmentWrapper = document.getElementById('department_wrapper');
+    const departmentSelect = document.getElementById('department_id');
+    if (roleSelect && departmentWrapper) {
+        function toggleDepartment() {
+            if (roleSelect.value === 'employee') {
+                departmentWrapper.style.display = '';
+                if (departmentSelect) {
+                    departmentSelect.required = true;
+                }
+            } else {
+                departmentWrapper.style.display = 'none';
+                if (departmentSelect) {
+                    departmentSelect.required = false;
+                    departmentSelect.value = '';
+                }
+            }
+        }
+
+        roleSelect.addEventListener('change', toggleDepartment);
+        // Initialize on load
+        toggleDepartment();
     }
 });
 </script>

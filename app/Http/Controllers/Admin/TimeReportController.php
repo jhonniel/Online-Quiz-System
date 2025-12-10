@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\User;
 use App\Models\Dtr;
+use App\Models\Department;
 use Illuminate\Http\Request;
 use Carbon\Carbon;
 
@@ -18,17 +19,17 @@ class TimeReportController extends Controller
         // Get date range filter (if provided)
         $startDate = $request->get('start_date');
         $endDate = $request->get('end_date');
-        
+
         // Determine date range: prioritize custom range if provided, otherwise use week filter
         if ($startDate && $endDate) {
             $startDateObj = Carbon::parse($startDate)->startOfDay();
             $endDateObj = Carbon::parse($endDate)->endOfDay();
-            
+
             // Validate that end date is after start date
             if ($endDateObj->lt($startDateObj)) {
                 return redirect()->back()->withErrors(['end_date' => 'End date must be after start date.']);
             }
-            
+
             $weekStartDate = $startDateObj->copy();
             $weekEndDate = $endDateObj->copy();
         } else {
@@ -41,9 +42,21 @@ class TimeReportController extends Controller
             $endDate = null;
         }
 
-        // Get all active employees
-        $employees = User::where('role', 'employee')
-            ->where('is_active', true)
+        // Get selected department (if any)
+        $selectedDepartmentId = $request->get('department_id');
+
+        // Get all active employees (filter by department if selected)
+        $employeesQuery = User::where('role', 'employee')
+            ->where('is_active', true);
+
+        if ($selectedDepartmentId) {
+            $employeesQuery->where('department_id', $selectedDepartmentId);
+        }
+
+        $employees = $employeesQuery->orderBy('name')->get();
+
+        // Get departments for filter dropdown
+        $departments = Department::active()
             ->orderBy('name')
             ->get();
 
@@ -69,7 +82,7 @@ class TimeReportController extends Controller
             // Calculate total hours from all DTR records (including weekends)
             $totalHours = $dtrs->sum('total_hours');
             $totalOvertime = $dtrs->sum('overtime_hours');
-            
+
             // Daily breakdown - only show weekdays (Monday-Friday)
             $dailyBreakdown = [];
             $currentDate = $weekStartDate->copy();
@@ -79,10 +92,10 @@ class TimeReportController extends Controller
                 if ($dayOfWeek !== Carbon::SATURDAY && $dayOfWeek !== Carbon::SUNDAY) {
                     $dateKey = $currentDate->format('Y-m-d');
                     $dtr = $dtrMap[$dateKey] ?? null;
-                    
+
                     $dayHours = $dtr ? (float) $dtr->total_hours : 0;
                     $dayOvertime = $dtr ? (float) $dtr->overtime_hours : 0;
-                    
+
                     // Determine status label based on hours
                     if ($dayHours >= 8.0) {
                         $statusLabel = 'completed';
@@ -94,7 +107,7 @@ class TimeReportController extends Controller
                         $statusLabel = 'absent';
                         $statusBadgeClass = 'bg-red-100 text-red-800';
                     }
-                    
+
                     $dailyBreakdown[] = [
                         'date' => $currentDate->copy(),
                         'dtr' => $dtr,
@@ -159,7 +172,9 @@ class TimeReportController extends Controller
         return view('admin.time-report.index', compact(
             'weeklyReports',
             'employees',
+            'departments',
             'selectedEmployeeId',
+            'selectedDepartmentId',
             'weekStartDate',
             'weekEndDate',
             'previousWeek',

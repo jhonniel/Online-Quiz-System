@@ -222,6 +222,47 @@
                         </div>
                     </div>
 
+                    <!-- Department (Employees Only) -->
+                    <div class="space-y-2" id="department_wrapper"
+                         @if(old('role') === 'employee') style="" @else style="display:none;" @endif>
+                        <label for="department_id" class="block text-sm font-semibold text-gray-700">
+                            Department <span class="text-red-500">*</span>
+                        </label>
+                        <div class="relative group">
+                            <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none z-10">
+                                <svg class="w-5 h-5 text-gray-400 group-focus-within:text-indigo-500 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path>
+                                </svg>
+                            </div>
+                            <select name="department_id"
+                                    id="department_id"
+                                    class="block w-full pl-12 pr-10 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200 bg-gray-50 focus:bg-white appearance-none cursor-pointer @error('department_id') border-red-300 focus:ring-red-500 focus:border-red-500 @enderror">
+                                <option value="">Select a department</option>
+                                @foreach($departments ?? [] as $department)
+                                    <option value="{{ $department->id }}" {{ old('department_id') == $department->id ? 'selected' : '' }}>
+                                        {{ $department->name }}
+                                    </option>
+                                @endforeach
+                            </select>
+                            <div class="absolute inset-y-0 right-0 pr-4 flex items-center pointer-events-none">
+                                <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                                </svg>
+                            </div>
+                        </div>
+                        <p class="text-xs text-gray-500 mt-1">
+                            <a href="{{ route('admin.departments.create') }}" target="_blank" class="text-indigo-600 hover:text-indigo-800 underline">Create new department</a> if not in the list
+                        </p>
+                        @error('department_id')
+                            <p class="text-sm text-red-600 flex items-center mt-1">
+                                <svg class="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd"></path>
+                                </svg>
+                                {{ $message }}
+                            </p>
+                        @enderror
+                    </div>
+
                     <!-- Required Training Hours (Students Only) -->
                     <div class="space-y-2" id="required_training_hours_wrapper"
                          @if(old('role') === 'student') style="" @else style="display:none;" @endif>
@@ -565,6 +606,30 @@ document.addEventListener('DOMContentLoaded', function() {
         roleSelect.addEventListener('change', toggleLeaveBalances);
         // Initialize on load
         toggleLeaveBalances();
+    }
+
+    // Show Department only for employees
+    const departmentWrapper = document.getElementById('department_wrapper');
+    const departmentSelect = document.getElementById('department_id');
+    if (roleSelect && departmentWrapper) {
+        function toggleDepartment() {
+            if (roleSelect.value === 'employee') {
+                departmentWrapper.style.display = '';
+                if (departmentSelect) {
+                    departmentSelect.required = true;
+                }
+            } else {
+                departmentWrapper.style.display = 'none';
+                if (departmentSelect) {
+                    departmentSelect.required = false;
+                    departmentSelect.value = '';
+                }
+            }
+        }
+
+        roleSelect.addEventListener('change', toggleDepartment);
+        // Initialize on load
+        toggleDepartment();
     }
 
     // Password strength checker

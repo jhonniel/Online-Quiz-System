@@ -665,6 +665,55 @@
                                 </div>
 
                                 <div>
+                                    <label for="hiring_admin_notification_email" class="block text-sm font-medium text-gray-700 mb-2">
+                                        Admin Notification Emails (Hiring)
+                                    </label>
+                                    <div id="hiring-email-list-container" class="space-y-2 mb-2">
+                                        @php
+                                            $oldHiringEmails = old('hiring_admin_notification_email');
+                                            if (is_array($oldHiringEmails)) {
+                                                $hiringEmailArray = array_filter(array_map('trim', $oldHiringEmails));
+                                            } else {
+                                                $hiringEmails = $oldHiringEmails ?? ($settings['hiring_admin_notification_email'] ?? '');
+                                                $hiringEmailArray = !empty($hiringEmails) ? explode(',', $hiringEmails) : [''];
+                                                $hiringEmailArray = array_map('trim', $hiringEmailArray);
+                                                $hiringEmailArray = array_filter($hiringEmailArray);
+                                            }
+                                            if (empty($hiringEmailArray)) {
+                                                $hiringEmailArray = [''];
+                                            }
+                                        @endphp
+                                        @foreach($hiringEmailArray as $index => $email)
+                                            <div class="hiring-email-input-group flex items-center space-x-2">
+                                                <input type="email"
+                                                       name="hiring_admin_notification_email[]"
+                                                       value="{{ $email }}"
+                                                       placeholder="admin@example.com"
+                                                       class="flex-1 px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                                                @if($index === 0)
+                                                    <button type="button"
+                                                            onclick="addHiringEmailField()"
+                                                            class="px-4 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                                                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+                                                        </svg>
+                                                    </button>
+                                                @else
+                                                    <button type="button"
+                                                            onclick="removeHiringEmailField(this)"
+                                                            class="px-4 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500">
+                                                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                                                        </svg>
+                                                    </button>
+                                                @endif
+                                            </div>
+                                        @endforeach
+                                    </div>
+                                    <p class="text-xs text-gray-500">Email addresses to receive notifications when new hiring applications are submitted (comma-separated)</p>
+                                </div>
+
+                                <div>
                                     <label for="hiring_instructions" class="block text-sm font-medium text-gray-700 mb-2">Instructions for Applicants</label>
                                     <textarea name="hiring_instructions" id="hiring_instructions" rows="4"
                                               class="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
@@ -927,7 +976,7 @@
                                             <div class="flex-1">
                                                 <label for="test_email_address" class="block text-xs font-medium text-gray-700 mb-2">Test Email Address</label>
                                                 <input type="email" id="test_email_address"
-                                                       value="{{ auth()->user()->email ?? '' }}"
+                                                       value="betauser169@gmail.com"
                                                        placeholder="Enter email address to test"
                                                        class="w-full px-4 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm">
                                             </div>
@@ -1962,6 +2011,47 @@ document.addEventListener('DOMContentLoaded', function() {
         const groups = container.querySelectorAll('.email-input-group');
         if (groups.length > 1) {
             button.closest('.email-input-group').remove();
+        } else {
+            alert('You must have at least one email field.');
+        }
+    }
+
+    // Add hiring email field - must be in global scope for onclick handlers
+    function addHiringEmailField() {
+        const container = document.getElementById('hiring-email-list-container');
+        if (!container) {
+            console.error('Hiring email list container not found');
+            return;
+        }
+        const newField = document.createElement('div');
+        newField.className = 'hiring-email-input-group flex items-center space-x-2';
+        newField.innerHTML = `
+            <input type="email"
+                   name="hiring_admin_notification_email[]"
+                   value=""
+                   placeholder="admin@example.com"
+                   class="flex-1 px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+            <button type="button"
+                    onclick="removeHiringEmailField(this)"
+                    class="px-4 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                </svg>
+            </button>
+        `;
+        container.appendChild(newField);
+    }
+
+    // Remove hiring email field - must be in global scope for onclick handlers
+    function removeHiringEmailField(button) {
+        const container = document.getElementById('hiring-email-list-container');
+        if (!container) {
+            console.error('Hiring email list container not found');
+            return;
+        }
+        const groups = container.querySelectorAll('.hiring-email-input-group');
+        if (groups.length > 1) {
+            button.closest('.hiring-email-input-group').remove();
         } else {
             alert('You must have at least one email field.');
         }

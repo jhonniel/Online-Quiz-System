@@ -71,6 +71,10 @@ Route::prefix('admin')->middleware(['auth', 'admin'])->group(function () {
         Route::post('users/bulk-assign-role', [AdminUserController::class, 'bulkAssignRole'])->name('admin.users.bulk-assign-role');
         Route::post('users/{user}/send-credentials', [AdminUserController::class, 'sendCredentials'])->name('admin.users.send-credentials');
         Route::post('users/send-bulk-credentials', [AdminUserController::class, 'sendBulkCredentials'])->name('admin.users.send-bulk-credentials');
+
+        // Department Management
+        Route::resource('departments', App\Http\Controllers\Admin\DepartmentController::class)->names('admin.departments');
+        Route::patch('departments/{department}/toggle-status', [App\Http\Controllers\Admin\DepartmentController::class, 'toggleStatus'])->name('admin.departments.toggle-status');
     });
 
     // Content Management (Quizzes, Forum, Universities)

@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\LeaveRequest;
 use App\Models\LeaveRequestLog;
 use App\Models\Dtr;
+use App\Models\Department;
 use App\Mail\LeaveRequestStatusUpdate;
 use App\Services\MailConfigService;
 use Illuminate\Http\Request;
@@ -37,6 +38,13 @@ class LeaveRequestController extends Controller
             $query->where('type', $request->type);
         }
 
+        // Filter by department
+        if ($request->has('department_id') && $request->department_id) {
+            $query->whereHas('user', function($q) use ($request) {
+                $q->where('department_id', $request->department_id);
+            });
+        }
+
         // Filter by employee
         if ($request->has('employee') && $request->employee) {
             $query->where('user_id', $request->employee);
@@ -60,6 +68,11 @@ class LeaveRequestController extends Controller
         $baseQuery = LeaveRequest::whereHas('user', function($q) {
             $q->where('role', 'employee');
         });
+        if ($request->has('department_id') && $request->department_id) {
+            $baseQuery->whereHas('user', function($q) use ($request) {
+                $q->where('department_id', $request->department_id);
+            });
+        }
         if ($request->has('employee') && $request->employee) {
             $baseQuery->where('user_id', $request->employee);
         }
@@ -79,7 +92,12 @@ class LeaveRequestController extends Controller
             ->orderBy('name')
             ->get();
 
-        return view('admin.leave-requests.index', compact('leaveRequests', 'stats', 'employees'));
+        // Get departments for filter dropdown
+        $departments = Department::active()
+            ->orderBy('name')
+            ->get();
+
+        return view('admin.leave-requests.index', compact('leaveRequests', 'stats', 'employees', 'departments'));
     }
 
     /**
@@ -283,6 +301,7 @@ class LeaveRequestController extends Controller
         $nowManila = Carbon::now('Asia/Manila');
         $monthParam = $request->input('month', $nowManila->format('Y-m'));
         $employeeId = $request->input('employee');
+        $departmentId = $request->input('department_id');
 
         try {
             $currentMonth = Carbon::createFromFormat('Y-m', $monthParam, 'Asia/Manila')->startOfMonth();
@@ -301,8 +320,11 @@ class LeaveRequestController extends Controller
         // Only show employee leave requests
         // Wrap OR conditions in a single group so employee filter applies to all.
         $leaveQuery = LeaveRequest::with('user')
-            ->whereHas('user', function($q) {
+            ->whereHas('user', function($q) use ($departmentId) {
                 $q->where('role', 'employee');
+                if ($departmentId) {
+                    $q->where('department_id', $departmentId);
+                }
             })
             ->where(function ($outer) use ($startOfCalendar, $endOfCalendar) {
                 $outer->where(function ($q) use ($startOfCalendar, $endOfCalendar) {
@@ -372,8 +394,17 @@ class LeaveRequestController extends Controller
         $nextMonth = $currentMonth->copy()->addMonth()->format('Y-m');
 
         // Employees list for sidebar filter (employees only)
-        $employees = \App\Models\User::where('role', 'employee')
-            ->where('is_active', true)
+        $employeesQuery = \App\Models\User::where('role', 'employee')
+            ->where('is_active', true);
+
+        if ($departmentId) {
+            $employeesQuery->where('department_id', $departmentId);
+        }
+
+        $employees = $employeesQuery->orderBy('name')->get();
+
+        // Get departments for filter dropdown
+        $departments = Department::active()
             ->orderBy('name')
             ->get();
 
@@ -383,7 +414,9 @@ class LeaveRequestController extends Controller
             'prevMonth' => $prevMonth,
             'nextMonth' => $nextMonth,
             'employees' => $employees,
+            'departments' => $departments,
             'selectedEmployeeId' => $employeeId,
+            'selectedDepartmentId' => $departmentId,
         ]);
     }
 
@@ -395,6 +428,9 @@ class LeaveRequestController extends Controller
         $request->validate([
             'admin_notes' => 'nullable|string|max:1000',
         ]);
+
+        // Ensure user relationship is loaded
+        $leaveRequest->load('user');
 
         $statusBefore = $leaveRequest->status;
 
@@ -423,11 +459,28 @@ class LeaveRequestController extends Controller
         // Send email notification to employee
         try {
             MailConfigService::configure();
+
+            Log::info('Sending leave request approval email to user', [
+                'user_email' => $leaveRequest->user->email,
+                'leave_request_id' => $leaveRequest->id,
+                'user_name' => $leaveRequest->user->name
+            ]);
+
             Mail::to($leaveRequest->user->email)->send(
                 new LeaveRequestStatusUpdate($leaveRequest, 'approved', $request->admin_notes)
             );
+
+            Log::info('Leave request approval email sent successfully', [
+                'user_email' => $leaveRequest->user->email,
+                'leave_request_id' => $leaveRequest->id
+            ]);
         } catch (\Exception $e) {
-            Log::error('Failed to send leave request approval email: ' . $e->getMessage());
+            Log::error('Failed to send leave request approval email', [
+                'user_email' => $leaveRequest->user->email ?? 'unknown',
+                'leave_request_id' => $leaveRequest->id,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
             // Don't fail the request if email fails
         }
 
@@ -457,6 +510,9 @@ class LeaveRequestController extends Controller
             'admin_notes' => 'nullable|string|max:1000',
         ]);
 
+        // Ensure user relationship is loaded
+        $leaveRequest->load('user');
+
         $statusBefore = $leaveRequest->status;
 
         $leaveRequest->update([
@@ -479,11 +535,28 @@ class LeaveRequestController extends Controller
         // Send email notification to employee
         try {
             MailConfigService::configure();
+
+            Log::info('Sending leave request force acceptance email to user', [
+                'user_email' => $leaveRequest->user->email,
+                'leave_request_id' => $leaveRequest->id,
+                'user_name' => $leaveRequest->user->name
+            ]);
+
             Mail::to($leaveRequest->user->email)->send(
                 new LeaveRequestStatusUpdate($leaveRequest, 'approved', $request->admin_notes)
             );
+
+            Log::info('Leave request force acceptance email sent successfully', [
+                'user_email' => $leaveRequest->user->email,
+                'leave_request_id' => $leaveRequest->id
+            ]);
         } catch (\Exception $e) {
-            Log::error('Failed to send leave request force acceptance email: ' . $e->getMessage());
+            Log::error('Failed to send leave request force acceptance email', [
+                'user_email' => $leaveRequest->user->email ?? 'unknown',
+                'leave_request_id' => $leaveRequest->id,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
             // Don't fail the request if email fails
         }
 
@@ -499,6 +572,9 @@ class LeaveRequestController extends Controller
         $request->validate([
             'admin_notes' => 'nullable|string|max:1000',
         ]);
+
+        // Ensure user relationship is loaded
+        $leaveRequest->load('user');
 
         $statusBefore = $leaveRequest->status;
 
@@ -522,11 +598,28 @@ class LeaveRequestController extends Controller
         // Send email notification to employee
         try {
             MailConfigService::configure();
+
+            Log::info('Sending leave request rejection email to user', [
+                'user_email' => $leaveRequest->user->email,
+                'leave_request_id' => $leaveRequest->id,
+                'user_name' => $leaveRequest->user->name
+            ]);
+
             Mail::to($leaveRequest->user->email)->send(
                 new LeaveRequestStatusUpdate($leaveRequest, 'rejected', $request->admin_notes)
             );
+
+            Log::info('Leave request rejection email sent successfully', [
+                'user_email' => $leaveRequest->user->email,
+                'leave_request_id' => $leaveRequest->id
+            ]);
         } catch (\Exception $e) {
-            Log::error('Failed to send leave request rejection email: ' . $e->getMessage());
+            Log::error('Failed to send leave request rejection email', [
+                'user_email' => $leaveRequest->user->email ?? 'unknown',
+                'leave_request_id' => $leaveRequest->id,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
             // Don't fail the request if email fails
         }
 
@@ -542,6 +635,9 @@ class LeaveRequestController extends Controller
         $request->validate([
             'admin_notes' => 'nullable|string|max:1000',
         ]);
+
+        // Ensure user relationship is loaded
+        $leaveRequest->load('user');
 
         $statusBefore = $leaveRequest->status;
 
@@ -569,11 +665,28 @@ class LeaveRequestController extends Controller
         // Send email notification to employee
         try {
             MailConfigService::configure();
+
+            Log::info('Sending leave request resubmission email to user', [
+                'user_email' => $leaveRequest->user->email,
+                'leave_request_id' => $leaveRequest->id,
+                'user_name' => $leaveRequest->user->name
+            ]);
+
             Mail::to($leaveRequest->user->email)->send(
-                new LeaveRequestStatusUpdate($leaveRequest, 'pending', $request->admin_notes)
+                new LeaveRequestStatusUpdate($leaveRequest, 'resubmission_requested', $request->admin_notes)
             );
+
+            Log::info('Leave request resubmission email sent successfully', [
+                'user_email' => $leaveRequest->user->email,
+                'leave_request_id' => $leaveRequest->id
+            ]);
         } catch (\Exception $e) {
-            Log::error('Failed to send leave request resubmission email: ' . $e->getMessage());
+            Log::error('Failed to send leave request resubmission email', [
+                'user_email' => $leaveRequest->user->email ?? 'unknown',
+                'leave_request_id' => $leaveRequest->id,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
             // Don't fail the request if email fails
         }
 

@@ -151,9 +151,6 @@
                                 <li><strong>Date</strong> - Format: YYYY-MM-DD (e.g., 2024-12-01)</li>
                                 <li><strong>Worked Hours</strong> - Base hours worked for that day in <strong>HH:MM</strong> format (e.g., 08:00, 07:30)</li>
                                 <li><strong>Added Time From Note</strong> - Extra hours to add in <strong>HH:MM</strong> format (e.g., 01:15, 00:00)</li>
-                                <li><strong>Total Hours</strong> - <em>Optional, ignored</em> - System will automatically calculate as: <strong>Worked Hours + Added Time From Note</strong></li>
-                                <li><strong>Overtime Hours</strong> - <em>Optional, ignored</em> - System will automatically calculate as: <strong>(Total Hours − 08:00)</strong> when Total Hours &gt; 08:00, otherwise 00:00</li>
-                                <li><strong>Status</strong> - One of: <strong>present</strong>, <strong>absent</strong>, <strong>late</strong>, <strong>half_day</strong>, <strong>on_leave</strong>, <strong>travel</strong> (optional, defaults to "present" if invalid)</li>
                                 <li><strong>Remarks</strong> - Any additional notes (optional)</li>
                             </ul>
                             <div class="mt-3 p-2 bg-blue-100 rounded border border-blue-200">
@@ -161,7 +158,8 @@
                                 <ul class="list-disc list-inside space-y-1 text-blue-800">
                                     <li>Import uses the <strong>same calculation logic as manual entry</strong></li>
                                     <li>If a DTR record already exists for a student on a given date, it will be <strong>skipped</strong> (not updated)</li>
-                                    <li>Total Hours and Overtime Hours columns are ignored - they are automatically recalculated</li>
+                                    <li><strong>Total Hours</strong> and <strong>Overtime Hours</strong> are automatically calculated by the system</li>
+                                    <li><strong>Status</strong> is automatically determined by the system based on the hours worked</li>
                                     <li>Weekly deficit is automatically calculated for each imported record</li>
                                 </ul>
                             </div>

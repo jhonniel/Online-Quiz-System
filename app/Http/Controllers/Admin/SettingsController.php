@@ -96,6 +96,14 @@ class SettingsController extends Controller
             $settings['leave_admin_notification_email'] = '';
         }
 
+        // Hiring Admin Notification Email
+        $hiringAdminNotificationEmailSetting = Setting::where('key', 'hiring_admin_notification_email')->first();
+        if ($hiringAdminNotificationEmailSetting && $hiringAdminNotificationEmailSetting->value !== null && trim($hiringAdminNotificationEmailSetting->value) !== '') {
+            $settings['hiring_admin_notification_email'] = $hiringAdminNotificationEmailSetting->value;
+        } else {
+            $settings['hiring_admin_notification_email'] = '';
+        }
+
         // Default leave balances - use database value if it exists and is not empty, otherwise default to 0
         $vacationSetting = Setting::where('key', 'default_vacation_balance')->first();
         $sickSetting = Setting::where('key', 'default_sick_leave_balance')->first();
@@ -413,6 +421,8 @@ class SettingsController extends Controller
             'leave_cto' => 'nullable|string|max:255',
             'leave_admin_notification_email' => 'nullable|array',
             'leave_admin_notification_email.*' => 'nullable|email|max:255',
+            'hiring_admin_notification_email' => 'nullable|array',
+            'hiring_admin_notification_email.*' => 'nullable|email|max:255',
             'default_vacation_balance' => 'nullable|numeric|min:0|max:365',
             // Contact Information
             'contact_email' => 'nullable|email|max:255',
@@ -568,12 +578,19 @@ class SettingsController extends Controller
         $leaveCto = $request->leave_cto ?? 'NITISH KHEMANI';
         Setting::set('leave_cto', $leaveCto, 'text', 'Name for Chief Technology Officer in leave request letters');
 
-        // Handle multiple admin notification emails
+        // Handle multiple admin notification emails for leave requests
         $adminEmails = $request->leave_admin_notification_email ?? [];
         $adminEmails = is_array($adminEmails) ? $adminEmails : [$adminEmails];
         $adminEmails = array_filter(array_map('trim', $adminEmails)); // Remove empty values and trim
         $leaveAdminNotificationEmail = !empty($adminEmails) ? implode(',', $adminEmails) : '';
         Setting::set('leave_admin_notification_email', $leaveAdminNotificationEmail, 'text', 'Email addresses (comma-separated) to receive notifications when employees submit leave requests');
+
+        // Handle multiple admin notification emails for hiring applications
+        $hiringAdminEmails = $request->hiring_admin_notification_email ?? [];
+        $hiringAdminEmails = is_array($hiringAdminEmails) ? $hiringAdminEmails : [$hiringAdminEmails];
+        $hiringAdminEmails = array_filter(array_map('trim', $hiringAdminEmails)); // Remove empty values and trim
+        $hiringAdminNotificationEmail = !empty($hiringAdminEmails) ? implode(',', $hiringAdminEmails) : '';
+        Setting::set('hiring_admin_notification_email', $hiringAdminNotificationEmail, 'text', 'Email addresses (comma-separated) to receive notifications when hiring applications are submitted');
 
         // Default Leave Balances
         // Always save these values - form fields are always present in the form
@@ -685,6 +702,8 @@ class SettingsController extends Controller
         Cache::forget('setting.contact_live_chat_time');
         // Clear cache for leave admin notification email
         Cache::forget('setting.leave_admin_notification_email');
+        // Clear cache for hiring admin notification email
+        Cache::forget('setting.hiring_admin_notification_email');
         // Clear cache for hiring process configuration settings
         Cache::forget('setting.hiring_process_enabled');
         Cache::forget('setting.hiring_process_description');

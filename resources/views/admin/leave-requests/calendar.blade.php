@@ -32,16 +32,44 @@
         <div class="lg:col-span-1 space-y-3 sm:space-y-4">
             <div class="bg-white rounded-2xl shadow border border-gray-200 p-3 sm:p-4">
                 <h2 class="text-xs sm:text-sm font-bold text-gray-900 mb-2">Employees</h2>
+
+                <!-- Department Filter -->
+                <div class="mb-3">
+                    <label for="department_id" class="block text-xs font-medium text-gray-700 mb-1.5">Filter by Department</label>
+                    <select name="department_id" id="department_id"
+                            onchange="filterByDepartment(this.value)"
+                            class="w-full px-2.5 py-1.5 text-xs border border-gray-300 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                        <option value="">All Departments</option>
+                        @foreach($departments ?? [] as $department)
+                            <option value="{{ $department->id }}" {{ $selectedDepartmentId == $department->id ? 'selected' : '' }}>
+                                {{ $department->name }}
+                            </option>
+                        @endforeach
+                    </select>
+                </div>
+
                 <p class="text-xs text-gray-500 mb-2 sm:mb-3">
                     Tap a name to focus on that employee's leave, or choose "All Employees" to view everyone.
                 </p>
                 <div class="space-y-1 max-h-[calc(100vh-20rem)] sm:max-h-[calc(100vh-24rem)] overflow-y-auto text-xs sm:text-sm -mx-1">
-                    <a href="{{ route('admin.leave-requests.calendar', ['month' => $currentMonth->format('Y-m')]) }}"
+                    @php
+                        $allEmployeesParams = ['month' => $currentMonth->format('Y-m')];
+                        if ($selectedDepartmentId) {
+                            $allEmployeesParams['department_id'] = $selectedDepartmentId;
+                        }
+                    @endphp
+                    <a href="{{ route('admin.leave-requests.calendar', $allEmployeesParams) }}"
                        class="flex items-center justify-between px-3 py-1.5 rounded-md mx-1 transition-colors duration-150 {{ !$selectedEmployeeId ? 'bg-indigo-50 text-indigo-700 font-semibold' : 'text-gray-700 hover:bg-gray-50' }}">
                         <span>All Employees</span>
                     </a>
                     @foreach($employees as $employee)
-                        <a href="{{ route('admin.leave-requests.calendar', ['month' => $currentMonth->format('Y-m'), 'employee' => $employee->id]) }}"
+                        @php
+                            $employeeParams = ['month' => $currentMonth->format('Y-m'), 'employee' => $employee->id];
+                            if ($selectedDepartmentId) {
+                                $employeeParams['department_id'] = $selectedDepartmentId;
+                            }
+                        @endphp
+                        <a href="{{ route('admin.leave-requests.calendar', $employeeParams) }}"
                            class="flex items-center justify-between px-3 py-1.5 rounded-md mx-1 transition-colors duration-150 {{ $selectedEmployeeId == $employee->id ? 'bg-indigo-50 text-indigo-700 font-semibold' : 'text-gray-700 hover:bg-gray-50' }}">
                             <span class="truncate">{{ $employee->name }}</span>
                         </a>
@@ -55,7 +83,16 @@
             <!-- Month Navigation -->
             <div class="bg-white rounded-2xl shadow border border-gray-200 p-3 sm:p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-3">
                 <div class="flex items-center justify-between sm:justify-start space-x-2 sm:space-x-3">
-                    <a href="{{ route('admin.leave-requests.calendar', ['month' => $prevMonth, 'employee' => $selectedEmployeeId]) }}"
+                    @php
+                        $prevMonthParams = ['month' => $prevMonth];
+                        if ($selectedEmployeeId) {
+                            $prevMonthParams['employee'] = $selectedEmployeeId;
+                        }
+                        if ($selectedDepartmentId) {
+                            $prevMonthParams['department_id'] = $selectedDepartmentId;
+                        }
+                    @endphp
+                    <a href="{{ route('admin.leave-requests.calendar', $prevMonthParams) }}"
                        class="inline-flex items-center px-2.5 sm:px-3 py-1.5 border border-gray-300 rounded-md text-xs sm:text-sm text-gray-700 bg-white hover:bg-gray-50">
                         <svg class="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
@@ -66,7 +103,16 @@
                     <span class="text-base sm:text-lg font-semibold text-gray-900 px-2 sm:px-0">
                         {{ $currentMonth->format('F Y') }}
                     </span>
-                    <a href="{{ route('admin.leave-requests.calendar', ['month' => $nextMonth, 'employee' => $selectedEmployeeId]) }}"
+                    @php
+                        $nextMonthParams = ['month' => $nextMonth];
+                        if ($selectedEmployeeId) {
+                            $nextMonthParams['employee'] = $selectedEmployeeId;
+                        }
+                        if ($selectedDepartmentId) {
+                            $nextMonthParams['department_id'] = $selectedDepartmentId;
+                        }
+                    @endphp
+                    <a href="{{ route('admin.leave-requests.calendar', $nextMonthParams) }}"
                        class="inline-flex items-center px-2.5 sm:px-3 py-1.5 border border-gray-300 rounded-md text-xs sm:text-sm text-gray-700 bg-white hover:bg-gray-50">
                         <span class="hidden sm:inline">Next</span>
                         <svg class="h-3.5 w-3.5 sm:h-4 sm:w-4 sm:ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -171,6 +217,36 @@
         </div>
     </div>
 </div>
+
+<script>
+function filterByDepartment(departmentId) {
+    const url = new URL(window.location.href);
+    const params = new URLSearchParams(url.search);
+
+    // Update or remove department_id parameter
+    if (departmentId) {
+        params.set('department_id', departmentId);
+    } else {
+        params.delete('department_id');
+    }
+
+    // Preserve month and employee filters
+    const month = params.get('month') || '{{ $currentMonth->format("Y-m") }}';
+    const employee = params.get('employee');
+
+    // Build new URL
+    const newParams = new URLSearchParams();
+    newParams.set('month', month);
+    if (employee) {
+        newParams.set('employee', employee);
+    }
+    if (departmentId) {
+        newParams.set('department_id', departmentId);
+    }
+
+    window.location.href = '{{ route("admin.leave-requests.calendar") }}?' + newParams.toString();
+}
+</script>
 @endsection
 
 

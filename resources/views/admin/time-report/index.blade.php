@@ -36,7 +36,18 @@
     <!-- Filters -->
     <div class="bg-white shadow rounded-lg p-4 sm:p-6 mb-6">
         <form method="GET" action="{{ route('admin.time-report.index') }}" class="space-y-4">
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+                <div>
+                    <label for="department_id" class="block text-sm font-medium text-gray-700 mb-2">Department</label>
+                    <select name="department_id" id="department_id" class="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
+                        <option value="">All Departments</option>
+                        @foreach($departments ?? [] as $department)
+                            <option value="{{ $department->id }}" {{ $selectedDepartmentId == $department->id ? 'selected' : '' }}>
+                                {{ $department->name }}
+                            </option>
+                        @endforeach
+                    </select>
+                </div>
                 <div>
                     <label for="employee_id" class="block text-sm font-medium text-gray-700 mb-2">Filter by Employee</label>
                     <select name="employee_id" id="employee_id" class="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
@@ -50,17 +61,17 @@
                 </div>
                 <div>
                     <label for="start_date" class="block text-sm font-medium text-gray-700 mb-2">Start Date</label>
-                    <input type="date" name="start_date" id="start_date" value="{{ $startDate ?? $weekStartDate->format('Y-m-d') }}" 
+                    <input type="date" name="start_date" id="start_date" value="{{ $startDate ?? $weekStartDate->format('Y-m-d') }}"
                            class="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
                 </div>
                 <div>
                     <label for="end_date" class="block text-sm font-medium text-gray-700 mb-2">End Date</label>
-                    <input type="date" name="end_date" id="end_date" value="{{ $endDate ?? $weekEndDate->format('Y-m-d') }}" 
+                    <input type="date" name="end_date" id="end_date" value="{{ $endDate ?? $weekEndDate->format('Y-m-d') }}"
                            class="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
                 </div>
                 <div>
                     <label for="week_start" class="block text-sm font-medium text-gray-700 mb-2">Or Select Week</label>
-                    <input type="date" name="week_start" id="week_start" value="{{ $weekStartDate->format('Y-m-d') }}" 
+                    <input type="date" name="week_start" id="week_start" value="{{ $weekStartDate->format('Y-m-d') }}"
                            class="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
                     <p class="mt-1 text-xs text-gray-500">Leave date range empty to use week</p>
                 </div>
@@ -74,7 +85,7 @@
                 </a>
             </div>
         </form>
-        
+
         <!-- Week Navigation (only show if not using custom date range) -->
         @if(!$startDate || !$endDate)
         <div class="mt-4 flex items-center justify-between">
@@ -82,7 +93,7 @@
                 $prevWeekParams = array_merge(request()->query(), ['week_start' => $previousWeek]);
                 $nextWeekParams = array_merge(request()->query(), ['week_start' => $nextWeek]);
             @endphp
-            <a href="{{ route('admin.time-report.index', $prevWeekParams) }}" 
+            <a href="{{ route('admin.time-report.index', $prevWeekParams) }}"
                class="inline-flex items-center px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50">
                 <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
@@ -96,7 +107,7 @@
                     Week of {{ $weekStartDate->format('M d') }} - {{ $weekEndDate->format('M d, Y') }}
                 @endif
             </div>
-            <a href="{{ route('admin.time-report.index', $nextWeekParams) }}" 
+            <a href="{{ route('admin.time-report.index', $nextWeekParams) }}"
                class="inline-flex items-center px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50">
                 Next Week
                 <svg class="w-4 h-4 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">

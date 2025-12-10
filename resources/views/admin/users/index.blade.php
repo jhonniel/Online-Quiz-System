@@ -174,6 +174,9 @@
                                 <span class="hidden lg:inline">University</span>
                             </th>
                             <th scope="col" class="px-3 sm:px-4 lg:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                <span class="hidden lg:inline">Department</span>
+                            </th>
+                            <th scope="col" class="px-3 sm:px-4 lg:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                 <span class="hidden md:inline">Status</span>
                             </th>
                             <th scope="col" class="px-3 sm:px-4 lg:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -224,6 +227,15 @@
                                         {{ $user->university->name }}
                                     @else
                                         <span class="text-gray-400 italic">Not specified</span>
+                                    @endif
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                    @if($user->role === 'employee' && $user->department)
+                                        {{ $user->department->name }}
+                                    @elseif($user->role === 'employee')
+                                        <span class="text-amber-600 italic">Not assigned</span>
+                                    @else
+                                        <span class="text-gray-400 italic">N/A</span>
                                     @endif
                                 </td>
                                 <td class="px-6 py-4 whitespace-nowrap">

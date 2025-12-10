@@ -3,14 +3,14 @@
 
 Hello {{ $leaveRequest->user->name }},
 
-Your leave request has been **{{ ucfirst($status) }}@if($status === 'pending' && $leaveRequest->reviewed_at) (Resubmission Required)@endif**.
+Your leave request has been **@if($status === 'resubmission_requested' || ($status === 'pending' && $leaveRequest->reviewed_at))Resubmission Required@else{{ ucfirst($status) }}@endif**.
 
 ## Request Details
 
-**Request Type:** {{ $leaveRequest->type_label }}  
-**Start Date:** {{ $leaveRequest->start_date->format('F d, Y') }}  
+**Request Type:** {{ $leaveRequest->type_label }}
+**Start Date:** {{ $leaveRequest->start_date->format('F d, Y') }}
 @if($leaveRequest->end_date && $leaveRequest->end_date->format('Y-m-d') !== $leaveRequest->start_date->format('Y-m-d'))
-**End Date:** {{ $leaveRequest->end_date->format('F d, Y') }}  
+**End Date:** {{ $leaveRequest->end_date->format('F d, Y') }}
 **Duration:** {{ $leaveRequest->days }} {{ $leaveRequest->days == 1 ? 'day' : 'days' }}
 @else
 **Date:** {{ $leaveRequest->start_date->format('F d, Y') }}
@@ -26,7 +26,7 @@ Your leave request has been **{{ ucfirst($status) }}@if($status === 'pending' &&
 ✅ Your leave request has been **approved**. Please make sure to coordinate with your team regarding your absence.
 @elseif($status === 'rejected')
 ❌ Your leave request has been **rejected**. If you have any questions, please contact your supervisor or HR.
-@elseif($status === 'pending' && $leaveRequest->reviewed_at)
+@elseif($status === 'resubmission_requested' || ($status === 'pending' && $leaveRequest->reviewed_at))
 ⚠️ Your leave request requires **resubmission**. Please review the admin notes above and make the necessary corrections. You can edit your request from your leave requests page.
 @endif
 
@@ -34,8 +34,8 @@ Your leave request has been **{{ ucfirst($status) }}@if($status === 'pending' &&
 View Leave Request Details
 @endcomponent
 
-**Request ID:** #{{ $leaveRequest->id }}  
-**Submitted:** {{ $leaveRequest->created_at->format('F j, Y \a\t g:i A') }}  
+**Request ID:** #{{ $leaveRequest->id }}
+**Submitted:** {{ $leaveRequest->created_at->format('F j, Y \a\t g:i A') }}
 **Status Updated:** {{ $leaveRequest->reviewed_at ? $leaveRequest->reviewed_at->format('F j, Y \a\t g:i A') : now()->format('F j, Y \a\t g:i A') }}
 
 Thanks,<br>

@@ -412,23 +412,93 @@ class LeaveRequestController extends Controller
         ]);
 
         // Send email notification to admin(s) if setting is configured (for any requester role)
+        // Clear cache first to ensure we get the latest settings
+        \Illuminate\Support\Facades\Cache::forget('setting.leave_admin_notification_email');
         $adminEmailsStr = \App\Models\Setting::get('leave_admin_notification_email', '');
-        if (!empty($adminEmailsStr)) {
+
+        // Also try direct database query as fallback
+        if (empty($adminEmailsStr)) {
+            $setting = \App\Models\Setting::where('key', 'leave_admin_notification_email')->first();
+            $adminEmailsStr = $setting ? $setting->value : '';
+        }
+
+        Log::info('Leave request notification - checking admin emails', [
+            'admin_emails_str' => $adminEmailsStr,
+            'leave_request_id' => $leaveRequest->id
+        ]);
+
+        if (!empty($adminEmailsStr) && trim($adminEmailsStr) !== '') {
             $adminEmails = array_filter(array_map('trim', explode(',', $adminEmailsStr)));
             $validEmails = array_filter($adminEmails, function ($email) {
                 return filter_var($email, FILTER_VALIDATE_EMAIL);
             });
 
+            Log::info('Leave request notification - parsed emails', [
+                'total_emails' => count($adminEmails),
+                'valid_emails' => count($validEmails),
+                'valid_emails_list' => $validEmails
+            ]);
+
             if (!empty($validEmails)) {
                 try {
+                    // Configure mail settings before sending
                     MailConfigService::configure();
+
+                    // Log mail configuration for debugging
+                    Log::info('Leave request notification - mail configuration', [
+                        'mail_driver' => config('mail.default'),
+                        'mail_from' => config('mail.from.address'),
+                        'valid_emails_count' => count($validEmails)
+                    ]);
+
+                    $sentCount = 0;
+                    $failedCount = 0;
                     foreach ($validEmails as $email) {
-                        Mail::to($email)->send(new LeaveRequestNotification($leaveRequest));
+                        try {
+                            // Send email synchronously (not queued) to ensure immediate delivery
+                            Mail::to($email)->send(new LeaveRequestNotification($leaveRequest));
+                            $sentCount++;
+                            Log::info('Leave request notification email sent successfully', [
+                                'email' => $email,
+                                'leave_request_id' => $leaveRequest->id
+                            ]);
+                        } catch (\Exception $emailException) {
+                            $failedCount++;
+                            Log::error('Failed to send leave request notification email to individual admin', [
+                                'email' => $email,
+                                'error' => $emailException->getMessage(),
+                                'leave_request_id' => $leaveRequest->id,
+                                'trace' => $emailException->getTraceAsString()
+                            ]);
+                            // Continue sending to other emails even if one fails
+                        }
+                    }
+                    if ($sentCount > 0) {
+                        Log::info('Leave request notification emails sent', [
+                            'sent' => $sentCount,
+                            'failed' => $failedCount,
+                            'total' => count($validEmails),
+                            'leave_request_id' => $leaveRequest->id
+                        ]);
+                    } else {
+                        Log::warning('Leave request notification - no valid emails found after parsing', [
+                            'admin_emails_str' => $adminEmailsStr,
+                            'parsed_emails' => $adminEmails,
+                            'valid_emails' => $validEmails,
+                            'leave_request_id' => $leaveRequest->id
+                        ]);
                     }
                 } catch (\Exception $e) {
-                    Log::error('Failed to send leave request notification email to admin(s): ' . $e->getMessage());
+                    Log::error('Failed to configure mail or send leave request notification emails: ' . $e->getMessage(), [
+                        'leave_request_id' => $leaveRequest->id,
+                        'trace' => $e->getTraceAsString()
+                    ]);
                     // Don't fail the request if email fails
                 }
+            } else {
+                Log::info('Leave request notification - no admin emails configured', [
+                    'leave_request_id' => $leaveRequest->id
+                ]);
             }
         }
 
