@@ -22,9 +22,9 @@ Login to Your Account
 
 Your interview has been scheduled for:
 
-**Date:** {{ \Carbon\Carbon::parse($interviewDate)->format('F j, Y') }}
+**Date & Time:** {{ \Carbon\Carbon::parse($interviewDate)->format('F j, Y g:i A') }}
 
-Please make sure to be available on this date. We will contact you with further details about the interview location and time.
+Please make sure to be available on this date and time. We will contact you with further details about the interview location if needed.
 @endif
 
 ## Important Notes

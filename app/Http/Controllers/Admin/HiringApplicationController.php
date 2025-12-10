@@ -57,7 +57,7 @@ class HiringApplicationController extends Controller
     {
         $request->validate([
             'admin_notes' => 'nullable|string|max:1000',
-            'interview_date' => 'required|date|after_or_equal:today',
+            'interview_date' => 'required|date|after_or_equal:now',
         ]);
 
         // Generate a random password for the applicant
@@ -169,17 +169,57 @@ class HiringApplicationController extends Controller
     {
         $request->validate([
             'admin_notes' => 'nullable|string|max:1000',
+            'interview_date' => 'required|date|after_or_equal:now',
         ]);
+
+        // Check if this is a reschedule (interview was already scheduled and date/time is changing)
+        $isReschedule = $application->status === 'interview_scheduled' &&
+                       $application->interview_date &&
+                       $application->interview_date->format('Y-m-d H:i') !== date('Y-m-d H:i', strtotime($request->interview_date));
 
         $application->update([
             'status' => 'interview_scheduled',
             'admin_notes' => $request->admin_notes,
+            'interview_date' => $request->interview_date,
             'reviewed_by' => Auth::id(),
             'reviewed_at' => now(),
         ]);
 
+        // Send email notification to applicant if enabled
+        $emailNotificationsEnabled = \App\Models\Setting::get('hiring_email_notifications', 'enabled');
+        if ($emailNotificationsEnabled === 'enabled') {
+            try {
+                // Ensure mail configuration is up to date from settings
+                MailConfigService::configure();
+
+                Mail::to($application->email)
+                    ->send(new \App\Mail\InterviewRescheduled(
+                        $application,
+                        $request->interview_date,
+                        $request->admin_notes,
+                        $application->hiringPosition,
+                        $isReschedule
+                    ));
+
+                Log::info('Interview ' . ($isReschedule ? 'rescheduled' : 'scheduled') . ' email sent successfully', [
+                    'application_id' => $application->id,
+                    'email' => $application->email,
+                    'interview_date' => $request->interview_date,
+                    'is_reschedule' => $isReschedule
+                ]);
+            } catch (\Exception $e) {
+                Log::error('Failed to send interview ' . ($isReschedule ? 'reschedule' : 'schedule') . ' email', [
+                    'error' => $e->getMessage(),
+                    'application_id' => $application->id,
+                    'email' => $application->email
+                ]);
+            }
+        }
+
+        $successMessage = $isReschedule ? 'Interview rescheduled. Email notification sent to applicant.' : 'Interview scheduled. Email notification sent to applicant.';
+
         return redirect()->route('admin.hiring-applications.show', $application)
-            ->with('success', 'Interview scheduled.');
+            ->with('success', $successMessage);
     }
 
     public function downloadResume(HiringApplication $application)
@@ -241,6 +281,20 @@ class HiringApplicationController extends Controller
         }
 
         abort(404, 'Resume not found.');
+    }
+
+    public function updateAdminNotes(Request $request, HiringApplication $application)
+    {
+        $request->validate([
+            'admin_notes' => 'nullable|string|max:1000',
+        ]);
+
+        $application->update([
+            'admin_notes' => $request->admin_notes,
+        ]);
+
+        return redirect()->route('admin.hiring-applications.show', $application)
+            ->with('success', 'Admin notes updated successfully.');
     }
 
     public function destroy(HiringApplication $application)

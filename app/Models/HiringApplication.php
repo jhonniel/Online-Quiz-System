@@ -35,7 +35,7 @@ class HiringApplication extends Model
         'birth_date' => 'date',
         'reviewed_at' => 'datetime',
         'token_expires_at' => 'datetime',
-        'interview_date' => 'date',
+        'interview_date' => 'datetime',
     ];
 
     // Relationships

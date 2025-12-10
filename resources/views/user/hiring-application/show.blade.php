@@ -77,9 +77,9 @@
                             </div>
                             @if($application->interview_date)
                                 <div class="text-right">
-                                    <h3 class="text-sm font-medium text-gray-500">Interview Date</h3>
+                                    <h3 class="text-sm font-medium text-gray-500">Interview Date & Time</h3>
                                     <p class="mt-2 text-lg font-semibold text-gray-900">
-                                        {{ $application->interview_date->format('F j, Y') }}
+                                        {{ $application->interview_date->format('F j, Y g:i A') }}
                                     </p>
                                 </div>
                             @endif

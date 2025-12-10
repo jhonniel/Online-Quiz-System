@@ -178,8 +178,8 @@
                         </span>
                         @if($application->interview_date)
                             <div class="mt-3">
-                                <label class="text-sm font-medium text-gray-500">Interview Date</label>
-                                <p class="mt-1 text-sm text-gray-900">{{ $application->interview_date->format('F j, Y') }}</p>
+                                <label class="text-sm font-medium text-gray-500">Interview Date & Time</label>
+                                <p class="mt-1 text-sm text-gray-900">{{ $application->interview_date->format('F j, Y g:i A') }}</p>
                             </div>
                         @endif
                     @elseif($application->status == 'rejected')
@@ -242,11 +242,23 @@
                     <h2 class="text-lg font-medium text-gray-900">Admin Notes</h2>
                 </div>
                 <div class="px-6 py-6">
-                    @if($application->admin_notes)
-                        <p class="text-sm text-gray-700 whitespace-pre-wrap">{{ $application->admin_notes }}</p>
-                    @else
-                        <p class="text-sm text-gray-500">No notes added yet.</p>
-                    @endif
+                    <form action="{{ route('admin.hiring-applications.update-admin-notes', $application) }}" method="POST">
+                        @csrf
+                        @method('PATCH')
+                        <textarea name="admin_notes"
+                                  id="admin_notes"
+                                  rows="4"
+                                  placeholder="Add notes about this application..."
+                                  class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">{{ old('admin_notes', $application->admin_notes) }}</textarea>
+                        @error('admin_notes')
+                            <p class="mt-1 text-xs text-red-600">{{ $message }}</p>
+                        @enderror
+                        <div class="mt-3">
+                            <button type="submit" class="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                                Save Notes
+                            </button>
+                        </div>
+                    </form>
                 </div>
             </div>
 
@@ -261,13 +273,13 @@
                             @csrf
                             <div class="mb-3">
                                 <label for="interview_date" class="block text-sm font-medium text-gray-700 mb-1">
-                                    Interview Date <span class="text-red-500">*</span>
+                                    Interview Date & Time <span class="text-red-500">*</span>
                                 </label>
-                                <input type="date"
+                                <input type="datetime-local"
                                        name="interview_date"
                                        id="interview_date"
                                        required
-                                       min="{{ date('Y-m-d') }}"
+                                       min="{{ date('Y-m-d\TH:i') }}"
                                        value="{{ old('interview_date') }}"
                                        class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm @error('interview_date') border-red-500 @enderror">
                                 @error('interview_date')
@@ -302,10 +314,65 @@
                     @elseif($application->status == 'accepted')
                         <form action="{{ route('admin.hiring-applications.schedule-interview', $application) }}" method="POST">
                             @csrf
-                            <textarea name="admin_notes" rows="3" placeholder="Add interview notes (optional)"
-                                      class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm mb-3"></textarea>
+                            <div class="mb-3">
+                                <label for="interview_date_schedule" class="block text-sm font-medium text-gray-700 mb-1">
+                                    Interview Date & Time <span class="text-red-500">*</span>
+                                </label>
+                                <input type="datetime-local"
+                                       name="interview_date"
+                                       id="interview_date_schedule"
+                                       required
+                                       min="{{ date('Y-m-d\TH:i') }}"
+                                       value="{{ old('interview_date', $application->interview_date ? $application->interview_date->format('Y-m-d\TH:i') : '') }}"
+                                       class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm @error('interview_date') border-red-500 @enderror">
+                                @error('interview_date')
+                                    <p class="mt-1 text-xs text-red-600">{{ $message }}</p>
+                                @enderror
+                            </div>
+                            <div class="mb-3">
+                                <label for="admin_notes_schedule" class="block text-sm font-medium text-gray-700 mb-1">
+                                    Notes (Optional)
+                                </label>
+                                <textarea name="admin_notes"
+                                          id="admin_notes_schedule"
+                                          rows="3"
+                                          placeholder="Add interview notes (optional)"
+                                          class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm">{{ old('admin_notes', $application->admin_notes) }}</textarea>
+                            </div>
                             <button type="submit" class="w-full inline-flex justify-center items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700">
                                 Schedule Interview
+                            </button>
+                        </form>
+                    @elseif($application->status == 'interview_scheduled')
+                        <form action="{{ route('admin.hiring-applications.schedule-interview', $application) }}" method="POST">
+                            @csrf
+                            <div class="mb-3">
+                                <label for="interview_date_reschedule" class="block text-sm font-medium text-gray-700 mb-1">
+                                    Interview Date & Time <span class="text-red-500">*</span>
+                                </label>
+                                <input type="datetime-local"
+                                       name="interview_date"
+                                       id="interview_date_reschedule"
+                                       required
+                                       min="{{ date('Y-m-d\TH:i') }}"
+                                       value="{{ old('interview_date', $application->interview_date ? $application->interview_date->format('Y-m-d\TH:i') : '') }}"
+                                       class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm @error('interview_date') border-red-500 @enderror">
+                                @error('interview_date')
+                                    <p class="mt-1 text-xs text-red-600">{{ $message }}</p>
+                                @enderror
+                            </div>
+                            <div class="mb-3">
+                                <label for="admin_notes_reschedule" class="block text-sm font-medium text-gray-700 mb-1">
+                                    Notes (Optional)
+                                </label>
+                                <textarea name="admin_notes"
+                                          id="admin_notes_reschedule"
+                                          rows="3"
+                                          placeholder="Add interview notes (optional)"
+                                          class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm">{{ old('admin_notes', $application->admin_notes) }}</textarea>
+                            </div>
+                            <button type="submit" class="w-full inline-flex justify-center items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700">
+                                Reschedule Interview
                             </button>
                         </form>
                     @endif
