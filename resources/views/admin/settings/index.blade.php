@@ -46,7 +46,7 @@
             </div>
                 <div>
                     <h1 class="text-3xl font-bold">System Settings</h1>
-                    <p class="text-indigo-100 mt-1">Configure and customize your quiz system</p>
+                    <p class="text-indigo-100 mt-1">Configure and customize your system</p>
                 </div>
             </div>
             <div class="hidden md:block">
@@ -178,7 +178,7 @@
                                     </label>
                                     <textarea name="system_description" id="system_description" rows="3"
                                               class="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition duration-200">{{ $settings['system_description'] }}</textarea>
-                                    <p class="mt-2 text-xs text-gray-500">Brief description of your quiz system</p>
+                                    <p class="mt-2 text-xs text-gray-500">Brief description of your system</p>
                     </div>
 
                                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -1019,7 +1019,7 @@
                                     <div>
                                         <label for="contact_email" class="block text-sm font-medium text-gray-700 mb-2">Email Address</label>
                                         <input type="email" name="contact_email" id="contact_email"
-                                               value="{{ old('contact_email', $settings['contact_email'] ?? 'support@quizsystem.com') }}"
+                                               value="{{ old('contact_email', $settings['contact_email'] ?? 'support@system.com') }}"
                                                placeholder="support@example.com"
                                                class="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
                                         <p class="mt-1 text-xs text-gray-500">Email address displayed on the contact page</p>

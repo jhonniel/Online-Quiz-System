@@ -19,7 +19,7 @@ class PasswordResetLinkController extends Controller
     {
         // Get system settings for the view
         $settings = [
-            'system_name' => \App\Models\Setting::get('system_name', 'Online Quiz System'),
+            'system_name' => \App\Models\Setting::get('system_name', 'System'),
             'system_logo' => \App\Models\Setting::get('system_logo'),
         ];
 
@@ -41,7 +41,7 @@ class PasswordResetLinkController extends Controller
 
         // Check if the email exists in the database
         $user = User::where('email', $request->email)->first();
-        
+
         if (!$user) {
             return back()->withInput($request->only('email'))
                 ->withErrors(['email' => 'This email address is not registered in our system.']);

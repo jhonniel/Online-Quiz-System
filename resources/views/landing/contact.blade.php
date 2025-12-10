@@ -38,7 +38,7 @@
                         </div>
                         <div>
                             <h3 class="text-lg font-semibold text-gray-900">Email Support</h3>
-                            <p class="text-gray-600">{{ $settings['contact_email'] ?? 'support@quizsystem.com' }}</p>
+                            <p class="text-gray-600">{{ $settings['contact_email'] ?? 'support@system.com' }}</p>
                             <p class="text-sm text-gray-500">{{ $settings['contact_email_response_time'] ?? 'We typically respond within 24 hours' }}</p>
                         </div>
                     </div>

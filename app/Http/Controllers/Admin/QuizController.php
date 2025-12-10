@@ -35,7 +35,7 @@ class QuizController extends Controller
         try {
             // Manually load settings to debug
             $settings = [
-                'system_name' => Setting::get('system_name', 'Quiz System'),
+                'system_name' => Setting::get('system_name', 'System'),
                 'system_logo' => Setting::get('system_logo'),
                 'system_icon' => Setting::get('system_icon'),
                 'system_description' => Setting::get('system_description', 'Online Quiz Management System'),

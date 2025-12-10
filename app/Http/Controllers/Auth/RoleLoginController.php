@@ -27,7 +27,7 @@ class RoleLoginController extends Controller
 
         // Get system settings
         $settings = [
-            'system_name' => \App\Models\Setting::get('system_name', 'Online Quiz System'),
+            'system_name' => \App\Models\Setting::get('system_name', 'System'),
             'system_logo' => \App\Models\Setting::get('system_logo'),
         ];
 

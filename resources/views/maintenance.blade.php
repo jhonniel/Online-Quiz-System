@@ -3,7 +3,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>System Maintenance - {{ $settings['system_name'] ?? 'Quiz System' }}</title>
+    <title>System Maintenance - {{ $settings['system_name'] ?? 'System' }}</title>
 
     <!-- Favicon -->
     @if(isset($settings['system_icon']) && $settings['system_icon'])
@@ -49,7 +49,7 @@
             <div class="mb-8">
                 @if(isset($settings['system_logo']) && $settings['system_logo'])
                     <img src="{{ $settings['system_logo_url'] ?? '' }}"
-                         alt="{{ $settings['system_name'] ?? 'Quiz System' }}"
+                         alt="{{ $settings['system_name'] ?? 'System' }}"
                          class="h-20 w-auto mx-auto maintenance-animation">
                 @else
                     <div class="h-20 w-20 mx-auto bg-white rounded-full flex items-center justify-center maintenance-animation">
@@ -77,7 +77,7 @@
 
             <!-- Subtitle -->
             <h2 class="text-xl md:text-2xl text-indigo-200 mb-8">
-                {{ $settings['system_name'] ?? 'Quiz System' }} is temporarily unavailable
+                {{ $settings['system_name'] ?? 'System' }} is temporarily unavailable
             </h2>
 
             <!-- Message -->

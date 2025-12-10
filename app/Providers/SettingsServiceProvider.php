@@ -60,18 +60,18 @@ class SettingsServiceProvider extends ServiceProvider
 
             // Base settings that should be available in all views
             $baseSettings = [
-                'system_name' => Setting::get('system_name', 'Quiz System'),
+                'system_name' => Setting::get('system_name', 'System'),
                 'system_logo' => Setting::get('system_logo'),
                 'system_icon' => Setting::get('system_icon'),
                 'system_logo_url' => $buildUrl(Setting::get('system_logo')),
                 'system_icon_url' => $buildUrl(Setting::get('system_icon')),
-                'system_description' => Setting::get('system_description', 'Online Quiz Management System'),
+                'system_description' => Setting::get('system_description', 'Online Management System'),
                 'primary_color' => Setting::get('primary_color', '#4F46E5'),
                 'secondary_color' => Setting::get('secondary_color', '#6B7280'),
                 'hiring_application_public_access' => Setting::get('hiring_application_public_access', 'disabled'),
                 'hiring_application_url' => Setting::get('hiring_application_url', 'hiring/apply'),
                 // Contact Information
-                'contact_email' => Setting::get('contact_email', 'support@quizsystem.com'),
+                'contact_email' => Setting::get('contact_email', 'support@system.com'),
                 'contact_phone' => Setting::get('contact_phone', '+1 (555) 123-4567'),
                 'contact_phone_hours' => Setting::get('contact_phone_hours', 'Monday - Friday, 9 AM - 6 PM EST'),
                 'contact_email_response_time' => Setting::get('contact_email_response_time', 'We typically respond within 24 hours'),

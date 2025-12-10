@@ -139,7 +139,7 @@ class SettingsController extends Controller
         $contactLiveChatTimeSetting = Setting::where('key', 'contact_live_chat_time')->first();
 
         // Set contact information values
-        $settings['contact_email'] = ($contactEmailSetting && $contactEmailSetting->value !== null && trim($contactEmailSetting->value) !== '') ? $contactEmailSetting->value : 'support@quizsystem.com';
+        $settings['contact_email'] = ($contactEmailSetting && $contactEmailSetting->value !== null && trim($contactEmailSetting->value) !== '') ? $contactEmailSetting->value : 'support@system.com';
         $settings['contact_phone'] = ($contactPhoneSetting && $contactPhoneSetting->value !== null && trim($contactPhoneSetting->value) !== '') ? $contactPhoneSetting->value : '+1 (555) 123-4567';
         $settings['contact_phone_hours'] = ($contactPhoneHoursSetting && $contactPhoneHoursSetting->value !== null && trim($contactPhoneHoursSetting->value) !== '') ? $contactPhoneHoursSetting->value : 'Monday - Friday, 9 AM - 6 PM EST';
         $settings['contact_email_response_time'] = ($contactEmailResponseTimeSetting && $contactEmailResponseTimeSetting->value !== null && trim($contactEmailResponseTimeSetting->value) !== '') ? $contactEmailResponseTimeSetting->value : 'We typically respond within 24 hours';
@@ -452,7 +452,7 @@ class SettingsController extends Controller
         ]);
 
         // Update system name
-        Setting::set('system_name', $request->system_name, 'text', 'The name of the quiz system');
+        Setting::set('system_name', $request->system_name, 'text', 'The name of the system');
 
         // Update system description
         Setting::set('system_description', $request->system_description, 'text', 'System description');
