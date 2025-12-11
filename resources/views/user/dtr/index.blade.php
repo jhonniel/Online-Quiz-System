@@ -73,11 +73,49 @@
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                     </svg>
                 </div>
-                <div class="ml-4">
+                <div class="ml-4 flex-1">
                     <p class="text-sm font-medium text-gray-500">Overtime ({{ $overtimeWindowLabel ?? 'This Year' }})</p>
                     <p class="text-2xl font-bold {{ str_starts_with($totalOvertimeFormatted, '-') ? 'text-red-600' : 'text-gray-900' }}">{{ $totalOvertimeFormatted }}</p>
                     @if(str_starts_with($totalOvertimeFormatted, '-'))
                         <p class="text-xs text-red-500 mt-1">Negative balance</p>
+                    @endif
+
+                    @if($expiringOvertimeTotal > 0 && $minDaysRemaining !== null)
+                        <div class="mt-2 pt-2 border-t border-gray-200">
+                            <p class="text-xs font-medium text-amber-600 mb-1">
+                                <span class="inline-flex items-center">
+                                    <svg class="h-3 w-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                    </svg>
+                                    Expiring Balance: {{ $expiringOvertimeFormatted }}
+                                </span>
+                            </p>
+                            <p class="text-xs text-amber-600">
+                                <span class="inline-flex items-center">
+                                    <svg class="h-3 w-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
+                                    </svg>
+                                    @if($minDaysRemaining > 0)
+                                        {{ $minDaysRemaining }} {{ $minDaysRemaining == 1 ? 'day' : 'days' }} remaining
+                                    @else
+                                        Expiring today
+                                    @endif
+                                </span>
+                            </p>
+                        </div>
+                    @endif
+
+                    @if($currentWeekDeficitHours > 0)
+                        <div class="mt-2 pt-2 border-t border-gray-200">
+                            <p class="text-xs text-gray-500">
+                                <span class="inline-flex items-center">
+                                    <svg class="h-3 w-3 mr-1 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
+                                    </svg>
+                                    Current week deficit: {{ $currentWeekDeficitFormatted }} (not yet added)
+                                </span>
+                            </p>
+                        </div>
                     @endif
                 </div>
             </div>

@@ -140,6 +140,8 @@ Route::prefix('admin')->middleware(['auth', 'admin'])->group(function () {
     Route::post('/dtr', [App\Http\Controllers\Admin\DtrController::class, 'store'])->name('admin.dtr.store');
     Route::get('/dtr/{dtr}/edit', [App\Http\Controllers\Admin\DtrController::class, 'edit'])->name('admin.dtr.edit');
     Route::put('/dtr/{dtr}', [App\Http\Controllers\Admin\DtrController::class, 'update'])->name('admin.dtr.update');
+    Route::delete('/dtr/{dtr}', [App\Http\Controllers\Admin\DtrController::class, 'destroy'])->name('admin.dtr.destroy');
+    Route::post('/dtr/recalculate-deficits', [App\Http\Controllers\Admin\DtrController::class, 'recalculateDeficits'])->name('admin.dtr.recalculate-deficits');
     Route::post('/dtr/import', [App\Http\Controllers\Admin\DtrController::class, 'import'])->name('admin.dtr.import');
     Route::get('/dtr/template', [App\Http\Controllers\Admin\DtrController::class, 'downloadTemplate'])->name('admin.dtr.template');
 

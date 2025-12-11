@@ -14,6 +14,7 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\Rule;
+use Carbon\Carbon;
 
 class UserController extends Controller
 {
@@ -192,26 +193,17 @@ class UserController extends Controller
                 ],
             ];
 
-            $overtimeQuery = \App\Models\Dtr::where('user_id', $user->id);
-            if ($months === 12) {
-                $overtimeQuery->whereYear('date', $currentYear);
-            } else {
-                $overtimeQuery->whereDate('date', '>=', $fromDate->toDateString());
-            }
-            $totalOvertimeHours = $overtimeQuery->sum('overtime_hours');
+            // Overtime Credited Window is ONLY used for expiration logic, NOT for counting
+            // Get ALL DTR overtime (no date filtering - count all)
+            $totalOvertimeHours = \App\Models\Dtr::where('user_id', $user->id)
+                ->sum('overtime_hours');
 
-            // Add overtime coming from approved overtime leave requests (HH:MM in reason)
-            $approvedOvertimeRequestsQuery = \App\Models\LeaveRequest::where('user_id', $user->id)
+            // Get approved overtime leave requests for completed weeks only (count all, window only for expiration)
+            $approvedOvertimeRequests = \App\Models\LeaveRequest::where('user_id', $user->id)
                 ->where('type', 'overtime')
-                ->where('status', 'approved');
-
-            if ($months === 12) {
-                $approvedOvertimeRequestsQuery->whereYear('start_date', $currentYear);
-            } else {
-                $approvedOvertimeRequestsQuery->whereDate('start_date', '>=', $fromDate->toDateString());
-            }
-
-            $approvedOvertimeRequests = $approvedOvertimeRequestsQuery->get();
+                ->where('status', 'approved')
+                ->whereDate('start_date', '<=', $today) // completed weeks only
+                ->get();
 
             $overtimeFromLeavesMinutes = 0;
             foreach ($approvedOvertimeRequests as $otRequest) {
@@ -224,17 +216,33 @@ class UserController extends Controller
 
             $totalOvertimeHours += $overtimeFromLeavesMinutes / 60;
 
-            // Subtract deficit hours from overtime balance (allow negative values)
-            $deficitQuery = \App\Models\DtrDeficit::where('user_id', $user->id)
-                ->where('is_applied', true);
-
-            if ($months === 12) {
-                $deficitQuery->whereYear('week_start_date', $currentYear);
-            } else {
-                $deficitQuery->whereDate('week_start_date', '>=', $fromDate->toDateString());
+            // Build set of weeks where overtime was earned (DTR or overtime leave)
+            $overtimeWeekKeys = [];
+            $dtrWeeks = \App\Models\Dtr::where('user_id', $user->id)
+                ->where('overtime_hours', '>', 0)
+                ->get(['date']);
+            foreach ($dtrWeeks as $dtr) {
+                $weekStart = $dtr->date->copy()->startOfWeek()->toDateString();
+                $overtimeWeekKeys[$weekStart] = true;
+            }
+            foreach ($approvedOvertimeRequests as $otRequest) {
+                $weekStart = $otRequest->start_date->copy()->startOfWeek()->toDateString();
+                $overtimeWeekKeys[$weekStart] = true;
             }
 
-            $totalDeficitHours = $deficitQuery->sum('deficit_hours');
+            // Get deficit hours for completed weeks starting from the user's first DTR week
+            $today = Carbon::today();
+            $firstDtr = \App\Models\Dtr::where('user_id', $user->id)->orderBy('date', 'asc')->first();
+            if ($firstDtr) {
+                $firstWeekStart = $firstDtr->date->copy()->startOfWeek()->toDateString();
+                $totalDeficitHours = \App\Models\DtrDeficit::where('user_id', $user->id)
+                    ->where('is_applied', true)
+                    ->where('week_end_date', '<', $today->toDateString()) // Only completed weeks
+                    ->where('week_start_date', '>=', $firstWeekStart)
+                    ->sum('deficit_hours');
+            } else {
+                $totalDeficitHours = 0;
+            }
             $totalOvertimeHours = $totalOvertimeHours - $totalDeficitHours;
 
             // Format total deficit hours for display
@@ -243,17 +251,11 @@ class UserController extends Controller
             $deficitMinutesPart = $totalDeficitMinutes % 60;
             $totalDeficitFormatted = sprintf('%02d:%02d', $deficitHoursPart, $deficitMinutesPart);
 
-            $approvedOffsetQuery = \App\Models\LeaveRequest::where('user_id', $user->id)
+            // Get ALL approved offset requests (no date filtering - count all)
+            $approvedOffsetRequests = \App\Models\LeaveRequest::where('user_id', $user->id)
                 ->where('type', 'offset')
-                ->where('status', 'approved');
-
-            if ($months === 12) {
-                $approvedOffsetQuery->whereYear('start_date', $currentYear);
-            } else {
-                $approvedOffsetQuery->whereDate('start_date', '>=', $fromDate->toDateString());
-            }
-
-            $approvedOffsetRequests = $approvedOffsetQuery->get();
+                ->where('status', 'approved')
+                ->get();
 
             // Parse offset hours from reason field (each offset may have different hours)
             $offsetHoursUsed = 0;

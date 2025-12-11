@@ -31,6 +31,15 @@
                     </svg>
                     Download Template
                 </a>
+                <form action="{{ route('admin.dtr.recalculate-deficits') }}" method="POST" class="inline" onsubmit="return confirm('This will recalculate all deficit records for all employees based on their actual DTR data. This may take a moment. Continue?');">
+                    @csrf
+                    <button type="submit" class="inline-flex items-center px-3 py-2 sm:px-4 sm:py-2 bg-white/10 backdrop-blur-sm border border-white/20 rounded-lg text-white hover:bg-white/20 transition duration-200 text-xs sm:text-sm">
+                        <svg class="h-4 w-4 sm:h-5 sm:w-5 mr-1 sm:mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+                        </svg>
+                        Recalculate Deficits
+                    </button>
+                </form>
             </div>
         </div>
     </div>
@@ -386,6 +395,13 @@
                                                                class="inline-flex items-center px-2.5 py-1.5 border border-indigo-200 text-xs font-medium rounded-md text-indigo-700 bg-indigo-50 hover:bg-indigo-100">
                                                                 Edit
                                                             </a>
+                                                            <form action="{{ route('admin.dtr.destroy', $dtr) }}" method="POST" class="inline" onsubmit="return confirm('Are you sure you want to delete this DTR record? This action cannot be undone.');">
+                                                                @csrf
+                                                                @method('DELETE')
+                                                                <button type="submit" class="inline-flex items-center px-2.5 py-1.5 border border-red-200 text-xs font-medium rounded-md text-red-700 bg-red-50 hover:bg-red-100">
+                                                                    Delete
+                                                                </button>
+                                                            </form>
                                                         </div>
                                                     </td>
                                                 </tr>

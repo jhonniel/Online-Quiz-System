@@ -349,9 +349,117 @@ class DtrController extends Controller
     /**
      * Remove the specified resource from storage.
      */
-    public function destroy(string $id)
+    public function destroy(Dtr $dtr)
     {
-        //
+        try {
+            $userId = $dtr->user_id;
+            $date = $dtr->date;
+
+            $dtr->delete();
+
+            // Recalculate weekly deficit after deletion
+            $this->calculateAndStoreWeeklyDeficit($userId, Carbon::parse($date));
+
+            return redirect()->route('admin.dtr.index')
+                ->with('success', 'DTR record deleted successfully.');
+        } catch (\Exception $e) {
+            Log::error('DTR deletion failed: ' . $e->getMessage());
+
+            return redirect()->back()
+                ->withErrors(['error' => 'Failed to delete DTR record: ' . $e->getMessage()]);
+        }
+    }
+
+    /**
+     * Recalculate all deficit records for all employees
+     */
+    public function recalculateDeficits()
+    {
+        try {
+            $employees = User::where('role', 'employee')
+                ->where('is_active', true)
+                ->get();
+
+            // Use the later of "today" and the user's last DTR date as the effective current date
+            $today = Carbon::today();
+            $recalculatedCount = 0;
+            $fixedCount = 0;
+
+            foreach ($employees as $employee) {
+                // Determine the week range based on DTR data
+                $firstDtr = Dtr::where('user_id', $employee->id)->orderBy('date', 'asc')->first();
+                $lastDtr = Dtr::where('user_id', $employee->id)->orderBy('date', 'desc')->first();
+
+                if (!$firstDtr || !$lastDtr) {
+                    continue;
+                }
+
+                // Effective "today" for completed-week checks
+                $effectiveToday = $lastDtr->date->gt($today) ? $lastDtr->date->copy() : $today->copy();
+
+                $weekStart = $firstDtr->date->copy()->startOfWeek();
+                $lastCompletedWeekEnd = $effectiveToday->copy()->startOfWeek()->subDay(); // end of last completed week
+
+                // Iterate each week from first DTR week to last completed week
+                while ($weekStart->lte($lastCompletedWeekEnd)) {
+                    $weekEnd = $weekStart->copy()->endOfWeek();
+
+                    // Get DTR records for this week (excluding future dates)
+                    $weeklyDtrs = Dtr::where('user_id', $employee->id)
+                        ->whereDate('date', '>=', $weekStart->toDateString())
+                        ->whereDate('date', '<=', $weekEnd->toDateString())
+                        ->whereDate('date', '<=', $effectiveToday->toDateString())
+                        ->get();
+
+                    $weeklyTotalHours = $weeklyDtrs->sum('total_hours');
+                    $weeklyBaseHours = 40.0;
+                    $correctDeficitHours = max(0, $weeklyBaseHours - $weeklyTotalHours);
+
+                    // Upsert or delete deficit record
+                    if ($correctDeficitHours > 0) {
+                        DtrDeficit::updateOrCreate(
+                            [
+                                'user_id' => $employee->id,
+                                'week_start_date' => $weekStart->toDateString(),
+                                'week_end_date' => $weekEnd->toDateString(),
+                            ],
+                            [
+                                'deficit_hours' => $correctDeficitHours,
+                                'is_applied' => true,
+                            ]
+                        );
+                        $fixedCount++;
+                    } else {
+                        // No deficit -> remove any existing record
+                        DtrDeficit::where('user_id', $employee->id)
+                            ->where('week_start_date', $weekStart->toDateString())
+                            ->where('week_end_date', $weekEnd->toDateString())
+                            ->delete();
+                    }
+
+                    $recalculatedCount++;
+
+                    // Move to next week
+                    $weekStart->addWeek();
+                }
+
+                // Remove any deficit records outside the valid range (before first DTR or after last completed week)
+                DtrDeficit::where('user_id', $employee->id)
+                    ->where(function ($q) use ($firstDtr, $lastCompletedWeekEnd) {
+                        $q->whereDate('week_start_date', '<', $firstDtr->date->copy()->startOfWeek()->toDateString())
+                          ->orWhereDate('week_end_date', '>', $lastCompletedWeekEnd->toDateString());
+                    })
+                    ->delete();
+            }
+
+            return redirect()->route('admin.dtr.index')
+                ->with('success', "Recalculated {$recalculatedCount} deficit records. Fixed {$fixedCount} incorrect records.");
+        } catch (\Exception $e) {
+            Log::error('Deficit recalculation failed: ' . $e->getMessage());
+
+            return redirect()->back()
+                ->withErrors(['error' => 'Failed to recalculate deficits: ' . $e->getMessage()]);
+        }
     }
 
     /**
@@ -617,18 +725,27 @@ class DtrController extends Controller
             $weeklyBaseHours = 40.0; // 40 hours = 40:00
             $deficitHours = max(0, $weeklyBaseHours - $weeklyTotalHours);
 
-            // Store or update deficit record (only for completed weeks)
-            DtrDeficit::updateOrCreate(
-                [
-                    'user_id' => $userId,
-                    'week_start_date' => $weekStart->toDateString(),
-                    'week_end_date' => $weekEnd->toDateString(),
-                ],
-                [
-                    'deficit_hours' => $deficitHours,
-                    'is_applied' => true,
-                ]
-            );
+            // Store or update deficit record (only for completed weeks with actual deficit)
+            // If there's no deficit, delete any existing deficit record for this week
+            if ($deficitHours > 0) {
+                DtrDeficit::updateOrCreate(
+                    [
+                        'user_id' => $userId,
+                        'week_start_date' => $weekStart->toDateString(),
+                        'week_end_date' => $weekEnd->toDateString(),
+                    ],
+                    [
+                        'deficit_hours' => $deficitHours,
+                        'is_applied' => true,
+                    ]
+                );
+            } else {
+                // No deficit - delete any existing deficit record for this week
+                DtrDeficit::where('user_id', $userId)
+                    ->where('week_start_date', $weekStart->toDateString())
+                    ->where('week_end_date', $weekEnd->toDateString())
+                    ->delete();
+            }
         } catch (\Exception $e) {
             Log::error('Failed to calculate weekly deficit: ' . $e->getMessage(), [
                 'user_id' => $userId,
