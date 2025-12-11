@@ -393,12 +393,17 @@
                                         </tbody>
                                         <tfoot class="bg-gradient-to-r from-indigo-50 to-purple-50 border-t-2 border-indigo-300">
                                             @php
-                                                // Calculate weekly total for this employee
+                                                // Calculate weekly total for this employee (excluding future dates)
+                                                $today = \Carbon\Carbon::today();
                                                 $weeklyTotalHours = 0;
                                                 $weeklyOvertimeHours = 0;
                                                 foreach ($employeeGroup['records'] as $dtr) {
-                                                    $weeklyTotalHours += ($dtr->total_hours ?? 0);
-                                                    $weeklyOvertimeHours += ($dtr->overtime_hours ?? 0);
+                                                    // Only count dates that are today or in the past
+                                                    $dtrDate = \Carbon\Carbon::parse($dtr->date);
+                                                    if ($dtrDate->lte($today)) {
+                                                        $weeklyTotalHours += ($dtr->total_hours ?? 0);
+                                                        $weeklyOvertimeHours += ($dtr->overtime_hours ?? 0);
+                                                    }
                                                 }
                                                 $weeklyTotalMinutes = (int) round($weeklyTotalHours * 60);
                                                 $weeklyTotalH = intdiv($weeklyTotalMinutes, 60);
@@ -411,12 +416,24 @@
                                                 $weeklyOvertimeM = $weeklyOvertimeMinutes % 60;
                                                 $weeklyOvertimeFormatted = sprintf('%02d:%02d', $weeklyOvertimeH, $weeklyOvertimeM);
 
-                                                // Calculate deficit: Weekly Total Base (40:00) - Weekly Total
-                                                $weeklyBaseMinutes = 40 * 60; // 40:00 = 2400 minutes
-                                                $deficitMinutes = max(0, $weeklyBaseMinutes - $weeklyTotalMinutes);
-                                                $deficitH = intdiv($deficitMinutes, 60);
-                                                $deficitM = $deficitMinutes % 60;
-                                                $deficitFormatted = sprintf('%02d:%02d', $deficitH, $deficitM);
+                                                // Only calculate deficit if the week has ended (not current week)
+                                                $weekEndDate = \Carbon\Carbon::parse($week['week_end']);
+                                                $isCurrentWeek = $today->lte($weekEndDate);
+
+                                                if ($isCurrentWeek) {
+                                                    // Current week - don't show deficit
+                                                    $deficitFormatted = 'N/A';
+                                                    $deficitMinutes = 0;
+                                                    $showDeficit = false;
+                                                } else {
+                                                    // Past week - calculate deficit
+                                                    $weeklyBaseMinutes = 40 * 60; // 40:00 = 2400 minutes
+                                                    $deficitMinutes = max(0, $weeklyBaseMinutes - $weeklyTotalMinutes);
+                                                    $deficitH = intdiv($deficitMinutes, 60);
+                                                    $deficitM = $deficitMinutes % 60;
+                                                    $deficitFormatted = sprintf('%02d:%02d', $deficitH, $deficitM);
+                                                    $showDeficit = true;
+                                                }
                                             @endphp
                                             <tr>
                                                 <td class="px-3 py-3 whitespace-nowrap">
@@ -451,15 +468,21 @@
                                                         </div>
                                                         <div>
                                                             <div class="text-xs text-gray-600 font-medium mb-1">Deficit</div>
-                                                            <div class="text-sm font-bold {{ $deficitMinutes > 0 ? 'text-red-600' : 'text-green-600' }} bg-white px-2 py-1 rounded border {{ $deficitMinutes > 0 ? 'border-red-200' : 'border-green-200' }} inline-block">
-                                                                {{ $deficitFormatted }}
-                                                            </div>
+                                                            @if($showDeficit)
+                                                                <div class="text-sm font-bold {{ $deficitMinutes > 0 ? 'text-red-600' : 'text-green-600' }} bg-white px-2 py-1 rounded border {{ $deficitMinutes > 0 ? 'border-red-200' : 'border-green-200' }} inline-block">
+                                                                    {{ $deficitFormatted }}
+                                                                </div>
+                                                            @else
+                                                                <div class="text-sm font-semibold text-gray-500 bg-white px-2 py-1 rounded border border-gray-200 inline-block" title="Current week - deficit will be calculated after week ends">
+                                                                    N/A
+                                                                </div>
+                                                            @endif
                                                         </div>
                                                     </div>
                                                 </td>
                                                 <td class="px-3 py-3 whitespace-nowrap" colspan="4">
                                                     <div class="text-xs text-indigo-600 font-medium">
-                                                        {{ $week['label'] }} • {{ $deficitMinutes > 0 ? 'Deficit: ' . $deficitFormatted . ' hours' : 'No deficit' }}
+                                                        {{ $week['label'] }} • @if($showDeficit){{ $deficitMinutes > 0 ? 'Deficit: ' . $deficitFormatted . ' hours' : 'No deficit' }}@else<span class="text-gray-500">Current week - deficit will be calculated after week ends</span>@endif
                                                     </div>
                                                 </td>
                                             </tr>

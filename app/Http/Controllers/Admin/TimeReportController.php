@@ -64,10 +64,15 @@ class TimeReportController extends Controller
         $selectedEmployeeId = $request->get('employee_id');
 
         // Calculate weekly statistics for each employee
+        $today = Carbon::today();
+        $isCurrentWeek = $today->lte($weekEndDate);
+
         $weeklyReports = [];
         foreach ($employees as $employee) {
+            // Get DTR records, excluding future dates
             $dtrs = Dtr::where('user_id', $employee->id)
                 ->whereBetween('date', [$weekStartDate->format('Y-m-d'), $weekEndDate->format('Y-m-d')])
+                ->whereDate('date', '<=', $today->toDateString()) // Exclude future dates
                 ->orderBy('date')
                 ->get();
 
@@ -79,7 +84,7 @@ class TimeReportController extends Controller
                 $dtrMap[$dateKey] = $dtr;
             }
 
-            // Calculate total hours from all DTR records (including weekends)
+            // Calculate total hours from all DTR records (only past and today, not future)
             $totalHours = $dtrs->sum('total_hours');
             $totalOvertime = $dtrs->sum('overtime_hours');
 
@@ -92,12 +97,17 @@ class TimeReportController extends Controller
                 if ($dayOfWeek !== Carbon::SATURDAY && $dayOfWeek !== Carbon::SUNDAY) {
                     $dateKey = $currentDate->format('Y-m-d');
                     $dtr = $dtrMap[$dateKey] ?? null;
+                    $isFutureDate = $currentDate->gt($today);
 
                     $dayHours = $dtr ? (float) $dtr->total_hours : 0;
                     $dayOvertime = $dtr ? (float) $dtr->overtime_hours : 0;
 
                     // Determine status label based on hours
-                    if ($dayHours >= 8.0) {
+                    // Don't label future dates as absent
+                    if ($isFutureDate) {
+                        $statusLabel = 'not_recorded';
+                        $statusBadgeClass = 'bg-gray-100 text-gray-600';
+                    } elseif ($dayHours >= 8.0) {
                         $statusLabel = 'completed';
                         $statusBadgeClass = 'bg-green-100 text-green-800';
                     } elseif ($dayHours > 0 && $dayHours < 8.0) {
@@ -113,21 +123,50 @@ class TimeReportController extends Controller
                         'dtr' => $dtr,
                         'total_hours' => $dayHours,
                         'overtime_hours' => $dayOvertime,
-                        'status' => $dtr ? $dtr->status : 'absent',
+                        'status' => $dtr ? $dtr->status : ($isFutureDate ? null : 'absent'),
                         'status_label' => $statusLabel,
                         'status_badge_class' => $statusBadgeClass,
+                        'is_future' => $isFutureDate,
                     ];
                 }
                 $currentDate->addDay();
             }
 
+            // Count absent only for completed weeks (past weeks) where time is 0:00
             $daysPresent = $dtrs->where('status', 'present')->count();
-            $daysAbsent = $dtrs->where('status', 'absent')->count();
+            $daysAbsent = 0;
+            if (!$isCurrentWeek) {
+                // Only count absent for past weeks
+                // Count DTR records with status 'absent' OR records with 0 total_hours
+                $daysAbsent = $dtrs->filter(function($dtr) {
+                    return $dtr->status === 'absent' || $dtr->total_hours == 0;
+                })->count();
+
+                // Also count weekdays in the past week that have no DTR record (0:00 = absent)
+                $pastWeekdays = 0;
+                $checkDate = $weekStartDate->copy();
+                while ($checkDate <= $weekEndDate && $checkDate->lte($today)) {
+                    $dayOfWeek = $checkDate->dayOfWeek;
+                    if ($dayOfWeek !== Carbon::SATURDAY && $dayOfWeek !== Carbon::SUNDAY) {
+                        $dateKey = $checkDate->format('Y-m-d');
+                        if (!isset($dtrMap[$dateKey])) {
+                            // No DTR record for this weekday = absent
+                            $pastWeekdays++;
+                        }
+                    }
+                    $checkDate->addDay();
+                }
+                $daysAbsent += $pastWeekdays;
+            }
             $daysLate = $dtrs->where('status', 'late')->count();
             $daysOnLeave = $dtrs->where('status', 'on_leave')->count();
             $daysHalfDay = $dtrs->where('status', 'half_day')->count();
             $daysTravel = $dtrs->where('status', 'travel')->count();
             $totalDays = $dtrs->count();
+
+            // Calculate deficit (only for completed weeks)
+            $weeklyBaseHours = 40.0; // 40 hours per week
+            $deficitHours = $isCurrentWeek ? null : max(0, $weeklyBaseHours - $totalHours);
 
             $weeklyReports[] = [
                 'employee' => $employee,
@@ -141,6 +180,8 @@ class TimeReportController extends Controller
                 'days_travel' => $daysTravel,
                 'total_days' => $totalDays,
                 'daily_breakdown' => $dailyBreakdown,
+                'deficit_hours' => $deficitHours,
+                'is_current_week' => $isCurrentWeek,
             ];
         }
 
@@ -181,7 +222,8 @@ class TimeReportController extends Controller
             'nextWeek',
             'overallStats',
             'startDate',
-            'endDate'
+            'endDate',
+            'isCurrentWeek'
         ));
     }
 }

@@ -234,6 +234,22 @@
                             <div class="text-lg font-bold text-blue-600 mt-1">{{ $report['days_on_leave'] }}</div>
                         </div>
                         @endif
+                        @if(isset($report['deficit_hours']))
+                        <div class="bg-gray-50 rounded-lg p-3">
+                            <div class="text-xs font-medium text-gray-500">Deficit</div>
+                            @if($report['is_current_week'])
+                                <div class="text-lg font-semibold text-gray-500 mt-1" title="Current week - deficit will be calculated after week ends">N/A</div>
+                            @else
+                                @php
+                                    $deficitMinutes = (int) round($report['deficit_hours'] * 60);
+                                    $deficitH = intdiv($deficitMinutes, 60);
+                                    $deficitM = $deficitMinutes % 60;
+                                    $deficitFormatted = sprintf('%02d:%02d', $deficitH, $deficitM);
+                                @endphp
+                                <div class="text-lg font-bold {{ $report['deficit_hours'] > 0 ? 'text-red-600' : 'text-green-600' }} mt-1">{{ $deficitFormatted }}</div>
+                            @endif
+                        </div>
+                        @endif
                     </div>
 
                     <!-- Daily Breakdown -->
@@ -241,7 +257,7 @@
                         <h4 class="text-xs font-semibold text-gray-700 mb-2">Daily Breakdown</h4>
                         <div class="space-y-1.5">
                             @foreach($report['daily_breakdown'] as $day)
-                                <div class="flex items-center justify-between p-1.5 rounded-md {{ $day['total_hours'] > 0 ? 'bg-green-50' : 'bg-gray-50' }}">
+                                <div class="flex items-center justify-between p-1.5 rounded-md {{ ($day['is_future'] ?? false) ? 'bg-gray-100' : ($day['total_hours'] > 0 ? 'bg-green-50' : 'bg-gray-50') }}">
                                     <div class="flex items-center space-x-2 min-w-0 flex-1">
                                         <div class="text-xs font-medium text-gray-700 w-20 flex-shrink-0">
                                             {{ $day['date']->format('D, M d') }}
@@ -253,13 +269,17 @@
                                                         Completed
                                                     @elseif($day['status_label'] === 'under_time')
                                                         Under Time
+                                                    @elseif($day['status_label'] === 'not_recorded')
+                                                        Not Recorded
                                                     @else
                                                         Absent
                                                     @endif
                                                 </span>
                                             @else
-                                                <span class="px-1.5 py-0.5 text-xs font-medium rounded-full {{ $day['total_hours'] > 0 ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800' }}">
-                                                    @if($day['total_hours'] >= 8.0)
+                                                <span class="px-1.5 py-0.5 text-xs font-medium rounded-full {{ $day['total_hours'] > 0 ? 'bg-green-100 text-green-800' : ($day['is_future'] ?? false ? 'bg-gray-100 text-gray-600' : 'bg-red-100 text-red-800') }}">
+                                                    @if($day['is_future'] ?? false)
+                                                        Not Recorded
+                                                    @elseif($day['total_hours'] >= 8.0)
                                                         Completed
                                                     @elseif($day['total_hours'] > 0)
                                                         Under Time
@@ -271,7 +291,9 @@
                                         </div>
                                     </div>
                                     <div class="text-xs font-medium text-gray-900 ml-2 flex-shrink-0">
-                                        @if($day['total_hours'] > 0)
+                                        @if($day['is_future'] ?? false)
+                                            <span class="text-gray-400 italic">Not yet</span>
+                                        @elseif($day['total_hours'] > 0)
                                             {{ number_format($day['total_hours'], 2) }}h
                                             @if($day['overtime_hours'] > 0)
                                                 <span class="text-yellow-600">(+{{ number_format($day['overtime_hours'], 2) }}h)</span>

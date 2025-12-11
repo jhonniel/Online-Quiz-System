@@ -95,6 +95,8 @@ class DtrController extends Controller
             if (!isset($groupedDtrs[$monthKey]['weeks'][$weekKey])) {
                 $groupedDtrs[$monthKey]['weeks'][$weekKey] = [
                     'label' => $weekLabel,
+                    'week_start' => $weekStart->toDateString(),
+                    'week_end' => $weekEnd->toDateString(),
                     'employees' => [],
                 ];
             }
@@ -144,6 +146,15 @@ class DtrController extends Controller
             'is_travel' => 'nullable|boolean',
             'remarks' => 'nullable|string|max:1000',
         ]);
+
+        // Prevent setting 'absent' status for future dates
+        $requestDate = Carbon::parse($request->date);
+        $today = Carbon::today();
+        if ($requestDate->gt($today) && $request->status === 'absent') {
+            return redirect()->back()
+                ->withErrors(['status' => 'Cannot set absent status for future dates.'])
+                ->withInput();
+        }
 
         // Handle travel checkbox - override status if is_travel is checked
         $status = $request->status;
@@ -261,6 +272,15 @@ class DtrController extends Controller
             'is_travel' => 'nullable|boolean',
             'remarks' => 'nullable|string|max:1000',
         ]);
+
+        // Prevent setting 'absent' status for future dates
+        $requestDate = Carbon::parse($request->date);
+        $today = Carbon::today();
+        if ($requestDate->gt($today) && $request->status === 'absent') {
+            return redirect()->back()
+                ->withErrors(['status' => 'Cannot set absent status for future dates.'])
+                ->withInput();
+        }
 
         // Handle travel checkbox - override status if is_travel is checked
         $status = $request->status;
@@ -437,11 +457,18 @@ class DtrController extends Controller
                         : 0;
 
                     // Automatically determine status based on total hours
-                    // If total hours is 0, status is 'absent'
+                    // If total hours is 0, status is 'absent' (but not for future dates)
                     // If total hours > 0 and < 4, status is 'half_day'
                     // If total hours >= 4, status is 'present'
+                    $today = Carbon::today();
                     if ($totalHoursValue == 0) {
-                        $status = 'absent';
+                        // Only set absent if the date is today or in the past
+                        if ($dateObj->lte($today)) {
+                            $status = 'absent';
+                        } else {
+                            // For future dates with 0 hours, set as 'present' (not yet recorded)
+                            $status = 'present';
+                        }
                     } elseif ($totalHoursValue > 0 && $totalHoursValue < 4) {
                         $status = 'half_day';
                     } else {
@@ -568,21 +595,29 @@ class DtrController extends Controller
             // Get the week start and end dates (ISO week)
             $weekStart = $date->copy()->startOfWeek();
             $weekEnd = $date->copy()->endOfWeek();
+            $today = Carbon::today();
 
-            // Get all DTR records for this user in this week
+            // Don't calculate deficit for current week (week hasn't ended yet)
+            if ($today->lte($weekEnd)) {
+                // Current week - don't store deficit
+                return;
+            }
+
+            // Get all DTR records for this user in this week, excluding future dates
             $weeklyDtrs = Dtr::where('user_id', $userId)
                 ->whereDate('date', '>=', $weekStart->toDateString())
                 ->whereDate('date', '<=', $weekEnd->toDateString())
+                ->whereDate('date', '<=', $today->toDateString()) // Exclude future dates
                 ->get();
 
-            // Calculate weekly total hours
+            // Calculate weekly total hours (only from past and today, not future)
             $weeklyTotalHours = $weeklyDtrs->sum('total_hours');
 
             // Calculate deficit: 40:00 (2400 minutes) - weekly total
             $weeklyBaseHours = 40.0; // 40 hours = 40:00
             $deficitHours = max(0, $weeklyBaseHours - $weeklyTotalHours);
 
-            // Store or update deficit record
+            // Store or update deficit record (only for completed weeks)
             DtrDeficit::updateOrCreate(
                 [
                     'user_id' => $userId,
