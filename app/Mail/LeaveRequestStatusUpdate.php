@@ -43,7 +43,7 @@ class LeaveRequestStatusUpdate extends Mailable
         }
 
         return new Envelope(
-            subject: 'Leave Request ' . $statusLabel . ' - ' . config('app.name'),
+            subject: 'Request ' . $statusLabel . ' - ' . config('app.name'),
         );
     }
 

@@ -1,7 +1,7 @@
 @component('mail::message')
-# New Leave Request Submitted
+# New Request Submitted
 
-A new leave request has been submitted and requires your review.
+A new {{ $leaveRequest->type_label }} request has been submitted and requires your review.
 
 ## Employee Information
 

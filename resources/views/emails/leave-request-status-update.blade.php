@@ -1,9 +1,13 @@
 @component('mail::message')
-# Leave Request Status Update
+# Request Status Update
+
+@php
+    $statusLabel = $status === 'resubmission_requested' || ($status === 'pending' && $leaveRequest->reviewed_at) ? 'Resubmission Required' : ucfirst($status);
+@endphp
 
 Hello {{ $leaveRequest->user->name }},
 
-Your leave request has been **@if($status === 'resubmission_requested' || ($status === 'pending' && $leaveRequest->reviewed_at))Resubmission Required@else{{ ucfirst($status) }}@endif**.
+Your {{ $leaveRequest->type_label }} request has been **{{ $statusLabel }}**.
 
 ## Request Details
 
@@ -23,11 +27,11 @@ Your leave request has been **@if($status === 'resubmission_requested' || ($stat
 @endif
 
 @if($status === 'approved')
-✅ Your leave request has been **approved**. Please make sure to coordinate with your team regarding your absence.
+✅ Your {{ $leaveRequest->type_label }} request has been **{{ $statusLabel }}**. Please make sure to coordinate with your team regarding your absence.
 @elseif($status === 'rejected')
-❌ Your leave request has been **rejected**. If you have any questions, please contact your supervisor or HR.
+❌ Your {{ $leaveRequest->type_label }} request has been **{{ $statusLabel }}**. If you have any questions, please contact your supervisor or HR.
 @elseif($status === 'resubmission_requested' || ($status === 'pending' && $leaveRequest->reviewed_at))
-⚠️ Your leave request requires **resubmission**. Please review the admin notes above and make the necessary corrections. You can edit your request from your leave requests page.
+⚠️ Your {{ $leaveRequest->type_label }} request has been **{{ $statusLabel }}**. Please review the admin notes above and make the necessary corrections. You can edit your request from your leave requests page.
 @endif
 
 @component('mail::button', ['url' => route('user.leave-requests.show', $leaveRequest)])

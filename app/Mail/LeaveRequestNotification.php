@@ -30,7 +30,7 @@ class LeaveRequestNotification extends Mailable
     public function envelope(): Envelope
     {
         return new Envelope(
-            subject: 'New Leave Request Submitted - ' . config('app.name'),
+            subject: 'New Request Submitted - ' . config('app.name'),
         );
     }
 
