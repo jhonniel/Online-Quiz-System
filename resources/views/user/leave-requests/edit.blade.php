@@ -84,8 +84,8 @@
                             <label for="start_date" class="block text-sm font-medium text-gray-700 mb-2">
                                 Start Date <span class="text-red-500">*</span>
                             </label>
-                            <input type="date" name="start_date" id="start_date" 
-                                   value="{{ old('start_date', $editData['start_date']) }}" 
+                            <input type="date" name="start_date" id="start_date"
+                                   value="{{ old('start_date', $editData['start_date']) }}"
                                    required
                                    class="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
                             @error('start_date')
@@ -97,8 +97,8 @@
                             <label for="end_date" class="block text-sm font-medium text-gray-700 mb-2">
                                 End Date <span class="text-gray-400">(Optional)</span>
                             </label>
-                            <input type="date" name="end_date" id="end_date" 
-                                   value="{{ old('end_date', $editData['end_date']) }}" 
+                            <input type="date" name="end_date" id="end_date"
+                                   value="{{ old('end_date', $editData['end_date']) }}"
                                    class="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
                             <p class="mt-1 text-xs text-gray-500">Leave blank for single day requests</p>
                             @error('end_date')
@@ -204,7 +204,7 @@
                                    placeholder="08:00"
                                    class="time-input w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
                             <p class="mt-1 text-xs text-gray-500">
-                                Enter custom hours to deduct in <strong>HH:MM</strong> format (e.g., 08:00, 04:30). 
+                                Enter custom hours to deduct in <strong>HH:MM</strong> format (e.g., 08:00, 04:30).
                                 If left blank, it will automatically calculate as <strong>1 day = 08:00</strong> based on your request duration.
                             </p>
                             @error('offset_hours')
@@ -280,12 +280,12 @@
                            class="inline-flex items-center px-6 py-3 border border-gray-300 text-sm font-medium rounded-lg text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition duration-200">
                             Cancel
                         </a>
-                        <button type="submit"
-                                class="inline-flex items-center px-6 py-3 border border-transparent text-sm font-medium rounded-lg shadow-sm text-white bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-700 hover:to-indigo-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition duration-200">
-                            <svg class="h-5 w-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <button type="submit" id="submit-btn"
+                                class="inline-flex items-center px-6 py-3 border border-transparent text-sm font-medium rounded-lg shadow-sm text-white bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-700 hover:to-indigo-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition duration-200 disabled:opacity-50 disabled:cursor-not-allowed">
+                            <svg id="submit-icon" class="h-5 w-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
                             </svg>
-                            Update Request
+                            <span id="submit-text">Update Request</span>
                         </button>
                     </div>
                 </form>
@@ -353,6 +353,21 @@
             }
         });
     });
+
+    // Form submission with loading animation
+    const form = document.querySelector('form');
+    const submitBtn = document.getElementById('submit-btn');
+    const submitIcon = document.getElementById('submit-icon');
+    const submitText = document.getElementById('submit-text');
+
+    if (form && submitBtn) {
+        form.addEventListener('submit', function(e) {
+            // Disable submit button and show loading state
+            submitBtn.disabled = true;
+            submitIcon.outerHTML = '<svg id="submit-icon" class="animate-spin h-5 w-5 mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>';
+            submitText.textContent = 'Updating...';
+        });
+    }
 </script>
 @endsection
 

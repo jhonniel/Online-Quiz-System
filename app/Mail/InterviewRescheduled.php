@@ -73,3 +73,4 @@ class InterviewRescheduled extends Mailable
         return [];
     }
 }
+

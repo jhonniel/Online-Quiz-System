@@ -27,3 +27,4 @@ Best regards,<br>
 {{ config('app.name') }}
 </x-mail::message>
 
+

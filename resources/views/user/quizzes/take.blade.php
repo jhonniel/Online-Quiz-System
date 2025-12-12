@@ -46,6 +46,7 @@
 
             <form id="quiz-form" action="{{ route('user.quizzes.submit', $quiz) }}" method="POST">
                 @csrf
+                <input type="hidden" name="user_answers" id="user_answers_input">
 
                 <!-- Question Container -->
                 <div id="question-container" class="mb-6 sm:mb-8 question-transition">
@@ -81,8 +82,11 @@
                         </button>
 
                         <button type="submit" id="submit-btn"
-                                class="inline-flex items-center justify-center px-3 sm:px-4 py-2 border border-transparent text-xs sm:text-sm font-medium rounded-md shadow-sm text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 hidden">
-                            Submit Quiz
+                                class="inline-flex items-center justify-center px-3 sm:px-4 py-2 border border-transparent text-xs sm:text-sm font-medium rounded-md shadow-sm text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 hidden disabled:opacity-50 disabled:cursor-not-allowed">
+                            <svg id="submit-icon" class="w-4 h-4 sm:mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                            </svg>
+                            <span id="submit-text">Submit Quiz</span>
                         </button>
                     </div>
                 </div>
@@ -364,16 +368,11 @@ document.addEventListener('DOMContentLoaded', function() {
         if (confirm(`Are you sure you want to submit this quiz? You have answered ${answerCount} out of ${totalQuestions} questions. You cannot change your answers after submission.`)) {
             // Show loading state
             const submitBtn = document.getElementById('submit-btn');
-            const originalText = submitBtn.innerHTML;
+            const submitIcon = document.getElementById('submit-icon');
+            const submitText = document.getElementById('submit-text');
             submitBtn.disabled = true;
-            submitBtn.innerHTML = `
-                <svg class="animate-spin -ml-1 mr-2 h-3 w-3 sm:h-4 sm:w-4 text-white inline" fill="none" viewBox="0 0 24 24">
-                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                </svg>
-                <span class="hidden sm:inline">Submitting...</span>
-                <span class="sm:hidden">Submitting</span>
-            `;
+            submitIcon.outerHTML = '<svg id="submit-icon" class="animate-spin w-4 h-4 sm:mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>';
+            submitText.textContent = 'Submitting...';
 
             // Get CSRF token
             const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
@@ -417,7 +416,10 @@ document.addEventListener('DOMContentLoaded', function() {
                 } else {
                     ToastNotification.error(data.message);
                     submitBtn.disabled = false;
-                    submitBtn.innerHTML = originalText;
+                    const submitIcon = document.getElementById('submit-icon');
+                    const submitText = document.getElementById('submit-text');
+                    submitIcon.outerHTML = '<svg id="submit-icon" class="w-4 h-4 sm:mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>';
+                    submitText.textContent = 'Submit Quiz';
                 }
             })
             .catch(error => {
@@ -440,7 +442,10 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
 
                 submitBtn.disabled = false;
-                submitBtn.innerHTML = originalText;
+                const submitIcon = document.getElementById('submit-icon');
+                const submitText = document.getElementById('submit-text');
+                submitIcon.outerHTML = '<svg id="submit-icon" class="w-4 h-4 sm:mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>';
+                submitText.textContent = 'Submit Quiz';
             });
         }
     });

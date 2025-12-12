@@ -5,6 +5,7 @@ namespace App\Http\Controllers\User;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
 
 class ProfileController extends Controller
@@ -170,5 +171,72 @@ class ProfileController extends Controller
             'message' => 'Cover photo removed successfully!',
             'type' => 'success'
         ]);
+    }
+
+    public function changePassword(Request $request)
+    {
+        try {
+            $request->validate([
+                'current_password' => 'required',
+                'new_password' => 'required|min:8|confirmed',
+            ], [
+                'current_password.required' => 'Current password is required.',
+                'new_password.required' => 'New password is required.',
+                'new_password.min' => 'New password must be at least 8 characters.',
+                'new_password.confirmed' => 'New password confirmation does not match.',
+            ]);
+
+            $user = auth()->user();
+
+            // Verify current password
+            if (!Hash::check($request->current_password, $user->password)) {
+                if ($request->expectsJson() || $request->ajax()) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Current password is incorrect.',
+                        'errors' => ['current_password' => ['Current password is incorrect.']]
+                    ], 422);
+                }
+
+                return redirect()->back()
+                    ->withErrors(['current_password' => 'Current password is incorrect.']);
+            }
+
+            // Update password
+            $user->update([
+                'password' => Hash::make($request->new_password),
+            ]);
+
+            if ($request->expectsJson() || $request->ajax()) {
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Password changed successfully!',
+                    'type' => 'success'
+                ]);
+            }
+
+            return redirect()->back()
+                ->with('success', 'Password changed successfully!');
+
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            if ($request->expectsJson() || $request->ajax()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Validation failed',
+                    'errors' => $e->errors()
+                ], 422);
+            }
+            throw $e;
+        } catch (\Exception $e) {
+            if ($request->expectsJson() || $request->ajax()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Failed to change password: ' . $e->getMessage()
+                ], 500);
+            }
+
+            return redirect()->back()
+                ->with('error', 'Failed to change password: ' . $e->getMessage());
+        }
     }
 }

@@ -89,3 +89,4 @@ class DepartmentController extends Controller
             ->with('success', 'Department status updated successfully.');
     }
 }
+

@@ -351,6 +351,7 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/profile', [App\Http\Controllers\User\ProfileController::class, 'show'])->name('profile.show');
     Route::get('/profile/edit', [App\Http\Controllers\User\ProfileController::class, 'edit'])->name('profile.edit');
     Route::put('/profile', [App\Http\Controllers\User\ProfileController::class, 'update'])->name('profile.update');
+    Route::post('/profile/password/change', [App\Http\Controllers\User\ProfileController::class, 'changePassword'])->name('profile.password.change');
     Route::delete('/profile/picture', [App\Http\Controllers\User\ProfileController::class, 'removeProfilePicture'])->name('profile.picture.remove');
     Route::delete('/profile/cover', [App\Http\Controllers\User\ProfileController::class, 'removeCoverPhoto'])->name('profile.cover.remove');
 
