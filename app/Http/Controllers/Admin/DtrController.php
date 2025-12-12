@@ -1168,4 +1168,119 @@ class DtrController extends Controller
         $filename = 'student_dtr_export_' . ($dateFrom ? Carbon::parse($dateFrom)->format('Y-m-d') : 'all') . '_' . ($dateTo ? Carbon::parse($dateTo)->format('Y-m-d') : 'all') . '.pdf';
         return $pdf->download($filename);
     }
+
+    /**
+     * Export employee DTR records as PDF.
+     */
+    public function exportPdf(Request $request)
+    {
+        $query = Dtr::with('user')
+            ->whereHas('user', function($q) {
+                $q->where('role', 'employee');
+            });
+
+        // Filter by department
+        $selectedDepartment = null;
+        if ($request->filled('department_id')) {
+            $selectedDepartment = Department::find($request->department_id);
+            $query->whereHas('user', function($q) use ($request) {
+                $q->where('department_id', $request->department_id);
+            });
+        }
+
+        // Filter by employee
+        $selectedEmployee = null;
+        if ($request->filled('employee_id')) {
+            $selectedEmployee = User::find($request->employee_id);
+            $query->where('user_id', $request->employee_id);
+        }
+
+        // Filter by date range
+        $dateFrom = $request->filled('date_from') ? $request->date_from : null;
+        $dateTo = $request->filled('date_to') ? $request->date_to : null;
+
+        if ($dateFrom) {
+            $query->whereDate('date', '>=', $dateFrom);
+        }
+        if ($dateTo) {
+            $query->whereDate('date', '<=', $dateTo);
+        }
+
+        // Filter by status
+        if ($request->filled('status')) {
+            $query->where('status', $request->status);
+        }
+
+        $dtrs = $query->orderBy('date', 'asc')
+            ->orderBy('user_id')
+            ->get();
+
+        // Calculate totals
+        $totalHours = 0;
+        $totalOvertime = 0;
+        $totalRecords = $dtrs->count();
+
+        foreach ($dtrs as $dtr) {
+            $totalHours += ($dtr->total_hours ?? 0);
+            $totalOvertime += ($dtr->overtime_hours ?? 0);
+        }
+
+        // Format totals
+        $totalMinutes = (int) round($totalHours * 60);
+        $totalH = intdiv($totalMinutes, 60);
+        $totalM = $totalMinutes % 60;
+        $totalHoursFormatted = sprintf('%02d:%02d', $totalH, $totalM);
+
+        $totalOvertimeMinutes = (int) round($totalOvertime * 60);
+        $totalOvertimeH = intdiv($totalOvertimeMinutes, 60);
+        $totalOvertimeM = $totalOvertimeMinutes % 60;
+        $totalOvertimeFormatted = sprintf('%02d:%02d', $totalOvertimeH, $totalOvertimeM);
+
+        // Group by employee for better organization
+        $groupedByEmployee = [];
+        foreach ($dtrs as $dtr) {
+            $employeeId = $dtr->user_id;
+            if (!isset($groupedByEmployee[$employeeId])) {
+                $groupedByEmployee[$employeeId] = [
+                    'employee' => $dtr->user,
+                    'records' => [],
+                    'total_hours' => 0,
+                    'total_overtime' => 0,
+                ];
+            }
+            $groupedByEmployee[$employeeId]['records'][] = $dtr;
+            $groupedByEmployee[$employeeId]['total_hours'] += ($dtr->total_hours ?? 0);
+            $groupedByEmployee[$employeeId]['total_overtime'] += ($dtr->overtime_hours ?? 0);
+        }
+
+        // Format employee totals
+        foreach ($groupedByEmployee as &$group) {
+            $employeeTotalMinutes = (int) round($group['total_hours'] * 60);
+            $employeeTotalH = intdiv($employeeTotalMinutes, 60);
+            $employeeTotalM = $employeeTotalMinutes % 60;
+            $group['total_hours_formatted'] = sprintf('%02d:%02d', $employeeTotalH, $employeeTotalM);
+
+            $employeeOvertimeMinutes = (int) round($group['total_overtime'] * 60);
+            $employeeOvertimeH = intdiv($employeeOvertimeMinutes, 60);
+            $employeeOvertimeM = $employeeOvertimeMinutes % 60;
+            $group['total_overtime_formatted'] = sprintf('%02d:%02d', $employeeOvertimeH, $employeeOvertimeM);
+        }
+
+        $data = [
+            'dtrs' => $dtrs,
+            'groupedByEmployee' => $groupedByEmployee,
+            'totalRecords' => $totalRecords,
+            'totalHoursFormatted' => $totalHoursFormatted,
+            'totalOvertimeFormatted' => $totalOvertimeFormatted,
+            'dateFrom' => $dateFrom ? Carbon::parse($dateFrom)->format('F d, Y') : 'All Time',
+            'dateTo' => $dateTo ? Carbon::parse($dateTo)->format('F d, Y') : 'All Time',
+            'selectedEmployee' => $selectedEmployee,
+            'selectedDepartment' => $selectedDepartment,
+        ];
+
+        $pdf = Pdf::loadView('admin.dtr.export-pdf', $data)->setPaper('a4', 'landscape');
+
+        $filename = 'employee_dtr_export_' . ($dateFrom ? Carbon::parse($dateFrom)->format('Y-m-d') : 'all') . '_' . ($dateTo ? Carbon::parse($dateTo)->format('Y-m-d') : 'all') . '.pdf';
+        return $pdf->download($filename);
+    }
 }

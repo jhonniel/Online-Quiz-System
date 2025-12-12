@@ -144,6 +144,7 @@ Route::prefix('admin')->middleware(['auth', 'admin'])->group(function () {
     Route::post('/dtr/recalculate-deficits', [App\Http\Controllers\Admin\DtrController::class, 'recalculateDeficits'])->name('admin.dtr.recalculate-deficits');
     Route::post('/dtr/import', [App\Http\Controllers\Admin\DtrController::class, 'import'])->name('admin.dtr.import');
     Route::get('/dtr/template', [App\Http\Controllers\Admin\DtrController::class, 'downloadTemplate'])->name('admin.dtr.template');
+    Route::get('/dtr/export-pdf', [App\Http\Controllers\Admin\DtrController::class, 'exportPdf'])->name('admin.dtr.export-pdf');
 
     // Student DTR Management
     Route::get('/student-dtr', [App\Http\Controllers\Admin\DtrController::class, 'studentIndex'])->name('admin.student-dtr.index');

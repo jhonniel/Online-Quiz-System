@@ -31,15 +31,13 @@
                     </svg>
                     Download Template
                 </a>
-                <form action="{{ route('admin.dtr.recalculate-deficits') }}" method="POST" class="inline" onsubmit="return confirm('This will recalculate all deficit records for all employees based on their actual DTR data. This may take a moment. Continue?');">
-                    @csrf
-                    <button type="submit" class="inline-flex items-center px-3 py-2 sm:px-4 sm:py-2 bg-white/10 backdrop-blur-sm border border-white/20 rounded-lg text-white hover:bg-white/20 transition duration-200 text-xs sm:text-sm">
-                        <svg class="h-4 w-4 sm:h-5 sm:w-5 mr-1 sm:mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
-                        </svg>
-                        Recalculate Deficits
-                    </button>
-                </form>
+                <a href="{{ route('admin.dtr.export-pdf', request()->query()) }}"
+                   class="inline-flex items-center px-3 py-2 sm:px-4 sm:py-2 bg-white/10 backdrop-blur-sm border border-white/20 rounded-lg text-white hover:bg-white/20 transition duration-200 text-xs sm:text-sm">
+                    <svg class="h-4 w-4 sm:h-5 sm:w-5 mr-1 sm:mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"></path>
+                    </svg>
+                    Export PDF
+                </a>
             </div>
         </div>
     </div>
