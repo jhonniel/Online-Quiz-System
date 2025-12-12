@@ -79,17 +79,24 @@
 
             <!-- Quick Create Leave for Employee -->
             <div class="bg-white rounded-2xl shadow border border-gray-200 p-3 sm:p-4">
-                <h2 class="text-xs sm:text-sm font-bold text-gray-900 mb-2">File Leave for Employee</h2>
+                <h2 class="text-xs sm:text-sm font-bold text-gray-900 mb-2">File Leave for Employee(s)</h2>
                 <form action="{{ route('admin.leave-requests.store-for-employee') }}" method="POST" class="space-y-3">
                     @csrf
                     <div class="space-y-1">
-                        <label for="create_user_id" class="block text-xs font-medium text-gray-700">Employee</label>
-                        <select name="user_id" id="create_user_id" required class="w-full px-2.5 py-1.5 text-xs border border-gray-300 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
-                            <option value="">Select employee</option>
+                        <label for="create_user_ids" class="block text-xs font-medium text-gray-700">Select Employee(s)</label>
+                        <div class="max-h-32 overflow-y-auto border border-gray-300 rounded-md p-2 space-y-1">
+                            <div class="flex items-center mb-1">
+                                <input type="checkbox" id="select-all-employees" class="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500" onchange="toggleAllEmployees(this)">
+                                <label for="select-all-employees" class="ml-2 text-xs font-semibold text-gray-700 cursor-pointer">Select All</label>
+                            </div>
                             @foreach($employees as $employee)
-                                <option value="{{ $employee->id }}">{{ $employee->name }}</option>
+                                <div class="flex items-center">
+                                    <input type="checkbox" name="user_ids[]" id="employee_{{ $employee->id }}" value="{{ $employee->id }}" class="employee-checkbox rounded border-gray-300 text-indigo-600 focus:ring-indigo-500">
+                                    <label for="employee_{{ $employee->id }}" class="ml-2 text-xs text-gray-700 cursor-pointer">{{ $employee->name }}</label>
+                                </div>
                             @endforeach
-                        </select>
+                        </div>
+                        <p class="text-[10px] text-gray-500 mt-1">Select one or more employees to file leave for</p>
                     </div>
                     <div class="space-y-1">
                         <label for="create_type" class="block text-xs font-medium text-gray-700">Type</label>
@@ -117,7 +124,7 @@
                         <label for="create_reason" class="block text-xs font-medium text-gray-700">Reason (optional)</label>
                         <textarea name="reason" id="create_reason" rows="3" class="w-full px-2.5 py-1.5 text-xs border border-gray-300 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500" placeholder="Add brief notes"></textarea>
                     </div>
-                    <button type="submit" class="w-full inline-flex items-center justify-center px-3 py-1.5 text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded-md shadow focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                    <button type="submit" id="file-leave-btn" class="w-full inline-flex items-center justify-center px-3 py-1.5 text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded-md shadow focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed">
                         File Leave
                     </button>
                     <p class="text-[11px] text-gray-500">Creates a pending request that appears on the employee account and calendar.</p>
@@ -395,6 +402,56 @@ document.getElementById('leave-requests-modal').addEventListener('click', functi
 document.addEventListener('keydown', function(e) {
     if (e.key === 'Escape') {
         closeLeaveRequestsModal();
+    }
+});
+
+// Toggle all employees checkbox
+function toggleAllEmployees(selectAllCheckbox) {
+    const employeeCheckboxes = document.querySelectorAll('.employee-checkbox');
+    employeeCheckboxes.forEach(checkbox => {
+        checkbox.checked = selectAllCheckbox.checked;
+    });
+    updateFileLeaveButton();
+}
+
+// Update file leave button state based on selected employees
+function updateFileLeaveButton() {
+    const selectedEmployees = document.querySelectorAll('.employee-checkbox:checked');
+    const fileLeaveBtn = document.getElementById('file-leave-btn');
+    if (selectedEmployees.length === 0) {
+        fileLeaveBtn.disabled = true;
+    } else {
+        fileLeaveBtn.disabled = false;
+    }
+}
+
+// Add event listeners to employee checkboxes
+document.addEventListener('DOMContentLoaded', function() {
+    const employeeCheckboxes = document.querySelectorAll('.employee-checkbox');
+    employeeCheckboxes.forEach(checkbox => {
+        checkbox.addEventListener('change', updateFileLeaveButton);
+    });
+
+    // Check if any employees are selected on page load
+    updateFileLeaveButton();
+
+    // Form submission validation
+    const form = document.querySelector('form[action="{{ route("admin.leave-requests.store-for-employee") }}"]');
+    if (form) {
+        form.addEventListener('submit', function(e) {
+            const selectedEmployees = document.querySelectorAll('.employee-checkbox:checked');
+            if (selectedEmployees.length === 0) {
+                e.preventDefault();
+                alert('Please select at least one employee.');
+                return false;
+            }
+
+            // Show loading state
+            const submitBtn = form.querySelector('button[type="submit"]');
+            const originalText = submitBtn.innerHTML;
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<svg class="animate-spin h-3 w-3 mr-2 inline" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>Filing...';
+        });
     }
 });
 
