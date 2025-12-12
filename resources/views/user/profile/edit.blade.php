@@ -162,67 +162,17 @@
                         @enderror
                     </div>
                 </div>
-
-                <!-- Change Password Section -->
-                <div class="mb-8 border-t border-gray-200 pt-8">
-                    <h3 class="text-lg font-medium text-gray-900 mb-4">Change Password</h3>
-                    <form id="password-form" action="{{ route('profile.password.change') }}" method="POST" class="space-y-6">
-                        @csrf
-                        <div>
-                            <label for="current_password" class="block text-sm font-medium text-gray-700 mb-2">Current Password</label>
-                            <input type="password"
-                                   id="current_password"
-                                   name="current_password"
-                                   class="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm @error('current_password') border-red-300 @enderror"
-                                   required>
-                            @error('current_password')
-                                <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
-                            @enderror
-                        </div>
-
-                        <div>
-                            <label for="new_password" class="block text-sm font-medium text-gray-700 mb-2">New Password</label>
-                            <input type="password"
-                                   id="new_password"
-                                   name="new_password"
-                                   class="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm @error('new_password') border-red-300 @enderror"
-                                   required>
-                            <p class="mt-1 text-sm text-gray-500">Must be at least 8 characters</p>
-                            @error('new_password')
-                                <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
-                            @enderror
-                        </div>
-
-                        <div>
-                            <label for="new_password_confirmation" class="block text-sm font-medium text-gray-700 mb-2">Confirm New Password</label>
-                            <input type="password"
-                                   id="new_password_confirmation"
-                                   name="new_password_confirmation"
-                                   class="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-                                   required>
-                        </div>
-
-                        <div>
-                            <button type="submit"
-                                    class="inline-flex items-center justify-center px-6 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors duration-200">
-                                <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"></path>
-                                </svg>
-                                Change Password
-                            </button>
-                        </div>
-                    </form>
-                </div>
             </div>
 
-            <!-- Form Actions -->
-            <div class="border-t border-gray-200 px-6 py-4 bg-gray-50">
+            <!-- Form Actions - Sticky at bottom -->
+            <div class="border-t border-gray-200 px-6 py-4 bg-gray-50 flex-shrink-0 sticky bottom-0 z-10">
                 <div class="flex flex-col sm:flex-row gap-3 sm:justify-end">
                     <a href="{{ route('profile.show') }}"
                        class="inline-flex items-center justify-center px-6 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors duration-200">
                         Cancel
                     </a>
                     <button type="submit"
+                            id="save-profile-btn"
                             class="inline-flex items-center justify-center px-6 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors duration-200">
                         <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
@@ -232,6 +182,59 @@
                 </div>
             </div>
         </form>
+    </div>
+
+    <!-- Change Password Section - Separate Form -->
+    <div class="bg-white shadow-sm rounded-lg border border-gray-200 mx-2 sm:mx-3 lg:mx-4 xl:mx-6 mt-4">
+        <div class="p-6">
+            <h3 class="text-lg font-medium text-gray-900 mb-4">Change Password</h3>
+            <form id="password-form" action="{{ route('profile.password.change') }}" method="POST" class="space-y-6">
+                @csrf
+                <div>
+                    <label for="current_password" class="block text-sm font-medium text-gray-700 mb-2">Current Password</label>
+                    <input type="password"
+                           id="current_password"
+                           name="current_password"
+                           class="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm @error('current_password') border-red-300 @enderror"
+                           required>
+                    @error('current_password')
+                        <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                    @enderror
+                </div>
+
+                <div>
+                    <label for="new_password" class="block text-sm font-medium text-gray-700 mb-2">New Password</label>
+                    <input type="password"
+                           id="new_password"
+                           name="new_password"
+                           class="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm @error('new_password') border-red-300 @enderror"
+                           required>
+                    <p class="mt-1 text-sm text-gray-500">Must be at least 8 characters</p>
+                    @error('new_password')
+                        <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                    @enderror
+                </div>
+
+                <div>
+                    <label for="new_password_confirmation" class="block text-sm font-medium text-gray-700 mb-2">Confirm New Password</label>
+                    <input type="password"
+                           id="new_password_confirmation"
+                           name="new_password_confirmation"
+                           class="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                           required>
+                </div>
+
+                <div>
+                    <button type="submit"
+                            class="inline-flex items-center justify-center px-6 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors duration-200">
+                        <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"></path>
+                        </svg>
+                        Change Password
+                    </button>
+                </div>
+            </form>
+        </div>
     </div>
 </div>
 
@@ -351,8 +354,16 @@ document.getElementById('profile-form').addEventListener('submit', function(e) {
     e.preventDefault();
 
     const formData = new FormData(this);
-    const submitButton = this.querySelector('button[type="submit"]');
+    const submitButton = document.getElementById('save-profile-btn') || this.querySelector('button[type="submit"]');
     const originalText = submitButton.innerHTML;
+
+    // Ensure _method is set for PUT request
+    if (!formData.has('_method')) {
+        formData.append('_method', 'PUT');
+    }
+
+    console.log('Submitting profile form to:', this.action);
+    console.log('Form data keys:', Array.from(formData.keys()));
 
     // Disable submit button and show loading state
     submitButton.disabled = true;
@@ -364,9 +375,20 @@ document.getElementById('profile-form').addEventListener('submit', function(e) {
         headers: {
             'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
             'Accept': 'application/json',
+            'X-Requested-With': 'XMLHttpRequest',
         },
     })
     .then(response => {
+        // Check if response is JSON
+        const contentType = response.headers.get('content-type');
+        if (!contentType || !contentType.includes('application/json')) {
+            // If not JSON, might be HTML error page
+            return response.text().then(text => {
+                console.error('Non-JSON response:', text);
+                throw new Error('Server returned an error. Please check the console.');
+            });
+        }
+
         if (!response.ok) {
             return response.json().then(err => Promise.reject(err));
         }
