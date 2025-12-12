@@ -244,9 +244,21 @@
                                         @endforeach
 
                                         @if($total > $displayed)
-                                            <div class="text-[9px] sm:text-[10px] md:text-[11px] text-gray-500">
+                                            @php
+                                                $requestsData = array_map(function($req) {
+                                                    return [
+                                                        'id' => $req['id'],
+                                                        'employee_name' => $req['employee']->name,
+                                                        'type_label' => $req['type_label'],
+                                                        'status' => $req['status'],
+                                                    ];
+                                                }, $day['requests']);
+                                            @endphp
+                                            <button type="button"
+                                                    onclick="showAllLeaveRequests('{{ $day['date']->toDateString() }}', {{ json_encode($requestsData) }})"
+                                                    class="w-full text-[9px] sm:text-[10px] md:text-[11px] text-indigo-600 hover:text-indigo-700 font-semibold hover:underline text-left">
                                                 +{{ $total - $displayed }} more…
-                                            </div>
+                                            </button>
                                         @endif
 
                                         @if($total === 0)
@@ -265,7 +277,127 @@
     </div>
 </div>
 
+<!-- Modal for showing all leave requests on a date -->
+<div id="leave-requests-modal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50 hidden">
+    <div class="relative top-20 mx-auto p-5 border w-11/12 sm:w-3/4 md:w-1/2 lg:w-2/5 shadow-lg rounded-md bg-white">
+        <div class="mt-3">
+            <div class="flex items-center justify-between mb-4">
+                <h3 class="text-lg font-semibold text-gray-900" id="modal-date-title">Leave Requests</h3>
+                <button type="button" onclick="closeLeaveRequestsModal()" class="text-gray-400 hover:text-gray-600">
+                    <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                </button>
+            </div>
+            <div id="modal-requests-list" class="space-y-2 max-h-[60vh] overflow-y-auto">
+                <!-- Leave requests will be inserted here -->
+            </div>
+        </div>
+    </div>
+</div>
+
 <script>
+function showAllLeaveRequests(dateString, requests) {
+    const modal = document.getElementById('leave-requests-modal');
+    const modalTitle = document.getElementById('modal-date-title');
+    const modalList = document.getElementById('modal-requests-list');
+
+    // Format date for display
+    const date = new Date(dateString);
+    const formattedDate = date.toLocaleDateString('en-US', {
+        weekday: 'long',
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
+    });
+
+    modalTitle.textContent = `Leave Requests - ${formattedDate}`;
+
+    // Clear previous content
+    modalList.innerHTML = '';
+
+    if (requests.length === 0) {
+        modalList.innerHTML = '<p class="text-gray-500 text-sm">No leave requests for this date.</p>';
+    } else {
+        requests.forEach(function(entry) {
+            const statusClass = getStatusClass(entry.status);
+            const statusBadge = getStatusBadge(entry.status);
+
+            const requestDiv = document.createElement('div');
+            requestDiv.className = `border ${statusClass} rounded-lg p-3 hover:shadow-md transition-shadow`;
+            const showUrl = '{{ route("admin.leave-requests.show", ":id") }}'.replace(':id', entry.id);
+            requestDiv.innerHTML = `
+                <div class="flex items-start justify-between">
+                    <div class="flex-1">
+                        <a href="${showUrl}" class="block">
+                            <div class="font-semibold text-gray-900 text-sm mb-1">${escapeHtml(entry.employee_name)}</div>
+                            <div class="text-xs text-gray-600 mb-2">${escapeHtml(entry.type_label)}</div>
+                            <div class="flex items-center gap-2">
+                                ${statusBadge}
+                            </div>
+                        </a>
+                    </div>
+                </div>
+            `;
+            modalList.appendChild(requestDiv);
+        });
+    }
+
+    modal.classList.remove('hidden');
+}
+
+function closeLeaveRequestsModal() {
+    const modal = document.getElementById('leave-requests-modal');
+    modal.classList.add('hidden');
+}
+
+function getStatusClass(status) {
+    switch(status) {
+        case 'approved':
+            return 'bg-emerald-50 text-emerald-700 border-emerald-200';
+        case 'pending':
+            return 'bg-yellow-50 text-yellow-700 border-yellow-200';
+        case 'rejected':
+            return 'bg-red-50 text-red-700 border-red-200';
+        default:
+            return 'bg-gray-50 text-gray-700 border-gray-200';
+    }
+}
+
+function getStatusBadge(status) {
+    const statusLabels = {
+        'approved': { label: 'Approved', class: 'bg-emerald-100 text-emerald-800' },
+        'pending': { label: 'Pending', class: 'bg-yellow-100 text-yellow-800' },
+        'rejected': { label: 'Rejected', class: 'bg-red-100 text-red-800' }
+    };
+
+    const statusInfo = statusLabels[status] || { label: status, class: 'bg-gray-100 text-gray-800' };
+
+    return `<span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-semibold ${statusInfo.class}">
+        ${statusInfo.label}
+    </span>`;
+}
+
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+// Close modal when clicking outside
+document.getElementById('leave-requests-modal').addEventListener('click', function(e) {
+    if (e.target === this) {
+        closeLeaveRequestsModal();
+    }
+});
+
+// Close modal on Escape key
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+        closeLeaveRequestsModal();
+    }
+});
+
 function filterByDepartment(departmentId) {
     const url = new URL(window.location.href);
     const params = new URLSearchParams(url.search);
