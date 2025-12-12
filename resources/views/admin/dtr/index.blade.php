@@ -31,7 +31,7 @@
                     </svg>
                     Download Template
                 </a>
-                <a href="{{ route('admin.dtr.export-pdf', request()->query()) }}"
+                <a href="{{ route('admin.dtr.export-pdf', request()->query()) }}" target="_blank"
                    class="inline-flex items-center px-3 py-2 sm:px-4 sm:py-2 bg-white/10 backdrop-blur-sm border border-white/20 rounded-lg text-white hover:bg-white/20 transition duration-200 text-xs sm:text-sm">
                     <svg class="h-4 w-4 sm:h-5 sm:w-5 mr-1 sm:mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"></path>
@@ -439,6 +439,9 @@
                                                     $deficitFormatted = 'N/A';
                                                     $deficitMinutes = 0;
                                                     $showDeficit = false;
+                                                    $balanceMinutes = 0;
+                                                    $balanceFormatted = 'N/A';
+                                                    $isBalanceNegative = false;
                                                 } else {
                                                     // Past week - calculate deficit
                                                     $weeklyBaseMinutes = 40 * 60; // 40:00 = 2400 minutes
@@ -447,6 +450,14 @@
                                                     $deficitM = $deficitMinutes % 60;
                                                     $deficitFormatted = sprintf('%02d:%02d', $deficitH, $deficitM);
                                                     $showDeficit = true;
+
+                                                    // Calculate balance: Deficit - Overtime (from DTR only)
+                                                    $balanceMinutes = $deficitMinutes - $weeklyOvertimeMinutes;
+                                                    $balanceAbsMinutes = abs($balanceMinutes);
+                                                    $balanceH = intdiv($balanceAbsMinutes, 60);
+                                                    $balanceM = $balanceAbsMinutes % 60;
+                                                    $balanceFormatted = ($balanceMinutes < 0 ? '-' : '') . sprintf('%02d:%02d', $balanceH, $balanceM);
+                                                    $isBalanceNegative = $balanceMinutes < 0;
                                                 }
                                             @endphp
                                             <tr>
@@ -488,6 +499,18 @@
                                                                 </div>
                                                             @else
                                                                 <div class="text-sm font-semibold text-gray-500 bg-white px-2 py-1 rounded border border-gray-200 inline-block" title="Current week - deficit will be calculated after week ends">
+                                                                    N/A
+                                                                </div>
+                                                            @endif
+                                                        </div>
+                                                        <div>
+                                                            <div class="text-xs text-gray-600 font-medium mb-1">Balance (Deficit - Overtime)</div>
+                                                            @if($showDeficit)
+                                                                <div class="text-sm font-bold {{ $isBalanceNegative ? 'text-green-600' : 'text-red-600' }} bg-white px-2 py-1 rounded border {{ $isBalanceNegative ? 'border-green-200' : 'border-red-200' }} inline-block">
+                                                                    {{ $balanceFormatted }}
+                                                                </div>
+                                                            @else
+                                                                <div class="text-sm font-semibold text-gray-500 bg-white px-2 py-1 rounded border border-gray-200 inline-block" title="Current week - balance will be calculated after week ends">
                                                                     N/A
                                                                 </div>
                                                             @endif

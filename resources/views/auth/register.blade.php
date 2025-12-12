@@ -409,19 +409,20 @@
             );
 
             if (isDummy) {
-                ToastNotification.warning('Please use a real email address, not a dummy email.', 4000);
+                // Removed toast notification - validation still happens but no toast shown
                 return false;
             }
 
             return true;
         }
 
-        // Debounced email validation
+        // Debounced email validation (removed toast notification)
         let emailValidationTimeout;
         function debouncedEmailValidation(email) {
             clearTimeout(emailValidationTimeout);
             emailValidationTimeout = setTimeout(() => {
                 if (email.trim()) {
+                    // Validate silently without showing toast
                     validateEmail(email);
                 }
             }, 1000); // Wait 1 second after user stops typing
@@ -478,10 +479,7 @@
                     matchText.textContent = 'Passwords match';
                     passwordMatchDiv.classList.remove('error');
 
-                    // Show success toast for password match
-                    if (password.length >= 8) {
-                        ToastNotification.success('Your passwords match perfectly!', 3000);
-                    }
+                    // Removed toast notification for password match
                 } else if (confirmPassword.length > 0 && password !== confirmPassword) {
                     matchIcon.textContent = '✗';
                     matchIcon.className = 'text-red-500 mr-2';
@@ -489,8 +487,7 @@
                     matchText.textContent = 'Passwords do not match';
                     passwordMatchDiv.classList.add('error');
 
-                    // Show error toast for password mismatch
-                    ToastNotification.error('The passwords you entered do not match. Please try again.', 4000);
+                    // Removed toast notification for password mismatch
                 }
             } else {
                 passwordMatchDiv.classList.add('hidden');

@@ -169,6 +169,7 @@ Route::prefix('admin')->middleware(['auth', 'admin'])->group(function () {
         Route::post('/leave-requests/{leaveRequest}/force-accept', [App\Http\Controllers\Admin\LeaveRequestController::class, 'forceAccept'])->name('admin.leave-requests.force-accept');
         Route::post('/leave-requests/{leaveRequest}/reject', [App\Http\Controllers\Admin\LeaveRequestController::class, 'reject'])->name('admin.leave-requests.reject');
         Route::post('/leave-requests/{leaveRequest}/resubmit', [App\Http\Controllers\Admin\LeaveRequestController::class, 'resubmit'])->name('admin.leave-requests.resubmit');
+        Route::delete('/leave-requests/{leaveRequest}', [App\Http\Controllers\Admin\LeaveRequestController::class, 'destroy'])->name('admin.leave-requests.destroy');
     });
 
     // Student Management

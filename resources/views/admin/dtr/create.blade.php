@@ -16,7 +16,7 @@
                     <p class="text-indigo-100 mt-1">Manually add a new employee time record</p>
                 </div>
             </div>
-            <a href="{{ route('admin.dtr.index') }}" 
+            <a href="{{ route('admin.dtr.index') }}"
                class="inline-flex items-center px-4 py-2 bg-white/10 backdrop-blur-sm border border-white/20 rounded-lg text-white hover:bg-white/20 transition duration-200">
                 <svg class="h-5 w-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
@@ -71,21 +71,37 @@
                 <div class="border-t border-gray-200 {{ $collapseByDefault ? 'hidden' : '' }}" data-section="basic-info" style="{{ $collapseByDefault ? 'display: none;' : '' }}">
                     <div class="p-6 space-y-6">
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            <!-- Employee Selection -->
+                            <!-- Employee Selection (Bulk) -->
                             <div>
-                                <label for="user_id" class="block text-sm font-medium text-gray-700 mb-2">
-                                    Employee <span class="text-red-500">*</span>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">
+                                    Select Employees <span class="text-red-500">*</span>
                                 </label>
-                                <select name="user_id" id="user_id" required
-                                        class="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
-                                    <option value="">Select Employee</option>
-                                    @foreach($employees as $employee)
-                                        <option value="{{ $employee->id }}" {{ old('user_id') == $employee->id ? 'selected' : '' }}>
-                                            {{ $employee->name }} ({{ $employee->email }})
-                                        </option>
-                                    @endforeach
-                                </select>
-                                @error('user_id')
+                                <div class="border border-gray-300 rounded-lg p-4 max-h-64 overflow-y-auto bg-white">
+                                    <div class="mb-3 pb-3 border-b border-gray-200">
+                                        <label class="flex items-center space-x-2 cursor-pointer">
+                                            <input type="checkbox" id="select_all_employees" class="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded">
+                                            <span class="text-sm font-medium text-gray-700">Select All</span>
+                                        </label>
+                                    </div>
+                                    <div class="space-y-2">
+                                        @foreach($employees as $employee)
+                                            <label class="flex items-center space-x-2 cursor-pointer hover:bg-gray-50 p-2 rounded">
+                                                <input type="checkbox" name="user_ids[]" value="{{ $employee->id }}"
+                                                       class="employee-checkbox h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
+                                                       {{ (is_array(old('user_ids')) && in_array($employee->id, old('user_ids'))) ? 'checked' : '' }}>
+                                                <span class="text-sm text-gray-700">
+                                                    {{ $employee->name }}
+                                                    <span class="text-gray-500">({{ $employee->email }})</span>
+                                                </span>
+                                            </label>
+                                        @endforeach
+                                    </div>
+                                </div>
+                                <p class="mt-2 text-xs text-gray-500">Select one or more employees to add DTR records for</p>
+                                @error('user_ids')
+                                    <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                                @enderror
+                                @error('user_ids.*')
                                     <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
                                 @enderror
                             </div>
@@ -144,8 +160,8 @@
                                 <label for="total_hours" class="block text-sm font-medium text-gray-700 mb-2">
                                     Worked Hours (HH:MM) <span class="text-red-500">*</span>
                                 </label>
-                                <input type="text" name="total_hours" id="total_hours" 
-                                       value="{{ old('total_hours') }}" 
+                                <input type="text" name="total_hours" id="total_hours"
+                                       value="{{ old('total_hours') }}"
                                        placeholder="08:00"
                                        class="time-input w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
                                        required>
@@ -163,8 +179,8 @@
                                 <label for="overtime_hours" class="block text-sm font-medium text-gray-700 mb-2">
                                     Overtime (HH:MM)
                                 </label>
-                                <input type="text" name="overtime_hours" id="overtime_hours" 
-                                       value="{{ old('overtime_hours') }}" 
+                                <input type="text" name="overtime_hours" id="overtime_hours"
+                                       value="{{ old('overtime_hours') }}"
                                        placeholder="00:00"
                                        class="time-input w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
                                 <p class="mt-1 text-xs text-gray-500">Overtime in <strong>HH:MM</strong> (e.g., 01:00, 00:45). No AM/PM.</p>
@@ -255,6 +271,43 @@
 </div>
 
 <script>
+    // Select All functionality
+    document.addEventListener('DOMContentLoaded', function () {
+        const selectAllCheckbox = document.getElementById('select_all_employees');
+        const employeeCheckboxes = document.querySelectorAll('.employee-checkbox');
+
+        if (selectAllCheckbox && employeeCheckboxes.length > 0) {
+            selectAllCheckbox.addEventListener('change', function() {
+                employeeCheckboxes.forEach(function(checkbox) {
+                    checkbox.checked = selectAllCheckbox.checked;
+                });
+            });
+
+            // Update select all when individual checkboxes change
+            employeeCheckboxes.forEach(function(checkbox) {
+                checkbox.addEventListener('change', function() {
+                    const allChecked = Array.from(employeeCheckboxes).every(cb => cb.checked);
+                    selectAllCheckbox.checked = allChecked;
+                });
+            });
+        }
+
+        // Form validation - ensure at least one employee is selected
+        const form = document.querySelector('form[action="{{ route('admin.dtr.store') }}"]');
+        if (form) {
+            form.addEventListener('submit', function(e) {
+                const checkedEmployees = document.querySelectorAll('.employee-checkbox:checked');
+                if (checkedEmployees.length === 0) {
+                    e.preventDefault();
+                    alert('Please select at least one employee.');
+                    return false;
+                }
+            });
+        }
+    });
+</script>
+
+<script>
     document.addEventListener('DOMContentLoaded', function () {
         const inputs = document.querySelectorAll('.time-input');
 
@@ -310,7 +363,7 @@
             }
 
             travelCheckbox.addEventListener('change', updateStatus);
-            
+
             // Initialize on page load
             updateStatus();
         }
@@ -318,7 +371,7 @@
         // Handle collapsible sections
         function toggleVisibility(element, chevron) {
             if (!element) return;
-            
+
             const isHidden = element.classList.contains('hidden');
             if (isHidden) {
                 element.classList.remove('hidden');
@@ -336,7 +389,7 @@
             const targetId = button.getAttribute('data-target');
             const content = document.querySelector(`[data-section="${targetId}"]`);
             const chevron = document.querySelector(`[data-chevron="${targetId}"]`);
-            
+
             if (!button || !content) {
                 console.warn('Section toggle elements not found', { button: !!button, content: !!content });
                 return;

@@ -52,7 +52,7 @@
                 Total Hours: {{ $employeeGroup['total_hours_formatted'] }} •
                 Total Overtime: {{ $employeeGroup['total_overtime_formatted'] }} •
                 Total Deficit: <span style="color: #DC2626;">{{ $employeeGroup['total_deficit_formatted'] }}</span> •
-                Balance Overtime: <span style="color: {{ $employeeGroup['is_balance_negative'] ? '#DC2626' : '#059669' }};">{{ $employeeGroup['balance_overtime_formatted'] }}</span> •
+                Balance (Overtime - Deficit): <span style="color: {{ $employeeGroup['is_balance_negative'] ? '#DC2626' : '#059669' }};">{{ $employeeGroup['balance_overtime_formatted'] }}</span> •
                 Records: {{ count($employeeGroup['records']) }}
             </div>
         </div>

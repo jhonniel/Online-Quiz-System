@@ -136,7 +136,8 @@ class DtrController extends Controller
     public function store(Request $request)
     {
         $request->validate([
-            'user_id' => 'required|exists:users,id',
+            'user_ids' => 'required|array|min:1',
+            'user_ids.*' => 'required|exists:users,id',
             'date' => 'required|date',
             'added_time_from_note' => 'nullable|date_format:H:i',
             'total_hours' => 'required|date_format:H:i',
@@ -162,73 +163,96 @@ class DtrController extends Controller
             $status = 'travel';
         }
 
-        // Verify user is an employee
-        $employee = User::where('id', $request->user_id)
-            ->where('role', 'employee')
-            ->first();
+        // Convert HH:MM inputs to decimal hours (same for all employees)
+        $workedDecimal = 0;
+        $addedDecimal = 0;
+        $overtimeDecimal = 0;
 
-        if (!$employee) {
-            return redirect()->back()
-                ->withErrors(['user_id' => 'Selected user is not an employee.'])
-                ->withInput();
+        if ($request->filled('total_hours')) {
+            [$h, $m] = explode(':', $request->total_hours);
+            $workedDecimal = ((int) $h) + ((int) $m / 60);
         }
 
-        // Check if record already exists for this date
-        $existingDtr = Dtr::where('user_id', $request->user_id)
-            ->whereDate('date', $request->date)
-            ->first();
-
-        if ($existingDtr) {
-            return redirect()->back()
-                ->withErrors(['date' => 'A DTR record already exists for this employee on this date.'])
-                ->withInput();
+        if ($request->filled('added_time_from_note')) {
+            [$eh, $em] = explode(':', $request->added_time_from_note);
+            $addedDecimal = ((int) $eh) + ((int) $em / 60);
         }
 
-        try {
-            // Convert HH:MM inputs to decimal hours
-            $workedDecimal = 0;
-            $addedDecimal = 0;
-            $overtimeDecimal = 0;
+        // Total hours for the day = Worked + Added
+        $totalDecimal = $workedDecimal + $addedDecimal;
 
-            if ($request->filled('total_hours')) {
-                [$h, $m] = explode(':', $request->total_hours);
-                $workedDecimal = ((int) $h) + ((int) $m / 60);
+        // Overtime is any hours beyond the standard 8:00
+        $standardDecimal = 8.0;
+        $overtimeDecimal = $totalDecimal > $standardDecimal
+            ? $totalDecimal - $standardDecimal
+            : 0;
+
+        // Process bulk creation for selected employees
+        $userIds = $request->user_ids;
+        $created = 0;
+        $skipped = [];
+        $errors = [];
+
+        foreach ($userIds as $userId) {
+            // Verify user is an employee
+            $employee = User::where('id', $userId)
+                ->where('role', 'employee')
+                ->first();
+
+            if (!$employee) {
+                $errors[] = "User ID {$userId} is not an employee.";
+                continue;
             }
 
-            if ($request->filled('added_time_from_note')) {
-                [$eh, $em] = explode(':', $request->added_time_from_note);
-                $addedDecimal = ((int) $eh) + ((int) $em / 60);
+            // Check if record already exists for this date
+            $existingDtr = Dtr::where('user_id', $userId)
+                ->whereDate('date', $request->date)
+                ->first();
+
+            if ($existingDtr) {
+                $skipped[] = $employee->name;
+                continue;
             }
 
-            // Total hours for the day = Worked + Added
-            $totalDecimal = $workedDecimal + $addedDecimal;
+            try {
+                Dtr::create([
+                    'user_id' => $userId,
+                    'date' => $request->date,
+                    'added_time_from_note' => $addedDecimal,
+                    'total_hours' => $totalDecimal,
+                    'overtime_hours' => $overtimeDecimal,
+                    'status' => $status,
+                    'remarks' => $request->remarks,
+                ]);
 
-            // Overtime is any hours beyond the standard 8:00
-            $standardDecimal = 8.0;
-            $overtimeDecimal = $totalDecimal > $standardDecimal
-                ? $totalDecimal - $standardDecimal
-                : 0;
+                // Calculate and store weekly deficit for this employee
+                $this->calculateAndStoreWeeklyDeficit($userId, Carbon::parse($request->date));
 
-            $dtr = Dtr::create([
-                'user_id' => $request->user_id,
-                'date' => $request->date,
-                'added_time_from_note' => $addedDecimal,
-                'total_hours' => $totalDecimal,
-                'overtime_hours' => $overtimeDecimal,
-                'status' => $status,
-                'remarks' => $request->remarks,
-            ]);
+                $created++;
+            } catch (\Exception $e) {
+                Log::error("DTR creation failed for user {$userId}: " . $e->getMessage());
+                $errors[] = "Failed to create DTR for {$employee->name}: " . $e->getMessage();
+            }
+        }
 
-            // Calculate and store weekly deficit
-            $this->calculateAndStoreWeeklyDeficit($request->user_id, Carbon::parse($request->date));
+        // Build success/error messages
+        $messages = [];
+        if ($created > 0) {
+            $messages[] = "Successfully created {$created} DTR record(s).";
+        }
+        if (count($skipped) > 0) {
+            $messages[] = "Skipped " . count($skipped) . " employee(s) (records already exist): " . implode(', ', $skipped);
+        }
+        if (count($errors) > 0) {
+            $messages[] = "Errors: " . implode(' ', $errors);
+        }
 
+        if ($created > 0) {
             return redirect()->route('admin.dtr.index')
-                ->with('success', 'DTR record added successfully.');
-        } catch (\Exception $e) {
-            Log::error('DTR creation failed: ' . $e->getMessage());
-
+                ->with('success', implode(' ', $messages));
+        } else {
             return redirect()->back()
-                ->withErrors(['error' => 'Failed to create DTR record: ' . $e->getMessage()])
+                ->withErrors(['error' => implode(' ', $messages)])
                 ->withInput();
         }
     }
@@ -1237,29 +1261,45 @@ class DtrController extends Controller
         $totalOvertimeFormatted = sprintf('%02d:%02d', $totalOvertimeH, $totalOvertimeM);
 
         // Calculate total deficit hours for the date range
+        // Calculate deficit directly from DTR records grouped by week
         $totalDeficitHours = 0;
+        $totalOvertimeFromCompletedWeeks = 0; // Only count overtime from completed weeks
         if ($dateFrom && $dateTo) {
-            // Get all deficit records that overlap with the date range
-            $deficitQuery = DtrDeficit::whereHas('user', function($q) use ($request) {
-                $q->where('role', 'employee');
-                if ($request->filled('department_id')) {
-                    $q->where('department_id', $request->department_id);
-                }
-            });
+            $today = Carbon::today();
 
-            // Filter by employee if selected
-            if ($request->filled('employee_id')) {
-                $deficitQuery->where('user_id', $request->employee_id);
+            // Group DTR records by employee and week
+            $weeklyGroups = [];
+            foreach ($dtrs as $dtr) {
+                $weekStart = $dtr->date->copy()->startOfWeek();
+                $weekEnd = $dtr->date->copy()->endOfWeek();
+                $weekKey = $dtr->user_id . '_' . $weekStart->toDateString() . '_' . $weekEnd->toDateString();
+
+                // Only calculate deficit for completed weeks (not current week)
+                if ($today->gt($weekEnd)) {
+                    if (!isset($weeklyGroups[$weekKey])) {
+                        $weeklyGroups[$weekKey] = [
+                            'user_id' => $dtr->user_id,
+                            'week_start' => $weekStart,
+                            'week_end' => $weekEnd,
+                            'total_hours' => 0,
+                            'overtime_hours' => 0,
+                        ];
+                    }
+                    $weeklyGroups[$weekKey]['total_hours'] += ($dtr->total_hours ?? 0);
+                    $weeklyGroups[$weekKey]['overtime_hours'] += ($dtr->overtime_hours ?? 0);
+                }
             }
 
-            // Get deficits where the week overlaps with the date range
-            // A week overlaps if: week_start_date <= dateTo AND week_end_date >= dateFrom
-            $deficits = $deficitQuery->where('week_end_date', '>=', $dateFrom)
-                ->where('week_start_date', '<=', $dateTo)
-                ->where('is_applied', true)
-                ->get();
-
-            $totalDeficitHours = $deficits->sum('deficit_hours');
+            // Calculate deficit per week: max(0, 40 hours - weekly total)
+            foreach ($weeklyGroups as $weekGroup) {
+                $weeklyBaseHours = 40.0;
+                $weeklyDeficit = max(0, $weeklyBaseHours - $weekGroup['total_hours']);
+                $totalDeficitHours += $weeklyDeficit;
+                $totalOvertimeFromCompletedWeeks += $weekGroup['overtime_hours'];
+            }
+        } else {
+            // If no date range, use all overtime (but this shouldn't happen in PDF export)
+            $totalOvertimeFromCompletedWeeks = $totalOvertime;
         }
 
         // Format deficit
@@ -1268,8 +1308,8 @@ class DtrController extends Controller
         $totalDeficitM = $totalDeficitMinutes % 60;
         $totalDeficitFormatted = sprintf('%02d:%02d', $totalDeficitH, $totalDeficitM);
 
-        // Calculate balance overtime: Total Overtime - Deficit
-        $balanceOvertimeHours = $totalOvertime - $totalDeficitHours;
+        // Calculate balance overtime: Deficit - Overtime (from completed weeks only)
+        $balanceOvertimeHours = $totalOvertimeFromCompletedWeeks - $totalDeficitHours;
         $balanceOvertimeMinutes = (int) round(abs($balanceOvertimeHours) * 60);
         $balanceOvertimeH = intdiv($balanceOvertimeMinutes, 60);
         $balanceOvertimeM = $balanceOvertimeMinutes % 60;
@@ -1296,7 +1336,7 @@ class DtrController extends Controller
         // Format employee totals and calculate per-employee deficit and balance
         foreach ($groupedByEmployee as &$group) {
             $employee = $group['employee'];
-            
+
             $employeeTotalMinutes = (int) round($group['total_hours'] * 60);
             $employeeTotalH = intdiv($employeeTotalMinutes, 60);
             $employeeTotalM = $employeeTotalMinutes % 60;
@@ -1308,17 +1348,48 @@ class DtrController extends Controller
             $group['total_overtime_formatted'] = sprintf('%02d:%02d', $employeeOvertimeH, $employeeOvertimeM);
 
             // Calculate deficit for this employee based on date range
+            // Calculate deficit directly from DTR records grouped by week
             $employeeDeficitHours = 0;
+            $employeeOvertimeFromCompletedWeeks = 0; // Only count overtime from completed weeks
             if ($dateFrom && $dateTo) {
-                // Get deficit records for this employee where the week overlaps with the date range
-                $employeeDeficits = DtrDeficit::where('user_id', $employee->id)
-                    ->where('week_end_date', '>=', $dateFrom)
-                    ->where('week_start_date', '<=', $dateTo)
-                    ->where('is_applied', true)
-                    ->get();
+                $today = Carbon::today();
 
-                $employeeDeficitHours = $employeeDeficits->sum('deficit_hours');
+                // Group DTR records by week
+                $weeklyGroups = [];
+                foreach ($group['records'] as $dtr) {
+                    $weekStart = $dtr->date->copy()->startOfWeek();
+                    $weekEnd = $dtr->date->copy()->endOfWeek();
+                    $weekKey = $weekStart->toDateString() . '_' . $weekEnd->toDateString();
+
+                    // Only calculate deficit for completed weeks (not current week)
+                    if ($today->gt($weekEnd)) {
+                        if (!isset($weeklyGroups[$weekKey])) {
+                            $weeklyGroups[$weekKey] = [
+                                'week_start' => $weekStart,
+                                'week_end' => $weekEnd,
+                                'total_hours' => 0,
+                                'overtime_hours' => 0,
+                            ];
+                        }
+                        $weeklyGroups[$weekKey]['total_hours'] += ($dtr->total_hours ?? 0);
+                        $weeklyGroups[$weekKey]['overtime_hours'] += ($dtr->overtime_hours ?? 0);
+                    }
+                }
+
+                // Calculate deficit per week: max(0, 40 hours - weekly total)
+                foreach ($weeklyGroups as $weekGroup) {
+                    $weeklyBaseHours = 40.0;
+                    $weeklyDeficit = max(0, $weeklyBaseHours - $weekGroup['total_hours']);
+                    $employeeDeficitHours += $weeklyDeficit;
+                    $employeeOvertimeFromCompletedWeeks += $weekGroup['overtime_hours'];
+                }
+            } else {
+                // If no date range, use all overtime (but this shouldn't happen in PDF export)
+                $employeeOvertimeFromCompletedWeeks = $group['total_overtime'];
             }
+
+            // Ensure deficit is not negative (show 00:00 if negative)
+            $employeeDeficitHours = max(0, $employeeDeficitHours);
 
             // Format employee deficit
             $employeeDeficitMinutes = (int) round($employeeDeficitHours * 60);
@@ -1326,8 +1397,9 @@ class DtrController extends Controller
             $employeeDeficitM = $employeeDeficitMinutes % 60;
             $group['total_deficit_formatted'] = sprintf('%02d:%02d', $employeeDeficitH, $employeeDeficitM);
 
-            // Calculate balance overtime for this employee: Total Overtime - Deficit
-            $employeeBalanceOvertimeHours = $group['total_overtime'] - $employeeDeficitHours;
+            // Calculate balance overtime for this employee: Overtime - Deficit (from completed weeks only)
+            // Negative balance means deficit exceeds overtime
+            $employeeBalanceOvertimeHours = $employeeOvertimeFromCompletedWeeks - $employeeDeficitHours;
             $employeeBalanceOvertimeMinutes = (int) round(abs($employeeBalanceOvertimeHours) * 60);
             $employeeBalanceOvertimeH = intdiv($employeeBalanceOvertimeMinutes, 60);
             $employeeBalanceOvertimeM = $employeeBalanceOvertimeMinutes % 60;
@@ -1353,6 +1425,6 @@ class DtrController extends Controller
         $pdf = Pdf::loadView('admin.dtr.export-pdf', $data)->setPaper('a4', 'landscape');
 
         $filename = 'employee_dtr_export_' . ($dateFrom ? Carbon::parse($dateFrom)->format('Y-m-d') : 'all') . '_' . ($dateTo ? Carbon::parse($dateTo)->format('Y-m-d') : 'all') . '.pdf';
-        return $pdf->download($filename);
+        return $pdf->stream($filename);
     }
 }

@@ -27,7 +27,7 @@ class LeaveRequestController extends Controller
      */
     public function index(Request $request)
     {
-        $query = LeaveRequest::with(['user', 'reviewer', 'approvedBy.performer', 'rejectedBy.performer', 'resubmissionRequestedBy.performer'])
+        $query = LeaveRequest::with(['user', 'reviewer', 'approvedBy.performer', 'rejectedBy.performer', 'resubmissionRequestedBy.performer', 'logs'])
             ->whereHas('user', function($q) {
                 $q->where('role', 'employee');
             });
@@ -1077,5 +1077,33 @@ class LeaveRequestController extends Controller
 
             $dtr->save();
         }
+    }
+
+    /**
+     * Delete a leave request that was filed by an admin.
+     */
+    public function destroy(LeaveRequest $leaveRequest)
+    {
+        // Check if this request was filed by an admin
+        $filedByAdminLog = $leaveRequest->logs()
+            ->where('action', 'filed_by_admin')
+            ->first();
+
+        if (!$filedByAdminLog) {
+            return redirect()->route('admin.leave-requests.index')
+                ->with('error', 'This leave request cannot be deleted. Only requests filed by admins can be deleted.');
+        }
+
+        // Check if the current admin is the one who filed it
+        if ($filedByAdminLog->performed_by !== Auth::id()) {
+            return redirect()->route('admin.leave-requests.index')
+                ->with('error', 'You can only delete leave requests that you filed.');
+        }
+
+        // Delete the leave request (logs will be cascade deleted)
+        $leaveRequest->delete();
+
+        return redirect()->route('admin.leave-requests.index')
+            ->with('success', 'Leave request deleted successfully.');
     }
 }

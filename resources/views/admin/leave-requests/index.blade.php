@@ -232,10 +232,25 @@
                                     {{ $request->created_at->format('M d, Y') }}
                                 </td>
                                 <td class="px-3 sm:px-6 py-4 text-xs sm:text-sm font-medium">
-                                    <a href="{{ route('admin.leave-requests.show', $request) }}"
-                                       class="text-indigo-600 hover:text-indigo-900 whitespace-nowrap">
-                                        View Details
-                                    </a>
+                                    <div class="flex items-center space-x-2">
+                                        <a href="{{ route('admin.leave-requests.show', $request) }}"
+                                           class="text-indigo-600 hover:text-indigo-900 whitespace-nowrap">
+                                            View Details
+                                        </a>
+                                        @php
+                                            $filedByAdminLog = $request->logs->firstWhere('action', 'filed_by_admin');
+                                            $canDelete = $filedByAdminLog && $filedByAdminLog->performed_by === auth()->id();
+                                        @endphp
+                                        @if($canDelete)
+                                            <form action="{{ route('admin.leave-requests.destroy', $request) }}" method="POST" class="inline" onsubmit="return confirm('Are you sure you want to delete this leave request?');">
+                                                @csrf
+                                                @method('DELETE')
+                                                <button type="submit" class="text-red-600 hover:text-red-900 whitespace-nowrap">
+                                                    Delete
+                                                </button>
+                                            </form>
+                                        @endif
+                                    </div>
                                 </td>
                             </tr>
                         @endforeach

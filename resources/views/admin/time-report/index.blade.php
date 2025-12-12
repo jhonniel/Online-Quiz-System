@@ -265,14 +265,32 @@
                                 <div class="text-lg font-semibold text-gray-500 mt-1" title="Current week - deficit will be calculated after week ends">N/A</div>
                             @else
                                 @php
-                                    $deficitMinutes = (int) round(abs($report['deficit_hours']) * 60);
+                                    $deficitMinutes = (int) round($report['deficit_hours'] * 60);
                                     $deficitH = intdiv($deficitMinutes, 60);
                                     $deficitM = $deficitMinutes % 60;
                                     $deficitFormatted = sprintf('%02d:%02d', $deficitH, $deficitM);
-                                    $isNegative = $report['deficit_hours'] < 0;
                                 @endphp
-                                <div class="text-lg font-bold {{ $isNegative ? 'text-green-600' : ($report['deficit_hours'] > 0 ? 'text-red-600' : 'text-gray-600') }} mt-1">
-                                    {{ $isNegative ? '-' : '' }}{{ $deficitFormatted }}
+                                <div class="text-lg font-bold text-red-600 mt-1">
+                                    {{ $deficitFormatted }}
+                                </div>
+                            @endif
+                        </div>
+                        @endif
+                        @if(isset($report['balance_hours']))
+                        <div class="bg-gray-50 rounded-lg p-3">
+                            <div class="text-xs font-medium text-gray-500">Balance (Overtime - Deficit)</div>
+                            @if($report['is_current_week'])
+                                <div class="text-lg font-semibold text-gray-500 mt-1" title="Current week - balance will be calculated after week ends">N/A</div>
+                            @else
+                                @php
+                                    $balanceMinutes = (int) round(abs($report['balance_hours']) * 60);
+                                    $balanceH = intdiv($balanceMinutes, 60);
+                                    $balanceM = $balanceMinutes % 60;
+                                    $balanceFormatted = sprintf('%02d:%02d', $balanceH, $balanceM);
+                                    $isBalanceNegative = $report['balance_hours'] < 0;
+                                @endphp
+                                <div class="text-lg font-bold {{ $isBalanceNegative ? 'text-red-600' : 'text-green-600' }} mt-1">
+                                    {{ $isBalanceNegative ? '-' : '' }}{{ $balanceFormatted }}
                                 </div>
                             @endif
                         </div>
