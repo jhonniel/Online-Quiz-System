@@ -181,7 +181,15 @@ class TimeReportController extends Controller
 
             // Only calculate deficit if the date range has ended (end date is in the past)
             $rangeHasEnded = $weekEndDate->lt($today);
-            $deficitHours = $rangeHasEnded ? max(0, $baseHours - $totalHours) : null;
+
+            // Calculate deficit: (Base Hours - Total Hours) - Overtime Hours
+            // This allows negative values to show available overtime balance
+            if ($rangeHasEnded) {
+                $rawDeficit = $baseHours - $totalHours;
+                $deficitHours = $rawDeficit - $totalOvertime; // Subtract overtime from deficit
+            } else {
+                $deficitHours = null;
+            }
 
             $weeklyReports[] = [
                 'employee' => $employee,

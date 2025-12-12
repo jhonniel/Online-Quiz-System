@@ -1236,6 +1236,46 @@ class DtrController extends Controller
         $totalOvertimeM = $totalOvertimeMinutes % 60;
         $totalOvertimeFormatted = sprintf('%02d:%02d', $totalOvertimeH, $totalOvertimeM);
 
+        // Calculate total deficit hours for the date range
+        $totalDeficitHours = 0;
+        if ($dateFrom && $dateTo) {
+            // Get all deficit records that overlap with the date range
+            $deficitQuery = DtrDeficit::whereHas('user', function($q) use ($request) {
+                $q->where('role', 'employee');
+                if ($request->filled('department_id')) {
+                    $q->where('department_id', $request->department_id);
+                }
+            });
+
+            // Filter by employee if selected
+            if ($request->filled('employee_id')) {
+                $deficitQuery->where('user_id', $request->employee_id);
+            }
+
+            // Get deficits where the week overlaps with the date range
+            // A week overlaps if: week_start_date <= dateTo AND week_end_date >= dateFrom
+            $deficits = $deficitQuery->where('week_end_date', '>=', $dateFrom)
+                ->where('week_start_date', '<=', $dateTo)
+                ->where('is_applied', true)
+                ->get();
+
+            $totalDeficitHours = $deficits->sum('deficit_hours');
+        }
+
+        // Format deficit
+        $totalDeficitMinutes = (int) round($totalDeficitHours * 60);
+        $totalDeficitH = intdiv($totalDeficitMinutes, 60);
+        $totalDeficitM = $totalDeficitMinutes % 60;
+        $totalDeficitFormatted = sprintf('%02d:%02d', $totalDeficitH, $totalDeficitM);
+
+        // Calculate balance overtime: Total Overtime - Deficit
+        $balanceOvertimeHours = $totalOvertime - $totalDeficitHours;
+        $balanceOvertimeMinutes = (int) round(abs($balanceOvertimeHours) * 60);
+        $balanceOvertimeH = intdiv($balanceOvertimeMinutes, 60);
+        $balanceOvertimeM = $balanceOvertimeMinutes % 60;
+        $balanceOvertimeFormatted = ($balanceOvertimeHours < 0 ? '-' : '') . sprintf('%02d:%02d', $balanceOvertimeH, $balanceOvertimeM);
+        $isBalanceNegative = $balanceOvertimeHours < 0;
+
         // Group by employee for better organization
         $groupedByEmployee = [];
         foreach ($dtrs as $dtr) {
@@ -1253,8 +1293,10 @@ class DtrController extends Controller
             $groupedByEmployee[$employeeId]['total_overtime'] += ($dtr->overtime_hours ?? 0);
         }
 
-        // Format employee totals
+        // Format employee totals and calculate per-employee deficit and balance
         foreach ($groupedByEmployee as &$group) {
+            $employee = $group['employee'];
+            
             $employeeTotalMinutes = (int) round($group['total_hours'] * 60);
             $employeeTotalH = intdiv($employeeTotalMinutes, 60);
             $employeeTotalM = $employeeTotalMinutes % 60;
@@ -1264,6 +1306,33 @@ class DtrController extends Controller
             $employeeOvertimeH = intdiv($employeeOvertimeMinutes, 60);
             $employeeOvertimeM = $employeeOvertimeMinutes % 60;
             $group['total_overtime_formatted'] = sprintf('%02d:%02d', $employeeOvertimeH, $employeeOvertimeM);
+
+            // Calculate deficit for this employee based on date range
+            $employeeDeficitHours = 0;
+            if ($dateFrom && $dateTo) {
+                // Get deficit records for this employee where the week overlaps with the date range
+                $employeeDeficits = DtrDeficit::where('user_id', $employee->id)
+                    ->where('week_end_date', '>=', $dateFrom)
+                    ->where('week_start_date', '<=', $dateTo)
+                    ->where('is_applied', true)
+                    ->get();
+
+                $employeeDeficitHours = $employeeDeficits->sum('deficit_hours');
+            }
+
+            // Format employee deficit
+            $employeeDeficitMinutes = (int) round($employeeDeficitHours * 60);
+            $employeeDeficitH = intdiv($employeeDeficitMinutes, 60);
+            $employeeDeficitM = $employeeDeficitMinutes % 60;
+            $group['total_deficit_formatted'] = sprintf('%02d:%02d', $employeeDeficitH, $employeeDeficitM);
+
+            // Calculate balance overtime for this employee: Total Overtime - Deficit
+            $employeeBalanceOvertimeHours = $group['total_overtime'] - $employeeDeficitHours;
+            $employeeBalanceOvertimeMinutes = (int) round(abs($employeeBalanceOvertimeHours) * 60);
+            $employeeBalanceOvertimeH = intdiv($employeeBalanceOvertimeMinutes, 60);
+            $employeeBalanceOvertimeM = $employeeBalanceOvertimeMinutes % 60;
+            $group['balance_overtime_formatted'] = ($employeeBalanceOvertimeHours < 0 ? '-' : '') . sprintf('%02d:%02d', $employeeBalanceOvertimeH, $employeeBalanceOvertimeM);
+            $group['is_balance_negative'] = $employeeBalanceOvertimeHours < 0;
         }
 
         $data = [
@@ -1272,6 +1341,9 @@ class DtrController extends Controller
             'totalRecords' => $totalRecords,
             'totalHoursFormatted' => $totalHoursFormatted,
             'totalOvertimeFormatted' => $totalOvertimeFormatted,
+            'totalDeficitFormatted' => $totalDeficitFormatted,
+            'balanceOvertimeFormatted' => $balanceOvertimeFormatted,
+            'isBalanceNegative' => $isBalanceNegative,
             'dateFrom' => $dateFrom ? Carbon::parse($dateFrom)->format('F d, Y') : 'All Time',
             'dateTo' => $dateTo ? Carbon::parse($dateTo)->format('F d, Y') : 'All Time',
             'selectedEmployee' => $selectedEmployee,

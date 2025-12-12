@@ -44,22 +44,6 @@
         <div class="footer-inner">Page <span class="page"></span> of <span class="topage"></span></div>
     </footer>
 
-    <div class="summary-box" style="margin-top: 10px;">
-        <div class="summary-title">Summary</div>
-        <div class="summary-row">
-            <span class="summary-label">Total Hours:</span>
-            <span class="summary-value">{{ $totalHoursFormatted }}</span>
-        </div>
-        <div class="summary-row">
-            <span class="summary-label">Total Overtime:</span>
-            <span class="summary-value">{{ $totalOvertimeFormatted }}</span>
-        </div>
-        <div class="summary-row">
-            <span class="summary-label">Total Records:</span>
-            <span class="summary-value">{{ $totalRecords }}</span>
-        </div>
-    </div>
-
     @foreach($groupedByEmployee as $employeeGroup)
         <div class="employee-header">
             <div class="employee-name">{{ $employeeGroup['employee']->name }}</div>
@@ -67,6 +51,8 @@
             <div class="muted" style="margin-top: 2px;">
                 Total Hours: {{ $employeeGroup['total_hours_formatted'] }} •
                 Total Overtime: {{ $employeeGroup['total_overtime_formatted'] }} •
+                Total Deficit: <span style="color: #DC2626;">{{ $employeeGroup['total_deficit_formatted'] }}</span> •
+                Balance Overtime: <span style="color: {{ $employeeGroup['is_balance_negative'] ? '#DC2626' : '#059669' }};">{{ $employeeGroup['balance_overtime_formatted'] }}</span> •
                 Records: {{ count($employeeGroup['records']) }}
             </div>
         </div>

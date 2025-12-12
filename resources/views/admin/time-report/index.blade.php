@@ -155,7 +155,13 @@
                     <div class="ml-5 w-0 flex-1">
                         <dl>
                             <dt class="text-sm font-medium text-gray-500 truncate">Total Hours</dt>
-                            <dd class="text-lg font-semibold text-gray-900">{{ number_format($overallStats['total_hours_all'], 2) }} hrs</dd>
+                            @php
+                                $overallTotalMinutes = (int) round($overallStats['total_hours_all'] * 60);
+                                $overallTotalH = intdiv($overallTotalMinutes, 60);
+                                $overallTotalM = $overallTotalMinutes % 60;
+                                $overallTotalFormatted = sprintf('%02d:%02d', $overallTotalH, $overallTotalM);
+                            @endphp
+                            <dd class="text-lg font-semibold text-gray-900">{{ $overallTotalFormatted }}</dd>
                         </dl>
                     </div>
                 </div>
@@ -173,7 +179,13 @@
                     <div class="ml-5 w-0 flex-1">
                         <dl>
                             <dt class="text-sm font-medium text-gray-500 truncate">Total Overtime</dt>
-                            <dd class="text-lg font-semibold text-gray-900">{{ number_format($overallStats['total_overtime_all'], 2) }} hrs</dd>
+                            @php
+                                $overallOvertimeMinutes = (int) round($overallStats['total_overtime_all'] * 60);
+                                $overallOvertimeH = intdiv($overallOvertimeMinutes, 60);
+                                $overallOvertimeM = $overallOvertimeMinutes % 60;
+                                $overallOvertimeFormatted = sprintf('%02d:%02d', $overallOvertimeH, $overallOvertimeM);
+                            @endphp
+                            <dd class="text-lg font-semibold text-gray-900">{{ $overallOvertimeFormatted }}</dd>
                         </dl>
                     </div>
                 </div>
@@ -211,7 +223,13 @@
                             <p class="text-xs text-indigo-100 truncate">{{ $report['employee']->email }}</p>
                         </div>
                         <div class="text-right ml-2 flex-shrink-0">
-                            <div class="text-xl font-bold text-white">{{ number_format($report['total_hours'], 2) }}</div>
+                            @php
+                                $totalHoursMinutes = (int) round($report['total_hours'] * 60);
+                                $totalHoursH = intdiv($totalHoursMinutes, 60);
+                                $totalHoursM = $totalHoursMinutes % 60;
+                                $totalHoursFormatted = sprintf('%02d:%02d', $totalHoursH, $totalHoursM);
+                            @endphp
+                            <div class="text-xl font-bold text-white">{{ $totalHoursFormatted }}</div>
                             <div class="text-xs text-indigo-100">Total Hours</div>
                         </div>
                     </div>
@@ -222,7 +240,13 @@
                     <div class="grid grid-cols-2 gap-2 mb-4">
                         <div class="bg-gray-50 rounded-lg p-3">
                             <div class="text-xs font-medium text-gray-500">Overtime</div>
-                            <div class="text-lg font-bold text-yellow-600 mt-1">{{ number_format($report['total_overtime'], 2) }}</div>
+                            @php
+                                $overtimeMinutes = (int) round($report['total_overtime'] * 60);
+                                $overtimeH = intdiv($overtimeMinutes, 60);
+                                $overtimeM = $overtimeMinutes % 60;
+                                $overtimeFormatted = sprintf('%02d:%02d', $overtimeH, $overtimeM);
+                            @endphp
+                            <div class="text-lg font-bold text-yellow-600 mt-1">{{ $overtimeFormatted }}</div>
                         </div>
                         <div class="bg-gray-50 rounded-lg p-3">
                             <div class="text-xs font-medium text-gray-500">Absent</div>
@@ -241,12 +265,15 @@
                                 <div class="text-lg font-semibold text-gray-500 mt-1" title="Current week - deficit will be calculated after week ends">N/A</div>
                             @else
                                 @php
-                                    $deficitMinutes = (int) round($report['deficit_hours'] * 60);
+                                    $deficitMinutes = (int) round(abs($report['deficit_hours']) * 60);
                                     $deficitH = intdiv($deficitMinutes, 60);
                                     $deficitM = $deficitMinutes % 60;
                                     $deficitFormatted = sprintf('%02d:%02d', $deficitH, $deficitM);
+                                    $isNegative = $report['deficit_hours'] < 0;
                                 @endphp
-                                <div class="text-lg font-bold {{ $report['deficit_hours'] > 0 ? 'text-red-600' : 'text-green-600' }} mt-1">{{ $deficitFormatted }}</div>
+                                <div class="text-lg font-bold {{ $isNegative ? 'text-green-600' : ($report['deficit_hours'] > 0 ? 'text-red-600' : 'text-gray-600') }} mt-1">
+                                    {{ $isNegative ? '-' : '' }}{{ $deficitFormatted }}
+                                </div>
                             @endif
                         </div>
                         @endif
@@ -294,9 +321,20 @@
                                         @if($day['is_future'] ?? false)
                                             <span class="text-gray-400 italic">Not yet</span>
                                         @elseif($day['total_hours'] > 0)
-                                            {{ number_format($day['total_hours'], 2) }}h
+                                            @php
+                                                $dayTotalMinutes = (int) round($day['total_hours'] * 60);
+                                                $dayTotalH = intdiv($dayTotalMinutes, 60);
+                                                $dayTotalM = $dayTotalMinutes % 60;
+                                                $dayTotalFormatted = sprintf('%02d:%02d', $dayTotalH, $dayTotalM);
+
+                                                $dayOvertimeMinutes = (int) round($day['overtime_hours'] * 60);
+                                                $dayOvertimeH = intdiv($dayOvertimeMinutes, 60);
+                                                $dayOvertimeM = $dayOvertimeMinutes % 60;
+                                                $dayOvertimeFormatted = sprintf('%02d:%02d', $dayOvertimeH, $dayOvertimeM);
+                                            @endphp
+                                            {{ $dayTotalFormatted }}
                                             @if($day['overtime_hours'] > 0)
-                                                <span class="text-yellow-600">(+{{ number_format($day['overtime_hours'], 2) }}h)</span>
+                                                <span class="text-yellow-600">(+{{ $dayOvertimeFormatted }})</span>
                                             @endif
                                         @else
                                             <span class="text-gray-400">0h</span>
