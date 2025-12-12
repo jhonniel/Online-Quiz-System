@@ -164,9 +164,24 @@ class TimeReportController extends Controller
             $daysTravel = $dtrs->where('status', 'travel')->count();
             $totalDays = $dtrs->count();
 
-            // Calculate deficit (only for completed weeks)
-            $weeklyBaseHours = 40.0; // 40 hours per week
-            $deficitHours = $isCurrentWeek ? null : max(0, $weeklyBaseHours - $totalHours);
+            // Calculate deficit (only for completed date ranges)
+            // Count actual weekdays in the date range
+            $weekdayCount = 0;
+            $checkDate = $weekStartDate->copy();
+            while ($checkDate <= $weekEndDate) {
+                $dayOfWeek = $checkDate->dayOfWeek;
+                if ($dayOfWeek !== Carbon::SATURDAY && $dayOfWeek !== Carbon::SUNDAY) {
+                    $weekdayCount++;
+                }
+                $checkDate->addDay();
+            }
+
+            // Calculate base hours: 8 hours per weekday
+            $baseHours = $weekdayCount * 8.0;
+
+            // Only calculate deficit if the date range has ended (end date is in the past)
+            $rangeHasEnded = $weekEndDate->lt($today);
+            $deficitHours = $rangeHasEnded ? max(0, $baseHours - $totalHours) : null;
 
             $weeklyReports[] = [
                 'employee' => $employee,
@@ -181,7 +196,7 @@ class TimeReportController extends Controller
                 'total_days' => $totalDays,
                 'daily_breakdown' => $dailyBreakdown,
                 'deficit_hours' => $deficitHours,
-                'is_current_week' => $isCurrentWeek,
+                'is_current_week' => !$rangeHasEnded, // Use rangeHasEnded to determine if it's current
             ];
         }
 
