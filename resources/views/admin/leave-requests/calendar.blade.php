@@ -245,7 +245,15 @@
                                                 </div>
                                                 <div class="flex items-center justify-between gap-1">
                                                     <span class="truncate text-[8px] sm:text-[9px] md:text-[10px]">{{ $entry['type_label'] }}</span>
-                                                    <span class="ml-0.5 sm:ml-1 text-[8px] sm:text-[9px] capitalize shrink-0">{{ substr($entry['status'], 0, 1) }}</span>
+                                                    @php
+                                                        $statusLabel = match($entry['status']) {
+                                                            'pending' => isset($entry['reviewed_at']) && $entry['reviewed_at'] ? 'Resubmission' : 'Pending',
+                                                            'approved' => 'Approved',
+                                                            'rejected' => 'Rejected',
+                                                            default => ucfirst($entry['status']),
+                                                        };
+                                                    @endphp
+                                                    <span class="ml-0.5 sm:ml-1 text-[8px] sm:text-[9px] font-semibold shrink-0">{{ $statusLabel }}</span>
                                                 </div>
                                             </a>
                                         @endforeach

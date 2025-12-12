@@ -381,6 +381,7 @@ class LeaveRequestController extends Controller
                     'employee' => $requestItem->user,
                     'type_label' => $requestItem->type_label,
                     'status' => $requestItem->status,
+                    'reviewed_at' => $requestItem->reviewed_at,
                 ];
             }
         }
