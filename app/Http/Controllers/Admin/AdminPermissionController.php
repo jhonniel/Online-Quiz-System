@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\User;
 use App\Models\AdminPermission;
+use App\Models\Department;
 use Illuminate\Http\Request;
 
 class AdminPermissionController extends Controller
@@ -113,8 +114,9 @@ class AdminPermissionController extends Controller
         }
 
         $permission = $user->adminPermission;
+        $departments = Department::active()->orderBy('name')->get();
 
-        return view('admin.admin-permissions.edit', compact('user', 'permission'));
+        return view('admin.admin-permissions.edit', compact('user', 'permission', 'departments'));
     }
 
     /**
@@ -132,6 +134,8 @@ class AdminPermissionController extends Controller
             'content_management' => 'boolean',
             'analytics_reports' => 'boolean',
             'employee_management' => 'boolean',
+            'allowed_departments' => 'nullable|array',
+            'allowed_departments.*' => 'exists:departments,id',
             'student_management' => 'boolean',
             'hiring_process' => 'boolean',
             'communication' => 'boolean',
@@ -150,6 +154,14 @@ class AdminPermissionController extends Controller
             'user_management' => $request->has('user_management'),
             'system' => $request->has('system'),
         ];
+
+        // Handle allowed departments - only set if employee_management is enabled
+        if ($request->has('employee_management')) {
+            $permissions['allowed_departments'] = $request->input('allowed_departments', []);
+        } else {
+            // If employee_management is disabled, clear allowed_departments
+            $permissions['allowed_departments'] = null;
+        }
 
         // Update or create permission record
         $user->adminPermission()->updateOrCreate(

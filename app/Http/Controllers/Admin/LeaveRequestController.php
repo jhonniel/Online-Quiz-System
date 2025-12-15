@@ -27,10 +27,22 @@ class LeaveRequestController extends Controller
      */
     public function index(Request $request)
     {
+        $user = auth()->user();
+
         $query = LeaveRequest::with(['user', 'reviewer', 'approvedBy.performer', 'rejectedBy.performer', 'resubmissionRequestedBy.performer', 'logs'])
             ->whereHas('user', function($q) {
                 $q->where('role', 'employee');
             });
+
+        // Apply department restrictions if user has Employee Management with restrictions
+        if ($user->canAccessEmployeeManagement()) {
+            $allowedDepartmentIds = $user->getAllowedDepartmentIds();
+            if ($allowedDepartmentIds !== null) {
+                $query->whereHas('user', function($q) use ($allowedDepartmentIds) {
+                    $q->whereIn('department_id', $allowedDepartmentIds);
+                });
+            }
+        }
 
         // Filter by status
         if ($request->has('status') && $request->status) {
@@ -42,11 +54,14 @@ class LeaveRequestController extends Controller
             $query->where('type', $request->type);
         }
 
-        // Filter by department
+        // Filter by department (user-selected filter)
         if ($request->has('department_id') && $request->department_id) {
-            $query->whereHas('user', function($q) use ($request) {
-                $q->where('department_id', $request->department_id);
-            });
+            $selectedDeptId = $request->department_id;
+            if ($user->canManageDepartment($selectedDeptId)) {
+                $query->whereHas('user', function($q) use ($selectedDeptId) {
+                    $q->where('department_id', $selectedDeptId);
+                });
+            }
         }
 
         // Filter by employee
@@ -68,14 +83,28 @@ class LeaveRequestController extends Controller
 
         $leaveRequests = $query->orderBy('created_at', 'desc')->paginate(20);
 
-        // Statistics - only for employees
+        // Statistics - only for employees (apply department restrictions)
         $baseQuery = LeaveRequest::whereHas('user', function($q) {
             $q->where('role', 'employee');
         });
+
+        // Apply department restrictions to stats
+        if ($user->canAccessEmployeeManagement()) {
+            $allowedDepartmentIds = $user->getAllowedDepartmentIds();
+            if ($allowedDepartmentIds !== null) {
+                $baseQuery->whereHas('user', function($q) use ($allowedDepartmentIds) {
+                    $q->whereIn('department_id', $allowedDepartmentIds);
+                });
+            }
+        }
+
         if ($request->has('department_id') && $request->department_id) {
-            $baseQuery->whereHas('user', function($q) use ($request) {
-                $q->where('department_id', $request->department_id);
-            });
+            $selectedDeptId = $request->department_id;
+            if ($user->canManageDepartment($selectedDeptId)) {
+                $baseQuery->whereHas('user', function($q) use ($selectedDeptId) {
+                    $q->where('department_id', $selectedDeptId);
+                });
+            }
         }
         if ($request->has('employee') && $request->employee) {
             $baseQuery->where('user_id', $request->employee);
@@ -91,15 +120,31 @@ class LeaveRequestController extends Controller
             'rejected' => (clone $baseQuery)->where('status', 'rejected')->count(),
         ];
 
-        $employees = \App\Models\User::where('role', 'employee')
-            ->where('is_active', true)
-            ->orderBy('name')
-            ->get();
+        // Get employees for filter dropdown (respecting department restrictions)
+        $employeesQuery = \App\Models\User::where('role', 'employee')
+            ->where('is_active', true);
 
-        // Get departments for filter dropdown
-        $departments = Department::active()
-            ->orderBy('name')
-            ->get();
+        // Apply department restrictions to employee list
+        if ($user->canAccessEmployeeManagement()) {
+            $allowedDepartmentIds = $user->getAllowedDepartmentIds();
+            if ($allowedDepartmentIds !== null) {
+                $employeesQuery->whereIn('department_id', $allowedDepartmentIds);
+            }
+        }
+
+        $employees = $employeesQuery->orderBy('name')->get();
+
+        // Get departments for filter dropdown (only departments user can manage)
+        $departmentsQuery = Department::active();
+
+        if ($user->canAccessEmployeeManagement()) {
+            $allowedDepartmentIds = $user->getAllowedDepartmentIds();
+            if ($allowedDepartmentIds !== null) {
+                $departmentsQuery->whereIn('id', $allowedDepartmentIds);
+            }
+        }
+
+        $departments = $departmentsQuery->orderBy('name')->get();
 
         return view('admin.leave-requests.index', compact('leaveRequests', 'stats', 'employees', 'departments'));
     }
@@ -305,6 +350,8 @@ class LeaveRequestController extends Controller
      */
     public function calendar(Request $request)
     {
+        $user = auth()->user();
+
         // Use Manila timezone for current date/month context
         $nowManila = Carbon::now('Asia/Manila');
         $monthParam = $request->input('month', $nowManila->format('Y-m'));
@@ -328,9 +375,19 @@ class LeaveRequestController extends Controller
         // Only show employee leave requests
         // Wrap OR conditions in a single group so employee filter applies to all.
         $leaveQuery = LeaveRequest::with('user')
-            ->whereHas('user', function($q) use ($departmentId) {
+            ->whereHas('user', function($q) use ($departmentId, $user) {
                 $q->where('role', 'employee');
-                if ($departmentId) {
+
+                // Apply department restrictions if user has Employee Management with restrictions
+                if ($user->canAccessEmployeeManagement()) {
+                    $allowedDepartmentIds = $user->getAllowedDepartmentIds();
+                    if ($allowedDepartmentIds !== null) {
+                        $q->whereIn('department_id', $allowedDepartmentIds);
+                    }
+                }
+
+                // Filter by selected department (user-selected filter)
+                if ($departmentId && $user->canManageDepartment($departmentId)) {
                     $q->where('department_id', $departmentId);
                 }
             })
@@ -402,20 +459,36 @@ class LeaveRequestController extends Controller
         $prevMonth = $currentMonth->copy()->subMonth()->format('Y-m');
         $nextMonth = $currentMonth->copy()->addMonth()->format('Y-m');
 
-        // Employees list for sidebar filter (employees only)
+        // Employees list for sidebar filter (employees only, respecting department restrictions)
         $employeesQuery = \App\Models\User::where('role', 'employee')
             ->where('is_active', true);
 
-        if ($departmentId) {
+        // Apply department restrictions to employee list
+        if ($user->canAccessEmployeeManagement()) {
+            $allowedDepartmentIds = $user->getAllowedDepartmentIds();
+            if ($allowedDepartmentIds !== null) {
+                $employeesQuery->whereIn('department_id', $allowedDepartmentIds);
+            }
+        }
+
+        // Filter by selected department (user-selected filter)
+        if ($departmentId && $user->canManageDepartment($departmentId)) {
             $employeesQuery->where('department_id', $departmentId);
         }
 
         $employees = $employeesQuery->orderBy('name')->get();
 
-        // Get departments for filter dropdown
-        $departments = Department::active()
-            ->orderBy('name')
-            ->get();
+        // Get departments for filter dropdown (only departments user can manage)
+        $departmentsQuery = Department::active();
+
+        if ($user->canAccessEmployeeManagement()) {
+            $allowedDepartmentIds = $user->getAllowedDepartmentIds();
+            if ($allowedDepartmentIds !== null) {
+                $departmentsQuery->whereIn('id', $allowedDepartmentIds);
+            }
+        }
+
+        $departments = $departmentsQuery->orderBy('name')->get();
 
         return view('admin.leave-requests.calendar', [
             'currentMonth' => $currentMonth,
@@ -452,7 +525,18 @@ class LeaveRequestController extends Controller
             'reason' => ['nullable', 'string', 'max:1000'],
         ]);
 
+        $user = auth()->user();
         $employeeIds = $validated['user_ids'];
+
+        // Validate that user can manage all selected employees' departments
+        foreach ($employeeIds as $employeeId) {
+            $employee = User::findOrFail($employeeId);
+            if (!$user->canManageDepartment($employee->department_id)) {
+                return redirect()->back()
+                    ->withErrors(['user_ids' => "You don't have permission to file leave for employees in this department."])
+                    ->withInput();
+            }
+        }
 
         // Allow past dates only for sick_leave and overtime; others must be today or future
         $typeInput = $validated['type'];

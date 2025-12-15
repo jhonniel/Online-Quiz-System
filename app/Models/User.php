@@ -637,6 +637,80 @@ class User extends Authenticatable
     }
 
     /**
+     * Check if user can manage a specific department.
+     * Returns true if:
+     * - User is a super admin (admin without permission restrictions)
+     * - User has Employee Management permission and no department restrictions (allowed_departments is null or empty)
+     * - User has Employee Management permission and the department is in their allowed_departments list
+     */
+    public function canManageDepartment(?int $departmentId): bool
+    {
+        // Super admins can manage all departments
+        if ($this->isSuperAdmin()) {
+            return true;
+        }
+
+        // If user doesn't have Employee Management permission, they can't manage any department
+        if (!$this->canAccessEmployeeManagement()) {
+            return false;
+        }
+
+        // Load the relationship if not already loaded
+        if (!$this->relationLoaded('adminPermission')) {
+            $this->load('adminPermission');
+        }
+
+        $adminPermission = $this->adminPermission;
+
+        // If no permission record exists, return false (shouldn't happen if canAccessEmployeeManagement is true)
+        if (!$adminPermission) {
+            return false;
+        }
+
+        // If allowed_departments is null or empty, user can manage all departments
+        $allowedDepartments = $adminPermission->allowed_departments;
+        if (empty($allowedDepartments)) {
+            return true;
+        }
+
+        // Check if the department ID is in the allowed list
+        return in_array($departmentId, $allowedDepartments);
+    }
+
+    /**
+     * Get the list of department IDs the user can manage.
+     * Returns null if user can manage all departments, or an array of department IDs.
+     */
+    public function getAllowedDepartmentIds(): ?array
+    {
+        // Super admins can manage all departments (return null means all)
+        if ($this->isSuperAdmin()) {
+            return null;
+        }
+
+        // If user doesn't have Employee Management permission, return empty array
+        if (!$this->canAccessEmployeeManagement()) {
+            return [];
+        }
+
+        // Load the relationship if not already loaded
+        if (!$this->relationLoaded('adminPermission')) {
+            $this->load('adminPermission');
+        }
+
+        $adminPermission = $this->adminPermission;
+
+        // If no permission record exists, return empty array
+        if (!$adminPermission) {
+            return [];
+        }
+
+        // Return allowed_departments (null or empty means all departments)
+        $allowedDepartments = $adminPermission->allowed_departments;
+        return empty($allowedDepartments) ? null : $allowedDepartments;
+    }
+
+    /**
      * Check if user has access to Student Management.
      */
     public function canAccessStudentManagement(): bool

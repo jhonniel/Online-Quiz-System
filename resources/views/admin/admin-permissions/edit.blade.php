@@ -106,18 +106,50 @@
                     </div>
 
                     <!-- Employee Management -->
-                    <div class="flex items-start space-x-3 p-4 border border-gray-200 rounded-lg hover:bg-gray-50">
-                        <input type="checkbox"
-                               name="employee_management"
-                               id="employee_management"
-                               value="1"
-                               {{ ($permission && $permission->employee_management) ? 'checked' : '' }}
-                               class="mt-1 h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded">
-                        <div class="flex-1">
-                            <label for="employee_management" class="block text-sm font-medium text-gray-900 cursor-pointer">
-                                Employee Management
-                            </label>
-                            <p class="mt-1 text-sm text-gray-500">Access to employee DTR, leave requests, and time reports</p>
+                    <div class="md:col-span-2">
+                        <div class="flex items-start space-x-3 p-4 border border-gray-200 rounded-lg hover:bg-gray-50">
+                            <input type="checkbox"
+                                   name="employee_management"
+                                   id="employee_management"
+                                   value="1"
+                                   {{ ($permission && $permission->employee_management) ? 'checked' : '' }}
+                                   class="mt-1 h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
+                                   onchange="toggleDepartmentSelection()">
+                            <div class="flex-1">
+                                <label for="employee_management" class="block text-sm font-medium text-gray-900 cursor-pointer">
+                                    Employee Management
+                                </label>
+                                <p class="mt-1 text-sm text-gray-500">Access to employee DTR, leave requests, and time reports</p>
+
+                                <!-- Department Selection (shown only when Employee Management is checked) -->
+                                <div id="department-selection" class="mt-4 {{ ($permission && $permission->employee_management) ? '' : 'hidden' }}">
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                                        Allowed Departments
+                                        <span class="text-xs text-gray-500 font-normal">(Leave empty to allow all departments)</span>
+                                    </label>
+                                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 max-h-48 overflow-y-auto p-3 bg-gray-50 rounded-md border border-gray-200">
+                                        @foreach($departments as $department)
+                                            <div class="flex items-center">
+                                                <input type="checkbox"
+                                                       name="allowed_departments[]"
+                                                       id="dept_{{ $department->id }}"
+                                                       value="{{ $department->id }}"
+                                                       {{ ($permission && $permission->allowed_departments && in_array($department->id, $permission->allowed_departments)) ? 'checked' : '' }}
+                                                       class="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded">
+                                                <label for="dept_{{ $department->id }}" class="ml-2 text-sm text-gray-700 cursor-pointer">
+                                                    {{ $department->name }}
+                                                    @if($department->code)
+                                                        <span class="text-gray-500">({{ $department->code }})</span>
+                                                    @endif
+                                                </label>
+                                            </div>
+                                        @endforeach
+                                    </div>
+                                    @if($departments->isEmpty())
+                                        <p class="mt-2 text-sm text-gray-500">No departments available. <a href="{{ route('admin.departments.index') }}" class="text-indigo-600 hover:text-indigo-800">Create departments</a> first.</p>
+                                    @endif
+                                </div>
+                            </div>
                         </div>
                     </div>
 
@@ -232,6 +264,31 @@
         @endif
     </div>
 </div>
+
+<script>
+function toggleDepartmentSelection() {
+    const employeeManagementCheckbox = document.getElementById('employee_management');
+    const departmentSelection = document.getElementById('department-selection');
+
+    if (employeeManagementCheckbox && departmentSelection) {
+        if (employeeManagementCheckbox.checked) {
+            departmentSelection.classList.remove('hidden');
+        } else {
+            departmentSelection.classList.add('hidden');
+            // Uncheck all department checkboxes when Employee Management is disabled
+            const departmentCheckboxes = departmentSelection.querySelectorAll('input[type="checkbox"]');
+            departmentCheckboxes.forEach(checkbox => {
+                checkbox.checked = false;
+            });
+        }
+    }
+}
+
+// Initialize on page load
+document.addEventListener('DOMContentLoaded', function() {
+    toggleDepartmentSelection();
+});
+</script>
 @endsection
 
 

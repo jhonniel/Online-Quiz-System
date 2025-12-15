@@ -21,16 +21,34 @@ class DtrController extends Controller
      */
     public function index(Request $request)
     {
+        $user = auth()->user();
+
         $query = Dtr::with('user')
             ->whereHas('user', function($q) {
                 $q->where('role', 'employee');
             });
 
-        // Filter by department
+        // Apply department restrictions if user has Employee Management with restrictions
+        if ($user->canAccessEmployeeManagement()) {
+            $allowedDepartmentIds = $user->getAllowedDepartmentIds();
+            if ($allowedDepartmentIds !== null) {
+                // User has department restrictions - only show allowed departments
+                $query->whereHas('user', function($q) use ($allowedDepartmentIds) {
+                    $q->whereIn('department_id', $allowedDepartmentIds);
+                });
+            }
+            // If $allowedDepartmentIds is null, user can see all departments (no restrictions)
+        }
+
+        // Filter by department (user-selected filter)
         if ($request->filled('department_id')) {
-            $query->whereHas('user', function($q) use ($request) {
-                $q->where('department_id', $request->department_id);
-            });
+            $selectedDeptId = $request->department_id;
+            // Only apply if user can manage this department
+            if ($user->canManageDepartment($selectedDeptId)) {
+                $query->whereHas('user', function($q) use ($selectedDeptId) {
+                    $q->where('department_id', $selectedDeptId);
+                });
+            }
         }
 
         // Filter by employee
@@ -51,16 +69,31 @@ class DtrController extends Controller
             $query->where('status', $request->status);
         }
 
-        // Get employees for filter dropdown (only employees)
-        $employees = User::where('role', 'employee')
-            ->where('is_active', true)
-            ->orderBy('name')
-            ->get();
+        // Get employees for filter dropdown (only employees, respecting department restrictions)
+        $employeesQuery = User::where('role', 'employee')
+            ->where('is_active', true);
 
-        // Get departments for filter dropdown
-        $departments = Department::active()
-            ->orderBy('name')
-            ->get();
+        // Apply department restrictions to employee list
+        if ($user->canAccessEmployeeManagement()) {
+            $allowedDepartmentIds = $user->getAllowedDepartmentIds();
+            if ($allowedDepartmentIds !== null) {
+                $employeesQuery->whereIn('department_id', $allowedDepartmentIds);
+            }
+        }
+
+        $employees = $employeesQuery->orderBy('name')->get();
+
+        // Get departments for filter dropdown (only departments user can manage)
+        $departmentsQuery = Department::active();
+
+        if ($user->canAccessEmployeeManagement()) {
+            $allowedDepartmentIds = $user->getAllowedDepartmentIds();
+            if ($allowedDepartmentIds !== null) {
+                $departmentsQuery->whereIn('id', $allowedDepartmentIds);
+            }
+        }
+
+        $departments = $departmentsQuery->orderBy('name')->get();
 
         $dtrs = $query->orderBy('date', 'desc')
             ->orderBy('user_id')
@@ -119,10 +152,20 @@ class DtrController extends Controller
      */
     public function create()
     {
-        $employees = User::where('role', 'employee')
-            ->where('is_active', true)
-            ->orderBy('name')
-            ->get();
+        $user = auth()->user();
+
+        $employeesQuery = User::where('role', 'employee')
+            ->where('is_active', true);
+
+        // Apply department restrictions if user has Employee Management with restrictions
+        if ($user->canAccessEmployeeManagement()) {
+            $allowedDepartmentIds = $user->getAllowedDepartmentIds();
+            if ($allowedDepartmentIds !== null) {
+                $employeesQuery->whereIn('department_id', $allowedDepartmentIds);
+            }
+        }
+
+        $employees = $employeesQuery->orderBy('name')->get();
 
         // Determine if sections should be collapsed by default (only for students)
         $collapseByDefault = auth()->check() && auth()->user()->role === 'student';
@@ -1198,18 +1241,33 @@ class DtrController extends Controller
      */
     public function exportPdf(Request $request)
     {
+        $user = auth()->user();
+
         $query = Dtr::with('user')
             ->whereHas('user', function($q) {
                 $q->where('role', 'employee');
             });
 
-        // Filter by department
+        // Apply department restrictions if user has Employee Management with restrictions
+        if ($user->canAccessEmployeeManagement()) {
+            $allowedDepartmentIds = $user->getAllowedDepartmentIds();
+            if ($allowedDepartmentIds !== null) {
+                $query->whereHas('user', function($q) use ($allowedDepartmentIds) {
+                    $q->whereIn('department_id', $allowedDepartmentIds);
+                });
+            }
+        }
+
+        // Filter by department (user-selected filter)
         $selectedDepartment = null;
         if ($request->filled('department_id')) {
-            $selectedDepartment = Department::find($request->department_id);
-            $query->whereHas('user', function($q) use ($request) {
-                $q->where('department_id', $request->department_id);
-            });
+            $selectedDeptId = $request->department_id;
+            if ($user->canManageDepartment($selectedDeptId)) {
+                $selectedDepartment = Department::find($selectedDeptId);
+                $query->whereHas('user', function($q) use ($selectedDeptId) {
+                    $q->where('department_id', $selectedDeptId);
+                });
+            }
         }
 
         // Filter by employee

@@ -42,23 +42,41 @@ class TimeReportController extends Controller
             $endDate = null;
         }
 
+        $user = auth()->user();
+
         // Get selected department (if any)
         $selectedDepartmentId = $request->get('department_id');
 
-        // Get all active employees (filter by department if selected)
+        // Get all active employees (filter by department if selected, respecting restrictions)
         $employeesQuery = User::where('role', 'employee')
             ->where('is_active', true);
 
-        if ($selectedDepartmentId) {
+        // Apply department restrictions if user has Employee Management with restrictions
+        if ($user->canAccessEmployeeManagement()) {
+            $allowedDepartmentIds = $user->getAllowedDepartmentIds();
+            if ($allowedDepartmentIds !== null) {
+                $employeesQuery->whereIn('department_id', $allowedDepartmentIds);
+            }
+        }
+
+        // Filter by selected department (user-selected filter)
+        if ($selectedDepartmentId && $user->canManageDepartment($selectedDepartmentId)) {
             $employeesQuery->where('department_id', $selectedDepartmentId);
         }
 
         $employees = $employeesQuery->orderBy('name')->get();
 
-        // Get departments for filter dropdown
-        $departments = Department::active()
-            ->orderBy('name')
-            ->get();
+        // Get departments for filter dropdown (only departments user can manage)
+        $departmentsQuery = Department::active();
+
+        if ($user->canAccessEmployeeManagement()) {
+            $allowedDepartmentIds = $user->getAllowedDepartmentIds();
+            if ($allowedDepartmentIds !== null) {
+                $departmentsQuery->whereIn('id', $allowedDepartmentIds);
+            }
+        }
+
+        $departments = $departmentsQuery->orderBy('name')->get();
 
         // Get selected employee (if any)
         $selectedEmployeeId = $request->get('employee_id');
