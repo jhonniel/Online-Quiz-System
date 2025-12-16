@@ -8,6 +8,7 @@ use App\Models\DtrDeficit;
 use App\Models\User;
 use App\Models\University;
 use App\Models\Department;
+use App\Models\LeaveRequest;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\DB;
@@ -98,6 +99,136 @@ class DtrController extends Controller
         $dtrs = $query->orderBy('date', 'desc')
             ->orderBy('user_id')
             ->get();
+
+        // Approved overtime from leave requests (only count approved overtime requests)
+        $dateFrom = $request->filled('date_from') ? Carbon::parse($request->date_from) : ($dtrs->min('date') ? $dtrs->min('date')->copy() : null);
+        $dateTo = $request->filled('date_to') ? Carbon::parse($request->date_to) : ($dtrs->max('date') ? $dtrs->max('date')->copy() : null);
+        if ($dateFrom && $dateTo && $dateFrom->gt($dateTo)) {
+            [$dateFrom, $dateTo] = [$dateTo, $dateFrom];
+        }
+
+        // Calculate overtime from Total Hours (hours above 8:00 per day)
+        foreach ($dtrs as $dtr) {
+            $totalHours = (float) ($dtr->total_hours ?? 0);
+            // Overtime is calculated as hours above 8:00 per day
+            $dtr->overtime_hours = max(0, $totalHours - 8.0);
+        }
+
+        // Automatically add DTR records for approved leave requests (excluding overtime)
+        if ($dateFrom && $dateTo) {
+            $employeeIds = $dtrs->pluck('user_id')->unique()->values();
+            $approvedLeaves = LeaveRequest::with('user')
+                ->whereIn('user_id', $employeeIds)
+                ->where('status', 'approved')
+                ->where('type', '!=', 'overtime') // Exclude overtime type
+                ->whereDate('start_date', '<=', $dateTo->toDateString())
+                ->where(function ($q) use ($dateFrom) {
+                    $q->whereNull('end_date')
+                      ->orWhereDate('end_date', '>=', $dateFrom->toDateString());
+                })
+                ->get();
+
+            // Create a map of existing DTRs by user_id and date for quick lookup
+            $dtrMap = [];
+            foreach ($dtrs as $dtr) {
+                $dateKey = $dtr->date->format('Y-m-d');
+                $dtrMap[$dtr->user_id][$dateKey] = $dtr;
+            }
+
+            $leaveEntries = collect();
+            foreach ($approvedLeaves as $leave) {
+                $start = Carbon::parse($leave->start_date);
+                $end = $leave->end_date ? Carbon::parse($leave->end_date) : $start->copy();
+                $period = new \Carbon\CarbonPeriod($start, $end);
+
+                foreach ($period as $day) {
+                    if ($day->lt($dateFrom) || $day->gt($dateTo)) {
+                        continue;
+                    }
+
+                    $dateKey = $day->format('Y-m-d');
+                    $existingDtr = $dtrMap[$leave->user_id][$dateKey] ?? null;
+
+                    if ($leave->type === 'vacation_leave' || $leave->type === 'sick_leave') {
+                        // Vacation/Sick Leave: automatically record 08:00
+                        if (!$existingDtr) {
+                            // Create new DTR entry with 08:00 hours
+                            $entry = new Dtr([
+                                'user_id' => $leave->user_id,
+                                'date' => $day->copy(),
+                                'total_hours' => 8.0,
+                                'overtime_hours' => 0, // Will be calculated from total_hours
+                                'status' => 'on_leave',
+                                'remarks' => 'Approved Leave: ' . ($leave->type_label ?? ucfirst(str_replace('_', ' ', $leave->type))),
+                            ]);
+                            $entry->leave_type_label = $leave->type_label ?? ucfirst(str_replace('_', ' ', $leave->type));
+                            $entry->setRelation('user', $leave->user);
+                            $leaveEntries->push($entry);
+                        }
+                    } elseif ($leave->type === 'offset') {
+                        // Offset: parse total hours from reason field and divide by days
+                        $raw = $leave->reason ?? '';
+                        $totalOffsetHours = 8.0; // Default: 1 day = 8 hours
+
+                        if (preg_match('/Hours to Deduct:\s*([0-9]{2}):([0-9]{2})/', $raw, $m)) {
+                            $totalOffsetHours = (int)$m[1] + ((int)$m[2] / 60); // Convert to decimal hours
+                        }
+
+                        // Calculate hours per day (distribute total offset hours across all days)
+                        $days = $start->diffInDays($end) + 1;
+                        $offsetHoursPerDay = $days > 0 ? $totalOffsetHours / $days : $totalOffsetHours;
+
+                        if ($existingDtr) {
+                            // If DTR exists, add offset hours to existing total_hours
+                            $existingDtr->total_hours = ($existingDtr->total_hours ?? 0) + $offsetHoursPerDay;
+                            // Update remarks
+                            $existingRemarks = $existingDtr->remarks ?: '';
+                            $offsetLabel = 'Offset: ' . ($leave->type_label ?? 'Offset');
+                            if ($existingRemarks) {
+                                $existingDtr->remarks = $existingRemarks . ' | ' . $offsetLabel;
+                            } else {
+                                $existingDtr->remarks = $offsetLabel;
+                            }
+                        } else {
+                            // If no DTR exists, create new entry with 08:00 (1 day = 08:00)
+                            $entry = new Dtr([
+                                'user_id' => $leave->user_id,
+                                'date' => $day->copy(),
+                                'total_hours' => 8.0,
+                                'overtime_hours' => 0, // Will be calculated from total_hours
+                                'status' => 'on_leave',
+                                'remarks' => 'Offset: ' . ($leave->type_label ?? 'Offset'),
+                            ]);
+                            $entry->leave_type_label = $leave->type_label ?? 'Offset';
+                            $entry->setRelation('user', $leave->user);
+                            $leaveEntries->push($entry);
+                        }
+                    } else {
+                        // Other leave types: create entry with 08:00 hours
+                        if (!$existingDtr) {
+                            $entry = new Dtr([
+                                'user_id' => $leave->user_id,
+                                'date' => $day->copy(),
+                                'total_hours' => 8.0,
+                                'overtime_hours' => 0, // Will be calculated from total_hours
+                                'status' => 'on_leave',
+                                'remarks' => 'Approved Leave: ' . ($leave->type_label ?? ucfirst(str_replace('_', ' ', $leave->type))),
+                            ]);
+                            $entry->leave_type_label = $leave->type_label ?? ucfirst(str_replace('_', ' ', $leave->type));
+                            $entry->setRelation('user', $leave->user);
+                            $leaveEntries->push($entry);
+                        }
+                    }
+                }
+            }
+
+            if ($leaveEntries->isNotEmpty()) {
+                $dtrs = $dtrs->merge($leaveEntries)->sortBy([
+                    ['date', 'desc'],
+                    ['user_id', 'asc'],
+                ])->values();
+            }
+        }
 
         $totalRecords = $dtrs->count();
 
@@ -1167,6 +1298,49 @@ class DtrController extends Controller
             ->orderBy('user_id')
             ->get();
 
+        // Approved overtime from leave requests (only count approved overtime requests)
+        $parsedDateFrom = $dateFrom ? Carbon::parse($dateFrom) : ($dtrs->min('date') ? $dtrs->min('date')->copy() : null);
+        $parsedDateTo = $dateTo ? Carbon::parse($dateTo) : ($dtrs->max('date') ? $dtrs->max('date')->copy() : null);
+        if ($parsedDateFrom && $parsedDateTo && $parsedDateFrom->gt($parsedDateTo)) {
+            [$parsedDateFrom, $parsedDateTo] = [$parsedDateTo, $parsedDateFrom];
+        }
+
+        $overtimeMap = [];
+        if ($parsedDateFrom && $parsedDateTo) {
+            $overtimeRequests = LeaveRequest::where('type', 'overtime')
+                ->where('status', 'approved')
+                ->whereHas('user', function ($q) {
+                    $q->where('role', 'employee');
+                })
+                ->whereDate('start_date', '<=', $parsedDateTo->toDateString())
+                ->where(function ($q) use ($parsedDateFrom) {
+                    $q->whereNull('end_date')
+                      ->orWhereDate('end_date', '>=', $parsedDateFrom->toDateString());
+                })
+                ->get();
+
+            foreach ($overtimeRequests as $ot) {
+                $start = Carbon::parse($ot->start_date);
+                $end = $ot->end_date ? Carbon::parse($ot->end_date) : $start->copy();
+                $days = $start->diffInDays($end) + 1;
+                $totalHours = (float) ($ot->overtime_hours ?? 0);
+                $hoursPerDay = $days > 0 ? $totalHours / $days : $totalHours;
+
+                $current = $start->copy();
+                while ($current <= $end) {
+                    $dateKey = $current->toDateString();
+                    $overtimeMap[$ot->user_id][$dateKey] = ($overtimeMap[$ot->user_id][$dateKey] ?? 0) + $hoursPerDay;
+                    $current->addDay();
+                }
+            }
+        }
+
+        // Override overtime_hours to only include approved overtime
+        foreach ($dtrs as $dtr) {
+            $dateKey = $dtr->date->toDateString();
+            $dtr->overtime_hours = $overtimeMap[$dtr->user_id][$dateKey] ?? 0;
+        }
+
         // Calculate totals
         $totalHours = 0;
         $totalOvertime = 0;
@@ -1321,7 +1495,7 @@ class DtrController extends Controller
         // Calculate total deficit hours for the date range
         // Calculate deficit directly from DTR records grouped by week
         $totalDeficitHours = 0;
-        $totalOvertimeFromCompletedWeeks = 0; // Only count overtime from completed weeks
+        $totalOvertimeFromCompletedWeeks = 0; // Only count overtime from approved leave requests
         if ($dateFrom && $dateTo) {
             $today = Carbon::today();
 
@@ -1340,11 +1514,9 @@ class DtrController extends Controller
                             'week_start' => $weekStart,
                             'week_end' => $weekEnd,
                             'total_hours' => 0,
-                            'overtime_hours' => 0,
                         ];
                     }
                     $weeklyGroups[$weekKey]['total_hours'] += ($dtr->total_hours ?? 0);
-                    $weeklyGroups[$weekKey]['overtime_hours'] += ($dtr->overtime_hours ?? 0);
                 }
             }
 
@@ -1353,11 +1525,48 @@ class DtrController extends Controller
                 $weeklyBaseHours = 40.0;
                 $weeklyDeficit = max(0, $weeklyBaseHours - $weekGroup['total_hours']);
                 $totalDeficitHours += $weeklyDeficit;
-                $totalOvertimeFromCompletedWeeks += $weekGroup['overtime_hours'];
             }
+
+            // Get approved overtime leave requests for the date range (overtime balance is ONLY from approved leave requests)
+            $employeeIds = $dtrs->pluck('user_id')->unique();
+            $approvedOvertimeRequests = LeaveRequest::whereIn('user_id', $employeeIds)
+                ->where('type', 'overtime')
+                ->where('status', 'approved')
+                ->whereDate('start_date', '>=', $dateFrom)
+                ->whereDate('start_date', '<=', $dateTo)
+                ->whereDate('start_date', '<=', $today) // completed weeks only
+                ->get();
+
+            $overtimeFromLeavesMinutes = 0;
+            foreach ($approvedOvertimeRequests as $otRequest) {
+                $raw = $otRequest->reason ?? '';
+                if (preg_match('/Total Overtime Hours:\s*([0-9]{2}:[0-9]{2})/', $raw, $m)) {
+                    [$h, $mPart] = array_map('intval', explode(':', $m[1]));
+                    $overtimeFromLeavesMinutes += $h * 60 + $mPart;
+                }
+            }
+
+            $totalOvertimeFromCompletedWeeks = $overtimeFromLeavesMinutes / 60;
         } else {
-            // If no date range, use all overtime (but this shouldn't happen in PDF export)
-            $totalOvertimeFromCompletedWeeks = $totalOvertime;
+            // If no date range, get all approved overtime leave requests
+            $employeeIds = $dtrs->pluck('user_id')->unique();
+            $today = Carbon::today();
+            $approvedOvertimeRequests = LeaveRequest::whereIn('user_id', $employeeIds)
+                ->where('type', 'overtime')
+                ->where('status', 'approved')
+                ->whereDate('start_date', '<=', $today) // completed weeks only
+                ->get();
+
+            $overtimeFromLeavesMinutes = 0;
+            foreach ($approvedOvertimeRequests as $otRequest) {
+                $raw = $otRequest->reason ?? '';
+                if (preg_match('/Total Overtime Hours:\s*([0-9]{2}:[0-9]{2})/', $raw, $m)) {
+                    [$h, $mPart] = array_map('intval', explode(':', $m[1]));
+                    $overtimeFromLeavesMinutes += $h * 60 + $mPart;
+                }
+            }
+
+            $totalOvertimeFromCompletedWeeks = $overtimeFromLeavesMinutes / 60;
         }
 
         // Format deficit
@@ -1374,6 +1583,33 @@ class DtrController extends Controller
         $balanceOvertimeFormatted = ($balanceOvertimeHours < 0 ? '-' : '') . sprintf('%02d:%02d', $balanceOvertimeH, $balanceOvertimeM);
         $isBalanceNegative = $balanceOvertimeHours < 0;
 
+        // Get approved leave requests (excluding overtime type) for the date range
+        $leaveRequestMap = [];
+        if ($dateFrom && $dateTo) {
+            $employeeIds = $dtrs->pluck('user_id')->unique();
+            $approvedLeaves = LeaveRequest::whereIn('user_id', $employeeIds)
+                ->where('status', 'approved')
+                ->where('type', '!=', 'overtime') // Exclude overtime type
+                ->whereDate('start_date', '<=', $dateTo)
+                ->where(function ($q) use ($dateFrom) {
+                    $q->whereNull('end_date')
+                      ->orWhereDate('end_date', '>=', $dateFrom);
+                })
+                ->get();
+
+            foreach ($approvedLeaves as $leave) {
+                $start = Carbon::parse($leave->start_date);
+                $end = $leave->end_date ? Carbon::parse($leave->end_date) : $start->copy();
+                $period = new \Carbon\CarbonPeriod($start, $end);
+                foreach ($period as $day) {
+                    $dateKey = $day->format('Y-m-d');
+                    if (!isset($leaveRequestMap[$leave->user_id][$dateKey])) {
+                        $leaveRequestMap[$leave->user_id][$dateKey] = $leave;
+                    }
+                }
+            }
+        }
+
         // Group by employee for better organization
         $groupedByEmployee = [];
         foreach ($dtrs as $dtr) {
@@ -1386,6 +1622,10 @@ class DtrController extends Controller
                     'total_overtime' => 0,
                 ];
             }
+            // Attach leave request info to each DTR record
+            $dateKey = $dtr->date->format('Y-m-d');
+            $dtr->leave_request = $leaveRequestMap[$employeeId][$dateKey] ?? null;
+
             $groupedByEmployee[$employeeId]['records'][] = $dtr;
             $groupedByEmployee[$employeeId]['total_hours'] += ($dtr->total_hours ?? 0);
             $groupedByEmployee[$employeeId]['total_overtime'] += ($dtr->overtime_hours ?? 0);
@@ -1408,7 +1648,7 @@ class DtrController extends Controller
             // Calculate deficit for this employee based on date range
             // Calculate deficit directly from DTR records grouped by week
             $employeeDeficitHours = 0;
-            $employeeOvertimeFromCompletedWeeks = 0; // Only count overtime from completed weeks
+            $employeeOvertimeFromCompletedWeeks = 0; // Only count overtime from approved leave requests
             if ($dateFrom && $dateTo) {
                 $today = Carbon::today();
 
@@ -1426,11 +1666,9 @@ class DtrController extends Controller
                                 'week_start' => $weekStart,
                                 'week_end' => $weekEnd,
                                 'total_hours' => 0,
-                                'overtime_hours' => 0,
                             ];
                         }
                         $weeklyGroups[$weekKey]['total_hours'] += ($dtr->total_hours ?? 0);
-                        $weeklyGroups[$weekKey]['overtime_hours'] += ($dtr->overtime_hours ?? 0);
                     }
                 }
 
@@ -1439,11 +1677,46 @@ class DtrController extends Controller
                     $weeklyBaseHours = 40.0;
                     $weeklyDeficit = max(0, $weeklyBaseHours - $weekGroup['total_hours']);
                     $employeeDeficitHours += $weeklyDeficit;
-                    $employeeOvertimeFromCompletedWeeks += $weekGroup['overtime_hours'];
                 }
+
+                // Get approved overtime leave requests for this employee in the date range
+                $approvedOvertimeRequests = LeaveRequest::where('user_id', $employee->id)
+                    ->where('type', 'overtime')
+                    ->where('status', 'approved')
+                    ->whereDate('start_date', '>=', $dateFrom)
+                    ->whereDate('start_date', '<=', $dateTo)
+                    ->whereDate('start_date', '<=', $today) // completed weeks only
+                    ->get();
+
+                $overtimeFromLeavesMinutes = 0;
+                foreach ($approvedOvertimeRequests as $otRequest) {
+                    $raw = $otRequest->reason ?? '';
+                    if (preg_match('/Total Overtime Hours:\s*([0-9]{2}:[0-9]{2})/', $raw, $m)) {
+                        [$h, $mPart] = array_map('intval', explode(':', $m[1]));
+                        $overtimeFromLeavesMinutes += $h * 60 + $mPart;
+                    }
+                }
+
+                $employeeOvertimeFromCompletedWeeks = $overtimeFromLeavesMinutes / 60;
             } else {
-                // If no date range, use all overtime (but this shouldn't happen in PDF export)
-                $employeeOvertimeFromCompletedWeeks = $group['total_overtime'];
+                // If no date range, get all approved overtime leave requests for this employee
+                $today = Carbon::today();
+                $approvedOvertimeRequests = LeaveRequest::where('user_id', $employee->id)
+                    ->where('type', 'overtime')
+                    ->where('status', 'approved')
+                    ->whereDate('start_date', '<=', $today) // completed weeks only
+                    ->get();
+
+                $overtimeFromLeavesMinutes = 0;
+                foreach ($approvedOvertimeRequests as $otRequest) {
+                    $raw = $otRequest->reason ?? '';
+                    if (preg_match('/Total Overtime Hours:\s*([0-9]{2}:[0-9]{2})/', $raw, $m)) {
+                        [$h, $mPart] = array_map('intval', explode(':', $m[1]));
+                        $overtimeFromLeavesMinutes += $h * 60 + $mPart;
+                    }
+                }
+
+                $employeeOvertimeFromCompletedWeeks = $overtimeFromLeavesMinutes / 60;
             }
 
             // Ensure deficit is not negative (show 00:00 if negative)

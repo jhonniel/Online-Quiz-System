@@ -40,6 +40,54 @@ class DtrController extends Controller
 
         $dtrs = $query->orderBy('date', 'desc')->get();
 
+        // Include approved leave requests as on-leave entries in the list
+        $dateFrom = $request->filled('date_from') ? Carbon::parse($request->date_from) : ($dtrs->min('date') ? $dtrs->min('date')->copy() : null);
+        $dateTo = $request->filled('date_to') ? Carbon::parse($request->date_to) : ($dtrs->max('date') ? $dtrs->max('date')->copy() : null);
+        if ($dateFrom && $dateTo && $dateFrom->gt($dateTo)) {
+            [$dateFrom, $dateTo] = [$dateTo, $dateFrom];
+        }
+
+        if ($dateFrom && $dateTo) {
+            $approvedLeaves = LeaveRequest::where('user_id', $user->id)
+                ->where('status', 'approved')
+                ->whereDate('start_date', '<=', $dateTo->toDateString())
+                ->where(function ($q) use ($dateFrom) {
+                    $q->whereNull('end_date')
+                      ->orWhereDate('end_date', '>=', $dateFrom->toDateString());
+                })
+                ->get();
+
+            $leaveEntries = collect();
+            foreach ($approvedLeaves as $leave) {
+                $start = Carbon::parse($leave->start_date);
+                $end = $leave->end_date ? Carbon::parse($leave->end_date) : $start->copy();
+                $period = new \Carbon\CarbonPeriod($start, $end);
+                foreach ($period as $day) {
+                    // Only within range
+                    if ($day->lt($dateFrom) || $day->gt($dateTo)) {
+                        continue;
+                    }
+                    $entry = new Dtr([
+                        'user_id' => $user->id,
+                        'date' => $day->copy(),
+                        'total_hours' => 0,
+                        'overtime_hours' => 0,
+                        'status' => 'on_leave',
+                        'remarks' => 'Approved Leave: ' . ($leave->type_label ?? ucfirst(str_replace('_', ' ', $leave->type))),
+                    ]);
+                    $entry->setRelation('user', $user);
+                    $leaveEntries->push($entry);
+                }
+            }
+
+            // Merge leave entries and re-sort
+            if ($leaveEntries->isNotEmpty()) {
+                $dtrs = $dtrs->merge($leaveEntries)->sortByDesc(function ($item) {
+                    return $item->date;
+                })->values();
+            }
+        }
+
         $totalRecords = $dtrs->count();
 
         // Calculate Total Hours:
@@ -83,39 +131,13 @@ class DtrController extends Controller
         $months = $user->overtime_months_credited ?? 12;
         $today = Carbon::today();
 
-        // Get DTR overtime entries for completed weeks only (count all, window only for expiration)
-        $dtrOvertimeEntries = Dtr::where('user_id', $user->id)
-            ->where('overtime_hours', '>', 0)
-            ->whereDate('date', '<=', $today) // completed days/weeks only
-            ->get(['id', 'date', 'overtime_hours']);
-
-        // Calculate valid (non-expired) DTR overtime and track expiring
+        // ONLY count approved overtime leave requests for overtime balance (ignore DTR overtime totals)
         $netOvertimeHours = 0;
         $expiringOvertimeEntries = [];
         $expiringOvertimeTotal = 0;
 
-        foreach ($dtrOvertimeEntries as $dtr) {
-            $expirationDate = $dtr->date->copy()->addMonths($months);
-            $daysUntilExpiration = $today->diffInDays($expirationDate, false);
-
-            if ($daysUntilExpiration > 0) {
-                // Not expired - include in balance
-                $netOvertimeHours += $dtr->overtime_hours;
-
-                // Check if expiring within 30 days
-                if ($daysUntilExpiration <= 30) {
-                    $expiringOvertimeTotal += $dtr->overtime_hours;
-                    $expiringOvertimeEntries[] = [
-                        'type' => 'dtr',
-                        'date' => $dtr->date,
-                        'hours' => $dtr->overtime_hours,
-                        'expiration_date' => $expirationDate,
-                        'days_remaining' => $daysUntilExpiration,
-                    ];
-                }
-            }
-            // If expired (daysUntilExpiration <= 0), exclude from balance
-        }
+        // DTR overtime entries intentionally ignored per requirement
+        $dtrOvertimeEntries = collect();
 
         // Get approved overtime leave requests for completed weeks only (count all, window only for expiration)
         $approvedOvertimeRequests = LeaveRequest::where('user_id', $user->id)
@@ -155,54 +177,15 @@ class DtrController extends Controller
             }
         }
 
-        $netOvertimeHours += $overtimeFromLeavesMinutes / 60;
+        // Overtime balance is ONLY the total of approved overtime leave requests (no deductions)
+        $netOvertimeHours = $overtimeFromLeavesMinutes / 60;
 
-        // Build set of weeks where overtime was earned (DTR or overtime leave)
+        // Build set of weeks where overtime was earned (only from approved overtime leave requests)
         $overtimeWeekKeys = [];
-        foreach ($dtrOvertimeEntries as $dtr) {
-            $weekStart = $dtr->date->copy()->startOfWeek()->toDateString();
-            $overtimeWeekKeys[$weekStart] = true;
-        }
         foreach ($approvedOvertimeRequests as $otRequest) {
             $weekStart = $otRequest->start_date->copy()->startOfWeek()->toDateString();
             $overtimeWeekKeys[$weekStart] = true;
         }
-
-        // Get deficit hours for completed weeks starting from the user's first DTR week
-        $today = Carbon::today();
-        $firstDtr = Dtr::where('user_id', $user->id)->orderBy('date', 'asc')->first();
-        if ($firstDtr) {
-            $firstWeekStart = $firstDtr->date->copy()->startOfWeek()->toDateString();
-            $totalDeficitHours = \App\Models\DtrDeficit::where('user_id', $user->id)
-                ->where('is_applied', true)
-                ->where('week_end_date', '<', $today->toDateString()) // Only completed weeks
-                ->where('week_start_date', '>=', $firstWeekStart)
-                ->sum('deficit_hours');
-        } else {
-            $totalDeficitHours = 0;
-        }
-        $netOvertimeHours = $netOvertimeHours - $totalDeficitHours;
-
-        // Get ALL approved offset requests (no date filtering - count all)
-        $approvedOffsetRequests = LeaveRequest::where('user_id', $user->id)
-            ->where('type', 'offset')
-            ->where('status', 'approved')
-            ->get();
-
-        // Parse offset hours from reason field (each offset may have different hours)
-        $offsetHoursUsed = 0;
-        foreach ($approvedOffsetRequests as $offsetRequest) {
-            $raw = $offsetRequest->reason ?? '';
-            if (preg_match('/Hours to Deduct:\s*([0-9]{2}:[0-9]{2})/', $raw, $m)) {
-                [$h, $mPart] = array_map('intval', explode(':', $m[1]));
-                $offsetHoursUsed += $h + ($mPart / 60);
-            } else {
-                // Fallback: if format not found, use 8 hours (for old records)
-                $offsetHoursUsed += 8;
-            }
-        }
-
-        $netOvertimeHours = $netOvertimeHours - $offsetHoursUsed;
 
         // Format expiring overtime total
         $expiringOvertimeMinutes = (int) round($expiringOvertimeTotal * 60);

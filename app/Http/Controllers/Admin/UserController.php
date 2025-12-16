@@ -193,10 +193,10 @@ class UserController extends Controller
                 ],
             ];
 
+            // Overtime balance is ONLY based on approved overtime leave requests (DTR overtime is ignored)
             // Overtime Credited Window is ONLY used for expiration logic, NOT for counting
-            // Get ALL DTR overtime (no date filtering - count all)
-            $totalOvertimeHours = \App\Models\Dtr::where('user_id', $user->id)
-                ->sum('overtime_hours');
+            $today = Carbon::today();
+            $totalOvertimeHours = 0;
 
             // Get approved overtime leave requests for completed weeks only (count all, window only for expiration)
             $approvedOvertimeRequests = \App\Models\LeaveRequest::where('user_id', $user->id)
@@ -214,24 +214,16 @@ class UserController extends Controller
                 }
             }
 
-            $totalOvertimeHours += $overtimeFromLeavesMinutes / 60;
+            $totalOvertimeHours = $overtimeFromLeavesMinutes / 60;
 
-            // Build set of weeks where overtime was earned (DTR or overtime leave)
+            // Build set of weeks where overtime was earned (only from approved overtime leave requests)
             $overtimeWeekKeys = [];
-            $dtrWeeks = \App\Models\Dtr::where('user_id', $user->id)
-                ->where('overtime_hours', '>', 0)
-                ->get(['date']);
-            foreach ($dtrWeeks as $dtr) {
-                $weekStart = $dtr->date->copy()->startOfWeek()->toDateString();
-                $overtimeWeekKeys[$weekStart] = true;
-            }
             foreach ($approvedOvertimeRequests as $otRequest) {
                 $weekStart = $otRequest->start_date->copy()->startOfWeek()->toDateString();
                 $overtimeWeekKeys[$weekStart] = true;
             }
 
-            // Get deficit hours for completed weeks starting from the user's first DTR week
-            $today = Carbon::today();
+            // Get deficit hours for completed weeks starting from the user's first DTR week (for display only)
             $firstDtr = \App\Models\Dtr::where('user_id', $user->id)->orderBy('date', 'asc')->first();
             if ($firstDtr) {
                 $firstWeekStart = $firstDtr->date->copy()->startOfWeek()->toDateString();
@@ -243,7 +235,6 @@ class UserController extends Controller
             } else {
                 $totalDeficitHours = 0;
             }
-            $totalOvertimeHours = $totalOvertimeHours - $totalDeficitHours;
 
             // Format total deficit hours for display
             $totalDeficitMinutes = (int) round($totalDeficitHours * 60);
@@ -251,33 +242,12 @@ class UserController extends Controller
             $deficitMinutesPart = $totalDeficitMinutes % 60;
             $totalDeficitFormatted = sprintf('%02d:%02d', $deficitHoursPart, $deficitMinutesPart);
 
-            // Get ALL approved offset requests (no date filtering - count all)
-            $approvedOffsetRequests = \App\Models\LeaveRequest::where('user_id', $user->id)
-                ->where('type', 'offset')
-                ->where('status', 'approved')
-                ->get();
-
-            // Parse offset hours from reason field (each offset may have different hours)
-            $offsetHoursUsed = 0;
-            foreach ($approvedOffsetRequests as $offsetRequest) {
-                $raw = $offsetRequest->reason ?? '';
-                if (preg_match('/Hours to Deduct:\s*([0-9]{2}:[0-9]{2})/', $raw, $m)) {
-                    [$h, $mPart] = array_map('intval', explode(':', $m[1]));
-                    $offsetHoursUsed += $h + ($mPart / 60);
-                } else {
-                    // Fallback: if format not found, use 8 hours (for old records)
-                    $offsetHoursUsed += 8;
-                }
-            }
-
-            $netOvertimeHours = $totalOvertimeHours - $offsetHoursUsed;
-
-            // Format overtime (handle negative values)
-            $isNegative = $netOvertimeHours < 0;
-            $absOvertimeMinutes = (int) round(abs($netOvertimeHours) * 60);
+            // Overtime balance is ONLY the total of approved overtime requests (no deductions)
+            // Format overtime balance
+            $absOvertimeMinutes = (int) round(abs($totalOvertimeHours) * 60);
             $overtimeHoursPart = intdiv($absOvertimeMinutes, 60);
             $overtimeMinutesPart = $absOvertimeMinutes % 60;
-            $overtimeFormatted = ($isNegative ? '-' : '') . sprintf('%02d:%02d', $overtimeHoursPart, $overtimeMinutesPart);
+            $overtimeFormatted = sprintf('%02d:%02d', $overtimeHoursPart, $overtimeMinutesPart);
         }
 
         return view('admin.users.show', compact('user', 'balances', 'overtimeFormatted', 'overtimeWindowLabel', 'totalDeficitFormatted', 'totalDeficitHours'));

@@ -26,6 +26,7 @@ class DepartmentController extends Controller
             'name' => 'required|string|max:255|unique:departments,name',
             'code' => 'nullable|string|max:50|unique:departments,code',
             'description' => 'nullable|string',
+            'supervisor_name' => 'nullable|string|max:255',
             'is_active' => 'boolean',
         ]);
 
@@ -33,6 +34,7 @@ class DepartmentController extends Controller
             'name' => $request->name,
             'code' => $request->code ?: Str::upper(Str::limit(Str::slug($request->name), 10, '')),
             'description' => $request->description,
+            'supervisor_name' => $request->supervisor_name,
             'is_active' => $request->has('is_active'),
         ]);
 
@@ -51,6 +53,7 @@ class DepartmentController extends Controller
             'name' => 'required|string|max:255|unique:departments,name,' . $department->id,
             'code' => 'nullable|string|max:50|unique:departments,code,' . $department->id,
             'description' => 'nullable|string',
+            'supervisor_name' => 'nullable|string|max:255',
             'is_active' => 'boolean',
         ]);
 
@@ -58,6 +61,7 @@ class DepartmentController extends Controller
             'name' => $request->name,
             'code' => $request->code ?: Str::upper(Str::limit(Str::slug($request->name), 10, '')),
             'description' => $request->description,
+            'supervisor_name' => $request->supervisor_name,
             'is_active' => $request->has('is_active'),
         ]);
 

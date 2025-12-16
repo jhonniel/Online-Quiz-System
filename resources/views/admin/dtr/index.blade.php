@@ -364,8 +364,14 @@
                                                     </td>
                                                     <td class="px-3 py-2 whitespace-nowrap">
                                                         @php
-                                                            // If status is travel, show Travel
-                                                            if ($dtr->status === 'travel') {
+                                                            // Explicitly show Absent / Leave when applicable
+                                                            if ($dtr->status === 'absent') {
+                                                                $statusLabel = 'Absent';
+                                                                $statusClass = 'bg-red-100 text-red-800';
+                                                            } elseif ($dtr->status === 'on_leave') {
+                                                                $statusLabel = $dtr->leave_type_label ?? 'Leave';
+                                                                $statusClass = 'bg-purple-100 text-purple-800';
+                                                            } elseif ($dtr->status === 'travel') {
                                                                 $statusLabel = 'Travel';
                                                                 $statusClass = 'bg-blue-100 text-blue-800';
                                                             } else {
@@ -389,17 +395,21 @@
                                                             <div class="text-sm text-gray-500 max-w-xs truncate" title="{{ $dtr->remarks }}">
                                                                 {{ $dtr->remarks ?: '-' }}
                                                             </div>
-                                                            <a href="{{ route('admin.dtr.edit', $dtr) }}"
-                                                               class="inline-flex items-center px-2.5 py-1.5 border border-indigo-200 text-xs font-medium rounded-md text-indigo-700 bg-indigo-50 hover:bg-indigo-100">
-                                                                Edit
-                                                            </a>
-                                                            <form action="{{ route('admin.dtr.destroy', $dtr) }}" method="POST" class="inline" onsubmit="return confirm('Are you sure you want to delete this DTR record? This action cannot be undone.');">
-                                                                @csrf
-                                                                @method('DELETE')
-                                                                <button type="submit" class="inline-flex items-center px-2.5 py-1.5 border border-red-200 text-xs font-medium rounded-md text-red-700 bg-red-50 hover:bg-red-100">
-                                                                    Delete
-                                                                </button>
-                                                            </form>
+                                                            @if($dtr->exists && $dtr->id)
+                                                                <a href="{{ route('admin.dtr.edit', $dtr) }}"
+                                                                   class="inline-flex items-center px-2.5 py-1.5 border border-indigo-200 text-xs font-medium rounded-md text-indigo-700 bg-indigo-50 hover:bg-indigo-100">
+                                                                    Edit
+                                                                </a>
+                                                                <form action="{{ route('admin.dtr.destroy', $dtr) }}" method="POST" class="inline" onsubmit="return confirm('Are you sure you want to delete this DTR record? This action cannot be undone.');">
+                                                                    @csrf
+                                                                    @method('DELETE')
+                                                                    <button type="submit" class="inline-flex items-center px-2.5 py-1.5 border border-red-200 text-xs font-medium rounded-md text-red-700 bg-red-50 hover:bg-red-100">
+                                                                        Delete
+                                                                    </button>
+                                                                </form>
+                                                            @else
+                                                                <span class="text-xs text-gray-400">Not editable</span>
+                                                            @endif
                                                         </div>
                                                     </td>
                                                 </tr>

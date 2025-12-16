@@ -6,8 +6,10 @@ use App\Http\Controllers\Controller;
 use App\Models\User;
 use App\Models\Dtr;
 use App\Models\Department;
+use App\Models\LeaveRequest;
 use Illuminate\Http\Request;
 use Carbon\Carbon;
+use Carbon\CarbonPeriod;
 
 class TimeReportController extends Controller
 {
@@ -87,6 +89,36 @@ class TimeReportController extends Controller
 
         $weeklyReports = [];
         foreach ($employees as $employee) {
+            // Preload approved leave requests overlapping the filter window for this employee
+            $leaveRequests = LeaveRequest::where('user_id', $employee->id)
+                ->where('status', 'approved')
+                ->whereDate('start_date', '<=', $weekEndDate->toDateString())
+                ->where(function ($q) use ($weekStartDate) {
+                    $q->whereNull('end_date')
+                      ->orWhereDate('end_date', '>=', $weekStartDate->toDateString());
+                })
+                ->get();
+            $leaveDayMap = [];
+            foreach ($leaveRequests as $lr) {
+                $start = Carbon::parse($lr->start_date);
+                $end = $lr->end_date ? Carbon::parse($lr->end_date) : $start->copy();
+                $period = new CarbonPeriod($start, $end);
+                foreach ($period as $day) {
+                    $leaveDayMap[$day->format('Y-m-d')] = $lr;
+                }
+            }
+
+            // Also create a map for approved absent requests specifically
+            $approvedAbsentDayMap = [];
+            foreach ($leaveRequests->where('type', 'absent') as $absentRequest) {
+                $start = Carbon::parse($absentRequest->start_date);
+                $end = $absentRequest->end_date ? Carbon::parse($absentRequest->end_date) : $start->copy();
+                $period = new CarbonPeriod($start, $end);
+                foreach ($period as $day) {
+                    $approvedAbsentDayMap[$day->format('Y-m-d')] = true;
+                }
+            }
+
             // Get DTR records (allow future dates within the filter range so they count if present)
             // Use whereDate to ensure inclusive range
             $dtrs = Dtr::where('user_id', $employee->id)
@@ -106,8 +138,18 @@ class TimeReportController extends Controller
                 $dtrMap[$dateKey] = $dtr;
             }
 
-            // Calculate total hours from all DTR records (only past and today, not future)
-            $totalHours = $dtrs->sum('total_hours');
+            // Calculate total hours from all DTR records
+            // Note: Absent days should have total_hours = 0, so they won't contribute to totalHours
+            // Missing DTR records for past weekdays are also treated as 0 hours (absent)
+            $totalHours = 0;
+            foreach ($dtrs as $dtr) {
+                // Only count hours for non-absent records
+                // Absent days should contribute 0 hours to totalHours
+                if ($dtr->status !== 'absent') {
+                    $totalHours += (float) ($dtr->total_hours ?? 0);
+                }
+                // If status is 'absent', don't add any hours (treat as 0)
+            }
 
             // Determine if this is a single week filter or custom date range
             $isSingleWeek = !$startDate && !$endDate; // Using week_start filter (single week)
@@ -134,6 +176,8 @@ class TimeReportController extends Controller
                     $dateKey = $currentDate->format('Y-m-d');
                     // Check DTR map - ensure we're using the correct date format
                     $dtr = $dtrMap[$dateKey] ?? null;
+                    // Check leave map
+                    $leave = $leaveDayMap[$dateKey] ?? null;
                     // Also try checking directly if not found in map (fallback - compare date strings)
                     if (!$dtr && $dtrs->isNotEmpty()) {
                         $dtr = $dtrs->first(function($dtrRecord) use ($dateKey) {
@@ -150,6 +194,10 @@ class TimeReportController extends Controller
                     $isToday = $currentDate->eq($today);
                     // If a DTR exists, treat as recorded regardless of date; otherwise future if after today
                     $isFutureDate = !$dtr && $currentDate->gt($today);
+
+                    // Check if there's a leave request for this day
+                    $hasLeaveRequest = $leave !== null;
+                    $leaveTypeLabel = $leave ? ($leave->type_label ?? ucfirst(str_replace('_', ' ', $leave->type))) : null;
 
                     // Get hours - ensure we're getting the actual value
                     $dayHours = $dtr ? (float) ($dtr->total_hours ?? 0) : 0;
@@ -169,36 +217,70 @@ class TimeReportController extends Controller
                     }
 
                     // Determine status label based on hours and presence of DTR
-                    // CRITICAL: If hours > 0, NEVER mark as absent - always show actual status
-                    if ($dayHours > 0) {
+                    // If on approved leave without DTR, show leave status
+                    if ($leave && !$dtr) {
+                        $statusLabel = 'leave';
+                        $statusBadgeClass = 'bg-purple-100 text-purple-800';
+                        $dtrStatus = 'on_leave';
+                    } elseif ($dayHours > 0) {
                         // Hours exist - determine status based on hours
-                        if ($dayHours >= 8.0) {
+                        // Check if DTR status is travel first
+                        if ($dtr && $dtr->status === 'travel') {
+                            $statusLabel = 'travel';
+                            $statusBadgeClass = 'bg-blue-100 text-blue-800';
+                            $dtrStatus = 'travel';
+                        } elseif ($dayHours >= 8.0) {
                             $statusLabel = 'completed';
                             $statusBadgeClass = 'bg-green-100 text-green-800';
+                            // Use DTR status if available, otherwise set to present
+                            $dtrStatus = $dtr ? $dtr->status : 'present';
+                            if ($dtrStatus === 'absent') {
+                                $dtrStatus = 'present';
+                            }
                         } else {
                             $statusLabel = 'under_time';
                             $statusBadgeClass = 'bg-yellow-100 text-yellow-800';
-                        }
-                        // Use DTR status if available, otherwise set to present
-                        $dtrStatus = $dtr ? $dtr->status : 'present';
-                        if ($dtrStatus === 'absent') {
-                            $dtrStatus = 'present';
+                            // Use DTR status if available, otherwise set to present
+                            $dtrStatus = $dtr ? $dtr->status : 'present';
+                            if ($dtrStatus === 'absent') {
+                                $dtrStatus = 'present';
+                            }
                         }
                     } elseif ($dtr) {
                         // DTR exists but 0 hours
-                        $statusLabel = 'under_time';
-                        $statusBadgeClass = 'bg-yellow-100 text-yellow-800';
-                        $dtrStatus = $dtr->status === 'absent' ? 'present' : $dtr->status;
+                        // Check if DTR status is travel
+                        if ($dtr->status === 'travel') {
+                            $statusLabel = 'travel';
+                            $statusBadgeClass = 'bg-blue-100 text-blue-800';
+                            $dtrStatus = 'travel';
+                        } else {
+                            $statusLabel = 'under_time';
+                            $statusBadgeClass = 'bg-yellow-100 text-yellow-800';
+                            $dtrStatus = $dtr->status === 'absent' ? 'present' : $dtr->status;
+                        }
                     } elseif ($isFutureDate || $isToday) {
                         $statusLabel = 'not_recorded';
                         $statusBadgeClass = 'bg-gray-100 text-gray-600';
                         $dtrStatus = null;
                     } else {
-                        $statusLabel = 'absent';
-                        $statusBadgeClass = 'bg-red-100 text-red-800';
-                        $dtrStatus = 'absent';
+                        // Check if there's an approved absent leave request for this day
+                        $dateKey = $currentDate->format('Y-m-d');
+                        $hasApprovedAbsent = isset($approvedAbsentDayMap[$dateKey]);
+
+                        if ($hasApprovedAbsent) {
+                            // Has approved absent leave request
+                            $statusLabel = 'absent';
+                            $statusBadgeClass = 'bg-red-100 text-red-800';
+                            $dtrStatus = 'absent';
+                        } else {
+                            // No DTR and no leave request - show "No Records"
+                            $statusLabel = 'no_records';
+                            $statusBadgeClass = 'bg-gray-100 text-gray-500';
+                            $dtrStatus = null;
+                        }
                     }
 
+                    $dateKey = $currentDate->format('Y-m-d');
                     $dailyBreakdown[] = [
                         'date' => $currentDate->copy(),
                         'dtr' => $dtr,
@@ -209,34 +291,31 @@ class TimeReportController extends Controller
                         'status_label' => $statusLabel,
                         'status_badge_class' => $statusBadgeClass,
                         'is_future' => $isFutureDate,
+                        'leave' => $leave,
+                        'leave_type_label' => $leave ? ($leaveTypeLabel ?? 'Leave') : null,
+                        'has_leave_request' => $hasLeaveRequest ?? false,
                     ];
                 }
                 $currentDate->addDay();
             }
 
-            // Count absent only for days before today (completed days)
+            // Count absent only for days before today (completed days) - only count approved absent leave requests
             $daysPresent = $dtrs->where('status', 'present')->count();
             $daysAbsent = 0;
             if (!$isCurrentWeek) {
-                // Only count absent for dates strictly before today
-                $daysAbsent = $dtrs->filter(function($dtr) use ($today) {
-                    return $dtr->date->lt($today) && ($dtr->status === 'absent' || $dtr->total_hours == 0);
-                })->count();
-
-                // Also count weekdays before today that have no DTR record (0:00 = absent)
-                $pastWeekdays = 0;
+                // Count only approved absent leave requests for past weekdays
                 $checkDate = $weekStartDate->copy();
                 while ($checkDate <= $weekEndDate && $checkDate->lt($today)) {
                     $dayOfWeek = $checkDate->dayOfWeek;
                     if ($dayOfWeek !== Carbon::SATURDAY && $dayOfWeek !== Carbon::SUNDAY) {
                         $dateKey = $checkDate->format('Y-m-d');
-                        if (!isset($dtrMap[$dateKey])) {
-                            $pastWeekdays++;
+                        // Only count as absent if there's an approved absent leave request and no DTR record
+                        if (isset($approvedAbsentDayMap[$dateKey]) && !isset($dtrMap[$dateKey])) {
+                            $daysAbsent++;
                         }
                     }
                     $checkDate->addDay();
                 }
-                $daysAbsent += $pastWeekdays;
             }
             $daysLate = $dtrs->where('status', 'late')->count();
             $daysOnLeave = $dtrs->where('status', 'on_leave')->count();
@@ -266,7 +345,27 @@ class TimeReportController extends Controller
             if ($rangeHasEnded) {
                 if ($isSingleWeek) {
                     // Weekly deficit: baseHours - totalHours (max 0)
-                    $rawDeficit = max(0, $baseHours - $totalHours);
+                    // Ensure absent days are counted: if a DTR has status='absent', it should contribute 0 hours to totalHours
+                    // Also count past weekdays with no DTR record as 0 hours (absent)
+                    $adjustedTotalHours = $totalHours;
+
+                    // Check for past weekdays with no DTR record - these should count as absent (0 hours)
+                    $checkDate = $weekStartDate->copy();
+                    while ($checkDate <= $weekEndDate && $checkDate->lt($today)) {
+                        $dayOfWeek = $checkDate->dayOfWeek;
+                        if ($dayOfWeek !== Carbon::SATURDAY && $dayOfWeek !== Carbon::SUNDAY) {
+                            $dateKey = $checkDate->format('Y-m-d');
+                            if (!isset($dtrMap[$dateKey])) {
+                                // No DTR record for this past weekday = absent = 0 hours (already accounted in adjustedTotalHours)
+                                // This is already handled since totalHours only sums existing DTR records
+                            }
+                        }
+                        $checkDate->addDay();
+                    }
+
+                    // Calculate deficit: required hours (baseHours) minus actual hours worked (adjustedTotalHours)
+                    // If someone is absent, their totalHours will be lower, so deficit will be higher
+                    $rawDeficit = max(0, $baseHours - $adjustedTotalHours);
                 } else {
                     // Custom date range: sum per-day deficit (8:00 required per weekday)
                     // Only count deficit for dates that have DTR records OR are before today
@@ -285,7 +384,14 @@ class TimeReportController extends Controller
                             // If no DTR, only calculate deficit for past dates (before today)
                             if ($dtr || $isPastDate) {
                                 $dayHours = $dtr ? (float) $dtr->total_hours : 0;
-                                $rawDeficit += max(0, 8.0 - $dayHours);
+
+                                // If DTR status is 'absent', count as full 8 hours deficit
+                                if ($dtr && $dtr->status === 'absent') {
+                                    $rawDeficit += 8.0;
+                                } else {
+                                    // Otherwise, calculate deficit based on hours worked
+                                    $rawDeficit += max(0, 8.0 - $dayHours);
+                                }
                             }
                         }
                         $checkDate->addDay();

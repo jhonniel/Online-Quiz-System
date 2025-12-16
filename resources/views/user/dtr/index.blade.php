@@ -50,91 +50,6 @@
         </div>
     @endif
 
-    <!-- Summary Cards -->
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mx-2 sm:mx-3 lg:mx-4 xl:mx-6 mt-4">
-        <div class="bg-white rounded-lg shadow border border-gray-200 p-4">
-            <div class="flex items-center">
-                <div class="flex-shrink-0 bg-green-100 rounded-lg p-3">
-                    <svg class="h-6 w-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                    </svg>
-                </div>
-                <div class="ml-4">
-                    <p class="text-sm font-medium text-gray-500">Total Hours ({{ $totalHoursLabel }})</p>
-                    <p class="text-2xl font-bold text-gray-900">{{ $totalHoursFormatted }}</p>
-                </div>
-            </div>
-        </div>
-
-        <div class="bg-white rounded-lg shadow border border-gray-200 p-4">
-            <div class="flex items-center">
-                <div class="flex-shrink-0 bg-orange-100 rounded-lg p-3">
-                    <svg class="h-6 w-6 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                    </svg>
-                </div>
-                <div class="ml-4 flex-1">
-                    <p class="text-sm font-medium text-gray-500">Overtime ({{ $overtimeWindowLabel ?? 'This Year' }})</p>
-                    <p class="text-2xl font-bold {{ str_starts_with($totalOvertimeFormatted, '-') ? 'text-red-600' : 'text-gray-900' }}">{{ $totalOvertimeFormatted }}</p>
-                    @if(str_starts_with($totalOvertimeFormatted, '-'))
-                        <p class="text-xs text-red-500 mt-1">Negative balance</p>
-                    @endif
-
-                    @if($expiringOvertimeTotal > 0 && $minDaysRemaining !== null)
-                        <div class="mt-2 pt-2 border-t border-gray-200">
-                            <p class="text-xs font-medium text-amber-600 mb-1">
-                                <span class="inline-flex items-center">
-                                    <svg class="h-3 w-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                                    </svg>
-                                    Expiring Balance: {{ $expiringOvertimeFormatted }}
-                                </span>
-                            </p>
-                            <p class="text-xs text-amber-600">
-                                <span class="inline-flex items-center">
-                                    <svg class="h-3 w-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
-                                    </svg>
-                                    @if($minDaysRemaining > 0)
-                                        {{ $minDaysRemaining }} {{ $minDaysRemaining == 1 ? 'day' : 'days' }} remaining
-                                    @else
-                                        Expiring today
-                                    @endif
-                                </span>
-                            </p>
-                        </div>
-                    @endif
-
-                    @if($currentWeekDeficitHours > 0)
-                        <div class="mt-2 pt-2 border-t border-gray-200">
-                            <p class="text-xs text-gray-500">
-                                <span class="inline-flex items-center">
-                                    <svg class="h-3 w-3 mr-1 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
-                                    </svg>
-                                    Current week deficit: {{ $currentWeekDeficitFormatted }} (not yet added)
-                                </span>
-                            </p>
-                        </div>
-                    @endif
-                </div>
-            </div>
-        </div>
-
-        <div class="bg-white rounded-lg shadow border border-gray-200 p-4">
-            <div class="flex items-center">
-                <div class="flex-shrink-0 bg-red-100 rounded-lg p-3">
-                    <svg class="h-6 w-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-                    </svg>
-                </div>
-                <div class="ml-4">
-                    <p class="text-sm font-medium text-gray-500">Absent Count ({{ $currentYear }})</p>
-                    <p class="text-2xl font-bold text-gray-900">{{ $absentCount }}</p>
-                </div>
-            </div>
-        </div>
-    </div>
 
     <!-- Filter Form -->
     <div class="bg-white rounded-lg shadow border border-gray-200 p-4 mx-2 sm:mx-3 lg:mx-4 xl:mx-6 mt-4">
@@ -283,7 +198,13 @@
                                                     </td>
                                                     <td class="px-3 sm:px-6 py-4 whitespace-nowrap">
                                                         @php
-                                                            if ($dtr->status === 'travel') {
+                                                            if ($dtr->status === 'absent') {
+                                                                $statusLabel = 'Absent';
+                                                                $statusClass = 'bg-red-100 text-red-800';
+                                                            } elseif ($dtr->status === 'on_leave') {
+                                                                $statusLabel = 'Leave';
+                                                                $statusClass = 'bg-purple-100 text-purple-800';
+                                                            } elseif ($dtr->status === 'travel') {
                                                                 $statusLabel = 'Travel';
                                                                 $statusClass = 'bg-blue-100 text-blue-800';
                                                             } else {

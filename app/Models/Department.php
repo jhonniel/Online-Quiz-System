@@ -11,6 +11,7 @@ class Department extends Model
         'name',
         'code',
         'description',
+        'supervisor_name',
         'is_active',
     ];
 

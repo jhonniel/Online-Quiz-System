@@ -50,9 +50,7 @@
             <div class="employee-email">{{ $employeeGroup['employee']->email }}@if($employeeGroup['employee']->department) • {{ $employeeGroup['employee']->department->name }}@endif</div>
             <div class="muted" style="margin-top: 2px;">
                 Total Hours: {{ $employeeGroup['total_hours_formatted'] }} •
-                Total Overtime: {{ $employeeGroup['total_overtime_formatted'] }} •
                 Total Deficit: <span style="color: #DC2626;">{{ $employeeGroup['total_deficit_formatted'] }}</span> •
-                Balance (Overtime - Deficit): <span style="color: {{ $employeeGroup['is_balance_negative'] ? '#DC2626' : '#059669' }};">{{ $employeeGroup['balance_overtime_formatted'] }}</span> •
                 Records: {{ count($employeeGroup['records']) }}
             </div>
         </div>
@@ -105,6 +103,17 @@
                                 $statusLabel = 'Completed';
                             }
                         }
+
+                        // Build remarks with leave request info (excluding overtime type)
+                        $remarks = $dtr->remarks ?: '';
+                        if (isset($dtr->leave_request) && $dtr->leave_request) {
+                            $leaveTypeLabel = $dtr->leave_request->type_label ?? ucfirst(str_replace('_', ' ', $dtr->leave_request->type));
+                            if ($remarks) {
+                                $remarks = $remarks . ' | Leave: ' . $leaveTypeLabel;
+                            } else {
+                                $remarks = 'Leave: ' . $leaveTypeLabel;
+                            }
+                        }
                     @endphp
                     <tr>
                         <td>{{ $dtr->date->format('M d, Y') }}</td>
@@ -114,7 +123,7 @@
                         <td class="right">{{ $totalMinutes > 0 ? $totalFormatted : '00:00' }}</td>
                         <td class="right">{{ $otMinutes > 0 ? $otFormatted : '00:00' }}</td>
                         <td class="center">{{ $statusLabel }}</td>
-                        <td>{{ $dtr->remarks ?: '-' }}</td>
+                        <td>{{ $remarks ?: '-' }}</td>
                     </tr>
                 @endforeach
             </tbody>

@@ -99,6 +99,7 @@
                 </div>
             </div>
         </div>
+
     </div>
 
     <!-- Leave Balance & Overtime / Student Time -->
@@ -162,15 +163,14 @@
                             </span>
                         </p>
                         <p class="text-xs text-gray-500 mt-1">
-                            @if(str_starts_with($overtimeFormatted, '-'))
-                                Negative balance due to deficit hours deducted
-                            @else
-                                Based on approved DTR and overtime records within this window
-                            @endif
+                        @if(isset($approvedAbsentCount))
+                            Approved Absent: {{ $approvedAbsentCount }}
+                        @endif
                         </p>
                     </div>
                 </div>
             </div>
+
         </div>
     @elseif(auth()->user()->role === 'student' && isset($studentTime))
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 px-4 pb-4">
@@ -232,6 +232,7 @@
                     </div>
                 </div>
             </div>
+
         </div>
     @endif
 

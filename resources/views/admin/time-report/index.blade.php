@@ -311,25 +311,57 @@
                                             @if(isset($day['status_label']))
                                                 <span class="px-1.5 py-0.5 text-xs font-medium rounded-full {{ $day['status_badge_class'] }}">
                                                     @if($day['status_label'] === 'completed')
-                                                        Completed
+                                                        @if($day['has_leave_request'] ?? false)
+                                                            Completed ({{ $day['leave_type_label'] ?? 'Leave' }})
+                                                        @else
+                                                            Completed
+                                                        @endif
                                                     @elseif($day['status_label'] === 'under_time')
-                                                        Under Time
+                                                        @if($day['has_leave_request'] ?? false)
+                                                            Under Time ({{ $day['leave_type_label'] ?? 'Leave' }})
+                                                        @else
+                                                            Under Time
+                                                        @endif
                                                     @elseif($day['status_label'] === 'not_recorded')
                                                         Not Recorded
+                                                    @elseif($day['status_label'] === 'leave')
+                                                        {{ $day['leave_type_label'] ?? 'Leave' }}
+                                                    @elseif($day['status_label'] === 'travel')
+                                                        @if($day['has_leave_request'] ?? false)
+                                                            Travel ({{ $day['leave_type_label'] ?? 'Leave' }})
+                                                        @else
+                                                            Travel
+                                                        @endif
+                                                    @elseif($day['status_label'] === 'no_records')
+                                                        No Records
                                                     @else
                                                         Absent
                                                     @endif
                                                 </span>
                                             @else
-                                                <span class="px-1.5 py-0.5 text-xs font-medium rounded-full {{ $day['total_hours'] > 0 ? 'bg-green-100 text-green-800' : ($day['is_future'] ?? false ? 'bg-gray-100 text-gray-600' : 'bg-red-100 text-red-800') }}">
+                                                <span class="px-1.5 py-0.5 text-xs font-medium rounded-full {{ $day['total_hours'] > 0 ? 'bg-green-100 text-green-800' : ($day['is_future'] ?? false ? 'bg-gray-100 text-gray-600' : 'bg-gray-100 text-gray-500') }}">
                                                     @if($day['is_future'] ?? false)
                                                         Not Recorded
+                                                    @elseif(isset($day['dtr']) && $day['dtr']->status === 'travel')
+                                                        @if($day['has_leave_request'] ?? false)
+                                                            Travel ({{ $day['leave_type_label'] ?? 'Leave' }})
+                                                        @else
+                                                            Travel
+                                                        @endif
                                                     @elseif($day['total_hours'] >= 8.0)
-                                                        Completed
+                                                        @if($day['has_leave_request'] ?? false)
+                                                            Completed ({{ $day['leave_type_label'] ?? 'Leave' }})
+                                                        @else
+                                                            Completed
+                                                        @endif
                                                     @elseif($day['total_hours'] > 0)
-                                                        Under Time
+                                                        @if($day['has_leave_request'] ?? false)
+                                                            Under Time ({{ $day['leave_type_label'] ?? 'Leave' }})
+                                                        @else
+                                                            Under Time
+                                                        @endif
                                                     @else
-                                                        Absent
+                                                        No Records
                                                     @endif
                                                 </span>
                                             @endif

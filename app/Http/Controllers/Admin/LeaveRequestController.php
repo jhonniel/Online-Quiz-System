@@ -154,7 +154,7 @@ class LeaveRequestController extends Controller
      */
     public function show(LeaveRequest $leaveRequest)
     {
-        $leaveRequest->load(['user', 'reviewer']);
+        $leaveRequest->load(['user.department', 'reviewer']);
 
         $user = $leaveRequest->user;
         $balances = null;
@@ -214,10 +214,9 @@ class LeaveRequestController extends Controller
             // Establish current date for completed-week checks
             $today = Carbon::today();
 
+            // Overtime balance is ONLY based on approved overtime leave requests (DTR overtime is ignored)
             // Overtime Credited Window is ONLY used for expiration logic, NOT for counting
-            // Get ALL DTR overtime (no date filtering - count all)
-            $totalOvertimeHours = \App\Models\Dtr::where('user_id', $user->id)
-                ->sum('overtime_hours');
+            $totalOvertimeHours = 0;
 
             // Get approved overtime leave requests for completed weeks only (count all, window only for expiration)
             $approvedOvertimeRequests = LeaveRequest::where('user_id', $user->id)
@@ -235,64 +234,21 @@ class LeaveRequestController extends Controller
                 }
             }
 
-            $totalOvertimeHours += $overtimeFromLeavesMinutes / 60;
+            $totalOvertimeHours = $overtimeFromLeavesMinutes / 60;
 
-            // Build set of weeks where overtime was earned (DTR or overtime leave)
+            // Build set of weeks where overtime was earned (only from approved overtime leave requests)
             $overtimeWeekKeys = [];
-            $dtrWeeks = \App\Models\Dtr::where('user_id', $user->id)
-                ->where('overtime_hours', '>', 0)
-                ->get(['date']);
-            foreach ($dtrWeeks as $dtr) {
-                $weekStart = $dtr->date->copy()->startOfWeek()->toDateString();
-                $overtimeWeekKeys[$weekStart] = true;
-            }
             foreach ($approvedOvertimeRequests as $otRequest) {
                 $weekStart = $otRequest->start_date->copy()->startOfWeek()->toDateString();
                 $overtimeWeekKeys[$weekStart] = true;
             }
 
-            // Get deficit hours for completed weeks starting from the user's first DTR week
-            $today = Carbon::today();
-            $firstDtr = \App\Models\Dtr::where('user_id', $user->id)->orderBy('date', 'asc')->first();
-            if ($firstDtr) {
-                $firstWeekStart = $firstDtr->date->copy()->startOfWeek()->toDateString();
-                $totalDeficitHours = \App\Models\DtrDeficit::where('user_id', $user->id)
-                    ->where('is_applied', true)
-                    ->where('week_end_date', '<', $today->toDateString()) // Only completed weeks
-                    ->where('week_start_date', '>=', $firstWeekStart)
-                    ->sum('deficit_hours');
-            } else {
-                $totalDeficitHours = 0;
-            }
-            $totalOvertimeHours = $totalOvertimeHours - $totalDeficitHours;
-
-            // Get ALL approved offset requests (no date filtering - count all)
-            $approvedOffsetRequests = LeaveRequest::where('user_id', $user->id)
-                ->where('type', 'offset')
-                ->where('status', 'approved')
-                ->get();
-
-            // Parse offset hours from reason field (each offset may have different hours)
-            $offsetHoursUsed = 0;
-            foreach ($approvedOffsetRequests as $offsetRequest) {
-                $raw = $offsetRequest->reason ?? '';
-                if (preg_match('/Hours to Deduct:\s*([0-9]{2}:[0-9]{2})/', $raw, $m)) {
-                    [$h, $mPart] = array_map('intval', explode(':', $m[1]));
-                    $offsetHoursUsed += $h + ($mPart / 60);
-                } else {
-                    // Fallback: if format not found, use 8 hours (for old records)
-                    $offsetHoursUsed += 8;
-                }
-            }
-
-            $netOvertimeHours = $totalOvertimeHours - $offsetHoursUsed;
-
-            // Format overtime (handle negative values)
-            $isNegative = $netOvertimeHours < 0;
-            $absOvertimeMinutes = (int) round(abs($netOvertimeHours) * 60);
+            // Overtime balance is ONLY the total of approved overtime requests (no deductions)
+            // Format overtime balance
+            $absOvertimeMinutes = (int) round(abs($totalOvertimeHours) * 60);
             $overtimeHoursPart = intdiv($absOvertimeMinutes, 60);
             $overtimeMinutesPart = $absOvertimeMinutes % 60;
-            $overtimeFormatted = ($isNegative ? '-' : '') . sprintf('%02d:%02d', $overtimeHoursPart, $overtimeMinutesPart);
+            $overtimeFormatted = sprintf('%02d:%02d', $overtimeHoursPart, $overtimeMinutesPart);
 
             // Check if this is an offset request and if the duration exceeds overtime balance
             $hasNegativeBalance = false;
@@ -302,7 +258,7 @@ class LeaveRequestController extends Controller
 
                 // Check if offset hours needed exceeds current overtime balance
                 // If yes, approving will result in negative balance
-                $hasNegativeBalance = $offsetHoursNeeded > $netOvertimeHours;
+                $hasNegativeBalance = $offsetHoursNeeded > $totalOvertimeHours;
             }
         } elseif ($user->role === 'student') {
             // Student: show total DTR time vs required time set by admin
@@ -332,9 +288,18 @@ class LeaveRequestController extends Controller
             ];
         }
 
-        // Get signatory names from settings
+        // Get signatory names - immediate supervisor based on user's department
+        $employee = $leaveRequest->user;
+        $immediateSupervisor = 'CHARMAINE JOY ROSATACE'; // Default fallback
+
+        if ($employee && $employee->department && $employee->department->supervisor_name) {
+            $immediateSupervisor = $employee->department->supervisor_name;
+        } else {
+            $immediateSupervisor = \App\Models\Setting::get('leave_immediate_supervisor', 'CHARMAINE JOY ROSATACE');
+        }
+
         $signatories = [
-            'immediate_supervisor' => \App\Models\Setting::get('leave_immediate_supervisor', 'CHARMAINE JOY ROSATACE'),
+            'immediate_supervisor' => $immediateSupervisor,
             'hr_admin' => \App\Models\Setting::get('leave_hr_admin', 'MAY GRACE ACOSTA'),
             'cto' => \App\Models\Setting::get('leave_cto', 'NITISH KHEMANI'),
         ];
