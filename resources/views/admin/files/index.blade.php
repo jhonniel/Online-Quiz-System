@@ -240,10 +240,10 @@
                     @csrf
                     <input type="hidden" name="folder_id" value="{{ $currentFolder->id ?? null }}">
                     <div class="mb-4">
-                        <label for="file" class="block text-sm font-medium text-gray-700 mb-2">Select File (Max: 1GB)</label>
+                        <label for="file" class="block text-sm font-medium text-gray-700 mb-2">Select File (Max: 5GB)</label>
                         <input type="file" name="file" id="file" required
                                class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100">
-                        <p class="mt-1 text-xs text-gray-500">Maximum file size: 1GB</p>
+                        <p class="mt-1 text-xs text-gray-500">Maximum file size: 5GB</p>
                     </div>
                     <div class="mb-4">
                         <label for="description" class="block text-sm font-medium text-gray-700 mb-2">Description (Optional)</label>
@@ -495,10 +495,10 @@
                 return;
             }
 
-            // Check file size (1GB = 1073741824 bytes)
-            const maxSize = 1073741824; // 1GB in bytes
+            // Check file size (5GB = 5368709120 bytes)
+            const maxSize = 5368709120; // 5GB in bytes
             if (file.size > maxSize) {
-                alert('File size exceeds 1GB limit. Please select a smaller file.');
+                alert('File size exceeds 5GB limit. Please select a smaller file.');
                 return;
             }
 
@@ -551,7 +551,7 @@
                     } catch (e) {
                         // If response is not JSON, try to extract error from HTML
                         if (xhr.responseText.includes('The file size must not exceed')) {
-                            errorMessage = 'File size exceeds 1GB limit.';
+                            errorMessage = 'File size exceeds 5GB limit.';
                         }
                     }
 

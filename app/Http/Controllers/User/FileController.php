@@ -73,11 +73,11 @@ class FileController extends Controller
     public function store(Request $request)
     {
         $request->validate([
-            'file' => 'required|file|max:1048576', // 1GB max
+            'file' => 'required|file|max:5242880', // 5GB max
             'folder_id' => 'nullable|exists:files,id',
             'description' => 'nullable|string|max:1000',
         ], [
-            'file.max' => 'The file size must not exceed 1GB.',
+            'file.max' => 'The file size must not exceed 5GB.',
         ]);
 
         $userId = auth()->id();
