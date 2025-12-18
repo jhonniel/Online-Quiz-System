@@ -19,6 +19,7 @@ use App\Http\Controllers\Admin\ErrorLogController;
 use App\Http\Controllers\Admin\AdminPermissionController;
 use App\Http\Controllers\User\DashboardController as UserDashboardController;
 use App\Http\Controllers\User\QuizController as UserQuizController;
+use App\Http\Controllers\User\FileController as UserFileController;
 use Illuminate\Support\Facades\Route;
 
 // Landing Page Routes
@@ -178,6 +179,7 @@ Route::prefix('admin')->middleware(['auth', 'admin'])->group(function () {
         // Student Leave Requests Management
         Route::get('/student-leave-requests', [App\Http\Controllers\Admin\LeaveRequestController::class, 'studentIndex'])->name('admin.student-leave-requests.index');
         Route::get('/student-leave-calendar', [App\Http\Controllers\Admin\LeaveRequestController::class, 'studentCalendar'])->name('admin.student-leave-requests.calendar');
+        Route::post('/student-leave-requests/create-for-student', [App\Http\Controllers\Admin\LeaveRequestController::class, 'storeForStudent'])->name('admin.student-leave-requests.store-for-student');
     });
 
     // Hiring Process Management
@@ -200,6 +202,18 @@ Route::prefix('admin')->middleware(['auth', 'admin'])->group(function () {
         Route::patch('/hiring-applications/{application}/admin-notes', [App\Http\Controllers\Admin\HiringApplicationController::class, 'updateAdminNotes'])->name('admin.hiring-applications.update-admin-notes');
         Route::delete('/hiring-applications/{application}', [App\Http\Controllers\Admin\HiringApplicationController::class, 'destroy'])->name('admin.hiring-applications.destroy');
     });
+
+    // File Storage (Admin)
+    Route::get('files', [App\Http\Controllers\Admin\FileController::class, 'index'])->name('admin.files.index');
+    Route::post('files', [App\Http\Controllers\Admin\FileController::class, 'store'])->name('admin.files.store');
+    Route::post('files/create-folder', [App\Http\Controllers\Admin\FileController::class, 'createFolder'])->name('admin.files.create-folder');
+    Route::put('files/{file}', [App\Http\Controllers\Admin\FileController::class, 'update'])->name('admin.files.update');
+    Route::delete('files/{file}', [App\Http\Controllers\Admin\FileController::class, 'destroy'])->name('admin.files.destroy');
+    Route::get('files/{file}/download', [App\Http\Controllers\Admin\FileController::class, 'download'])->name('admin.files.download');
+    Route::get('files/{file}/view', [App\Http\Controllers\Admin\FileController::class, 'view'])->name('admin.files.view');
+    Route::post('files/{file}/share', [App\Http\Controllers\Admin\FileController::class, 'share'])->name('admin.files.share');
+    Route::post('files/{file}/unshare', [App\Http\Controllers\Admin\FileController::class, 'unshare'])->name('admin.files.unshare');
+    Route::get('files/{file}/shared-users', [App\Http\Controllers\Admin\FileController::class, 'getSharedUsers'])->name('admin.files.shared-users');
 
     // Communication
     Route::middleware(['admin.permission:communication'])->group(function () {
@@ -275,6 +289,12 @@ Route::middleware(['auth'])->group(function () {
     Route::post('/quizzes/{quiz}/cancel', [UserQuizController::class, 'cancel'])->name('user.quizzes.cancel');
     Route::get('/quizzes/{quiz}/result', [UserQuizController::class, 'result'])->name('user.quizzes.result');
     Route::get('/quizzes/{quiz}/time-expired', [UserQuizController::class, 'timeExpired'])->name('user.quizzes.time-expired');
+
+    // File Storage (User)
+    Route::get('/files', [UserFileController::class, 'index'])->name('user.files.index');
+    Route::post('/files', [UserFileController::class, 'store'])->name('user.files.store');
+    Route::get('/files/{file}/download', [UserFileController::class, 'download'])->name('user.files.download');
+    Route::get('/files/{file}/view', [UserFileController::class, 'view'])->name('user.files.view');
 
     // Chat Routes
     Route::get('/chat/messages', [ChatController::class, 'index'])->name('chat.messages');

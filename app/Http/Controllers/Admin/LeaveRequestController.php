@@ -28,6 +28,11 @@ class LeaveRequestController extends Controller
     public function index(Request $request)
     {
         $user = auth()->user();
+        $search = trim((string) $request->input('search', ''));
+        $perPage = (int) $request->input('per_page', 20);
+        if (!in_array($perPage, [10, 20, 50, 100], true)) {
+            $perPage = 20;
+        }
 
         $query = LeaveRequest::with(['user', 'reviewer', 'approvedBy.performer', 'rejectedBy.performer', 'resubmissionRequestedBy.performer', 'logs'])
             ->whereHas('user', function($q) {
@@ -69,19 +74,27 @@ class LeaveRequestController extends Controller
             $query->where('user_id', $request->employee);
         }
 
-        // Search by employee name or email
-        if ($request->has('search') && $request->search) {
-            $search = $request->search;
-            $query->whereHas('user', function($q) use ($search) {
-                $q->where('role', 'employee')
-                  ->where(function($subQ) use ($search) {
-                      $subQ->where('name', 'like', "%{$search}%")
-                           ->orWhere('email', 'like', "%{$search}%");
-                  });
+        // Search (employee name/email + request fields)
+        if ($search !== '') {
+            $query->where(function ($q) use ($search) {
+                if (ctype_digit($search)) {
+                    $q->orWhere('id', (int) $search)
+                        ->orWhere('user_id', (int) $search);
+                }
+
+                $q->orWhere('type', 'like', "%{$search}%")
+                    ->orWhere('status', 'like', "%{$search}%")
+                    ->orWhere('reason', 'like', "%{$search}%")
+                    ->orWhereHas('user', function ($uq) use ($search) {
+                        $uq->where('name', 'like', "%{$search}%")
+                            ->orWhere('email', 'like', "%{$search}%");
+                    });
             });
         }
 
-        $leaveRequests = $query->orderBy('created_at', 'desc')->paginate(20);
+        $leaveRequests = $query->orderBy('created_at', 'desc')
+            ->paginate($perPage)
+            ->appends($request->query());
 
         // Statistics - only for employees (apply department restrictions)
         $baseQuery = LeaveRequest::whereHas('user', function($q) {
@@ -111,6 +124,22 @@ class LeaveRequestController extends Controller
         }
         if ($request->has('type') && $request->type) {
             $baseQuery->where('type', $request->type);
+        }
+        if ($search !== '') {
+            $baseQuery->where(function ($q) use ($search) {
+                if (ctype_digit($search)) {
+                    $q->orWhere('id', (int) $search)
+                        ->orWhere('user_id', (int) $search);
+                }
+
+                $q->orWhere('type', 'like', "%{$search}%")
+                    ->orWhere('status', 'like', "%{$search}%")
+                    ->orWhere('reason', 'like', "%{$search}%")
+                    ->orWhereHas('user', function ($uq) use ($search) {
+                        $uq->where('name', 'like', "%{$search}%")
+                            ->orWhere('email', 'like', "%{$search}%");
+                    });
+            });
         }
 
         $stats = [
@@ -146,7 +175,7 @@ class LeaveRequestController extends Controller
 
         $departments = $departmentsQuery->orderBy('name')->get();
 
-        return view('admin.leave-requests.index', compact('leaveRequests', 'stats', 'employees', 'departments'));
+        return view('admin.leave-requests.index', compact('leaveRequests', 'stats', 'employees', 'departments', 'search', 'perPage'));
     }
 
     /**
@@ -902,6 +931,12 @@ class LeaveRequestController extends Controller
      */
     public function studentIndex(Request $request)
     {
+        $search = trim((string) $request->input('search', ''));
+        $perPage = (int) $request->input('per_page', 20);
+        if (!in_array($perPage, [10, 20, 50, 100], true)) {
+            $perPage = 20;
+        }
+
         $query = LeaveRequest::with(['user', 'reviewer'])
             ->whereHas('user', function($q) {
                 $q->where('role', 'student');
@@ -922,16 +957,27 @@ class LeaveRequestController extends Controller
             $query->where('user_id', $request->student);
         }
 
-        // Search by student name or email
-        if ($request->has('search') && $request->search) {
-            $search = $request->search;
-            $query->whereHas('user', function($q) use ($search) {
-                $q->where('name', 'like', "%{$search}%")
-                  ->orWhere('email', 'like', "%{$search}%");
+        // Search (student name/email, request fields, IDs)
+        if ($search !== '') {
+            $query->where(function ($q) use ($search) {
+                if (ctype_digit($search)) {
+                    $q->orWhere('id', (int) $search)
+                        ->orWhere('user_id', (int) $search);
+                }
+
+                $q->orWhere('type', 'like', "%{$search}%")
+                    ->orWhere('status', 'like', "%{$search}%")
+                    ->orWhere('reason', 'like', "%{$search}%")
+                    ->orWhereHas('user', function ($uq) use ($search) {
+                        $uq->where('name', 'like', "%{$search}%")
+                            ->orWhere('email', 'like', "%{$search}%");
+                    });
             });
         }
 
-        $leaveRequests = $query->orderBy('created_at', 'desc')->paginate(20);
+        $leaveRequests = $query->orderBy('created_at', 'desc')
+            ->paginate($perPage)
+            ->appends($request->query());
 
         // Statistics
         $baseQuery = LeaveRequest::whereHas('user', function($q) {
@@ -942,6 +988,22 @@ class LeaveRequestController extends Controller
         }
         if ($request->has('type') && $request->type) {
             $baseQuery->where('type', $request->type);
+        }
+        if ($search !== '') {
+            $baseQuery->where(function ($q) use ($search) {
+                if (ctype_digit($search)) {
+                    $q->orWhere('id', (int) $search)
+                        ->orWhere('user_id', (int) $search);
+                }
+
+                $q->orWhere('type', 'like', "%{$search}%")
+                    ->orWhere('status', 'like', "%{$search}%")
+                    ->orWhere('reason', 'like', "%{$search}%")
+                    ->orWhereHas('user', function ($uq) use ($search) {
+                        $uq->where('name', 'like', "%{$search}%")
+                            ->orWhere('email', 'like', "%{$search}%");
+                    });
+            });
         }
 
         $stats = [
@@ -956,7 +1018,7 @@ class LeaveRequestController extends Controller
             ->orderBy('name')
             ->get();
 
-        return view('admin.leave-requests.student-index', compact('leaveRequests', 'stats', 'students'));
+        return view('admin.leave-requests.student-index', compact('leaveRequests', 'stats', 'students', 'search', 'perPage'));
     }
 
     /**
@@ -1094,8 +1156,81 @@ class LeaveRequestController extends Controller
             'prevMonth' => $prevMonth,
             'nextMonth' => $nextMonth,
             'students' => $students,
+            // For filing leave, allow selecting from all active students
+            'studentsForFiling' => $allStudents->sortBy('name')->values(),
             'selectedStudent' => $studentId,
         ]);
+    }
+
+    /**
+     * Allow admins to file a leave request on behalf of one or more students (student calendar page).
+     * Supports bulk filing (one request per selected student).
+     */
+    public function storeForStudent(Request $request)
+    {
+        $validated = $request->validate([
+            'student_ids' => ['required', 'array', 'min:1'],
+            'student_ids.*' => [
+                'required',
+                Rule::exists('users', 'id')->where(function ($q) {
+                    $q->where('role', 'student')->where('is_active', true);
+                }),
+            ],
+            'type' => ['required', Rule::in(['additional_time', 'absent', 'other'])],
+            'start_date' => ['required', 'date'],
+            'end_date' => ['nullable', 'date', 'after_or_equal:start_date'],
+            'reason' => ['nullable', 'string', 'max:1000'],
+        ]);
+
+        $typeInput = $validated['type'];
+        // Allow past dates only for student additional_time; others must be today or future
+        if ($typeInput !== 'additional_time') {
+            $request->validate([
+                'start_date' => ['required', 'date', 'after_or_equal:today'],
+            ]);
+        }
+
+        $startDate = Carbon::parse($validated['start_date']);
+        $endDate = $validated['end_date'] ? Carbon::parse($validated['end_date']) : $startDate;
+        $daysRequested = $startDate->diffInDays($endDate) + 1;
+
+        $createdCount = 0;
+
+        foreach ($validated['student_ids'] as $studentId) {
+            $student = User::findOrFail($studentId);
+
+            $leaveRequest = LeaveRequest::create([
+                'user_id' => $student->id,
+                'type' => $validated['type'],
+                'start_date' => $validated['start_date'],
+                'end_date' => $validated['end_date'] ?? $validated['start_date'],
+                'reason' => $validated['reason'] ?? '',
+                'status' => 'pending',
+                'reviewed_by' => null,
+                'reviewed_at' => null,
+            ]);
+
+            LeaveRequestLog::create([
+                'leave_request_id' => $leaveRequest->id,
+                'action' => 'filed_by_admin',
+                'status_before' => null,
+                'status_after' => 'pending',
+                'notes' => 'Filed by admin on behalf of student',
+                'performed_by' => Auth::id(),
+            ]);
+
+            Log::info('Admin filed leave request for student', [
+                'leave_request_id' => $leaveRequest->id,
+                'student_id' => $student->id,
+                'admin_id' => Auth::id(),
+                'type' => $validated['type'],
+                'days' => $daysRequested,
+            ]);
+
+            $createdCount++;
+        }
+
+        return redirect()->back()->with('success', "Leave request filed for {$createdCount} student(s).");
     }
 
     /**

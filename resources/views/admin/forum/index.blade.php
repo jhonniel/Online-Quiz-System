@@ -19,8 +19,30 @@
     <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-2 flex-shrink-0 mx-2 sm:mx-3 lg:mx-4 xl:mx-6">
         <div class="flex flex-col sm:flex-row gap-2">
             <div class="flex-1">
-                <input type="text" id="search-input" placeholder="Search threads..."
-                       class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent">
+                <form id="admin-forum-search-form" method="GET" action="{{ route('admin.forum.index') }}">
+                    @if(request()->has('per_page'))
+                        <input type="hidden" name="per_page" value="{{ request('per_page') }}">
+                    @endif
+                    <div class="relative">
+                        <input type="text"
+                               id="search-input"
+                               name="search"
+                               value="{{ request('search', $search ?? '') }}"
+                               placeholder="Search threads (title, content, author, ID)..."
+                               autocomplete="off"
+                               class="w-full px-3 py-2 pr-10 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent">
+                        @if(request('search'))
+                            <button type="button"
+                                    id="clear-search-btn"
+                                    class="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600"
+                                    title="Clear search">
+                                <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                                </svg>
+                            </button>
+                        @endif
+                    </div>
+                </form>
             </div>
             <div class="flex gap-2">
                 <button class="px-4 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 transition-colors">
@@ -29,6 +51,12 @@
                     </svg>
                     Filter
                 </button>
+                <select id="forum-per-page-select" class="px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent">
+                    <option value="10" {{ request('per_page', 10) == 10 ? 'selected' : '' }}>10</option>
+                    <option value="20" {{ request('per_page', 10) == 20 ? 'selected' : '' }}>20</option>
+                    <option value="50" {{ request('per_page', 10) == 50 ? 'selected' : '' }}>50</option>
+                    <option value="100" {{ request('per_page', 10) == 100 ? 'selected' : '' }}>100</option>
+                </select>
                 <a href="{{ route('admin.forum.create') }}" class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
                     <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
@@ -206,33 +234,33 @@
                                      x-transition:leave-start="transform opacity-100 scale-100"
                                      x-transition:leave-end="transform opacity-0 scale-95"
                                      class="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 z-50 border border-gray-200">
-                                    <a href="{{ route('admin.forum.show', $thread) }}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center">
+                                    <a href="{{ route('admin.forum.show', $thread) }}" class="w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center">
                                         <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
                                         </svg>
                                         View
                                     </a>
-                                    <a href="{{ route('admin.forum.edit', $thread) }}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center">
+                                    <a href="{{ route('admin.forum.edit', $thread) }}" class="w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center">
                                         <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
                                         </svg>
                                         Edit
                                     </a>
-                                    <button onclick="togglePublish({{ $thread->id }}, {{ $thread->is_published ? 'false' : 'true' }})" class="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center">
+                                    <button onclick="togglePublish({{ $thread->id }}, {{ $thread->is_published ? 'false' : 'true' }})" class="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center">
                                         <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
                                         </svg>
                                         {{ $thread->is_published ? 'Unpublish' : 'Publish' }}
                                     </button>
-                                    <button onclick="togglePin({{ $thread->id }}, {{ $thread->is_pinned ? 'false' : 'true' }})" class="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center">
+                                    <button onclick="togglePin({{ $thread->id }}, {{ $thread->is_pinned ? 'false' : 'true' }})" class="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center">
                                         <svg class="w-4 h-4 mr-2" fill="currentColor" viewBox="0 0 20 20">
                                             <path d="M10 2L3 7v11h4v-6h6v6h4V7l-7-5z"></path>
                                         </svg>
                                         {{ $thread->is_pinned ? 'Unpin' : 'Pin' }}
                                     </button>
                                     <div class="border-t border-gray-100"></div>
-                                    <button onclick="deleteThread({{ $thread->id }})" class="block w-full text-left px-4 py-2 text-sm text-red-700 hover:bg-red-50 flex items-center">
+                                    <button onclick="deleteThread({{ $thread->id }})" class="w-full text-left px-4 py-2 text-sm text-red-700 hover:bg-red-50 flex items-center">
                                         <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
                                         </svg>
@@ -268,28 +296,45 @@
         <!-- Pagination -->
         @if($threads->hasPages())
         <div class="bg-white px-4 py-3 border-t border-gray-200 sm:px-6">
-            {{ $threads->links() }}
+            {{ $threads->appends(request()->query())->links() }}
         </div>
         @endif
     </div>
 </div>
 
 <script>
-// Search functionality
-document.getElementById('search-input').addEventListener('input', function(e) {
-    const searchTerm = e.target.value.toLowerCase();
-    const rows = document.querySelectorAll('tbody tr');
+// Search (server-side, debounced)
+document.addEventListener('DOMContentLoaded', function () {
+    const form = document.getElementById('admin-forum-search-form');
+    const input = document.getElementById('search-input');
+    const clearBtn = document.getElementById('clear-search-btn');
+    const perPageSelect = document.getElementById('forum-per-page-select');
 
-    rows.forEach(row => {
-        const title = row.querySelector('td:first-child p:first-child').textContent.toLowerCase();
-        const content = row.querySelector('td:first-child p:nth-child(2)').textContent.toLowerCase();
+    let t = null;
+    if (form && input) {
+        input.addEventListener('input', function () {
+            if (t) clearTimeout(t);
+            t = setTimeout(() => form.submit(), 350);
+        });
+    }
 
-        if (title.includes(searchTerm) || content.includes(searchTerm)) {
-            row.style.display = '';
-        } else {
-            row.style.display = 'none';
-        }
-    });
+    if (clearBtn && input && form) {
+        clearBtn.addEventListener('click', function () {
+            input.value = '';
+            form.submit();
+        });
+    }
+
+    if (perPageSelect) {
+        perPageSelect.addEventListener('change', function () {
+            const url = new URL(window.location.href);
+            const params = new URLSearchParams(url.search);
+            params.set('per_page', this.value);
+            params.delete('page');
+            url.search = params.toString();
+            window.location.href = url.toString();
+        });
+    }
 });
 
 // Toggle publish status

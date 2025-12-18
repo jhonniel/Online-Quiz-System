@@ -17,9 +17,50 @@ class HiringApplicationController extends Controller
     {
         $query = HiringApplication::with(['reviewer', 'user', 'hiringPosition']);
 
+        $search = trim((string) $request->input('search', ''));
+        $searchTokens = $search !== '' ? preg_split('/\s+/', $search, -1, PREG_SPLIT_NO_EMPTY) : [];
+
         // Filter by position if provided
         if ($request->has('position') && $request->position) {
             $query->where('hiring_position_id', $request->position);
+        }
+
+        // Search
+        if ($search !== '') {
+            $query->where(function ($q) use ($search, $searchTokens) {
+                if (ctype_digit($search)) {
+                    $q->orWhere('id', (int) $search);
+                }
+
+                $q->orWhere('first_name', 'like', "%{$search}%")
+                    ->orWhere('last_name', 'like', "%{$search}%")
+                    ->orWhere('email', 'like', "%{$search}%")
+                    ->orWhere('phone', 'like', "%{$search}%")
+                    ->orWhere('status', 'like', "%{$search}%")
+                    ->orWhere('position_applied', 'like', "%{$search}%")
+                    ->orWhereHas('hiringPosition', function ($hp) use ($search) {
+                        $hp->where('title', 'like', "%{$search}%");
+                    });
+
+                // Support searching full names like "Juan Dela Cruz" by requiring each token to match
+                if (count($searchTokens) > 1) {
+                    $q->orWhere(function ($andQ) use ($searchTokens) {
+                        foreach ($searchTokens as $token) {
+                            $andQ->where(function ($tokenQ) use ($token) {
+                                $tokenQ->where('first_name', 'like', "%{$token}%")
+                                    ->orWhere('last_name', 'like', "%{$token}%")
+                                    ->orWhere('email', 'like', "%{$token}%")
+                                    ->orWhere('phone', 'like', "%{$token}%")
+                                    ->orWhere('status', 'like', "%{$token}%")
+                                    ->orWhere('position_applied', 'like', "%{$token}%")
+                                    ->orWhereHas('hiringPosition', function ($hp) use ($token) {
+                                        $hp->where('title', 'like', "%{$token}%");
+                                    });
+                            });
+                        }
+                    });
+                }
+            });
         }
 
         // Get per page value (default 20, options: 10, 20, 50, 100)
@@ -35,6 +76,41 @@ class HiringApplicationController extends Controller
         if ($positionFilter) {
             $baseQuery->where('hiring_position_id', $positionFilter);
         }
+        if ($search !== '') {
+            $baseQuery->where(function ($q) use ($search, $searchTokens) {
+                if (ctype_digit($search)) {
+                    $q->orWhere('id', (int) $search);
+                }
+
+                $q->orWhere('first_name', 'like', "%{$search}%")
+                    ->orWhere('last_name', 'like', "%{$search}%")
+                    ->orWhere('email', 'like', "%{$search}%")
+                    ->orWhere('phone', 'like', "%{$search}%")
+                    ->orWhere('status', 'like', "%{$search}%")
+                    ->orWhere('position_applied', 'like', "%{$search}%")
+                    ->orWhereHas('hiringPosition', function ($hp) use ($search) {
+                        $hp->where('title', 'like', "%{$search}%");
+                    });
+
+                if (count($searchTokens) > 1) {
+                    $q->orWhere(function ($andQ) use ($searchTokens) {
+                        foreach ($searchTokens as $token) {
+                            $andQ->where(function ($tokenQ) use ($token) {
+                                $tokenQ->where('first_name', 'like', "%{$token}%")
+                                    ->orWhere('last_name', 'like', "%{$token}%")
+                                    ->orWhere('email', 'like', "%{$token}%")
+                                    ->orWhere('phone', 'like', "%{$token}%")
+                                    ->orWhere('status', 'like', "%{$token}%")
+                                    ->orWhere('position_applied', 'like', "%{$token}%")
+                                    ->orWhereHas('hiringPosition', function ($hp) use ($token) {
+                                        $hp->where('title', 'like', "%{$token}%");
+                                    });
+                            });
+                        }
+                    });
+                }
+            });
+        }
 
         $stats = [
             'total' => $baseQuery->count(),
@@ -44,7 +120,7 @@ class HiringApplicationController extends Controller
             'interview_scheduled' => (clone $baseQuery)->where('status', 'interview_scheduled')->count(),
         ];
 
-        return view('admin.hiring-applications.index', compact('applications', 'stats', 'positions', 'positionFilter', 'perPage'));
+        return view('admin.hiring-applications.index', compact('applications', 'stats', 'positions', 'positionFilter', 'perPage', 'search'));
     }
 
     public function show(HiringApplication $application)

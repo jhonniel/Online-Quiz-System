@@ -33,7 +33,7 @@
 
     <!-- Pagination -->
     @if(isset($data) && method_exists($data, 'links'))
-        <div class="bg-white px-3 sm:px-4 lg:px-6 py-3 flex items-center justify-between border-t border-gray-200 sm:px-6 flex-shrink-0">
+        <div class="bg-white px-3 sm:px-6 lg:px-6 py-3 flex items-center justify-between border-t border-gray-200 flex-shrink-0">
             <div class="flex-1 flex justify-between sm:hidden">
                 {{ $data->links() }}
             </div>
@@ -51,10 +51,11 @@
                 </div>
                 <div class="flex items-center space-x-2">
                     <span class="text-sm text-gray-700">Rows per page:</span>
-                    <select class="text-sm border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500">
+                    <select class="js-per-page-select text-sm border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500">
                         <option value="10" {{ request('per_page', 10) == 10 ? 'selected' : '' }}>10</option>
                         <option value="25" {{ request('per_page', 10) == 25 ? 'selected' : '' }}>25</option>
                         <option value="50" {{ request('per_page', 10) == 50 ? 'selected' : '' }}>50</option>
+                        <option value="100" {{ request('per_page', 10) == 100 ? 'selected' : '' }}>100</option>
                     </select>
                 </div>
                 <div>
@@ -63,6 +64,21 @@
             </div>
         </div>
     @endif
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            document.querySelectorAll('.js-per-page-select').forEach((select) => {
+                select.addEventListener('change', function () {
+                    const url = new URL(window.location.href);
+                    const params = new URLSearchParams(url.search);
+                    params.set('per_page', this.value);
+                    params.delete('page');
+                    url.search = params.toString();
+                    window.location.href = url.toString();
+                });
+            });
+        });
+    </script>
 @else
     <div class="text-center py-12 flex-1 flex items-center justify-center">
         <div>

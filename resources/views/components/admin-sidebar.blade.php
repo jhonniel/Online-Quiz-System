@@ -534,6 +534,26 @@
         </div>
         @endif
 
+        <!-- File Storage -->
+        <div class="mb-6">
+            <a href="{{ route('admin.files.index') }}"
+               class="flex items-center px-2 py-2 text-sm font-medium rounded-md transition-colors duration-200 {{ request()->routeIs('admin.files.*') ? 'bg-indigo-700 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white' }}"
+               :class="sidebarCollapsed ? 'justify-center px-2' : 'px-3'"
+               :title="sidebarCollapsed ? 'File Storage' : ''">
+                <svg class="h-6 w-6 flex-shrink-0"
+                     style="min-width: 1.5rem; min-height: 1.5rem; display: block !important; visibility: visible !important; opacity: 1 !important;"
+                     :class="sidebarCollapsed ? '' : 'mr-3'"
+                     fill="none"
+                     stroke="currentColor"
+                     viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-4l-2-2H5a2 2 0 00-2 2z"></path>
+                </svg>
+                <span class="transition-opacity duration-300 whitespace-nowrap" :class="sidebarCollapsed ? 'opacity-0 w-0 overflow-hidden absolute' : 'opacity-100'">
+                    File Storage
+                </span>
+            </a>
+        </div>
+
         <!-- System -->
         @if(auth()->user()->canAccessSystem())
         <div class="mb-6" x-data="{

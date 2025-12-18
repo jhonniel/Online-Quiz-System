@@ -97,7 +97,7 @@
     <!-- Filters -->
     <div class="bg-white rounded-lg shadow border border-gray-200 p-4 sm:p-6">
         <form method="GET" action="{{ route('admin.student-leave-requests.index') }}" class="space-y-4">
-            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
                 <div>
                     <label for="status" class="block text-sm font-medium text-gray-700 mb-2">Status</label>
                     <select name="status" id="status" class="w-full px-3 sm:px-4 py-2 text-sm sm:text-base border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
@@ -130,12 +130,32 @@
                     </select>
                 </div>
 
+                <div>
+                    <label for="search" class="block text-sm font-medium text-gray-700 mb-2">Search</label>
+                    <input type="text"
+                           name="search"
+                           id="search"
+                           value="{{ request('search', $search ?? '') }}"
+                           placeholder="Search student/email/type/status/reason/ID..."
+                           autocomplete="off"
+                           class="w-full px-3 sm:px-4 py-2 text-sm sm:text-base border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                </div>
+
                 <div class="flex items-end">
                     <button type="submit" class="w-full px-4 py-2 text-sm sm:text-base bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
                         Filter
                     </button>
                 </div>
             </div>
+
+            @if(request('status') || request('type') || request('student') || request('search'))
+                <div class="flex justify-end">
+                    <a href="{{ route('admin.student-leave-requests.index') }}"
+                       class="text-sm text-gray-600 hover:text-gray-900 underline">
+                        Clear filters
+                    </a>
+                </div>
+            @endif
         </form>
     </div>
 
@@ -209,7 +229,7 @@
 
             <!-- Pagination -->
             <div class="bg-gray-50 px-4 py-3 border-t border-gray-200">
-                {{ $leaveRequests->links() }}
+                {{ $leaveRequests->appends(request()->query())->links() }}
             </div>
         @else
             <div class="text-center py-12">
@@ -222,5 +242,20 @@
         @endif
     </div>
 </div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const form = document.querySelector('form[action="{{ route('admin.student-leave-requests.index') }}"]');
+        const searchInput = document.getElementById('search');
+
+        let t = null;
+        if (form && searchInput) {
+            searchInput.addEventListener('input', function () {
+                if (t) clearTimeout(t);
+                t = setTimeout(() => form.submit(), 350);
+            });
+        }
+    });
+</script>
 @endsection
 

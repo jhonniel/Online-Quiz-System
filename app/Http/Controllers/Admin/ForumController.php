@@ -5,18 +5,41 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\ForumThread;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
 class ForumController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        $threads = ForumThread::with('admin')
-            ->latest()
-            ->paginate(10);
+        $search = trim((string) $request->input('search', ''));
+        $perPage = (int) $request->input('per_page', 10);
+        if (!in_array($perPage, [10, 20, 50, 100], true)) {
+            $perPage = 10;
+        }
 
-        return view('admin.forum.index', compact('threads'));
+        $query = ForumThread::with('admin')->latest();
+
+        if ($search !== '') {
+            $query->where(function ($q) use ($search) {
+                if (ctype_digit($search)) {
+                    $q->orWhere('id', (int) $search)
+                        ->orWhere('admin_id', (int) $search);
+                }
+
+                $q->orWhere('title', 'like', "%{$search}%")
+                    ->orWhere('content', 'like', "%{$search}%")
+                    ->orWhereHas('admin', function ($aq) use ($search) {
+                        $aq->where('name', 'like', "%{$search}%")
+                            ->orWhere('email', 'like', "%{$search}%");
+                    });
+            });
+        }
+
+        $threads = $query->paginate($perPage)->appends($request->query());
+
+        return view('admin.forum.index', compact('threads', 'search', 'perPage'));
     }
 
     public function create()
@@ -35,7 +58,7 @@ class ForumController extends Controller
         ]);
 
         $data = [
-            'admin_id' => auth()->id(),
+            'admin_id' => Auth::id(),
             'title' => $request->title,
             'content' => $request->content,
             'is_published' => $request->boolean('is_published', true),
@@ -156,7 +179,7 @@ class ForumController extends Controller
         ]);
 
         $thread = ForumThread::findOrFail($request->thread_id);
-        $user = auth()->user();
+        $user = Auth::user();
 
         $commentData = [
             'thread_id' => $thread->id,
@@ -213,7 +236,7 @@ class ForumController extends Controller
         ]);
 
         $comment = \App\Models\ForumComment::findOrFail($request->comment_id);
-        $user = auth()->user();
+        $user = Auth::user();
 
         $like = \App\Models\ForumLike::where('user_id', $user->id)
             ->where('likeable_type', \App\Models\ForumComment::class)

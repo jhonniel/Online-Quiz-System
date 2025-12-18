@@ -61,17 +61,35 @@
         <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
             <!-- Search -->
             <div class="flex-1 max-w-md">
-                <div class="relative">
-                    <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                        <svg class="h-4 w-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
-                        </svg>
+                <form id="users-search-form" method="GET" action="{{ route('users.index') }}">
+                    @if(request()->has('per_page'))
+                        <input type="hidden" name="per_page" value="{{ request('per_page') }}">
+                    @endif
+                    <div class="relative">
+                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                            <svg class="h-4 w-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                            </svg>
+                        </div>
+                        <input type="text"
+                               id="search-input"
+                               name="search"
+                               value="{{ request('search', $search ?? '') }}"
+                               placeholder="Search users (name, email, role, dept, university, ID)..."
+                               autocomplete="off"
+                               class="block w-full pl-9 pr-10 py-2 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 text-sm">
+                        @if(request('search'))
+                            <button type="button"
+                                    id="clear-search-btn"
+                                    class="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600"
+                                    title="Clear search">
+                                <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                                </svg>
+                            </button>
+                        @endif
                     </div>
-                    <input type="text"
-                           id="search-input"
-                           placeholder="Search users..."
-                           class="block w-full pl-9 pr-3 py-2 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 text-sm">
-                </div>
+                </form>
             </div>
 
             <!-- Action Buttons -->
@@ -388,10 +406,11 @@
                     </div>
                     <div class="flex items-center space-x-2">
                         <span class="text-sm text-gray-700">Rows per page:</span>
-                        <select class="text-sm border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500">
+                        <select id="per-page-select" class="text-sm border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500">
                             <option value="10" {{ request('per_page', 10) == 10 ? 'selected' : '' }}>10</option>
                             <option value="25" {{ request('per_page', 10) == 25 ? 'selected' : '' }}>25</option>
                             <option value="50" {{ request('per_page', 10) == 50 ? 'selected' : '' }}>50</option>
+                            <option value="100" {{ request('per_page', 10) == 100 ? 'selected' : '' }}>100</option>
                         </select>
                     </div>
                     <div>
@@ -447,6 +466,42 @@
 
     // Bulk Role Assignment
     document.addEventListener('DOMContentLoaded', function() {
+        // Search (debounced)
+        const searchForm = document.getElementById('users-search-form');
+        const searchInput = document.getElementById('search-input');
+        const clearSearchBtn = document.getElementById('clear-search-btn');
+
+        let searchTimer = null;
+        if (searchInput && searchForm) {
+            searchInput.addEventListener('input', function() {
+                if (searchTimer) clearTimeout(searchTimer);
+                searchTimer = setTimeout(() => {
+                    searchForm.submit();
+                }, 350);
+            });
+        }
+
+        if (clearSearchBtn && searchInput && searchForm) {
+            clearSearchBtn.addEventListener('click', function() {
+                searchInput.value = '';
+                searchForm.submit();
+            });
+        }
+
+        // Per-page selector (preserve search + other params)
+        const perPageSelect = document.getElementById('per-page-select');
+        if (perPageSelect) {
+            perPageSelect.addEventListener('change', function() {
+                const url = new URL(window.location.href);
+                const params = new URLSearchParams(url.search);
+                params.set('per_page', this.value);
+                // reset to page 1 when changing page size
+                params.delete('page');
+                url.search = params.toString();
+                window.location.href = url.toString();
+            });
+        }
+
         const selectAllCheckbox = document.getElementById('select-all');
         const userCheckboxes = document.querySelectorAll('.user-checkbox');
         const bulkActionBar = document.getElementById('bulk-action-bar');

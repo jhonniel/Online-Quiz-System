@@ -6,14 +6,39 @@ use App\Http\Controllers\Controller;
 use App\Models\HiringPosition;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Storage;
 
 class HiringPositionController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        $positions = HiringPosition::with(['creator', 'applications'])
-            ->orderBy('created_at', 'desc')
-            ->paginate(20);
+        $search = trim((string) $request->input('search', ''));
+        $perPage = (int) $request->input('per_page', 20);
+        if (!in_array($perPage, [10, 20, 50, 100], true)) {
+            $perPage = 20;
+        }
+
+        $query = HiringPosition::with(['creator', 'applications'])
+            ->orderBy('created_at', 'desc');
+
+        if ($search !== '') {
+            $query->where(function ($q) use ($search) {
+                if (ctype_digit($search)) {
+                    $q->orWhere('id', (int) $search);
+                }
+
+                $q->orWhere('title', 'like', "%{$search}%")
+                    ->orWhere('slug', 'like', "%{$search}%")
+                    ->orWhere('department', 'like', "%{$search}%")
+                    ->orWhere('location', 'like', "%{$search}%")
+                    ->orWhere('employment_type', 'like', "%{$search}%")
+                    ->orWhere('description', 'like', "%{$search}%")
+                    ->orWhere('requirements', 'like', "%{$search}%")
+                    ->orWhere('responsibilities', 'like', "%{$search}%");
+            });
+        }
+
+        $positions = $query->paginate($perPage)->appends($request->query());
 
         $stats = [
             'total' => HiringPosition::count(),
@@ -22,7 +47,7 @@ class HiringPositionController extends Controller
             'total_applications' => HiringPosition::sum('application_count'),
         ];
 
-        return view('admin.hiring-positions.index', compact('positions', 'stats'));
+        return view('admin.hiring-positions.index', compact('positions', 'stats', 'search', 'perPage'));
     }
 
     public function create()
@@ -115,7 +140,7 @@ class HiringPositionController extends Controller
         if ($request->hasFile('thumbnail')) {
             if ($thumbnailPath) {
                 try {
-                    \Storage::disk($assetDisk)->delete($thumbnailPath);
+                    Storage::disk($assetDisk)->delete($thumbnailPath);
                 } catch (\Throwable $e) {
                     // ignore
                 }

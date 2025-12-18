@@ -122,6 +122,34 @@
     <div class="bg-white shadow-sm rounded-lg border border-gray-200 p-4">
         <form method="GET" action="{{ route('admin.hiring-applications.index') }}" class="flex items-center justify-between flex-wrap gap-4">
             <div class="flex items-center space-x-4 flex-wrap">
+                <!-- Search -->
+                <div class="flex-1 min-w-[240px] max-w-md">
+                    <div class="relative">
+                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                            <svg class="h-4 w-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                            </svg>
+                        </div>
+                        <input type="text"
+                               id="applications-search-input"
+                               name="search"
+                               value="{{ request('search', $search ?? '') }}"
+                               placeholder="Search applications (name, email, position, status, ID)..."
+                               autocomplete="off"
+                               class="block w-full pl-9 pr-10 py-2 border border-gray-300 rounded-md shadow-sm text-sm focus:ring-indigo-500 focus:border-indigo-500">
+                        @if(request('search'))
+                            <button type="button"
+                                    id="applications-clear-search-btn"
+                                    class="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600"
+                                    title="Clear search">
+                                <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                                </svg>
+                            </button>
+                        @endif
+                    </div>
+                </div>
+
                 @if(isset($positions) && $positions->count() > 0)
                     <div class="flex items-center space-x-2">
                         <label for="position" class="text-sm font-medium text-gray-700">Filter by Position:</label>
@@ -134,9 +162,6 @@
                                 </option>
                             @endforeach
                         </select>
-                        @if(request('per_page'))
-                            <input type="hidden" name="per_page" value="{{ request('per_page') }}">
-                        @endif
                     </div>
                 @endif
                 <div class="flex items-center space-x-2">
@@ -149,9 +174,6 @@
                         <option value="100" {{ request('per_page', 20) == 100 ? 'selected' : '' }}>100</option>
                     </select>
                     <span class="text-sm text-gray-500">per page</span>
-                    @if(request('position'))
-                        <input type="hidden" name="position" value="{{ request('position') }}">
-                    @endif
                 </div>
             </div>
             <div class="text-sm text-gray-500">
@@ -255,10 +277,33 @@
 
         @if($applications->hasPages())
             <div class="px-6 py-4 border-t border-gray-200">
-                {{ $applications->links() }}
+                {{ $applications->appends(request()->query())->links() }}
             </div>
         @endif
     </div>
 </div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const form = document.querySelector('form[action="{{ route('admin.hiring-applications.index') }}"]');
+        const input = document.getElementById('applications-search-input');
+        const clearBtn = document.getElementById('applications-clear-search-btn');
+
+        let t = null;
+        if (form && input) {
+            input.addEventListener('input', function () {
+                if (t) clearTimeout(t);
+                t = setTimeout(() => form.submit(), 350);
+            });
+        }
+
+        if (clearBtn && input && form) {
+            clearBtn.addEventListener('click', function () {
+                input.value = '';
+                form.submit();
+            });
+        }
+    });
+</script>
 @endsection
 

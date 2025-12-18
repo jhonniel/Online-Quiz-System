@@ -11,8 +11,8 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('leave_requests', function (Blueprint $table) {
-            $table->string('supporting_document_path')->nullable()->after('reason');
+        Schema::table('files', function (Blueprint $table) {
+            $table->string('thumbnail_path')->nullable()->after('path');
         });
     }
 
@@ -21,11 +21,8 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('leave_requests', function (Blueprint $table) {
-            $table->dropColumn('supporting_document_path');
+        Schema::table('files', function (Blueprint $table) {
+            $table->dropColumn('thumbnail_path');
         });
     }
 };
-
-
-

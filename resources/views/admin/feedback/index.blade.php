@@ -15,8 +15,20 @@
                     </div>
                     <input type="text"
                            id="search-input"
-                           placeholder="Search feedback..."
-                           class="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
+                           value="{{ request('search', $search ?? '') }}"
+                           placeholder="Search feedback (title, description, user, status, priority, ID)..."
+                           autocomplete="off"
+                           class="block w-full pl-10 pr-10 py-2 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
+                    @if(request('search'))
+                        <button type="button"
+                                id="clear-search-btn"
+                                class="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600"
+                                title="Clear search">
+                            <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                            </svg>
+                        </button>
+                    @endif
                 </div>
             </div>
 
@@ -198,6 +210,9 @@
     <div class="bg-white shadow rounded-lg mb-6">
         <div class="px-4 py-5 sm:p-6">
             <form method="GET" action="{{ route('admin.feedback.index') }}" class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                @if(request('per_page'))
+                    <input type="hidden" name="per_page" value="{{ request('per_page') }}">
+                @endif
                 <div>
                     <label for="status" class="block text-sm font-medium text-gray-700 mb-1">Status</label>
                     <select name="status" id="status" class="shadow-sm focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-gray-300 rounded-md">
@@ -359,7 +374,7 @@
                                              x-transition:leave-end="transform opacity-0 scale-95"
                                              class="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 z-50 border border-gray-200">
 
-                                            <a href="{{ route('admin.feedback.show', $feedback) }}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center">
+                                            <a href="{{ route('admin.feedback.show', $feedback) }}" class="px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center">
                                                 <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
                                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
@@ -407,10 +422,12 @@
                     </div>
                     <div class="flex items-center space-x-2">
                         <span class="text-sm text-gray-700">Rows per page:</span>
-                        <select class="text-sm border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500">
-                            <option value="10" {{ request('per_page', 10) == 10 ? 'selected' : '' }}>10</option>
-                            <option value="25" {{ request('per_page', 10) == 25 ? 'selected' : '' }}>25</option>
-                            <option value="50" {{ request('per_page', 10) == 50 ? 'selected' : '' }}>50</option>
+                        <select id="feedback-per-page-select" class="text-sm border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500">
+                            <option value="10" {{ request('per_page', 15) == 10 ? 'selected' : '' }}>10</option>
+                            <option value="15" {{ request('per_page', 15) == 15 ? 'selected' : '' }}>15</option>
+                            <option value="25" {{ request('per_page', 15) == 25 ? 'selected' : '' }}>25</option>
+                            <option value="50" {{ request('per_page', 15) == 50 ? 'selected' : '' }}>50</option>
+                            <option value="100" {{ request('per_page', 15) == 100 ? 'selected' : '' }}>100</option>
                         </select>
                     </div>
                     <div>
@@ -440,5 +457,48 @@ function confirmFeedbackAction(action, button) {
 
     return false;
 }
+
+document.addEventListener('DOMContentLoaded', function () {
+    const quickSearch = document.getElementById('search-input');
+    const clearBtn = document.getElementById('clear-search-btn');
+    const filterForm = document.querySelector('form[action="{{ route('admin.feedback.index') }}"]');
+    const filterSearch = document.getElementById('search');
+    const perPageSelect = document.getElementById('feedback-per-page-select');
+
+    // Keep quick search and filter search in sync
+    if (quickSearch && filterSearch) {
+        quickSearch.value = filterSearch.value;
+    }
+
+    let t = null;
+    if (quickSearch && filterForm && filterSearch) {
+        quickSearch.addEventListener('input', function () {
+            if (t) clearTimeout(t);
+            t = setTimeout(() => {
+                filterSearch.value = quickSearch.value;
+                filterForm.submit();
+            }, 350);
+        });
+    }
+
+    if (clearBtn && quickSearch && filterForm && filterSearch) {
+        clearBtn.addEventListener('click', function () {
+            quickSearch.value = '';
+            filterSearch.value = '';
+            filterForm.submit();
+        });
+    }
+
+    if (perPageSelect) {
+        perPageSelect.addEventListener('change', function () {
+            const url = new URL(window.location.href);
+            const params = new URLSearchParams(url.search);
+            params.set('per_page', this.value);
+            params.delete('page');
+            url.search = params.toString();
+            window.location.href = url.toString();
+        });
+    }
+});
 </script>
 @endsection

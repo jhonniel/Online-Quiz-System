@@ -55,6 +55,51 @@
         </div>
     @endif
 
+    <!-- Search Bar -->
+    <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+            <form id="departments-search-form" method="GET" action="{{ route('admin.departments.index') }}" class="flex-1 max-w-md">
+                @if(request()->has('per_page'))
+                    <input type="hidden" name="per_page" value="{{ request('per_page') }}">
+                @endif
+                <div class="relative">
+                    <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <svg class="h-4 w-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                        </svg>
+                    </div>
+                    <input type="text"
+                           id="departments-search-input"
+                           name="search"
+                           value="{{ request('search', $search ?? '') }}"
+                           placeholder="Search departments (name, code, supervisor, description, ID)..."
+                           autocomplete="off"
+                           class="block w-full pl-9 pr-10 py-2 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 text-sm">
+                    @if(request('search'))
+                        <button type="button"
+                                id="departments-clear-search-btn"
+                                class="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600"
+                                title="Clear search">
+                            <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                            </svg>
+                        </button>
+                    @endif
+                </div>
+            </form>
+
+            <div class="flex items-center space-x-2">
+                <span class="text-sm text-gray-700">Rows per page:</span>
+                <select id="departments-per-page-select" class="text-sm border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500">
+                    <option value="10" {{ request('per_page', 20) == 10 ? 'selected' : '' }}>10</option>
+                    <option value="20" {{ request('per_page', 20) == 20 ? 'selected' : '' }}>20</option>
+                    <option value="50" {{ request('per_page', 20) == 50 ? 'selected' : '' }}>50</option>
+                    <option value="100" {{ request('per_page', 20) == 100 ? 'selected' : '' }}>100</option>
+                </select>
+            </div>
+        </div>
+    </div>
+
     <!-- Departments Table -->
     <div class="bg-white shadow-sm rounded-lg border border-gray-200 overflow-hidden">
         <div class="overflow-x-auto">
@@ -94,7 +139,7 @@
                                 {{ $department->code ?: 'N/A' }}
                             </td>
                             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                {{ $department->users()->count() }}
+                                {{ $department->users_count ?? $department->users()->count() }}
                             </td>
                             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
                                 @if($department->supervisor_name)
@@ -158,10 +203,45 @@
 
         @if($departments->hasPages())
             <div class="px-6 py-4 border-t border-gray-200">
-                {{ $departments->links() }}
+                {{ $departments->appends(request()->query())->links() }}
             </div>
         @endif
     </div>
 </div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const form = document.getElementById('departments-search-form');
+        const input = document.getElementById('departments-search-input');
+        const clearBtn = document.getElementById('departments-clear-search-btn');
+        const perPageSelect = document.getElementById('departments-per-page-select');
+
+        let t = null;
+        if (form && input) {
+            input.addEventListener('input', function () {
+                if (t) clearTimeout(t);
+                t = setTimeout(() => form.submit(), 350);
+            });
+        }
+
+        if (clearBtn && input && form) {
+            clearBtn.addEventListener('click', function () {
+                input.value = '';
+                form.submit();
+            });
+        }
+
+        if (perPageSelect) {
+            perPageSelect.addEventListener('change', function () {
+                const url = new URL(window.location.href);
+                const params = new URLSearchParams(url.search);
+                params.set('per_page', this.value);
+                params.delete('page');
+                url.search = params.toString();
+                window.location.href = url.toString();
+            });
+        }
+    });
+</script>
 @endsection
 

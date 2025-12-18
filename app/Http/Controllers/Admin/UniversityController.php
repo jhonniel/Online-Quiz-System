@@ -12,10 +12,31 @@ class UniversityController extends Controller
     /**
      * Display a listing of the resource.
      */
-    public function index()
+    public function index(Request $request)
     {
-        $universities = University::withCount('users')->orderBy('name')->paginate(10);
-        return view('admin.universities.index', compact('universities'));
+        $search = trim((string) $request->input('search', ''));
+        $perPage = (int) $request->input('per_page', 10);
+        if (!in_array($perPage, [10, 25, 50, 100], true)) {
+            $perPage = 10;
+        }
+
+        $query = University::withCount('users')->orderBy('name');
+
+        if ($search !== '') {
+            $query->where(function ($q) use ($search) {
+                if (ctype_digit($search)) {
+                    $q->orWhere('id', (int) $search);
+                }
+
+                $q->orWhere('name', 'like', "%{$search}%")
+                    ->orWhere('code', 'like', "%{$search}%")
+                    ->orWhere('location', 'like', "%{$search}%");
+            });
+        }
+
+        $universities = $query->paginate($perPage)->appends($request->query());
+
+        return view('admin.universities.index', compact('universities', 'search', 'perPage'));
     }
 
     /**

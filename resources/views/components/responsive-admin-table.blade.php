@@ -4,6 +4,7 @@
     'description' => 'Manage your data',
     'icon' => 'M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z',
     'searchPlaceholder' => 'Search...',
+    'searchAction' => null,
     'addButtonText' => 'Add New',
     'addButtonRoute' => '#',
     'showFilter' => true,
@@ -16,17 +17,41 @@
         <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
             <!-- Search -->
             <div class="flex-1 max-w-md">
-                <div class="relative">
-                    <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                        <svg class="h-4 w-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
-                        </svg>
+                <form class="js-admin-search-form" method="GET" action="{{ $searchAction ?? request()->url() }}">
+                    @foreach(request()->except(['search', 'page']) as $key => $value)
+                        @if(is_array($value))
+                            @foreach($value as $v)
+                                <input type="hidden" name="{{ $key }}[]" value="{{ $v }}">
+                            @endforeach
+                        @else
+                            <input type="hidden" name="{{ $key }}" value="{{ $value }}">
+                        @endif
+                    @endforeach
+
+                    <div class="relative">
+                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                            <svg class="h-4 w-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                            </svg>
+                        </div>
+                        <input type="text"
+                               name="search"
+                               value="{{ request('search') }}"
+                               placeholder="{{ $searchPlaceholder }}"
+                               autocomplete="off"
+                               class="js-admin-search-input block w-full pl-9 pr-10 py-2 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 text-sm">
+
+                        @if(request('search'))
+                            <button type="button"
+                                    class="js-admin-search-clear absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600"
+                                    title="Clear search">
+                                <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                                </svg>
+                            </button>
+                        @endif
                     </div>
-                    <input type="text"
-                           id="search-input"
-                           placeholder="{{ $searchPlaceholder }}"
-                           class="block w-full pl-9 pr-3 py-2 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 text-sm">
-                </div>
+                </form>
             </div>
 
             <!-- Action Buttons -->
@@ -71,3 +96,27 @@
         {{ $slot }}
     </div>
 </div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        document.querySelectorAll('.js-admin-search-form').forEach((form) => {
+            const input = form.querySelector('.js-admin-search-input');
+            const clearBtn = form.querySelector('.js-admin-search-clear');
+
+            if (!input) return;
+
+            let t = null;
+            input.addEventListener('input', function () {
+                if (t) clearTimeout(t);
+                t = setTimeout(() => form.submit(), 350);
+            });
+
+            if (clearBtn) {
+                clearBtn.addEventListener('click', function () {
+                    input.value = '';
+                    form.submit();
+                });
+            }
+        });
+    });
+</script>

@@ -48,6 +48,62 @@
                     @endforeach
                 </div>
             </div>
+
+            <!-- Quick Create Leave for Student(s) -->
+            <div class="bg-white rounded-2xl shadow border border-gray-200 p-3 sm:p-4">
+                <h2 class="text-xs sm:text-sm font-bold text-gray-900 mb-2">File Leave for Student(s)</h2>
+                <form action="{{ route('admin.student-leave-requests.store-for-student') }}" method="POST" class="space-y-3">
+                    @csrf
+
+                    <div class="space-y-1">
+                        <label class="block text-xs font-medium text-gray-700">Select Student(s)</label>
+                        <div class="max-h-32 overflow-y-auto border border-gray-300 rounded-md p-2 space-y-1">
+                            <div class="flex items-center mb-1">
+                                <input type="checkbox" id="select-all-students" class="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500" onchange="toggleAllStudents(this)">
+                                <label for="select-all-students" class="ml-2 text-xs font-semibold text-gray-700 cursor-pointer">Select All</label>
+                            </div>
+                            @foreach(($studentsForFiling ?? $students) as $student)
+                                <div class="flex items-center">
+                                    <input type="checkbox" name="student_ids[]" id="student_{{ $student->id }}" value="{{ $student->id }}" class="student-checkbox rounded border-gray-300 text-indigo-600 focus:ring-indigo-500">
+                                    <label for="student_{{ $student->id }}" class="ml-2 text-xs text-gray-700 cursor-pointer">{{ $student->name }}</label>
+                                </div>
+                            @endforeach
+                        </div>
+                        <p class="text-[10px] text-gray-500 mt-1">Select one or more students to file leave for</p>
+                    </div>
+
+                    <div class="space-y-1">
+                        <label for="student_create_type" class="block text-xs font-medium text-gray-700">Type</label>
+                        <select name="type" id="student_create_type" required class="w-full px-2.5 py-1.5 text-xs border border-gray-300 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                            <option value="">Select type</option>
+                            <option value="additional_time">Additional Time</option>
+                            <option value="absent">Absent</option>
+                            <option value="other">Other</option>
+                        </select>
+                    </div>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                        <div class="space-y-1">
+                            <label for="student_create_start_date" class="block text-xs font-medium text-gray-700">Start Date</label>
+                            <input type="date" name="start_date" id="student_create_start_date" required class="w-full px-2.5 py-1.5 text-xs border border-gray-300 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                        </div>
+                        <div class="space-y-1">
+                            <label for="student_create_end_date" class="block text-xs font-medium text-gray-700">End Date</label>
+                            <input type="date" name="end_date" id="student_create_end_date" class="w-full px-2.5 py-1.5 text-xs border border-gray-300 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                        </div>
+                    </div>
+
+                    <div class="space-y-1">
+                        <label for="student_create_reason" class="block text-xs font-medium text-gray-700">Reason (optional)</label>
+                        <textarea name="reason" id="student_create_reason" rows="3" class="w-full px-2.5 py-1.5 text-xs border border-gray-300 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500" placeholder="Add brief notes"></textarea>
+                    </div>
+
+                    <button type="submit" id="file-student-leave-btn" class="w-full inline-flex items-center justify-center px-3 py-1.5 text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded-md shadow focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed">
+                        File Leave
+                    </button>
+                    <p class="text-[11px] text-gray-500">Creates a pending request that appears on the student calendar.</p>
+                </form>
+            </div>
         </div>
 
         <!-- Month Navigation + Calendar -->
@@ -151,9 +207,21 @@
                                         @endforeach
 
                                         @if($total > $displayed)
-                                            <div class="text-[9px] sm:text-[10px] md:text-[11px] text-gray-500">
+                                            @php
+                                                $requestsData = array_map(function($req) {
+                                                    return [
+                                                        'id' => $req['id'],
+                                                        'student_name' => $req['student']->name,
+                                                        'type_label' => $req['type_label'],
+                                                        'status' => $req['status'],
+                                                    ];
+                                                }, $day['requests']);
+                                            @endphp
+                                            <button type="button"
+                                                    onclick="showAllStudentLeaveRequests('{{ $day['date']->toDateString() }}', {{ json_encode($requestsData) }})"
+                                                    class="w-full text-[9px] sm:text-[10px] md:text-[11px] text-indigo-600 hover:text-indigo-700 font-semibold hover:underline text-left">
                                                 +{{ $total - $displayed }} more…
-                                            </div>
+                                            </button>
                                         @endif
 
                                         @if($total === 0)
@@ -171,6 +239,145 @@
         </div>
     </div>
 </div>
+
+<!-- Modal for showing all student leave requests on a date -->
+<div id="student-leave-requests-modal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50 hidden">
+    <div class="relative top-20 mx-auto p-5 border w-11/12 sm:w-3/4 md:w-1/2 lg:w-2/5 shadow-lg rounded-md bg-white">
+        <div class="mt-3">
+            <div class="flex items-center justify-between mb-4">
+                <h3 class="text-lg font-semibold text-gray-900" id="student-modal-date-title">Leave Requests</h3>
+                <button type="button" onclick="closeStudentLeaveRequestsModal()" class="text-gray-400 hover:text-gray-600">
+                    <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                </button>
+            </div>
+            <div id="student-modal-requests-list" class="space-y-2 max-h-[60vh] overflow-y-auto">
+                <!-- Leave requests will be inserted here -->
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Toggle all students checkbox
+function toggleAllStudents(selectAllCheckbox) {
+    const studentCheckboxes = document.querySelectorAll('.student-checkbox');
+    studentCheckboxes.forEach(checkbox => {
+        checkbox.checked = selectAllCheckbox.checked;
+    });
+    updateFileStudentLeaveButton();
+}
+
+function updateFileStudentLeaveButton() {
+    const selectedStudents = document.querySelectorAll('.student-checkbox:checked');
+    const btn = document.getElementById('file-student-leave-btn');
+    if (!btn) return;
+    btn.disabled = selectedStudents.length === 0;
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    const studentCheckboxes = document.querySelectorAll('.student-checkbox');
+    studentCheckboxes.forEach(checkbox => checkbox.addEventListener('change', updateFileStudentLeaveButton));
+    updateFileStudentLeaveButton();
+});
+
+function showAllStudentLeaveRequests(dateString, requests) {
+    const modal = document.getElementById('student-leave-requests-modal');
+    const modalTitle = document.getElementById('student-modal-date-title');
+    const modalList = document.getElementById('student-modal-requests-list');
+
+    // Format date for display
+    const date = new Date(dateString);
+    const formattedDate = date.toLocaleDateString('en-US', {
+        weekday: 'long',
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
+    });
+
+    modalTitle.textContent = `Leave Requests - ${formattedDate}`;
+
+    // Clear previous content
+    modalList.innerHTML = '';
+
+    if (!requests || requests.length === 0) {
+        modalList.innerHTML = '<p class="text-gray-500 text-sm">No leave requests for this date.</p>';
+    } else {
+        requests.forEach(function(entry) {
+            const statusClass = studentGetStatusClass(entry.status);
+            const statusBadge = studentGetStatusBadge(entry.status);
+            const showUrl = '{{ route("admin.leave-requests.show", ":id") }}'.replace(':id', entry.id);
+
+            const requestDiv = document.createElement('div');
+            requestDiv.className = `border ${statusClass} rounded-lg p-3 hover:shadow-md transition-shadow`;
+            requestDiv.innerHTML = `
+                <a href="${showUrl}" class="block">
+                    <div class="font-semibold text-gray-900 text-sm mb-1">${studentEscapeHtml(entry.student_name)}</div>
+                    <div class="text-xs text-gray-600 mb-2">${studentEscapeHtml(entry.type_label)}</div>
+                    <div class="flex items-center gap-2">
+                        ${statusBadge}
+                    </div>
+                </a>
+            `;
+            modalList.appendChild(requestDiv);
+        });
+    }
+
+    modal.classList.remove('hidden');
+}
+
+function closeStudentLeaveRequestsModal() {
+    document.getElementById('student-leave-requests-modal').classList.add('hidden');
+}
+
+function studentGetStatusClass(status) {
+    switch(status) {
+        case 'approved':
+            return 'bg-emerald-50 text-emerald-700 border-emerald-200';
+        case 'pending':
+            return 'bg-yellow-50 text-yellow-700 border-yellow-200';
+        case 'rejected':
+            return 'bg-red-50 text-red-700 border-red-200';
+        default:
+            return 'bg-gray-50 text-gray-700 border-gray-200';
+    }
+}
+
+function studentGetStatusBadge(status) {
+    const statusLabels = {
+        'approved': { label: 'Approved', class: 'bg-emerald-100 text-emerald-800' },
+        'pending': { label: 'Pending', class: 'bg-yellow-100 text-yellow-800' },
+        'rejected': { label: 'Rejected', class: 'bg-red-100 text-red-800' }
+    };
+
+    const statusInfo = statusLabels[status] || { label: status, class: 'bg-gray-100 text-gray-800' };
+
+    return `<span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-semibold ${statusInfo.class}">
+        ${studentEscapeHtml(statusInfo.label)}
+    </span>`;
+}
+
+function studentEscapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text ?? '';
+    return div.innerHTML;
+}
+
+// Close modal when clicking outside
+document.getElementById('student-leave-requests-modal').addEventListener('click', function(e) {
+    if (e.target === this) {
+        closeStudentLeaveRequestsModal();
+    }
+});
+
+// Close modal on Escape key
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+        closeStudentLeaveRequestsModal();
+    }
+});
+</script>
 @endsection
 
 

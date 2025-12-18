@@ -16,6 +16,12 @@ class FeedbackController extends Controller
     public function index(Request $request)
     {
         $query = Feedback::with(['user', 'assignedAdmin']);
+        $search = trim((string) $request->input('search', ''));
+
+        $perPage = (int) $request->input('per_page', 15);
+        if (!in_array($perPage, [10, 15, 25, 50, 100], true)) {
+            $perPage = 15;
+        }
 
         // Apply filters
         if ($request->filled('status')) {
@@ -30,19 +36,31 @@ class FeedbackController extends Controller
             $query->where('priority', $request->priority);
         }
 
-        if ($request->filled('search')) {
-            $search = $request->search;
+        if ($search !== '') {
             $query->where(function($q) use ($search) {
+                if (ctype_digit($search)) {
+                    $q->orWhere('id', (int) $search);
+                }
+
                 $q->where('title', 'like', "%{$search}%")
                   ->orWhere('description', 'like', "%{$search}%")
+                  ->orWhere('type', 'like', "%{$search}%")
+                  ->orWhere('priority', 'like', "%{$search}%")
+                  ->orWhere('status', 'like', "%{$search}%")
                   ->orWhereHas('user', function($userQuery) use ($search) {
                       $userQuery->where('name', 'like', "%{$search}%")
                                ->orWhere('email', 'like', "%{$search}%");
+                  })
+                  ->orWhereHas('assignedAdmin', function($adminQuery) use ($search) {
+                      $adminQuery->where('name', 'like', "%{$search}%")
+                                 ->orWhere('email', 'like', "%{$search}%");
                   });
             });
         }
 
-        $feedbacks = $query->orderBy('created_at', 'desc')->paginate(15);
+        $feedbacks = $query->orderBy('created_at', 'desc')
+            ->paginate($perPage)
+            ->appends($request->query());
 
         // Get statistics
         $stats = [
@@ -56,7 +74,7 @@ class FeedbackController extends Controller
             'high' => Feedback::where('priority', 'high')->count(),
         ];
 
-        return view('admin.feedback.index', compact('feedbacks', 'stats'));
+        return view('admin.feedback.index', compact('feedbacks', 'stats', 'search', 'perPage'));
     }
 
     /**
