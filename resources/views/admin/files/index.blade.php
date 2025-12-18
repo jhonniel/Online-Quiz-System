@@ -93,6 +93,26 @@
                 @foreach($files as $item)
                     <div class="group relative bg-gray-50 rounded-lg border border-gray-200 hover:border-indigo-300 hover:shadow-md transition-all duration-200 p-4">
                         @if($item->isFolder())
+                            @php
+                                $sharedCount = 0;
+                                $sharedUsers = collect();
+                                if ($item->uploaded_by == auth()->id()) {
+                                    $sharedUsers = $item->sharedWith ?? collect();
+                                    $sharedCount = $sharedUsers->count();
+                                }
+                            @endphp
+
+                            @if($sharedCount > 0)
+                                <!-- Shared indicator (owner only) -->
+                                <div class="absolute top-2 left-2 inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800"
+                                     title="Shared with {{ $sharedCount }} user{{ $sharedCount !== 1 ? 's' : '' }}">
+                                    <svg class="w-3.5 h-3.5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path>
+                                    </svg>
+                                    Shared
+                                </div>
+                            @endif
+
                             <a href="{{ route('admin.files.index', ['folder_id' => $item->id]) }}" class="block text-center">
                                 <div class="flex justify-center mb-3">
                                     <svg class="w-16 h-16 text-yellow-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -102,28 +122,38 @@
                                 <h3 class="text-sm font-medium text-gray-900 truncate" title="{{ $item->name }}">{{ $item->name }}</h3>
                                 <p class="text-xs text-gray-500 mt-1">Folder</p>
                             </a>
+
+                            @if($sharedCount > 0)
+                                <!-- Shared users quick view (owner only) -->
+                                <div class="mt-2 flex justify-center">
+                                    <button type="button"
+                                            onclick="openShareModal({{ $item->id }}, 'folder')"
+                                            class="inline-flex items-center px-2 py-1 rounded-full bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-xs"
+                                            title="Shared with {{ $sharedCount }} user{{ $sharedCount !== 1 ? 's' : '' }} (click to view list)">
+                                        <div class="flex -space-x-2 mr-2">
+                                            @foreach($sharedUsers->take(3) as $su)
+                                                <div class="w-6 h-6 rounded-full bg-indigo-600 text-white flex items-center justify-center text-[10px] font-semibold border-2 border-white">
+                                                    {{ strtoupper(substr($su->name ?? 'U', 0, 1)) }}
+                                                </div>
+                                            @endforeach
+                                            @if($sharedCount > 3)
+                                                <div class="w-6 h-6 rounded-full bg-indigo-200 text-indigo-800 flex items-center justify-center text-[10px] font-semibold border-2 border-white">
+                                                    +{{ $sharedCount - 3 }}
+                                                </div>
+                                            @endif
+                                        </div>
+                                        Shared: {{ $sharedCount }}
+                                    </button>
+                                </div>
+                            @endif
                         @else
                             <div class="text-center">
                                 @php
                                     $isImage = $item->mime_type && str_starts_with($item->mime_type, 'image/');
                                     $thumbnailUrl = null;
-                                    if ($isImage && $item->thumbnail_path) {
-                                        try {
-                                            $thumbnailUrl = Storage::disk('digitalocean')->url($item->thumbnail_path);
-                                        } catch (\Exception $e) {
-                                            // Fallback to original file
-                                            try {
-                                                $thumbnailUrl = Storage::disk('digitalocean')->url($item->path);
-                                            } catch (\Exception $e2) {
-                                                // Ignore
-                                            }
-                                        }
-                                    } elseif ($isImage) {
-                                        try {
-                                            $thumbnailUrl = Storage::disk('digitalocean')->url($item->path);
-                                        } catch (\Exception $e) {
-                                            // Ignore
-                                        }
+                                    if ($isImage) {
+                                        // Use app route so it works for private Spaces too (redirects to signed URL)
+                                        $thumbnailUrl = route('admin.files.view', $item);
                                     }
                                 @endphp
 
@@ -131,7 +161,7 @@
                                     @if($thumbnailUrl)
                                         <img src="{{ $thumbnailUrl }}" alt="{{ $item->name }}"
                                              class="w-full h-full object-cover cursor-pointer hover:opacity-90 transition-opacity"
-                                             onclick="openPreviewModal('{{ $item->id }}', '{{ addslashes($item->name) }}', '{{ $item->mime_type }}', '{{ Storage::disk('digitalocean')->url($item->path) }}')">
+                                             onclick="openPreviewModal('{{ $item->id }}', '{{ addslashes($item->name) }}', '{{ $item->mime_type }}', '{{ route('admin.files.view', $item) }}')">
                                     @else
                                         <div class="w-full h-full flex items-center justify-center">
                                             @if(str_starts_with($item->mime_type ?? '', 'application/pdf'))
@@ -171,7 +201,7 @@
                                      class="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg z-10 border border-gray-200">
                                     <div class="py-1">
                                         @if($item->isFile())
-                                            <button onclick="openPreviewModal('{{ $item->id }}', '{{ addslashes($item->name) }}', '{{ $item->mime_type }}', '{{ Storage::disk('digitalocean')->url($item->path) }}')"
+                                            <button onclick="openPreviewModal('{{ $item->id }}', '{{ addslashes($item->name) }}', '{{ $item->mime_type }}', '{{ route('admin.files.view', $item) }}')"
                                                     class="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Preview</button>
                                             <a href="{{ route('admin.files.download', $item) }}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Download</a>
                                         @endif
@@ -392,6 +422,22 @@
                         </button>
                     </div>
                 </form>
+
+                <!-- Shared users list -->
+                <div class="mt-6 border-t border-gray-200 pt-4">
+                    <div class="flex items-center justify-between mb-2">
+                        <h4 class="text-sm font-semibold text-gray-900">Shared with</h4>
+                        <button type="button" id="refresh-shared-users-btn"
+                                class="text-xs text-indigo-600 hover:text-indigo-800 underline"
+                                onclick="refreshSharedUsers()">
+                            Refresh
+                        </button>
+                    </div>
+                    <div id="shared-users-loading" class="text-sm text-gray-500">Loading...</div>
+                    <div id="shared-users-empty" class="hidden text-sm text-gray-500">Not shared with anyone yet.</div>
+                    <div id="shared-users-error" class="hidden text-sm text-red-600"></div>
+                    <ul id="shared-users-list" class="hidden divide-y divide-gray-200 max-h-56 overflow-y-auto"></ul>
+                </div>
             </div>
         </div>
     </div>
@@ -400,7 +446,137 @@
         // Use named-route templates (prevents bad URLs / 404s)
         const ADMIN_FILES_UPDATE_URL = @json(route('admin.files.update', ['file' => '__FILE__']));
         const ADMIN_FILES_SHARE_URL = @json(route('admin.files.share', ['file' => '__FILE__']));
+        const ADMIN_FILES_UNSHARE_URL = @json(route('admin.files.unshare', ['file' => '__FILE__']));
+        const ADMIN_FILES_SHARED_USERS_URL = @json(route('admin.files.shared-users', ['file' => '__FILE__']));
         const ADMIN_FILES_DOWNLOAD_URL = @json(route('admin.files.download', ['file' => '__FILE__']));
+        const ADMIN_FILES_PRESIGN_URL = @json(route('admin.files.presign'));
+        const ADMIN_FILES_CONFIRM_URL = @json(route('admin.files.confirm'));
+
+        let currentShareItemId = null;
+
+        function escapeHtml(str) {
+            return String(str ?? '')
+                .replaceAll('&', '&amp;')
+                .replaceAll('<', '&lt;')
+                .replaceAll('>', '&gt;')
+                .replaceAll('"', '&quot;')
+                .replaceAll("'", '&#039;');
+        }
+
+        function setSharedUsersState(state) {
+            const loading = document.getElementById('shared-users-loading');
+            const empty = document.getElementById('shared-users-empty');
+            const error = document.getElementById('shared-users-error');
+            const list = document.getElementById('shared-users-list');
+
+            loading.classList.add('hidden');
+            empty.classList.add('hidden');
+            error.classList.add('hidden');
+            list.classList.add('hidden');
+
+            if (state === 'loading') loading.classList.remove('hidden');
+            if (state === 'empty') empty.classList.remove('hidden');
+            if (state === 'error') error.classList.remove('hidden');
+            if (state === 'list') list.classList.remove('hidden');
+        }
+
+        function renderSharedUsers(users) {
+            const list = document.getElementById('shared-users-list');
+            list.innerHTML = '';
+
+            users.forEach(u => {
+                const canView = !!(u.pivot && u.pivot.can_view);
+                const canUpload = !!(u.pivot && u.pivot.can_upload);
+
+                const li = document.createElement('li');
+                li.className = 'py-2 flex items-center justify-between';
+
+                const left = document.createElement('div');
+                left.className = 'min-w-0';
+                left.innerHTML = `
+                    <div class="text-sm font-medium text-gray-900 truncate">${escapeHtml(u.name)}</div>
+                    <div class="text-xs text-gray-500 truncate">${escapeHtml(u.email)}</div>
+                    <div class="mt-1 flex flex-wrap gap-1">
+                        ${canView ? '<span class="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] bg-green-100 text-green-800">View</span>' : ''}
+                        ${canUpload ? '<span class="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] bg-indigo-100 text-indigo-800">Upload</span>' : ''}
+                    </div>
+                `;
+
+                const right = document.createElement('div');
+                right.className = 'flex-shrink-0 pl-2';
+
+                const btn = document.createElement('button');
+                btn.type = 'button';
+                btn.className = 'text-xs text-red-600 hover:text-red-800 underline';
+                btn.textContent = 'Remove';
+                btn.onclick = () => unshareUser(currentShareItemId, u.id);
+
+                right.appendChild(btn);
+                li.appendChild(left);
+                li.appendChild(right);
+                list.appendChild(li);
+            });
+        }
+
+        function loadSharedUsers(fileId) {
+            currentShareItemId = fileId;
+            setSharedUsersState('loading');
+            document.getElementById('shared-users-error').textContent = '';
+
+            const url = ADMIN_FILES_SHARED_USERS_URL.replace('__FILE__', fileId);
+            fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+                .then(async (res) => {
+                    const data = await res.json().catch(() => null);
+                    if (!res.ok) throw new Error((data && data.message) ? data.message : 'Failed to load shared users.');
+                    return data;
+                })
+                .then((users) => {
+                    if (!Array.isArray(users) || users.length === 0) {
+                        setSharedUsersState('empty');
+                        return;
+                    }
+                    renderSharedUsers(users);
+                    setSharedUsersState('list');
+                })
+                .catch((err) => {
+                    document.getElementById('shared-users-error').textContent = err?.message || 'Failed to load shared users.';
+                    setSharedUsersState('error');
+                });
+        }
+
+        function refreshSharedUsers() {
+            if (!currentShareItemId) return;
+            loadSharedUsers(currentShareItemId);
+        }
+
+        function unshareUser(fileId, userId) {
+            if (!fileId || !userId) return;
+            if (!confirm('Remove this user\'s access?')) return;
+
+            const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+            const url = ADMIN_FILES_UNSHARE_URL.replace('__FILE__', fileId);
+
+            fetch(url, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'X-CSRF-TOKEN': csrfToken,
+                },
+                body: JSON.stringify({ user_id: userId }),
+            })
+            .then(async (res) => {
+                const data = await res.json().catch(() => ({}));
+                if (!res.ok) throw new Error(data.message || 'Failed to remove sharing permission.');
+                return data;
+            })
+            .then(() => {
+                loadSharedUsers(fileId);
+            })
+            .catch((err) => {
+                alert(err?.message || 'Failed to remove sharing permission.');
+            });
+        }
 
         function openEditModal(id, name, description, type) {
             document.getElementById('edit_name').value = name;
@@ -427,6 +603,9 @@
             document.querySelector('input[name="can_view"]').checked = true;
 
             document.getElementById('share-modal').classList.remove('hidden');
+
+            // Load shared users list (owner-only endpoint; shows who already has access)
+            loadSharedUsers(id);
         }
 
         function openPreviewModal(id, name, mimeType, url) {
@@ -507,79 +686,136 @@
             document.getElementById('upload-form-buttons').style.display = 'none';
             document.getElementById('upload-status').textContent = 'Uploading ' + file.name + '...';
 
-            // Create XMLHttpRequest for upload progress tracking
-            const xhr = new XMLHttpRequest();
+            const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+            const folderId = formData.get('folder_id') || null;
+            const description = formData.get('description') || '';
 
-            // Track upload progress
-            xhr.upload.addEventListener('progress', function(e) {
-                if (e.lengthComputable) {
-                    const percentComplete = (e.loaded / e.total) * 100;
-                    const roundedPercent = Math.round(percentComplete);
-
-                    document.getElementById('upload-progress-bar').style.width = percentComplete + '%';
-                    document.getElementById('upload-percentage').textContent = roundedPercent + '%';
-
-                    // Update status with bytes
-                    const loadedMB = (e.loaded / 1048576).toFixed(2);
-                    const totalMB = (e.total / 1048576).toFixed(2);
-                    document.getElementById('upload-status').textContent =
-                        `Uploading: ${loadedMB} MB / ${totalMB} MB (${roundedPercent}%)`;
+            // Step 1: Get presigned URL from our server (small request)
+            fetch(ADMIN_FILES_PRESIGN_URL, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'X-CSRF-TOKEN': csrfToken,
+                },
+                body: JSON.stringify({
+                    original_name: file.name,
+                    mime_type: file.type || null,
+                    size: file.size,
+                    folder_id: folderId,
+                }),
+            })
+            .then(async (res) => {
+                const data = await res.json().catch(() => ({}));
+                if (!res.ok) {
+                    throw new Error(data.message || 'Failed to prepare upload.');
                 }
-            });
+                return data;
+            })
+            .then((presign) => {
+                // Step 2: Upload directly to Spaces (PUT to presigned URL)
+                const uploadXhr = new XMLHttpRequest();
 
-            // Handle upload completion
-            xhr.addEventListener('load', function() {
-                if (xhr.status === 200 || xhr.status === 302) {
-                    // Success - redirect or reload
-                    document.getElementById('upload-status').textContent = 'Upload complete! Redirecting...';
-                    document.getElementById('upload-progress-bar').style.width = '100%';
-                    document.getElementById('upload-percentage').textContent = '100%';
+                // Track upload progress
+                uploadXhr.upload.addEventListener('progress', function(e) {
+                    if (e.lengthComputable) {
+                        const percentComplete = (e.loaded / e.total) * 100;
+                        const roundedPercent = Math.round(percentComplete);
 
-                    setTimeout(function() {
-                        window.location.reload();
-                    }, 1000);
-                } else {
-                    // Error
-                    let errorMessage = 'Upload failed.';
-                    try {
-                        const response = JSON.parse(xhr.responseText);
-                        if (response.message) {
-                            errorMessage = response.message;
-                        } else if (response.errors && response.errors.file) {
-                            errorMessage = response.errors.file[0];
-                        }
-                    } catch (e) {
-                        // If response is not JSON, try to extract error from HTML
-                        if (xhr.responseText.includes('The file size must not exceed')) {
-                            errorMessage = 'File size exceeds 5GB limit.';
-                        }
+                        document.getElementById('upload-progress-bar').style.width = percentComplete + '%';
+                        document.getElementById('upload-percentage').textContent = roundedPercent + '%';
+
+                        const loadedMB = (e.loaded / 1048576).toFixed(2);
+                        const totalMB = (e.total / 1048576).toFixed(2);
+                        document.getElementById('upload-status').textContent =
+                            `Uploading to Spaces: ${loadedMB} MB / ${totalMB} MB (${roundedPercent}%)`;
                     }
+                });
 
-                    document.getElementById('upload-status').textContent = 'Error: ' + errorMessage;
+                uploadXhr.addEventListener('load', function() {
+                    if (uploadXhr.status >= 200 && uploadXhr.status < 300) {
+                        document.getElementById('upload-status').textContent = 'Upload complete! Saving record...';
+
+                        // Step 3: Confirm upload to create DB record
+                        fetch(ADMIN_FILES_CONFIRM_URL, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'X-Requested-With': 'XMLHttpRequest',
+                                'X-CSRF-TOKEN': csrfToken,
+                            },
+                            body: JSON.stringify({
+                                path: presign.path,
+                                original_name: file.name,
+                                mime_type: file.type || null,
+                                size: file.size,
+                                folder_id: folderId,
+                                description: description,
+                            }),
+                        })
+                        .then(async (res) => {
+                            const data = await res.json().catch(() => ({}));
+                            if (!res.ok) {
+                                throw new Error(data.message || 'Failed to save uploaded file.');
+                            }
+                            return data;
+                        })
+                        .then(() => {
+                            document.getElementById('upload-status').textContent = 'Saved! Reloading...';
+                            document.getElementById('upload-progress-bar').style.width = '100%';
+                            document.getElementById('upload-percentage').textContent = '100%';
+                            setTimeout(() => window.location.reload(), 800);
+                        })
+                        .catch((err) => {
+                            document.getElementById('upload-status').textContent = 'Error: ' + (err?.message || 'Failed to save file record.');
+                            document.getElementById('upload-progress-bar').classList.remove('bg-indigo-600');
+                            document.getElementById('upload-progress-bar').classList.add('bg-red-600');
+                            document.getElementById('upload-form-buttons').style.display = 'flex';
+                        });
+                    } else {
+                        document.getElementById('upload-status').textContent = 'Error: Upload to Spaces failed (HTTP ' + uploadXhr.status + ').';
+                        document.getElementById('upload-progress-bar').classList.remove('bg-indigo-600');
+                        document.getElementById('upload-progress-bar').classList.add('bg-red-600');
+                        document.getElementById('upload-form-buttons').style.display = 'flex';
+                    }
+                });
+
+                uploadXhr.addEventListener('error', function() {
+                    document.getElementById('upload-status').textContent = 'Error: Upload to Spaces failed. Please try again.';
                     document.getElementById('upload-progress-bar').classList.remove('bg-indigo-600');
                     document.getElementById('upload-progress-bar').classList.add('bg-red-600');
                     document.getElementById('upload-form-buttons').style.display = 'flex';
-                }
-            });
+                });
 
-            // Handle upload errors
-            xhr.addEventListener('error', function() {
-                document.getElementById('upload-status').textContent = 'Upload failed. Please try again.';
+                uploadXhr.addEventListener('abort', function() {
+                    document.getElementById('upload-status').textContent = 'Upload cancelled.';
+                    resetUploadForm();
+                });
+
+                uploadXhr.open('PUT', presign.upload_url);
+                // Required headers (must match what was signed)
+                uploadXhr.setRequestHeader('Content-Type', file.type || 'application/octet-stream');
+                if (presign.headers) {
+                    Object.keys(presign.headers).forEach((key) => {
+                        const lower = String(key).toLowerCase();
+                        if (lower === 'host' || lower === 'content-length') return;
+                        if (lower === 'content-type') return; // we set it above
+                        try {
+                            uploadXhr.setRequestHeader(key, presign.headers[key]);
+                        } catch (e) {
+                            // ignore headers the browser disallows
+                        }
+                    });
+                }
+
+                uploadXhr.send(file);
+            })
+            .catch((err) => {
+                document.getElementById('upload-status').textContent = 'Error: ' + (err?.message || 'Upload failed.');
                 document.getElementById('upload-progress-bar').classList.remove('bg-indigo-600');
                 document.getElementById('upload-progress-bar').classList.add('bg-red-600');
                 document.getElementById('upload-form-buttons').style.display = 'flex';
             });
-
-            // Handle upload abort
-            xhr.addEventListener('abort', function() {
-                document.getElementById('upload-status').textContent = 'Upload cancelled.';
-                resetUploadForm();
-            });
-
-            // Send request
-            xhr.open('POST', form.action);
-            xhr.setRequestHeader('X-Requested-With', 'XMLHttpRequest');
-            xhr.send(formData);
         });
     </script>
 

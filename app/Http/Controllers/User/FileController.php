@@ -11,6 +11,67 @@ use Illuminate\Support\Str;
 class FileController extends Controller
 {
     /**
+     * Get S3 client + bucket for DigitalOcean Spaces.
+     */
+    private function getSpacesClientAndBucket(): array
+    {
+        $cfg = config('filesystems.disks.digitalocean', []);
+        $bucket = $cfg['bucket'] ?? null;
+        $endpoint = $cfg['endpoint'] ?? null;
+        $region = $cfg['region'] ?? 'us-east-1';
+        $key = $cfg['key'] ?? null;
+        $secret = $cfg['secret'] ?? null;
+
+        if (!$bucket || !$endpoint || !$key || !$secret) {
+            throw new \RuntimeException('DigitalOcean Spaces disk is not configured correctly.');
+        }
+
+        $host = parse_url($endpoint, PHP_URL_HOST) ?: '';
+        $usePathStyle = true;
+        if ($host && str_contains($host, $bucket . '.')) {
+            $usePathStyle = false;
+        }
+
+        $client = new \Aws\S3\S3Client([
+            'version' => 'latest',
+            'region' => $region,
+            'endpoint' => $endpoint,
+            'credentials' => [
+                'key' => $key,
+                'secret' => $secret,
+            ],
+            'signature_version' => 'v4',
+            'use_path_style_endpoint' => $usePathStyle,
+        ]);
+
+        return [$client, $bucket];
+    }
+
+    /**
+     * Build base file directory in Spaces for a folder (includes hierarchy).
+     */
+    private function buildSpacesDir(?int $folderId): array
+    {
+        $assetRoot = trim(env('DIGITALOCEAN_SPACES_ROOT_PATH', ''), '/');
+        $fileDir = $assetRoot ? $assetRoot . '/file-storage' : 'file-storage';
+        $folder = null;
+
+        if ($folderId) {
+            $folder = File::where('id', $folderId)
+                ->where('type', 'folder')
+                ->with('folder')
+                ->firstOrFail();
+
+            $folderPath = $this->getFolderPath($folder);
+            if ($folderPath) {
+                $fileDir = $fileDir . '/' . $folderPath;
+            }
+        }
+
+        return [$fileDir, $folder];
+    }
+
+    /**
      * Display a listing of files and folders for the current user.
      */
     public function index(Request $request)
@@ -146,6 +207,118 @@ class FileController extends Controller
     }
 
     /**
+     * Create a presigned upload URL so the browser uploads directly to Spaces.
+     */
+    public function presignUpload(Request $request)
+    {
+        $validated = $request->validate([
+            'original_name' => 'required|string|max:255',
+            'mime_type' => 'nullable|string|max:255',
+            'size' => 'required|integer|min:1|max:5368709120', // 5GB
+            'folder_id' => 'nullable|exists:files,id',
+        ]);
+
+        $userId = auth()->id();
+
+        if (!empty($validated['folder_id'])) {
+            $folder = File::where('id', $validated['folder_id'])
+                ->where('type', 'folder')
+                ->firstOrFail();
+
+            if (!$folder->canUserUpload($userId)) {
+                return response()->json(['message' => 'You do not have permission to upload to this folder.'], 403);
+            }
+        }
+
+        $extension = pathinfo($validated['original_name'], PATHINFO_EXTENSION);
+        $extension = $extension ? strtolower($extension) : 'bin';
+
+        $filename = Str::random(40) . '.' . $extension;
+        [$fileDir] = $this->buildSpacesDir($validated['folder_id'] ?? null);
+        $key = trim($fileDir . '/' . $filename, '/');
+
+        [$client, $bucket] = $this->getSpacesClientAndBucket();
+
+        $contentType = $validated['mime_type'] ?: 'application/octet-stream';
+
+        $command = $client->getCommand('PutObject', [
+            'Bucket' => $bucket,
+            'Key' => $key,
+            'ContentType' => $contentType,
+        ]);
+
+        $presigned = $client->createPresignedRequest($command, '+60 minutes');
+
+        $headers = [];
+        foreach ($presigned->getHeaders() as $name => $values) {
+            $headers[$name] = implode(', ', $values);
+        }
+        unset($headers['Host'], $headers['host']);
+
+        return response()->json([
+            'upload_url' => (string) $presigned->getUri(),
+            'path' => $key,
+            'headers' => $headers,
+            'max_size' => 5368709120,
+        ]);
+    }
+
+    /**
+     * Confirm a direct Spaces upload and create the DB record.
+     */
+    public function confirmUpload(Request $request)
+    {
+        $validated = $request->validate([
+            'path' => 'required|string|max:2048',
+            'original_name' => 'required|string|max:255',
+            'mime_type' => 'nullable|string|max:255',
+            'size' => 'required|integer|min:1|max:5368709120',
+            'folder_id' => 'nullable|exists:files,id',
+            'description' => 'nullable|string|max:1000',
+        ]);
+
+        $userId = auth()->id();
+
+        if (!empty($validated['folder_id'])) {
+            $folder = File::where('id', $validated['folder_id'])
+                ->where('type', 'folder')
+                ->firstOrFail();
+
+            if (!$folder->canUserUpload($userId)) {
+                return response()->json(['message' => 'You do not have permission to upload to this folder.'], 403);
+            }
+        }
+
+        $assetDisk = 'digitalocean';
+        try {
+            if (!Storage::disk($assetDisk)->exists($validated['path'])) {
+                return response()->json(['message' => 'Upload not found in Spaces. Please retry.'], 422);
+            }
+        } catch (\Throwable $e) {
+            return response()->json(['message' => 'Could not verify Spaces upload.'], 500);
+        }
+
+        $originalName = $validated['original_name'];
+
+        $fileModel = File::create([
+            'name' => pathinfo($originalName, PATHINFO_FILENAME),
+            'original_name' => $originalName,
+            'path' => $validated['path'],
+            'type' => 'file',
+            'mime_type' => $validated['mime_type'] ?: null,
+            'size' => (int) $validated['size'],
+            'folder_id' => $validated['folder_id'] ?? null,
+            'uploaded_by' => $userId,
+            'description' => $validated['description'] ?? null,
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'file' => $fileModel->fresh(),
+        ]);
+    }
+
+    /**
      * Download a file.
      */
     public function download(File $file)
@@ -192,7 +365,11 @@ class FileController extends Controller
         try {
             $assetDisk = 'digitalocean';
             if (Storage::disk($assetDisk)->exists($file->path)) {
-                $url = Storage::disk($assetDisk)->url($file->path);
+                if (method_exists(Storage::disk($assetDisk), 'temporaryUrl')) {
+                    $url = Storage::disk($assetDisk)->temporaryUrl($file->path, now()->addMinutes(60));
+                } else {
+                    $url = Storage::disk($assetDisk)->url($file->path);
+                }
                 return redirect($url);
             }
         } catch (\Exception $e) {

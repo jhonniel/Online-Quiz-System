@@ -206,6 +206,8 @@ Route::prefix('admin')->middleware(['auth', 'admin'])->group(function () {
     // File Storage (Admin)
     Route::get('files', [App\Http\Controllers\Admin\FileController::class, 'index'])->name('admin.files.index');
     Route::post('files', [App\Http\Controllers\Admin\FileController::class, 'store'])->name('admin.files.store');
+    Route::post('files/presign', [App\Http\Controllers\Admin\FileController::class, 'presignUpload'])->name('admin.files.presign');
+    Route::post('files/confirm', [App\Http\Controllers\Admin\FileController::class, 'confirmUpload'])->name('admin.files.confirm');
     Route::post('files/create-folder', [App\Http\Controllers\Admin\FileController::class, 'createFolder'])->name('admin.files.create-folder');
     Route::put('files/{file}', [App\Http\Controllers\Admin\FileController::class, 'update'])->name('admin.files.update');
     Route::delete('files/{file}', [App\Http\Controllers\Admin\FileController::class, 'destroy'])->name('admin.files.destroy');
@@ -293,6 +295,8 @@ Route::middleware(['auth'])->group(function () {
     // File Storage (User)
     Route::get('/files', [UserFileController::class, 'index'])->name('user.files.index');
     Route::post('/files', [UserFileController::class, 'store'])->name('user.files.store');
+    Route::post('/files/presign', [UserFileController::class, 'presignUpload'])->name('user.files.presign');
+    Route::post('/files/confirm', [UserFileController::class, 'confirmUpload'])->name('user.files.confirm');
     Route::get('/files/{file}/download', [UserFileController::class, 'download'])->name('user.files.download');
     Route::get('/files/{file}/view', [UserFileController::class, 'view'])->name('user.files.view');
 

@@ -74,18 +74,8 @@
                                         $isVideo = $item->mime_type && str_starts_with($item->mime_type, 'video/');
                                         $thumbnailUrl = null;
 
-                                        if ($isImage && $item->thumbnail_path) {
-                                            try {
-                                                $thumbnailUrl = Storage::disk('digitalocean')->url($item->thumbnail_path);
-                                            } catch (\Exception $e) {
-                                                try {
-                                                    $thumbnailUrl = Storage::disk('digitalocean')->url($item->path);
-                                                } catch (\Exception $e2) {}
-                                            }
-                                        } elseif ($isImage) {
-                                            try {
-                                                $thumbnailUrl = Storage::disk('digitalocean')->url($item->path);
-                                            } catch (\Exception $e) {}
+                                        if ($isImage) {
+                                            $thumbnailUrl = route('user.files.view', $item);
                                         }
                                     @endphp
 
@@ -93,7 +83,7 @@
                                         @if($thumbnailUrl)
                                             <img src="{{ $thumbnailUrl }}" alt="{{ $item->name }}"
                                                  class="w-full h-full object-cover cursor-pointer hover:opacity-90 transition-opacity"
-                                                 onclick="openUserPreviewModal('{{ $item->id }}', '{{ addslashes($item->name) }}', '{{ $item->mime_type }}', '{{ Storage::disk('digitalocean')->url($item->path) }}')">
+                                                 onclick="openUserPreviewModal('{{ $item->id }}', '{{ addslashes($item->name) }}', '{{ $item->mime_type }}', '{{ route('user.files.view', $item) }}')">
                                         @else
                                             <div class="w-full h-full flex items-center justify-center">
                                                 @if($isVideo)
@@ -129,7 +119,7 @@
                                          class="absolute right-0 mt-2 w-44 bg-white rounded-md shadow-lg z-10 border border-gray-200">
                                         <div class="py-1">
                                             @if($item->isFile())
-                                                <button onclick="openUserPreviewModal('{{ $item->id }}', '{{ addslashes($item->name) }}', '{{ $item->mime_type }}', '{{ Storage::disk('digitalocean')->url($item->path) }}')"
+                                                <button onclick="openUserPreviewModal('{{ $item->id }}', '{{ addslashes($item->name) }}', '{{ $item->mime_type }}', '{{ route('user.files.view', $item) }}')"
                                                         class="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Preview</button>
                                                 <a href="{{ route('user.files.download', $item) }}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Download</a>
                                             @elseif($item->isFolder())
@@ -170,7 +160,19 @@
                         </svg>
                     </button>
                 </div>
-                <form action="{{ route('user.files.store') }}" method="POST" enctype="multipart/form-data">
+                <!-- Upload Progress (Hidden by default) -->
+                <div id="user-upload-progress-container" class="hidden mb-4">
+                    <div class="flex items-center justify-between mb-2">
+                        <span class="text-sm font-medium text-gray-700">Uploading...</span>
+                        <span id="user-upload-percentage" class="text-sm font-medium text-indigo-600">0%</span>
+                    </div>
+                    <div class="w-full bg-gray-200 rounded-full h-2.5">
+                        <div id="user-upload-progress-bar" class="bg-indigo-600 h-2.5 rounded-full transition-all duration-300 ease-out" style="width: 0%"></div>
+                    </div>
+                    <p id="user-upload-status" class="text-xs text-gray-500 mt-2">Preparing upload...</p>
+                </div>
+
+                <form id="user-upload-file-form" action="{{ route('user.files.store') }}" method="POST" enctype="multipart/form-data">
                     @csrf
                     <input type="hidden" name="folder_id" value="{{ $currentFolder->id ?? null }}">
                     <div class="mb-4">
@@ -184,10 +186,10 @@
                         <textarea name="description" id="user-description" rows="3"
                                   class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500"></textarea>
                     </div>
-                    <div class="flex justify-end space-x-3">
+                    <div id="user-upload-form-buttons" class="flex justify-end space-x-3">
                         <button type="button" onclick="document.getElementById('user-upload-file-modal').classList.add('hidden')"
                                 class="px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50">Cancel</button>
-                        <button type="submit"
+                        <button type="submit" id="user-upload-submit-btn"
                                 class="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700">Upload</button>
                     </div>
                 </form>
@@ -261,6 +263,8 @@
 
     <script>
         const USER_FILES_DOWNLOAD_URL = @json(route('user.files.download', ['file' => '__FILE__']));
+        const USER_FILES_PRESIGN_URL = @json(route('user.files.presign'));
+        const USER_FILES_CONFIRM_URL = @json(route('user.files.confirm'));
 
         function openUserPreviewModal(id, name, mimeType, url) {
             document.getElementById('user-preview-file-name').textContent = name;
@@ -298,6 +302,143 @@
 
             document.getElementById('user-preview-modal').classList.remove('hidden');
         }
+
+        // Direct upload to Spaces with progress
+        document.addEventListener('DOMContentLoaded', function () {
+            const form = document.getElementById('user-upload-file-form');
+            if (!form) return;
+
+            form.addEventListener('submit', function (e) {
+                e.preventDefault();
+
+                const formData = new FormData(form);
+                const fileInput = document.getElementById('user-file');
+                const file = fileInput?.files?.[0];
+
+                if (!file) {
+                    alert('Please select a file to upload.');
+                    return;
+                }
+
+                const maxSize = 5368709120; // 5GB in bytes
+                if (file.size > maxSize) {
+                    alert('File size exceeds 5GB limit. Please select a smaller file.');
+                    return;
+                }
+
+                const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+                const folderId = formData.get('folder_id') || null;
+                const description = formData.get('description') || '';
+
+                // Show progress UI
+                document.getElementById('user-upload-progress-container').classList.remove('hidden');
+                document.getElementById('user-upload-form-buttons').style.display = 'none';
+                document.getElementById('user-upload-status').textContent = 'Preparing upload to Spaces...';
+
+                fetch(USER_FILES_PRESIGN_URL, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest',
+                        'X-CSRF-TOKEN': csrfToken,
+                    },
+                    body: JSON.stringify({
+                        original_name: file.name,
+                        mime_type: file.type || null,
+                        size: file.size,
+                        folder_id: folderId,
+                    }),
+                })
+                .then(async (res) => {
+                    const data = await res.json().catch(() => ({}));
+                    if (!res.ok) throw new Error(data.message || 'Failed to prepare upload.');
+                    return data;
+                })
+                .then((presign) => {
+                    const xhr = new XMLHttpRequest();
+
+                    xhr.upload.addEventListener('progress', function (e) {
+                        if (e.lengthComputable) {
+                            const percent = (e.loaded / e.total) * 100;
+                            const rounded = Math.round(percent);
+                            document.getElementById('user-upload-progress-bar').style.width = percent + '%';
+                            document.getElementById('user-upload-percentage').textContent = rounded + '%';
+                            document.getElementById('user-upload-status').textContent = `Uploading to Spaces... (${rounded}%)`;
+                        }
+                    });
+
+                    xhr.addEventListener('load', function () {
+                        if (xhr.status >= 200 && xhr.status < 300) {
+                            document.getElementById('user-upload-status').textContent = 'Upload complete! Saving record...';
+
+                            fetch(USER_FILES_CONFIRM_URL, {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                    'X-Requested-With': 'XMLHttpRequest',
+                                    'X-CSRF-TOKEN': csrfToken,
+                                },
+                                body: JSON.stringify({
+                                    path: presign.path,
+                                    original_name: file.name,
+                                    mime_type: file.type || null,
+                                    size: file.size,
+                                    folder_id: folderId,
+                                    description: description,
+                                }),
+                            })
+                            .then(async (res) => {
+                                const data = await res.json().catch(() => ({}));
+                                if (!res.ok) throw new Error(data.message || 'Failed to save uploaded file.');
+                                return data;
+                            })
+                            .then(() => {
+                                document.getElementById('user-upload-progress-bar').style.width = '100%';
+                                document.getElementById('user-upload-percentage').textContent = '100%';
+                                document.getElementById('user-upload-status').textContent = 'Saved! Reloading...';
+                                setTimeout(() => window.location.reload(), 800);
+                            })
+                            .catch((err) => {
+                                document.getElementById('user-upload-status').textContent = 'Error: ' + (err?.message || 'Failed to save file.');
+                                document.getElementById('user-upload-progress-bar').classList.remove('bg-indigo-600');
+                                document.getElementById('user-upload-progress-bar').classList.add('bg-red-600');
+                                document.getElementById('user-upload-form-buttons').style.display = 'flex';
+                            });
+                        } else {
+                            document.getElementById('user-upload-status').textContent = 'Error: Upload to Spaces failed (HTTP ' + xhr.status + ').';
+                            document.getElementById('user-upload-progress-bar').classList.remove('bg-indigo-600');
+                            document.getElementById('user-upload-progress-bar').classList.add('bg-red-600');
+                            document.getElementById('user-upload-form-buttons').style.display = 'flex';
+                        }
+                    });
+
+                    xhr.addEventListener('error', function () {
+                        document.getElementById('user-upload-status').textContent = 'Error: Upload to Spaces failed. Please try again.';
+                        document.getElementById('user-upload-progress-bar').classList.remove('bg-indigo-600');
+                        document.getElementById('user-upload-progress-bar').classList.add('bg-red-600');
+                        document.getElementById('user-upload-form-buttons').style.display = 'flex';
+                    });
+
+                    xhr.open('PUT', presign.upload_url);
+                    xhr.setRequestHeader('Content-Type', file.type || 'application/octet-stream');
+                    if (presign.headers) {
+                        Object.keys(presign.headers).forEach((key) => {
+                            const lower = String(key).toLowerCase();
+                            if (lower === 'host' || lower === 'content-length') return;
+                            if (lower === 'content-type') return;
+                            try { xhr.setRequestHeader(key, presign.headers[key]); } catch (e) {}
+                        });
+                    }
+                    xhr.send(file);
+                })
+                .catch((err) => {
+                    document.getElementById('user-upload-status').textContent = 'Error: ' + (err?.message || 'Upload failed.');
+                    document.getElementById('user-upload-progress-bar').classList.remove('bg-indigo-600');
+                    document.getElementById('user-upload-progress-bar').classList.add('bg-red-600');
+                    document.getElementById('user-upload-form-buttons').style.display = 'flex';
+                });
+            });
+        });
     </script>
 </div>
 @endsection
