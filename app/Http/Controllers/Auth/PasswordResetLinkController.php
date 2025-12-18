@@ -7,6 +7,7 @@ use App\Models\User;
 use App\Services\MailConfigService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Password;
 use Illuminate\View\View;
 
@@ -47,15 +48,44 @@ class PasswordResetLinkController extends Controller
                 ->withErrors(['email' => 'This email address is not registered in our system.']);
         }
 
-        // Ensure mail configuration is up to date from settings before sending reset link
-        MailConfigService::configure();
+        try {
+            // Ensure mail configuration is up to date from settings before sending reset link
+            MailConfigService::configure();
 
-        // We will send the password reset link to this user. Once we have attempted
-        // to send the link, we will examine the response then see the message we
-        // need to show to the user. Finally, we'll send out a proper response.
-        $status = Password::sendResetLink(
-            $request->only('email')
-        );
+            // We will send the password reset link to this user. Once we have attempted
+            // to send the link, we will examine the response then see the message we
+            // need to show to the user. Finally, we'll send out a proper response.
+            $status = Password::sendResetLink(
+                $request->only('email')
+            );
+        } catch (\Throwable $e) {
+            Log::error('Failed to send password reset link', [
+                'email' => $request->email,
+                'error' => $e->getMessage(),
+                'exception' => get_class($e),
+            ]);
+
+            // Helpful fallback for local development: write email to logs instead of failing.
+            if (app()->environment('local')) {
+                config(['mail.default' => 'log']);
+
+                try {
+                    $status = Password::sendResetLink($request->only('email'));
+                } catch (\Throwable $e2) {
+                    Log::error('Failed to send password reset link even with log mailer', [
+                        'email' => $request->email,
+                        'error' => $e2->getMessage(),
+                        'exception' => get_class($e2),
+                    ]);
+
+                    return back()->withInput($request->only('email'))
+                        ->withErrors(['email' => 'Unable to send reset link right now. Please contact the administrator.']);
+                }
+            } else {
+                return back()->withInput($request->only('email'))
+                    ->withErrors(['email' => 'Unable to send reset link right now. Please contact the administrator.']);
+            }
+        }
 
         return $status == Password::RESET_LINK_SENT
                     ? back()->with('status', 'We have emailed your password reset link. Please check your inbox.')
