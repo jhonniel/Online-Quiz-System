@@ -223,6 +223,7 @@ class SettingsController extends Controller
         $hiringInstructionsSetting = Setting::where('key', 'hiring_instructions')->first();
         $hiringApplicationPublicAccessSetting = Setting::where('key', 'hiring_application_public_access')->first();
         $hiringApplicationUrlSetting = Setting::where('key', 'hiring_application_url')->first();
+        $fileStorageStudentAccessSetting = Setting::where('key', 'file_storage_student_access')->first();
 
         // Set hiring process configuration values
         $settings['hiring_process_enabled'] = ($hiringProcessEnabledSetting && $hiringProcessEnabledSetting->value !== null && trim($hiringProcessEnabledSetting->value) !== '') ? $hiringProcessEnabledSetting->value : 'enabled';
@@ -234,6 +235,7 @@ class SettingsController extends Controller
         $settings['hiring_instructions'] = ($hiringInstructionsSetting && $hiringInstructionsSetting->value !== null && trim($hiringInstructionsSetting->value) !== '') ? $hiringInstructionsSetting->value : '';
         $settings['hiring_application_public_access'] = ($hiringApplicationPublicAccessSetting && $hiringApplicationPublicAccessSetting->value !== null && trim($hiringApplicationPublicAccessSetting->value) !== '') ? $hiringApplicationPublicAccessSetting->value : 'disabled';
         $settings['hiring_application_url'] = ($hiringApplicationUrlSetting && $hiringApplicationUrlSetting->value !== null && trim($hiringApplicationUrlSetting->value) !== '') ? $hiringApplicationUrlSetting->value : 'hiring/apply';
+        $settings['file_storage_student_access'] = ($fileStorageStudentAccessSetting && $fileStorageStudentAccessSetting->value !== null && trim($fileStorageStudentAccessSetting->value) !== '') ? $fileStorageStudentAccessSetting->value : 'disabled';
 
         // Debug: Log what we're passing to the view - this will help us see what's happening
         \Log::info('Settings Controller - Final values being passed to view', [
@@ -415,6 +417,7 @@ class SettingsController extends Controller
             'hiring_instructions' => 'nullable|string|max:2000',
             'hiring_application_public_access' => 'nullable|string|in:enabled,disabled',
             'hiring_application_url' => 'nullable|string|max:255|regex:/^[a-z0-9\-\/_]+$/i',
+            'file_storage_student_access' => 'nullable|string|in:enabled,disabled',
             'overtime_months_credited' => 'nullable|integer|in:12,9,6,3,1',
             'leave_immediate_supervisor' => 'nullable|string|max:255',
             'leave_hr_admin' => 'nullable|string|max:255',
@@ -440,6 +443,7 @@ class SettingsController extends Controller
             'contact_live_chat_days' => 'nullable|string|max:255',
             'contact_live_chat_time' => 'nullable|string|max:255',
             'default_sick_leave_balance' => 'nullable|numeric|min:0|max:365',
+            // Landing Page - Employees
             // Email Configuration
             'mail_mailer' => 'nullable|string|in:smtp,sendmail,mailgun,ses,postmark,resend,log,array',
             'mail_host' => 'nullable|string|max:255',
@@ -533,6 +537,10 @@ class SettingsController extends Controller
 
         $hiringProcessDescription = $request->hiring_process_description ?? '';
         Setting::set('hiring_process_description', $hiringProcessDescription, 'text', 'Description of the hiring process workflow');
+
+        // Handle File Storage student access
+        $fileStorageStudentAccess = $request->file_storage_student_access ?? 'disabled';
+        Setting::set('file_storage_student_access', $fileStorageStudentAccess, 'text', 'File Storage access for students (enabled, disabled)');
 
         $minimumQuizScore = $request->minimum_quiz_score ?? '';
         Setting::set('minimum_quiz_score', $minimumQuizScore !== '' ? (int) $minimumQuizScore : 70, 'number', 'Minimum quiz score percentage required to pass');
@@ -700,6 +708,18 @@ class SettingsController extends Controller
         Cache::forget('setting.contact_phone_support_time');
         Cache::forget('setting.contact_live_chat_days');
         Cache::forget('setting.contact_live_chat_time');
+        // Clear cache for landing page settings
+        for ($i = 1; $i <= 4; $i++) {
+            Cache::forget("setting.employee_{$i}_name");
+            Cache::forget("setting.employee_{$i}_position");
+            Cache::forget("setting.employee_{$i}_image");
+        }
+        for ($i = 1; $i <= 3; $i++) {
+            Cache::forget("setting.project_{$i}_name");
+            Cache::forget("setting.project_{$i}_description");
+            Cache::forget("setting.project_{$i}_image");
+            Cache::forget("setting.project_{$i}_url");
+        }
         // Clear cache for leave admin notification email
         Cache::forget('setting.leave_admin_notification_email');
         // Clear cache for hiring admin notification email
@@ -714,6 +734,7 @@ class SettingsController extends Controller
         Cache::forget('setting.hiring_instructions');
         Cache::forget('setting.hiring_application_public_access');
         Cache::forget('setting.hiring_application_url');
+        Cache::forget('setting.file_storage_student_access');
         Setting::clearCache();
 
         return redirect()->route('admin.settings.index')

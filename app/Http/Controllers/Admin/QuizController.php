@@ -22,12 +22,43 @@ use Barryvdh\DomPDF\Facade\Pdf;
 
 class QuizController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        $quizzes = Quiz::with(['creator', 'assignments'])
-            ->orderByDesc('created_at')
-            ->paginate(10);
-        return view('admin.quizzes.index', compact('quizzes'));
+        $search = trim((string) $request->input('search', ''));
+        $perPage = (int) $request->input('per_page', 10);
+        if (!in_array($perPage, [10, 25, 50, 100], true)) {
+            $perPage = 10;
+        }
+
+        $query = Quiz::with(['creator'])
+            ->withCount([
+                'assignments',
+                'assignments as completed_assignments_count' => function ($q) {
+                    $q->where('status', 'completed');
+                },
+            ])
+            ->orderByDesc('created_at');
+
+        if ($search !== '') {
+            $query->where(function ($q) use ($search) {
+                if (ctype_digit($search)) {
+                    $q->orWhere('id', (int) $search);
+                }
+
+                $q->orWhere('title', 'like', "%{$search}%")
+                    ->orWhere('description', 'like', "%{$search}%")
+                    ->orWhere('topic', 'like', "%{$search}%")
+                    ->orWhere('quiz_code', 'like', "%{$search}%")
+                    ->orWhereHas('creator', function ($cq) use ($search) {
+                        $cq->where('name', 'like', "%{$search}%")
+                            ->orWhere('email', 'like', "%{$search}%");
+                    });
+            });
+        }
+
+        $quizzes = $query->paginate($perPage)->appends($request->query());
+
+        return view('admin.quizzes.index', compact('quizzes', 'search', 'perPage'));
     }
 
     public function create()

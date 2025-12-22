@@ -24,7 +24,7 @@ use Illuminate\Support\Facades\Route;
 
 // Landing Page Routes
 Route::get('/', [LandingController::class, 'index'])->name('landing.index');
-Route::get('/features', [LandingController::class, 'features'])->name('landing.features');
+Route::get('/projects', [LandingController::class, 'projects'])->name('landing.projects');
 Route::get('/about', [LandingController::class, 'about'])->name('landing.about');
 Route::get('/contact', [LandingController::class, 'contact'])->name('landing.contact');
 Route::post('/contact', [LandingController::class, 'storeContact'])->name('landing.contact.store');
@@ -208,6 +208,10 @@ Route::prefix('admin')->middleware(['auth', 'admin'])->group(function () {
     Route::post('files', [App\Http\Controllers\Admin\FileController::class, 'store'])->name('admin.files.store');
     Route::post('files/presign', [App\Http\Controllers\Admin\FileController::class, 'presignUpload'])->name('admin.files.presign');
     Route::post('files/confirm', [App\Http\Controllers\Admin\FileController::class, 'confirmUpload'])->name('admin.files.confirm');
+    Route::post('files/multipart/initiate', [App\Http\Controllers\Admin\FileController::class, 'initiateMultipartUpload'])->name('admin.files.multipart.initiate');
+    Route::post('files/multipart/presign-chunk', [App\Http\Controllers\Admin\FileController::class, 'presignChunk'])->name('admin.files.multipart.presign-chunk');
+    Route::post('files/multipart/complete', [App\Http\Controllers\Admin\FileController::class, 'completeMultipartUpload'])->name('admin.files.multipart.complete');
+    Route::post('files/multipart/abort', [App\Http\Controllers\Admin\FileController::class, 'abortMultipartUpload'])->name('admin.files.multipart.abort');
     Route::post('files/create-folder', [App\Http\Controllers\Admin\FileController::class, 'createFolder'])->name('admin.files.create-folder');
     Route::put('files/{file}', [App\Http\Controllers\Admin\FileController::class, 'update'])->name('admin.files.update');
     Route::delete('files/{file}', [App\Http\Controllers\Admin\FileController::class, 'destroy'])->name('admin.files.destroy');
@@ -248,6 +252,10 @@ Route::prefix('admin')->middleware(['auth', 'admin'])->group(function () {
         Route::post('/settings', [\App\Http\Controllers\Admin\SettingsController::class, 'update'])->name('admin.settings.update');
         Route::get('/settings/health', [\App\Http\Controllers\Admin\SettingsController::class, 'getHealth'])->name('admin.settings.health');
         Route::post('/settings/test-email', [\App\Http\Controllers\Admin\SettingsController::class, 'testEmail'])->name('admin.settings.test-email');
+
+        // Landing Page Management
+        Route::get('/landing-page', [\App\Http\Controllers\Admin\LandingPageController::class, 'index'])->name('admin.landing-page.index');
+        Route::post('/landing-page', [\App\Http\Controllers\Admin\LandingPageController::class, 'update'])->name('admin.landing-page.update');
 
         // User Activity Management
         Route::get('user-activity', [App\Http\Controllers\Admin\UserActivityController::class, 'index'])->name('admin.user-activity.index');
@@ -297,6 +305,10 @@ Route::middleware(['auth'])->group(function () {
     Route::post('/files', [UserFileController::class, 'store'])->name('user.files.store');
     Route::post('/files/presign', [UserFileController::class, 'presignUpload'])->name('user.files.presign');
     Route::post('/files/confirm', [UserFileController::class, 'confirmUpload'])->name('user.files.confirm');
+    Route::post('/files/multipart/initiate', [UserFileController::class, 'initiateMultipartUpload'])->name('user.files.multipart.initiate');
+    Route::post('/files/multipart/presign-chunk', [UserFileController::class, 'presignChunk'])->name('user.files.multipart.presign-chunk');
+    Route::post('/files/multipart/complete', [UserFileController::class, 'completeMultipartUpload'])->name('user.files.multipart.complete');
+    Route::post('/files/multipart/abort', [UserFileController::class, 'abortMultipartUpload'])->name('user.files.multipart.abort');
     Route::get('/files/{file}/download', [UserFileController::class, 'download'])->name('user.files.download');
     Route::get('/files/{file}/view', [UserFileController::class, 'view'])->name('user.files.view');
 
@@ -317,6 +329,7 @@ Route::middleware(['auth'])->group(function () {
     // Leave Requests (Employee Only)
     // DTR (Employee Only)
     Route::get('/dtr', [App\Http\Controllers\User\DtrController::class, 'index'])->name('user.dtr.index');
+    Route::get('/dtr/export-pdf', [App\Http\Controllers\User\DtrController::class, 'exportPdf'])->name('user.dtr.export-pdf');
 
     Route::resource('leave-requests', App\Http\Controllers\User\LeaveRequestController::class)->names('user.leave-requests');
 

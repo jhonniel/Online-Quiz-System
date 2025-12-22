@@ -745,6 +745,19 @@
                                     </div>
                                     <p class="mt-2 text-xs text-gray-500">Custom URL path for the hiring application form</p>
                                 </div>
+
+                                <div>
+                                    <label for="file_storage_student_access" class="block text-sm font-medium text-gray-700 mb-2">File Storage - Student Access</label>
+                                    <select name="file_storage_student_access" id="file_storage_student_access"
+                                            class="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                                        @php
+                                            $fileStorageStudentAccessValue = old('file_storage_student_access', $settings['file_storage_student_access'] ?? 'disabled');
+                                        @endphp
+                                        <option value="disabled" {{ $fileStorageStudentAccessValue == 'disabled' ? 'selected' : '' }}>Disabled</option>
+                                        <option value="enabled" {{ $fileStorageStudentAccessValue == 'enabled' ? 'selected' : '' }}>Enabled</option>
+                                    </select>
+                                    <p class="mt-2 text-xs text-gray-500">Allow students to access File Storage feature. Employees always have access.</p>
+                                </div>
                                 </div>
                             </div>
                         </div>
@@ -1515,6 +1528,7 @@
 document.addEventListener('DOMContentLoaded', function() {
     console.log('DOMContentLoaded fired');
 
+
     // Update preview when form fields change
     const systemNameInput = document.getElementById('system_name');
     const systemDescriptionInput = document.getElementById('system_description');
@@ -2102,6 +2116,13 @@ window.showTab = function(tabName) {
             return false;
         }
 
+        // Update URL hash without scrolling
+        if (history.pushState) {
+            history.pushState(null, null, '#' + tabName);
+        } else {
+            window.location.hash = '#' + tabName;
+        }
+
         return true;
     } catch (error) {
         console.error('Error in showTab:', error);
@@ -2234,5 +2255,6 @@ window.sendTestEmail = function() {
         console.error('Test email error:', error);
     });
 };
+
 </script>
 @endsection

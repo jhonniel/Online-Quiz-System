@@ -253,10 +253,10 @@
                                 </td>
                                 <td class="px-3 sm:px-6 py-4 text-xs sm:text-sm font-medium">
                                     <div class="flex items-center space-x-2">
-                                        <a href="{{ route('admin.leave-requests.show', $request) }}"
-                                           class="text-indigo-600 hover:text-indigo-900 whitespace-nowrap">
-                                            View Details
-                                        </a>
+                                    <a href="{{ route('admin.leave-requests.show', $request) }}"
+                                       class="text-indigo-600 hover:text-indigo-900 whitespace-nowrap">
+                                        View Details
+                                    </a>
                                         @php
                                             $filedByAdminLog = $request->logs->firstWhere('action', 'filed_by_admin');
                                             $canDelete = $filedByAdminLog && $filedByAdminLog->performed_by === auth()->id();

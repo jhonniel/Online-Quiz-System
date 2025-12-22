@@ -374,6 +374,236 @@ class FileController extends Controller
     }
 
     /**
+     * Initiate a multipart upload (chunked upload).
+     */
+    public function initiateMultipartUpload(Request $request)
+    {
+        $validated = $request->validate([
+            'original_name' => 'required|string|max:255',
+            'mime_type' => 'nullable|string|max:255',
+            'size' => 'required|integer|min:1|max:5368709120', // 5GB
+            'folder_id' => 'nullable|exists:files,id',
+        ]);
+
+        $userId = auth()->id();
+
+        // Check upload permission if uploading to a folder
+        if (!empty($validated['folder_id'])) {
+            $folder = File::where('id', $validated['folder_id'])
+                ->where('type', 'folder')
+                ->firstOrFail();
+
+            if (!$folder->canUserUpload($userId)) {
+                return response()->json(['message' => 'You do not have permission to upload to this folder.'], 403);
+            }
+        }
+
+        // Determine extension from original name
+        $extension = pathinfo($validated['original_name'], PATHINFO_EXTENSION);
+        $extension = $extension ? strtolower($extension) : 'bin';
+
+        $filename = Str::random(40) . '.' . $extension;
+        [$fileDir] = $this->buildSpacesDir($validated['folder_id'] ?? null);
+        $key = trim($fileDir . '/' . $filename, '/');
+
+        [$client, $bucket] = $this->getSpacesClientAndBucket();
+
+        $contentType = $validated['mime_type'] ?: 'application/octet-stream';
+
+        // Create multipart upload
+        $result = $client->createMultipartUpload([
+            'Bucket' => $bucket,
+            'Key' => $key,
+            'ContentType' => $contentType,
+        ]);
+
+        $uploadId = $result['UploadId'];
+
+        return response()->json([
+            'upload_id' => $uploadId,
+            'path' => $key,
+            'chunk_size' => 10 * 1024 * 1024, // 10MB chunks
+        ]);
+    }
+
+    /**
+     * Get presigned URL for uploading a chunk.
+     */
+    public function presignChunk(Request $request)
+    {
+        $validated = $request->validate([
+            'upload_id' => 'required|string|max:255',
+            'path' => 'required|string|max:2048',
+            'part_number' => 'required|integer|min:1|max:10000',
+        ]);
+
+        [$client, $bucket] = $this->getSpacesClientAndBucket();
+
+        $command = $client->getCommand('UploadPart', [
+            'Bucket' => $bucket,
+            'Key' => $validated['path'],
+            'UploadId' => $validated['upload_id'],
+            'PartNumber' => $validated['part_number'],
+        ]);
+
+        $presigned = $client->createPresignedRequest($command, '+60 minutes');
+
+        $headers = [];
+        foreach ($presigned->getHeaders() as $name => $values) {
+            $headers[$name] = implode(', ', $values);
+        }
+        unset($headers['Host'], $headers['host']);
+
+        return response()->json([
+            'upload_url' => (string) $presigned->getUri(),
+            'headers' => $headers,
+        ]);
+    }
+
+    /**
+     * Complete multipart upload and create DB record.
+     */
+    public function completeMultipartUpload(Request $request)
+    {
+        $validated = $request->validate([
+            'upload_id' => 'required|string|max:255',
+            'path' => 'required|string|max:2048',
+            'parts' => 'required|array|min:1',
+            'parts.*.part_number' => 'required|integer|min:1',
+            'parts.*.etag' => 'required|string|max:255',
+            'original_name' => 'required|string|max:255',
+            'mime_type' => 'nullable|string|max:255',
+            'size' => 'required|integer|min:1|max:5368709120',
+            'folder_id' => 'nullable|exists:files,id',
+            'description' => 'nullable|string|max:1000',
+        ]);
+
+        $userId = auth()->id();
+
+        if (!empty($validated['folder_id'])) {
+            $folder = File::where('id', $validated['folder_id'])
+                ->where('type', 'folder')
+                ->firstOrFail();
+
+            if (!$folder->canUserUpload($userId)) {
+                return response()->json(['message' => 'You do not have permission to upload to this folder.'], 403);
+            }
+        }
+
+        [$client, $bucket] = $this->getSpacesClientAndBucket();
+
+        // Prepare parts array for CompleteMultipartUpload
+        $parts = [];
+        foreach ($validated['parts'] as $part) {
+            $parts[] = [
+                'PartNumber' => $part['part_number'],
+                'ETag' => $part['etag'],
+            ];
+        }
+
+        // Sort parts by part number
+        usort($parts, function($a, $b) {
+            return $a['PartNumber'] <=> $b['PartNumber'];
+        });
+
+        // Complete multipart upload
+        try {
+            $result = $client->completeMultipartUpload([
+                'Bucket' => $bucket,
+                'Key' => $validated['path'],
+                'UploadId' => $validated['upload_id'],
+                'MultipartUpload' => [
+                    'Parts' => $parts,
+                ],
+            ]);
+        } catch (\Throwable $e) {
+            Log::error('Failed to complete multipart upload', [
+                'upload_id' => $validated['upload_id'],
+                'path' => $validated['path'],
+                'error' => $e->getMessage(),
+            ]);
+            return response()->json(['message' => 'Failed to complete upload: ' . $e->getMessage()], 500);
+        }
+
+        // Verify object exists
+        $assetDisk = 'digitalocean';
+        try {
+            if (!Storage::disk($assetDisk)->exists($validated['path'])) {
+                return response()->json(['message' => 'Upload not found in Spaces. Please retry.'], 422);
+            }
+        } catch (\Throwable $e) {
+            return response()->json(['message' => 'Could not verify Spaces upload.'], 500);
+        }
+
+        $originalName = $validated['original_name'];
+        $mimeType = $validated['mime_type'] ?: null;
+        $size = (int) $validated['size'];
+        $fileDir = trim(dirname($validated['path']), '/');
+
+        // Create file record
+        $fileModel = File::create([
+            'name' => pathinfo($originalName, PATHINFO_FILENAME),
+            'original_name' => $originalName,
+            'path' => $validated['path'],
+            'type' => 'file',
+            'mime_type' => $mimeType,
+            'size' => $size,
+            'folder_id' => $validated['folder_id'] ?? null,
+            'uploaded_by' => $userId,
+            'description' => $validated['description'] ?? null,
+        ]);
+
+        // Generate thumbnail for images (only if reasonably small)
+        try {
+            if ($mimeType && str_starts_with($mimeType, 'image/') && $size <= (25 * 1024 * 1024)) {
+                $thumb = $this->generateThumbnailFromStorage($validated['path'], $fileDir, $assetDisk);
+                if ($thumb) {
+                    $fileModel->update(['thumbnail_path' => $thumb]);
+                }
+            }
+        } catch (\Throwable $e) {
+            Log::warning('Thumbnail generation skipped/failed for chunked upload', [
+                'file_id' => $fileModel->id,
+                'error' => $e->getMessage(),
+            ]);
+        }
+
+        return response()->json([
+            'success' => true,
+            'file' => $fileModel->fresh(),
+        ]);
+    }
+
+    /**
+     * Abort multipart upload (cleanup).
+     */
+    public function abortMultipartUpload(Request $request)
+    {
+        $validated = $request->validate([
+            'upload_id' => 'required|string|max:255',
+            'path' => 'required|string|max:2048',
+        ]);
+
+        [$client, $bucket] = $this->getSpacesClientAndBucket();
+
+        try {
+            $client->abortMultipartUpload([
+                'Bucket' => $bucket,
+                'Key' => $validated['path'],
+                'UploadId' => $validated['upload_id'],
+            ]);
+        } catch (\Throwable $e) {
+            Log::warning('Failed to abort multipart upload', [
+                'upload_id' => $validated['upload_id'],
+                'path' => $validated['path'],
+                'error' => $e->getMessage(),
+            ]);
+        }
+
+        return response()->json(['success' => true]);
+    }
+
+    /**
      * Create a new folder.
      */
     public function createFolder(Request $request)

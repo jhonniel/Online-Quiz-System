@@ -20,17 +20,35 @@
         <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <!-- Search -->
             <div class="flex-1 max-w-md">
-                <div class="relative">
-                    <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                        <svg class="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
-                        </svg>
+                <form id="quizzes-search-form" method="GET" action="{{ route('quizzes.index') }}">
+                    @if(request()->has('per_page'))
+                        <input type="hidden" name="per_page" value="{{ request('per_page') }}">
+                    @endif
+                    <div class="relative">
+                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                            <svg class="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                            </svg>
+                        </div>
+                        <input type="text"
+                               id="search-input"
+                               name="search"
+                               value="{{ request('search', $search ?? '') }}"
+                               placeholder="Search quizzes (title, code, topic, creator, ID)..."
+                               autocomplete="off"
+                               class="block w-full pl-10 pr-10 py-2 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
+                        @if(request('search'))
+                            <button type="button"
+                                    id="clear-search-btn"
+                                    class="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600"
+                                    title="Clear search">
+                                <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                                </svg>
+                            </button>
+                        @endif
                     </div>
-                    <input type="text"
-                           id="search-input"
-                           placeholder="Search quizzes..."
-                           class="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
-                </div>
+                </form>
             </div>
 
             <!-- Action Buttons -->
@@ -158,8 +176,8 @@
                                 </td>
                                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                                     @php
-                                        $assignedCount = $quiz->assignments()->count();
-                                        $completedCount = $quiz->assignments()->where('status', 'completed')->count();
+                                        $assignedCount = $quiz->assignments_count ?? $quiz->assignments()->count();
+                                        $completedCount = $quiz->completed_assignments_count ?? $quiz->assignments()->where('status', 'completed')->count();
                                     @endphp
                                     <div class="flex items-center space-x-2">
                                         <div class="flex items-center">
@@ -211,7 +229,7 @@
                                              x-transition:leave-end="transform opacity-0 scale-95"
                                              class="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 z-50 border border-gray-200">
 
-                                            <a href="{{ route('quizzes.show', $quiz) }}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center">
+                                            <a href="{{ route('quizzes.show', $quiz) }}" class="w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center">
                                                 <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
                                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
@@ -219,7 +237,7 @@
                                                 View
                                             </a>
 
-                                            <a href="{{ route('quizzes.edit', $quiz) }}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center">
+                                            <a href="{{ route('quizzes.edit', $quiz) }}" class="w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center">
                                                 <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
                                                 </svg>
@@ -242,7 +260,7 @@
                                                 </button>
                                             @endif
 
-                                            <a href="{{ route('admin.quizzes.results', $quiz) }}" class="block px-4 py-2 text-sm text-green-700 hover:bg-green-50 flex items-center">
+                                            <a href="{{ route('admin.quizzes.results', $quiz) }}" class="w-full px-4 py-2 text-sm text-green-700 hover:bg-green-50 flex items-center">
                                                 <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
                                                 </svg>
@@ -276,7 +294,7 @@
             <!-- Pagination -->
             <div class="bg-white px-4 py-3 flex items-center justify-between border-t border-gray-200 sm:px-6">
                 <div class="flex-1 flex justify-between sm:hidden">
-                    {{ $quizzes->links() }}
+                    {{ $quizzes->appends(request()->query())->links() }}
                 </div>
                 <div class="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
                     <div class="flex items-center">
@@ -292,10 +310,11 @@
                     </div>
                     <div class="flex items-center space-x-2">
                         <span class="text-sm text-gray-700">Rows per page:</span>
-                        <select class="text-sm border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500">
+                        <select id="quizzes-per-page-select" class="text-sm border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500">
                             <option value="10" {{ request('per_page', 10) == 10 ? 'selected' : '' }}>10</option>
                             <option value="25" {{ request('per_page', 10) == 25 ? 'selected' : '' }}>25</option>
                             <option value="50" {{ request('per_page', 10) == 50 ? 'selected' : '' }}>50</option>
+                            <option value="100" {{ request('per_page', 10) == 100 ? 'selected' : '' }}>100</option>
                         </select>
                     </div>
                     <div>
@@ -772,5 +791,41 @@ document.getElementById('assignForm').addEventListener('submit', function(e) {
 
         return false;
     }
+</script>
+
+<script>
+    // Quizzes search + per-page (server-side)
+    document.addEventListener('DOMContentLoaded', function () {
+        const searchForm = document.getElementById('quizzes-search-form');
+        const searchInput = document.getElementById('search-input');
+        const clearBtn = document.getElementById('clear-search-btn');
+        const perPageSelect = document.getElementById('quizzes-per-page-select');
+
+        let t = null;
+        if (searchForm && searchInput) {
+            searchInput.addEventListener('input', function () {
+                if (t) clearTimeout(t);
+                t = setTimeout(() => searchForm.submit(), 350);
+            });
+        }
+
+        if (clearBtn && searchInput && searchForm) {
+            clearBtn.addEventListener('click', function () {
+                searchInput.value = '';
+                searchForm.submit();
+            });
+        }
+
+        if (perPageSelect) {
+            perPageSelect.addEventListener('change', function () {
+                const url = new URL(window.location.href);
+                const params = new URLSearchParams(url.search);
+                params.set('per_page', this.value);
+                params.delete('page');
+                url.search = params.toString();
+                window.location.href = url.toString();
+            });
+        }
+    });
 </script>
 @endsection

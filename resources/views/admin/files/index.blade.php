@@ -451,6 +451,10 @@
         const ADMIN_FILES_DOWNLOAD_URL = @json(route('admin.files.download', ['file' => '__FILE__']));
         const ADMIN_FILES_PRESIGN_URL = @json(route('admin.files.presign'));
         const ADMIN_FILES_CONFIRM_URL = @json(route('admin.files.confirm'));
+        const ADMIN_FILES_MULTIPART_INITIATE_URL = @json(route('admin.files.multipart.initiate'));
+        const ADMIN_FILES_MULTIPART_PRESIGN_CHUNK_URL = @json(route('admin.files.multipart.presign-chunk'));
+        const ADMIN_FILES_MULTIPART_COMPLETE_URL = @json(route('admin.files.multipart.complete'));
+        const ADMIN_FILES_MULTIPART_ABORT_URL = @json(route('admin.files.multipart.abort'));
 
         let currentShareItemId = null;
 
@@ -660,7 +664,7 @@
             document.getElementById('upload-status').textContent = 'Preparing upload...';
         }
 
-        // Handle file upload with progress
+        // Handle file upload with chunked multipart upload
         document.getElementById('upload-file-form').addEventListener('submit', function(e) {
             e.preventDefault();
 
@@ -684,60 +688,105 @@
             // Show progress container
             document.getElementById('upload-progress-container').classList.remove('hidden');
             document.getElementById('upload-form-buttons').style.display = 'none';
-            document.getElementById('upload-status').textContent = 'Uploading ' + file.name + '...';
+            document.getElementById('upload-status').textContent = 'Preparing chunked upload for ' + file.name + '...';
 
             const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
             const folderId = formData.get('folder_id') || null;
             const description = formData.get('description') || '';
 
-            // Step 1: Get presigned URL from our server (small request)
-            fetch(ADMIN_FILES_PRESIGN_URL, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-Requested-With': 'XMLHttpRequest',
-                    'X-CSRF-TOKEN': csrfToken,
-                },
-                body: JSON.stringify({
-                    original_name: file.name,
-                    mime_type: file.type || null,
-                    size: file.size,
-                    folder_id: folderId,
-                }),
-            })
-            .then(async (res) => {
-                const data = await res.json().catch(() => ({}));
-                if (!res.ok) {
-                    throw new Error(data.message || 'Failed to prepare upload.');
-                }
-                return data;
-            })
-            .then((presign) => {
-                // Step 2: Upload directly to Spaces (PUT to presigned URL)
-                const uploadXhr = new XMLHttpRequest();
+            // Use chunked upload for files larger than 10MB, otherwise use single PUT
+            const CHUNK_SIZE = 10 * 1024 * 1024; // 10MB
+            const useChunked = file.size > CHUNK_SIZE;
 
-                // Track upload progress
-                uploadXhr.upload.addEventListener('progress', function(e) {
-                    if (e.lengthComputable) {
-                        const percentComplete = (e.loaded / e.total) * 100;
-                        const roundedPercent = Math.round(percentComplete);
+            if (useChunked) {
+                // Chunked multipart upload
+                let uploadId = null;
+                let path = null;
+                let chunkSize = CHUNK_SIZE;
+                const totalChunks = Math.ceil(file.size / chunkSize);
+                const uploadedParts = [];
 
-                        document.getElementById('upload-progress-bar').style.width = percentComplete + '%';
-                        document.getElementById('upload-percentage').textContent = roundedPercent + '%';
-
-                        const loadedMB = (e.loaded / 1048576).toFixed(2);
-                        const totalMB = (e.total / 1048576).toFixed(2);
-                        document.getElementById('upload-status').textContent =
-                            `Uploading to Spaces: ${loadedMB} MB / ${totalMB} MB (${roundedPercent}%)`;
+                // Step 1: Initiate multipart upload
+                fetch(ADMIN_FILES_MULTIPART_INITIATE_URL, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest',
+                        'X-CSRF-TOKEN': csrfToken,
+                    },
+                    body: JSON.stringify({
+                        original_name: file.name,
+                        mime_type: file.type || null,
+                        size: file.size,
+                        folder_id: folderId,
+                    }),
+                })
+                .then(async (res) => {
+                    const data = await res.json().catch(() => ({}));
+                    if (!res.ok) {
+                        throw new Error(data.message || 'Failed to initiate multipart upload.');
                     }
-                });
+                    return data;
+                })
+                .then((initData) => {
+                    uploadId = initData.upload_id;
+                    path = initData.path;
+                    chunkSize = initData.chunk_size || CHUNK_SIZE;
 
-                uploadXhr.addEventListener('load', function() {
-                    if (uploadXhr.status >= 200 && uploadXhr.status < 300) {
-                        document.getElementById('upload-status').textContent = 'Upload complete! Saving record...';
+                    // Step 2: Upload chunks sequentially
+                    let currentChunk = 0;
+                    const uploadChunk = (chunkIndex) => {
+                        if (chunkIndex >= totalChunks) {
+                            // All chunks uploaded, complete multipart upload
+                            document.getElementById('upload-status').textContent = 'Completing upload...';
 
-                        // Step 3: Confirm upload to create DB record
-                        fetch(ADMIN_FILES_CONFIRM_URL, {
+                            fetch(ADMIN_FILES_MULTIPART_COMPLETE_URL, {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                    'X-Requested-With': 'XMLHttpRequest',
+                                    'X-CSRF-TOKEN': csrfToken,
+                                },
+                                body: JSON.stringify({
+                                    upload_id: uploadId,
+                                    path: path,
+                                    parts: uploadedParts,
+                                    original_name: file.name,
+                                    mime_type: file.type || null,
+                                    size: file.size,
+                                    folder_id: folderId,
+                                    description: description,
+                                }),
+                            })
+                            .then(async (res) => {
+                                const data = await res.json().catch(() => ({}));
+                                if (!res.ok) {
+                                    throw new Error(data.message || 'Failed to complete upload.');
+                                }
+                                return data;
+                            })
+                            .then(() => {
+                                document.getElementById('upload-status').textContent = 'Saved! Reloading...';
+                                document.getElementById('upload-progress-bar').style.width = '100%';
+                                document.getElementById('upload-percentage').textContent = '100%';
+                                setTimeout(() => window.location.reload(), 800);
+                            })
+                            .catch((err) => {
+                                document.getElementById('upload-status').textContent = 'Error: ' + (err?.message || 'Failed to complete upload.');
+                                document.getElementById('upload-progress-bar').classList.remove('bg-indigo-600');
+                                document.getElementById('upload-progress-bar').classList.add('bg-red-600');
+                                document.getElementById('upload-form-buttons').style.display = 'flex';
+                            });
+                            return;
+                        }
+
+                        const start = chunkIndex * chunkSize;
+                        const end = Math.min(start + chunkSize, file.size);
+                        const chunk = file.slice(start, end);
+                        const partNumber = chunkIndex + 1;
+
+                        // Get presigned URL for this chunk
+                        fetch(ADMIN_FILES_MULTIPART_PRESIGN_CHUNK_URL, {
                             method: 'POST',
                             headers: {
                                 'Content-Type': 'application/json',
@@ -745,77 +794,211 @@
                                 'X-CSRF-TOKEN': csrfToken,
                             },
                             body: JSON.stringify({
-                                path: presign.path,
-                                original_name: file.name,
-                                mime_type: file.type || null,
-                                size: file.size,
-                                folder_id: folderId,
-                                description: description,
+                                upload_id: uploadId,
+                                path: path,
+                                part_number: partNumber,
                             }),
                         })
                         .then(async (res) => {
                             const data = await res.json().catch(() => ({}));
                             if (!res.ok) {
-                                throw new Error(data.message || 'Failed to save uploaded file.');
+                                throw new Error(data.message || 'Failed to get presigned URL for chunk.');
                             }
                             return data;
                         })
-                        .then(() => {
-                            document.getElementById('upload-status').textContent = 'Saved! Reloading...';
-                            document.getElementById('upload-progress-bar').style.width = '100%';
-                            document.getElementById('upload-percentage').textContent = '100%';
-                            setTimeout(() => window.location.reload(), 800);
+                        .then((presign) => {
+                            // Upload chunk
+                            const chunkXhr = new XMLHttpRequest();
+
+                            chunkXhr.addEventListener('load', function() {
+                                if (chunkXhr.status >= 200 && chunkXhr.status < 300) {
+                                    const etag = chunkXhr.getResponseHeader('ETag') || chunkXhr.getResponseHeader('etag');
+                                    if (!etag) {
+                                        throw new Error('Missing ETag in chunk response.');
+                                    }
+
+                                    uploadedParts.push({
+                                        part_number: partNumber,
+                                        etag: etag.replace(/"/g, ''), // Remove quotes from ETag
+                                    });
+
+                                    // Update progress
+                                    const overallProgress = ((chunkIndex + 1) / totalChunks) * 100;
+                                    document.getElementById('upload-progress-bar').style.width = overallProgress + '%';
+                                    document.getElementById('upload-percentage').textContent = Math.round(overallProgress) + '%';
+
+                                    const uploadedMB = ((chunkIndex + 1) * chunkSize / 1048576).toFixed(2);
+                                    const totalMB = (file.size / 1048576).toFixed(2);
+                                    document.getElementById('upload-status').textContent =
+                                        `Uploading chunk ${partNumber}/${totalChunks}: ${uploadedMB} MB / ${totalMB} MB`;
+
+                                    // Upload next chunk
+                                    uploadChunk(chunkIndex + 1);
+                                } else {
+                                    throw new Error('Chunk upload failed (HTTP ' + chunkXhr.status + ').');
+                                }
+                            });
+
+                            chunkXhr.addEventListener('error', function() {
+                                throw new Error('Chunk upload failed.');
+                            });
+
+                            chunkXhr.open('PUT', presign.upload_url);
+                            if (presign.headers) {
+                                Object.keys(presign.headers).forEach((key) => {
+                                    const lower = String(key).toLowerCase();
+                                    if (lower === 'host' || lower === 'content-length') return;
+                                    try {
+                                        chunkXhr.setRequestHeader(key, presign.headers[key]);
+                                    } catch (e) {
+                                        // ignore headers the browser disallows
+                                    }
+                                });
+                            }
+
+                            chunkXhr.send(chunk);
                         })
                         .catch((err) => {
-                            document.getElementById('upload-status').textContent = 'Error: ' + (err?.message || 'Failed to save file record.');
+                            document.getElementById('upload-status').textContent = 'Error: ' + (err?.message || 'Chunk upload failed.');
                             document.getElementById('upload-progress-bar').classList.remove('bg-indigo-600');
                             document.getElementById('upload-progress-bar').classList.add('bg-red-600');
                             document.getElementById('upload-form-buttons').style.display = 'flex';
                         });
-                    } else {
-                        document.getElementById('upload-status').textContent = 'Error: Upload to Spaces failed (HTTP ' + uploadXhr.status + ').';
-                        document.getElementById('upload-progress-bar').classList.remove('bg-indigo-600');
-                        document.getElementById('upload-progress-bar').classList.add('bg-red-600');
-                        document.getElementById('upload-form-buttons').style.display = 'flex';
-                    }
-                });
+                    };
 
-                uploadXhr.addEventListener('error', function() {
-                    document.getElementById('upload-status').textContent = 'Error: Upload to Spaces failed. Please try again.';
+                    // Start uploading chunks
+                    uploadChunk(0);
+                })
+                .catch((err) => {
+                    document.getElementById('upload-status').textContent = 'Error: ' + (err?.message || 'Failed to initiate upload.');
                     document.getElementById('upload-progress-bar').classList.remove('bg-indigo-600');
                     document.getElementById('upload-progress-bar').classList.add('bg-red-600');
                     document.getElementById('upload-form-buttons').style.display = 'flex';
                 });
+            } else {
+                // Single PUT upload for smaller files (original method)
+                fetch(ADMIN_FILES_PRESIGN_URL, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest',
+                        'X-CSRF-TOKEN': csrfToken,
+                    },
+                    body: JSON.stringify({
+                        original_name: file.name,
+                        mime_type: file.type || null,
+                        size: file.size,
+                        folder_id: folderId,
+                    }),
+                })
+                .then(async (res) => {
+                    const data = await res.json().catch(() => ({}));
+                    if (!res.ok) {
+                        throw new Error(data.message || 'Failed to prepare upload.');
+                    }
+                    return data;
+                })
+                .then((presign) => {
+                    const uploadXhr = new XMLHttpRequest();
 
-                uploadXhr.addEventListener('abort', function() {
-                    document.getElementById('upload-status').textContent = 'Upload cancelled.';
-                    resetUploadForm();
-                });
+                    uploadXhr.upload.addEventListener('progress', function(e) {
+                        if (e.lengthComputable) {
+                            const percentComplete = (e.loaded / e.total) * 100;
+                            const roundedPercent = Math.round(percentComplete);
 
-                uploadXhr.open('PUT', presign.upload_url);
-                // Required headers (must match what was signed)
-                uploadXhr.setRequestHeader('Content-Type', file.type || 'application/octet-stream');
-                if (presign.headers) {
-                    Object.keys(presign.headers).forEach((key) => {
-                        const lower = String(key).toLowerCase();
-                        if (lower === 'host' || lower === 'content-length') return;
-                        if (lower === 'content-type') return; // we set it above
-                        try {
-                            uploadXhr.setRequestHeader(key, presign.headers[key]);
-                        } catch (e) {
-                            // ignore headers the browser disallows
+                            document.getElementById('upload-progress-bar').style.width = percentComplete + '%';
+                            document.getElementById('upload-percentage').textContent = roundedPercent + '%';
+
+                            const loadedMB = (e.loaded / 1048576).toFixed(2);
+                            const totalMB = (e.total / 1048576).toFixed(2);
+                            document.getElementById('upload-status').textContent =
+                                `Uploading to Spaces: ${loadedMB} MB / ${totalMB} MB (${roundedPercent}%)`;
                         }
                     });
-                }
 
-                uploadXhr.send(file);
-            })
-            .catch((err) => {
-                document.getElementById('upload-status').textContent = 'Error: ' + (err?.message || 'Upload failed.');
-                document.getElementById('upload-progress-bar').classList.remove('bg-indigo-600');
-                document.getElementById('upload-progress-bar').classList.add('bg-red-600');
-                document.getElementById('upload-form-buttons').style.display = 'flex';
-            });
+                    uploadXhr.addEventListener('load', function() {
+                        if (uploadXhr.status >= 200 && uploadXhr.status < 300) {
+                            document.getElementById('upload-status').textContent = 'Upload complete! Saving record...';
+
+                            fetch(ADMIN_FILES_CONFIRM_URL, {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                    'X-Requested-With': 'XMLHttpRequest',
+                                    'X-CSRF-TOKEN': csrfToken,
+                                },
+                                body: JSON.stringify({
+                                    path: presign.path,
+                                    original_name: file.name,
+                                    mime_type: file.type || null,
+                                    size: file.size,
+                                    folder_id: folderId,
+                                    description: description,
+                                }),
+                            })
+                            .then(async (res) => {
+                                const data = await res.json().catch(() => ({}));
+                                if (!res.ok) {
+                                    throw new Error(data.message || 'Failed to save uploaded file.');
+                                }
+                                return data;
+                            })
+                            .then(() => {
+                                document.getElementById('upload-status').textContent = 'Saved! Reloading...';
+                                document.getElementById('upload-progress-bar').style.width = '100%';
+                                document.getElementById('upload-percentage').textContent = '100%';
+                                setTimeout(() => window.location.reload(), 800);
+                            })
+                            .catch((err) => {
+                                document.getElementById('upload-status').textContent = 'Error: ' + (err?.message || 'Failed to save file record.');
+                                document.getElementById('upload-progress-bar').classList.remove('bg-indigo-600');
+                                document.getElementById('upload-progress-bar').classList.add('bg-red-600');
+                                document.getElementById('upload-form-buttons').style.display = 'flex';
+                            });
+                        } else {
+                            document.getElementById('upload-status').textContent = 'Error: Upload to Spaces failed (HTTP ' + uploadXhr.status + ').';
+                            document.getElementById('upload-progress-bar').classList.remove('bg-indigo-600');
+                            document.getElementById('upload-progress-bar').classList.add('bg-red-600');
+                            document.getElementById('upload-form-buttons').style.display = 'flex';
+                        }
+                    });
+
+                    uploadXhr.addEventListener('error', function() {
+                        document.getElementById('upload-status').textContent = 'Error: Upload to Spaces failed. Please try again.';
+                        document.getElementById('upload-progress-bar').classList.remove('bg-indigo-600');
+                        document.getElementById('upload-progress-bar').classList.add('bg-red-600');
+                        document.getElementById('upload-form-buttons').style.display = 'flex';
+                    });
+
+                    uploadXhr.addEventListener('abort', function() {
+                        document.getElementById('upload-status').textContent = 'Upload cancelled.';
+                        resetUploadForm();
+                    });
+
+                    uploadXhr.open('PUT', presign.upload_url);
+                    uploadXhr.setRequestHeader('Content-Type', file.type || 'application/octet-stream');
+                    if (presign.headers) {
+                        Object.keys(presign.headers).forEach((key) => {
+                            const lower = String(key).toLowerCase();
+                            if (lower === 'host' || lower === 'content-length') return;
+                            if (lower === 'content-type') return;
+                            try {
+                                uploadXhr.setRequestHeader(key, presign.headers[key]);
+                            } catch (e) {
+                                // ignore headers the browser disallows
+                            }
+                        });
+                    }
+
+                    uploadXhr.send(file);
+                })
+                .catch((err) => {
+                    document.getElementById('upload-status').textContent = 'Error: ' + (err?.message || 'Upload failed.');
+                    document.getElementById('upload-progress-bar').classList.remove('bg-indigo-600');
+                    document.getElementById('upload-progress-bar').classList.add('bg-red-600');
+                    document.getElementById('upload-form-buttons').style.display = 'flex';
+                });
+            }
         });
     </script>
 

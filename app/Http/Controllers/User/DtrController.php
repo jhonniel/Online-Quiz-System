@@ -8,19 +8,20 @@ use App\Models\LeaveRequest;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Carbon\Carbon;
+use Barryvdh\DomPDF\Facade\Pdf;
 
 class DtrController extends Controller
 {
     /**
-     * Display the authenticated employee's DTR records.
+     * Display the authenticated employee/student's DTR records.
      */
     public function index(Request $request)
     {
         $user = Auth::user();
 
-        // Only allow employees to access
-        if ($user->role !== 'employee') {
-            abort(403, 'Only employees can view DTR records.');
+        // Allow employees and students to access
+        if (!in_array($user->role, ['employee', 'student'])) {
+            abort(403, 'Only employees and students can view DTR records.');
         }
 
         $query = Dtr::where('user_id', $user->id);
@@ -286,5 +287,136 @@ class DtrController extends Controller
             'minDaysRemaining',
             'expiringOvertimeEntries'
         ));
+    }
+
+    /**
+     * Export the authenticated employee/student's DTR records as PDF.
+     */
+    public function exportPdf(Request $request)
+    {
+        $user = Auth::user();
+
+        // Allow employees and students to access
+        if (!in_array($user->role, ['employee', 'student'])) {
+            abort(403, 'Only employees and students can export DTR records.');
+        }
+
+        $query = Dtr::where('user_id', $user->id);
+
+        // Filter by date range
+        if ($request->filled('date_from')) {
+            $query->whereDate('date', '>=', $request->date_from);
+        }
+        if ($request->filled('date_to')) {
+            $query->whereDate('date', '<=', $request->date_to);
+        }
+
+        // Filter by status
+        if ($request->filled('status')) {
+            $query->where('status', $request->status);
+        }
+
+        $dtrs = $query->orderBy('date', 'asc')->get();
+
+        // Include approved leave requests as on-leave entries
+        $dateFrom = $request->filled('date_from') ? Carbon::parse($request->date_from) : ($dtrs->min('date') ? $dtrs->min('date')->copy() : null);
+        $dateTo = $request->filled('date_to') ? Carbon::parse($request->date_to) : ($dtrs->max('date') ? $dtrs->max('date')->copy() : null);
+        if ($dateFrom && $dateTo && $dateFrom->gt($dateTo)) {
+            [$dateFrom, $dateTo] = [$dateTo, $dateFrom];
+        }
+
+        if ($dateFrom && $dateTo) {
+            $approvedLeaves = LeaveRequest::where('user_id', $user->id)
+                ->where('status', 'approved')
+                ->whereDate('start_date', '<=', $dateTo->toDateString())
+                ->where(function ($q) use ($dateFrom) {
+                    $q->whereNull('end_date')
+                      ->orWhereDate('end_date', '>=', $dateFrom->toDateString());
+                })
+                ->get();
+
+            $leaveEntries = collect();
+            foreach ($approvedLeaves as $leave) {
+                $start = Carbon::parse($leave->start_date);
+                $end = $leave->end_date ? Carbon::parse($leave->end_date) : $start->copy();
+                $period = new \Carbon\CarbonPeriod($start, $end);
+                foreach ($period as $day) {
+                    if ($day->lt($dateFrom) || $day->gt($dateTo)) {
+                        continue;
+                    }
+                    $entry = new Dtr([
+                        'user_id' => $user->id,
+                        'date' => $day->copy(),
+                        'total_hours' => 0,
+                        'overtime_hours' => 0,
+                        'status' => 'on_leave',
+                        'remarks' => 'Approved Leave: ' . ($leave->type_label ?? ucfirst(str_replace('_', ' ', $leave->type))),
+                    ]);
+                    $entry->setRelation('user', $user);
+                    $leaveEntries->push($entry);
+                }
+            }
+
+            if ($leaveEntries->isNotEmpty()) {
+                $dtrs = $dtrs->merge($leaveEntries)->sortBy(function ($item) {
+                    return $item->date;
+                })->values();
+            }
+        }
+
+        // Calculate totals
+        $totalHours = 0;
+        $totalOvertime = 0;
+        $totalRecords = $dtrs->count();
+
+        foreach ($dtrs as $dtr) {
+            $totalHours += ($dtr->total_hours ?? 0);
+            $totalOvertime += ($dtr->overtime_hours ?? 0);
+        }
+
+        // Format totals
+        $totalMinutes = (int) round($totalHours * 60);
+        $totalH = intdiv($totalMinutes, 60);
+        $totalM = $totalMinutes % 60;
+        $totalHoursFormatted = sprintf('%02d:%02d', $totalH, $totalM);
+
+        $totalOvertimeMinutes = (int) round($totalOvertime * 60);
+        $totalOvertimeH = intdiv($totalOvertimeMinutes, 60);
+        $totalOvertimeM = $totalOvertimeMinutes % 60;
+        $totalOvertimeFormatted = sprintf('%02d:%02d', $totalOvertimeH, $totalOvertimeM);
+
+        // Group by week for better organization
+        $groupedByWeek = [];
+        foreach ($dtrs as $dtr) {
+            $weekStart = $dtr->date->copy()->startOfWeek();
+            $weekEnd = $dtr->date->copy()->endOfWeek();
+            $weekKey = $weekStart->toDateString() . '_' . $weekEnd->toDateString();
+            $weekLabel = $weekStart->format('M d') . ' - ' . $weekEnd->format('M d, Y');
+
+            if (!isset($groupedByWeek[$weekKey])) {
+                $groupedByWeek[$weekKey] = [
+                    'label' => $weekLabel,
+                    'records' => [],
+                ];
+            }
+
+            $groupedByWeek[$weekKey]['records'][] = $dtr;
+        }
+
+        $data = [
+            'user' => $user,
+            'dtrs' => $dtrs,
+            'groupedByWeek' => $groupedByWeek,
+            'totalRecords' => $totalRecords,
+            'totalHoursFormatted' => $totalHoursFormatted,
+            'totalOvertimeFormatted' => $totalOvertimeFormatted,
+            'dateFrom' => $dateFrom ? $dateFrom->format('F d, Y') : 'All Time',
+            'dateTo' => $dateTo ? $dateTo->format('F d, Y') : 'All Time',
+        ];
+
+        $pdf = Pdf::loadView('user.dtr.export-pdf', $data)->setPaper('a4', 'landscape');
+
+        $filename = 'dtr_' . $user->name . '_' . ($dateFrom ? $dateFrom->format('Y-m-d') : 'all') . '_' . ($dateTo ? $dateTo->format('Y-m-d') : 'all') . '.pdf';
+        return $pdf->download($filename);
     }
 }

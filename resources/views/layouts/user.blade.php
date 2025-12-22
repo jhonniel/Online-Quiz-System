@@ -138,7 +138,7 @@
                         @endif
 
                         <!-- DTR (Employee Only) -->
-                        @if(auth()->user()->role === 'employee')
+                        @if(in_array(auth()->user()->role, ['employee', 'student']))
                         <a href="{{ route('user.dtr.index') }}"
                            class="group flex items-center px-2 py-2 text-sm font-medium rounded-md transition-colors duration-200 {{ request()->routeIs('user.dtr.*') ? 'bg-indigo-700 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white' }}"
                            :class="sidebarCollapsed ? 'justify-center' : ''"
@@ -150,8 +150,19 @@
                                 DTR
                             </span>
                         </a>
+                        @endif
 
-                        <!-- File Storage (Employee Only) -->
+                        <!-- File Storage (Employee & Student if enabled) -->
+                        @php
+                            $showFileStorage = false;
+                            if (auth()->user()->role === 'employee') {
+                                $showFileStorage = true;
+                            } elseif (auth()->user()->role === 'student') {
+                                $fileStorageStudentAccess = \App\Models\Setting::get('file_storage_student_access', 'disabled');
+                                $showFileStorage = $fileStorageStudentAccess === 'enabled';
+                            }
+                        @endphp
+                        @if($showFileStorage)
                         <a href="{{ route('user.files.index') }}"
                            class="group flex items-center px-2 py-2 text-sm font-medium rounded-md transition-colors duration-200 {{ request()->routeIs('user.files.*') ? 'bg-indigo-700 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white' }}"
                            :class="sidebarCollapsed ? 'justify-center' : ''"
@@ -369,7 +380,27 @@
                         </a>
                         @endif
 
-                        @if(auth()->user()->role === 'employee')
+                        @php
+                            $showFileStorageMobile = false;
+                            if (auth()->user()->role === 'employee') {
+                                $showFileStorageMobile = true;
+                            } elseif (auth()->user()->role === 'student') {
+                                $fileStorageStudentAccess = \App\Models\Setting::get('file_storage_student_access', 'disabled');
+                                $showFileStorageMobile = $fileStorageStudentAccess === 'enabled';
+                            }
+                        @endphp
+                        @if($showFileStorageMobile)
+                        <a href="{{ route('user.files.index') }}"
+                           @click="sidebarOpen = false"
+                           class="group flex items-center px-2 py-2 text-sm font-medium rounded-md transition-colors duration-200 {{ request()->routeIs('user.files.*') ? 'bg-indigo-700 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white' }}">
+                            <svg class="mr-3 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-4l-2-2H5a2 2 0 00-2 2z"></path>
+                            </svg>
+                            File Storage
+                        </a>
+                        @endif
+
+                        @if(in_array(auth()->user()->role, ['employee', 'student']))
                         <a href="{{ route('user.dtr.index') }}"
                            @click="sidebarOpen = false"
                            class="group flex items-center px-2 py-2 text-sm font-medium rounded-md transition-colors duration-200 {{ request()->routeIs('user.dtr.*') ? 'bg-indigo-700 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white' }}">

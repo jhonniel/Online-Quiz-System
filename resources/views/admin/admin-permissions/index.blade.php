@@ -34,7 +34,7 @@
 
     <!-- Search and Filter Bar -->
     <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-3 flex-shrink-0 mx-2 sm:mx-3 lg:mx-4 xl:mx-6">
-        <form method="GET" action="{{ route('admin.admin-permissions.index') }}" class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <form id="admin-permissions-search-form" method="GET" action="{{ route('admin.admin-permissions.index') }}" class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
             <!-- Search -->
             <div class="flex-1 max-w-md">
                 <div class="relative">
@@ -44,10 +44,22 @@
                         </svg>
                     </div>
                     <input type="text"
+                           id="admin-permissions-search-input"
                            name="search"
                            value="{{ request('search') }}"
                            placeholder="Search by name or email..."
-                           class="block w-full pl-9 pr-3 py-2 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 text-sm">
+                           autocomplete="off"
+                           class="block w-full pl-9 pr-10 py-2 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 text-sm">
+                    @if(request('search'))
+                        <button type="button"
+                                id="admin-permissions-clear-search-btn"
+                                class="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600"
+                                title="Clear search">
+                            <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                            </svg>
+                        </button>
+                    @endif
                 </div>
             </div>
 
@@ -292,7 +304,7 @@
                     </div>
                     <div class="flex items-center space-x-2">
                         <span class="text-sm text-gray-700">Rows per page:</span>
-                        <select onchange="window.location.href = '{{ route('admin.admin-permissions.index') }}?' + new URLSearchParams({...new URLSearchParams(window.location.search), per_page: this.value}).toString()"
+                        <select id="admin-permissions-per-page-select"
                                 class="text-sm border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500">
                             <option value="10" {{ request('per_page', 20) == 10 ? 'selected' : '' }}>10</option>
                             <option value="20" {{ request('per_page', 20) == 20 ? 'selected' : '' }}>20</option>
@@ -308,6 +320,44 @@
         @endif
     </div>
 </div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const form = document.getElementById('admin-permissions-search-form');
+        const searchInput = document.getElementById('admin-permissions-search-input');
+        const clearBtn = document.getElementById('admin-permissions-clear-search-btn');
+        const perPageSelect = document.getElementById('admin-permissions-per-page-select');
+
+        // Debounced search
+        let t = null;
+        if (form && searchInput) {
+            searchInput.addEventListener('input', function () {
+                if (t) clearTimeout(t);
+                t = setTimeout(() => form.submit(), 350);
+            });
+        }
+
+        // Clear search
+        if (clearBtn && searchInput && form) {
+            clearBtn.addEventListener('click', function () {
+                searchInput.value = '';
+                form.submit();
+            });
+        }
+
+        // Per page (preserve filters)
+        if (perPageSelect) {
+            perPageSelect.addEventListener('change', function () {
+                const url = new URL(window.location.href);
+                const params = new URLSearchParams(url.search);
+                params.set('per_page', this.value);
+                params.delete('page');
+                url.search = params.toString();
+                window.location.href = url.toString();
+            });
+        }
+    });
+</script>
 @endsection
 
 

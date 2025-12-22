@@ -20,9 +20,10 @@ class AdminPermissionController extends Controller
             ->whereHas('adminPermission')
             ->with('adminPermission');
 
+        $search = trim((string) $request->input('search', ''));
+
         // Search functionality
-        if ($request->has('search') && $request->search) {
-            $search = $request->search;
+        if ($search !== '') {
             $query->where(function($q) use ($search) {
                 $q->where('name', 'like', "%{$search}%")
                   ->orWhere('email', 'like', "%{$search}%");
@@ -35,7 +36,10 @@ class AdminPermissionController extends Controller
         }
 
         // Get per_page from request or default to 20
-        $perPage = $request->get('per_page', 20);
+        $perPage = (int) $request->get('per_page', 20);
+        if (!in_array($perPage, [10, 20, 50, 100], true)) {
+            $perPage = 20;
+        }
 
         $users = $query->orderBy('role')
             ->orderBy('name')
