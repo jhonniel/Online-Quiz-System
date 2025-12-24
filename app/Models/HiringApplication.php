@@ -3,10 +3,12 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Str;
 
 class HiringApplication extends Model
 {
+    use SoftDeletes;
     protected $fillable = [
         'hiring_position_id',
         'first_name',
@@ -36,6 +38,7 @@ class HiringApplication extends Model
         'reviewed_at' => 'datetime',
         'token_expires_at' => 'datetime',
         'interview_date' => 'datetime',
+        'deleted_at' => 'datetime',
     ];
 
     // Relationships

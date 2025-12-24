@@ -137,6 +137,11 @@ class SettingsController extends Controller
         $contactPhoneSupportTimeSetting = Setting::where('key', 'contact_phone_support_time')->first();
         $contactLiveChatDaysSetting = Setting::where('key', 'contact_live_chat_days')->first();
         $contactLiveChatTimeSetting = Setting::where('key', 'contact_live_chat_time')->first();
+        $socialFacebookSetting = Setting::where('key', 'social_facebook')->first();
+        $socialTwitterSetting = Setting::where('key', 'social_twitter')->first();
+        $socialLinkedInSetting = Setting::where('key', 'social_linkedin')->first();
+        $socialInstagramSetting = Setting::where('key', 'social_instagram')->first();
+        $socialYouTubeSetting = Setting::where('key', 'social_youtube')->first();
 
         // Set contact information values
         $settings['contact_email'] = ($contactEmailSetting && $contactEmailSetting->value !== null && trim($contactEmailSetting->value) !== '') ? $contactEmailSetting->value : 'support@system.com';
@@ -153,6 +158,12 @@ class SettingsController extends Controller
         $settings['contact_phone_support_time'] = ($contactPhoneSupportTimeSetting && $contactPhoneSupportTimeSetting->value !== null && trim($contactPhoneSupportTimeSetting->value) !== '') ? $contactPhoneSupportTimeSetting->value : '9:00 AM - 6:00 PM EST';
         $settings['contact_live_chat_days'] = ($contactLiveChatDaysSetting && $contactLiveChatDaysSetting->value !== null && trim($contactLiveChatDaysSetting->value) !== '') ? $contactLiveChatDaysSetting->value : 'Monday - Friday';
         $settings['contact_live_chat_time'] = ($contactLiveChatTimeSetting && $contactLiveChatTimeSetting->value !== null && trim($contactLiveChatTimeSetting->value) !== '') ? $contactLiveChatTimeSetting->value : '10:00 AM - 5:00 PM EST';
+        // Social Media Links
+        $settings['social_facebook'] = ($socialFacebookSetting && $socialFacebookSetting->value !== null && trim($socialFacebookSetting->value) !== '') ? $socialFacebookSetting->value : '';
+        $settings['social_twitter'] = ($socialTwitterSetting && $socialTwitterSetting->value !== null && trim($socialTwitterSetting->value) !== '') ? $socialTwitterSetting->value : '';
+        $settings['social_linkedin'] = ($socialLinkedInSetting && $socialLinkedInSetting->value !== null && trim($socialLinkedInSetting->value) !== '') ? $socialLinkedInSetting->value : '';
+        $settings['social_instagram'] = ($socialInstagramSetting && $socialInstagramSetting->value !== null && trim($socialInstagramSetting->value) !== '') ? $socialInstagramSetting->value : '';
+        $settings['social_youtube'] = ($socialYouTubeSetting && $socialYouTubeSetting->value !== null && trim($socialYouTubeSetting->value) !== '') ? $socialYouTubeSetting->value : '';
 
         // Email Configuration Settings - reload directly from database
         $mailMailerSetting = Setting::where('key', 'mail_mailer')->first();
@@ -448,6 +459,12 @@ class SettingsController extends Controller
             'contact_phone_support_time' => 'nullable|string|max:255',
             'contact_live_chat_days' => 'nullable|string|max:255',
             'contact_live_chat_time' => 'nullable|string|max:255',
+            // Social Media Links
+            'social_facebook' => 'nullable|url|max:500',
+            'social_twitter' => 'nullable|url|max:500',
+            'social_linkedin' => 'nullable|url|max:500',
+            'social_instagram' => 'nullable|url|max:500',
+            'social_youtube' => 'nullable|url|max:500',
             'default_sick_leave_balance' => 'nullable|numeric|min:0|max:365',
             // Landing Page - Employees
             // Email Configuration
@@ -727,6 +744,22 @@ class SettingsController extends Controller
         $contactLiveChatTime = $request->contact_live_chat_time ?? '';
         Setting::set('contact_live_chat_time', $contactLiveChatTime, 'text', 'Live chat support time');
 
+        // Social Media Links
+        $socialFacebook = $request->social_facebook ?? '';
+        Setting::set('social_facebook', $socialFacebook, 'text', 'Facebook page URL');
+
+        $socialTwitter = $request->social_twitter ?? '';
+        Setting::set('social_twitter', $socialTwitter, 'text', 'Twitter/X profile URL');
+
+        $socialLinkedIn = $request->social_linkedin ?? '';
+        Setting::set('social_linkedin', $socialLinkedIn, 'text', 'LinkedIn company/profile URL');
+
+        $socialInstagram = $request->social_instagram ?? '';
+        Setting::set('social_instagram', $socialInstagram, 'text', 'Instagram profile URL');
+
+        $socialYouTube = $request->social_youtube ?? '';
+        Setting::set('social_youtube', $socialYouTube, 'text', 'YouTube channel URL');
+
         // Clear cache to ensure changes are reflected immediately
         // Explicitly clear cache for leave balance settings
         Cache::forget('setting.default_vacation_balance');
@@ -746,6 +779,12 @@ class SettingsController extends Controller
         Cache::forget('setting.contact_phone_support_time');
         Cache::forget('setting.contact_live_chat_days');
         Cache::forget('setting.contact_live_chat_time');
+        // Clear cache for social media settings
+        Cache::forget('setting.social_facebook');
+        Cache::forget('setting.social_twitter');
+        Cache::forget('setting.social_linkedin');
+        Cache::forget('setting.social_instagram');
+        Cache::forget('setting.social_youtube');
         // Clear cache for landing page settings
         for ($i = 1; $i <= 4; $i++) {
             Cache::forget("setting.employee_{$i}_name");

@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\HiringApplication;
+use App\Models\UserActivity;
 use App\Services\MailConfigService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -126,7 +127,21 @@ class HiringApplicationController extends Controller
     public function show(HiringApplication $application)
     {
         $application->load(['reviewer', 'user', 'hiringPosition']);
-        return view('admin.hiring-applications.show', compact('application'));
+
+        // Get activity logs for this application
+        // Query all hiring application actions, then filter by application_id in metadata
+        $activityLogs = \App\Models\UserActivity::where('activity_type', 'action')
+            ->where('action', 'like', 'hiring_application_%')
+            ->with('user')
+            ->orderBy('created_at', 'desc')
+            ->get()
+            ->filter(function ($log) use ($application) {
+                return isset($log->metadata['application_id']) &&
+                       $log->metadata['application_id'] == $application->id;
+            })
+            ->values(); // Re-index the collection
+
+        return view('admin.hiring-applications.show', compact('application', 'activityLogs'));
     }
 
     public function accept(Request $request, HiringApplication $application)
@@ -218,6 +233,20 @@ class HiringApplicationController extends Controller
             'reviewed_at' => now(),
         ]);
 
+        // Log the action
+        UserActivity::logActivity(
+            Auth::user(),
+            'action',
+            'hiring_application_rejected',
+            [
+                'application_id' => $application->id,
+                'applicant_name' => $application->full_name,
+                'applicant_email' => $application->email,
+                'position' => $application->hiringPosition->title ?? $application->position_applied,
+                'admin_notes' => $request->admin_notes,
+            ]
+        );
+
         // Send email notification to applicant if enabled
         $emailNotificationsEnabled = \App\Models\Setting::get('hiring_email_notifications', 'enabled');
         if ($emailNotificationsEnabled === 'enabled') {
@@ -244,6 +273,111 @@ class HiringApplicationController extends Controller
             ->with('success', 'Application rejected.');
     }
 
+    public function reconsider(Request $request, HiringApplication $application)
+    {
+        // Only allow full admins (not employees with limited access) to reconsider applications
+        if (!Auth::user()->isAdmin()) {
+            abort(403, 'Only full administrators can reconsider applications.');
+        }
+
+        // Only allow reconsideration if application is rejected
+        if ($application->status !== 'rejected') {
+            return redirect()->route('admin.hiring-applications.show', $application)
+                ->with('error', 'Only rejected applications can be reconsidered.');
+        }
+
+        $request->validate([
+            'admin_notes' => 'nullable|string|max:1000',
+            'interview_date' => 'required|date|after_or_equal:now',
+        ]);
+
+        // Generate a random password for the applicant
+        $password = \Illuminate\Support\Str::random(12);
+
+        // Check if user already exists with this email
+        $user = \App\Models\User::where('email', $application->email)->first();
+
+        if (!$user) {
+            // Create new user account with role 'applicant'
+            $user = \App\Models\User::create([
+                'name' => $application->full_name,
+                'email' => $application->email,
+                'password' => \Illuminate\Support\Facades\Hash::make($password),
+                'role' => 'applicant',
+                'is_active' => true,
+                'is_approved' => true,
+            ]);
+        } else {
+            // Update existing user to applicant role and activate
+            $user->update([
+                'role' => 'applicant',
+                'is_active' => true,
+                'is_approved' => true,
+                'password' => \Illuminate\Support\Facades\Hash::make($password), // Reset password
+            ]);
+        }
+
+        // Update application
+        $application->update([
+            'status' => 'accepted',
+            'admin_notes' => $request->admin_notes,
+            'reviewed_by' => Auth::id(),
+            'reviewed_at' => now(),
+            'interview_date' => $request->interview_date,
+            'user_id' => $user->id,
+        ]);
+
+        // Refresh to get the properly formatted datetime
+        $application->refresh();
+
+        // Generate acceptance token (for backward compatibility)
+        $token = $application->generateAcceptanceToken();
+
+        // Log the action
+        UserActivity::logActivity(
+            Auth::user(),
+            'action',
+            'hiring_application_reconsidered',
+            [
+                'application_id' => $application->id,
+                'applicant_name' => $application->full_name,
+                'applicant_email' => $application->email,
+                'position' => $application->hiringPosition->title ?? $application->position_applied,
+                'interview_date' => $application->interview_date?->toDateTimeString(),
+                'admin_notes' => $request->admin_notes,
+                'user_account_created' => true,
+                'user_id' => $user->id,
+                'previous_status' => 'rejected',
+            ]
+        );
+
+        // Send email with credentials (reconsideration message)
+        $emailNotificationsEnabled = \App\Models\Setting::get('hiring_email_notifications', 'enabled');
+        if ($emailNotificationsEnabled === 'enabled') {
+            try {
+                // Ensure mail configuration is up to date from settings
+                MailConfigService::configure();
+
+                Mail::to($application->email)
+                    ->send(new \App\Mail\HiringApplicationReconsideration(
+                        $application,
+                        $application->email,
+                        $password,
+                        $application->interview_date,
+                        $application->hiringPosition
+                    ));
+            } catch (\Exception $e) {
+                Log::error('Failed to send reconsideration email', [
+                    'error' => $e->getMessage(),
+                    'application_id' => $application->id
+                ]);
+            }
+        }
+
+        return redirect()->route('admin.hiring-applications.show', $application)
+            ->with('success', 'Application reconsidered and accepted. User account created and credentials sent via email.');
+    }
+
     public function scheduleInterview(Request $request, HiringApplication $application)
     {
         $request->validate([
@@ -263,6 +397,22 @@ class HiringApplicationController extends Controller
             'reviewed_by' => Auth::id(),
             'reviewed_at' => now(),
         ]);
+
+        // Log the action
+        UserActivity::logActivity(
+            Auth::user(),
+            'action',
+            $isReschedule ? 'hiring_application_interview_rescheduled' : 'hiring_application_interview_scheduled',
+            [
+                'application_id' => $application->id,
+                'applicant_name' => $application->full_name,
+                'applicant_email' => $application->email,
+                'position' => $application->hiringPosition->title ?? $application->position_applied,
+                'interview_date' => $request->interview_date,
+                'admin_notes' => $request->admin_notes,
+                'is_reschedule' => $isReschedule,
+            ]
+        );
 
         // Send email notification to applicant if enabled
         $emailNotificationsEnabled = \App\Models\Setting::get('hiring_email_notifications', 'enabled');
@@ -378,12 +528,27 @@ class HiringApplicationController extends Controller
 
     public function destroy(HiringApplication $application)
     {
-        // Delete resume file if exists
-        if ($application->resume_path && Storage::disk('public')->exists($application->resume_path)) {
-            Storage::disk('public')->delete($application->resume_path);
+        // Only allow full admins (not employees with limited access) to delete applications
+        if (!Auth::user()->isAdmin()) {
+            abort(403, 'Only full administrators can delete applications.');
         }
 
+        // Soft delete the application (don't delete resume file, keep it for audit purposes)
         $application->delete();
+
+        // Log the action
+        UserActivity::logActivity(
+            Auth::user(),
+            'action',
+            'hiring_application_deleted',
+            [
+                'application_id' => $application->id,
+                'applicant_name' => $application->full_name,
+                'applicant_email' => $application->email,
+                'position' => $application->hiringPosition->title ?? $application->position_applied,
+                'status' => $application->status,
+            ]
+        );
 
         return redirect()->route('admin.hiring-applications.index')
             ->with('success', 'Application deleted successfully.');

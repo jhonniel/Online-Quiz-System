@@ -1,0 +1,44 @@
+<x-mail::message>
+# 🎉 Application Reconsidered - Accepted
+
+Hello {{ $application->first_name }},
+
+After thorough checking, we consider your application for the **{{ $position->title ?? $application->position_applied }}** position as **accepted**. Please proceed to the next step.
+
+## Your Account Credentials
+
+Your account has been automatically created and activated. You can now log in to view the status of your application and proceed with the next steps.
+
+**Email:** {{ $email }}
+
+**Password:** {{ $password }}
+
+<x-mail::button :url="$loginUrl">
+Login to Your Account
+</x-mail::button>
+
+@if($interviewDate)
+## Interview Scheduled
+
+Your interview has been scheduled for:
+
+**Date & Time:** {{ \Carbon\Carbon::parse($interviewDate)->format('F j, Y g:i A') }}
+
+Please make sure to be available on this date and time. We will contact you with further details about the interview location if needed.
+@endif
+
+## Important Notes
+
+- Please keep your credentials secure and do not share them with anyone.
+- You can change your password after logging in.
+- Your account is already active, so you can log in immediately.
+- Use the login button above or visit our website to access your account.
+@if($position && strcasecmp($position->employment_type ?? '', 'Internship') === 0)
+- **Please read the TOR (Term of Reference) PDF file attached to this email.**
+@endif
+
+Thank you for your interest in joining our team. We look forward to working with you!
+
+Best regards,<br>
+Infosoft-Studio
+</x-mail::message>

@@ -329,6 +329,47 @@
                                 </span>
                             </button>
                         </form>
+                    @elseif($application->status == 'rejected' && auth()->user()->isAdmin())
+                        <form action="{{ route('admin.hiring-applications.reconsider', $application) }}" method="POST">
+                            @csrf
+                            <div class="mb-3">
+                                <label for="interview_date_reconsider" class="block text-sm font-medium text-gray-700 mb-1">
+                                    Interview Date & Time <span class="text-red-500">*</span>
+                                </label>
+                                <input type="datetime-local"
+                                       name="interview_date"
+                                       id="interview_date_reconsider"
+                                       required
+                                       min="{{ date('Y-m-d\TH:i') }}"
+                                       value="{{ old('interview_date') }}"
+                                       class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm @error('interview_date') border-red-500 @enderror">
+                                @error('interview_date')
+                                    <p class="mt-1 text-xs text-red-600">{{ $message }}</p>
+                                @enderror
+                            </div>
+                            <div class="mb-3">
+                                <label for="admin_notes_reconsider" class="block text-sm font-medium text-gray-700 mb-1">
+                                    Notes (Optional)
+                                </label>
+                                <textarea name="admin_notes"
+                                          id="admin_notes_reconsider"
+                                          rows="3"
+                                          placeholder="Add notes (optional)"
+                                          class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"></textarea>
+                            </div>
+                            <button type="submit" class="action-button w-full inline-flex justify-center items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-green-600 hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed" data-loading-text="Processing...">
+                                <span class="button-text">Accept as Reconsideration & Send Credentials</span>
+                                <span class="button-spinner hidden ml-2">
+                                    <svg class="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                    </svg>
+                                </span>
+                            </button>
+                            <p class="mt-2 text-xs text-gray-500">
+                                A user account will be automatically created with role "Applicant" and credentials will be sent via email with reconsideration message.
+                            </p>
+                        </form>
                     @elseif($application->status == 'accepted')
                         <form action="{{ route('admin.hiring-applications.schedule-interview', $application) }}" method="POST">
                             @csrf
@@ -406,7 +447,8 @@
                             </button>
                         </form>
                     @endif
-                    <form action="{{ route('admin.hiring-applications.destroy', $application) }}" method="POST" class="delete-form">
+                    @if(auth()->user()->isAdmin())
+                        <form action="{{ route('admin.hiring-applications.destroy', $application) }}" method="POST" class="delete-form">
                         @csrf
                         @method('DELETE')
                         <button type="submit" class="action-button w-full inline-flex justify-center items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed" data-loading-text="Deleting...">
@@ -419,9 +461,95 @@
                             </span>
                         </button>
                     </form>
+                    @endif
                 </div>
             </div>
         </div>
+    </div>
+
+    <!-- Activity Logs -->
+    <div class="bg-white rounded-lg shadow border border-gray-200 p-4 sm:p-6 mt-6">
+        <h2 class="text-lg sm:text-xl font-semibold text-gray-900 mb-4">Activity Log</h2>
+        <p class="text-sm text-gray-500 mb-4">Track all updates and actions performed on this application.</p>
+        @if($activityLogs && $activityLogs->count() > 0)
+            <div class="space-y-4">
+                @foreach($activityLogs as $log)
+                    @php
+                        $actionLabel = match($log->action) {
+                            'hiring_application_accepted' => 'Application Accepted',
+                            'hiring_application_rejected' => 'Application Rejected',
+                            'hiring_application_reconsidered' => 'Application Reconsidered',
+                            'hiring_application_interview_scheduled' => 'Interview Scheduled',
+                            'hiring_application_interview_rescheduled' => 'Interview Rescheduled',
+                            'hiring_application_deleted' => 'Application Deleted',
+                            default => ucfirst(str_replace('_', ' ', str_replace('hiring_application_', '', $log->action))),
+                        };
+                        $borderColor = match($log->action) {
+                            'hiring_application_accepted', 'hiring_application_reconsidered' => 'border-green-500',
+                            'hiring_application_rejected' => 'border-red-500',
+                            'hiring_application_interview_scheduled', 'hiring_application_interview_rescheduled' => 'border-blue-500',
+                            'hiring_application_deleted' => 'border-gray-400',
+                            default => 'border-gray-400',
+                        };
+                        $badgeColor = match($log->action) {
+                            'hiring_application_accepted', 'hiring_application_reconsidered' => 'bg-green-100 text-green-800',
+                            'hiring_application_rejected' => 'bg-red-100 text-red-800',
+                            'hiring_application_interview_scheduled', 'hiring_application_interview_rescheduled' => 'bg-blue-100 text-blue-800',
+                            'hiring_application_deleted' => 'bg-gray-100 text-gray-800',
+                            default => 'bg-gray-100 text-gray-800',
+                        };
+                    @endphp
+                    <div class="border-l-4 {{ $borderColor }} pl-4 py-2">
+                        <div class="flex items-start justify-between">
+                            <div class="flex-1">
+                                <div class="flex items-center space-x-2">
+                                    <span class="px-2 py-1 text-xs font-semibold rounded-full {{ $badgeColor }}">
+                                        {{ $actionLabel }}
+                                    </span>
+                                </div>
+                                <div class="mt-2 text-sm text-gray-700">
+                                    @if($log->user)
+                                        <span class="font-medium">{{ $log->user->name }}</span>
+                                        <span class="text-gray-500">performed this action</span>
+                                    @else
+                                        <span class="text-gray-500">Action performed by unknown user</span>
+                                    @endif
+                                </div>
+                                @if($log->metadata)
+                                    <div class="mt-2 space-y-1">
+                                        @if(isset($log->metadata['interview_date']))
+                                            <div class="text-sm text-gray-600">
+                                                <span class="font-medium">Interview Date:</span> {{ \Carbon\Carbon::parse($log->metadata['interview_date'])->format('F j, Y g:i A') }}
+                                            </div>
+                                        @endif
+                                        @if(isset($log->metadata['admin_notes']) && !empty($log->metadata['admin_notes']))
+                                            <div class="text-sm text-gray-600 bg-gray-50 rounded p-2 mt-2">
+                                                {{ $log->metadata['admin_notes'] }}
+                                            </div>
+                                        @endif
+                                        @if(isset($log->metadata['is_reschedule']) && $log->metadata['is_reschedule'])
+                                            <div class="text-sm text-blue-600">
+                                                <span class="font-medium">Type:</span> Rescheduled
+                                            </div>
+                                        @endif
+                                    </div>
+                                @endif
+                            </div>
+                            <div class="text-xs text-gray-500 ml-4">
+                                {{ $log->created_at->format('M d, Y h:i A') }}
+                            </div>
+                        </div>
+                    </div>
+                @endforeach
+            </div>
+        @else
+            <div class="text-center py-8 text-gray-500">
+                <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                </svg>
+                <p class="mt-2 text-sm">No activity log entries yet.</p>
+            </div>
+        @endif
     </div>
 </div>
 

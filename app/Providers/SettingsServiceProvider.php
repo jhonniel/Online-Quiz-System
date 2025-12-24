@@ -83,6 +83,12 @@ class SettingsServiceProvider extends ServiceProvider
                 'contact_email_support_response' => Setting::get('contact_email_support_response', 'Response within 24 hours'),
                 'contact_phone_support_days' => Setting::get('contact_phone_support_days', 'Monday - Friday'),
                 'contact_phone_support_time' => Setting::get('contact_phone_support_time', '9:00 AM - 6:00 PM EST'),
+                // Social Media Links
+                'social_facebook' => Setting::get('social_facebook', ''),
+                'social_twitter' => Setting::get('social_twitter', ''),
+                'social_linkedin' => Setting::get('social_linkedin', ''),
+                'social_instagram' => Setting::get('social_instagram', ''),
+                'social_youtube' => Setting::get('social_youtube', ''),
                 'contact_live_chat_days' => Setting::get('contact_live_chat_days', 'Monday - Friday'),
                 'contact_live_chat_time' => Setting::get('contact_live_chat_time', '10:00 AM - 5:00 PM EST'),
             ];
