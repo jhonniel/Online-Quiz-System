@@ -235,6 +235,10 @@ class SettingsController extends Controller
         $settings['hiring_instructions'] = ($hiringInstructionsSetting && $hiringInstructionsSetting->value !== null && trim($hiringInstructionsSetting->value) !== '') ? $hiringInstructionsSetting->value : '';
         $settings['hiring_application_public_access'] = ($hiringApplicationPublicAccessSetting && $hiringApplicationPublicAccessSetting->value !== null && trim($hiringApplicationPublicAccessSetting->value) !== '') ? $hiringApplicationPublicAccessSetting->value : 'disabled';
         $settings['hiring_application_url'] = ($hiringApplicationUrlSetting && $hiringApplicationUrlSetting->value !== null && trim($hiringApplicationUrlSetting->value) !== '') ? $hiringApplicationUrlSetting->value : 'hiring/apply';
+        $hiringTorPdfSetting = Setting::where('key', 'hiring_tor_pdf')->first();
+        $settings['hiring_tor_pdf'] = ($hiringTorPdfSetting && $hiringTorPdfSetting->value !== null && trim($hiringTorPdfSetting->value) !== '') ? $hiringTorPdfSetting->value : null;
+        $privacyPolicyPdfSetting = Setting::where('key', 'privacy_policy_pdf')->first();
+        $settings['privacy_policy_pdf'] = ($privacyPolicyPdfSetting && $privacyPolicyPdfSetting->value !== null && trim($privacyPolicyPdfSetting->value) !== '') ? $privacyPolicyPdfSetting->value : null;
         $settings['file_storage_student_access'] = ($fileStorageStudentAccessSetting && $fileStorageStudentAccessSetting->value !== null && trim($fileStorageStudentAccessSetting->value) !== '') ? $fileStorageStudentAccessSetting->value : 'disabled';
 
         // Debug: Log what we're passing to the view - this will help us see what's happening
@@ -417,6 +421,8 @@ class SettingsController extends Controller
             'hiring_instructions' => 'nullable|string|max:2000',
             'hiring_application_public_access' => 'nullable|string|in:enabled,disabled',
             'hiring_application_url' => 'nullable|string|max:255|regex:/^[a-z0-9\-\/_]+$/i',
+            'hiring_tor_pdf' => 'nullable|file|mimes:pdf|max:10240',
+            'privacy_policy_pdf' => 'nullable|file|mimes:pdf|max:10240',
             'file_storage_student_access' => 'nullable|string|in:enabled,disabled',
             'overtime_months_credited' => 'nullable|integer|in:12,9,6,3,1',
             'leave_immediate_supervisor' => 'nullable|string|max:255',
@@ -564,6 +570,38 @@ class SettingsController extends Controller
         // Ensure URL doesn't start with / and is a valid path
         $hiringApplicationUrl = ltrim($hiringApplicationUrl, '/');
         Setting::set('hiring_application_url', $hiringApplicationUrl !== '' ? $hiringApplicationUrl : 'hiring/apply', 'text', 'Custom URL path for hiring application form (e.g., careers, jobs, apply)');
+
+        // Handle TOR PDF upload
+        $assetDisk = 'digitalocean';
+        $assetRoot = trim(env('DIGITALOCEAN_SPACES_ROOT_PATH', ''), '/');
+        $torDir = $assetRoot ? $assetRoot . '/hiring/tor' : 'hiring/tor';
+
+        if ($request->hasFile('hiring_tor_pdf')) {
+            // Delete old TOR PDF if exists
+            $oldTorPdf = Setting::get('hiring_tor_pdf');
+            if ($oldTorPdf && Storage::disk($assetDisk)->exists($oldTorPdf)) {
+                Storage::disk($assetDisk)->delete($oldTorPdf);
+            }
+
+            // Store new TOR PDF
+            $torPdfPath = $request->file('hiring_tor_pdf')->store($torDir, $assetDisk);
+            Setting::set('hiring_tor_pdf', $torPdfPath, 'file', 'TOR (Term of Reference) PDF for Internship positions');
+        }
+
+        // Handle Privacy Policy PDF upload
+        $privacyPolicyDir = $assetRoot ? $assetRoot . '/privacy-policy' : 'privacy-policy';
+
+        if ($request->hasFile('privacy_policy_pdf')) {
+            // Delete old Privacy Policy PDF if exists
+            $oldPrivacyPolicyPdf = Setting::get('privacy_policy_pdf');
+            if ($oldPrivacyPolicyPdf && Storage::disk($assetDisk)->exists($oldPrivacyPolicyPdf)) {
+                Storage::disk($assetDisk)->delete($oldPrivacyPolicyPdf);
+            }
+
+            // Store new Privacy Policy PDF
+            $privacyPolicyPdfPath = $request->file('privacy_policy_pdf')->store($privacyPolicyDir, $assetDisk);
+            Setting::set('privacy_policy_pdf', $privacyPolicyPdfPath, 'file', 'Privacy Policy PDF file');
+        }
 
         // Handle overtime credited window (global for all employees)
         if ($request->filled('overtime_months_credited')) {
@@ -734,6 +772,8 @@ class SettingsController extends Controller
         Cache::forget('setting.hiring_instructions');
         Cache::forget('setting.hiring_application_public_access');
         Cache::forget('setting.hiring_application_url');
+        Cache::forget('setting.hiring_tor_pdf');
+        Cache::forget('setting.privacy_policy_pdf');
         Cache::forget('setting.file_storage_student_access');
         Setting::clearCache();
 

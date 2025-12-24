@@ -21,30 +21,50 @@
                         </div>
                     </div>
 
-                    @if($quiz->time_limit && isset($remainingTime))
+                    @if($quiz->time_limit)
                         <!-- Timer Display -->
-                        <div class="bg-blue-50 border border-blue-200 rounded-lg p-3 sm:p-4 flex-shrink-0">
+                        <div id="timer-display" class="bg-blue-50 border border-blue-200 rounded-lg p-3 sm:p-4 flex-shrink-0 {{ isset($remainingTime) ? '' : 'hidden' }}">
                             <div class="text-center">
                                 <div class="text-xs sm:text-sm font-medium text-blue-800">Time Remaining</div>
-                                <div id="header-timer" class="text-xl sm:text-2xl font-bold text-blue-900 mt-1">{{ floor($remainingTime / 60) }}:{{ str_pad($remainingTime % 60, 2, '0', STR_PAD_LEFT) }}</div>
+                                <div id="header-timer" class="text-xl sm:text-2xl font-bold text-blue-900 mt-1">
+                                    @if(isset($remainingTime))
+                                        {{ floor($remainingTime / 60) }}:{{ str_pad($remainingTime % 60, 2, '0', STR_PAD_LEFT) }}
+                                    @else
+                                        --
+                                    @endif
+                                </div>
                             </div>
                         </div>
                     @endif
                 </div>
             </div>
 
-            <!-- Progress Bar -->
-            <div class="mb-4 sm:mb-6">
+            <!-- Progress Bar (hidden initially) -->
+            <div id="progress-section" class="mb-4 sm:mb-6 hidden">
                 <div class="flex justify-between text-xs sm:text-sm text-gray-600 mb-2">
                     <span>Progress</span>
                     <span id="progress-text">Question 1 of {{ $quiz->total_questions }}</span>
                 </div>
                 <div class="w-full bg-gray-200 rounded-full h-2">
-                    <div id="progress-bar" class="bg-indigo-600 h-2 rounded-full transition-all duration-300" style="width: {{ 100 / $quiz->total_questions }}%"></div>
+                    <div id="progress-bar" class="bg-indigo-600 h-2 rounded-full transition-all duration-300" style="width: 0%"></div>
                 </div>
             </div>
 
-            <form id="quiz-form" action="{{ route('user.quizzes.submit', $quiz) }}" method="POST">
+            <!-- Start Quiz Button (shown initially) -->
+            <div id="start-quiz-section" class="mb-6 sm:mb-8">
+                <div class="text-center py-8 sm:py-12">
+                    <button type="button" id="start-quiz-btn"
+                            class="inline-flex items-center justify-center px-8 py-4 border border-transparent text-base sm:text-lg font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors duration-200">
+                        <svg class="w-5 h-5 sm:w-6 sm:h-6 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"></path>
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                        </svg>
+                        <span id="start-quiz-text">Start Quiz</span>
+                    </button>
+                </div>
+            </div>
+
+            <form id="quiz-form" action="{{ route('user.quizzes.submit', $quiz) }}" method="POST" class="hidden">
                 @csrf
                 <input type="hidden" name="user_answers" id="user_answers_input">
 
@@ -97,11 +117,89 @@
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    // Quiz data from server
-    const questions = @json($questions);
-    const totalQuestions = questions.length;
+    // Quiz data (will be loaded from API)
+    let questions = [];
+    let totalQuestions = 0;
     let currentQuestionIndex = 0;
     let userAnswers = {};
+    let remainingTime = null;
+
+    // Start Quiz Button Handler
+    const startQuizBtn = document.getElementById('start-quiz-btn');
+    const startQuizSection = document.getElementById('start-quiz-section');
+    const progressSection = document.getElementById('progress-section');
+    const quizForm = document.getElementById('quiz-form');
+
+    startQuizBtn.addEventListener('click', function() {
+        // Show loading state
+        const originalHTML = startQuizBtn.innerHTML;
+        startQuizBtn.disabled = true;
+        startQuizBtn.innerHTML = `
+            <svg class="animate-spin w-5 h-5 sm:w-6 sm:h-6 mr-2" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+            <span>Loading Questions...</span>
+        `;
+
+        // Get CSRF token
+        const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+
+        // Fetch questions from API
+        fetch('{{ route("user.quizzes.questions", $quiz) }}', {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest',
+                'X-CSRF-TOKEN': csrfToken
+            }
+        })
+        .then(response => {
+            if (!response.ok) {
+                return response.json().then(errorData => {
+                    throw new Error(errorData.message || 'Failed to fetch questions');
+                });
+            }
+            return response.json();
+        })
+        .then(data => {
+            if (data.success) {
+                questions = data.questions;
+                totalQuestions = questions.length;
+                remainingTime = data.remaining_time;
+
+                // Hide start button section
+                startQuizSection.classList.add('hidden');
+
+                // Show progress bar and quiz form
+                progressSection.classList.remove('hidden');
+                quizForm.classList.remove('hidden');
+
+                // Update progress text with actual question count
+                document.getElementById('progress-text').textContent = `Question 1 of ${totalQuestions}`;
+
+                // Show and initialize timer if time limit exists
+                if (remainingTime !== null && remainingTime !== undefined) {
+                    const timerDisplay = document.getElementById('timer-display');
+                    if (timerDisplay) {
+                        timerDisplay.classList.remove('hidden');
+                    }
+                    initializeTimer(remainingTime);
+                }
+
+                // Initialize quiz
+                initializeQuiz();
+            } else {
+                throw new Error(data.message || 'Failed to load questions');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            ToastNotification.error(error.message || 'An error occurred while loading questions. Please try again.');
+            startQuizBtn.disabled = false;
+            startQuizBtn.innerHTML = originalHTML;
+        });
+    });
 
     // Initialize quiz
     function initializeQuiz() {
@@ -500,9 +598,14 @@ document.addEventListener('DOMContentLoaded', function() {
             }
     });
 
-    // Timer functionality (if time limit is set)
-    @if($quiz->time_limit && isset($remainingTime))
-        let timeLeft = {{ $remainingTime }}; // Use server-calculated remaining time
+    // Timer functionality
+    function initializeTimer(timeLeft) {
+        // Update header timer if it exists
+        const headerTimer = document.getElementById('header-timer');
+        if (headerTimer) {
+            headerTimer.textContent = formatTime(timeLeft);
+        }
+
         const timerElement = document.createElement('div');
         timerElement.className = 'fixed top-2 right-2 sm:top-4 sm:right-4 bg-red-600 text-white px-2 py-1.5 sm:px-4 sm:py-2 rounded-lg shadow-lg z-50 text-xs sm:text-sm';
         timerElement.innerHTML = `<span class="font-bold hidden sm:inline">Time Left: </span><span class="font-bold sm:hidden">Time: </span><span id="timer">${formatTime(timeLeft)}</span>`;
@@ -522,7 +625,6 @@ document.addEventListener('DOMContentLoaded', function() {
             document.getElementById('timer').textContent = formattedTime;
 
             // Update header timer if it exists
-            const headerTimer = document.getElementById('header-timer');
             if (headerTimer) {
                 headerTimer.textContent = formattedTime;
             }
@@ -555,10 +657,7 @@ document.addEventListener('DOMContentLoaded', function() {
             const remainingSeconds = seconds % 60;
             return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
         }
-    @endif
-
-    // Initialize the quiz
-    initializeQuiz();
+    }
 });
 </script>
 @endsection

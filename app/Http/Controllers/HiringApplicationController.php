@@ -40,6 +40,8 @@ class HiringApplicationController extends Controller
                 'hiring_instructions' => Setting::get('hiring_instructions', '') ?? '',
                 'hiring_stages' => Setting::get('hiring_stages', '') ?? '',
                 'hiring_application_url' => Setting::get('hiring_application_url', 'hiring/apply') ?? 'hiring/apply',
+                'hiring_tor_pdf' => Setting::get('hiring_tor_pdf') ?? null,
+                'privacy_policy_pdf' => Setting::get('privacy_policy_pdf') ?? null,
             ];
 
         return view('hiring.positions', compact('positions', 'settings'));
@@ -60,6 +62,8 @@ class HiringApplicationController extends Controller
             'hiring_instructions' => Setting::get('hiring_instructions', '') ?? '',
             'hiring_stages' => Setting::get('hiring_stages', '') ?? '',
             'hiring_application_url' => Setting::get('hiring_application_url', 'hiring/apply') ?? 'hiring/apply',
+            'hiring_tor_pdf' => Setting::get('hiring_tor_pdf') ?? null,
+            'privacy_policy_pdf' => Setting::get('privacy_policy_pdf') ?? null,
         ];
 
         // Ensure errors variable is available in the view
@@ -101,6 +105,8 @@ class HiringApplicationController extends Controller
             'hiring_instructions' => Setting::get('hiring_instructions', '') ?? '',
             'hiring_stages' => Setting::get('hiring_stages', '') ?? '',
             'hiring_application_url' => Setting::get('hiring_application_url', 'hiring/apply') ?? 'hiring/apply',
+            'hiring_tor_pdf' => Setting::get('hiring_tor_pdf') ?? null,
+            'privacy_policy_pdf' => Setting::get('privacy_policy_pdf') ?? null,
         ];
 
         // Basic school options for internship applicants; can be extended later

@@ -747,6 +747,86 @@
                                 </div>
 
                                 <div>
+                                    <label for="hiring_tor_pdf" class="block text-sm font-medium text-gray-700 mb-2">TOR (Term of Reference) PDF</label>
+                                    @php
+                                        $torPdfPath = $settings['hiring_tor_pdf'] ?? null;
+                                        $torPdfUrl = null;
+                                        if ($torPdfPath) {
+                                            try {
+                                                $storage = \Illuminate\Support\Facades\Storage::disk('digitalocean');
+                                                if ($storage->exists($torPdfPath)) {
+                                                    if (method_exists($storage, 'temporaryUrl')) {
+                                                        try {
+                                                            $torPdfUrl = $storage->temporaryUrl($torPdfPath, now()->addHours(24));
+                                                        } catch (\Exception $e) {
+                                                            $torPdfUrl = $storage->url($torPdfPath);
+                                                        }
+                                                    } else {
+                                                        $torPdfUrl = $storage->url($torPdfPath);
+                                                    }
+                                                }
+                                            } catch (\Exception $e) {
+                                                $torPdfUrl = null;
+                                            }
+                                        }
+                                    @endphp
+                                    @if($torPdfUrl)
+                                        <div class="mb-3">
+                                            <p class="text-sm text-gray-600 mb-2">Current TOR PDF:</p>
+                                            <a href="{{ $torPdfUrl }}" target="_blank" class="inline-flex items-center px-3 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors">
+                                                <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"></path>
+                                                </svg>
+                                                View Current TOR PDF
+                                            </a>
+                                        </div>
+                                    @endif
+                                    <input type="file" name="hiring_tor_pdf" id="hiring_tor_pdf" accept=".pdf"
+                                           class="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                                    <p class="mt-2 text-xs text-gray-500">Upload TOR (Term of Reference) PDF file. This will be attached to credential emails for Internship positions only.</p>
+                                </div>
+
+                                <div>
+                                    <label for="privacy_policy_pdf" class="block text-sm font-medium text-gray-700 mb-2">Privacy Policy PDF</label>
+                                    @php
+                                        $privacyPolicyPdfPath = $settings['privacy_policy_pdf'] ?? null;
+                                        $privacyPolicyPdfUrl = null;
+                                        if ($privacyPolicyPdfPath) {
+                                            try {
+                                                $storage = \Illuminate\Support\Facades\Storage::disk('digitalocean');
+                                                if ($storage->exists($privacyPolicyPdfPath)) {
+                                                    if (method_exists($storage, 'temporaryUrl')) {
+                                                        try {
+                                                            $privacyPolicyPdfUrl = $storage->temporaryUrl($privacyPolicyPdfPath, now()->addHours(24));
+                                                        } catch (\Exception $e) {
+                                                            $privacyPolicyPdfUrl = $storage->url($privacyPolicyPdfPath);
+                                                        }
+                                                    } else {
+                                                        $privacyPolicyPdfUrl = $storage->url($privacyPolicyPdfPath);
+                                                    }
+                                                }
+                                            } catch (\Exception $e) {
+                                                $privacyPolicyPdfUrl = null;
+                                            }
+                                        }
+                                    @endphp
+                                    @if($privacyPolicyPdfUrl)
+                                        <div class="mb-3">
+                                            <p class="text-sm text-gray-600 mb-2">Current Privacy Policy PDF:</p>
+                                            <a href="{{ $privacyPolicyPdfUrl }}" target="_blank" class="inline-flex items-center px-3 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors">
+                                                <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"></path>
+                                                </svg>
+                                                View Current Privacy Policy PDF
+                                            </a>
+                                        </div>
+                                    @endif
+                                    <input type="file" name="privacy_policy_pdf" id="privacy_policy_pdf" accept=".pdf"
+                                           class="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                                    <p class="mt-2 text-xs text-gray-500">Upload Privacy Policy PDF file. This will be linked from the "Join Our Team" page and footer.</p>
+                                </div>
+
+                                <div>
                                     <label for="file_storage_student_access" class="block text-sm font-medium text-gray-700 mb-2">File Storage - Student Access</label>
                                     <select name="file_storage_student_access" id="file_storage_student_access"
                                             class="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">

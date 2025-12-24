@@ -396,7 +396,27 @@
                 <!-- Submit Button -->
                 <div class="flex items-center justify-between pt-4 border-t border-gray-200">
                     <p class="text-sm text-gray-500">
-                        By submitting this form, you agree to our privacy policy and terms of service.
+                        By submitting this form, you agree to our
+                        @php
+                            $privacyPolicyPdfPath = $settings['privacy_policy_pdf'] ?? null;
+                            $torPdfPath = $settings['hiring_tor_pdf'] ?? null;
+                            $isInternship = isset($position) && $position && strcasecmp($position->employment_type ?? '', 'Internship') === 0;
+
+                            // For Internship positions, use TOR PDF if available, otherwise fallback to privacy policy
+                            if ($isInternship && $torPdfPath) {
+                                $pdfLink = route('landing.tor-pdf');
+                            } elseif ($privacyPolicyPdfPath) {
+                                $pdfLink = route('landing.privacy-policy');
+                            } else {
+                                $pdfLink = null;
+                            }
+                        @endphp
+                        @if($pdfLink)
+                            <a href="{{ $pdfLink }}" target="_blank" class="text-indigo-600 hover:text-indigo-800 underline">privacy policy</a>
+                        @else
+                            privacy policy
+                        @endif
+                         and terms of service.
                     </p>
                     <button type="submit" id="submit-btn"
                             class="inline-flex items-center px-6 py-3 border border-transparent text-base font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed">

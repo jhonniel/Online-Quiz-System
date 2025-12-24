@@ -266,7 +266,14 @@
                     <div class="flex flex-col md:flex-row justify-between items-center">
                         <p class="text-gray-400 text-sm">&copy; {{ date('Y') }} {{ $settings['system_name'] }}. All rights reserved.</p>
                         <div class="flex space-x-6 mt-4 md:mt-0">
-                            <a href="#" class="text-gray-400 hover:text-white text-sm transition-colors">Privacy Policy</a>
+                            @php
+                                $privacyPolicyPdfPath = $settings['privacy_policy_pdf'] ?? null;
+                            @endphp
+                            @if($privacyPolicyPdfPath)
+                                <a href="{{ route('landing.privacy-policy') }}" target="_blank" class="text-gray-400 hover:text-white text-sm transition-colors">Privacy Policy</a>
+                            @else
+                                <a href="#" class="text-gray-400 hover:text-white text-sm transition-colors">Privacy Policy</a>
+                            @endif
                             <a href="#" class="text-gray-400 hover:text-white text-sm transition-colors">Terms of Service</a>
                         </div>
                     </div>

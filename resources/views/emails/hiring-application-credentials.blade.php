@@ -33,6 +33,9 @@ Please make sure to be available on this date and time. We will contact you with
 - You can change your password after logging in.
 - Your account is already active, so you can log in immediately.
 - Use the login button above or visit our website to access your account.
+@if($position && strcasecmp($position->employment_type ?? '', 'Internship') === 0)
+- **Please read the TOR (Term of Reference) PDF file attached to this email.**
+@endif
 
 Thank you for your interest in joining our team. We look forward to working with you!
 

@@ -44,6 +44,35 @@ class LandingPageController extends Controller
         $settings['about_subtitle'] = Setting::get('about_subtitle', '');
         $settings['about_content'] = Setting::get('about_content', '');
 
+        // About Page section
+        $settings['about_page_hero_title'] = Setting::get('about_page_hero_title', '');
+        $settings['about_page_hero_subtitle'] = Setting::get('about_page_hero_subtitle', '');
+        $settings['about_page_mission'] = Setting::get('about_page_mission', '');
+        $settings['about_page_what_we_offer'] = Setting::get('about_page_what_we_offer', '');
+        $settings['about_page_vision'] = Setting::get('about_page_vision', '');
+        $settings['about_page_team_title'] = Setting::get('about_page_team_title', '');
+        $settings['about_page_team_description'] = Setting::get('about_page_team_description', '');
+        $settings['about_page_cta_title'] = Setting::get('about_page_cta_title', '');
+        $settings['about_page_cta_description'] = Setting::get('about_page_cta_description', '');
+        $settings['about_page_cta_button_text'] = Setting::get('about_page_cta_button_text', '');
+
+        // About Page Features (4 cards)
+        for ($i = 1; $i <= 4; $i++) {
+            $settings["about_page_feature_{$i}_title"] = Setting::get("about_page_feature_{$i}_title", '');
+            $settings["about_page_feature_{$i}_description"] = Setting::get("about_page_feature_{$i}_description", '');
+        }
+
+        // About Page Team Features (3 items)
+        for ($i = 1; $i <= 3; $i++) {
+            $settings["about_page_team_feature_{$i}_title"] = Setting::get("about_page_team_feature_{$i}_title", '');
+            $settings["about_page_team_feature_{$i}_description"] = Setting::get("about_page_team_feature_{$i}_description", '');
+        }
+
+        // Statistics counts
+        $settings['statistics_clients_count'] = Setting::get('statistics_clients_count', '0');
+        $settings['statistics_projects_count'] = Setting::get('statistics_projects_count', '0');
+        $settings['statistics_lgus_count'] = Setting::get('statistics_lgus_count', '0');
+
         return view('admin.landing-page.index', compact('settings'));
     }
 
@@ -63,6 +92,38 @@ class LandingPageController extends Controller
             'about_title' => 'nullable|string|max:255',
             'about_subtitle' => 'nullable|string|max:500',
             'about_content' => 'nullable|string|max:5000',
+
+            // About Page
+            'about_page_hero_title' => 'nullable|string|max:255',
+            'about_page_hero_subtitle' => 'nullable|string|max:500',
+            'about_page_mission' => 'nullable|string|max:2000',
+            'about_page_what_we_offer' => 'nullable|string|max:2000',
+            'about_page_vision' => 'nullable|string|max:2000',
+            'about_page_team_title' => 'nullable|string|max:255',
+            'about_page_team_description' => 'nullable|string|max:500',
+            'about_page_cta_title' => 'nullable|string|max:255',
+            'about_page_cta_description' => 'nullable|string|max:500',
+            'about_page_cta_button_text' => 'nullable|string|max:100',
+            // About Page Features (4 cards)
+            'about_page_feature_1_title' => 'nullable|string|max:255',
+            'about_page_feature_1_description' => 'nullable|string|max:500',
+            'about_page_feature_2_title' => 'nullable|string|max:255',
+            'about_page_feature_2_description' => 'nullable|string|max:500',
+            'about_page_feature_3_title' => 'nullable|string|max:255',
+            'about_page_feature_3_description' => 'nullable|string|max:500',
+            'about_page_feature_4_title' => 'nullable|string|max:255',
+            'about_page_feature_4_description' => 'nullable|string|max:500',
+            // About Page Team Features (3 items)
+            'about_page_team_feature_1_title' => 'nullable|string|max:255',
+            'about_page_team_feature_1_description' => 'nullable|string|max:500',
+            'about_page_team_feature_2_title' => 'nullable|string|max:255',
+            'about_page_team_feature_2_description' => 'nullable|string|max:500',
+            'about_page_team_feature_3_title' => 'nullable|string|max:255',
+            'about_page_team_feature_3_description' => 'nullable|string|max:500',
+            // Statistics
+            'statistics_clients_count' => 'nullable|integer|min:0',
+            'statistics_projects_count' => 'nullable|integer|min:0',
+            'statistics_lgus_count' => 'nullable|integer|min:0',
 
             // Employees
             'employee_1_name' => 'nullable|string|max:255',
@@ -117,6 +178,30 @@ class LandingPageController extends Controller
         Setting::set('about_title', $request->input('about_title', 'About Us'), 'text', 'About Us section title');
         Setting::set('about_subtitle', $request->input('about_subtitle', ''), 'text', 'About Us section subtitle');
         Setting::set('about_content', $request->input('about_content', ''), 'text', 'About Us section content');
+
+        // Handle About Page
+        Setting::set('about_page_hero_title', $request->input('about_page_hero_title', ''), 'text', 'About page hero title');
+        Setting::set('about_page_hero_subtitle', $request->input('about_page_hero_subtitle', ''), 'text', 'About page hero subtitle');
+        Setting::set('about_page_mission', $request->input('about_page_mission', ''), 'text', 'About page mission');
+        Setting::set('about_page_what_we_offer', $request->input('about_page_what_we_offer', ''), 'text', 'About page what we offer');
+        Setting::set('about_page_vision', $request->input('about_page_vision', ''), 'text', 'About page vision');
+        Setting::set('about_page_team_title', $request->input('about_page_team_title', ''), 'text', 'About page team section title');
+        Setting::set('about_page_team_description', $request->input('about_page_team_description', ''), 'text', 'About page team section description');
+        Setting::set('about_page_cta_title', $request->input('about_page_cta_title', ''), 'text', 'About page CTA title');
+        Setting::set('about_page_cta_description', $request->input('about_page_cta_description', ''), 'text', 'About page CTA description');
+        Setting::set('about_page_cta_button_text', $request->input('about_page_cta_button_text', ''), 'text', 'About page CTA button text');
+
+        // About Page Features (4 cards)
+        for ($i = 1; $i <= 4; $i++) {
+            Setting::set("about_page_feature_{$i}_title", $request->input("about_page_feature_{$i}_title", ''), 'text', "About page feature {$i} title");
+            Setting::set("about_page_feature_{$i}_description", $request->input("about_page_feature_{$i}_description", ''), 'text', "About page feature {$i} description");
+        }
+
+        // About Page Team Features (3 items)
+        for ($i = 1; $i <= 3; $i++) {
+            Setting::set("about_page_team_feature_{$i}_title", $request->input("about_page_team_feature_{$i}_title", ''), 'text', "About page team feature {$i} title");
+            Setting::set("about_page_team_feature_{$i}_description", $request->input("about_page_team_feature_{$i}_description", ''), 'text', "About page team feature {$i} description");
+        }
 
         // Handle Landing Page - Hero background image
         if ($request->hasFile('hero_background_image')) {
@@ -252,6 +337,11 @@ class LandingPageController extends Controller
         // Save additional projects as JSON
         Setting::set('additional_projects', json_encode($additionalProjectsData), 'text', 'Additional projects for landing page');
 
+        // Save statistics counts
+        Setting::set('statistics_clients_count', $request->input('statistics_clients_count', '0'), 'text', 'Statistics - Clients count');
+        Setting::set('statistics_projects_count', $request->input('statistics_projects_count', '0'), 'text', 'Statistics - Projects count');
+        Setting::set('statistics_lgus_count', $request->input('statistics_lgus_count', '0'), 'text', 'Statistics - LGUs count');
+
         // Clear cache
         for ($i = 1; $i <= 4; $i++) {
             Cache::forget("setting.employee_{$i}_name");
@@ -279,6 +369,31 @@ class LandingPageController extends Controller
         Cache::forget('setting.about_title');
         Cache::forget('setting.about_subtitle');
         Cache::forget('setting.about_content');
+
+        // Clear about page settings cache
+        Cache::forget('setting.about_page_hero_title');
+        Cache::forget('setting.about_page_hero_subtitle');
+        Cache::forget('setting.about_page_mission');
+        Cache::forget('setting.about_page_what_we_offer');
+        Cache::forget('setting.about_page_vision');
+        Cache::forget('setting.about_page_team_title');
+        Cache::forget('setting.about_page_team_description');
+        Cache::forget('setting.about_page_cta_title');
+        Cache::forget('setting.about_page_cta_description');
+        Cache::forget('setting.about_page_cta_button_text');
+        for ($i = 1; $i <= 4; $i++) {
+            Cache::forget("setting.about_page_feature_{$i}_title");
+            Cache::forget("setting.about_page_feature_{$i}_description");
+        }
+        for ($i = 1; $i <= 3; $i++) {
+            Cache::forget("setting.about_page_team_feature_{$i}_title");
+            Cache::forget("setting.about_page_team_feature_{$i}_description");
+        }
+
+        // Clear statistics cache
+        Cache::forget('setting.statistics_clients_count');
+        Cache::forget('setting.statistics_projects_count');
+        Cache::forget('setting.statistics_lgus_count');
 
         Setting::clearCache();
 

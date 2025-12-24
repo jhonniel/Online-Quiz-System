@@ -100,6 +100,55 @@ class QuizController extends Controller
         return redirect()->route('user.quizzes.take', $quiz);
     }
 
+    public function start(Request $request, Quiz $quiz)
+    {
+        // Check if user is assigned to this quiz
+        $assignment = QuizAssignment::where('quiz_id', $quiz->id)
+            ->where('user_id', auth()->id())
+            ->first();
+
+        if (!$assignment || $assignment->is_completed) {
+            if ($request->ajax()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'You are not authorized to take this quiz.',
+                    'type' => 'error'
+                ], 403);
+            }
+            abort(403, 'You are not authorized to take this quiz.');
+        }
+
+        // Check if quiz has already been started
+        if ($assignment->started_at) {
+            if ($request->ajax()) {
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Quiz already started. Redirecting...',
+                    'type' => 'info',
+                    'redirect_url' => route('user.quizzes.take', $quiz)
+                ]);
+            }
+            return redirect()->route('user.quizzes.take', $quiz);
+        }
+
+        // Start the quiz
+        $assignment->update([
+            'started_at' => now(),
+            'status' => 'in_progress'
+        ]);
+
+        if ($request->ajax()) {
+            return response()->json([
+                'success' => true,
+                'message' => 'Quiz started successfully!',
+                'type' => 'success',
+                'redirect_url' => route('user.quizzes.take', $quiz)
+            ]);
+        }
+
+        return redirect()->route('user.quizzes.take', $quiz);
+    }
+
     public function take(Quiz $quiz)
     {
         // Check if user is assigned to this quiz
@@ -111,15 +160,13 @@ class QuizController extends Controller
             abort(403, 'You are not authorized to take this quiz.');
         }
 
-        // Set start time and status if not already set
+        // If quiz hasn't been started yet, show instructions page
         if (!$assignment->started_at) {
-            $assignment->update([
-                'started_at' => now(),
-                'status' => 'in_progress'
-            ]);
-            $assignment->refresh(); // Refresh to get the updated started_at
-        } elseif ($assignment->status === 'assigned') {
-            // Update status to in_progress if quiz was started but status wasn't updated
+            return view('user.quizzes.start', compact('quiz', 'assignment'));
+        }
+
+        // Update status to in_progress if quiz was started but status wasn't updated
+        if ($assignment->status === 'assigned') {
             $assignment->update(['status' => 'in_progress']);
         }
 
@@ -127,7 +174,63 @@ class QuizController extends Controller
 
         // Get all questions
         $allQuestions = $quiz->questions;
-        
+
+        // If questions_to_show is set, randomly select that many questions
+        // Otherwise, show all questions
+        if ($quiz->questions_to_show && $quiz->questions_to_show > 0 && $quiz->questions_to_show < $allQuestions->count()) {
+            // Randomly select the specified number of questions
+            $questions = $allQuestions->shuffle()->take($quiz->questions_to_show);
+        } else {
+            // Show all questions (shuffled)
+            $questions = $allQuestions->shuffle();
+        }
+
+        // Calculate remaining time if time limit is set
+        $remainingTime = $assignment->remaining_time;
+        $timeExpired = $assignment->isTimeExpired();
+
+        // If time has expired, redirect to a time expired page or show message
+        if ($timeExpired) {
+            return redirect()->route('user.quizzes.time-expired', $quiz)
+                ->with('error', 'Time has expired for this quiz.');
+        }
+
+        // Don't pass questions to view - they will be fetched via API when Start Quiz is clicked
+        return view('user.quizzes.take', compact('quiz', 'remainingTime'));
+    }
+
+    public function getQuestions(Request $request, Quiz $quiz)
+    {
+        // Check if user is assigned to this quiz
+        $assignment = QuizAssignment::where('quiz_id', $quiz->id)
+            ->where('user_id', auth()->id())
+            ->first();
+
+        if (!$assignment || $assignment->is_completed) {
+            return response()->json([
+                'success' => false,
+                'message' => 'You are not authorized to take this quiz.',
+            ], 403);
+        }
+
+        // Check if quiz has been started
+        if (!$assignment->started_at) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Quiz has not been started yet.',
+            ], 400);
+        }
+
+        // Update status to in_progress if quiz was started but status wasn't updated
+        if ($assignment->status === 'assigned') {
+            $assignment->update(['status' => 'in_progress']);
+        }
+
+        $quiz->load(['questions.answers']);
+
+        // Get all questions
+        $allQuestions = $quiz->questions;
+
         // If questions_to_show is set, randomly select that many questions
         // Otherwise, show all questions
         if ($quiz->questions_to_show && $quiz->questions_to_show > 0 && $quiz->questions_to_show < $allQuestions->count()) {
@@ -197,13 +300,27 @@ class QuizController extends Controller
         $remainingTime = $assignment->remaining_time;
         $timeExpired = $assignment->isTimeExpired();
 
-        // If time has expired, redirect to a time expired page or show message
+        // If time has expired, return error
         if ($timeExpired) {
-            return redirect()->route('user.quizzes.time-expired', $quiz)
-                ->with('error', 'Time has expired for this quiz.');
+            return response()->json([
+                'success' => false,
+                'message' => 'Time has expired for this quiz.',
+            ], 408);
         }
 
-        return view('user.quizzes.take', compact('quiz', 'questions', 'remainingTime'));
+        return response()->json([
+            'success' => true,
+            'questions' => $questions->map(function ($question) {
+                return [
+                    'id' => $question->id,
+                    'question_text' => $question->question_text,
+                    'question_type' => $question->question_type,
+                    'points' => $question->points,
+                    'ordered_options' => $question->ordered_options ?? null,
+                ];
+            })->values(),
+            'remaining_time' => $remainingTime,
+        ]);
     }
 
     public function submit(Request $request, Quiz $quiz)

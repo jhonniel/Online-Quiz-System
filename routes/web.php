@@ -28,6 +28,9 @@ Route::get('/projects', [LandingController::class, 'projects'])->name('landing.p
 Route::get('/about', [LandingController::class, 'about'])->name('landing.about');
 Route::get('/contact', [LandingController::class, 'contact'])->name('landing.contact');
 Route::post('/contact', [LandingController::class, 'storeContact'])->name('landing.contact.store');
+Route::get('/image-proxy/{path}', [LandingController::class, 'imageProxy'])->name('landing.image-proxy');
+Route::get('/privacy-policy', [LandingController::class, 'privacyPolicy'])->name('landing.privacy-policy');
+Route::get('/tor-pdf', [LandingController::class, 'torPdf'])->name('landing.tor-pdf');
 
 // Public Hiring Application Routes (dynamic URL based on admin settings)
 // The route will be registered dynamically in the controller based on settings
@@ -257,6 +260,9 @@ Route::prefix('admin')->middleware(['auth', 'admin'])->group(function () {
         Route::get('/landing-page', [\App\Http\Controllers\Admin\LandingPageController::class, 'index'])->name('admin.landing-page.index');
         Route::post('/landing-page', [\App\Http\Controllers\Admin\LandingPageController::class, 'update'])->name('admin.landing-page.update');
 
+        // Stacks Management
+        Route::resource('stacks', \App\Http\Controllers\Admin\StackController::class)->names('admin.stacks');
+
         // User Activity Management
         Route::get('user-activity', [App\Http\Controllers\Admin\UserActivityController::class, 'index'])->name('admin.user-activity.index');
         Route::get('user-activity/sessions', [App\Http\Controllers\Admin\UserActivityController::class, 'sessions'])->name('admin.user-activity.sessions');
@@ -295,6 +301,8 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/quizzes/enter-code', [UserQuizController::class, 'enterCode'])->name('user.quizzes.enter-code');
     Route::post('/quizzes/validate-code', [UserQuizController::class, 'validateCode'])->name('user.quizzes.validate-code');
     Route::get('/quizzes/{quiz}/take', [UserQuizController::class, 'take'])->name('user.quizzes.take');
+    Route::get('/quizzes/{quiz}/questions', [UserQuizController::class, 'getQuestions'])->name('user.quizzes.questions');
+    Route::post('/quizzes/{quiz}/start', [UserQuizController::class, 'start'])->name('user.quizzes.start');
     Route::post('/quizzes/{quiz}/submit', [UserQuizController::class, 'submit'])->name('user.quizzes.submit');
     Route::post('/quizzes/{quiz}/cancel', [UserQuizController::class, 'cancel'])->name('user.quizzes.cancel');
     Route::get('/quizzes/{quiz}/result', [UserQuizController::class, 'result'])->name('user.quizzes.result');

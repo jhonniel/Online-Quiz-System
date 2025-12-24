@@ -254,8 +254,14 @@
                             <p class="mt-1 text-xs text-red-600">{{ $message }}</p>
                         @enderror
                         <div class="mt-3">
-                            <button type="submit" class="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
-                                Save Notes
+                            <button type="submit" class="action-button inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed" data-loading-text="Saving...">
+                                <span class="button-text">Save Notes</span>
+                                <span class="button-spinner hidden ml-2">
+                                    <svg class="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                    </svg>
+                                </span>
                             </button>
                         </div>
                     </form>
@@ -296,8 +302,14 @@
                                           placeholder="Add notes (optional)"
                                           class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"></textarea>
                             </div>
-                            <button type="submit" class="w-full inline-flex justify-center items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-green-600 hover:bg-green-700">
-                                Accept Application & Send Credentials
+                            <button type="submit" class="action-button w-full inline-flex justify-center items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-green-600 hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed" data-loading-text="Processing...">
+                                <span class="button-text">Accept Application & Send Credentials</span>
+                                <span class="button-spinner hidden ml-2">
+                                    <svg class="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                    </svg>
+                                </span>
                             </button>
                             <p class="mt-2 text-xs text-gray-500">
                                 A user account will be automatically created with role "Applicant" and credentials will be sent via email.
@@ -307,8 +319,14 @@
                             @csrf
                             <textarea name="admin_notes" rows="3" placeholder="Add notes (optional)"
                                       class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm mb-3"></textarea>
-                            <button type="submit" class="w-full inline-flex justify-center items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-red-600 hover:bg-red-700">
-                                Reject Application
+                            <button type="submit" class="action-button w-full inline-flex justify-center items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-red-600 hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed" data-loading-text="Processing...">
+                                <span class="button-text">Reject Application</span>
+                                <span class="button-spinner hidden ml-2">
+                                    <svg class="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                    </svg>
+                                </span>
                             </button>
                         </form>
                     @elseif($application->status == 'accepted')
@@ -339,8 +357,14 @@
                                           placeholder="Add interview notes (optional)"
                                           class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm">{{ old('admin_notes', $application->admin_notes) }}</textarea>
                             </div>
-                            <button type="submit" class="w-full inline-flex justify-center items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700">
-                                Schedule Interview
+                            <button type="submit" class="action-button w-full inline-flex justify-center items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed" data-loading-text="Processing...">
+                                <span class="button-text">Schedule Interview</span>
+                                <span class="button-spinner hidden ml-2">
+                                    <svg class="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                    </svg>
+                                </span>
                             </button>
                         </form>
                     @elseif($application->status == 'interview_scheduled')
@@ -371,16 +395,28 @@
                                           placeholder="Add interview notes (optional)"
                                           class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm">{{ old('admin_notes', $application->admin_notes) }}</textarea>
                             </div>
-                            <button type="submit" class="w-full inline-flex justify-center items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700">
-                                Reschedule Interview
+                            <button type="submit" class="action-button w-full inline-flex justify-center items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed" data-loading-text="Processing...">
+                                <span class="button-text">Reschedule Interview</span>
+                                <span class="button-spinner hidden ml-2">
+                                    <svg class="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                    </svg>
+                                </span>
                             </button>
                         </form>
                     @endif
-                    <form action="{{ route('admin.hiring-applications.destroy', $application) }}" method="POST" onsubmit="return confirm('Are you sure you want to delete this application?');">
+                    <form action="{{ route('admin.hiring-applications.destroy', $application) }}" method="POST" class="delete-form">
                         @csrf
                         @method('DELETE')
-                        <button type="submit" class="w-full inline-flex justify-center items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50">
-                            Delete Application
+                        <button type="submit" class="action-button w-full inline-flex justify-center items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed" data-loading-text="Deleting...">
+                            <span class="button-text">Delete Application</span>
+                            <span class="button-spinner hidden ml-2">
+                                <svg class="animate-spin h-5 w-5 text-gray-700" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                </svg>
+                            </span>
                         </button>
                     </form>
                 </div>
@@ -395,6 +431,60 @@ function copyToClipboard(text) {
         alert('Link copied to clipboard!');
     });
 }
+
+// Loading animation for action buttons
+document.addEventListener('DOMContentLoaded', function() {
+    // Get all action buttons
+    const actionButtons = document.querySelectorAll('button[type="submit"].action-button');
+
+    actionButtons.forEach(button => {
+        const form = button.closest('form');
+
+        if (form) {
+            // Check if this is a delete form
+            const isDeleteForm = form.classList.contains('delete-form') ||
+                                 form.action.includes('/destroy') ||
+                                 form.querySelector('input[name="_method"][value="DELETE"]');
+
+            if (isDeleteForm) {
+                // Handle delete forms with confirm dialog
+                form.addEventListener('submit', function(e) {
+                    const confirmed = confirm('Are you sure you want to delete this application?');
+                    if (confirmed) {
+                        showLoadingState(button);
+                    } else {
+                        e.preventDefault();
+                        return false;
+                    }
+                });
+            } else {
+                // For other forms, show loading on submit
+                form.addEventListener('submit', function(e) {
+                    if (!button.disabled) {
+                        showLoadingState(button);
+                    }
+                });
+            }
+        }
+    });
+
+    function showLoadingState(button) {
+        const buttonText = button.querySelector('.button-text');
+        const buttonSpinner = button.querySelector('.button-spinner');
+        const loadingText = button.getAttribute('data-loading-text') || 'Processing...';
+
+        // Disable button
+        button.disabled = true;
+
+        // Show spinner and update text
+        if (buttonText) {
+            buttonText.textContent = loadingText;
+        }
+        if (buttonSpinner) {
+            buttonSpinner.classList.remove('hidden');
+        }
+    }
+});
 </script>
 @endsection
 

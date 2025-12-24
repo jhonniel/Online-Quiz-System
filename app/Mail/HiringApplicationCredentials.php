@@ -7,7 +7,10 @@ use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Mail\Mailable;
 use Illuminate\Mail\Mailables\Content;
 use Illuminate\Mail\Mailables\Envelope;
+use Illuminate\Mail\Mailables\Attachment;
 use Illuminate\Queue\SerializesModels;
+use Illuminate\Support\Facades\Storage;
+use App\Models\Setting;
 
 class HiringApplicationCredentials extends Mailable
 {
@@ -69,6 +72,39 @@ class HiringApplicationCredentials extends Mailable
      */
     public function attachments(): array
     {
-        return [];
+        $attachments = [];
+
+        // Check if employment type is Internship and attach TOR PDF
+        if ($this->position && strcasecmp($this->position->employment_type ?? '', 'Internship') === 0) {
+            $torPdfPath = Setting::get('hiring_tor_pdf');
+
+            if ($torPdfPath) {
+                try {
+                    $storage = Storage::disk('digitalocean');
+
+                    if ($storage->exists($torPdfPath)) {
+                        // Get the file name
+                        $fileName = basename($torPdfPath);
+                        if (empty($fileName) || $fileName === $torPdfPath) {
+                            $fileName = 'TOR.pdf';
+                        }
+
+                        // Create attachment from data using closure
+                        $attachments[] = Attachment::fromData(
+                            fn () => $storage->get($torPdfPath),
+                            $fileName
+                        )->withMime('application/pdf');
+                    }
+                } catch (\Exception $e) {
+                    \Log::error('Failed to attach TOR PDF to email', [
+                        'error' => $e->getMessage(),
+                        'tor_path' => $torPdfPath,
+                        'application_id' => $this->application->id ?? null
+                    ]);
+                }
+            }
+        }
+
+        return $attachments;
     }
 }
