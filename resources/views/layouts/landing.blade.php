@@ -5,8 +5,29 @@
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <meta name="csrf-token" content="{{ csrf_token() }}">
 
-        <title>@yield('title', $settings['system_name'] . ' - Online Quiz Management System')</title>
+        <title>@yield('title', $settings['system_name'] )</title>
         <meta name="description" content="@yield('description', $settings['system_description'])">
+
+        <!-- Favicon -->
+        @if(isset($settings['system_icon']) && $settings['system_icon'] && isset($settings['system_icon_url']) && $settings['system_icon_url'])
+            @php
+                $iconUrl = $settings['system_icon_url'];
+                $iconPath = $settings['system_icon'] ?? '';
+                $extension = strtolower(pathinfo($iconPath, PATHINFO_EXTENSION));
+                $mimeType = match($extension) {
+                    'png' => 'image/png',
+                    'jpg', 'jpeg' => 'image/jpeg',
+                    'gif' => 'image/gif',
+                    'svg' => 'image/svg+xml',
+                    'webp' => 'image/webp',
+                    'ico' => 'image/x-icon',
+                    default => 'image/x-icon'
+                };
+            @endphp
+            <link rel="icon" type="{{ $mimeType }}" href="{{ $iconUrl }}">
+            <link rel="shortcut icon" type="{{ $mimeType }}" href="{{ $iconUrl }}">
+            <link rel="apple-touch-icon" href="{{ $iconUrl }}">
+        @endif
 
         <!-- Fonts -->
         <link rel="preconnect" href="https://fonts.bunny.net">
