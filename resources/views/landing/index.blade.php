@@ -1,6 +1,6 @@
 @extends('layouts.landing')
 
-@section('title', $settings['system_name'] . ' - Online Quiz Management System')
+@section('title', $settings['system_name'])
 @section('description', $settings['system_description'])
 
 
