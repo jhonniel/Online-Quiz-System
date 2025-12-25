@@ -49,7 +49,11 @@ class StackController extends Controller
 
         $imagePath = null;
         if ($request->hasFile('image')) {
-            $imagePath = $request->file('image')->store('stacks', 'public');
+            // Store on DigitalOcean Spaces
+            $assetDisk = 'digitalocean';
+            $assetRoot = trim(env('DIGITALOCEAN_SPACES_ROOT_PATH', ''), '/');
+            $stacksDir = $assetRoot ? $assetRoot . '/stacks' : 'stacks';
+            $imagePath = $request->file('image')->store($stacksDir, $assetDisk);
         }
 
         Stack::create([
@@ -106,19 +110,22 @@ class StackController extends Controller
         }
 
         $imagePath = $stack->image;
+        $assetDisk = 'digitalocean';
 
         // Handle image upload
         if ($request->hasFile('image')) {
             // Delete old image if exists
-            if ($stack->image && Storage::disk('public')->exists($stack->image)) {
-                Storage::disk('public')->delete($stack->image);
+            if ($stack->image && Storage::disk($assetDisk)->exists($stack->image)) {
+                Storage::disk($assetDisk)->delete($stack->image);
             }
-            // Store new image
-            $imagePath = $request->file('image')->store('stacks', 'public');
+            // Store new image on DigitalOcean Spaces
+            $assetRoot = trim(env('DIGITALOCEAN_SPACES_ROOT_PATH', ''), '/');
+            $stacksDir = $assetRoot ? $assetRoot . '/stacks' : 'stacks';
+            $imagePath = $request->file('image')->store($stacksDir, $assetDisk);
         } elseif ($request->has('remove_image') && $request->remove_image == '1') {
             // Remove image if requested
-            if ($stack->image && Storage::disk('public')->exists($stack->image)) {
-                Storage::disk('public')->delete($stack->image);
+            if ($stack->image && Storage::disk($assetDisk)->exists($stack->image)) {
+                Storage::disk($assetDisk)->delete($stack->image);
             }
             $imagePath = null;
         }
@@ -144,8 +151,9 @@ class StackController extends Controller
         $stack = Stack::findOrFail($id);
 
         // Delete associated image if exists
-        if ($stack->image && Storage::disk('public')->exists($stack->image)) {
-            Storage::disk('public')->delete($stack->image);
+        $assetDisk = 'digitalocean';
+        if ($stack->image && Storage::disk($assetDisk)->exists($stack->image)) {
+            Storage::disk($assetDisk)->delete($stack->image);
         }
 
         $stack->delete();
