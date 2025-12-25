@@ -1,5 +1,7 @@
 @extends('layouts.landing')
 
+@section('title', 'Open Positions - ' . $settings['system_name'])
+@section('description', 'Browse available job opportunities')
 @section('content')
 <div class="min-h-screen bg-gray-50 py-8 sm:py-12 px-4 sm:px-6 lg:px-8">
     <div class="max-w-7xl mx-auto">
