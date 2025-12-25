@@ -154,27 +154,55 @@ class HiringApplicationController extends Controller
         // Generate a random password for the applicant
         $password = \Illuminate\Support\Str::random(12);
 
+        // Find university by matching school name from application
+        $universityId = null;
+        if ($application->school) {
+            // Try to match by full_name first (includes location), then by name
+            $university = \App\Models\University::where(function($query) use ($application) {
+                $query->whereRaw('CONCAT(name, IF(location IS NOT NULL AND location != "", CONCAT(" (", location, ")"), "")) = ?', [$application->school])
+                      ->orWhere('name', $application->school);
+            })->first();
+
+            if ($university) {
+                $universityId = $university->id;
+            }
+        }
+
         // Check if user already exists with this email
         $user = \App\Models\User::where('email', $application->email)->first();
 
         if (!$user) {
             // Create new user account with role 'applicant'
-            $user = \App\Models\User::create([
+            $userData = [
                 'name' => $application->full_name,
                 'email' => $application->email,
                 'password' => \Illuminate\Support\Facades\Hash::make($password),
                 'role' => 'applicant',
                 'is_active' => true,
                 'is_approved' => true,
-            ]);
+            ];
+
+            // Add university_id if found
+            if ($universityId) {
+                $userData['university_id'] = $universityId;
+            }
+
+            $user = \App\Models\User::create($userData);
         } else {
             // Update existing user to applicant role and activate
-            $user->update([
+            $updateData = [
                 'role' => 'applicant',
                 'is_active' => true,
                 'is_approved' => true,
                 'password' => \Illuminate\Support\Facades\Hash::make($password), // Reset password
-            ]);
+            ];
+
+            // Add university_id if found (only update if not already set or if we found a match)
+            if ($universityId) {
+                $updateData['university_id'] = $universityId;
+            }
+
+            $user->update($updateData);
         }
 
         // Update application
@@ -294,27 +322,55 @@ class HiringApplicationController extends Controller
         // Generate a random password for the applicant
         $password = \Illuminate\Support\Str::random(12);
 
+        // Find university by matching school name from application
+        $universityId = null;
+        if ($application->school) {
+            // Try to match by full_name first (includes location), then by name
+            $university = \App\Models\University::where(function($query) use ($application) {
+                $query->whereRaw('CONCAT(name, IF(location IS NOT NULL AND location != "", CONCAT(" (", location, ")"), "")) = ?', [$application->school])
+                      ->orWhere('name', $application->school);
+            })->first();
+
+            if ($university) {
+                $universityId = $university->id;
+            }
+        }
+
         // Check if user already exists with this email
         $user = \App\Models\User::where('email', $application->email)->first();
 
         if (!$user) {
             // Create new user account with role 'applicant'
-            $user = \App\Models\User::create([
+            $userData = [
                 'name' => $application->full_name,
                 'email' => $application->email,
                 'password' => \Illuminate\Support\Facades\Hash::make($password),
                 'role' => 'applicant',
                 'is_active' => true,
                 'is_approved' => true,
-            ]);
+            ];
+
+            // Add university_id if found
+            if ($universityId) {
+                $userData['university_id'] = $universityId;
+            }
+
+            $user = \App\Models\User::create($userData);
         } else {
             // Update existing user to applicant role and activate
-            $user->update([
+            $updateData = [
                 'role' => 'applicant',
                 'is_active' => true,
                 'is_approved' => true,
                 'password' => \Illuminate\Support\Facades\Hash::make($password), // Reset password
-            ]);
+            ];
+
+            // Add university_id if found (only update if not already set or if we found a match)
+            if ($universityId) {
+                $updateData['university_id'] = $universityId;
+            }
+
+            $user->update($updateData);
         }
 
         // Update application
