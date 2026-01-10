@@ -860,4 +860,146 @@ class QuizController extends Controller
 
         return $code;
     }
+
+    /**
+     * Export quizzes to CSV format
+     */
+    public function exportToCsv(Request $request)
+    {
+        // Only allow full admins
+        if (!Auth::user()->isAdmin()) {
+            abort(403, 'Only full administrators can export quizzes.');
+        }
+
+        $quizIdsInput = $request->input('quiz_ids', '');
+        
+        // Handle JSON string input from form
+        if (is_string($quizIdsInput) && !empty($quizIdsInput)) {
+            $quizIds = json_decode($quizIdsInput, true);
+            if (!is_array($quizIds)) {
+                $quizIds = [];
+            }
+        } else {
+            $quizIds = is_array($quizIdsInput) ? $quizIdsInput : [];
+        }
+
+        // If no specific quizzes selected, export all
+        if (empty($quizIds)) {
+            $quizzes = Quiz::with(['questions.answers'])->get();
+        } else {
+            $quizzes = Quiz::whereIn('id', $quizIds)
+                ->with(['questions.answers'])
+                ->get();
+        }
+
+        // Create CSV content
+        $handle = fopen('php://temp', 'r+');
+
+        // Add BOM for Excel compatibility (UTF-8 BOM)
+        fwrite($handle, "\xEF\xBB\xBF");
+
+        // Write header row
+        fputcsv($handle, [
+            'Quiz Title',
+            'Quiz Description',
+            'Topic',
+            'Quiz Code',
+            'Time Limit (minutes)',
+            'Total Questions',
+            'Questions To Show',
+            'Is Active',
+            'Question Text',
+            'Question Type',
+            'Points',
+            'Question Order',
+            'Answer Text',
+            'Is Correct',
+            'Answer Order'
+        ]);
+
+        // Write quiz data
+        foreach ($quizzes as $quiz) {
+            $questions = $quiz->questions()->orderBy('order')->get();
+
+            if ($questions->isEmpty()) {
+                // Quiz with no questions - write quiz info only
+                fputcsv($handle, [
+                    $quiz->title,
+                    $quiz->description ?? '',
+                    $quiz->topic ?? '',
+                    $quiz->quiz_code,
+                    $quiz->time_limit ?? '',
+                    $quiz->total_questions ?? 0,
+                    $quiz->questions_to_show ?? '',
+                    $quiz->is_active ? '1' : '0',
+                    '', // Question Text
+                    '', // Question Type
+                    '', // Points
+                    '', // Question Order
+                    '', // Answer Text
+                    '', // Is Correct
+                    ''  // Answer Order
+                ]);
+            } else {
+                foreach ($questions as $question) {
+                    $answers = $question->answers()->orderBy('order')->get();
+
+                    if ($answers->isEmpty()) {
+                        // Question with no answers - write quiz and question info
+                        fputcsv($handle, [
+                            $quiz->title,
+                            $quiz->description ?? '',
+                            $quiz->topic ?? '',
+                            $quiz->quiz_code,
+                            $quiz->time_limit ?? '',
+                            $quiz->total_questions ?? 0,
+                            $quiz->questions_to_show ?? '',
+                            $quiz->is_active ? '1' : '0',
+                            $question->question_text,
+                            $question->question_type,
+                            $question->points ?? 0,
+                            $question->order ?? 0,
+                            '', // Answer Text
+                            '', // Is Correct
+                            ''  // Answer Order
+                        ]);
+                    } else {
+                        foreach ($answers as $index => $answer) {
+                            fputcsv($handle, [
+                                $index === 0 ? $quiz->title : '', // Only write quiz info on first answer
+                                $index === 0 ? ($quiz->description ?? '') : '',
+                                $index === 0 ? ($quiz->topic ?? '') : '',
+                                $index === 0 ? $quiz->quiz_code : '',
+                                $index === 0 ? ($quiz->time_limit ?? '') : '',
+                                $index === 0 ? ($quiz->total_questions ?? 0) : '',
+                                $index === 0 ? ($quiz->questions_to_show ?? '') : '',
+                                $index === 0 ? ($quiz->is_active ? '1' : '0') : '',
+                                $index === 0 ? $question->question_text : '', // Only write question info on first answer
+                                $index === 0 ? $question->question_type : '',
+                                $index === 0 ? ($question->points ?? 0) : '',
+                                $index === 0 ? ($question->order ?? 0) : '',
+                                $answer->answer_text,
+                                $answer->is_correct ? '1' : '0',
+                                $answer->order ?? 0
+                            ]);
+                        }
+                    }
+                }
+            }
+        }
+
+        rewind($handle);
+        $csv = stream_get_contents($handle);
+        fclose($handle);
+
+        $filename = 'quizzes_export_' . date('Y-m-d_His') . '.csv';
+
+        return response($csv, 200, [
+            'Content-Type' => 'text/csv; charset=UTF-8',
+            'Content-Disposition' => 'attachment; filename="' . $filename . '"',
+            'Content-Transfer-Encoding' => 'binary',
+            'Pragma' => 'no-cache',
+            'Expires' => '0',
+        ]);
+    }
 }

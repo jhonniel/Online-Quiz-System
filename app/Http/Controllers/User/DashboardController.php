@@ -73,4 +73,12 @@ class DashboardController extends Controller
             'ongoingQuiz'
         ));
     }
+
+    /**
+     * Display the Term of Reference (TOR) PDF in an iframe
+     */
+    public function tor()
+    {
+        return view('user.tor');
+    }
 }

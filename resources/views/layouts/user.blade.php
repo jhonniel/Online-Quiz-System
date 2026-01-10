@@ -231,6 +231,21 @@
                             </span>
                         </a>
 
+                        <!-- Term of Reference (TOR) - Student Only -->
+                        @if(auth()->user()->role === 'student')
+                        <a href="{{ route('user.tor') }}"
+                           class="group flex items-center px-2 py-2 text-sm font-medium rounded-md transition-colors duration-200 {{ request()->routeIs('user.tor') ? 'bg-indigo-700 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white' }}"
+                           :class="sidebarCollapsed ? 'justify-center' : ''"
+                           :title="sidebarCollapsed ? 'Term of Reference (TOR)' : ''">
+                            <svg class="h-5 w-5" :class="sidebarCollapsed ? '' : 'mr-3'" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                            </svg>
+                            <span class="transition-opacity duration-300" :class="sidebarCollapsed ? 'opacity-0 w-0 overflow-hidden' : 'opacity-100'">
+                                Term of Reference (TOR)
+                            </span>
+                        </a>
+                        @endif
+
                         <!-- Admin Access (for employees with permissions) -->
                         @if(auth()->user()->isEmployee() && auth()->user()->hasAnyAdminPermission())
                         <div class="pt-4 mt-4 border-t border-gray-700">
@@ -449,6 +464,17 @@
                             </svg>
                             Feedback
                         </a>
+
+                        @if(auth()->user()->role === 'student')
+                        <a href="{{ route('user.tor') }}"
+                           @click="sidebarOpen = false"
+                           class="group flex items-center px-2 py-2 text-sm font-medium rounded-md transition-colors duration-200 {{ request()->routeIs('user.tor') ? 'bg-indigo-700 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white' }}">
+                            <svg class="mr-3 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                            </svg>
+                            Term of Reference (TOR)
+                        </a>
+                        @endif
 
                         <!-- Admin Access (for employees with permissions) -->
                         @if(auth()->user()->isEmployee() && auth()->user()->hasAnyAdminPermission())

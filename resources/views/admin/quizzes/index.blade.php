@@ -59,6 +59,19 @@
                     </svg>
                     Filter
                 </button>
+                @if(auth()->user()->isAdmin())
+                <form id="export-quizzes-form" method="POST" action="{{ route('admin.quizzes.export-csv') }}" style="display: none;">
+                    @csrf
+                    <input type="hidden" name="quiz_ids" id="export-quiz-ids" value="">
+                </form>
+                <button type="button" id="export-quizzes-btn" class="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md shadow-sm text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed" disabled>
+                    <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                    </svg>
+                    <span id="export-btn-text">Export CSV</span>
+                    <span id="export-count-badge" class="hidden ml-2 bg-indigo-600 text-white text-xs rounded-full px-2 py-0.5">0</span>
+                </button>
+                @endif
                 <a href="{{ route('admin.quizzes.import-form') }}" class="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md shadow-sm text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
                     <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10"></path>
@@ -97,6 +110,11 @@
                 <table class="min-w-full divide-y divide-gray-200">
                     <thead class="bg-gray-50">
                         <tr>
+                            @if(auth()->user()->isAdmin())
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                <input type="checkbox" id="select-all-quizzes" class="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500">
+                            </th>
+                            @endif
                             <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                 Quiz ID
                             </th>
@@ -132,6 +150,14 @@
                     <tbody class="bg-white divide-y divide-gray-200">
                         @foreach($quizzes as $quiz)
                             <tr class="hover:bg-gray-50 transition-colors duration-150">
+                                @if(auth()->user()->isAdmin())
+                                <td class="px-6 py-4 whitespace-nowrap">
+                                    <input type="checkbox" 
+                                           name="quiz_ids[]" 
+                                           value="{{ $quiz->id }}" 
+                                           class="quiz-checkbox rounded border-gray-300 text-indigo-600 focus:ring-indigo-500">
+                                </td>
+                                @endif
                                 <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
                                     #{{ str_pad($quiz->id, 4, '0', STR_PAD_LEFT) }}
                                 </td>
@@ -826,6 +852,77 @@ document.getElementById('assignForm').addEventListener('submit', function(e) {
                 window.location.href = url.toString();
             });
         }
+
+        // Export quizzes to CSV with selection
+        const exportBtn = document.getElementById('export-quizzes-btn');
+        const exportForm = document.getElementById('export-quizzes-form');
+        const selectAllCheckbox = document.getElementById('select-all-quizzes');
+        const quizCheckboxes = document.querySelectorAll('.quiz-checkbox');
+        const exportCountBadge = document.getElementById('export-count-badge');
+        const exportBtnText = document.getElementById('export-btn-text');
+
+        function updateExportButton() {
+            const selectedQuizzes = Array.from(quizCheckboxes).filter(cb => cb.checked);
+            const count = selectedQuizzes.length;
+            
+            if (exportBtn) {
+                exportBtn.disabled = count === 0;
+            }
+            
+            if (exportCountBadge) {
+                if (count > 0) {
+                    exportCountBadge.textContent = count;
+                    exportCountBadge.classList.remove('hidden');
+                } else {
+                    exportCountBadge.classList.add('hidden');
+                }
+            }
+        }
+
+        // Select all functionality
+        if (selectAllCheckbox) {
+            selectAllCheckbox.addEventListener('change', function () {
+                quizCheckboxes.forEach(checkbox => {
+                    checkbox.checked = this.checked;
+                });
+                updateExportButton();
+            });
+        }
+
+        // Individual checkbox change
+        quizCheckboxes.forEach(checkbox => {
+            checkbox.addEventListener('change', function () {
+                updateExportButton();
+                
+                // Update select all checkbox state
+                if (selectAllCheckbox) {
+                    const allChecked = Array.from(quizCheckboxes).every(cb => cb.checked);
+                    const someChecked = Array.from(quizCheckboxes).some(cb => cb.checked);
+                    selectAllCheckbox.checked = allChecked;
+                    selectAllCheckbox.indeterminate = someChecked && !allChecked;
+                }
+            });
+        });
+
+        // Export button click
+        if (exportBtn && exportForm) {
+            exportBtn.addEventListener('click', function () {
+                const selectedQuizzes = Array.from(quizCheckboxes)
+                    .filter(cb => cb.checked)
+                    .map(cb => cb.value);
+                
+                if (selectedQuizzes.length === 0) {
+                    alert('Please select at least one quiz to export.');
+                    return;
+                }
+                
+                document.getElementById('export-quiz-ids').value = JSON.stringify(selectedQuizzes);
+                exportForm.submit();
+            });
+        }
+
+        // Initial state
+        updateExportButton();
     });
 </script>
 @endsection

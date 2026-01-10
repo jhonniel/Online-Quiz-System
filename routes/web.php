@@ -95,6 +95,18 @@ Route::prefix('admin')->middleware(['auth', 'admin'])->group(function () {
     Route::get('quizzes/{quiz}/results', [AdminQuizController::class, 'results'])->name('admin.quizzes.results');
     Route::post('quizzes/{quiz}/import-questions', [AdminQuizController::class, 'importQuestions'])->name('admin.quizzes.import-questions');
     Route::get('quizzes/template/download', [AdminQuizController::class, 'downloadTemplate'])->name('admin.quizzes.template.download');
+    Route::post('quizzes/export-csv', [AdminQuizController::class, 'exportToCsv'])->name('admin.quizzes.export-csv');
+
+    // Task Management
+    Route::get('tasks', [App\Http\Controllers\Admin\TaskController::class, 'index'])->name('admin.tasks.index');
+    Route::post('tasks', [App\Http\Controllers\Admin\TaskController::class, 'store'])->name('admin.tasks.store');
+    Route::put('tasks/{task}', [App\Http\Controllers\Admin\TaskController::class, 'update'])->name('admin.tasks.update');
+    Route::delete('tasks/{task}', [App\Http\Controllers\Admin\TaskController::class, 'destroy'])->name('admin.tasks.destroy');
+    Route::post('tasks/update-order', [App\Http\Controllers\Admin\TaskController::class, 'updateOrder'])->name('admin.tasks.update-order');
+    Route::post('tasks/{task}/comments', [App\Http\Controllers\Admin\TaskController::class, 'addComment'])->name('admin.tasks.add-comment');
+    Route::post('tasks/{task}/attachments', [App\Http\Controllers\Admin\TaskController::class, 'uploadAttachment'])->name('admin.tasks.upload-attachment');
+    Route::delete('tasks/attachments/{attachment}', [App\Http\Controllers\Admin\TaskController::class, 'deleteAttachment'])->name('admin.tasks.delete-attachment');
+    Route::post('tasks/{task}/assign-users', [App\Http\Controllers\Admin\TaskController::class, 'assignUsers'])->name('admin.tasks.assign-users');
 
     // Quiz Assignment Management
     Route::post('quiz-assignments/{assignment}/reset', [AdminQuizController::class, 'resetAssignment'])->name('admin.quiz-assignments.reset');
@@ -298,6 +310,8 @@ Route::prefix('admin')->middleware(['auth', 'admin'])->group(function () {
 // User Routes
 Route::middleware(['auth'])->group(function () {
     Route::get('/dashboard', [UserDashboardController::class, 'index'])->name('user.dashboard');
+    // TOR PDF for students
+    Route::get('/tor', [UserDashboardController::class, 'tor'])->name('user.tor');
     Route::get('/quizzes', [UserQuizController::class, 'index'])->name('user.quizzes.index');
     Route::get('/quizzes/enter-code', [UserQuizController::class, 'enterCode'])->name('user.quizzes.enter-code');
     Route::post('/quizzes/validate-code', [UserQuizController::class, 'validateCode'])->name('user.quizzes.validate-code');

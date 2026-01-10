@@ -554,6 +554,67 @@
             </a>
         </div>
 
+        <!-- TASK TO DO -->
+        <div class="mb-6" x-data="{
+            open: (localStorage.getItem('nav-task-assign') || '{{ request()->routeIs('admin.tasks.*') ? 'true' : 'false' }}') === 'true',
+            toggle() {
+                this.open = !this.open;
+                localStorage.setItem('nav-task-assign', this.open);
+            }
+        }"
+        x-init="if ({{ request()->routeIs('admin.tasks.*') ? 'true' : 'false' }}) { open = true; }">
+            <button @click="toggle()"
+                    class="w-full flex items-center justify-between px-2 py-2 text-sm font-medium rounded-md transition-colors duration-200 text-gray-300 hover:bg-gray-700 hover:text-white"
+                    :class="sidebarCollapsed ? 'justify-center px-2' : 'px-3'"
+                    :title="sidebarCollapsed ? 'TASK TO DO' : ''">
+                <div class="flex items-center">
+                    <span class="transition-opacity duration-300 whitespace-nowrap" :class="sidebarCollapsed ? 'opacity-0 w-0 overflow-hidden absolute' : 'opacity-100'">
+                        TASK TO DO
+                    </span>
+                </div>
+                <svg class="h-4 w-4 transition-transform duration-200 flex-shrink-0"
+                     :class="[
+                         open ? 'rotate-90' : '',
+                         sidebarCollapsed ? 'opacity-0 w-0 overflow-hidden' : 'opacity-100'
+                     ]"
+                     fill="none"
+                     stroke="currentColor"
+                     viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+                </svg>
+            </button>
+            <div x-show="open"
+                 x-transition:enter="transition ease-out duration-100"
+                 x-transition:enter-start="opacity-0 transform scale-95"
+                 x-transition:enter-end="opacity-100 transform scale-100"
+                 x-transition:leave="transition ease-in duration-75"
+                 x-transition:leave-start="opacity-100 transform scale-100"
+                 x-transition:leave-end="opacity-0 transform scale-95"
+                 :class="sidebarCollapsed ? 'hidden' : ''"
+                 class="ml-6 mt-1 space-y-1">
+                <a href="{{ route('admin.tasks.index', ['type' => 'personal']) }}"
+                   class="flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors duration-200 {{ request()->routeIs('admin.tasks.index') && request('type') == 'personal' ? 'bg-indigo-700 text-white' : 'text-gray-400 hover:bg-gray-700 hover:text-gray-300' }}"
+                   :title="sidebarCollapsed ? 'My Tasks' : ''">
+                    <svg class="h-5 w-5 flex-shrink-0 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
+                    </svg>
+                    <span class="transition-opacity duration-300" :class="sidebarCollapsed ? 'opacity-0 w-0 overflow-hidden' : 'opacity-100'">
+                        My Tasks
+                    </span>
+                </a>
+                <a href="{{ route('admin.tasks.index', ['type' => 'group']) }}"
+                   class="flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors duration-200 {{ request()->routeIs('admin.tasks.index') && request('type') == 'group' ? 'bg-indigo-700 text-white' : 'text-gray-400 hover:bg-gray-700 hover:text-gray-300' }}"
+                   :title="sidebarCollapsed ? 'Group Tasks' : ''">
+                    <svg class="h-5 w-5 flex-shrink-0 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path>
+                    </svg>
+                    <span class="transition-opacity duration-300" :class="sidebarCollapsed ? 'opacity-0 w-0 overflow-hidden' : 'opacity-100'">
+                        Group Tasks
+                    </span>
+                </a>
+            </div>
+        </div>
+
         <!-- System -->
         @if(auth()->user()->canAccessSystem())
         <div class="mb-6" x-data="{

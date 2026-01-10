@@ -9,8 +9,8 @@
 
     <!-- Favicon -->
     @if(isset($settings['system_icon']) && $settings['system_icon'])
-        <link rel="icon" type="image/x-icon" href="{{ $settings['system_icon_url'] ?? '' }}">
-        <link rel="shortcut icon" type="image/x-icon" href="{{ $settings['system_icon_url'] ?? '' }}">
+        <link rel="icon" type="image/x-icon" href="{{ Storage::url($settings['system_icon']) }}">
+        <link rel="shortcut icon" type="image/x-icon" href="{{ Storage::url($settings['system_icon']) }}">
     @endif
 
     <!-- Fonts -->
@@ -65,10 +65,10 @@
         }
     </style>
 </head>
-<body class="font-sans antialiased bg-gray-100"
+<body class="font-sans antialiased bg-gray-100" 
       x-data="{ sidebarCollapsed: false }"
       x-init="
-          $store.sidebar = { collapsed: sidebarCollapsed };
+          $store.sidebar = { collapsed: sidebarCollapsed }; 
           $watch('sidebarCollapsed', value => {
               $store.sidebar = { collapsed: value };
               window.dispatchEvent(new CustomEvent('sidebar-collapse-changed', { detail: value }));
@@ -292,8 +292,7 @@
 
                 init() {
                     this.loadNotifications();
-                    // Polling disabled to reduce server load
-                    // this.startPolling();
+                    this.startPolling();
                 },
 
                 toggleNotifications() {
