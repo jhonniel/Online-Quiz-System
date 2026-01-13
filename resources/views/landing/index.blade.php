@@ -6,17 +6,58 @@
 
 @section('content')
 <!-- Hero Section -->
-<section class="relative text-white overflow-hidden @if(empty($heroBackgroundUrl)) gradient-bg py-16 md:py-24 lg:py-32 @endif min-h-[400px] sm:min-h-[500px] md:min-h-[600px]">
+<section class="relative text-white overflow-hidden @if(empty($heroBackgroundUrl)) gradient-bg py-16 md:py-24 lg:py-32 @endif min-h-[400px] sm:min-h-[500px]">
     @if(!empty($heroBackgroundUrl))
-        <img src="{{ $heroBackgroundUrl }}" alt="Hero Background" class="w-full h-full object-cover absolute inset-0" style="z-index: 0;">
-        <div class="absolute inset-0 bg-black/20" style="z-index: 1;"></div>
+        <!-- Mobile: Absolute positioned image with cover -->
+        <img src="{{ $heroBackgroundUrl }}" alt="Hero Background" class="w-full h-full object-cover absolute inset-0 md:hidden" style="z-index: 0;">
+        <!-- Desktop: Relative positioned image showing full image -->
+        <div class="hidden md:block relative" style="z-index: 0;">
+            <img src="{{ $heroBackgroundUrl }}" alt="Hero Background" class="w-full h-auto object-contain" style="display: block;">
+            <div class="absolute inset-0 bg-black/10" style="z-index: 1;"></div>
+            <!-- Content overlay for desktop -->
+            <div class="absolute inset-0 z-10 flex items-center justify-center max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-16">
+                <div class="text-center max-w-4xl mx-auto w-full">
+                    <h1 class="text-3xl sm:text-4xl md:text-5xl lg:text-6xl xl:text-7xl font-bold mb-4 md:mb-6 leading-tight animate-fade-in-up px-2">
+                        {{ $heroTitle }}
+                    </h1>
+                    <p class="text-base sm:text-lg md:text-xl lg:text-2xl mb-6 md:mb-10 text-gray-100 leading-relaxed animate-fade-in-up animate-delay-100 px-4">
+                        {{ $heroSubtitle }}
+                    </p>
+                    <div class="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center items-center animate-fade-in-up animate-delay-200 px-4 pb-4 sm:pb-0">
+                        @auth
+                            @if(auth()->user()->isAdmin())
+                                <a href="{{ route('admin.dashboard') }}" class="w-full sm:w-auto bg-white text-primary px-6 py-3 sm:px-8 sm:py-4 rounded-xl font-semibold hover:bg-gray-50 transition-all shadow-xl hover:shadow-2xl transform hover:-translate-y-1 text-sm sm:text-base text-center">
+                                    Go to Dashboard
+                                </a>
+                            @else
+                                <a href="{{ route('user.dashboard') }}" class="w-full sm:w-auto bg-white text-primary px-6 py-3 sm:px-8 sm:py-4 rounded-xl font-semibold hover:bg-gray-50 transition-all shadow-xl hover:shadow-2xl transform hover:-translate-y-1 text-sm sm:text-base text-center">
+                                    Go to Dashboard
+                                </a>
+                            @endif
+                        @else
+                            <a href="{{ $heroPrimaryButtonUrl ?? route('login') }}" class="w-full sm:w-auto bg-white text-primary px-6 py-3 sm:px-8 sm:py-4 rounded-xl font-semibold hover:bg-gray-50 transition-all shadow-xl hover:shadow-2xl transform hover:-translate-y-1 text-sm sm:text-base text-center whitespace-nowrap">
+                                {{ $heroPrimaryButtonText }}
+                            </a>
+                        @endauth
+                        @if(!empty($heroSecondaryButtonText))
+                            <a href="{{ $heroSecondaryButtonUrl ?? route('landing.projects') }}" class="w-full sm:w-auto border-2 border-white text-white px-6 py-3 sm:px-8 sm:py-4 rounded-xl font-semibold hover:bg-white hover:text-gray-900 transition-all backdrop-blur-sm text-sm sm:text-base text-center whitespace-nowrap">
+                                {{ $heroSecondaryButtonText }}
+                            </a>
+                        @endif
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- Mobile overlay -->
+        <div class="absolute inset-0 bg-black/20 md:hidden" style="z-index: 1;"></div>
     @else
         <div class="absolute inset-0 opacity-10" style="z-index: 0;">
             <div class="absolute top-0 left-0 w-64 h-64 md:w-96 md:h-96 bg-white rounded-full -translate-x-1/2 -translate-y-1/2"></div>
             <div class="absolute bottom-0 right-0 w-64 h-64 md:w-96 md:h-96 bg-white rounded-full translate-x-1/2 translate-y-1/2"></div>
         </div>
     @endif
-    <div class="relative z-10 flex items-center justify-center min-h-[400px] sm:min-h-[500px] md:min-h-[600px] max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-16">
+    <!-- Mobile content -->
+    <div class="absolute inset-0 z-10 flex items-center justify-center max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-16 md:hidden">
         <div class="text-center max-w-4xl mx-auto w-full">
             <h1 class="text-3xl sm:text-4xl md:text-5xl lg:text-6xl xl:text-7xl font-bold mb-4 md:mb-6 leading-tight animate-fade-in-up px-2">
                 {{ $heroTitle }}
