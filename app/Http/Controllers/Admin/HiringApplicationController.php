@@ -158,9 +158,12 @@ class HiringApplicationController extends Controller
         $universityId = null;
         if ($application->school) {
             // Try to match by full_name first (includes location), then by name
+            // PostgreSQL-compatible concatenation
             $university = \App\Models\University::where(function($query) use ($application) {
-                $query->whereRaw('CONCAT(name, IF(location IS NOT NULL AND location != "", CONCAT(" (", location, ")"), "")) = ?', [$application->school])
-                      ->orWhere('name', $application->school);
+                $query->whereRaw(
+                    "name || CASE WHEN location IS NOT NULL AND location <> '' THEN ' (' || location || ')' ELSE '' END = ?",
+                    [$application->school]
+                )->orWhere('name', $application->school);
             })->first();
 
             if ($university) {
@@ -326,9 +329,12 @@ class HiringApplicationController extends Controller
         $universityId = null;
         if ($application->school) {
             // Try to match by full_name first (includes location), then by name
+            // PostgreSQL-compatible concatenation
             $university = \App\Models\University::where(function($query) use ($application) {
-                $query->whereRaw('CONCAT(name, IF(location IS NOT NULL AND location != "", CONCAT(" (", location, ")"), "")) = ?', [$application->school])
-                      ->orWhere('name', $application->school);
+                $query->whereRaw(
+                    "name || CASE WHEN location IS NOT NULL AND location <> '' THEN ' (' || location || ')' ELSE '' END = ?",
+                    [$application->school]
+                )->orWhere('name', $application->school);
             })->first();
 
             if ($university) {
