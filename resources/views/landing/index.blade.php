@@ -6,43 +6,45 @@
 
 @section('content')
 <!-- Hero Section -->
-<section class="relative text-white overflow-hidden @if(empty($heroBackgroundUrl)) gradient-bg py-16 md:py-24 lg:py-32 @endif">
+<section class="relative text-white overflow-hidden @if(empty($heroBackgroundUrl)) gradient-bg py-16 md:py-24 lg:py-32 @endif min-h-[400px] sm:min-h-[500px] md:min-h-[600px]">
     @if(!empty($heroBackgroundUrl))
-        <img src="{{ $heroBackgroundUrl }}" alt="Hero Background" class="w-full h-auto object-contain" style="display: block; width: 100%;">
+        <img src="{{ $heroBackgroundUrl }}" alt="Hero Background" class="w-full h-full object-cover absolute inset-0" style="z-index: 0;">
         <div class="absolute inset-0 bg-black/20" style="z-index: 1;"></div>
     @else
-        <div class="absolute inset-0 opacity-10">
+        <div class="absolute inset-0 opacity-10" style="z-index: 0;">
             <div class="absolute top-0 left-0 w-64 h-64 md:w-96 md:h-96 bg-white rounded-full -translate-x-1/2 -translate-y-1/2"></div>
             <div class="absolute bottom-0 right-0 w-64 h-64 md:w-96 md:h-96 bg-white rounded-full translate-x-1/2 translate-y-1/2"></div>
         </div>
     @endif
-    <div class="absolute inset-0 flex items-center justify-center max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-16" style="z-index: 2; pointer-events: none;">
-        <div class="text-center max-w-4xl mx-auto w-full" style="pointer-events: auto;">
+    <div class="relative z-10 flex items-center justify-center min-h-[400px] sm:min-h-[500px] md:min-h-[600px] max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-16">
+        <div class="text-center max-w-4xl mx-auto w-full">
             <h1 class="text-3xl sm:text-4xl md:text-5xl lg:text-6xl xl:text-7xl font-bold mb-4 md:mb-6 leading-tight animate-fade-in-up px-2">
                 {{ $heroTitle }}
             </h1>
             <p class="text-base sm:text-lg md:text-xl lg:text-2xl mb-6 md:mb-10 text-gray-100 leading-relaxed animate-fade-in-up animate-delay-100 px-4">
                 {{ $heroSubtitle }}
             </p>
-            <div class="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center animate-fade-in-up animate-delay-200 px-4">
+            <div class="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center items-center animate-fade-in-up animate-delay-200 px-4 pb-4 sm:pb-0">
                 @auth
                     @if(auth()->user()->isAdmin())
-                        <a href="{{ route('admin.dashboard') }}" class="bg-white text-primary px-6 py-3 sm:px-8 sm:py-4 rounded-xl font-semibold hover:bg-gray-50 transition-all shadow-xl hover:shadow-2xl transform hover:-translate-y-1 text-sm sm:text-base">
+                        <a href="{{ route('admin.dashboard') }}" class="w-full sm:w-auto bg-white text-primary px-6 py-3 sm:px-8 sm:py-4 rounded-xl font-semibold hover:bg-gray-50 transition-all shadow-xl hover:shadow-2xl transform hover:-translate-y-1 text-sm sm:text-base text-center">
                             Go to Dashboard
                         </a>
                     @else
-                        <a href="{{ route('user.dashboard') }}" class="bg-white text-primary px-6 py-3 sm:px-8 sm:py-4 rounded-xl font-semibold hover:bg-gray-50 transition-all shadow-xl hover:shadow-2xl transform hover:-translate-y-1 text-sm sm:text-base">
+                        <a href="{{ route('user.dashboard') }}" class="w-full sm:w-auto bg-white text-primary px-6 py-3 sm:px-8 sm:py-4 rounded-xl font-semibold hover:bg-gray-50 transition-all shadow-xl hover:shadow-2xl transform hover:-translate-y-1 text-sm sm:text-base text-center">
                             Go to Dashboard
                         </a>
                     @endif
                 @else
-                    <a href="{{ $heroPrimaryButtonUrl ?? route('login') }}" class="bg-white text-primary px-6 py-3 sm:px-8 sm:py-4 rounded-xl font-semibold hover:bg-gray-50 transition-all shadow-xl hover:shadow-2xl transform hover:-translate-y-1 text-sm sm:text-base">
+                    <a href="{{ $heroPrimaryButtonUrl ?? route('login') }}" class="w-full sm:w-auto bg-white text-primary px-6 py-3 sm:px-8 sm:py-4 rounded-xl font-semibold hover:bg-gray-50 transition-all shadow-xl hover:shadow-2xl transform hover:-translate-y-1 text-sm sm:text-base text-center whitespace-nowrap">
                         {{ $heroPrimaryButtonText }}
                     </a>
                 @endauth
-                <a href="{{ $heroSecondaryButtonUrl ?? route('landing.projects') }}" class="border-2 border-white text-white px-6 py-3 sm:px-8 sm:py-4 rounded-xl font-semibold hover:bg-white hover:text-gray-900 transition-all backdrop-blur-sm text-sm sm:text-base">
-                    {{ $heroSecondaryButtonText }}
-                </a>
+                @if(!empty($heroSecondaryButtonText))
+                    <a href="{{ $heroSecondaryButtonUrl ?? route('landing.projects') }}" class="w-full sm:w-auto border-2 border-white text-white px-6 py-3 sm:px-8 sm:py-4 rounded-xl font-semibold hover:bg-white hover:text-gray-900 transition-all backdrop-blur-sm text-sm sm:text-base text-center whitespace-nowrap">
+                        {{ $heroSecondaryButtonText }}
+                    </a>
+                @endif
             </div>
         </div>
     </div>
@@ -95,11 +97,11 @@
 </section>
 
 <!-- Projects Section with Laptop Animation -->
-<section class="py-12 sm:py-16 md:py-20 lg:py-24 bg-gradient-to-br from-gray-50 to-gray-100 relative overflow-hidden" id="projects-section">
+<section class="py-8 sm:py-12 md:py-16 lg:py-20 bg-gradient-to-br from-gray-50 to-gray-100 relative overflow-hidden" id="projects-section">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div class="text-center mb-8 sm:mb-12 md:mb-16">
-            <h2 class="text-3xl sm:text-4xl md:text-5xl font-bold text-gray-900 mb-3 sm:mb-4 px-4">Our Projects</h2>
-            <p class="text-base sm:text-lg md:text-xl text-gray-600 px-4">Explore the solutions we've delivered</p>
+        <div class="text-center mb-6 sm:mb-8 md:mb-12">
+            <h2 class="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold text-gray-900 mb-2 sm:mb-3 md:mb-4 px-4">Our Projects</h2>
+            <p class="text-sm sm:text-base md:text-lg lg:text-xl text-gray-600 px-4">Explore the solutions we've delivered</p>
         </div>
 
         <!-- Three Laptops Container -->
@@ -137,7 +139,7 @@
                     <div class="projects-carousel flex transition-transform duration-700 ease-in-out" id="projects-carousel" style="transform: translateX(0); visibility: visible !important;">
                         @foreach($validProjects as $index => $project)
                             <div class="laptop-carousel-item flex-shrink-0 w-full sm:w-1/2 md:w-1/3 px-2 sm:px-3 md:px-4" data-project-index="{{ $index }}" style="visibility: visible !important; display: block !important;">
-                                <div class="relative mx-auto w-full max-w-[240px] sm:max-w-[280px] md:max-w-[300px]">
+                                <div class="relative mx-auto w-full max-w-[180px] sm:max-w-[240px] md:max-w-[280px] lg:max-w-[300px]">
                                     <!-- Laptop Image Frame -->
                                     <div class="relative w-full laptop-frame-container" style="aspect-ratio: 16/10; background-image: url('{{ $laptopImageUrl }}'); background-size: contain; background-repeat: no-repeat; background-position: center; z-index: 20 !important;">
                                         <!-- Project Image and Overlay - positioned INSIDE laptop screen area -->
@@ -234,7 +236,7 @@
                     </div>
                 </div>
                 <!-- Carousel Navigation Dots -->
-                <div class="flex justify-center mt-4 sm:mt-6 gap-2" id="carousel-dots">
+                <div class="flex justify-center mt-2 sm:mt-3 md:mt-4 gap-1 sm:gap-1.5" id="carousel-dots">
                     @php
                         // Calculate number of slides: desktop shows 3 per slide, tablet 2, mobile 1
                         // We'll create dots for desktop view (3 per slide), JS will adjust for smaller screens
@@ -242,18 +244,18 @@
                         $slidesCount = ceil($totalProjects / $projectsPerSlideDesktop);
                     @endphp
                     @for($i = 0; $i < $slidesCount; $i++)
-                        <button class="carousel-dot w-2 h-2 rounded-full transition-all duration-300 {{ $i === 0 ? 'bg-primary w-8' : 'bg-gray-300' }}"
+                        <button class="carousel-dot w-1 h-1 sm:w-1.5 sm:h-1.5 md:w-2 md:h-2 rounded-full transition-all duration-300 {{ $i === 0 ? 'bg-primary w-3 sm:w-4 md:w-5' : 'bg-gray-300' }}"
                                 data-slide="{{ $i }}"
                                 aria-label="Go to slide {{ $i + 1 }}"></button>
                     @endfor
                 </div>
             @else
                 <!-- Static grid for 5 or fewer projects -->
-                <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 sm:gap-6">
+                <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 sm:gap-4 md:gap-6">
                     @foreach($validProjects as $i => $project)
                         <!-- Laptop {{ $i + 1 }} -->
                         <div class="relative laptop-item" data-index="{{ $i }}">
-                            <div class="relative mx-auto w-full max-w-[240px] sm:max-w-[280px] md:max-w-[300px]">
+                            <div class="relative mx-auto w-full max-w-[180px] sm:max-w-[240px] md:max-w-[280px] lg:max-w-[300px]">
                                 <!-- Laptop Image Frame -->
                                 <div class="relative w-full laptop-frame-container" style="aspect-ratio: 16/10; background-image: url('{{ $laptopImageUrl }}'); background-size: contain; background-repeat: no-repeat; background-position: center; z-index: 20 !important;">
                                     <!-- Project Image and Overlay - positioned INSIDE laptop screen area -->
@@ -1558,10 +1560,10 @@ document.addEventListener('DOMContentLoaded', function() {
                     if (index < maxSlides) {
                         dot.style.display = '';
                         if (index === displaySlide) {
-                            dot.classList.add('bg-primary', 'w-8');
+                            dot.classList.add('bg-primary', 'w-3', 'sm:w-4', 'md:w-5');
                             dot.classList.remove('bg-gray-300');
                         } else {
-                            dot.classList.remove('bg-primary', 'w-8');
+                            dot.classList.remove('bg-primary', 'w-3', 'sm:w-4', 'md:w-5');
                             dot.classList.add('bg-gray-300');
                         }
                     } else {
@@ -2140,8 +2142,22 @@ html[data-debug="laptop"] .laptop-screen-area::before {
 
     /* Improve touch targets on mobile */
     .carousel-dot {
-        min-width: 24px;
-        min-height: 24px;
+        min-width: 12px;
+        min-height: 12px;
+    }
+    
+    @media (min-width: 640px) {
+        .carousel-dot {
+            min-width: 16px;
+            min-height: 16px;
+        }
+    }
+    
+    @media (min-width: 768px) {
+        .carousel-dot {
+            min-width: 20px;
+            min-height: 20px;
+        }
     }
 
     /* Better spacing for mobile */
