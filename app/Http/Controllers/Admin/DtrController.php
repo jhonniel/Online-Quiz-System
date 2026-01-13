@@ -1193,7 +1193,7 @@ class DtrController extends Controller
     public function studentUpdate(Request $request, Dtr $dtr)
     {
         // Verify this is a student DTR
-        if ($dtr->user->role !== 'student') {
+        if (!$dtr->user || $dtr->user->role !== 'student') {
             abort(404, 'DTR record not found for students.');
         }
 
@@ -1261,6 +1261,43 @@ class DtrController extends Controller
             return redirect()->back()
                 ->withErrors(['error' => 'Failed to update student DTR record: ' . $e->getMessage()])
                 ->withInput();
+        }
+    }
+
+    /**
+     * Remove the specified student DTR resource from storage.
+     * Only full-access admins (super admins) can perform this action.
+     */
+    public function studentDestroy(Dtr $dtr)
+    {
+        // Ensure the record belongs to a student
+        if (!$dtr->user || $dtr->user->role !== 'student') {
+            abort(404, 'DTR record not found for students.');
+        }
+
+        $currentUser = auth()->user();
+
+        // Only super admins (full access) can delete student DTR records
+        if (!$currentUser || !$currentUser->isSuperAdmin()) {
+            abort(403, 'Only full-access admins can delete student DTR records.');
+        }
+
+        try {
+            $userId = $dtr->user_id;
+            $date = $dtr->date;
+
+            $dtr->delete();
+
+            // Recalculate weekly deficit after deletion
+            $this->calculateAndStoreWeeklyDeficit($userId, Carbon::parse($date));
+
+            return redirect()->route('admin.student-dtr.index')
+                ->with('success', 'Student DTR record deleted successfully.');
+        } catch (\Exception $e) {
+            Log::error('Student DTR deletion failed: ' . $e->getMessage());
+
+            return redirect()->back()
+                ->withErrors(['error' => 'Failed to delete student DTR record: ' . $e->getMessage()]);
         }
     }
 

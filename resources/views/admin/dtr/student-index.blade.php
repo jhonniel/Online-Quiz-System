@@ -394,6 +394,18 @@
                                                                class="inline-flex items-center px-2.5 py-1.5 border border-indigo-200 text-xs font-medium rounded-md text-indigo-700 bg-indigo-50 hover:bg-indigo-100">
                                                                 Edit
                                                             </a>
+                                                            @if(auth()->check() && auth()->user()->isSuperAdmin())
+                                                                <form action="{{ route('admin.student-dtr.destroy', $dtr) }}"
+                                                                      method="POST"
+                                                                      onsubmit="return confirm('Are you sure you want to delete this student DTR record? This action cannot be undone.');">
+                                                                    @csrf
+                                                                    @method('DELETE')
+                                                                    <button type="submit"
+                                                                            class="inline-flex items-center px-2.5 py-1.5 border border-red-200 text-xs font-medium rounded-md text-red-700 bg-red-50 hover:bg-red-100">
+                                                                        Delete
+                                                                    </button>
+                                                                </form>
+                                                            @endif
                                                         </div>
                                                     </td>
                                                 </tr>

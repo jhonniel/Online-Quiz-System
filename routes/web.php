@@ -151,24 +151,25 @@ Route::prefix('admin')->middleware(['auth', 'admin'])->group(function () {
     // Employee Management
     Route::middleware(['admin.permission:employee_management'])->group(function () {
         // DTR Management (Employees)
-    Route::get('/dtr', [App\Http\Controllers\Admin\DtrController::class, 'index'])->name('admin.dtr.index');
-    Route::get('/dtr/create', [App\Http\Controllers\Admin\DtrController::class, 'create'])->name('admin.dtr.create');
-    Route::post('/dtr', [App\Http\Controllers\Admin\DtrController::class, 'store'])->name('admin.dtr.store');
-    Route::get('/dtr/{dtr}/edit', [App\Http\Controllers\Admin\DtrController::class, 'edit'])->name('admin.dtr.edit');
-    Route::put('/dtr/{dtr}', [App\Http\Controllers\Admin\DtrController::class, 'update'])->name('admin.dtr.update');
-    Route::delete('/dtr/{dtr}', [App\Http\Controllers\Admin\DtrController::class, 'destroy'])->name('admin.dtr.destroy');
-    Route::post('/dtr/recalculate-deficits', [App\Http\Controllers\Admin\DtrController::class, 'recalculateDeficits'])->name('admin.dtr.recalculate-deficits');
-    Route::post('/dtr/import', [App\Http\Controllers\Admin\DtrController::class, 'import'])->name('admin.dtr.import');
-    Route::get('/dtr/template', [App\Http\Controllers\Admin\DtrController::class, 'downloadTemplate'])->name('admin.dtr.template');
-    Route::get('/dtr/export-pdf', [App\Http\Controllers\Admin\DtrController::class, 'exportPdf'])->name('admin.dtr.export-pdf');
+        Route::get('/dtr', [App\Http\Controllers\Admin\DtrController::class, 'index'])->name('admin.dtr.index');
+        Route::get('/dtr/create', [App\Http\Controllers\Admin\DtrController::class, 'create'])->name('admin.dtr.create');
+        Route::post('/dtr', [App\Http\Controllers\Admin\DtrController::class, 'store'])->name('admin.dtr.store');
+        Route::get('/dtr/{dtr}/edit', [App\Http\Controllers\Admin\DtrController::class, 'edit'])->name('admin.dtr.edit');
+        Route::put('/dtr/{dtr}', [App\Http\Controllers\Admin\DtrController::class, 'update'])->name('admin.dtr.update');
+        Route::delete('/dtr/{dtr}', [App\Http\Controllers\Admin\DtrController::class, 'destroy'])->name('admin.dtr.destroy');
+        Route::post('/dtr/recalculate-deficits', [App\Http\Controllers\Admin\DtrController::class, 'recalculateDeficits'])->name('admin.dtr.recalculate-deficits');
+        Route::post('/dtr/import', [App\Http\Controllers\Admin\DtrController::class, 'import'])->name('admin.dtr.import');
+        Route::get('/dtr/template', [App\Http\Controllers\Admin\DtrController::class, 'downloadTemplate'])->name('admin.dtr.template');
+        Route::get('/dtr/export-pdf', [App\Http\Controllers\Admin\DtrController::class, 'exportPdf'])->name('admin.dtr.export-pdf');
 
-    // Student DTR Management
-    Route::get('/student-dtr', [App\Http\Controllers\Admin\DtrController::class, 'studentIndex'])->name('admin.student-dtr.index');
-    Route::get('/student-dtr/create', [App\Http\Controllers\Admin\DtrController::class, 'studentCreate'])->name('admin.student-dtr.create');
-    Route::post('/student-dtr', [App\Http\Controllers\Admin\DtrController::class, 'studentStore'])->name('admin.student-dtr.store');
-    Route::get('/student-dtr/{dtr}/edit', [App\Http\Controllers\Admin\DtrController::class, 'studentEdit'])->name('admin.student-dtr.edit');
-    Route::put('/student-dtr/{dtr}', [App\Http\Controllers\Admin\DtrController::class, 'studentUpdate'])->name('admin.student-dtr.update');
-    Route::get('/student-dtr/export/pdf', [App\Http\Controllers\Admin\DtrController::class, 'studentExportPdf'])->name('admin.student-dtr.export-pdf');
+        // Student DTR Management
+        Route::get('/student-dtr', [App\Http\Controllers\Admin\DtrController::class, 'studentIndex'])->name('admin.student-dtr.index');
+        Route::get('/student-dtr/create', [App\Http\Controllers\Admin\DtrController::class, 'studentCreate'])->name('admin.student-dtr.create');
+        Route::post('/student-dtr', [App\Http\Controllers\Admin\DtrController::class, 'studentStore'])->name('admin.student-dtr.store');
+        Route::get('/student-dtr/{dtr}/edit', [App\Http\Controllers\Admin\DtrController::class, 'studentEdit'])->name('admin.student-dtr.edit');
+        Route::put('/student-dtr/{dtr}', [App\Http\Controllers\Admin\DtrController::class, 'studentUpdate'])->name('admin.student-dtr.update');
+        Route::delete('/student-dtr/{dtr}', [App\Http\Controllers\Admin\DtrController::class, 'studentDestroy'])->name('admin.student-dtr.destroy');
+        Route::get('/student-dtr/export/pdf', [App\Http\Controllers\Admin\DtrController::class, 'studentExportPdf'])->name('admin.student-dtr.export-pdf');
 
     // Student Management Dashboard
     Route::get('/student-management/dashboard', [StudentDashboardController::class, 'index'])->name('admin.student-management.dashboard');
