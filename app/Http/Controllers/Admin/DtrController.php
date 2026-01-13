@@ -1160,7 +1160,7 @@ class DtrController extends Controller
     public function studentEdit(Dtr $dtr)
     {
         // Verify this is a student DTR
-        if ($dtr->user->role !== 'student') {
+        if (!$dtr->user || $dtr->user->role !== 'student') {
             abort(404, 'DTR record not found for students.');
         }
 
@@ -1169,10 +1169,22 @@ class DtrController extends Controller
             ->orderBy('name')
             ->get();
 
+        // Convert stored decimal hours back to HH:MM for form fields
+        $workedDecimal = max(($dtr->total_hours ?? 0) - ($dtr->added_time_from_note ?? 0), 0);
+        $workedMinutes = (int) round($workedDecimal * 60);
+        $workedH = intdiv($workedMinutes, 60);
+        $workedM = $workedMinutes % 60;
+        $workedFormatted = sprintf('%02d:%02d', $workedH, $workedM);
+
+        $addedMinutes = (int) round(($dtr->added_time_from_note ?? 0) * 60);
+        $addedH = intdiv($addedMinutes, 60);
+        $addedM = $addedMinutes % 60;
+        $addedFormatted = sprintf('%02d:%02d', $addedH, $addedM);
+
         // Determine if sections should be collapsed by default
         $collapseByDefault = true;
 
-        return view('admin.dtr.student-edit', compact('dtr', 'students', 'collapseByDefault'));
+        return view('admin.dtr.student-edit', compact('dtr', 'students', 'collapseByDefault', 'workedFormatted', 'addedFormatted'));
     }
 
     /**
