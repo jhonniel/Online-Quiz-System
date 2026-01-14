@@ -134,7 +134,7 @@
                                     </div>
                                 </div>
                                 <p class="mt-2 text-xs text-gray-500">
-                                    Select a date range to create DTR records for multiple dates. Records will be created for all dates in the range (excluding weekends).
+                                    Select a date range to create or update DTR records for multiple dates. Records will be processed for all dates in the range (excluding weekends). If a record already exists, the new hours will be added to the existing total hours.
                                 </p>
                                 <div id="date_range_info" class="mt-2 text-sm text-gray-600 hidden">
                                     <span id="date_range_count">0</span> date(s) will be processed

@@ -425,29 +425,67 @@ class DtrController extends Controller
                     ->whereDate('date', $date->toDateString())
                     ->first();
 
-                if ($existingDtr) {
-                    $skipped[] = "{$employee->name} on {$date->format('Y-m-d')}";
-                    continue;
-                }
-
                 try {
-                    Dtr::create([
-                        'user_id' => $userId,
-                        'date' => $date->toDateString(),
-                        'added_time_from_note' => $addedDecimal,
-                        'total_hours' => $totalDecimal,
-                        'overtime_hours' => $overtimeDecimal,
-                        'status' => $dateStatus,
-                        'remarks' => $request->remarks,
-                    ]);
+                    if ($existingDtr) {
+                        // If DTR record already exists, add the new hours to existing total
+                        $existingTotal = (float) ($existingDtr->total_hours ?? 0);
+                        $existingAdded = (float) ($existingDtr->added_time_from_note ?? 0);
+                        
+                        // Add new worked hours and added time to existing values
+                        // New total = existing total + new worked hours + new added time
+                        $newTotal = $existingTotal + $workedDecimal + $addedDecimal;
+                        $newAdded = $existingAdded + $addedDecimal;
+                        
+                        // Recalculate overtime based on new total
+                        $newOvertime = max($newTotal - $standardDecimal, 0);
+                        
+                        // Update remarks - append new remark if provided
+                        $existingRemarks = $existingDtr->remarks ?? '';
+                        $newRemarks = $existingRemarks;
+                        if (!empty($request->remarks)) {
+                            if (!empty($existingRemarks)) {
+                                $newRemarks = $existingRemarks . '; ' . $request->remarks;
+                            } else {
+                                $newRemarks = $request->remarks;
+                            }
+                        }
+                        
+                        // Update status only if it's not travel and we're not setting travel
+                        // If existing is travel, keep it as travel
+                        $finalStatus = $existingDtr->status === 'travel' ? 'travel' : $dateStatus;
+                        
+                        $existingDtr->update([
+                            'added_time_from_note' => $newAdded,
+                            'total_hours' => $newTotal,
+                            'overtime_hours' => $newOvertime,
+                            'status' => $finalStatus,
+                            'remarks' => $newRemarks,
+                        ]);
 
-                    // Calculate and store weekly deficit for this employee
-                    $this->calculateAndStoreWeeklyDeficit($userId, $date);
+                        // Calculate and store weekly deficit for this employee
+                        $this->calculateAndStoreWeeklyDeficit($userId, $date);
 
-                    $created++;
+                        $created++;
+                    } else {
+                        // Create new DTR record
+                        Dtr::create([
+                            'user_id' => $userId,
+                            'date' => $date->toDateString(),
+                            'added_time_from_note' => $addedDecimal,
+                            'total_hours' => $totalDecimal,
+                            'overtime_hours' => $overtimeDecimal,
+                            'status' => $dateStatus,
+                            'remarks' => $request->remarks,
+                        ]);
+
+                        // Calculate and store weekly deficit for this employee
+                        $this->calculateAndStoreWeeklyDeficit($userId, $date);
+
+                        $created++;
+                    }
                 } catch (\Exception $e) {
-                    Log::error("DTR creation failed for user {$userId} on {$date->format('Y-m-d')}: " . $e->getMessage());
-                    $errors[] = "Failed to create DTR for {$employee->name} on {$date->format('Y-m-d')}: " . $e->getMessage();
+                    Log::error("DTR creation/update failed for user {$userId} on {$date->format('Y-m-d')}: " . $e->getMessage());
+                    $errors[] = "Failed to create/update DTR for {$employee->name} on {$date->format('Y-m-d')}: " . $e->getMessage();
                 }
             }
         }
@@ -455,10 +493,7 @@ class DtrController extends Controller
         // Build success/error messages
         $messages = [];
         if ($created > 0) {
-            $messages[] = "Successfully created {$created} DTR record(s) for " . count($dateRange) . " date(s).";
-        }
-        if (count($skipped) > 0) {
-            $messages[] = "Skipped " . count($skipped) . " record(s) (already exist): " . implode(', ', array_slice($skipped, 0, 5)) . (count($skipped) > 5 ? '...' : '');
+            $messages[] = "Successfully processed {$created} DTR record(s) for " . count($dateRange) . " date(s).";
         }
         if (count($errors) > 0) {
             $messages[] = "Errors: " . implode(' ', array_slice($errors, 0, 3)) . (count($errors) > 3 ? '...' : '');
