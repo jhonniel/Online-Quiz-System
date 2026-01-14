@@ -502,6 +502,16 @@ class LeaveRequestController extends Controller
      */
     public function storeForEmployee(Request $request)
     {
+        $user = auth()->user();
+        
+        // Determine allowed leave types based on user permissions
+        $allowedTypes = ['vacation_leave', 'sick_leave', 'work_from_home', 'absent', 'overtime', 'offset'];
+        
+        // Only super admins (full access) can file travel leave
+        if ($user->isSuperAdmin()) {
+            $allowedTypes[] = 'travel';
+        }
+        
         $validated = $request->validate([
             'user_ids' => [
                 'required',
@@ -514,13 +524,20 @@ class LeaveRequestController extends Controller
                     $q->where('role', 'employee')->where('is_active', true);
                 }),
             ],
-            'type' => ['required', Rule::in(['vacation_leave', 'sick_leave', 'work_from_home', 'absent', 'overtime', 'offset'])],
+            'type' => ['required', Rule::in($allowedTypes)],
             'start_date' => ['required', 'date'],
             'end_date' => ['nullable', 'date', 'after_or_equal:start_date'],
             'reason' => ['nullable', 'string', 'max:1000'],
+            'travel_hours' => ['nullable', 'numeric', 'min:0', 'max:24'], // Custom hours for travel (per day)
         ]);
 
-        $user = auth()->user();
+        // Check if user is trying to file travel but is not a super admin
+        if ($validated['type'] === 'travel' && !$user->isSuperAdmin()) {
+            return redirect()->back()
+                ->withErrors(['type' => 'Only full-access admins can file travel leave requests.'])
+                ->withInput();
+        }
+
         $employeeIds = $validated['user_ids'];
 
         // Validate that user can manage all selected employees' departments
@@ -533,9 +550,9 @@ class LeaveRequestController extends Controller
             }
         }
 
-        // Allow past dates only for sick_leave and overtime; others must be today or future
+        // Allow past dates for sick_leave, overtime, and travel; others must be today or future
         $typeInput = $validated['type'];
-        if (!($typeInput === 'sick_leave' || $typeInput === 'overtime')) {
+        if (!in_array($typeInput, ['sick_leave', 'overtime', 'travel'])) {
             // Re-run validation for start_date with today-or-future rule
             $request->validate([
                 'start_date' => ['required', 'date', 'after_or_equal:today'],
@@ -603,6 +620,11 @@ class LeaveRequestController extends Controller
                 }
             }
 
+            // Determine status - travel requests are auto-approved
+            $status = ($validated['type'] === 'travel') ? 'approved' : 'pending';
+            $reviewedBy = ($validated['type'] === 'travel') ? Auth::id() : null;
+            $reviewedAt = ($validated['type'] === 'travel') ? now() : null;
+
             // Create leave request for this employee
             $leaveRequest = LeaveRequest::create([
                 'user_id' => $employee->id,
@@ -610,25 +632,32 @@ class LeaveRequestController extends Controller
                 'start_date' => $validated['start_date'],
                 'end_date' => $validated['end_date'] ?? $validated['start_date'],
                 'reason' => $validated['reason'] ?? '',
-                'status' => 'pending',
-                'reviewed_by' => null,
-                'reviewed_at' => null,
+                'status' => $status,
+                'reviewed_by' => $reviewedBy,
+                'reviewed_at' => $reviewedAt,
             ]);
 
             // Log that an admin filed this request on behalf of the employee
             LeaveRequestLog::create([
                 'leave_request_id' => $leaveRequest->id,
-                'action' => 'filed_by_admin',
+                'action' => $status === 'approved' ? 'approved' : 'filed_by_admin',
                 'status_before' => null,
-                'status_after' => 'pending',
-                'notes' => 'Filed by admin on behalf of employee',
+                'status_after' => $status,
+                'notes' => $status === 'approved' ? 'Travel leave auto-approved and filed by admin' : 'Filed by admin on behalf of employee',
                 'performed_by' => Auth::id(),
             ]);
+
+            // If travel type, automatically add hours to DTR
+            if ($validated['type'] === 'travel') {
+                $this->applyTravelTimeToDtr($leaveRequest, $validated['travel_hours'] ?? 8.0);
+            }
 
             Log::info('Admin filed leave request for employee', [
                 'leave_request_id' => $leaveRequest->id,
                 'employee_id' => $employee->id,
                 'admin_id' => Auth::id(),
+                'type' => $validated['type'],
+                'status' => $status,
             ]);
 
             $createdCount++;
@@ -637,7 +666,11 @@ class LeaveRequestController extends Controller
         // Prepare success/error messages
         $message = '';
         if ($createdCount > 0) {
-            $message = "Leave request filed for {$createdCount} employee(s).";
+            if ($validated['type'] === 'travel') {
+                $message = "Travel leave approved and filed for {$createdCount} employee(s). Hours have been added to DTR.";
+            } else {
+                $message = "Leave request filed for {$createdCount} employee(s).";
+            }
         }
         if (count($failedEmployees) > 0) {
             $failedNames = collect($failedEmployees)->pluck('name')->join(', ');
@@ -1266,6 +1299,58 @@ class LeaveRequestController extends Controller
             $dtr->overtime_hours = max($newTotal - 8.0, 0);
 
             $dtr->save();
+        }
+    }
+
+    /**
+     * Apply travel leave time to DTR records.
+     * Each day gets custom hours (default 8.0) added to DTR with travel status.
+     */
+    private function applyTravelTimeToDtr(LeaveRequest $leaveRequest, float $hoursPerDay = 8.0): void
+    {
+        $start = Carbon::parse($leaveRequest->start_date);
+        $end = $leaveRequest->end_date ? Carbon::parse($leaveRequest->end_date) : $start;
+        $period = CarbonPeriod::create($start, $end);
+
+        foreach ($period as $date) {
+            $dtr = Dtr::firstOrNew([
+                'user_id' => $leaveRequest->user_id,
+                'date' => $date->toDateString(),
+            ]);
+
+            // If DTR record already exists, add hours to existing total
+            // If it doesn't exist, create new record with specified hours
+            if ($dtr->exists) {
+                $existingTotal = (float) ($dtr->total_hours ?? 0);
+                $newTotal = $existingTotal + $hoursPerDay;
+                $dtr->total_hours = $newTotal;
+                $dtr->overtime_hours = max($newTotal - 8.0, 0);
+                
+                // Update remarks to include travel information
+                $existingRemarks = $dtr->remarks ?? '';
+                $travelRemark = "Travel Leave ({$hoursPerDay}h)";
+                if (!empty($existingRemarks) && strpos($existingRemarks, $travelRemark) === false) {
+                    $dtr->remarks = $existingRemarks . '; ' . $travelRemark;
+                } elseif (empty($existingRemarks)) {
+                    $dtr->remarks = $travelRemark;
+                }
+                
+                // Set status to travel if not already set
+                if ($dtr->status !== 'travel') {
+                    $dtr->status = 'travel';
+                }
+            } else {
+                // Create new DTR record with specified hours for travel
+                $dtr->total_hours = $hoursPerDay;
+                $dtr->overtime_hours = max($hoursPerDay - 8.0, 0);
+                $dtr->status = 'travel';
+                $dtr->remarks = "Travel Leave ({$hoursPerDay}h)";
+            }
+
+            $dtr->save();
+
+            // Recalculate weekly deficit after creating/updating DTR
+            $this->calculateAndStoreWeeklyDeficit($leaveRequest->user_id, $date);
         }
     }
 

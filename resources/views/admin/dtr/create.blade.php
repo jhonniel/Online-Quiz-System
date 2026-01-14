@@ -106,16 +106,39 @@
                                 @enderror
                             </div>
 
-                            <!-- Date -->
-                            <div>
-                                <label for="date" class="block text-sm font-medium text-gray-700 mb-2">
-                                    Date <span class="text-red-500">*</span>
+                            <!-- Date Range -->
+                            <div class="md:col-span-2">
+                                <label class="block text-sm font-medium text-gray-700 mb-2">
+                                    Date Range <span class="text-red-500">*</span>
                                 </label>
-                                <input type="date" name="date" id="date" value="{{ old('date', date('Y-m-d')) }}" required
-                                       class="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
-                                @error('date')
-                                    <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
-                                @enderror
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div>
+                                        <label for="date_from" class="block text-xs font-medium text-gray-600 mb-1">
+                                            From Date
+                                        </label>
+                                        <input type="date" name="date_from" id="date_from" value="{{ old('date_from', date('Y-m-d')) }}" required
+                                               class="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                                        @error('date_from')
+                                            <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                                        @enderror
+                                    </div>
+                                    <div>
+                                        <label for="date_to" class="block text-xs font-medium text-gray-600 mb-1">
+                                            To Date
+                                        </label>
+                                        <input type="date" name="date_to" id="date_to" value="{{ old('date_to', date('Y-m-d')) }}" required
+                                               class="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                                        @error('date_to')
+                                            <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                                        @enderror
+                                    </div>
+                                </div>
+                                <p class="mt-2 text-xs text-gray-500">
+                                    Select a date range to create DTR records for multiple dates. Records will be created for all dates in the range (excluding weekends).
+                                </p>
+                                <div id="date_range_info" class="mt-2 text-sm text-gray-600 hidden">
+                                    <span id="date_range_count">0</span> date(s) will be processed
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -292,6 +315,59 @@
             });
         }
 
+        // Date range validation and info
+        const dateFromInput = document.getElementById('date_from');
+        const dateToInput = document.getElementById('date_to');
+        const dateRangeInfo = document.getElementById('date_range_info');
+        const dateRangeCount = document.getElementById('date_range_count');
+
+        function updateDateRangeInfo() {
+            if (dateFromInput && dateToInput && dateRangeInfo && dateRangeCount) {
+                const dateFrom = new Date(dateFromInput.value);
+                const dateTo = new Date(dateToInput.value);
+
+                if (dateFromInput.value && dateToInput.value && dateFrom <= dateTo) {
+                    // Calculate number of weekdays in range
+                    let count = 0;
+                    const currentDate = new Date(dateFrom);
+                    while (currentDate <= dateTo) {
+                        const dayOfWeek = currentDate.getDay();
+                        // Exclude weekends (Saturday = 6, Sunday = 0)
+                        if (dayOfWeek !== 0 && dayOfWeek !== 6) {
+                            count++;
+                        }
+                        currentDate.setDate(currentDate.getDate() + 1);
+                    }
+                    dateRangeCount.textContent = count;
+                    dateRangeInfo.classList.remove('hidden');
+                } else {
+                    dateRangeInfo.classList.add('hidden');
+                }
+            }
+        }
+
+        if (dateFromInput && dateToInput) {
+            dateFromInput.addEventListener('change', function() {
+                // Ensure date_to is not before date_from
+                if (dateToInput.value && dateToInput.value < dateFromInput.value) {
+                    dateToInput.value = dateFromInput.value;
+                }
+                updateDateRangeInfo();
+            });
+
+            dateToInput.addEventListener('change', function() {
+                // Ensure date_to is not before date_from
+                if (dateToInput.value < dateFromInput.value) {
+                    alert('To Date must be on or after From Date.');
+                    dateToInput.value = dateFromInput.value;
+                }
+                updateDateRangeInfo();
+            });
+
+            // Initial update
+            updateDateRangeInfo();
+        }
+
         // Form validation - ensure at least one employee is selected
         const form = document.querySelector('form[action="{{ route('admin.dtr.store') }}"]');
         if (form) {
@@ -301,6 +377,24 @@
                     e.preventDefault();
                     alert('Please select at least one employee.');
                     return false;
+                }
+
+                // Validate date range
+                if (dateFromInput && dateToInput) {
+                    const dateFrom = new Date(dateFromInput.value);
+                    const dateTo = new Date(dateToInput.value);
+
+                    if (!dateFromInput.value || !dateToInput.value) {
+                        e.preventDefault();
+                        alert('Please select both From Date and To Date.');
+                        return false;
+                    }
+
+                    if (dateTo < dateFrom) {
+                        e.preventDefault();
+                        alert('To Date must be on or after From Date.');
+                        return false;
+                    }
                 }
             });
         }

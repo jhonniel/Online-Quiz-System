@@ -203,6 +203,28 @@ class DtrController extends Controller
                             $entry->setRelation('user', $leave->user);
                             $leaveEntries->push($entry);
                         }
+                    } elseif ($leave->type === 'travel') {
+                        // Travel leave: DTR records are already created when approved, so just ensure they're included
+                        // If DTR doesn't exist (shouldn't happen, but fallback), create it
+                        if (!$existingDtr) {
+                            // This shouldn't happen since travel creates DTR on approval, but fallback
+                            $entry = new Dtr([
+                                'user_id' => $leave->user_id,
+                                'date' => $day->copy(),
+                                'total_hours' => 8.0, // Default, but should use actual hours from DTR
+                                'overtime_hours' => 0,
+                                'status' => 'travel',
+                                'remarks' => 'Approved Travel Leave',
+                            ]);
+                            $entry->leave_type_label = 'Travel';
+                            $entry->setRelation('user', $leave->user);
+                            $leaveEntries->push($entry);
+                        } else {
+                            // DTR exists - ensure it's marked as travel if it's a travel leave
+                            if ($existingDtr->status !== 'travel') {
+                                $existingDtr->status = 'travel';
+                            }
+                        }
                     } else {
                         // Other leave types: create entry with 08:00 hours
                         if (!$existingDtr) {
@@ -312,7 +334,8 @@ class DtrController extends Controller
         $request->validate([
             'user_ids' => 'required|array|min:1',
             'user_ids.*' => 'required|exists:users,id',
-            'date' => 'required|date',
+            'date_from' => 'required|date',
+            'date_to' => 'required|date|after_or_equal:date_from',
             'added_time_from_note' => 'nullable|date_format:H:i',
             'total_hours' => 'required|date_format:H:i',
             // Overtime is auto-computed as (Total Hours - 8:00) when Total Hours > 8:00
@@ -322,22 +345,13 @@ class DtrController extends Controller
             'remarks' => 'nullable|string|max:1000',
         ]);
 
-        // Prevent setting 'absent' status for future dates
-        $requestDate = Carbon::parse($request->date);
-        $today = Carbon::today();
-        if ($requestDate->gt($today) && $request->status === 'absent') {
-            return redirect()->back()
-                ->withErrors(['status' => 'Cannot set absent status for future dates.'])
-                ->withInput();
-        }
-
         // Handle travel checkbox - override status if is_travel is checked
         $status = $request->status;
         if ($request->boolean('is_travel')) {
             $status = 'travel';
         }
 
-        // Convert HH:MM inputs to decimal hours (same for all employees)
+        // Convert HH:MM inputs to decimal hours (same for all employees and dates)
         $workedDecimal = 0;
         $addedDecimal = 0;
         $overtimeDecimal = 0;
@@ -361,11 +375,32 @@ class DtrController extends Controller
             ? $totalDecimal - $standardDecimal
             : 0;
 
-        // Process bulk creation for selected employees
+        // Generate date range (excluding weekends)
+        $dateFrom = Carbon::parse($request->date_from);
+        $dateTo = Carbon::parse($request->date_to);
+        $dateRange = [];
+        $currentDate = $dateFrom->copy();
+        
+        while ($currentDate->lte($dateTo)) {
+            // Skip weekends (Saturday = 6, Sunday = 0)
+            if (!$currentDate->isWeekend()) {
+                $dateRange[] = $currentDate->copy();
+            }
+            $currentDate->addDay();
+        }
+
+        if (empty($dateRange)) {
+            return redirect()->back()
+                ->withErrors(['date_from' => 'The selected date range contains only weekends. Please select a range that includes weekdays.'])
+                ->withInput();
+        }
+
+        // Process bulk creation for selected employees and date range
         $userIds = $request->user_ids;
         $created = 0;
         $skipped = [];
         $errors = [];
+        $today = Carbon::today();
 
         foreach ($userIds as $userId) {
             // Verify user is an employee
@@ -378,47 +413,55 @@ class DtrController extends Controller
                 continue;
             }
 
-            // Check if record already exists for this date
-            $existingDtr = Dtr::where('user_id', $userId)
-                ->whereDate('date', $request->date)
-                ->first();
+            foreach ($dateRange as $date) {
+                // Prevent setting 'absent' status for future dates
+                $dateStatus = $status;
+                if ($date->gt($today) && $status === 'absent') {
+                    $dateStatus = 'present'; // Change absent to present for future dates
+                }
 
-            if ($existingDtr) {
-                $skipped[] = $employee->name;
-                continue;
-            }
+                // Check if record already exists for this date
+                $existingDtr = Dtr::where('user_id', $userId)
+                    ->whereDate('date', $date->toDateString())
+                    ->first();
 
-            try {
-                Dtr::create([
-                    'user_id' => $userId,
-                    'date' => $request->date,
-                    'added_time_from_note' => $addedDecimal,
-                    'total_hours' => $totalDecimal,
-                    'overtime_hours' => $overtimeDecimal,
-                    'status' => $status,
-                    'remarks' => $request->remarks,
-                ]);
+                if ($existingDtr) {
+                    $skipped[] = "{$employee->name} on {$date->format('Y-m-d')}";
+                    continue;
+                }
 
-                // Calculate and store weekly deficit for this employee
-                $this->calculateAndStoreWeeklyDeficit($userId, Carbon::parse($request->date));
+                try {
+                    Dtr::create([
+                        'user_id' => $userId,
+                        'date' => $date->toDateString(),
+                        'added_time_from_note' => $addedDecimal,
+                        'total_hours' => $totalDecimal,
+                        'overtime_hours' => $overtimeDecimal,
+                        'status' => $dateStatus,
+                        'remarks' => $request->remarks,
+                    ]);
 
-                $created++;
-            } catch (\Exception $e) {
-                Log::error("DTR creation failed for user {$userId}: " . $e->getMessage());
-                $errors[] = "Failed to create DTR for {$employee->name}: " . $e->getMessage();
+                    // Calculate and store weekly deficit for this employee
+                    $this->calculateAndStoreWeeklyDeficit($userId, $date);
+
+                    $created++;
+                } catch (\Exception $e) {
+                    Log::error("DTR creation failed for user {$userId} on {$date->format('Y-m-d')}: " . $e->getMessage());
+                    $errors[] = "Failed to create DTR for {$employee->name} on {$date->format('Y-m-d')}: " . $e->getMessage();
+                }
             }
         }
 
         // Build success/error messages
         $messages = [];
         if ($created > 0) {
-            $messages[] = "Successfully created {$created} DTR record(s).";
+            $messages[] = "Successfully created {$created} DTR record(s) for " . count($dateRange) . " date(s).";
         }
         if (count($skipped) > 0) {
-            $messages[] = "Skipped " . count($skipped) . " employee(s) (records already exist): " . implode(', ', $skipped);
+            $messages[] = "Skipped " . count($skipped) . " record(s) (already exist): " . implode(', ', array_slice($skipped, 0, 5)) . (count($skipped) > 5 ? '...' : '');
         }
         if (count($errors) > 0) {
-            $messages[] = "Errors: " . implode(' ', $errors);
+            $messages[] = "Errors: " . implode(' ', array_slice($errors, 0, 3)) . (count($errors) > 3 ? '...' : '');
         }
 
         if ($created > 0) {

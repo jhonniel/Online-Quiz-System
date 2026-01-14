@@ -152,9 +152,9 @@ class TimeReportController extends Controller
                 // If status is 'absent', don't add any hours (treat as 0)
             }
             
-            // Add hours for approved vacation/sick leave days that don't have DTR records
+            // Add hours for approved vacation/sick/travel leave days that don't have DTR records
             foreach ($leaveDayMap as $dateKey => $leaveRequest) {
-                if (in_array($leaveRequest->type, ['vacation_leave', 'sick_leave'])) {
+                if (in_array($leaveRequest->type, ['vacation_leave', 'sick_leave', 'travel'])) {
                     // Check if this date is within the filter range and is a weekday
                     $leaveDate = Carbon::parse($dateKey);
                     if ($leaveDate->gte($weekStartDate) && $leaveDate->lte($weekEndDate)) {
@@ -222,8 +222,12 @@ class TimeReportController extends Controller
 
                     // Get hours - ensure we're getting the actual value
                     // If there's an approved vacation/sick leave but no DTR, show 8.0 hours
+                    // Travel leave should have DTR records (auto-created), but use DTR hours if available
                     if ($leave && !$dtr && in_array($leave->type, ['vacation_leave', 'sick_leave'])) {
                         $dayHours = 8.0; // Approved leave = 8 hours per day
+                    } elseif ($leave && $leave->type === 'travel') {
+                        // Travel leave: use DTR hours if exists (should always exist), otherwise fallback to 8.0
+                        $dayHours = $dtr ? (float) ($dtr->total_hours ?? 8.0) : 8.0;
                     } else {
                         $dayHours = $dtr ? (float) ($dtr->total_hours ?? 0) : 0;
                     }
@@ -243,19 +247,24 @@ class TimeReportController extends Controller
                     }
 
                     // Determine status label based on hours and presence of DTR
-                    // If on approved leave without DTR, show leave status
-                    if ($leave && !$dtr) {
+                    // Check for travel leave first (can be from DTR or leave request)
+                    if (($dtr && $dtr->status === 'travel') || ($leave && $leave->type === 'travel')) {
+                        $statusLabel = 'travel';
+                        $statusBadgeClass = 'bg-blue-100 text-blue-800';
+                        $dtrStatus = 'travel';
+                        // Get hours from DTR if exists, otherwise from leave request (should have DTR)
+                        if (!$dtr && $leave && $leave->type === 'travel') {
+                            // Travel leave should have DTR, but fallback: show 8.0 hours
+                            $dayHours = 8.0;
+                        }
+                    } elseif ($leave && !$dtr && in_array($leave->type, ['vacation_leave', 'sick_leave'])) {
+                        // If on approved vacation/sick leave without DTR, show leave status
                         $statusLabel = 'leave';
                         $statusBadgeClass = 'bg-purple-100 text-purple-800';
                         $dtrStatus = 'on_leave';
                     } elseif ($dayHours > 0) {
                         // Hours exist - determine status based on hours
-                        // Check if DTR status is travel first
-                        if ($dtr && $dtr->status === 'travel') {
-                            $statusLabel = 'travel';
-                            $statusBadgeClass = 'bg-blue-100 text-blue-800';
-                            $dtrStatus = 'travel';
-                        } elseif ($dayHours >= 8.0) {
+                        if ($dayHours >= 8.0) {
                             $statusLabel = 'completed';
                             $statusBadgeClass = 'bg-green-100 text-green-800';
                             // Use DTR status if available, otherwise set to present
@@ -307,6 +316,14 @@ class TimeReportController extends Controller
                     }
 
                     $dateKey = $currentDate->format('Y-m-d');
+                    // Set leave type label for display
+                    $leaveTypeLabelForDisplay = null;
+                    if ($leave) {
+                        $leaveTypeLabelForDisplay = $leave->type_label ?? ucfirst(str_replace('_', ' ', $leave->type));
+                    } elseif ($dtr && $dtr->status === 'travel') {
+                        $leaveTypeLabelForDisplay = 'Travel';
+                    }
+                    
                     $dailyBreakdown[] = [
                         'date' => $currentDate->copy(),
                         'dtr' => $dtr,
@@ -318,7 +335,7 @@ class TimeReportController extends Controller
                         'status_badge_class' => $statusBadgeClass,
                         'is_future' => $isFutureDate,
                         'leave' => $leave,
-                        'leave_type_label' => $leave ? ($leaveTypeLabel ?? 'Leave') : null,
+                        'leave_type_label' => $leaveTypeLabelForDisplay ?? ($leave ? ($leaveTypeLabel ?? 'Leave') : null),
                         'has_leave_request' => $hasLeaveRequest ?? false,
                     ];
                 }

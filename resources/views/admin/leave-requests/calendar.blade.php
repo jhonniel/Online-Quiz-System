@@ -100,7 +100,7 @@
                     </div>
                     <div class="space-y-1">
                         <label for="create_type" class="block text-xs font-medium text-gray-700">Type</label>
-                        <select name="type" id="create_type" required class="w-full px-2.5 py-1.5 text-xs border border-gray-300 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                        <select name="type" id="create_type" required class="w-full px-2.5 py-1.5 text-xs border border-gray-300 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500" onchange="handleLeaveTypeChange(this)">
                             <option value="">Select type</option>
                             <option value="vacation_leave">Vacation Leave</option>
                             <option value="sick_leave">Sick Leave</option>
@@ -108,7 +108,16 @@
                             <option value="absent">Absent</option>
                             <option value="overtime">Overtime</option>
                             <option value="offset">Offset</option>
+                            @if(auth()->check() && auth()->user()->isSuperAdmin())
+                                <option value="travel">Travel (Full Access Only)</option>
+                            @endif
                         </select>
+                    </div>
+                    <!-- Travel Hours Field (only shown for travel type) -->
+                    <div id="travel_hours_container" class="space-y-1 hidden">
+                        <label for="travel_hours" class="block text-xs font-medium text-gray-700">Hours per Day</label>
+                        <input type="number" name="travel_hours" id="travel_hours" min="0" max="24" step="0.5" value="8.0" class="w-full px-2.5 py-1.5 text-xs border border-gray-300 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500" placeholder="8.0">
+                        <p class="text-[10px] text-gray-500">Default: 8.0 hours per day. Can be customized.</p>
                     </div>
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
                         <div class="space-y-1">
@@ -127,7 +136,8 @@
                     <button type="submit" id="file-leave-btn" class="w-full inline-flex items-center justify-center px-3 py-1.5 text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded-md shadow focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed">
                         File Leave
                     </button>
-                    <p class="text-[11px] text-gray-500">Creates a pending request that appears on the employee account and calendar.</p>
+                    <p class="text-[11px] text-gray-500" id="form-help-text">Creates a pending request that appears on the employee account and calendar.</p>
+                    <p class="text-[11px] text-purple-600 font-medium hidden" id="travel-help-text">Travel requests are auto-approved and hours are automatically added to DTR. Past dates are allowed.</p>
                 </form>
             </div>
         </div>
@@ -489,6 +499,26 @@ function filterByDepartment(departmentId) {
     }
 
     window.location.href = '{{ route("admin.leave-requests.calendar") }}?' + newParams.toString();
+}
+
+// Handle travel leave type selection - show/hide custom hours field
+function handleLeaveTypeChange(selectElement) {
+    const travelHoursContainer = document.getElementById('travel_hours_container');
+    const travelHoursInput = document.getElementById('travel_hours');
+    const formHelpText = document.getElementById('form-help-text');
+    const travelHelpText = document.getElementById('travel-help-text');
+    
+    if (selectElement.value === 'travel') {
+        travelHoursContainer.classList.remove('hidden');
+        travelHoursInput.required = false; // Not required, defaults to 8.0
+        formHelpText.classList.add('hidden');
+        travelHelpText.classList.remove('hidden');
+    } else {
+        travelHoursContainer.classList.add('hidden');
+        travelHoursInput.required = false;
+        formHelpText.classList.remove('hidden');
+        travelHelpText.classList.add('hidden');
+    }
 }
 </script>
 @endsection

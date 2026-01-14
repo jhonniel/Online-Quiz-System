@@ -93,6 +93,7 @@ class LeaveRequest extends Model
             'overtime' => 'Overtime',
             'offset' => 'Offset',
             'additional_time' => 'Additional Time',
+            'travel' => 'Travel',
             'other' => 'Other',
             default => ucfirst(str_replace('_', ' ', $this->type)),
         };
