@@ -227,6 +227,11 @@
                                         <a href="{{ route('admin.hiring-positions.show', $application->hiringPosition) }}" class="text-indigo-600 hover:text-indigo-900">
                                             {{ $application->hiringPosition->title }}
                                         </a>
+                                        @if($application->hiringPosition->employment_type === 'Internship' && $application->school)
+                                            <div class="text-xs text-gray-500 mt-1">
+                                                <span class="font-medium">School:</span> {{ $application->school }}
+                                            </div>
+                                        @endif
                                     @else
                                         {{ $application->position_applied ?: 'Not specified' }}
                                     @endif
