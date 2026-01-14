@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\LeaveRequest;
 use App\Models\LeaveRequestLog;
 use App\Models\Dtr;
+use App\Models\DtrDeficit;
 use App\Models\Department;
 use App\Models\User;
 use App\Models\LeaveBalance;
@@ -688,6 +689,11 @@ class LeaveRequestController extends Controller
             $this->applyAdditionalTimeToDtr($leaveRequest);
         }
 
+        // If Vacation Leave or Sick Leave, automatically add 8 hours per day to DTR
+        if (in_array($leaveRequest->type, ['vacation_leave', 'sick_leave'])) {
+            $this->applyLeaveTimeToDtr($leaveRequest);
+        }
+
         // Send email notification to employee
         try {
             MailConfigService::configure();
@@ -1260,6 +1266,117 @@ class LeaveRequestController extends Controller
             $dtr->overtime_hours = max($newTotal - 8.0, 0);
 
             $dtr->save();
+        }
+    }
+
+    /**
+     * Apply vacation leave or sick leave time to DTR records.
+     * Each approved day gets 8.0 hours automatically added.
+     */
+    private function applyLeaveTimeToDtr(LeaveRequest $leaveRequest): void
+    {
+        $start = Carbon::parse($leaveRequest->start_date);
+        $end = $leaveRequest->end_date ? Carbon::parse($leaveRequest->end_date) : $start;
+        $period = CarbonPeriod::create($start, $end);
+
+        $leaveTypeLabel = $leaveRequest->type === 'vacation_leave' ? 'Vacation Leave' : 'Sick Leave';
+
+        foreach ($period as $date) {
+            $dtr = Dtr::firstOrNew([
+                'user_id' => $leaveRequest->user_id,
+                'date' => $date->toDateString(),
+            ]);
+
+            // If DTR record already exists, add 8 hours to existing total
+            // If it doesn't exist, create new record with 8.0 hours
+            if ($dtr->exists) {
+                $existingTotal = (float) ($dtr->total_hours ?? 0);
+                $newTotal = $existingTotal + 8.0; // Add 8 hours for the leave day
+                $dtr->total_hours = $newTotal;
+                $dtr->overtime_hours = max($newTotal - 8.0, 0);
+                
+                // Update remarks to include leave information
+                $existingRemarks = $dtr->remarks ?? '';
+                $leaveRemark = "Approved {$leaveTypeLabel}";
+                if (!empty($existingRemarks) && strpos($existingRemarks, $leaveRemark) === false) {
+                    $dtr->remarks = $existingRemarks . '; ' . $leaveRemark;
+                } elseif (empty($existingRemarks)) {
+                    $dtr->remarks = $leaveRemark;
+                }
+            } else {
+                // Create new DTR record with 8.0 hours for the leave day
+                $dtr->total_hours = 8.0;
+                $dtr->overtime_hours = 0;
+                $dtr->status = 'on_leave';
+                $dtr->remarks = "Approved {$leaveTypeLabel}";
+            }
+
+            $dtr->save();
+
+            // Recalculate weekly deficit after creating/updating DTR
+            $this->calculateAndStoreWeeklyDeficit($leaveRequest->user_id, $date);
+        }
+    }
+
+    /**
+     * Calculate and store weekly deficit for a user on a specific date.
+     * This matches the logic from DtrController for consistency.
+     */
+    private function calculateAndStoreWeeklyDeficit(int $userId, Carbon $date): void
+    {
+        try {
+            // Get the week start and end dates (ISO week)
+            $weekStart = $date->copy()->startOfWeek();
+            $weekEnd = $date->copy()->endOfWeek();
+            $today = Carbon::today();
+
+            // Don't calculate deficit for current week (week hasn't ended yet)
+            if ($today->lte($weekEnd)) {
+                // Current week - don't store deficit
+                return;
+            }
+
+            // Get all DTR records for this user in this week, excluding future dates
+            $weeklyDtrs = Dtr::where('user_id', $userId)
+                ->whereDate('date', '>=', $weekStart->toDateString())
+                ->whereDate('date', '<=', $weekEnd->toDateString())
+                ->whereDate('date', '<=', $today->toDateString()) // Exclude future dates
+                ->get();
+
+            // Calculate weekly total hours (only from past and today, not future)
+            $weeklyTotalHours = $weeklyDtrs->sum('total_hours');
+
+            // Calculate deficit: 40:00 (2400 minutes) - weekly total
+            $weeklyBaseHours = 40.0; // 40 hours = 40:00
+            $deficitHours = max(0, $weeklyBaseHours - $weeklyTotalHours);
+
+            // Store or update deficit record (only for completed weeks with actual deficit)
+            // If there's no deficit, delete any existing deficit record for this week
+            if ($deficitHours > 0) {
+                DtrDeficit::updateOrCreate(
+                    [
+                        'user_id' => $userId,
+                        'week_start_date' => $weekStart->toDateString(),
+                        'week_end_date' => $weekEnd->toDateString(),
+                    ],
+                    [
+                        'deficit_hours' => $deficitHours,
+                        'is_applied' => true,
+                    ]
+                );
+            } else {
+                // No deficit - delete any existing deficit record for this week
+                DtrDeficit::where('user_id', $userId)
+                    ->where('week_start_date', $weekStart->toDateString())
+                    ->where('week_end_date', $weekEnd->toDateString())
+                    ->delete();
+            }
+        } catch (\Exception $e) {
+            Log::error('Failed to calculate weekly deficit', [
+                'user_id' => $userId,
+                'date' => $date->toDateString(),
+                'error' => $e->getMessage()
+            ]);
         }
     }
 
