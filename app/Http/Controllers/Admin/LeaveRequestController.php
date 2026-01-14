@@ -550,14 +550,8 @@ class LeaveRequestController extends Controller
             }
         }
 
-        // Allow past dates for sick_leave, overtime, and travel; others must be today or future
-        $typeInput = $validated['type'];
-        if (!in_array($typeInput, ['sick_leave', 'overtime', 'travel'])) {
-            // Re-run validation for start_date with today-or-future rule
-            $request->validate([
-                'start_date' => ['required', 'date', 'after_or_equal:today'],
-            ]);
-        }
+        // Admins can file leave requests for any date (including past dates) for any leave type
+        // No date restrictions for admin-filed leave requests
 
         $startDate = Carbon::parse($validated['start_date']);
         $endDate = $validated['end_date']

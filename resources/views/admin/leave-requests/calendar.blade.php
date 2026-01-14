@@ -136,7 +136,7 @@
                     <button type="submit" id="file-leave-btn" class="w-full inline-flex items-center justify-center px-3 py-1.5 text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded-md shadow focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed">
                         File Leave
                     </button>
-                    <p class="text-[11px] text-gray-500" id="form-help-text">Creates a pending request that appears on the employee account and calendar.</p>
+                    <p class="text-[11px] text-gray-500" id="form-help-text">Creates a pending request that appears on the employee account and calendar. Admins can file leave for any date, including past dates.</p>
                     <p class="text-[11px] text-purple-600 font-medium hidden" id="travel-help-text">Travel requests are auto-approved and hours are automatically added to DTR. Past dates are allowed.</p>
                 </form>
             </div>
