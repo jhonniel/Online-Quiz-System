@@ -141,6 +141,7 @@ class TimeReportController extends Controller
             // Calculate total hours from all DTR records
             // Note: Absent days should have total_hours = 0, so they won't contribute to totalHours
             // Missing DTR records for past weekdays are also treated as 0 hours (absent)
+            // Approved vacation/sick leave without DTR records contribute 8.0 hours per day
             $totalHours = 0;
             foreach ($dtrs as $dtr) {
                 // Only count hours for non-absent records
@@ -149,6 +150,26 @@ class TimeReportController extends Controller
                     $totalHours += (float) ($dtr->total_hours ?? 0);
                 }
                 // If status is 'absent', don't add any hours (treat as 0)
+            }
+            
+            // Add hours for approved vacation/sick leave days that don't have DTR records
+            foreach ($leaveDayMap as $dateKey => $leaveRequest) {
+                if (in_array($leaveRequest->type, ['vacation_leave', 'sick_leave'])) {
+                    // Check if this date is within the filter range and is a weekday
+                    $leaveDate = Carbon::parse($dateKey);
+                    if ($leaveDate->gte($weekStartDate) && $leaveDate->lte($weekEndDate)) {
+                        $dayOfWeek = $leaveDate->dayOfWeek;
+                        // Only count weekdays (Monday-Friday)
+                        if ($dayOfWeek !== Carbon::SATURDAY && $dayOfWeek !== Carbon::SUNDAY) {
+                            // Check if DTR record exists for this date
+                            $hasDtr = isset($dtrMap[$dateKey]);
+                            if (!$hasDtr) {
+                                // No DTR record exists, add 8.0 hours for approved leave
+                                $totalHours += 8.0;
+                            }
+                        }
+                    }
+                }
             }
 
             // Determine if this is a single week filter or custom date range
@@ -200,7 +221,12 @@ class TimeReportController extends Controller
                     $leaveTypeLabel = $leave ? ($leave->type_label ?? ucfirst(str_replace('_', ' ', $leave->type))) : null;
 
                     // Get hours - ensure we're getting the actual value
-                    $dayHours = $dtr ? (float) ($dtr->total_hours ?? 0) : 0;
+                    // If there's an approved vacation/sick leave but no DTR, show 8.0 hours
+                    if ($leave && !$dtr && in_array($leave->type, ['vacation_leave', 'sick_leave'])) {
+                        $dayHours = 8.0; // Approved leave = 8 hours per day
+                    } else {
+                        $dayHours = $dtr ? (float) ($dtr->total_hours ?? 0) : 0;
+                    }
 
                     // Calculate overtime based on filter type
                     if ($isSingleWeek) {
