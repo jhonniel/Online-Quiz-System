@@ -28,6 +28,11 @@ class AppServiceProvider extends ServiceProvider
         
         // Register dynamic hiring application route based on admin settings
         $this->registerHiringApplicationRoute();
+        
+        // Route model binding for DtrTimeRequest
+        Route::bind('dtrTimeRequest', function ($value) {
+            return \App\Models\DtrTimeRequest::findOrFail($value);
+        });
     }
 
     /**

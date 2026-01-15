@@ -57,7 +57,7 @@
 
     <!-- Filters -->
     <div class="bg-white rounded-lg shadow border border-gray-200 p-4 sm:p-6">
-        <form method="GET" action="{{ route('admin.student-management.time-requests.index') }}" class="space-y-4">
+        <form method="GET" action="{{ route('admin.time-requests.index') }}" class="space-y-4">
             <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
                 <div>
                     <label for="status" class="block text-sm font-medium text-gray-700 mb-2">Status</label>
@@ -276,7 +276,7 @@
 function openApproveModal(requestId) {
     const modal = document.getElementById('approve-modal');
     const form = document.getElementById('approve-form');
-    form.action = `/admin/student-management/time-requests/${requestId}/approve`;
+    form.action = `/admin/time-requests/${requestId}/approve`;
     modal.classList.remove('hidden');
 }
 
@@ -289,7 +289,7 @@ function closeApproveModal() {
 function openRejectModal(requestId) {
     const modal = document.getElementById('reject-modal');
     const form = document.getElementById('reject-form');
-    form.action = `/admin/student-management/time-requests/${requestId}/reject`;
+    form.action = `/admin/time-requests/${requestId}/reject`;
     modal.classList.remove('hidden');
 }
 

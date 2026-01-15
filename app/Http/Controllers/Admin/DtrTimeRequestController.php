@@ -18,6 +18,10 @@ class DtrTimeRequestController extends Controller
     {
         $user = Auth::user();
         
+        if (!$user) {
+            abort(403, 'Authentication required.');
+        }
+        
         // Only super admins or admins with student_management permission can access
         if (!$user->isSuperAdmin() && !$user->canAccessStudentManagement()) {
             abort(403, 'Access denied. Only super admins or admins with student management permission can access time requests.');

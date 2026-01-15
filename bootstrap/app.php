@@ -43,23 +43,24 @@ return Application::configure(basePath: dirname(__DIR__))
 
         // Render all 500 errors as "Page Not Found" to users (but still log them)
         $exceptions->render(function (\Throwable $e, $request) {
-            // Only handle 500 errors (server errors)
-            $statusCode = 500;
+            // Skip HTTP exceptions that are not 500 (like 403, 404, etc.)
             if ($e instanceof \Symfony\Component\HttpKernel\Exception\HttpExceptionInterface) {
                 $statusCode = $e->getStatusCode();
-            }
-            
-            // If it's a 500 error, show "Page Not Found" instead
-            if ($statusCode === 500) {
-                if ($request->expectsJson()) {
-                    return response()->json(['error' => 'Page not found'], 404);
+                // Don't convert 403, 404, etc. - let them show normally
+                if ($statusCode !== 500) {
+                    return null;
                 }
-                
-                // Return 404 view but keep 500 status for logging
-                return response()->view('errors.404', ['exception' => $e], 404);
             }
             
-            return null; // Let Laravel handle other errors normally
+            // For non-HTTP exceptions (which are treated as 500), show "Page Not Found"
+            // This catches all server errors (500) and unhandled exceptions
+            // Only convert actual 500 errors, not 403/404
+            if ($request->expectsJson()) {
+                return response()->json(['error' => 'Page not found'], 404);
+            }
+            
+            // Return 404 view but the error is still logged with 500 status
+            return response()->view('errors.404', ['exception' => $e], 404);
         });
 
         // Log HTTP and server errors into error_logs table

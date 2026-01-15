@@ -200,9 +200,9 @@ Route::prefix('admin')->middleware(['auth', 'admin'])->group(function () {
     
     // Student Time Requests Management (Super Admin only, or admins with student_management permission)
     // Access is checked in the controller, not via middleware
-    Route::get('/student-management/time-requests', [App\Http\Controllers\Admin\DtrTimeRequestController::class, 'index'])->name('admin.student-management.time-requests.index');
-    Route::post('/student-management/time-requests/{dtrTimeRequest}/approve', [App\Http\Controllers\Admin\DtrTimeRequestController::class, 'approve'])->name('admin.student-management.time-requests.approve');
-    Route::post('/student-management/time-requests/{dtrTimeRequest}/reject', [App\Http\Controllers\Admin\DtrTimeRequestController::class, 'reject'])->name('admin.student-management.time-requests.reject');
+    Route::get('/time-requests', [App\Http\Controllers\Admin\DtrTimeRequestController::class, 'index'])->name('admin.time-requests.index');
+    Route::post('/time-requests/{dtrTimeRequest}/approve', [App\Http\Controllers\Admin\DtrTimeRequestController::class, 'approve'])->name('admin.time-requests.approve');
+    Route::post('/time-requests/{dtrTimeRequest}/reject', [App\Http\Controllers\Admin\DtrTimeRequestController::class, 'reject'])->name('admin.time-requests.reject');
 
     // Hiring Process Management
     Route::middleware(['admin.permission:hiring_process'])->group(function () {
