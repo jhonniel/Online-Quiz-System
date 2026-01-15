@@ -23,10 +23,10 @@ class DtrTimeRequestController extends Controller
         }
 
         $validated = $request->validate([
-            'date_from' => 'required|date',
-            'date_to' => 'required|date|after_or_equal:date_from',
+            'date_from' => 'required|date|before_or_equal:today',
+            'date_to' => 'required|date|after_or_equal:date_from|before_or_equal:today',
             'days' => 'required|array|min:1',
-            'days.*.date' => 'required|date',
+            'days.*.date' => 'required|date|before_or_equal:today',
             'days.*.time' => 'required|date_format:H:i',
             'remarks' => 'nullable|string|max:1000',
         ]);
@@ -50,8 +50,16 @@ class DtrTimeRequestController extends Controller
         $skippedCount = 0;
         $errors = [];
 
+        $today = Carbon::today()->startOfDay();
+        
         foreach ($validated['days'] as $index => $day) {
-            $date = Carbon::parse($day['date']);
+            $date = Carbon::parse($day['date'])->startOfDay();
+            
+            // Validate date is not in the future (compare dates only, not time)
+            if ($date->gt($today)) {
+                $errors[] = "Date {$day['date']} cannot be in the future. Only past and today's dates are allowed.";
+                continue;
+            }
             
             // Convert time (HH:MM) to decimal hours
             $timeParts = explode(':', $day['time']);

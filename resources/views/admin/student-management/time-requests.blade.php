@@ -127,8 +127,14 @@
                             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                                 {{ $request->date->format('M d, Y') }}
                             </td>
-                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                {{ number_format($request->hours, 2) }} hrs
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900" style="font-family: monospace;">
+                                @php
+                                    $totalMinutes = (int) round($request->hours * 60);
+                                    $hours = intdiv($totalMinutes, 60);
+                                    $minutes = $totalMinutes % 60;
+                                    $formattedTime = sprintf('%02d:%02d', $hours, $minutes);
+                                @endphp
+                                {{ $formattedTime }}
                             </td>
                             <td class="px-6 py-4 text-sm text-gray-500">
                                 {{ $request->remarks ?: '-' }}

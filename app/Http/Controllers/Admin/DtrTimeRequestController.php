@@ -16,6 +16,13 @@ class DtrTimeRequestController extends Controller
      */
     public function index(Request $request)
     {
+        $user = Auth::user();
+        
+        // Only super admins or admins with student_management permission can access
+        if (!$user->isSuperAdmin() && !$user->canAccessStudentManagement()) {
+            abort(403, 'Access denied. Only super admins or admins with student management permission can access time requests.');
+        }
+        
         $query = DtrTimeRequest::with(['user', 'reviewer'])
             ->whereHas('user', function ($q) {
                 $q->where('role', 'student');
@@ -56,6 +63,13 @@ class DtrTimeRequestController extends Controller
      */
     public function approve(Request $request, DtrTimeRequest $dtrTimeRequest)
     {
+        $user = Auth::user();
+        
+        // Only super admins or admins with student_management permission can approve
+        if (!$user->isSuperAdmin() && !$user->canAccessStudentManagement()) {
+            abort(403, 'Access denied. Only super admins or admins with student management permission can approve time requests.');
+        }
+        
         if ($dtrTimeRequest->status !== 'pending') {
             return back()->withErrors(['error' => 'This request has already been processed.']);
         }
@@ -100,6 +114,13 @@ class DtrTimeRequestController extends Controller
      */
     public function reject(Request $request, DtrTimeRequest $dtrTimeRequest)
     {
+        $user = Auth::user();
+        
+        // Only super admins or admins with student_management permission can reject
+        if (!$user->isSuperAdmin() && !$user->canAccessStudentManagement()) {
+            abort(403, 'Access denied. Only super admins or admins with student management permission can reject time requests.');
+        }
+        
         if ($dtrTimeRequest->status !== 'pending') {
             return back()->withErrors(['error' => 'This request has already been processed.']);
         }

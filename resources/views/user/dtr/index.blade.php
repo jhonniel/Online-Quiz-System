@@ -422,9 +422,10 @@ document.addEventListener('DOMContentLoaded', function() {
                                name="date_from" 
                                id="attendance_date_from" 
                                required
+                               max="{{ date('Y-m-d') }}"
                                min="{{ request('date_from') ?: '' }}"
-                               max="{{ request('date_to') ?: '' }}"
                                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                        <p class="mt-1 text-xs text-gray-500">Cannot select future dates</p>
                         @error('date_from')
                             <p class="mt-1 text-xs text-red-600">{{ $message }}</p>
                         @enderror
@@ -436,10 +437,10 @@ document.addEventListener('DOMContentLoaded', function() {
                                name="date_to" 
                                id="attendance_date_to" 
                                required
+                               max="{{ date('Y-m-d') }}"
                                min="{{ request('date_from') ?: '' }}"
-                               max="{{ request('date_to') ?: '' }}"
                                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
-                        <p class="mt-1 text-xs text-gray-500">Date range must be within the selected filter range</p>
+                        <p class="mt-1 text-xs text-gray-500">Date range must be within the selected filter range and cannot be in the future</p>
                         @error('date_to')
                             <p class="mt-1 text-xs text-red-600">{{ $message }}</p>
                         @enderror
@@ -510,11 +511,24 @@ function updateDaysList() {
         return;
     }
     
-    const from = new Date(dateFrom);
-    const to = new Date(dateTo);
+    const from = new Date(dateFrom + 'T00:00:00');
+    const to = new Date(dateTo + 'T00:00:00');
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
     
-    if (from > to) {
+    // Normalize dates to compare only date part (ignore time)
+    const fromDateOnly = new Date(from.getFullYear(), from.getMonth(), from.getDate());
+    const toDateOnly = new Date(to.getFullYear(), to.getMonth(), to.getDate());
+    const todayDateOnly = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+    
+    if (fromDateOnly > toDateOnly) {
         container.innerHTML = '<p class="text-sm text-red-500 text-center">Date From must be before Date To</p>';
+        return;
+    }
+    
+    // Check if any date is in the future (using date-only comparison)
+    if (fromDateOnly > todayDateOnly || toDateOnly > todayDateOnly) {
+        container.innerHTML = '<p class="text-sm text-red-500 text-center">Cannot select future dates. Only past and today\'s dates are allowed.</p>';
         return;
     }
     
@@ -591,16 +605,17 @@ document.addEventListener('DOMContentLoaded', function() {
     // Set default dates if filter range exists
     const filterFrom = '{{ request("date_from") }}';
     const filterTo = '{{ request("date_to") }}';
+    const today = new Date().toISOString().split('T')[0];
     
     if (filterFrom && filterTo && dateFromInput && dateToInput) {
-        const today = new Date().toISOString().split('T')[0];
-        if (today >= filterFrom && today <= filterTo) {
-            dateFromInput.value = today;
-            dateToInput.value = today;
-        } else {
-            dateFromInput.value = filterFrom;
-            dateToInput.value = filterFrom;
-        }
+        // Use today if within filter range, otherwise use filterFrom (but not future)
+        const defaultDate = (today >= filterFrom && today <= filterTo) ? today : filterFrom;
+        dateFromInput.value = defaultDate;
+        dateToInput.value = defaultDate;
+    } else if (dateFromInput && dateToInput) {
+        // If no filter, default to today
+        dateFromInput.value = today;
+        dateToInput.value = today;
     }
 });
 
