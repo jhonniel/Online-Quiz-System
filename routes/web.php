@@ -196,6 +196,11 @@ Route::prefix('admin')->middleware(['auth', 'admin'])->group(function () {
         Route::get('/student-leave-requests', [App\Http\Controllers\Admin\LeaveRequestController::class, 'studentIndex'])->name('admin.student-leave-requests.index');
         Route::get('/student-leave-calendar', [App\Http\Controllers\Admin\LeaveRequestController::class, 'studentCalendar'])->name('admin.student-leave-requests.calendar');
         Route::post('/student-leave-requests/create-for-student', [App\Http\Controllers\Admin\LeaveRequestController::class, 'storeForStudent'])->name('admin.student-leave-requests.store-for-student');
+        
+        // Student Time Requests Management
+        Route::get('/student-management/time-requests', [App\Http\Controllers\Admin\DtrTimeRequestController::class, 'index'])->name('admin.student-management.time-requests.index');
+        Route::post('/student-management/time-requests/{dtrTimeRequest}/approve', [App\Http\Controllers\Admin\DtrTimeRequestController::class, 'approve'])->name('admin.student-management.time-requests.approve');
+        Route::post('/student-management/time-requests/{dtrTimeRequest}/reject', [App\Http\Controllers\Admin\DtrTimeRequestController::class, 'reject'])->name('admin.student-management.time-requests.reject');
     });
 
     // Hiring Process Management
@@ -354,6 +359,9 @@ Route::middleware(['auth'])->group(function () {
     // DTR (Employee Only)
     Route::get('/dtr', [App\Http\Controllers\User\DtrController::class, 'index'])->name('user.dtr.index');
     Route::get('/dtr/export-pdf', [App\Http\Controllers\User\DtrController::class, 'exportPdf'])->name('user.dtr.export-pdf');
+    
+    // Student Time Requests
+    Route::post('/dtr-time-requests', [App\Http\Controllers\User\DtrTimeRequestController::class, 'store'])->name('user.dtr-time-requests.store');
 
     Route::resource('leave-requests', App\Http\Controllers\User\LeaveRequestController::class)->names('user.leave-requests');
 

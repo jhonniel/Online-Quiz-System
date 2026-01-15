@@ -101,18 +101,29 @@
     <!-- DTR Table -->
     <div class="bg-white rounded-lg shadow border border-gray-200 overflow-hidden flex-1 flex flex-col mx-2 sm:mx-3 lg:mx-4 xl:mx-6 mt-4 mb-4">
         <div class="px-4 sm:px-6 py-4 border-b border-gray-200 bg-gray-50">
-            <div class="flex items-center justify-between">
+            <div class="flex items-center justify-between flex-wrap gap-3">
                 <div>
                     <h2 class="text-lg font-semibold text-gray-900">Time Records</h2>
                     <p class="text-sm text-gray-600 mt-1">Total records: {{ $totalRecords }}</p>
                 </div>
-                <a href="{{ route('user.dtr.export-pdf', request()->query()) }}"
-                   class="inline-flex items-center px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors text-sm font-medium">
-                    <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
-                    </svg>
-                    Generate PDF
-                </a>
+                <div class="flex items-center gap-3">
+                    @if(auth()->user()->role === 'student')
+                        <button onclick="openRecordAttendanceModal()"
+                                class="inline-flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm font-medium">
+                            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+                            </svg>
+                            Record Attendance
+                        </button>
+                    @endif
+                    <a href="{{ route('user.dtr.export-pdf', request()->query()) }}"
+                       class="inline-flex items-center px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors text-sm font-medium">
+                        <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                        </svg>
+                        Generate PDF
+                    </a>
+                </div>
             </div>
         </div>
 
@@ -287,11 +298,28 @@
                                                 $deficitH = intdiv($deficitMinutes, 60);
                                                 $deficitM = $deficitMinutes % 60;
                                                 $deficitFormatted = sprintf('%02d:%02d', $deficitH, $deficitM);
+                                                $isWeekComplete = $deficitMinutes == 0;
                                             @endphp
                                             <tr>
                                                 <td colspan="3" class="px-3 sm:px-6 py-3 text-right text-sm font-bold text-gray-900">Weekly Total:</td>
-                                                <td class="px-3 sm:px-6 py-3 text-sm font-bold text-gray-900">{{ $weeklyTotalFormatted }}</td>
-                                                <td class="px-3 sm:px-6 py-3 text-sm font-bold text-orange-600">{{ $weeklyOvertimeFormatted }}</td>
+                                                <td class="px-3 sm:px-6 py-3 text-sm font-bold text-gray-900">
+                                                    @if($isWeekComplete)
+                                                        <svg class="w-5 h-5 text-green-600 inline-block" fill="currentColor" viewBox="0 0 20 20">
+                                                            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+                                                        </svg>
+                                                    @else
+                                                        {{ $weeklyTotalFormatted }}
+                                                    @endif
+                                                </td>
+                                                <td class="px-3 sm:px-6 py-3 text-sm font-bold text-orange-600">
+                                                    @if($isWeekComplete)
+                                                        <svg class="w-5 h-5 text-green-600 inline-block" fill="currentColor" viewBox="0 0 20 20">
+                                                            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+                                                        </svg>
+                                                    @else
+                                                        {{ $weeklyOvertimeFormatted }}
+                                                    @endif
+                                                </td>
                                                 <td colspan="2" class="px-3 sm:px-6 py-3 text-sm text-gray-600">
                                                     @if($deficitMinutes > 0)
                                                         Deficit: {{ $deficitFormatted }}
@@ -367,6 +395,246 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 });
 </script>
+
+@if(auth()->user()->role === 'student')
+<!-- Record Attendance Modal -->
+<div id="record-attendance-modal" class="hidden fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
+    <div class="relative top-10 mx-auto p-5 border w-11/12 md:w-3/4 lg:w-2/3 shadow-lg rounded-md bg-white max-h-[90vh] overflow-y-auto">
+        <div class="flex items-center justify-between mb-4">
+            <h3 class="text-lg font-bold text-gray-900">Record Attendance</h3>
+            <button onclick="closeRecordAttendanceModal()" class="text-gray-400 hover:text-gray-600">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                </svg>
+            </button>
+        </div>
+
+        <form action="{{ route('user.dtr-time-requests.store') }}" method="POST" id="record-attendance-form">
+            @csrf
+            <input type="hidden" name="filter_date_from" value="{{ request('date_from') }}">
+            <input type="hidden" name="filter_date_to" value="{{ request('date_to') }}">
+
+            <div class="space-y-4">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label for="attendance_date_from" class="block text-sm font-medium text-gray-700 mb-2">Date From</label>
+                        <input type="date" 
+                               name="date_from" 
+                               id="attendance_date_from" 
+                               required
+                               min="{{ request('date_from') ?: '' }}"
+                               max="{{ request('date_to') ?: '' }}"
+                               class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                        @error('date_from')
+                            <p class="mt-1 text-xs text-red-600">{{ $message }}</p>
+                        @enderror
+                    </div>
+
+                    <div>
+                        <label for="attendance_date_to" class="block text-sm font-medium text-gray-700 mb-2">Date To</label>
+                        <input type="date" 
+                               name="date_to" 
+                               id="attendance_date_to" 
+                               required
+                               min="{{ request('date_from') ?: '' }}"
+                               max="{{ request('date_to') ?: '' }}"
+                               class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                        <p class="mt-1 text-xs text-gray-500">Date range must be within the selected filter range</p>
+                        @error('date_to')
+                            <p class="mt-1 text-xs text-red-600">{{ $message }}</p>
+                        @enderror
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Hours per Day</label>
+                    <div id="days-container" class="space-y-2 max-h-64 overflow-y-auto border border-gray-200 rounded-lg p-3">
+                        <p class="text-sm text-gray-500 text-center">Select a date range to see days</p>
+                    </div>
+                </div>
+
+                <div>
+                    <label for="attendance_remarks" class="block text-sm font-medium text-gray-700 mb-2">Remarks (Optional)</label>
+                    <textarea name="remarks" 
+                              id="attendance_remarks" 
+                              rows="3"
+                              maxlength="1000"
+                              class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"></textarea>
+                    <p class="mt-1 text-xs text-gray-500">Add any additional notes about this attendance</p>
+                    @error('remarks')
+                        <p class="mt-1 text-xs text-red-600">{{ $message }}</p>
+                    @enderror
+                </div>
+            </div>
+
+            <div class="mt-6 flex justify-end gap-3">
+                <button type="button" 
+                        onclick="closeRecordAttendanceModal()"
+                        class="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors">
+                    Cancel
+                </button>
+                <button type="submit" 
+                        class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors">
+                    Submit Request
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+function openRecordAttendanceModal() {
+    const modal = document.getElementById('record-attendance-modal');
+    if (modal) {
+        modal.classList.remove('hidden');
+        updateDaysList();
+    }
+}
+
+function closeRecordAttendanceModal() {
+    const modal = document.getElementById('record-attendance-modal');
+    if (modal) {
+        modal.classList.add('hidden');
+        document.getElementById('record-attendance-form').reset();
+        document.getElementById('days-container').innerHTML = '<p class="text-sm text-gray-500 text-center">Select a date range to see days</p>';
+    }
+}
+
+function updateDaysList() {
+    const dateFrom = document.getElementById('attendance_date_from').value;
+    const dateTo = document.getElementById('attendance_date_to').value;
+    const container = document.getElementById('days-container');
+    
+    if (!dateFrom || !dateTo) {
+        container.innerHTML = '<p class="text-sm text-gray-500 text-center">Please select both date from and date to</p>';
+        return;
+    }
+    
+    const from = new Date(dateFrom);
+    const to = new Date(dateTo);
+    
+    if (from > to) {
+        container.innerHTML = '<p class="text-sm text-red-500 text-center">Date From must be before Date To</p>';
+        return;
+    }
+    
+    // Get filter range
+    const filterFrom = '{{ request("date_from") }}';
+    const filterTo = '{{ request("date_to") }}';
+    
+    if (filterFrom && filterTo) {
+        const filterFromDate = new Date(filterFrom);
+        const filterToDate = new Date(filterTo);
+        
+        if (from < filterFromDate || to > filterToDate) {
+            container.innerHTML = '<p class="text-sm text-red-500 text-center">Date range must be within the selected filter range</p>';
+            return;
+        }
+    }
+    
+    // Generate days list
+    let html = '';
+    const currentDate = new Date(from);
+    let dayIndex = 0;
+    
+    while (currentDate <= to) {
+        const dateStr = currentDate.toISOString().split('T')[0];
+        const dayName = currentDate.toLocaleDateString('en-US', { weekday: 'short' });
+        const dayNum = currentDate.getDate();
+        const monthName = currentDate.toLocaleDateString('en-US', { month: 'short' });
+        
+        html += `
+            <div class="flex items-center gap-3 p-2 bg-gray-50 rounded border border-gray-200">
+                <div class="w-24 text-sm font-medium text-gray-700">
+                    ${dayName}, ${monthName} ${dayNum}
+                </div>
+                <input type="date" 
+                       name="days[${dayIndex}][date]" 
+                       value="${dateStr}" 
+                       hidden>
+                <input type="text" 
+                       name="days[${dayIndex}][time]" 
+                       value="08:00"
+                       pattern="^([0-1][0-9]|2[0-3]):[0-5][0-9]$"
+                       placeholder="08:00"
+                       maxlength="5"
+                       required
+                       class="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                       style="font-family: monospace; text-align: center;"
+                       oninput="formatTimeInput(this)">
+            </div>
+        `;
+        
+        currentDate.setDate(currentDate.getDate() + 1);
+        dayIndex++;
+    }
+    
+    if (html === '') {
+        container.innerHTML = '<p class="text-sm text-gray-500 text-center">No days in range</p>';
+    } else {
+        container.innerHTML = html;
+    }
+}
+
+// Add event listeners
+document.addEventListener('DOMContentLoaded', function() {
+    const dateFromInput = document.getElementById('attendance_date_from');
+    const dateToInput = document.getElementById('attendance_date_to');
+    
+    if (dateFromInput) {
+        dateFromInput.addEventListener('change', updateDaysList);
+    }
+    if (dateToInput) {
+        dateToInput.addEventListener('change', updateDaysList);
+    }
+    
+    // Set default dates if filter range exists
+    const filterFrom = '{{ request("date_from") }}';
+    const filterTo = '{{ request("date_to") }}';
+    
+    if (filterFrom && filterTo && dateFromInput && dateToInput) {
+        const today = new Date().toISOString().split('T')[0];
+        if (today >= filterFrom && today <= filterTo) {
+            dateFromInput.value = today;
+            dateToInput.value = today;
+        } else {
+            dateFromInput.value = filterFrom;
+            dateToInput.value = filterFrom;
+        }
+    }
+});
+
+// Format time input to HH:MM format
+function formatTimeInput(input) {
+    let value = input.value.replace(/[^\d]/g, ''); // Remove non-digits
+    
+    if (value.length >= 2) {
+        value = value.substring(0, 2) + ':' + value.substring(2, 4);
+    }
+    
+    // Validate hours (00-23) and minutes (00-59)
+    const parts = value.split(':');
+    if (parts.length === 2) {
+        let hours = parseInt(parts[0]) || 0;
+        let minutes = parseInt(parts[1]) || 0;
+        
+        if (hours > 23) hours = 23;
+        if (minutes > 59) minutes = 59;
+        
+        value = String(hours).padStart(2, '0') + ':' + String(minutes).padStart(2, '0');
+    }
+    
+    input.value = value;
+}
+
+// Close modal when clicking outside
+document.getElementById('record-attendance-modal')?.addEventListener('click', function(e) {
+    if (e.target === this) {
+        closeRecordAttendanceModal();
+    }
+});
+</script>
+@endif
 @endsection
 
 

@@ -78,11 +78,34 @@
             <tbody>
                 @foreach($week['records'] as $dtr)
                     @php
+                        // Determine status first
+                        if ($dtr->status === 'travel') {
+                            $statusLabel = 'Travel';
+                            $isCompleted = false;
+                        } elseif ($dtr->status === 'on_leave') {
+                            $statusLabel = 'On Leave';
+                            $isCompleted = false;
+                        } elseif ($dtr->status === 'absent') {
+                            $statusLabel = 'Absent';
+                            $isCompleted = false;
+                        } else {
+                            $totalMinutesForStatus = (int) round(($dtr->total_hours ?? 0) * 60);
+                            if ($totalMinutesForStatus < 480) {
+                                $statusLabel = 'Under Time';
+                                $isCompleted = false;
+                            } else {
+                                $statusLabel = 'Completed';
+                                $isCompleted = true;
+                            }
+                        }
+
+                        // Calculate time values
                         $workedHours = max(($dtr->total_hours ?? 0) - ($dtr->added_time_from_note ?? 0), 0);
                         $workedMinutes = (int) round($workedHours * 60);
                         $workedH = intdiv($workedMinutes, 60);
                         $workedM = $workedMinutes % 60;
                         $workedFormatted = sprintf('%02d:%02d', $workedH, $workedM);
+                        $workedOver8Hours = $workedMinutes > 480; // 8 hours = 480 minutes
 
                         $extraMinutes = (int) round(($dtr->added_time_from_note ?? 0) * 60);
                         $extraH = intdiv($extraMinutes, 60);
@@ -93,37 +116,46 @@
                         $totalH = intdiv($totalMinutes, 60);
                         $totalM = $totalMinutes % 60;
                         $totalFormatted = sprintf('%02d:%02d', $totalH, $totalM);
+                        $totalOver8Hours = $totalMinutes > 480; // 8 hours = 480 minutes
 
                         $otMinutes = (int) round(($dtr->overtime_hours ?? 0) * 60);
                         $otH = intdiv($otMinutes, 60);
                         $otM = $otMinutes % 60;
                         $otFormatted = sprintf('%02d:%02d', $otH, $otM);
 
-                        // Status logic
-                        if ($dtr->status === 'travel') {
-                            $statusLabel = 'Travel';
-                        } elseif ($dtr->status === 'on_leave') {
-                            $statusLabel = 'On Leave';
-                        } elseif ($dtr->status === 'absent') {
-                            $statusLabel = 'Absent';
-                        } else {
-                            $totalMinutesForStatus = (int) round(($dtr->total_hours ?? 0) * 60);
-                            if ($totalMinutesForStatus < 480) {
-                                $statusLabel = 'Under Time';
-                            } else {
-                                $statusLabel = 'Completed';
-                            }
-                        }
-
                         $remarks = $dtr->remarks ?: '-';
                     @endphp
                     <tr>
                         <td>{{ $dtr->date->format('M d, Y') }}</td>
                         <td>{{ $dtr->date->format('D') }}</td>
-                        <td class="right">{{ $workedMinutes > 0 ? $workedFormatted : '00:00' }}</td>
-                        <td class="right">{{ $extraMinutes > 0 ? $extraFormatted : '00:00' }}</td>
-                        <td class="right">{{ $totalMinutes > 0 ? $totalFormatted : '00:00' }}</td>
-                        <td class="right">{{ $otMinutes > 0 ? $otFormatted : '00:00' }}</td>
+                        <td class="right">
+                            @if($isCompleted || $workedOver8Hours)
+                                ✓
+                            @else
+                                {{ $workedMinutes > 0 ? $workedFormatted : '00:00' }}
+                            @endif
+                        </td>
+                        <td class="right">
+                            @if($isCompleted || $extraMinutes > 0)
+                                ✓
+                            @else
+                                -
+                            @endif
+                        </td>
+                        <td class="right">
+                            @if($isCompleted || $totalOver8Hours)
+                                ✓
+                            @else
+                                {{ $totalMinutes > 0 ? $totalFormatted : '00:00' }}
+                            @endif
+                        </td>
+                        <td class="right">
+                            @if($isCompleted || $otMinutes > 0)
+                                ✓
+                            @else
+                                -
+                            @endif
+                        </td>
                         <td class="center">{{ $statusLabel }}</td>
                         <td>{{ $remarks }}</td>
                     </tr>
