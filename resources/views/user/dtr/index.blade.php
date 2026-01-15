@@ -157,78 +157,101 @@
                                         </thead>
                                         <tbody class="bg-white divide-y divide-gray-200">
                                             @foreach($week['records'] as $dtr)
+                                                @php
+                                                    // Determine status first
+                                                    if ($dtr->status === 'absent') {
+                                                        $statusLabel = 'Absent';
+                                                        $statusClass = 'bg-red-100 text-red-800';
+                                                        $isCompleted = false;
+                                                    } elseif ($dtr->status === 'on_leave') {
+                                                        $statusLabel = 'Leave';
+                                                        $statusClass = 'bg-purple-100 text-purple-800';
+                                                        $isCompleted = false;
+                                                    } elseif ($dtr->status === 'travel') {
+                                                        $statusLabel = 'Travel';
+                                                        $statusClass = 'bg-blue-100 text-blue-800';
+                                                        $isCompleted = false;
+                                                    } else {
+                                                        $totalMinutesForStatus = (int) round(($dtr->total_hours ?? 0) * 60);
+                                                        if ($totalMinutesForStatus < 480) {
+                                                            $statusLabel = 'Under Time';
+                                                            $statusClass = 'bg-yellow-100 text-yellow-800';
+                                                            $isCompleted = false;
+                                                        } else {
+                                                            $statusLabel = 'Completed';
+                                                            $statusClass = 'bg-green-100 text-green-800';
+                                                            $isCompleted = true;
+                                                        }
+                                                    }
+                                                    
+                                                    // Calculate time values
+                                                    $workedHours = max(($dtr->total_hours ?? 0) - ($dtr->added_time_from_note ?? 0), 0);
+                                                    $workedMinutes = (int) round($workedHours * 60);
+                                                    $workedH = intdiv($workedMinutes, 60);
+                                                    $workedM = $workedMinutes % 60;
+                                                    $workedFormatted = sprintf('%02d:%02d', $workedH, $workedM);
+                                                    $workedOver8Hours = $workedMinutes > 480; // 8 hours = 480 minutes
+                                                    
+                                                    $extraMinutes = (int) round(($dtr->added_time_from_note ?? 0) * 60);
+                                                    
+                                                    $totalMinutes = (int) round(($dtr->total_hours ?? 0) * 60);
+                                                    $totalH = intdiv($totalMinutes, 60);
+                                                    $totalM = $totalMinutes % 60;
+                                                    $totalFormatted = sprintf('%02d:%02d', $totalH, $totalM);
+                                                    $totalOver8Hours = $totalMinutes > 480; // 8 hours = 480 minutes
+                                                    
+                                                    $otMinutes = (int) round(($dtr->overtime_hours ?? 0) * 60);
+                                                @endphp
                                                 <tr class="hover:bg-gray-50">
                                                     <td class="px-3 sm:px-6 py-4 whitespace-nowrap">
                                                         <div class="text-sm text-gray-900">{{ $dtr->date->format('M d, Y') }}</div>
                                                         <div class="text-xs text-gray-500">{{ $dtr->date->format('l') }}</div>
                                                     </td>
                                                     <td class="px-3 sm:px-6 py-4 whitespace-nowrap">
-                                                        @php
-                                                            $workedHours = max(($dtr->total_hours ?? 0) - ($dtr->added_time_from_note ?? 0), 0);
-                                                            $workedMinutes = (int) round($workedHours * 60);
-                                                            $workedH = intdiv($workedMinutes, 60);
-                                                            $workedM = $workedMinutes % 60;
-                                                            $workedFormatted = sprintf('%02d:%02d', $workedH, $workedM);
-                                                        @endphp
                                                         <div class="text-sm font-medium text-gray-900">
-                                                            {{ $workedMinutes > 0 ? $workedFormatted : '00:00' }}
+                                                            @if($isCompleted || $workedOver8Hours)
+                                                                <svg class="w-5 h-5 text-green-600" fill="currentColor" viewBox="0 0 20 20">
+                                                                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+                                                                </svg>
+                                                            @else
+                                                                {{ $workedMinutes > 0 ? $workedFormatted : '00:00' }}
+                                                            @endif
                                                         </div>
                                                     </td>
                                                     <td class="px-3 sm:px-6 py-4 whitespace-nowrap">
-                                                        @php
-                                                            $extraMinutes = (int) round(($dtr->added_time_from_note ?? 0) * 60);
-                                                            $extraH = intdiv($extraMinutes, 60);
-                                                            $extraM = $extraMinutes % 60;
-                                                            $extraFormatted = sprintf('%02d:%02d', $extraH, $extraM);
-                                                        @endphp
                                                         <div class="text-sm font-medium text-gray-900">
-                                                            {{ $extraMinutes > 0 ? $extraFormatted : '00:00' }}
+                                                            @if($isCompleted || $extraMinutes > 0)
+                                                                <svg class="w-5 h-5 text-green-600" fill="currentColor" viewBox="0 0 20 20">
+                                                                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+                                                                </svg>
+                                                            @else
+                                                                <span class="text-gray-400">-</span>
+                                                            @endif
                                                         </div>
                                                     </td>
                                                     <td class="px-3 sm:px-6 py-4 whitespace-nowrap">
-                                                        @php
-                                                            $totalMinutes = (int) round(($dtr->total_hours ?? 0) * 60);
-                                                            $totalH = intdiv($totalMinutes, 60);
-                                                            $totalM = $totalMinutes % 60;
-                                                            $totalFormatted = sprintf('%02d:%02d', $totalH, $totalM);
-                                                        @endphp
                                                         <div class="text-sm font-medium text-gray-900">
-                                                            {{ $totalMinutes > 0 ? $totalFormatted : '00:00' }}
+                                                            @if($isCompleted || $totalOver8Hours)
+                                                                <svg class="w-5 h-5 text-green-600" fill="currentColor" viewBox="0 0 20 20">
+                                                                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+                                                                </svg>
+                                                            @else
+                                                                {{ $totalMinutes > 0 ? $totalFormatted : '00:00' }}
+                                                            @endif
                                                         </div>
                                                     </td>
                                                     <td class="px-3 sm:px-6 py-4 whitespace-nowrap">
-                                                        @php
-                                                            $otMinutes = (int) round(($dtr->overtime_hours ?? 0) * 60);
-                                                            $otH = intdiv($otMinutes, 60);
-                                                            $otM = $otMinutes % 60;
-                                                            $otFormatted = sprintf('%02d:%02d', $otH, $otM);
-                                                        @endphp
                                                         <div class="text-sm font-medium text-orange-600">
-                                                            {{ $otMinutes > 0 ? $otFormatted : '00:00' }}
+                                                            @if($isCompleted || $otMinutes > 0)
+                                                                <svg class="w-5 h-5 text-green-600" fill="currentColor" viewBox="0 0 20 20">
+                                                                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+                                                                </svg>
+                                                            @else
+                                                                <span class="text-gray-400">-</span>
+                                                            @endif
                                                         </div>
                                                     </td>
                                                     <td class="px-3 sm:px-6 py-4 whitespace-nowrap">
-                                                        @php
-                                                            if ($dtr->status === 'absent') {
-                                                                $statusLabel = 'Absent';
-                                                                $statusClass = 'bg-red-100 text-red-800';
-                                                            } elseif ($dtr->status === 'on_leave') {
-                                                                $statusLabel = 'Leave';
-                                                                $statusClass = 'bg-purple-100 text-purple-800';
-                                                            } elseif ($dtr->status === 'travel') {
-                                                                $statusLabel = 'Travel';
-                                                                $statusClass = 'bg-blue-100 text-blue-800';
-                                                            } else {
-                                                                $totalMinutesForStatus = (int) round(($dtr->total_hours ?? 0) * 60);
-                                                                if ($totalMinutesForStatus < 480) {
-                                                                    $statusLabel = 'Under Time';
-                                                                    $statusClass = 'bg-yellow-100 text-yellow-800';
-                                                                } else {
-                                                                    $statusLabel = 'Completed';
-                                                                    $statusClass = 'bg-green-100 text-green-800';
-                                                                }
-                                                            }
-                                                        @endphp
                                                         <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full {{ $statusClass }}">
                                                             {{ $statusLabel }}
                                                         </span>

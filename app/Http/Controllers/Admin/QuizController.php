@@ -269,6 +269,11 @@ class QuizController extends Controller
             ->with('success', 'Quiz deleted successfully.');
     }
 
+    /**
+     * Assign quiz to users.
+     * Accessible to users with Content Management permission (via middleware).
+     * Super admins and users with content_management permission can assign quizzes.
+     */
     public function assignToUsers(Request $request, Quiz $quiz)
     {
         $request->validate([
