@@ -50,7 +50,7 @@ class AdminPermissionController extends Controller
 
     /**
      * Show form to add a new user to permissions management.
-     * Full-access admins can add any non-employee user.
+     * Full-access admins can add any user (all roles).
      * Regular admins can only add employees.
      */
     public function create()
@@ -59,9 +59,8 @@ class AdminPermissionController extends Controller
         $isFullAccessAdmin = $currentUser->isSuperAdmin();
 
         if ($isFullAccessAdmin) {
-            // Full-access admins can add any user (except employees) that don't have permissions yet
-            $users = User::where('role', '!=', 'employee')
-                ->whereDoesntHave('adminPermission')
+            // Full-access admins can add any user (all roles) that don't have permissions yet
+            $users = User::whereDoesntHave('adminPermission')
                 ->orderBy('role')
                 ->orderBy('name')
                 ->get();
@@ -95,12 +94,6 @@ class AdminPermissionController extends Controller
         if (!$isFullAccessAdmin && !$user->isEmployee()) {
             return redirect()->route('admin.admin-permissions.create')
                 ->with('error', 'Only full-access admins can assign permissions to non-employee users.');
-        }
-
-        // Regular admins can only assign to employees
-        if (!$isFullAccessAdmin && !$user->isEmployee()) {
-            return redirect()->route('admin.admin-permissions.create')
-                ->with('error', 'Permissions can only be assigned to employee users.');
         }
 
         // Check if user already has permissions

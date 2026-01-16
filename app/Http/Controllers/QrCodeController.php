@@ -27,15 +27,27 @@ class QrCodeController extends Controller
         }
 
         // Get user with relationships
-        $user = $qrToken->user()->with(['department', 'university'])->first();
+        $user = $qrToken->user()->with(['department', 'university', 'adminPermission'])->first();
 
         // If user not found, show error
         if (!$user) {
             return view('qr.not-found', ['qrCodeId' => null, 'settings' => $settings]);
         }
 
-        // Only show information for employees
-        if ($user->role !== 'employee') {
+        // Check if user has permission to have QR code scanned
+        // Employees can always have their QR code scanned
+        // Other users can have QR code scanned if they have an adminPermission record (admin granted permission)
+        $canAccessQrCode = false;
+        
+        if ($user->role === 'employee') {
+            // Employees can always access
+            $canAccessQrCode = true;
+        } elseif ($user->adminPermission) {
+            // Non-employees can access if they have an adminPermission record (admin granted permission)
+            $canAccessQrCode = true;
+        }
+
+        if (!$canAccessQrCode) {
             return view('qr.not-available', compact('settings', 'user'));
         }
 
