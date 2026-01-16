@@ -888,7 +888,9 @@ class User extends Authenticatable
         $token = \App\Models\QrCodeToken::getOrGenerateForUser($this);
         // Generate QR code with hashed token URL (static until token is used)
         $qrCodeUrl = route('qr.scan', ['token' => $token]);
-        return \SimpleSoftwareIO\QrCode\Facades\QrCode::size($size)->generate($qrCodeUrl);
+        // Use the QrCode generator directly
+        $qrCode = new \SimpleSoftwareIO\QrCode\Generator();
+        return $qrCode->size($size)->generate($qrCodeUrl);
     }
 
     /**
@@ -901,8 +903,9 @@ class User extends Authenticatable
         $token = \App\Models\QrCodeToken::getOrGenerateForUser($this);
         // Generate QR code with hashed token URL (static until token is used)
         $qrCodeUrl = route('qr.scan', ['token' => $token]);
-        // Generate SVG directly (default format, doesn't require imagick)
-        return \SimpleSoftwareIO\QrCode\Facades\QrCode::size($size)->generate($qrCodeUrl);
+        // Use the QrCode generator directly (SVG format, doesn't require imagick)
+        $qrCode = new \SimpleSoftwareIO\QrCode\Generator();
+        return $qrCode->size($size)->format('svg')->generate($qrCodeUrl);
     }
 
     /**
