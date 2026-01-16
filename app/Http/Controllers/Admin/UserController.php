@@ -154,7 +154,7 @@ class UserController extends Controller
             ]);
         }
 
-        return redirect()->route('users.index')
+        return redirect()->route('admin.users.index')
             ->with('success', 'User created successfully.');
     }
 
@@ -293,7 +293,7 @@ class UserController extends Controller
             'overtime_months_credited' => $request->overtime_months_credited,
         ]);
 
-        return redirect()->route('users.show', $user)
+        return redirect()->route('admin.users.show', $user)
             ->with('success', 'Overtime credited window updated for all employees.');
     }
 
@@ -320,7 +320,7 @@ class UserController extends Controller
             'sick_allowance' => $request->sick_allowance,
         ]);
 
-        return redirect()->route('users.show', $user)
+        return redirect()->route('admin.users.show', $user)
             ->with('success', "Leave balances updated for {$year}.");
     }
 
@@ -422,7 +422,7 @@ class UserController extends Controller
             }
         }
 
-        return redirect()->route('users.index')
+        return redirect()->route('admin.users.index')
             ->with('success', 'User updated successfully.');
     }
 
@@ -430,12 +430,12 @@ class UserController extends Controller
     {
         // Prevent admin from deleting themselves
         if ($user->id === auth()->id()) {
-            return redirect()->route('users.index')
+            return redirect()->route('admin.users.index')
                 ->with('error', 'You cannot delete your own account.');
         }
 
         $user->delete();
-        return redirect()->route('users.index')
+        return redirect()->route('admin.users.index')
             ->with('success', 'User deleted successfully.');
     }
 

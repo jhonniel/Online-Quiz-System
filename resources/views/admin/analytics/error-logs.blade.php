@@ -106,7 +106,7 @@
                             @endphp
                             <tr class="hover:bg-gray-50">
                                 <td class="px-3 sm:px-4 py-2 whitespace-nowrap text-xs sm:text-sm text-gray-600">
-                                    {{ $log->created_at->format('Y-m-d H:i:s') }}
+                                    {{ $log->created_at ? $log->created_at->format('Y-m-d H:i:s') : 'N/A' }}
                                 </td>
                                 <td class="px-3 sm:px-4 py-2 whitespace-nowrap text-xs sm:text-sm">
                                     <span class="inline-flex items-center px-2 py-1 rounded-full border text-[11px] font-semibold {{ $badgeColor }}">
@@ -122,12 +122,12 @@
                                     </div>
                                 </td>
                                 <td class="px-3 sm:px-4 py-2 whitespace-nowrap text-xs sm:text-sm text-gray-700">
-                                    @if($log->user)
+                                    @if($log->user && $log->user->exists)
                                         <div class="truncate max-w-[120px] sm:max-w-[160px]">
-                                            {{ $log->user->name }}
+                                            {{ $log->user->name ?? 'Unknown' }}
                                         </div>
                                         <div class="text-[10px] text-gray-400 truncate max-w-[140px]">
-                                            {{ $log->user->email }}
+                                            {{ $log->user->email ?? '' }}
                                         </div>
                                     @else
                                         <span class="text-[11px] text-gray-400">Guest</span>
@@ -135,7 +135,7 @@
                                 </td>
                                 <td class="px-3 sm:px-4 py-2 text-xs sm:text-sm text-gray-700">
                                     <div class="truncate max-w-xs sm:max-w-md">
-                                        {{ $log->message }}
+                                        {{ $log->message ?? 'No message' }}
                                     </div>
                                 </td>
                             </tr>

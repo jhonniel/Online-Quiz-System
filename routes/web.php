@@ -70,7 +70,15 @@ Route::prefix('admin')->middleware(['auth', 'admin'])->group(function () {
     // User Management
     Route::middleware(['admin.permission:user_management'])->group(function () {
         Route::get('users/api', [AdminUserController::class, 'api'])->name('admin.users.api');
-        Route::resource('users', AdminUserController::class);
+        Route::resource('users', AdminUserController::class)->names([
+            'index' => 'admin.users.index',
+            'create' => 'admin.users.create',
+            'store' => 'admin.users.store',
+            'show' => 'admin.users.show',
+            'edit' => 'admin.users.edit',
+            'update' => 'admin.users.update',
+            'destroy' => 'admin.users.destroy',
+        ]);
         Route::patch('users/{user}/toggle-status', [AdminUserController::class, 'toggleStatus'])->name('admin.users.toggle-status');
         Route::patch('users/{user}/approve', [AdminUserController::class, 'approve'])->name('admin.users.approve');
         Route::patch('users/{user}/disapprove', [AdminUserController::class, 'disapprove'])->name('admin.users.disapprove');
@@ -88,7 +96,15 @@ Route::prefix('admin')->middleware(['auth', 'admin'])->group(function () {
     // Content Management (Quizzes, Forum, Universities)
     Route::middleware(['admin.permission:content_management'])->group(function () {
         // University Management
-        Route::resource('universities', UniversityController::class);
+        Route::resource('universities', UniversityController::class)->names([
+            'index' => 'admin.universities.index',
+            'create' => 'admin.universities.create',
+            'store' => 'admin.universities.store',
+            'show' => 'admin.universities.show',
+            'edit' => 'admin.universities.edit',
+            'update' => 'admin.universities.update',
+            'destroy' => 'admin.universities.destroy',
+        ]);
         Route::patch('universities/{university}/toggle-status', [UniversityController::class, 'toggleStatus'])->name('admin.universities.toggle-status');
 
         // Quiz Management

@@ -9,7 +9,7 @@
                 <p class="mt-1 text-sm text-gray-600">Update user account information.</p>
             </div>
 
-            <form action="{{ route('users.update', $user) }}" method="POST">
+            <form action="{{ route('admin.users.update', $user) }}" method="POST">
                 @csrf
                 @method('PUT')
 
@@ -230,7 +230,7 @@
 
                 <!-- Actions -->
                 <div class="mt-8 flex justify-end space-x-3">
-                    <a href="{{ route('users.index') }}"
+                    <a href="{{ route('admin.users.index') }}"
                        class="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
                         Cancel
                     </a>

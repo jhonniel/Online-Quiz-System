@@ -9,7 +9,7 @@
                 <p class="mt-1 text-sm text-gray-600">Update university information.</p>
             </div>
 
-            <form action="{{ route('universities.update', $university) }}" method="POST" class="space-y-6">
+            <form action="{{ route('admin.universities.update', $university) }}" method="POST" class="space-y-6">
                 @csrf
                 @method('PUT')
 
@@ -99,7 +99,7 @@
 
                 <!-- Form Actions -->
                 <div class="flex justify-end space-x-3">
-                    <a href="{{ route('universities.index') }}"
+                    <a href="{{ route('admin.universities.index') }}"
                        class="bg-white py-2 px-4 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
                         Cancel
                     </a>

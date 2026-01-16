@@ -41,7 +41,8 @@ return Application::configure(basePath: dirname(__DIR__))
             return redirect()->route('landing.index');
         });
 
-        // Render 500 errors with custom error page
+        // Disable custom 500 error UI - let Laravel handle it with default behavior
+        // 500 errors will now be logged but not show custom UI
         $exceptions->render(function (\Throwable $e, $request) {
             // Skip HTTP exceptions that are not 500 (like 403, 404, etc.)
             if ($e instanceof \Symfony\Component\HttpKernel\Exception\HttpExceptionInterface) {
@@ -52,22 +53,10 @@ return Application::configure(basePath: dirname(__DIR__))
                 }
             }
             
-            // For non-HTTP exceptions (which are treated as 500), show custom 500 error page
-            // This catches all server errors (500) and unhandled exceptions
-            if ($request->expectsJson()) {
-                return response()->json([
-                    'error' => 'Internal server error',
-                    'message' => 'An unexpected error occurred. Please contact the administrator for assistance.'
-                ], 500);
-            }
-            
-            // Return 500 error page
-            return response()->view('errors.500', [
-                'exception' => $e,
-                'code' => 500,
-                'title' => 'Internal Server Error',
-                'message' => 'An unexpected error occurred. Please contact the administrator for assistance.'
-            ], 500);
+            // For 500 errors, return null to use Laravel's default error handling
+            // This disables the custom 500 error UI
+            // Errors are still logged via the report() callback below
+            return null;
         });
 
         // Log HTTP and server errors into error_logs table

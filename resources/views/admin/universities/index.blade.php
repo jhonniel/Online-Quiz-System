@@ -7,7 +7,7 @@
     icon="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"
     search-placeholder="Search universities..."
     add-button-text="Add University"
-    :add-button-route="route('universities.create')"
+    :add-button-route="route('admin.universities.create')"
 >
     <x-responsive-table
         :headers="[
@@ -100,7 +100,7 @@
                              x-transition:leave-end="transform opacity-0 scale-95"
                              class="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 z-50 border border-gray-200">
 
-                            <a href="{{ route('universities.show', $university) }}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center">
+                            <a href="{{ route('admin.universities.show', $university) }}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center">
                                 <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
@@ -108,7 +108,7 @@
                                 View
                             </a>
 
-                            <a href="{{ route('universities.edit', $university) }}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center">
+                            <a href="{{ route('admin.universities.edit', $university) }}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center">
                                 <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
                                 </svg>
@@ -136,7 +136,7 @@
                             @if($university->users_count == 0)
                                 <div class="border-t border-gray-100"></div>
 
-                                <form method="POST" action="{{ route('universities.destroy', $university) }}" class="block" onsubmit="return confirmUniversityAction('delete', this)">
+                                <form method="POST" action="{{ route('admin.universities.destroy', $university) }}" class="block" onsubmit="return confirmUniversityAction('delete', this)">
                                     @csrf
                                     @method('DELETE')
                                     <button type="submit" class="w-full text-left px-4 py-2 text-sm text-red-700 hover:bg-red-50 flex items-center">

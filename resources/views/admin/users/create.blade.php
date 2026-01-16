@@ -42,7 +42,7 @@
                         <p class="text-indigo-100 text-lg">Add a new user account with proper permissions and settings</p>
                     </div>
             </div>
-                <a href="{{ route('users.index') }}" class="bg-white/20 hover:bg-white/30 backdrop-blur-sm px-6 py-3 rounded-xl font-semibold transition-all duration-200 flex items-center space-x-2 group">
+                <a href="{{ route('admin.users.index') }}" class="bg-white/20 hover:bg-white/30 backdrop-blur-sm px-6 py-3 rounded-xl font-semibold transition-all duration-200 flex items-center space-x-2 group">
                     <svg class="w-5 h-5 group-hover:-translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
                     </svg>
@@ -54,7 +54,7 @@
 
     <!-- Main Form Card -->
     <div class="bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden">
-        <form action="{{ route('users.store') }}" method="POST" id="createUserForm" class="divide-y divide-gray-100">
+        <form action="{{ route('admin.users.store') }}" method="POST" id="createUserForm" class="divide-y divide-gray-100">
             @csrf
 
             <!-- Basic Information Section -->
@@ -518,7 +518,7 @@
             <!-- Action Buttons -->
             <div class="p-8 bg-gray-50 border-t border-gray-200">
                 <div class="flex flex-col sm:flex-row justify-end space-y-3 sm:space-y-0 sm:space-x-4">
-                    <a href="{{ route('users.index') }}"
+                    <a href="{{ route('admin.users.index') }}"
                        class="inline-flex items-center justify-center px-6 py-3 border-2 border-gray-300 rounded-xl font-semibold text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 transition-all duration-200">
                         <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
