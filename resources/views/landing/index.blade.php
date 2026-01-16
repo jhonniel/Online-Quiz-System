@@ -227,7 +227,6 @@
                                                     <div class="w-full h-full bg-gradient-to-br from-primary/20 to-primary/40 flex items-center justify-center fallback-content" style="position: absolute !important; top: 0 !important; left: 0 !important; width: 100% !important; height: 100% !important; z-index: 1 !important; display: none !important; visibility: hidden !important;">
                                                         <div class="text-center p-3">
                                                             <h3 class="text-sm font-bold text-gray-900 mb-1">{{ $project['name'] }}</h3>
-                                                            <p class="text-gray-700 text-xs line-clamp-2">{{ $project['description'] }}</p>
                                                         </div>
                                                     </div>
                                                 @else
@@ -248,7 +247,6 @@
                                                     <div class="w-full h-full bg-gradient-to-br from-primary/20 to-primary/40 flex items-center justify-center">
                                                         <div class="text-center p-3">
                                                             <h3 class="text-sm font-bold text-gray-900 mb-1">{{ $project['name'] }}</h3>
-                                                            <p class="text-gray-700 text-xs line-clamp-2">{{ $project['description'] }}</p>
                                                         </div>
                                                     </div>
                                                 @endif
@@ -257,14 +255,6 @@
                                             <div class="project-overlay absolute inset-0 flex items-center justify-start z-4" style="top: 0; left: 0; right: 0; bottom: 0; width: 100%; height: 100%; pointer-events: none; background: transparent !important; background-color: transparent !important; z-index: 13 !important;">
                                                 <div class="p-2 sm:p-4 md:p-5 pointer-events-auto flex flex-col items-start justify-start text-left" style="background: transparent !important; background-color: transparent !important; max-width: 90%;">
                                                     <h3 class="text-xs sm:text-base md:text-lg lg:text-xl font-bold text-white mb-2 sm:mb-3 md:mb-4 leading-tight drop-shadow-lg break-words" style="text-shadow: 0 2px 4px rgba(0,0,0,0.5); word-wrap: break-word; overflow-wrap: break-word; hyphens: auto; max-width: 100%; margin-left: 14% !important;">{{ $project['name'] }}</h3>
-                                                    <a href="{{ $project['url'] && $project['url'] !== '#' ? $project['url'] : '#' }}"
-                                                       {{ $project['url'] && $project['url'] !== '#' ? 'target="_blank"' : '' }}
-                                                       class="inline-flex items-center justify-start px-2.5 py-1 sm:px-3.5 sm:py-1.5 md:px-4 md:py-2 text-xs sm:text-sm bg-white text-primary rounded-lg font-semibold hover:bg-gray-100 transition-all whitespace-nowrap shadow-lg" style="margin-left: 14% !important;">
-                                                        Visit Site
-                                                        <svg class="w-4 h-4 ml-2 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-                                                        </svg>
-                                                    </a>
                                                 </div>
                                             </div>
                                         </div>
@@ -342,7 +332,6 @@
                                                 <div class="w-full h-full bg-gradient-to-br from-primary/20 to-primary/40 items-center justify-center hidden fallback-content" style="display: none;">
                                                     <div class="text-center p-3">
                                                         <h3 class="text-sm font-bold text-gray-900 mb-1">{{ $project['name'] }}</h3>
-                                                        <p class="text-gray-700 text-xs line-clamp-2">{{ $project['description'] }}</p>
                                                     </div>
                                                 </div>
                                             @else
@@ -363,7 +352,6 @@
                                                 <div class="w-full h-full bg-gradient-to-br from-primary/20 to-primary/40 flex items-center justify-center">
                                                     <div class="text-center p-3">
                                                         <h3 class="text-sm font-bold text-gray-900 mb-1">{{ $project['name'] }}</h3>
-                                                        <p class="text-gray-700 text-xs line-clamp-2">{{ $project['description'] }}</p>
                                                     </div>
                                                 </div>
                                             @endif
@@ -372,14 +360,6 @@
                                             <div class="project-overlay absolute inset-0 flex items-center justify-start z-4" style="top: 0; left: 0; right: 0; bottom: 0; width: 100%; height: 100%; pointer-events: none; background: transparent !important; background-color: transparent !important; z-index: 13 !important;">
                                                 <div class="p-2 sm:p-4 md:p-5 pointer-events-auto flex flex-col items-start justify-start text-left" style="background: transparent !important; background-color: transparent !important; max-width: 90%;">
                                                 <h3 class="text-xs sm:text-base md:text-lg lg:text-xl font-bold text-white mb-2 sm:mb-3 md:mb-4 leading-tight drop-shadow-lg break-words" style="text-shadow: 0 2px 4px rgba(0,0,0,0.5); word-wrap: break-word; overflow-wrap: break-word; hyphens: auto; max-width: 100%; margin-left: 9% !important;">{{ $project['name'] }}</h3>
-                                                <a href="{{ $project['url'] && $project['url'] !== '#' ? $project['url'] : '#' }}"
-                                                   {{ $project['url'] && $project['url'] !== '#' ? 'target="_blank"' : '' }}
-                                                   class="inline-flex items-center justify-start px-2.5 py-1 sm:px-3.5 sm:py-1.5 md:px-4 md:py-2 text-xs sm:text-sm bg-white text-primary rounded-lg font-semibold hover:bg-gray-100 transition-all whitespace-nowrap shadow-lg" style="margin-left: 9% !important;">
-                                                    Visit Site
-                                                    <svg class="w-4 h-4 ml-2 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-                                                    </svg>
-                                                </a>
                                             </div>
                                         </div>
                                         <!-- Laptop frame border overlay - appears on top -->
