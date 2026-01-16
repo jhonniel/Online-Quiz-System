@@ -24,7 +24,21 @@ class NewsController extends Controller
      */
     public function create()
     {
-        return view('admin.news.create');
+        // Get existing categories from news table
+        $existingCategories = News::whereNotNull('category')
+            ->distinct()
+            ->pluck('category')
+            ->filter()
+            ->sort()
+            ->values()
+            ->toArray();
+        
+        // Add default categories if they don't exist
+        $defaultCategories = ['General News', 'Announcements', 'Events', 'Awards', 'Partnerships'];
+        $allCategories = array_unique(array_merge($defaultCategories, $existingCategories));
+        sort($allCategories);
+        
+        return view('admin.news.create', compact('allCategories'));
     }
 
     /**
@@ -38,10 +52,16 @@ class NewsController extends Controller
             'image' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:5120',
             'image_url' => 'nullable|url|max:500',
             'category' => 'nullable|string|max:100',
+            'new_category' => 'nullable|string|max:100',
             'author' => 'nullable|string|max:255',
             'is_published' => 'boolean',
             'published_at' => 'nullable|date',
         ]);
+        
+        // Use new_category if provided, otherwise use category
+        if ($request->filled('new_category')) {
+            $validated['category'] = trim($request->input('new_category'));
+        }
 
         $validated['created_by'] = auth()->id();
         $validated['is_published'] = $request->has('is_published') ? true : false;
@@ -50,11 +70,15 @@ class NewsController extends Controller
             $validated['published_at'] = now();
         }
 
-        // Handle image upload
+        // Handle image upload to DigitalOcean Spaces
         if ($request->hasFile('image')) {
-            $imagePath = $request->file('image')->store('news', 'public');
+            $assetDisk = 'digitalocean';
+            $assetRoot = trim(env('DIGITALOCEAN_SPACES_ROOT_PATH', ''), '/');
+            $newsDir = $assetRoot ? $assetRoot . '/news' : 'news';
+            
+            $imagePath = $request->file('image')->store($newsDir, $assetDisk);
             $validated['image_path'] = $imagePath;
-            $validated['image_url'] = Storage::disk('public')->url($imagePath);
+            $validated['image_url'] = Storage::disk($assetDisk)->url($imagePath);
         }
 
         // Remove image from validated array as it's not a database field
@@ -82,7 +106,21 @@ class NewsController extends Controller
      */
     public function edit(News $news)
     {
-        return view('admin.news.edit', compact('news'));
+        // Get existing categories from news table
+        $existingCategories = News::whereNotNull('category')
+            ->distinct()
+            ->pluck('category')
+            ->filter()
+            ->sort()
+            ->values()
+            ->toArray();
+        
+        // Add default categories if they don't exist
+        $defaultCategories = ['General News', 'Announcements', 'Events', 'Awards', 'Partnerships'];
+        $allCategories = array_unique(array_merge($defaultCategories, $existingCategories));
+        sort($allCategories);
+        
+        return view('admin.news.edit', compact('news', 'allCategories'));
     }
 
     /**
@@ -96,10 +134,16 @@ class NewsController extends Controller
             'image' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:5120',
             'image_url' => 'nullable|url|max:500',
             'category' => 'nullable|string|max:100',
+            'new_category' => 'nullable|string|max:100',
             'author' => 'nullable|string|max:255',
             'is_published' => 'boolean',
             'published_at' => 'nullable|date',
         ]);
+        
+        // Use new_category if provided, otherwise use category
+        if ($request->filled('new_category')) {
+            $validated['category'] = trim($request->input('new_category'));
+        }
 
         $validated['is_published'] = $request->has('is_published') ? true : false;
         
@@ -107,16 +151,25 @@ class NewsController extends Controller
             $validated['published_at'] = now();
         }
 
-        // Handle image upload
+        // Handle image upload to DigitalOcean Spaces
         if ($request->hasFile('image')) {
+            $assetDisk = 'digitalocean';
+            $assetRoot = trim(env('DIGITALOCEAN_SPACES_ROOT_PATH', ''), '/');
+            $newsDir = $assetRoot ? $assetRoot . '/news' : 'news';
+            
             // Delete old image if exists
-            if ($news->image_path && Storage::disk('public')->exists($news->image_path)) {
-                Storage::disk('public')->delete($news->image_path);
+            if ($news->image_path) {
+                // Try digitalocean first, then public
+                if (Storage::disk('digitalocean')->exists($news->image_path)) {
+                    Storage::disk('digitalocean')->delete($news->image_path);
+                } elseif (Storage::disk('public')->exists($news->image_path)) {
+                    Storage::disk('public')->delete($news->image_path);
+                }
             }
             
-            $imagePath = $request->file('image')->store('news', 'public');
+            $imagePath = $request->file('image')->store($newsDir, $assetDisk);
             $validated['image_path'] = $imagePath;
-            $validated['image_url'] = Storage::disk('public')->url($imagePath);
+            $validated['image_url'] = Storage::disk($assetDisk)->url($imagePath);
         }
 
         // Remove image from validated array as it's not a database field
@@ -134,8 +187,13 @@ class NewsController extends Controller
     public function destroy(News $news)
     {
         // Delete associated image if exists
-        if ($news->image_path && Storage::disk('public')->exists($news->image_path)) {
-            Storage::disk('public')->delete($news->image_path);
+        if ($news->image_path) {
+            // Try digitalocean first, then public
+            if (Storage::disk('digitalocean')->exists($news->image_path)) {
+                Storage::disk('digitalocean')->delete($news->image_path);
+            } elseif (Storage::disk('public')->exists($news->image_path)) {
+                Storage::disk('public')->delete($news->image_path);
+            }
         }
 
         $news->delete();

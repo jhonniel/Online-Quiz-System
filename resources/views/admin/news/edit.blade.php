@@ -46,14 +46,18 @@
         <!-- Category -->
         <div>
             <label for="category" class="block text-sm font-medium text-gray-700 mb-2">Category</label>
-            <select name="category" id="category" class="w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500">
+            <select name="category" id="category" onchange="handleCategoryChange()" class="w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500">
                 <option value="">Select category</option>
-                <option value="General News" {{ old('category', $news->category) == 'General News' ? 'selected' : '' }}>General News</option>
-                <option value="Announcements" {{ old('category', $news->category) == 'Announcements' ? 'selected' : '' }}>Announcements</option>
-                <option value="Events" {{ old('category', $news->category) == 'Events' ? 'selected' : '' }}>Events</option>
-                <option value="Awards" {{ old('category', $news->category) == 'Awards' ? 'selected' : '' }}>Awards</option>
-                <option value="Partnerships" {{ old('category', $news->category) == 'Partnerships' ? 'selected' : '' }}>Partnerships</option>
+                @foreach($allCategories as $cat)
+                    <option value="{{ $cat }}" {{ old('category', $news->category) == $cat ? 'selected' : '' }}>{{ $cat }}</option>
+                @endforeach
+                <option value="__new__">+ Add New Category</option>
             </select>
+            <div id="new-category-input" class="mt-2 hidden">
+                <input type="text" name="new_category" id="new_category" placeholder="Enter new category name"
+                       class="w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500">
+                <p class="mt-1 text-xs text-gray-500">Enter a new category name</p>
+            </div>
             @error('category')
                 <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
             @enderror
@@ -68,7 +72,12 @@
                     @php
                         $currentImageUrl = $news->image_url;
                         if ($news->image_path && !$currentImageUrl) {
-                            $currentImageUrl = \Illuminate\Support\Facades\Storage::disk('public')->url($news->image_path);
+                            // Try digitalocean first, then public
+                            if (\Illuminate\Support\Facades\Storage::disk('digitalocean')->exists($news->image_path)) {
+                                $currentImageUrl = \Illuminate\Support\Facades\Storage::disk('digitalocean')->url($news->image_path);
+                            } elseif (\Illuminate\Support\Facades\Storage::disk('public')->exists($news->image_path)) {
+                                $currentImageUrl = \Illuminate\Support\Facades\Storage::disk('public')->url($news->image_path);
+                            }
                         }
                     @endphp
                     <img src="{{ $currentImageUrl }}" alt="Current image" class="h-48 w-auto rounded-lg border border-gray-300">
@@ -166,5 +175,41 @@ function previewImage(input) {
         preview.classList.add('hidden');
     }
 }
+
+function handleCategoryChange() {
+    const categorySelect = document.getElementById('category');
+    const newCategoryInput = document.getElementById('new-category-input');
+    const newCategoryField = document.getElementById('new_category');
+    
+    if (categorySelect.value === '__new__') {
+        newCategoryInput.classList.remove('hidden');
+        newCategoryField.focus();
+        categorySelect.name = ''; // Disable the select
+    } else {
+        newCategoryInput.classList.add('hidden');
+        newCategoryField.value = '';
+        categorySelect.name = 'category'; // Re-enable the select
+    }
+}
+
+// Handle form submission to use new_category if provided
+document.addEventListener('DOMContentLoaded', function() {
+    const form = document.querySelector('form');
+    if (form) {
+        form.addEventListener('submit', function(e) {
+            const categorySelect = document.getElementById('category');
+            const newCategoryField = document.getElementById('new_category');
+            
+            if (categorySelect.value === '__new__' && newCategoryField.value.trim()) {
+                // Create a hidden input with the new category value
+                const hiddenInput = document.createElement('input');
+                hiddenInput.type = 'hidden';
+                hiddenInput.name = 'category';
+                hiddenInput.value = newCategoryField.value.trim();
+                form.appendChild(hiddenInput);
+            }
+        });
+    }
+});
 </script>
 @endsection

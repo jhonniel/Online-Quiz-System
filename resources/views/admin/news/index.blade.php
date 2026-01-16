@@ -57,7 +57,12 @@
                                     @php
                                         $imageUrl = $item->image_url;
                                         if ($item->image_path && !$imageUrl) {
-                                            $imageUrl = \Illuminate\Support\Facades\Storage::disk('public')->url($item->image_path);
+                                            // Try digitalocean first, then public
+                                            if (\Illuminate\Support\Facades\Storage::disk('digitalocean')->exists($item->image_path)) {
+                                                $imageUrl = \Illuminate\Support\Facades\Storage::disk('digitalocean')->url($item->image_path);
+                                            } elseif (\Illuminate\Support\Facades\Storage::disk('public')->exists($item->image_path)) {
+                                                $imageUrl = \Illuminate\Support\Facades\Storage::disk('public')->url($item->image_path);
+                                            }
                                         }
                                     @endphp
                                     @if($imageUrl)

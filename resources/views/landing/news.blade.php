@@ -16,7 +16,12 @@
             @php
                 $featuredImageUrl = $featuredNews->image_url;
                 if ($featuredNews->image_path && !$featuredImageUrl) {
-                    $featuredImageUrl = \Illuminate\Support\Facades\Storage::disk('public')->url($featuredNews->image_path);
+                    // Try digitalocean first, then public
+                    if (\Illuminate\Support\Facades\Storage::disk('digitalocean')->exists($featuredNews->image_path)) {
+                        $featuredImageUrl = \Illuminate\Support\Facades\Storage::disk('digitalocean')->url($featuredNews->image_path);
+                    } elseif (\Illuminate\Support\Facades\Storage::disk('public')->exists($featuredNews->image_path)) {
+                        $featuredImageUrl = \Illuminate\Support\Facades\Storage::disk('public')->url($featuredNews->image_path);
+                    }
                 }
             @endphp
             @if($featuredImageUrl)
@@ -110,7 +115,12 @@
                             @php
                                 $articleImageUrl = $item->image_url;
                                 if ($item->image_path && !$articleImageUrl) {
-                                    $articleImageUrl = \Illuminate\Support\Facades\Storage::disk('public')->url($item->image_path);
+                                    // Try digitalocean first, then public
+                                    if (\Illuminate\Support\Facades\Storage::disk('digitalocean')->exists($item->image_path)) {
+                                        $articleImageUrl = \Illuminate\Support\Facades\Storage::disk('digitalocean')->url($item->image_path);
+                                    } elseif (\Illuminate\Support\Facades\Storage::disk('public')->exists($item->image_path)) {
+                                        $articleImageUrl = \Illuminate\Support\Facades\Storage::disk('public')->url($item->image_path);
+                                    }
                                 }
                             @endphp
                             @if($articleImageUrl)
