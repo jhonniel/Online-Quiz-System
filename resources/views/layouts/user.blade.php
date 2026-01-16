@@ -476,8 +476,8 @@
                         </a>
                         @endif
 
-                        <!-- Admin Access (for employees with permissions) -->
-                        @if(auth()->user()->isEmployee() && auth()->user()->hasAnyAdminPermission())
+                        <!-- Admin Access (for any user with admin permissions) -->
+                        @if(auth()->user()->hasAnyAdminPermission())
                         <div class="pt-4 mt-4 border-t border-gray-700">
                             <a href="{{ route('admin.dashboard') }}"
                                @click="sidebarOpen = false"

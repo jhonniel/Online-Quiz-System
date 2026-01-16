@@ -26,7 +26,13 @@ class LandingController extends Controller
 
             // Check if user is active and approved
             if ($user->is_active && $user->is_approved) {
-                if ($user->isAdmin()) {
+                // Load adminPermission relationship to check permissions
+                if (!$user->relationLoaded('adminPermission')) {
+                    $user->load('adminPermission');
+                }
+
+                // Redirect to admin dashboard if user is admin or has admin permissions
+                if ($user->isAdmin() || $user->hasAnyAdminPermission()) {
                     return redirect()->route('admin.dashboard');
                 } else {
                     return redirect()->route('user.dashboard');

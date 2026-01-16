@@ -601,30 +601,6 @@ class User extends Authenticatable
 
         // If user is not an admin/employee and has no adminPermission record, they don't have access
         return false;
-
-        // Load the relationship if not already loaded
-        if (!$this->relationLoaded('adminPermission')) {
-            $this->load('adminPermission');
-        }
-
-        $adminPermission = $this->adminPermission;
-
-        // If user is an admin without a permission record, they are a super admin with full access
-        if ($this->isAdmin() && !$adminPermission) {
-            return true;
-        }
-
-        // If user is an employee without a permission record, they have NO access
-        if ($this->isEmployee() && !$adminPermission) {
-            return false;
-        }
-
-        // If user has a permission record, check the specific permission
-        if ($adminPermission) {
-            return $adminPermission->$permission ?? false;
-        }
-
-        return false;
     }
 
     /**

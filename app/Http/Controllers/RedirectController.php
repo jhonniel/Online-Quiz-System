@@ -11,10 +11,14 @@ class RedirectController extends Controller
         if (auth()->check()) {
             $user = auth()->user();
 
-            // Admins always go to admin dashboard
-            // Employees with permissions can access both, but default to user dashboard
-            // Other users go to user dashboard
-            if ($user->isAdmin()) {
+            // Load adminPermission relationship to check permissions
+            if (!$user->relationLoaded('adminPermission')) {
+                $user->load('adminPermission');
+            }
+
+            // Redirect to admin dashboard if user is admin or has admin permissions
+            // Users with any role who have been granted admin permissions can access admin dashboard
+            if ($user->isAdmin() || $user->hasAnyAdminPermission()) {
                 return redirect()->route('admin.dashboard');
             } else {
                 return redirect()->route('user.dashboard');

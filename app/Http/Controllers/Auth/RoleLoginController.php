@@ -17,7 +17,13 @@ class RoleLoginController extends Controller
 
             // Check if user is active and approved
             if ($user->is_active && $user->is_approved) {
-                if ($user->isAdmin()) {
+                // Load adminPermission relationship to check permissions
+                if (!$user->relationLoaded('adminPermission')) {
+                    $user->load('adminPermission');
+                }
+
+                // Redirect to admin dashboard if user is admin or has admin permissions
+                if ($user->isAdmin() || $user->hasAnyAdminPermission()) {
                     return redirect()->route('admin.dashboard');
                 } else {
                     return redirect()->route('user.dashboard');
@@ -108,11 +114,20 @@ class RoleLoginController extends Controller
 
             $request->session()->regenerate();
 
-            // Redirect based on user's actual role
-            // Admins go to admin dashboard
-            // Employees with permissions can access admin, but default to user dashboard
+            // Load adminPermission relationship to check permissions
+            if (!$user->relationLoaded('adminPermission')) {
+                $user->load('adminPermission');
+            }
+
+            // Redirect based on user's role and permissions
+            // Admins always go to admin dashboard
+            // Users with admin permissions (any role) go to admin dashboard
             // Other users go to user dashboard
-            $redirectUrl = $user->isAdmin() ? route('admin.dashboard') : route('user.dashboard');
+            if ($user->isAdmin() || $user->hasAnyAdminPermission()) {
+                $redirectUrl = route('admin.dashboard');
+            } else {
+                $redirectUrl = route('user.dashboard');
+            }
 
             if ($request->ajax()) {
                 return response()->json([
