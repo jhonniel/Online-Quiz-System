@@ -580,13 +580,27 @@ class User extends Authenticatable
      * Check if user has access to a specific admin feature.
      * Super admins (admins without permission records) have access to all features.
      * Employees must have explicit permission records with the specific permission enabled.
+     * Other roles (students, applicants, etc.) can have access if they have an adminPermission record.
      */
     public function hasAdminPermission(string $permission): bool
     {
-        // If user is not an admin or employee, they don't have any admin permissions
-        if (!$this->isAdmin() && !$this->isEmployee()) {
-            return false;
+        // Load the relationship if not already loaded
+        if (!$this->relationLoaded('adminPermission')) {
+            $this->load('adminPermission');
         }
+
+        // If user is an admin, they have full access (super admin)
+        if ($this->isAdmin() && !$this->adminPermission) {
+            return true;
+        }
+
+        // If user has an adminPermission record (regardless of role), check the specific permission
+        if ($this->adminPermission) {
+            return $this->adminPermission->$permission ?? false;
+        }
+
+        // If user is not an admin/employee and has no adminPermission record, they don't have access
+        return false;
 
         // Load the relationship if not already loaded
         if (!$this->relationLoaded('adminPermission')) {
@@ -763,14 +777,10 @@ class User extends Authenticatable
 
     /**
      * Check if user has any admin permission assigned.
+     * Works for admins, employees, and any other role that has been granted permissions.
      */
     public function hasAnyAdminPermission(): bool
     {
-        // If user is not an admin or employee, they don't have any admin permissions
-        if (!$this->isAdmin() && !$this->isEmployee()) {
-            return false;
-        }
-
         // Load the relationship if not already loaded
         if (!$this->relationLoaded('adminPermission')) {
             $this->load('adminPermission');
@@ -783,12 +793,7 @@ class User extends Authenticatable
             return true; // Super admin has all permissions
         }
 
-        // If user is an employee without a permission record, they have NO access
-        if ($this->isEmployee() && !$adminPermission) {
-            return false;
-        }
-
-        // If user has a permission record, check if they have at least one permission enabled
+        // If user has a permission record (regardless of role), check if they have at least one permission enabled
         if ($adminPermission) {
             return $adminPermission->content_management ||
                    $adminPermission->analytics_reports ||
@@ -800,15 +805,8 @@ class User extends Authenticatable
                    $adminPermission->system;
         }
 
-        // Check if user has at least one permission enabled
-        return $adminPermission->content_management ||
-               $adminPermission->analytics_reports ||
-               $adminPermission->employee_management ||
-               $adminPermission->student_management ||
-               $adminPermission->hiring_process ||
-               $adminPermission->communication ||
-               $adminPermission->user_management ||
-               $adminPermission->system;
+        // If user doesn't have a permission record, they have NO access
+        return false;
     }
 
     /**

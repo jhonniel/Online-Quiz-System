@@ -21,18 +21,30 @@ class AdminMiddleware
 
         $user = auth()->user();
 
-        // Allow admin users and employees with any admin permission
-        if (!$user->isAdmin() && !$user->isEmployee()) {
-            abort(403, 'Access denied. Admin or Employee privileges required.');
-        }
-
         // Load adminPermission relationship if not already loaded
         if (!$user->relationLoaded('adminPermission')) {
             $user->load('adminPermission');
         }
 
-        // If user is employee, they must have at least one admin permission
-        if ($user->isEmployee() && !$user->hasAnyAdminPermission()) {
+        // Allow access if:
+        // 1. User is an admin (always allowed)
+        // 2. User is an employee with admin permissions
+        // 3. User has any role but has been granted admin permissions via adminPermission record
+        $hasAccess = false;
+
+        if ($user->isAdmin()) {
+            // Admins always have access
+            $hasAccess = true;
+        } elseif ($user->isEmployee()) {
+            // Employees need at least one admin permission
+            $hasAccess = $user->hasAnyAdminPermission();
+        } elseif ($user->adminPermission) {
+            // Other roles (students, applicants, etc.) can access if they have an adminPermission record
+            // This means an admin has explicitly granted them access
+            $hasAccess = $user->hasAnyAdminPermission();
+        }
+
+        if (!$hasAccess) {
             abort(403, 'Access denied. You do not have permission to access admin features.');
         }
 
