@@ -476,6 +476,7 @@ class SettingsController extends Controller
             'mail_encryption' => 'nullable|string|in:tls,ssl,null',
             'mail_from_address' => 'nullable|email|max:255',
             'mail_from_name' => 'nullable|string|max:255',
+            'qr_code_prefix' => 'nullable|string|max:20',
         ]);
 
         // Update system name
@@ -483,6 +484,16 @@ class SettingsController extends Controller
 
         // Update system description
         Setting::set('system_description', $request->system_description, 'text', 'System description');
+
+        // Update QR code prefix
+        $qrCodePrefix = trim($request->qr_code_prefix ?? 'QR');
+        if (empty($qrCodePrefix)) {
+            $qrCodePrefix = 'QR';
+        }
+        Setting::set('qr_code_prefix', $qrCodePrefix, 'text', 'QR code prefix for user IDs');
+        
+        // Clear cache to ensure new QR codes use the updated prefix immediately
+        \Illuminate\Support\Facades\Cache::forget("setting.qr_code_prefix");
 
         // Update colors
         if ($request->primary_color) {

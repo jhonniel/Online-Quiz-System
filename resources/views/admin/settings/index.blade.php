@@ -181,6 +181,22 @@
                                     <p class="mt-2 text-xs text-gray-500">Brief description of your system</p>
                     </div>
 
+                    <div>
+                                    <label for="qr_code_prefix" class="block text-sm font-medium text-gray-700 mb-2">
+                                        <span class="flex items-center">
+                                            <svg class="h-4 w-4 mr-1 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z"></path>
+                                            </svg>
+                                            QR Code Prefix
+                                        </span>
+                                    </label>
+                                    <input type="text" name="qr_code_prefix" id="qr_code_prefix"
+                                           value="{{ $settings['qr_code_prefix'] ?? 'QR' }}"
+                                           maxlength="20"
+                                           class="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition duration-200">
+                                    <p class="mt-2 text-xs text-gray-500">Prefix for user QR code IDs (e.g., "QR" will generate "QR000001", "QR000002", etc.)</p>
+                    </div>
+
                                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
                                         <label for="system_logo" class="block text-sm font-medium text-gray-700 mb-2">

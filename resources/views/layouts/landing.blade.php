@@ -39,6 +39,9 @@
         <!-- Tailwind CSS -->
         <script src="https://cdn.tailwindcss.com"></script>
 
+        <!-- Page-specific Styles -->
+        @yield('styles')
+
         <!-- Custom Styles -->
         <style>
             * {

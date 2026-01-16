@@ -33,6 +33,9 @@ Route::get('/image-proxy/{path}', [LandingController::class, 'imageProxy'])->nam
 Route::get('/privacy-policy', [LandingController::class, 'privacyPolicy'])->name('landing.privacy-policy');
 Route::get('/tor-pdf', [LandingController::class, 'torPdf'])->name('landing.tor-pdf');
 
+// QR Code Scanning Route (Public) - Uses hashed token for one-time access
+Route::get('/qr/{token}', [App\Http\Controllers\QrCodeController::class, 'scan'])->name('qr.scan');
+
 // Public Hiring Application Routes (dynamic URL based on admin settings)
 // The route will be registered dynamically in the controller based on settings
 Route::get('/hiring/accept/{token}', [App\Http\Controllers\HiringApplicationController::class, 'acceptWithToken'])->name('hiring.accept');

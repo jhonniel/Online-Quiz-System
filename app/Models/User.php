@@ -36,6 +36,7 @@ class User extends Authenticatable
         'bio',
         'overtime_months_credited',
         'required_training_hours',
+        'qr_code_id',
     ];
 
     /**
@@ -823,5 +824,96 @@ class User extends Authenticatable
 
         // Use Laravel's built-in ResetPassword notification
         $this->notify(new ResetPassword($token));
+    }
+
+    /**
+     * Generate or get QR code ID for the user
+     * Uses the current QR Code Prefix from settings dynamically
+     * If prefix changes, regenerates QR code ID to match new prefix
+     */
+    public function generateQrCodeId()
+    {
+        // Get current prefix from settings (always fresh, not cached)
+        // Clear cache to ensure we get the latest prefix value
+        \Illuminate\Support\Facades\Cache::forget("setting.qr_code_prefix");
+        $prefix = \App\Models\Setting::get('qr_code_prefix', 'QR');
+        
+        // Ensure prefix is not empty
+        if (empty(trim($prefix))) {
+            $prefix = 'QR';
+        }
+        $prefix = trim($prefix);
+        
+        // Check if QR code exists and if it matches the current prefix
+        if ($this->qr_code_id) {
+            // Check if the current QR code starts with the current prefix
+            if (str_starts_with($this->qr_code_id, $prefix)) {
+                // QR code already matches current prefix, return it
+                return $this->qr_code_id;
+            } else {
+                // Prefix has changed, regenerate QR code with new prefix
+                // Clear the old QR code ID so it gets regenerated
+                $this->qr_code_id = null;
+            }
+        }
+
+        // Generate new QR code ID with current prefix
+        $maxAttempts = 100;
+        $attempt = 0;
+
+        do {
+            $number = str_pad($this->id, 6, '0', STR_PAD_LEFT);
+            $qrCodeId = $prefix . $number;
+            $attempt++;
+        } while (self::where('qr_code_id', $qrCodeId)->where('id', '!=', $this->id)->exists() && $attempt < $maxAttempts);
+
+        if ($attempt >= $maxAttempts) {
+            // Fallback: use timestamp if all attempts failed
+            $qrCodeId = $prefix . time() . $this->id;
+        }
+
+        $this->qr_code_id = $qrCodeId;
+        $this->save();
+
+        return $qrCodeId;
+    }
+
+    /**
+     * Get QR code image as base64
+     * Uses static token per user (same QR code until scanned)
+     */
+    public function getQrCodeImage($size = 200)
+    {
+        // Get or generate a token for this user (reuses existing unused token)
+        $token = \App\Models\QrCodeToken::getOrGenerateForUser($this);
+        // Generate QR code with hashed token URL (static until token is used)
+        $qrCodeUrl = route('qr.scan', ['token' => $token]);
+        return \SimpleSoftwareIO\QrCode\Facades\QrCode::size($size)->generate($qrCodeUrl);
+    }
+
+    /**
+     * Get QR code SVG string for embedding in HTML (doesn't require imagick)
+     * Uses static token per user (same QR code until scanned)
+     */
+    public function getQrCodeSvg($size = 200)
+    {
+        // Get or generate a token for this user (reuses existing unused token)
+        $token = \App\Models\QrCodeToken::getOrGenerateForUser($this);
+        // Generate QR code with hashed token URL (static until token is used)
+        $qrCodeUrl = route('qr.scan', ['token' => $token]);
+        // Generate SVG directly (default format, doesn't require imagick)
+        return \SimpleSoftwareIO\QrCode\Facades\QrCode::size($size)->generate($qrCodeUrl);
+    }
+
+    /**
+     * Get QR code data URI for embedding in HTML (using SVG format to avoid imagick requirement)
+     * Uses one-time token for security
+     */
+    public function getQrCodeDataUri($size = 200)
+    {
+        // Use getQrCodeSvg which already generates tokens
+        $svg = $this->getQrCodeSvg($size);
+        // Convert SVG to data URI
+        return 'data:image/svg+xml;base64,' . base64_encode($svg);
     }
 }
