@@ -884,13 +884,20 @@ class User extends Authenticatable
      */
     public function getQrCodeImage($size = 200)
     {
-        // Get or generate a token for this user (reuses existing unused token)
-        $token = \App\Models\QrCodeToken::getOrGenerateForUser($this);
-        // Generate QR code with hashed token URL (static until token is used)
-        $qrCodeUrl = route('qr.scan', ['token' => $token]);
-        // Use the QrCode generator directly
-        $qrCode = new \SimpleSoftwareIO\QrCode\Generator();
-        return $qrCode->size($size)->generate($qrCodeUrl);
+        try {
+            // Get or generate a token for this user (reuses existing unused token)
+            $token = \App\Models\QrCodeToken::getOrGenerateForUser($this);
+            // Generate QR code with hashed token URL (static until token is used)
+            $qrCodeUrl = route('qr.scan', ['token' => $token]);
+            // Use the QrCode generator directly
+            if (class_exists(\SimpleSoftwareIO\QrCode\Generator::class)) {
+                $qrCode = new \SimpleSoftwareIO\QrCode\Generator();
+                return $qrCode->size($size)->generate($qrCodeUrl);
+            }
+        } catch (\Exception $e) {
+            // Fallback if QR code package is not available
+        }
+        return '';
     }
 
     /**
@@ -899,13 +906,20 @@ class User extends Authenticatable
      */
     public function getQrCodeSvg($size = 200)
     {
-        // Get or generate a token for this user (reuses existing unused token)
-        $token = \App\Models\QrCodeToken::getOrGenerateForUser($this);
-        // Generate QR code with hashed token URL (static until token is used)
-        $qrCodeUrl = route('qr.scan', ['token' => $token]);
-        // Use the QrCode generator directly (SVG format, doesn't require imagick)
-        $qrCode = new \SimpleSoftwareIO\QrCode\Generator();
-        return $qrCode->size($size)->format('svg')->generate($qrCodeUrl);
+        try {
+            // Get or generate a token for this user (reuses existing unused token)
+            $token = \App\Models\QrCodeToken::getOrGenerateForUser($this);
+            // Generate QR code with hashed token URL (static until token is used)
+            $qrCodeUrl = route('qr.scan', ['token' => $token]);
+            // Use the QrCode generator directly (SVG format, doesn't require imagick)
+            if (class_exists(\SimpleSoftwareIO\QrCode\Generator::class)) {
+                $qrCode = new \SimpleSoftwareIO\QrCode\Generator();
+                return $qrCode->size($size)->format('svg')->generate($qrCodeUrl);
+            }
+        } catch (\Exception $e) {
+            // Fallback if QR code package is not available
+        }
+        return '<svg width="' . $size . '" height="' . $size . '"><text x="50%" y="50%" text-anchor="middle" dy=".3em">QR Code Unavailable</text></svg>';
     }
 
     /**

@@ -15,9 +15,8 @@ class AdminPermissionController extends Controller
      */
     public function index(Request $request)
     {
-        // Only show users who have been assigned permissions (have adminPermission record)
-        $query = User::whereIn('role', ['admin', 'employee'])
-            ->whereHas('adminPermission')
+        // Show all users who have been assigned permissions (have adminPermission record)
+        $query = User::whereHas('adminPermission')
             ->with('adminPermission');
 
         $search = trim((string) $request->input('search', ''));
@@ -50,21 +49,37 @@ class AdminPermissionController extends Controller
     }
 
     /**
-     * Show form to add a new employee to permissions management.
+     * Show form to add a new user to permissions management.
+     * Full-access admins can add any non-employee user.
+     * Regular admins can only add employees.
      */
     public function create()
     {
-        // Get all employees that don't have permissions yet
-        $employees = User::where('role', 'employee')
-            ->whereDoesntHave('adminPermission')
-            ->orderBy('name')
-            ->get();
+        $currentUser = auth()->user();
+        $isFullAccessAdmin = $currentUser->isSuperAdmin();
 
-        return view('admin.admin-permissions.create', compact('employees'));
+        if ($isFullAccessAdmin) {
+            // Full-access admins can add any user (except employees) that don't have permissions yet
+            $users = User::where('role', '!=', 'employee')
+                ->whereDoesntHave('adminPermission')
+                ->orderBy('role')
+                ->orderBy('name')
+                ->get();
+        } else {
+            // Regular admins can only add employees
+            $users = User::where('role', 'employee')
+                ->whereDoesntHave('adminPermission')
+                ->orderBy('name')
+                ->get();
+        }
+
+        return view('admin.admin-permissions.create', compact('users', 'isFullAccessAdmin'));
     }
 
     /**
-     * Store a new permission assignment for an employee.
+     * Store a new permission assignment for a user.
+     * Full-access admins can assign to any non-employee user.
+     * Regular admins can only assign to employees.
      */
     public function store(Request $request)
     {
@@ -72,10 +87,18 @@ class AdminPermissionController extends Controller
             'user_id' => 'required|exists:users,id',
         ]);
 
+        $currentUser = auth()->user();
+        $isFullAccessAdmin = $currentUser->isSuperAdmin();
         $user = User::findOrFail($request->user_id);
 
-        // Only allow assigning to employees
-        if (!$user->isEmployee()) {
+        // Access control: Only full-access admins can assign to non-employee users
+        if (!$isFullAccessAdmin && !$user->isEmployee()) {
+            return redirect()->route('admin.admin-permissions.create')
+                ->with('error', 'Only full-access admins can assign permissions to non-employee users.');
+        }
+
+        // Regular admins can only assign to employees
+        if (!$isFullAccessAdmin && !$user->isEmployee()) {
             return redirect()->route('admin.admin-permissions.create')
                 ->with('error', 'Permissions can only be assigned to employee users.');
         }
@@ -83,7 +106,7 @@ class AdminPermissionController extends Controller
         // Check if user already has permissions
         if ($user->adminPermission) {
             return redirect()->route('admin.admin-permissions.edit', $user)
-                ->with('info', 'This employee already has permissions. You can edit them here.');
+                ->with('info', 'This user already has permissions. You can edit them here.');
         }
 
         // Create empty permission record (all false by default)
@@ -102,36 +125,47 @@ class AdminPermissionController extends Controller
         $user->refresh();
         $user->load('adminPermission');
 
+        $roleLabel = $user->isEmployee() ? 'Employee' : ucfirst($user->role);
         return redirect()->route('admin.admin-permissions.edit', $user)
-            ->with('success', 'Employee added to permissions management. Please configure their access. The employee may need to refresh their browser or log out and log back in to see the changes.');
+            ->with('success', "{$roleLabel} added to permissions management. Please configure their access. The user may need to refresh their browser or log out and log back in to see the changes.");
     }
 
     /**
      * Show the form for editing the specified user's permissions.
+     * Full-access admins can edit any user's permissions.
+     * Regular admins can only edit employee permissions.
      */
     public function edit(User $user)
     {
-        // Only allow editing permissions for admin and employee users
-        if (!$user->isAdmin() && !$user->isEmployee()) {
+        $currentUser = auth()->user();
+        $isFullAccessAdmin = $currentUser->isSuperAdmin();
+
+        // Access control: Only full-access admins can edit non-employee permissions
+        if (!$isFullAccessAdmin && !$user->isEmployee() && !$user->isAdmin()) {
             return redirect()->route('admin.admin-permissions.index')
-                ->with('error', 'Permissions can only be assigned to admin or employee users.');
+                ->with('error', 'Only full-access admins can edit permissions for non-employee users.');
         }
 
         $permission = $user->adminPermission;
         $departments = Department::active()->orderBy('name')->get();
 
-        return view('admin.admin-permissions.edit', compact('user', 'permission', 'departments'));
+        return view('admin.admin-permissions.edit', compact('user', 'permission', 'departments', 'isFullAccessAdmin'));
     }
 
     /**
      * Update the specified user's permissions in storage.
+     * Full-access admins can update any user's permissions.
+     * Regular admins can only update employee permissions.
      */
     public function update(Request $request, User $user)
     {
-        // Only allow updating permissions for admin and employee users
-        if (!$user->isAdmin() && !$user->isEmployee()) {
+        $currentUser = auth()->user();
+        $isFullAccessAdmin = $currentUser->isSuperAdmin();
+
+        // Access control: Only full-access admins can update non-employee permissions
+        if (!$isFullAccessAdmin && !$user->isEmployee() && !$user->isAdmin()) {
             return redirect()->route('admin.admin-permissions.index')
-                ->with('error', 'Permissions can only be assigned to admin or employee users.');
+                ->with('error', 'Only full-access admins can update permissions for non-employee users.');
         }
 
         $validated = $request->validate([
@@ -177,24 +211,30 @@ class AdminPermissionController extends Controller
         $user->refresh();
         $user->load('adminPermission');
 
-        $roleLabel = $user->isAdmin() ? 'Admin' : 'Employee';
+        $roleLabel = ucfirst($user->role);
         return redirect()->route('admin.admin-permissions.index')
             ->with('success', "{$roleLabel} permissions updated successfully. The user may need to refresh their browser to see the changes.");
     }
 
     /**
-     * Remove permissions from a user (making them a super admin/employee with full access).
+     * Remove permissions from a user.
+     * Full-access admins can remove permissions from any user.
+     * Regular admins can only remove permissions from employees.
      */
     public function destroy(User $user)
     {
-        if (!$user->isAdmin() && !$user->isEmployee()) {
+        $currentUser = auth()->user();
+        $isFullAccessAdmin = $currentUser->isSuperAdmin();
+
+        // Access control: Only full-access admins can remove permissions from non-employee users
+        if (!$isFullAccessAdmin && !$user->isEmployee() && !$user->isAdmin()) {
             return redirect()->route('admin.admin-permissions.index')
-                ->with('error', 'Only admin or employee users can have permissions.');
+                ->with('error', 'Only full-access admins can remove permissions from non-employee users.');
         }
 
         $user->adminPermission()->delete();
 
-        $roleLabel = $user->isAdmin() ? 'admin' : 'employee';
+        $roleLabel = $user->isAdmin() ? 'admin' : strtolower($user->role);
         return redirect()->route('admin.admin-permissions.index')
             ->with('success', "Permissions removed. User now has full {$roleLabel} access.");
     }
