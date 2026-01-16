@@ -51,7 +51,7 @@
 
     <!-- Form -->
     <div class="bg-white rounded-2xl shadow-xl border border-gray-200 p-8">
-        <form action="{{ route('admin.student-dtr.update', $dtr) }}" method="POST" class="space-y-6">
+        <form id="dtr-edit-form" action="{{ route('admin.student-dtr.update', $dtr) }}" method="POST" class="space-y-6" onsubmit="return validateForm(event);">
             @csrf
             @method('PUT')
 
@@ -202,22 +202,6 @@
                     </svg>
                     Cancel
                 </a>
-                @if(auth()->check() && auth()->user()->isSuperAdmin())
-                    <form action="{{ route('admin.student-dtr.destroy', $dtr) }}"
-                          method="POST"
-                          onsubmit="return confirm('Are you sure you want to delete this student DTR record? This action cannot be undone.');"
-                          class="inline-block">
-                        @csrf
-                        @method('DELETE')
-                        <button type="submit"
-                                class="inline-flex items-center px-6 py-3 border border-red-300 text-sm font-medium rounded-lg text-red-700 bg-red-50 hover:bg-red-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 transition duration-200">
-                            <svg class="h-5 w-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
-                            </svg>
-                            Delete Record
-                        </button>
-                    </form>
-                @endif
                 <button type="submit"
                         class="inline-flex items-center px-6 py-3 border border-transparent text-sm font-medium rounded-lg shadow-sm text-white bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-700 hover:to-indigo-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition duration-200">
                     <svg class="h-5 w-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -228,9 +212,77 @@
             </div>
         </form>
     </div>
+
+    <!-- Delete Form - OUTSIDE the edit form to prevent conflicts -->
+    @if(auth()->check() && auth()->user()->isSuperAdmin())
+        <div class="mt-4 bg-white rounded-2xl shadow-xl border border-gray-200 p-6">
+            <form id="dtr-delete-form" action="{{ route('admin.student-dtr.destroy', $dtr) }}"
+                  method="POST"
+                  onsubmit="return confirm('Are you sure you want to delete this student DTR record? This action cannot be undone.');"
+                  class="inline-block">
+                @csrf
+                @method('DELETE')
+                <button type="submit"
+                        class="inline-flex items-center px-6 py-3 border border-red-300 text-sm font-medium rounded-lg text-red-700 bg-red-50 hover:bg-red-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 transition duration-200">
+                    <svg class="h-5 w-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                    </svg>
+                    Delete Record
+                </button>
+            </form>
+        </div>
+    @endif
 </div>
 
 <script>
+    // Form validation to prevent accidental submission
+    function validateForm(event) {
+        const form = document.getElementById('dtr-edit-form');
+        if (!form) {
+            console.error('Form not found');
+            event.preventDefault();
+            return false;
+        }
+        
+        // Verify we're submitting to the update route, not delete
+        const formAction = form.getAttribute('action');
+        console.log('Form action:', formAction);
+        
+        if (!formAction || formAction.includes('destroy') || formAction.includes('delete')) {
+            console.error('Form action is incorrect:', formAction);
+            event.preventDefault();
+            alert('Error: Form is submitting to wrong route. Please refresh the page and try again.');
+            return false;
+        }
+        
+        // Verify method is PUT
+        const methodInput = form.querySelector('input[name="_method"]');
+        console.log('Form method:', methodInput ? methodInput.value : 'not found');
+        
+        if (!methodInput || methodInput.value !== 'PUT') {
+            console.error('Form method is incorrect');
+            event.preventDefault();
+            alert('Error: Form method is incorrect. Please refresh the page and try again.');
+            return false;
+        }
+        
+        // Double-check we're not accidentally submitting the delete form
+        const deleteForm = document.getElementById('dtr-delete-form');
+        if (deleteForm) {
+            const deleteButtons = deleteForm.querySelectorAll('button[type="submit"]');
+            deleteButtons.forEach(btn => {
+                if (btn === event.target || btn.contains(event.target)) {
+                    console.error('Delete button clicked instead of update!');
+                    event.preventDefault();
+                    return false;
+                }
+            });
+        }
+        
+        console.log('Form validation passed, submitting update...');
+        return true;
+    }
+
     document.addEventListener('DOMContentLoaded', function () {
         const inputs = document.querySelectorAll('.time-input');
 

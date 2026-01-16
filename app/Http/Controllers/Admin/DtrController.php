@@ -1270,9 +1270,35 @@ class DtrController extends Controller
      */
     public function studentUpdate(Request $request, Dtr $dtr)
     {
+        // Log the incoming request
+        Log::info('Student DTR Update Request', [
+            'dtr_id' => $dtr->id,
+            'method' => $request->method(),
+            'route' => $request->route()->getName(),
+            'user_id' => $request->user_id,
+            'date' => $request->date,
+        ]);
+
         // Verify this is a student DTR
         if (!$dtr->user || $dtr->user->role !== 'student') {
             abort(404, 'DTR record not found for students.');
+        }
+
+        // Store original values for rollback if needed
+        $originalData = [
+            'user_id' => $dtr->user_id,
+            'date' => $dtr->date->format('Y-m-d'),
+            'total_hours' => $dtr->total_hours,
+            'added_time_from_note' => $dtr->added_time_from_note,
+            'overtime_hours' => $dtr->overtime_hours,
+            'status' => $dtr->status,
+            'remarks' => $dtr->remarks,
+        ];
+
+        // Verify the record exists before we start
+        if (!Dtr::where('id', $dtr->id)->exists()) {
+            Log::error('DTR record does not exist at start of update!', ['dtr_id' => $dtr->id]);
+            abort(404, 'DTR record not found.');
         }
 
         $request->validate([
@@ -1295,21 +1321,52 @@ class DtrController extends Controller
                 ->withInput();
         }
 
+        // Store DTR ID before transaction
+        $dtrId = $dtr->id;
+
+        // Use database transaction to ensure atomicity
         try {
+            return \DB::transaction(function () use ($request, $dtr, $dtrId, $originalData) {
+            try {
+            // First, check if updating date or user_id would create a duplicate
+            // (there's a unique constraint on user_id + date)
+            if ($request->user_id != $dtr->user_id || $request->date != $dtr->date->format('Y-m-d')) {
+                $existingDtr = Dtr::where('user_id', $request->user_id)
+                    ->whereDate('date', $request->date)
+                    ->where('id', '!=', $dtrId)
+                    ->lockForUpdate() // Lock the row to prevent race conditions
+                    ->first();
+                
+                if ($existingDtr) {
+                    return redirect()->back()
+                        ->withErrors(['date' => 'A DTR record already exists for this student on this date.'])
+                        ->withInput();
+                }
+            }
+
             // Convert HH:MM inputs to decimal hours
             $workedDecimal = 0;
             $addedDecimal = 0;
 
+            // total_hours field in form is actually "Worked Hours" (base hours)
             if ($request->filled('total_hours')) {
                 [$h, $m] = explode(':', $request->total_hours);
                 $workedDecimal = ((int) $h) + ((int) $m / 60);
+            } else {
+                // If not provided, keep current worked hours
+                $workedDecimal = max(($dtr->total_hours ?? 0) - ($dtr->added_time_from_note ?? 0), 0);
             }
 
+            // Added time from note
             if ($request->filled('added_time_from_note')) {
                 [$eh, $em] = explode(':', $request->added_time_from_note);
                 $addedDecimal = ((int) $eh) + ((int) $em / 60);
+            } else {
+                // If not provided, keep current added time
+                $addedDecimal = $dtr->added_time_from_note ?? 0;
             }
 
+            // Total hours = Worked Hours + Added Time
             $totalDecimal = $workedDecimal + $addedDecimal;
 
             // Overtime is any hours beyond the standard 8:00
@@ -1318,23 +1375,148 @@ class DtrController extends Controller
                 ? $totalDecimal - $standardDecimal
                 : 0;
 
-            $dtr->update([
+            // Build update data - explicitly preserve all existing fields
+            // Only update the fields we want to change
+            $updateData = [
                 'user_id' => $request->user_id,
                 'date' => $request->date,
                 'added_time_from_note' => $addedDecimal,
                 'total_hours' => $totalDecimal,
                 'overtime_hours' => $overtimeDecimal,
                 'status' => $request->status,
-                'remarks' => $request->remarks,
+            ];
+
+            // Handle remarks - preserve existing if not provided or empty
+            if ($request->has('remarks')) {
+                $remarksValue = trim($request->remarks ?? '');
+                // Only update if value is provided, otherwise preserve existing
+                $updateData['remarks'] = $remarksValue !== '' ? $remarksValue : ($dtr->remarks ?? null);
+            } else {
+                // Field not in request, preserve existing
+                $updateData['remarks'] = $dtr->remarks;
+            }
+
+            // Log before update for debugging
+            Log::info('Updating student DTR', [
+                'dtr_id' => $dtr->id,
+                'update_data' => $updateData,
+                'existing_data' => [
+                    'user_id' => $dtr->user_id,
+                    'date' => $dtr->date->format('Y-m-d'),
+                    'total_hours' => $dtr->total_hours,
+                    'added_time_from_note' => $dtr->added_time_from_note,
+                    'status' => $dtr->status,
+                    'remarks' => $dtr->remarks,
+                ]
+            ]);
+
+            // IMPORTANT: Use update() method which only updates specified fields
+            // This preserves all other fields (time_in, time_out, break_start, break_end, etc.)
+            // Lock the record for update to prevent concurrent modifications
+            $lockedDtr = Dtr::where('id', $dtrId)->lockForUpdate()->first();
+            
+            if (!$lockedDtr) {
+                Log::error('DTR record does not exist before update!', [
+                    'dtr_id' => $dtrId
+                ]);
+                throw new \Exception('DTR record not found. It may have been deleted.');
+            }
+
+            // Verify this is still a student DTR
+            if (!$lockedDtr->user || $lockedDtr->user->role !== 'student') {
+                throw new \Exception('DTR record does not belong to a student.');
+            }
+
+            // Perform the update using query builder to ensure we're updating the correct record
+            // IMPORTANT: Use update() which only updates specified columns, preserving others
+            Log::info('About to update DTR record', [
+                'dtr_id' => $dtrId,
+                'update_data' => $updateData,
+            ]);
+            
+            $updated = Dtr::where('id', $dtrId)->update($updateData);
+            
+            Log::info('DTR update executed', [
+                'dtr_id' => $dtrId,
+                'updated' => $updated,
+                'rows_affected' => $updated,
+            ]);
+            
+            if (!$updated) {
+                Log::error('DTR update returned false', [
+                    'dtr_id' => $dtrId,
+                    'update_data' => $updateData,
+                    'original_data' => $originalData
+                ]);
+                throw new \Exception('Failed to update DTR record. No rows were affected.');
+            }
+
+            // Verify the record still exists after update
+            $updatedDtr = Dtr::find($dtrId);
+            if (!$updatedDtr) {
+                Log::error('DTR record disappeared after update!', [
+                    'dtr_id' => $dtrId,
+                    'update_data' => $updateData,
+                    'original_data' => $originalData,
+                    'record_exists' => Dtr::where('id', $dtrId)->exists(),
+                ]);
+                throw new \Exception('DTR record was deleted during update. This should not happen.');
+            }
+
+            Log::info('DTR record verified after update', [
+                'dtr_id' => $dtrId,
+                'user_id' => $updatedDtr->user_id,
+                'date' => $updatedDtr->date->format('Y-m-d'),
+                'total_hours' => $updatedDtr->total_hours,
             ]);
 
             // Calculate and store weekly deficit
             $this->calculateAndStoreWeeklyDeficit($request->user_id, Carbon::parse($request->date));
 
-            return redirect()->route('admin.student-dtr.index')
-                ->with('success', 'Student DTR record updated successfully.');
+            Log::info('Student DTR updated successfully', [
+                'dtr_id' => $dtrId,
+                'updated_data' => [
+                    'user_id' => $updatedDtr->user_id,
+                    'date' => $updatedDtr->date->format('Y-m-d'),
+                    'total_hours' => $updatedDtr->total_hours,
+                    'added_time_from_note' => $updatedDtr->added_time_from_note,
+                    'status' => $updatedDtr->status,
+                ]
+            ]);
+
+                return redirect()->route('admin.student-dtr.index')
+                    ->with('success', 'Student DTR record updated successfully.');
+            } catch (\Exception $e) {
+                // Rollback is automatic in transaction
+                Log::error('Student DTR update exception (inside transaction): ' . $e->getMessage(), [
+                    'dtr_id' => $dtrId ?? null,
+                    'trace' => $e->getTraceAsString(),
+                ]);
+                throw $e; // Re-throw to let outer catch handle it
+            }
+            }, 5); // 5 attempts for deadlock retry
+        } catch (\Illuminate\Database\QueryException $e) {
+            Log::error('Student DTR update database error: ' . $e->getMessage(), [
+                'dtr_id' => $dtr->id ?? null,
+                'sql' => $e->getSql() ?? null,
+                'bindings' => $e->getBindings() ?? null,
+            ]);
+
+            // Check if it's a unique constraint violation
+            if (str_contains($e->getMessage(), 'UNIQUE constraint') || str_contains($e->getMessage(), 'Duplicate entry')) {
+                return redirect()->back()
+                    ->withErrors(['date' => 'A DTR record already exists for this student on this date.'])
+                    ->withInput();
+            }
+
+            return redirect()->back()
+                ->withErrors(['error' => 'Database error: ' . $e->getMessage()])
+                ->withInput();
         } catch (\Exception $e) {
-            Log::error('Student DTR update failed: ' . $e->getMessage());
+            Log::error('Student DTR update failed: ' . $e->getMessage(), [
+                'dtr_id' => $dtr->id ?? null,
+                'trace' => $e->getTraceAsString(),
+            ]);
 
             return redirect()->back()
                 ->withErrors(['error' => 'Failed to update student DTR record: ' . $e->getMessage()])
@@ -1376,6 +1558,189 @@ class DtrController extends Controller
 
             return redirect()->back()
                 ->withErrors(['error' => 'Failed to delete student DTR record: ' . $e->getMessage()]);
+        }
+    }
+
+    /**
+     * Bulk update student DTR records.
+     */
+    public function studentBulkUpdate(Request $request)
+    {
+        $request->validate([
+            'dtr_ids' => 'required|array',
+            'dtr_ids.*' => 'required|integer|exists:dtrs,id',
+            'worked_hours.*' => 'nullable|date_format:H:i',
+            'total_hours.*' => 'nullable|date_format:H:i',
+            'added_time_from_note.*' => 'nullable|date_format:H:i',
+            'status.*' => 'nullable|in:present,absent,late,half_day,on_leave,travel',
+            'remarks.*' => 'nullable|string|max:1000',
+        ]);
+
+        $dtrIds = $request->dtr_ids;
+
+        if (empty($dtrIds)) {
+            return redirect()->back()
+                ->withErrors(['error' => 'No records selected.']);
+        }
+
+        // Get all DTR records and verify they belong to students
+        $dtrs = Dtr::whereIn('id', $dtrIds)
+            ->whereHas('user', function($q) {
+                $q->where('role', 'student');
+            })
+            ->get();
+
+        if ($dtrs->isEmpty()) {
+            return redirect()->back()
+                ->withErrors(['error' => 'No valid student DTR records found.']);
+        }
+
+        $updatedCount = 0;
+        $affectedUsers = [];
+
+        try {
+            foreach ($dtrs as $dtr) {
+                $updateData = [];
+                $needsRecalculation = false;
+                $dtrId = $dtr->id;
+
+                // Get worked hours and added time for this specific record
+                $workedDecimal = null;
+                $addedDecimal = null;
+
+                // Update worked hours if provided for this specific record
+                if ($request->has("worked_hours.{$dtrId}") && $request->filled("worked_hours.{$dtrId}")) {
+                    $workedHoursInput = $request->input("worked_hours.{$dtrId}");
+                    [$h, $m] = explode(':', $workedHoursInput);
+                    $workedDecimal = ((int) $h) + ((int) $m / 60);
+                } else {
+                    // Keep current worked hours
+                    $workedDecimal = max(($dtr->total_hours ?? 0) - ($dtr->added_time_from_note ?? 0), 0);
+                }
+
+                // Update added time if provided for this specific record
+                if ($request->has("added_time_from_note.{$dtrId}") && $request->filled("added_time_from_note.{$dtrId}")) {
+                    $addedTimeInput = $request->input("added_time_from_note.{$dtrId}");
+                    [$eh, $em] = explode(':', $addedTimeInput);
+                    $addedDecimal = ((int) $eh) + ((int) $em / 60);
+                } else {
+                    // Keep current added time
+                    $addedDecimal = $dtr->added_time_from_note ?? 0;
+                }
+
+                // Calculate total hours
+                $totalDecimal = $workedDecimal + $addedDecimal;
+                
+                // Build update data - only include fields we want to change
+                $updateData = [
+                    'added_time_from_note' => $addedDecimal,
+                    'total_hours' => $totalDecimal,
+                ];
+                
+                // Calculate overtime
+                $standardDecimal = 8.0;
+                $updateData['overtime_hours'] = $totalDecimal > $standardDecimal
+                    ? $totalDecimal - $standardDecimal
+                    : 0;
+                
+                $needsRecalculation = true;
+
+                // Update status if provided for this specific record (only if not empty)
+                if ($request->has("status.{$dtrId}") && $request->filled("status.{$dtrId}")) {
+                    $updateData['status'] = $request->input("status.{$dtrId}");
+                }
+                // If status not provided, don't include it - preserve existing
+
+                // Update remarks if provided for this specific record
+                if ($request->has("remarks.{$dtrId}")) {
+                    $remarksValue = trim($request->input("remarks.{$dtrId}", ''));
+                    // Only update if value is provided, otherwise preserve existing
+                    $updateData['remarks'] = $remarksValue !== '' ? $remarksValue : ($dtr->remarks ?? null);
+                }
+                // If remarks not provided, don't include it - preserve existing
+
+                // Use fill() and save() to ensure only specified fields are updated
+                // This preserves time_in, time_out, break_start, break_end, and other fields
+                $dtr->fill($updateData);
+                $dtr->save();
+                
+                $updatedCount++;
+                
+                if ($needsRecalculation) {
+                    $affectedUsers[$dtr->user_id] = $dtr->date;
+                }
+            }
+
+            // Recalculate weekly deficits for affected users
+            foreach ($affectedUsers as $userId => $date) {
+                $this->calculateAndStoreWeeklyDeficit($userId, Carbon::parse($date));
+            }
+
+            return redirect()->route('admin.student-dtr.index')
+                ->with('success', "Successfully updated {$updatedCount} record(s).");
+        } catch (\Exception $e) {
+            Log::error('Bulk update failed: ' . $e->getMessage());
+
+            return redirect()->back()
+                ->withErrors(['error' => 'Failed to update records: ' . $e->getMessage()]);
+        }
+    }
+
+    /**
+     * Bulk delete student DTR records.
+     */
+    public function studentBulkDelete(Request $request)
+    {
+        $currentUser = auth()->user();
+
+        // Only super admins (full access) can delete student DTR records
+        if (!$currentUser || !$currentUser->isSuperAdmin()) {
+            abort(403, 'Only full-access admins can delete student DTR records.');
+        }
+
+        $request->validate([
+            'dtr_ids' => 'required|array',
+            'dtr_ids.*' => 'required|integer|exists:dtrs,id',
+        ]);
+
+        // Get all DTR records and verify they belong to students
+        $dtrs = Dtr::whereIn('id', $request->dtr_ids)
+            ->whereHas('user', function($q) {
+                $q->where('role', 'student');
+            })
+            ->get();
+
+        if ($dtrs->isEmpty()) {
+            return redirect()->back()
+                ->withErrors(['error' => 'No valid student DTR records found.']);
+        }
+
+        $deletedCount = 0;
+        $affectedUsers = [];
+
+        try {
+            foreach ($dtrs as $dtr) {
+                $userId = $dtr->user_id;
+                $date = $dtr->date;
+                
+                $dtr->delete();
+                $deletedCount++;
+                
+                $affectedUsers[$userId] = $date;
+            }
+
+            // Recalculate weekly deficits for affected users
+            foreach ($affectedUsers as $userId => $date) {
+                $this->calculateAndStoreWeeklyDeficit($userId, Carbon::parse($date));
+            }
+
+            return redirect()->route('admin.student-dtr.index')
+                ->with('success', "Successfully deleted {$deletedCount} record(s).");
+        } catch (\Exception $e) {
+            Log::error('Bulk delete failed: ' . $e->getMessage());
+
+            return redirect()->back()
+                ->withErrors(['error' => 'Failed to delete records: ' . $e->getMessage()]);
         }
     }
 

@@ -169,6 +169,8 @@ Route::prefix('admin')->middleware(['auth', 'admin'])->group(function () {
         Route::get('/student-dtr/{dtr}/edit', [App\Http\Controllers\Admin\DtrController::class, 'studentEdit'])->name('admin.student-dtr.edit');
         Route::put('/student-dtr/{dtr}', [App\Http\Controllers\Admin\DtrController::class, 'studentUpdate'])->name('admin.student-dtr.update');
         Route::delete('/student-dtr/{dtr}', [App\Http\Controllers\Admin\DtrController::class, 'studentDestroy'])->name('admin.student-dtr.destroy');
+        Route::post('/student-dtr/bulk-update', [App\Http\Controllers\Admin\DtrController::class, 'studentBulkUpdate'])->name('admin.student-dtr.bulk-update');
+        Route::post('/student-dtr/bulk-delete', [App\Http\Controllers\Admin\DtrController::class, 'studentBulkDelete'])->name('admin.student-dtr.bulk-delete');
         Route::get('/student-dtr/export/pdf', [App\Http\Controllers\Admin\DtrController::class, 'studentExportPdf'])->name('admin.student-dtr.export-pdf');
 
     // Student Management Dashboard

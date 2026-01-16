@@ -248,8 +248,31 @@
     <!-- DTR Table -->
     <div class="bg-white rounded-2xl shadow-xl border border-gray-200 overflow-hidden">
         <div class="px-6 py-4 border-b border-gray-200 bg-gray-50">
-            <h2 class="text-lg font-semibold text-gray-900">Time Records</h2>
-            <p class="text-sm text-gray-600 mt-1">Total records: {{ $totalRecords }}</p>
+            <div class="flex items-center justify-between">
+                <div>
+                    <h2 class="text-lg font-semibold text-gray-900">Time Records</h2>
+                    <p class="text-sm text-gray-600 mt-1">Total records: {{ $totalRecords }}</p>
+                </div>
+                <div class="flex items-center gap-3" id="bulk-actions" style="display: none;">
+                    <span class="text-sm text-gray-700" id="selected-count">0 selected</span>
+                    <button type="button" onclick="openBulkEditModal()" 
+                            class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-lg shadow-sm text-white bg-indigo-600 hover:bg-indigo-700">
+                        <svg class="h-4 w-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
+                        </svg>
+                        Edit Selected
+                    </button>
+                    @if(auth()->check() && auth()->user()->isSuperAdmin())
+                    <button type="button" onclick="bulkDelete()" 
+                            class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-lg shadow-sm text-white bg-red-600 hover:bg-red-700">
+                        <svg class="h-4 w-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                        </svg>
+                        Delete Selected
+                    </button>
+                    @endif
+                </div>
+            </div>
         </div>
 
         <div class="overflow-x-auto" id="dtr-groups-root">
@@ -302,6 +325,10 @@
                                     <table class="min-w-full divide-y divide-gray-200 mb-4">
                                         <thead class="bg-gray-50">
                                             <tr>
+                                                <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-12">
+                                                    <input type="checkbox" class="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500" 
+                                                           onchange="toggleAllRows(this, '{{ $weekKey }}-{{ $studentGroup['student']->id }}')">
+                                                </th>
                                                 <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
                                                 <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Worked Hours</th>
                                                 <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Added Time From Note</th>
@@ -313,7 +340,13 @@
                                         </thead>
                                         <tbody class="bg-white divide-y divide-gray-200">
                                             @foreach($studentGroup['records'] as $dtr)
-                                                <tr class="hover:bg-gray-50">
+                                                <tr class="hover:bg-gray-50" data-dtr-id="{{ $dtr->id }}">
+                                                    <td class="px-3 py-2 whitespace-nowrap">
+                                                        <input type="checkbox" name="dtr_ids[]" value="{{ $dtr->id }}" 
+                                                               class="dtr-checkbox rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                                                               data-week-key="{{ $weekKey }}-{{ $studentGroup['student']->id }}"
+                                                               onchange="updateBulkActions()">
+                                                    </td>
                                                     <td class="px-3 py-2 whitespace-nowrap">
                                                         <div class="text-sm text-gray-900">{{ $dtr->date->format('M d, Y') }}</div>
                                                         <div class="text-xs text-gray-500">{{ $dtr->date->format('l') }}</div>
@@ -608,7 +641,245 @@
             });
         }
     });
+
+    // Bulk operations
+    function updateBulkActions() {
+        const checkboxes = document.querySelectorAll('.dtr-checkbox:checked');
+        const bulkActions = document.getElementById('bulk-actions');
+        const selectedCount = document.getElementById('selected-count');
+        
+        if (checkboxes.length > 0) {
+            bulkActions.style.display = 'flex';
+            selectedCount.textContent = checkboxes.length + ' selected';
+        } else {
+            bulkActions.style.display = 'none';
+        }
+    }
+
+    function toggleAllRows(checkbox, weekKey) {
+        const checkboxes = document.querySelectorAll(`.dtr-checkbox[data-week-key="${weekKey}"]`);
+        checkboxes.forEach(cb => {
+            cb.checked = checkbox.checked;
+        });
+        updateBulkActions();
+    }
+
+    function openBulkEditModal() {
+        const checkboxes = document.querySelectorAll('.dtr-checkbox:checked');
+        if (checkboxes.length === 0) {
+            alert('Please select at least one record to edit.');
+            return;
+        }
+        
+        const selectedIds = Array.from(checkboxes).map(cb => cb.value);
+        const selectedRows = Array.from(checkboxes).map(cb => {
+            const row = cb.closest('tr');
+            const dateCell = row.querySelector('td:nth-child(2)');
+            const workedCell = row.querySelector('td:nth-child(3)');
+            const addedCell = row.querySelector('td:nth-child(4)');
+            const totalCell = row.querySelector('td:nth-child(5)');
+            const statusCell = row.querySelector('td:nth-child(7)');
+            const remarksCell = row.querySelector('td:nth-child(8)');
+            
+            // Extract current values
+            const workedText = workedCell ? workedCell.textContent.trim() : '00:00';
+            const addedText = addedCell ? addedCell.textContent.trim() : '00:00';
+            const totalText = totalCell ? totalCell.textContent.trim() : '00:00';
+            const statusBadge = statusCell ? statusCell.querySelector('span') : null;
+            const statusText = statusBadge ? statusBadge.textContent.trim() : '';
+            const remarksText = remarksCell ? remarksCell.querySelector('.text-sm')?.textContent.trim() || '-' : '-';
+            
+            // Get the actual status from the row's data attribute or parse from badge
+            // The status is stored in the database, but we need to extract it from the display
+            // For now, we'll default to 'present' and let user change it
+            let statusValue = 'present';
+            if (statusText.includes('Travel')) statusValue = 'travel';
+            else if (statusText.includes('Under Time')) statusValue = 'present';
+            else if (statusText.includes('Completed')) statusValue = 'present';
+            
+            // Use total hours as the default for total_hours field
+            return {
+                id: cb.value,
+                date: dateCell ? dateCell.textContent.trim() : '',
+                worked: workedText,
+                added: addedText,
+                total: totalText,
+                status: statusValue,
+                remarks: remarksText !== '-' ? remarksText : ''
+            };
+        });
+        
+        // Populate the form with individual records
+        const recordsContainer = document.getElementById('bulk-edit-records');
+        recordsContainer.innerHTML = '';
+        
+        selectedRows.forEach((row, index) => {
+            const recordDiv = document.createElement('div');
+            recordDiv.className = 'border border-gray-200 rounded-lg p-4 mb-4 bg-gray-50';
+            recordDiv.innerHTML = `
+                <div class="flex items-center justify-between mb-3">
+                    <h4 class="text-sm font-semibold text-gray-900">${row.date}</h4>
+                    <span class="text-xs text-gray-500">Record #${index + 1}</span>
+                </div>
+                <input type="hidden" name="dtr_ids[]" value="${row.id}">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-medium text-gray-700 mb-1">Worked Hours (HH:MM)</label>
+                        <input type="text" name="worked_hours[${row.id}]" value="${row.worked}" 
+                               pattern="^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$"
+                               placeholder="08:00" 
+                               class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+                               onchange="calculateTotalHours(this, '${row.id}')">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-gray-700 mb-1">Added Time (HH:MM)</label>
+                        <input type="text" name="added_time_from_note[${row.id}]" value="${row.added}" 
+                               pattern="^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$"
+                               placeholder="00:00" 
+                               class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+                               onchange="calculateTotalHours(this, '${row.id}')">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-gray-700 mb-1">Total Hours (HH:MM) <span class="text-gray-500">(Auto-calculated)</span></label>
+                        <input type="text" name="total_hours[${row.id}]" value="${row.total}" 
+                               pattern="^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$"
+                               placeholder="08:00" 
+                               class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm bg-gray-50"
+                               readonly>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-gray-700 mb-1">Status</label>
+                        <select name="status[${row.id}]" class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm">
+                            <option value="">Keep current</option>
+                            <option value="present" ${row.status === 'present' ? 'selected' : ''}>Present</option>
+                            <option value="absent" ${row.status === 'absent' ? 'selected' : ''}>Absent</option>
+                            <option value="late" ${row.status === 'late' ? 'selected' : ''}>Late</option>
+                            <option value="half_day" ${row.status === 'half_day' ? 'selected' : ''}>Half Day</option>
+                            <option value="on_leave" ${row.status === 'on_leave' ? 'selected' : ''}>On Leave</option>
+                            <option value="travel" ${row.status === 'travel' ? 'selected' : ''}>Travel</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-gray-700 mb-1">Remarks</label>
+                        <input type="text" name="remarks[${row.id}]" value="${row.remarks}" 
+                               placeholder="Leave empty to keep current" 
+                               class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm">
+                    </div>
+                </div>
+            `;
+            recordsContainer.appendChild(recordDiv);
+        });
+        
+        document.getElementById('bulk-edit-modal').classList.remove('hidden');
+    }
+
+    function closeBulkEditModal() {
+        document.getElementById('bulk-edit-modal').classList.add('hidden');
+    }
+
+    function calculateTotalHours(input, recordId) {
+        const workedInput = document.querySelector(`input[name="worked_hours[${recordId}]"]`);
+        const addedInput = document.querySelector(`input[name="added_time_from_note[${recordId}]"]`);
+        const totalInput = document.querySelector(`input[name="total_hours[${recordId}]"]`);
+        
+        if (!workedInput || !addedInput || !totalInput) return;
+        
+        const workedValue = workedInput.value.trim();
+        const addedValue = addedInput.value.trim();
+        
+        if (!workedValue || !addedValue) {
+            totalInput.value = '';
+            return;
+        }
+        
+        // Parse HH:MM format
+        const parseTime = (timeStr) => {
+            const parts = timeStr.split(':');
+            if (parts.length !== 2) return 0;
+            const hours = parseInt(parts[0]) || 0;
+            const minutes = parseInt(parts[1]) || 0;
+            return hours + (minutes / 60);
+        };
+        
+        const workedDecimal = parseTime(workedValue);
+        const addedDecimal = parseTime(addedValue);
+        const totalDecimal = workedDecimal + addedDecimal;
+        
+        // Convert back to HH:MM
+        const totalHours = Math.floor(totalDecimal);
+        const totalMinutes = Math.round((totalDecimal - totalHours) * 60);
+        const formattedTotal = `${String(totalHours).padStart(2, '0')}:${String(totalMinutes).padStart(2, '0')}`;
+        
+        totalInput.value = formattedTotal;
+    }
+
+    function bulkDelete() {
+        const checkboxes = document.querySelectorAll('.dtr-checkbox:checked');
+        if (checkboxes.length === 0) {
+            alert('Please select at least one record to delete.');
+            return;
+        }
+        
+        if (!confirm(`Are you sure you want to delete ${checkboxes.length} selected record(s)? This action cannot be undone.`)) {
+            return;
+        }
+        
+        const selectedIds = Array.from(checkboxes).map(cb => cb.value);
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = '{{ route("admin.student-dtr.bulk-delete") }}';
+        
+        const csrfToken = document.createElement('input');
+        csrfToken.type = 'hidden';
+        csrfToken.name = '_token';
+        csrfToken.value = '{{ csrf_token() }}';
+        form.appendChild(csrfToken);
+        
+        selectedIds.forEach(id => {
+            const input = document.createElement('input');
+            input.type = 'hidden';
+            input.name = 'dtr_ids[]';
+            input.value = id;
+            form.appendChild(input);
+        });
+        
+        document.body.appendChild(form);
+        form.submit();
+    }
 </script>
+
+<!-- Bulk Edit Modal -->
+<div id="bulk-edit-modal" class="hidden fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
+    <div class="relative top-10 mx-auto p-5 border w-full max-w-4xl shadow-lg rounded-md bg-white my-10 max-h-[90vh] overflow-y-auto">
+        <div class="mt-3">
+            <div class="flex items-center justify-between mb-4">
+                <h3 class="text-lg font-medium text-gray-900">Bulk Edit Time Records</h3>
+                <button type="button" onclick="closeBulkEditModal()" class="text-gray-400 hover:text-gray-500">
+                    <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                </button>
+            </div>
+            <form action="{{ route('admin.student-dtr.bulk-update') }}" method="POST">
+                @csrf
+                <div id="bulk-edit-records" class="space-y-4">
+                    <!-- Records will be dynamically inserted here -->
+                </div>
+                
+                <div class="flex items-center justify-end gap-3 mt-6 pt-4 border-t border-gray-200">
+                    <button type="button" onclick="closeBulkEditModal()" 
+                            class="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50">
+                        Cancel
+                    </button>
+                    <button type="submit" 
+                            class="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700">
+                        Update Selected Records
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
 
 @endsection
 
