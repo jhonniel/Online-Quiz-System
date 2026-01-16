@@ -3,6 +3,7 @@
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\DB;
 
 return new class extends Migration
 {
@@ -11,15 +12,29 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('task_assignments', function (Blueprint $table) {
+        $driver = Schema::getConnection()->getDriverName();
+        
+        Schema::create('task_assignments', function (Blueprint $table) use ($driver) {
             $table->id();
             $table->foreignId('task_id')->constrained('tasks')->onDelete('cascade');
             $table->foreignId('user_id')->constrained('users')->onDelete('cascade');
-            $table->enum('role', ['owner', 'assignee', 'viewer'])->default('viewer');
+            
+            // Use string for PostgreSQL, enum for MySQL/SQLite
+            if ($driver === 'pgsql') {
+                $table->string('role', 20)->default('viewer');
+            } else {
+                $table->enum('role', ['owner', 'assignee', 'viewer'])->default('viewer');
+            }
+            
             $table->timestamps();
             
             $table->unique(['task_id', 'user_id']);
         });
+        
+        // Add check constraint for PostgreSQL
+        if ($driver === 'pgsql') {
+            DB::statement("ALTER TABLE task_assignments ADD CONSTRAINT task_assignments_role_check CHECK (role IN ('owner', 'assignee', 'viewer'))");
+        }
     }
 
     /**
@@ -27,6 +42,13 @@ return new class extends Migration
      */
     public function down(): void
     {
+        $driver = Schema::getConnection()->getDriverName();
+        
+        // Drop check constraint for PostgreSQL
+        if ($driver === 'pgsql') {
+            DB::statement('ALTER TABLE task_assignments DROP CONSTRAINT IF EXISTS task_assignments_role_check');
+        }
+        
         Schema::dropIfExists('task_assignments');
     }
 };
