@@ -78,6 +78,16 @@ class HiringApplication extends Model
         return $this->status === 'rejected';
     }
 
+    public function isHired()
+    {
+        return $this->status === 'hired';
+    }
+
+    public function isInterviewScheduled()
+    {
+        return $this->status === 'interview_scheduled';
+    }
+
     public function generateAcceptanceToken()
     {
         $this->acceptance_token = Str::random(64);

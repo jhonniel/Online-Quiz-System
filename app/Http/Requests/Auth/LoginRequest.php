@@ -44,11 +44,26 @@ class LoginRequest extends FormRequest
         // First, try to find the user by email
         $user = \App\Models\User::where('email', $this->email)->first();
 
-        if ($user && !$user->is_approved) {
-            // User exists but account is not approved
-            throw ValidationException::withMessages([
-                'email' => 'Your account is not yet activated. Please wait for admin approval.',
-            ]);
+        if ($user) {
+            // Check if user has a hiring application
+            $hiringApplication = \App\Models\HiringApplication::where('user_id', $user->id)
+                ->orWhere('email', $user->email)
+                ->latest()
+                ->first();
+
+            // If user has a hiring application, check if they are hired
+            if ($hiringApplication && $hiringApplication->status !== 'hired') {
+                throw ValidationException::withMessages([
+                    'email' => 'Your application is still under review. You will be able to login once you are hired.',
+                ]);
+            }
+
+            if (!$user->is_approved) {
+                // User exists but account is not approved
+                throw ValidationException::withMessages([
+                    'email' => 'Your account is not yet activated. Please wait for admin approval.',
+                ]);
+            }
         }
 
         if (! Auth::attempt($this->only('email', 'password'), $this->boolean('remember'))) {

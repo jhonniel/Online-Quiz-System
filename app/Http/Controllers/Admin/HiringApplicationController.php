@@ -574,6 +574,80 @@ class HiringApplicationController extends Controller
         abort(404, 'Resume not found.');
     }
 
+    public function markAsHired(Request $request, HiringApplication $application)
+    {
+        // Only allow marking as hired if interview was scheduled or application was accepted
+        if ($application->status !== 'interview_scheduled' && $application->status !== 'accepted') {
+            return redirect()->route('admin.hiring-applications.show', $application)
+                ->withErrors(['error' => 'Can only mark as hired after interview is scheduled or application is accepted.']);
+        }
+
+        // Ensure user account exists
+        if (!$application->user_id) {
+            return redirect()->route('admin.hiring-applications.show', $application)
+                ->withErrors(['error' => 'User account must be created first. Please accept the application first.']);
+        }
+
+        $user = $application->user;
+        if (!$user) {
+            return redirect()->route('admin.hiring-applications.show', $application)
+                ->withErrors(['error' => 'User account not found.']);
+        }
+
+        // Update application status to hired
+        $application->update([
+            'status' => 'hired',
+            'admin_notes' => $request->admin_notes ?? $application->admin_notes,
+            'reviewed_by' => Auth::id(),
+            'reviewed_at' => now(),
+        ]);
+
+        // Activate user account so they can login
+        $user->update([
+            'is_approved' => true,
+            'is_active' => true,
+        ]);
+
+        // Log the action
+        UserActivity::logActivity(
+            Auth::user(),
+            'action',
+            'hiring_application_hired',
+            [
+                'application_id' => $application->id,
+                'applicant_name' => $application->full_name,
+                'applicant_email' => $application->email,
+                'position' => $application->hiringPosition->title ?? $application->position_applied,
+                'admin_notes' => $request->admin_notes,
+            ]
+        );
+
+        // Send email notification to applicant if enabled
+        $emailNotificationsEnabled = \App\Models\Setting::get('hiring_email_notifications', 'enabled');
+        if ($emailNotificationsEnabled === 'enabled') {
+            try {
+                // Ensure mail configuration is up to date from settings
+                MailConfigService::configure();
+
+                Mail::to($application->email)
+                    ->send(new \App\Mail\HiringApplicationStatusUpdate(
+                        $application,
+                        'hired',
+                        $request->admin_notes ?? 'Congratulations! You have been hired.',
+                        $application->hiringPosition
+                    ));
+            } catch (\Exception $e) {
+                Log::error('Failed to send hired email', [
+                    'error' => $e->getMessage(),
+                    'application_id' => $application->id
+                ]);
+            }
+        }
+
+        return redirect()->route('admin.hiring-applications.show', $application)
+            ->with('success', 'Application marked as hired. User account is now active and can login.');
+    }
+
     public function updateAdminNotes(Request $request, HiringApplication $application)
     {
         $request->validate([

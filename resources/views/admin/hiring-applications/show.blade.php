@@ -33,6 +33,10 @@
                     <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800">
                         Interview Scheduled
                     </span>
+                @elseif($application->status == 'hired')
+                    <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800">
+                        Hired
+                    </span>
                 @endif
             </div>
         </div>
@@ -190,6 +194,13 @@
                         <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800">
                             Interview Scheduled
                         </span>
+                    @elseif($application->status == 'hired')
+                        <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800">
+                            Hired
+                        </span>
+                        <div class="mt-3">
+                            <p class="text-sm text-gray-600">User account is active and can login.</p>
+                        </div>
                     @endif
 
                     @if($application->acceptance_token && $application->isTokenValid())
@@ -445,6 +456,34 @@
                                     </svg>
                                 </span>
                             </button>
+                        </form>
+                    @endif
+
+                    @if(($application->status == 'interview_scheduled' || $application->status == 'accepted') && $application->user_id)
+                        <form action="{{ route('admin.hiring-applications.mark-hired', $application) }}" method="POST" onsubmit="return confirm('Are you sure you want to mark this applicant as hired? They will be able to login to their account.');">
+                            @csrf
+                            <div class="mb-3">
+                                <label for="admin_notes_hired" class="block text-sm font-medium text-gray-700 mb-1">
+                                    Notes (Optional)
+                                </label>
+                                <textarea name="admin_notes"
+                                          id="admin_notes_hired"
+                                          rows="3"
+                                          placeholder="Add notes about hiring (optional)"
+                                          class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm">{{ old('admin_notes', $application->admin_notes) }}</textarea>
+                            </div>
+                            <button type="submit" class="action-button w-full inline-flex justify-center items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-green-600 hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed" data-loading-text="Processing...">
+                                <span class="button-text">Mark as Hired</span>
+                                <span class="button-spinner hidden ml-2">
+                                    <svg class="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                    </svg>
+                                </span>
+                            </button>
+                            <p class="mt-2 text-xs text-gray-500">
+                                This will activate the user account and allow them to login.
+                            </p>
                         </form>
                     @endif
                     @if(auth()->user()->isAdmin())

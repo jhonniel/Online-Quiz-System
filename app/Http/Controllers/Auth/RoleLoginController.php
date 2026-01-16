@@ -50,18 +50,41 @@ class RoleLoginController extends Controller
         // Check if user exists before attempting authentication
         $user = \App\Models\User::where('email', $request->email)->first();
 
-        // If user exists but is not approved, show approval message
-        if ($user && !$user->is_approved) {
-            if ($request->ajax() || $request->expectsJson()) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Contact admin to activate your account',
-                    'type' => 'error'
-                ], 403);
+        if ($user) {
+            // Check if user has a hiring application
+            $hiringApplication = \App\Models\HiringApplication::where('user_id', $user->id)
+                ->orWhere('email', $user->email)
+                ->latest()
+                ->first();
+
+            // If user has a hiring application, check if they are hired
+            if ($hiringApplication && $hiringApplication->status !== 'hired') {
+                $message = 'Your application is still under review. You will be able to login once you are hired.';
+                if ($request->ajax() || $request->expectsJson()) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => $message,
+                        'type' => 'error'
+                    ], 403);
+                }
+                return redirect()->back()
+                    ->withInput($request->only('email'))
+                    ->withErrors(['login' => [$message]]);
             }
-            return redirect()->back()
-                ->withInput($request->only('email'))
-                ->withErrors(['login' => ['Contact admin to activate your account']]);
+
+            // If user exists but is not approved, show approval message
+            if (!$user->is_approved) {
+                if ($request->ajax() || $request->expectsJson()) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Contact admin to activate your account',
+                        'type' => 'error'
+                    ], 403);
+                }
+                return redirect()->back()
+                    ->withInput($request->only('email'))
+                    ->withErrors(['login' => ['Contact admin to activate your account']]);
+            }
         }
 
         // Attempt authentication
