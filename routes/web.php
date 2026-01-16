@@ -25,6 +25,7 @@ use Illuminate\Support\Facades\Route;
 // Landing Page Routes
 Route::get('/', [LandingController::class, 'index'])->name('landing.index');
 Route::get('/projects', [LandingController::class, 'projects'])->name('landing.projects');
+Route::get('/news', [LandingController::class, 'news'])->name('landing.news');
 Route::get('/about', [LandingController::class, 'about'])->name('landing.about');
 Route::get('/contact', [LandingController::class, 'contact'])->name('landing.contact');
 Route::post('/contact', [LandingController::class, 'storeContact'])->name('landing.contact.store');
@@ -106,6 +107,19 @@ Route::prefix('admin')->middleware(['auth', 'admin'])->group(function () {
     Route::post('tasks/{task}/comments', [App\Http\Controllers\Admin\TaskController::class, 'addComment'])->name('admin.tasks.add-comment');
     Route::post('tasks/{task}/attachments', [App\Http\Controllers\Admin\TaskController::class, 'uploadAttachment'])->name('admin.tasks.upload-attachment');
     Route::delete('tasks/attachments/{attachment}', [App\Http\Controllers\Admin\TaskController::class, 'deleteAttachment'])->name('admin.tasks.delete-attachment');
+
+    // News Management
+    Route::resource('news', App\Http\Controllers\Admin\NewsController::class)->names([
+        'index' => 'admin.news.index',
+        'create' => 'admin.news.create',
+        'store' => 'admin.news.store',
+        'show' => 'admin.news.show',
+        'edit' => 'admin.news.edit',
+        'update' => 'admin.news.update',
+        'destroy' => 'admin.news.destroy',
+    ]);
+    Route::post('news/{news}/toggle-publish', [App\Http\Controllers\Admin\NewsController::class, 'togglePublish'])->name('admin.news.toggle-publish');
+    Route::post('news/toggle-section', [App\Http\Controllers\Admin\NewsController::class, 'toggleNewsSection'])->name('admin.news.toggle-section');
     Route::post('tasks/{task}/assign-users', [App\Http\Controllers\Admin\TaskController::class, 'assignUsers'])->name('admin.tasks.assign-users');
 
     // Quiz Assignment Management

@@ -9,6 +9,7 @@ use App\Models\QuizAttempt;
 use App\Models\University;
 use App\Models\ContactMessage;
 use App\Models\Stack;
+use App\Models\News;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
 use App\Models\Setting;
@@ -230,6 +231,9 @@ class LandingController extends Controller
         $statisticsProjectsCount = Setting::get('statistics_projects_count', '0');
         $statisticsLgusCount = Setting::get('statistics_lgus_count', '0');
 
+        // Check if news section is enabled (for navbar)
+        $newsSectionEnabled = Setting::get('news_section_enabled', '0') === '1';
+
         return view('landing.index', compact(
             'totalQuizzes',
             'totalUsers',
@@ -247,6 +251,7 @@ class LandingController extends Controller
             'heroPrimaryButtonText',
             'heroPrimaryButtonUrl',
             'heroSecondaryButtonText',
+            'newsSectionEnabled',
             'heroSecondaryButtonUrl',
             'heroBackgroundUrl',
             'employees',
@@ -425,6 +430,14 @@ class LandingController extends Controller
             'aboutPageFeatures',
             'aboutPageTeamFeatures'
         ));
+    }
+
+    public function news()
+    {
+        // Get published news
+        $news = News::published()->latest()->paginate(12);
+        
+        return view('landing.news', compact('news'));
     }
 
     public function contact()

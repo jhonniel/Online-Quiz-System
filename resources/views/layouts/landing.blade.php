@@ -166,6 +166,9 @@
                     <div class="hidden lg:flex items-center space-x-1">
                         <a href="{{ route('landing.index') }}" class="px-4 py-2 text-gray-700 hover:text-primary font-medium transition-colors rounded-lg hover:bg-gray-50">Home</a>
                         <a href="{{ route('landing.projects') }}" class="px-4 py-2 text-gray-700 hover:text-primary font-medium transition-colors rounded-lg hover:bg-gray-50">Projects</a>
+                        @if(\App\Models\Setting::get('news_section_enabled', '0') === '1')
+                            <a href="{{ route('landing.news') }}" class="px-4 py-2 text-gray-700 hover:text-primary font-medium transition-colors rounded-lg hover:bg-gray-50">News</a>
+                        @endif
                         <a href="{{ route('landing.about') }}" class="px-4 py-2 text-gray-700 hover:text-primary font-medium transition-colors rounded-lg hover:bg-gray-50">About</a>
                         <a href="{{ route('landing.contact') }}" class="px-4 py-2 text-gray-700 hover:text-primary font-medium transition-colors rounded-lg hover:bg-gray-50">Contact</a>
                         @if(($settings['hiring_application_public_access'] ?? 'disabled') === 'enabled')
@@ -201,6 +204,9 @@
                 <div class="px-4 pt-2 pb-4 space-y-1">
                     <a href="{{ route('landing.index') }}" class="block px-4 py-3 text-gray-700 hover:text-primary hover:bg-gray-50 rounded-lg font-medium transition-colors">Home</a>
                     <a href="{{ route('landing.projects') }}" class="block px-4 py-3 text-gray-700 hover:text-primary hover:bg-gray-50 rounded-lg font-medium transition-colors">Projects</a>
+                    @if(\App\Models\Setting::get('news_section_enabled', '0') === '1')
+                        <a href="{{ route('landing.news') }}" class="block px-4 py-3 text-gray-700 hover:text-primary hover:bg-gray-50 rounded-lg font-medium transition-colors">News</a>
+                    @endif
                     <a href="{{ route('landing.about') }}" class="block px-4 py-3 text-gray-700 hover:text-primary hover:bg-gray-50 rounded-lg font-medium transition-colors">About</a>
                     <a href="{{ route('landing.contact') }}" class="block px-4 py-3 text-gray-700 hover:text-primary hover:bg-gray-50 rounded-lg font-medium transition-colors">Contact</a>
                     @if(($settings['hiring_application_public_access'] ?? 'disabled') === 'enabled')

@@ -1,0 +1,151 @@
+@extends('layouts.admin')
+
+@section('content')
+<div class="space-y-6">
+    <!-- Header -->
+    <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+        <div class="flex items-center justify-between">
+            <div>
+                <h1 class="text-2xl font-bold text-gray-900">Create News</h1>
+                <p class="text-sm text-gray-600 mt-1">Add a new news article to display on the landing page</p>
+            </div>
+            <a href="{{ route('admin.news.index') }}" class="text-gray-600 hover:text-gray-900">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                </svg>
+            </a>
+        </div>
+    </div>
+
+    <!-- Form -->
+    <form action="{{ route('admin.news.store') }}" method="POST" enctype="multipart/form-data" class="bg-white rounded-lg shadow-sm border border-gray-200 p-6 space-y-6">
+        @csrf
+
+        <!-- Title -->
+        <div>
+            <label for="title" class="block text-sm font-medium text-gray-700 mb-2">Title <span class="text-red-500">*</span></label>
+            <input type="text" name="title" id="title" value="{{ old('title') }}" required
+                   class="w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500">
+            @error('title')
+                <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+            @enderror
+        </div>
+
+        <!-- Content -->
+        <div>
+            <label for="content" class="block text-sm font-medium text-gray-700 mb-2">Content <span class="text-red-500">*</span></label>
+            <textarea name="content" id="content" rows="10" required
+                      class="w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500">{{ old('content') }}</textarea>
+            @error('content')
+                <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+            @enderror
+            <p class="mt-1 text-xs text-gray-500">You can use HTML tags for formatting</p>
+        </div>
+
+        <!-- Category -->
+        <div>
+            <label for="category" class="block text-sm font-medium text-gray-700 mb-2">Category</label>
+            <select name="category" id="category" class="w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500">
+                <option value="">Select category</option>
+                <option value="General News" {{ old('category') == 'General News' ? 'selected' : '' }}>General News</option>
+                <option value="Announcements" {{ old('category') == 'Announcements' ? 'selected' : '' }}>Announcements</option>
+                <option value="Events" {{ old('category') == 'Events' ? 'selected' : '' }}>Events</option>
+                <option value="Awards" {{ old('category') == 'Awards' ? 'selected' : '' }}>Awards</option>
+                <option value="Partnerships" {{ old('category') == 'Partnerships' ? 'selected' : '' }}>Partnerships</option>
+            </select>
+            @error('category')
+                <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+            @enderror
+            <p class="mt-1 text-xs text-gray-500">Optional: Categorize this news article</p>
+        </div>
+
+        <!-- Image Upload -->
+        <div>
+            <label for="image" class="block text-sm font-medium text-gray-700 mb-2">Upload Image</label>
+            <input type="file" name="image" id="image" accept="image/*"
+                   class="w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500"
+                   onchange="previewImage(this)">
+            @error('image')
+                <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+            @enderror
+            <p class="mt-1 text-xs text-gray-500">Upload an image file (JPEG, PNG, JPG, GIF, WEBP - Max 5MB)</p>
+            <div id="image-preview" class="mt-4 hidden">
+                <img id="preview-img" src="" alt="Preview" class="max-w-xs h-48 object-cover rounded-lg border border-gray-300">
+            </div>
+        </div>
+
+        <!-- Image URL (Alternative) -->
+        <div>
+            <label for="image_url" class="block text-sm font-medium text-gray-700 mb-2">Or Image URL</label>
+            <input type="url" name="image_url" id="image_url" value="{{ old('image_url') }}"
+                   placeholder="https://example.com/image.jpg"
+                   class="w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500">
+            @error('image_url')
+                <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+            @enderror
+            <p class="mt-1 text-xs text-gray-500">Alternative: Provide an image URL instead of uploading</p>
+        </div>
+
+        <!-- Author -->
+        <div>
+            <label for="author" class="block text-sm font-medium text-gray-700 mb-2">Author</label>
+            <input type="text" name="author" id="author" value="{{ old('author') }}"
+                   placeholder="Leave empty to use your name"
+                   class="w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500">
+            @error('author')
+                <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+            @enderror
+        </div>
+
+        <!-- Published At -->
+        <div>
+            <label for="published_at" class="block text-sm font-medium text-gray-700 mb-2">Published Date</label>
+            <input type="datetime-local" name="published_at" id="published_at" value="{{ old('published_at') }}"
+                   class="w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500">
+            @error('published_at')
+                <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+            @enderror
+            <p class="mt-1 text-xs text-gray-500">Leave empty to publish immediately when checked</p>
+        </div>
+
+        <!-- Is Published -->
+        <div class="flex items-center">
+            <input type="checkbox" name="is_published" id="is_published" value="1" {{ old('is_published') ? 'checked' : '' }}
+                   class="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded">
+            <label for="is_published" class="ml-2 block text-sm text-gray-700">
+                Publish immediately
+            </label>
+        </div>
+
+        <!-- Actions -->
+        <div class="flex items-center justify-end gap-3 pt-4 border-t border-gray-200">
+            <a href="{{ route('admin.news.index') }}" class="px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50">
+                Cancel
+            </a>
+            <button type="submit" class="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                Create News
+            </button>
+        </div>
+    </form>
+</div>
+
+<script>
+function previewImage(input) {
+    const preview = document.getElementById('image-preview');
+    const previewImg = document.getElementById('preview-img');
+    
+    if (input.files && input.files[0]) {
+        const reader = new FileReader();
+        
+        reader.onload = function(e) {
+            previewImg.src = e.target.result;
+            preview.classList.remove('hidden');
+        }
+        
+        reader.readAsDataURL(input.files[0]);
+    } else {
+        preview.classList.add('hidden');
+    }
+}
+</script>
+@endsection
