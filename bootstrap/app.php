@@ -41,26 +41,33 @@ return Application::configure(basePath: dirname(__DIR__))
             return redirect()->route('landing.index');
         });
 
-        // Render all 500 errors as "Page Not Found" to users (but still log them)
+        // Render 500 errors with custom error page
         $exceptions->render(function (\Throwable $e, $request) {
             // Skip HTTP exceptions that are not 500 (like 403, 404, etc.)
             if ($e instanceof \Symfony\Component\HttpKernel\Exception\HttpExceptionInterface) {
                 $statusCode = $e->getStatusCode();
-                // Don't convert 403, 404, etc. - let them show normally
+                // Don't handle 403, 404, etc. - let them show normally
                 if ($statusCode !== 500) {
                     return null;
                 }
             }
             
-            // For non-HTTP exceptions (which are treated as 500), show "Page Not Found"
+            // For non-HTTP exceptions (which are treated as 500), show custom 500 error page
             // This catches all server errors (500) and unhandled exceptions
-            // Only convert actual 500 errors, not 403/404
             if ($request->expectsJson()) {
-                return response()->json(['error' => 'Page not found'], 404);
+                return response()->json([
+                    'error' => 'Internal server error',
+                    'message' => 'An unexpected error occurred. Please contact the administrator for assistance.'
+                ], 500);
             }
             
-            // Return 404 view but the error is still logged with 500 status
-            return response()->view('errors.404', ['exception' => $e], 404);
+            // Return 500 error page
+            return response()->view('errors.500', [
+                'exception' => $e,
+                'code' => 500,
+                'title' => 'Internal Server Error',
+                'message' => 'An unexpected error occurred. Please contact the administrator for assistance.'
+            ], 500);
         });
 
         // Log HTTP and server errors into error_logs table

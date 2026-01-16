@@ -105,13 +105,24 @@
 
                         <!-- Main Message -->
                         <h1 class="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-extrabold text-center text-white mb-4 tracking-tight">
-                            <span class="inline-block animate-[float_3s_ease-in-out_infinite]">DILI</span>
-                            <span class="inline-block animate-[floatReverse_3s_ease-in-out_infinite] mx-2">NA</span>
-                            <span class="inline-block animate-[float_3s_ease-in-out_infinite]">PWD</span>
-                            <span class="inline-block animate-[floatReverse_3s_ease-in-out_infinite] mx-2">ANA</span>
-                            <span class="inline-block animate-[float_3s_ease-in-out_infinite]">SI</span>
-                            <span class="inline-block animate-[floatReverse_3s_ease-in-out_infinite] mx-2">YGAY</span>
+                            @if(($code ?? 500) == 500)
+                                <span class="inline-block animate-[float_3s_ease-in-out_infinite]">SERVER</span>
+                                <span class="inline-block animate-[floatReverse_3s_ease-in-out_infinite] mx-2">ERROR</span>
+                            @else
+                                <span class="inline-block animate-[float_3s_ease-in-out_infinite]">DILI</span>
+                                <span class="inline-block animate-[floatReverse_3s_ease-in-out_infinite] mx-2">NA</span>
+                                <span class="inline-block animate-[float_3s_ease-in-out_infinite]">PWD</span>
+                                <span class="inline-block animate-[floatReverse_3s_ease-in-out_infinite] mx-2">ANA</span>
+                                <span class="inline-block animate-[float_3s_ease-in-out_infinite]">SI</span>
+                                <span class="inline-block animate-[floatReverse_3s_ease-in-out_infinite] mx-2">YGAY</span>
+                            @endif
                         </h1>
+                        
+                        @if(($code ?? 500) == 500)
+                            <p class="text-lg sm:text-xl text-white/80 text-center mb-8 max-w-2xl mx-auto">
+                                {{ $message ?? 'An unexpected error occurred. Please contact the administrator for assistance.' }}
+                            </p>
+                        @endif
                     </div>
 
                     <!-- Action Buttons -->

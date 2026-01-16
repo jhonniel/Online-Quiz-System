@@ -16,50 +16,61 @@ class DtrTimeRequestController extends Controller
      */
     public function index(Request $request)
     {
-        $user = Auth::user();
-        
-        if (!$user) {
-            abort(403, 'Authentication required.');
-        }
-        
-        // Only admins can access
-        if (!$user->isAdmin()) {
-            abort(403, 'Access denied. Only admins can access time requests.');
-        }
-        
-        $query = DtrTimeRequest::with(['user', 'reviewer'])
-            ->whereHas('user', function ($q) {
-                $q->where('role', 'student');
-            })
-            ->orderBy('created_at', 'desc');
+        try {
+            $user = Auth::user();
+            
+            if (!$user) {
+                abort(403, 'Authentication required.');
+            }
+            
+            // Only admins can access
+            if (!$user->isAdmin()) {
+                abort(403, 'Access denied. Only admins can access time requests.');
+            }
+            
+            $query = DtrTimeRequest::with(['user', 'reviewer'])
+                ->whereHas('user', function ($q) {
+                    $q->where('role', 'student');
+                })
+                ->orderBy('created_at', 'desc');
 
-        // Filter by status
-        if ($request->filled('status')) {
-            $query->where('status', $request->status);
+            // Filter by status
+            if ($request->filled('status')) {
+                $query->where('status', $request->status);
+            }
+
+            // Filter by student
+            if ($request->filled('student_id')) {
+                $query->where('user_id', $request->student_id);
+            }
+
+            // Filter by date range
+            if ($request->filled('date_from')) {
+                $query->whereDate('date', '>=', $request->date_from);
+            }
+            if ($request->filled('date_to')) {
+                $query->whereDate('date', '<=', $request->date_to);
+            }
+
+            $timeRequests = $query->paginate(20)->appends($request->query());
+
+            // Get all students for filter dropdown
+            $students = \App\Models\User::where('role', 'student')
+                ->where('is_active', true)
+                ->orderBy('name')
+                ->get();
+
+            return view('admin.student-management.time-requests', compact('timeRequests', 'students'));
+        } catch (\Exception $e) {
+            \Log::error('Error in DtrTimeRequestController@index: ' . $e->getMessage(), [
+                'exception' => $e,
+                'trace' => $e->getTraceAsString(),
+                'user_id' => Auth::id(),
+            ]);
+            
+            // Re-throw to see the actual error
+            throw $e;
         }
-
-        // Filter by student
-        if ($request->filled('student_id')) {
-            $query->where('user_id', $request->student_id);
-        }
-
-        // Filter by date range
-        if ($request->filled('date_from')) {
-            $query->whereDate('date', '>=', $request->date_from);
-        }
-        if ($request->filled('date_to')) {
-            $query->whereDate('date', '<=', $request->date_to);
-        }
-
-        $timeRequests = $query->paginate(20)->appends($request->query());
-
-        // Get all students for filter dropdown
-        $students = \App\Models\User::where('role', 'student')
-            ->where('is_active', true)
-            ->orderBy('name')
-            ->get();
-
-        return view('admin.student-management.time-requests', compact('timeRequests', 'students'));
     }
 
     /**

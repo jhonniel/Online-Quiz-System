@@ -1,9 +1,7 @@
 @php
-    $code = 404;
-    $title = 'Page Not Found';
-    $message = 'The page you are looking for could not be found.';
+    $code = 500;
+    $title = 'Internal Server Error';
+    $message = 'An unexpected error occurred. Please contact the administrator for assistance.';
 @endphp
 
 @include('errors.minimal')
-
-
