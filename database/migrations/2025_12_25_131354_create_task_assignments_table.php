@@ -33,12 +33,9 @@ return new class extends Migration
         });
         
         // Add foreign key constraint after tasks table exists
-        // Check if tasks table exists before adding the foreign key
-        if (Schema::hasTable('tasks')) {
-            Schema::table('task_assignments', function (Blueprint $table) {
-                $table->foreign('task_id')->references('id')->on('tasks')->onDelete('cascade');
-            });
-        }
+        Schema::table('task_assignments', function (Blueprint $table) {
+            $table->foreign('task_id')->references('id')->on('tasks')->onDelete('cascade');
+        });
         
         // Add check constraint for PostgreSQL
         if ($driver === 'pgsql') {
