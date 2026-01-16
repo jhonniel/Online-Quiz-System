@@ -403,7 +403,7 @@
                         @for($i = 1; $i <= 3; $i++)
                             <div class="border border-gray-200 rounded-lg p-6 bg-gray-50">
                                 <h4 class="text-md font-semibold text-gray-900 mb-4">Project {{ $i }}</h4>
-                                <div class="grid grid-cols-1 gap-4">
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                                     <div>
                                         <label for="project_{{ $i }}_name" class="block text-sm font-medium text-gray-700 mb-2">Project Name</label>
                                         <input type="text" name="project_{{ $i }}_name" id="project_{{ $i }}_name"
@@ -412,7 +412,7 @@
                                     </div>
                                     <div>
                                         <label for="project_{{ $i }}_description" class="block text-sm font-medium text-gray-700 mb-2">Description</label>
-                                        <textarea name="project_{{ $i }}_description" id="project_{{ $i }}_description" rows="2"
+                                        <textarea name="project_{{ $i }}_description" id="project_{{ $i }}_description" rows="5"
                                                   class="w-full px-4 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">{{ $settings['project_' . $i . '_description'] ?? '' }}</textarea>
                                     </div>
                                     <div class="md:col-span-2">
@@ -497,7 +497,7 @@
                                             <span>Remove</span>
                                         </button>
                                     </div>
-                                    <div class="grid grid-cols-1 gap-4">
+                                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                                         <div>
                                             <label class="block text-sm font-medium text-gray-700 mb-2">Project Name</label>
                                             <input type="text" name="additional_projects[{{ $index }}][name]" value="{{ $project['name'] ?? '' }}"
@@ -505,7 +505,7 @@
                                         </div>
                                         <div>
                                             <label class="block text-sm font-medium text-gray-700 mb-2">Description</label>
-                                            <textarea name="additional_projects[{{ $index }}][description]" rows="2"
+                                            <textarea name="additional_projects[{{ $index }}][description]" rows="5"
                                                       class="w-full px-4 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">{{ $project['description'] ?? '' }}</textarea>
                                         </div>
                                         <div class="md:col-span-2">
@@ -573,7 +573,7 @@ function addAdditionalProject() {
                     <span>Remove</span>
                 </button>
             </div>
-            <div class="grid grid-cols-1 gap-4">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-2">Project Name</label>
                     <input type="text" name="additional_projects[${index}][name]" value=""
@@ -581,7 +581,7 @@ function addAdditionalProject() {
                 </div>
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-2">Description</label>
-                    <textarea name="additional_projects[${index}][description]" rows="2"
+                    <textarea name="additional_projects[${index}][description]" rows="5"
                               class="w-full px-4 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"></textarea>
                 </div>
                 <div class="md:col-span-2">
