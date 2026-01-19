@@ -5,6 +5,7 @@ namespace App\Http\Controllers\User;
 use App\Http\Controllers\Controller;
 use App\Models\Dtr;
 use App\Models\LeaveRequest;
+use App\Models\DtrTimeRequest;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Carbon\Carbon;
@@ -271,6 +272,16 @@ class DtrController extends Controller
             $groupedDtrs[$monthKey]['weeks'][$weekKey]['records'][] = $dtr;
         }
 
+        // Get pending and rejected time requests (not approved) for students
+        $pendingTimeRequests = collect();
+        if ($user->role === 'student') {
+            $pendingTimeRequests = DtrTimeRequest::where('user_id', $user->id)
+                ->whereIn('status', ['pending', 'rejected'])
+                ->orderBy('date', 'desc')
+                ->orderBy('created_at', 'desc')
+                ->get();
+        }
+
         return view('user.dtr.index', compact(
             'groupedDtrs',
             'totalRecords',
@@ -285,7 +296,8 @@ class DtrController extends Controller
             'expiringOvertimeFormatted',
             'expiringOvertimeTotal',
             'minDaysRemaining',
-            'expiringOvertimeEntries'
+            'expiringOvertimeEntries',
+            'pendingTimeRequests'
         ));
     }
 

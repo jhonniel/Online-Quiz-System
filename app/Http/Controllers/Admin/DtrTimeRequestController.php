@@ -23,9 +23,9 @@ class DtrTimeRequestController extends Controller
                 abort(403, 'Authentication required.');
             }
             
-            // Only admins can access
-            if (!$user->isAdmin()) {
-                abort(403, 'Access denied. Only admins can access time requests.');
+            // Check if user has student_management permission or is admin
+            if (!$user->isAdmin() && !$user->canAccessStudentManagement()) {
+                abort(403, 'Access denied. You do not have permission to access time requests.');
             }
             
             $query = DtrTimeRequest::with(['user', 'reviewer'])
