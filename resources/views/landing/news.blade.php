@@ -10,9 +10,9 @@
     @php
         $featuredNews = $news->first();
     @endphp
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div class="relative rounded-2xl overflow-hidden shadow-2xl">
-            <!-- Background Image with Blur -->
+    <div class="w-full px-4 sm:px-6 lg:px-8">
+        <div class="relative rounded-2xl overflow-hidden shadow-2xl w-full mx-auto" style="max-width: 1200px; height: 600px; position: relative; background: #000;">
+            <!-- Background Image with Blur - Full Cover -->
             @php
                 $featuredImageUrl = $featuredNews->image_url;
                 if ($featuredNews->image_path && !$featuredImageUrl) {
@@ -25,51 +25,47 @@
                 }
             @endphp
             @if($featuredImageUrl)
-                <div class="absolute inset-0">
-                    <img src="{{ $featuredImageUrl }}" alt="{{ $featuredNews->title }}" class="w-full h-full object-cover filter blur-md scale-110">
+                <div class="absolute inset-0" style="z-index: 0; margin: 0; padding: 0;">
+                    <img src="{{ $featuredImageUrl }}" alt="{{ $featuredNews->title }}" style="position: absolute; top: -10px; left: -10px; right: -10px; bottom: -10px; width: calc(100% + 20px); height: calc(100% + 20px); object-fit: cover; object-position: center; filter: blur(8px); transform: scale(1.1); margin: 0; padding: 0;">
                 </div>
+            @else
+                <!-- Fallback gradient background if no image -->
+                <div class="absolute inset-0 bg-gradient-to-br from-gray-800 to-gray-900" style="z-index: 0;"></div>
             @endif
             
             <!-- Dark Overlay -->
-            <div class="absolute inset-0 bg-black/60"></div>
+            <div class="absolute inset-0 bg-black/60" style="z-index: 1;"></div>
             
-            <!-- Content -->
-            <div class="relative px-6 sm:px-8 md:px-12 lg:px-16 py-12 sm:py-16 md:py-20 lg:py-24">
-                <div class="max-w-3xl">
+            <!-- Content - Left Aligned -->
+            <div class="relative h-full px-8 sm:px-12 md:px-16 lg:px-20 py-16 sm:py-20 md:py-24 lg:py-28 flex items-center" style="z-index: 2;">
+                <div class="max-w-2xl">
+                    <!-- Headline -->
                     <h1 class="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold text-white mb-4 sm:mb-6 leading-tight">
                         {{ $featuredNews->title }}
                     </h1>
-                    <p class="text-white/90 text-sm sm:text-base mb-4">
+                    
+                    <!-- Byline -->
+                    <p class="text-white/90 text-sm sm:text-base mb-4 sm:mb-6">
                         by {{ $featuredNews->author ?? ($featuredNews->creator ? $featuredNews->creator->name : 'Admin') }} | 
                         {{ $featuredNews->published_at ? $featuredNews->published_at->format('M d, Y') : $featuredNews->created_at->format('M d, Y') }}
                     </p>
+                    
+                    <!-- Summary/Description -->
                     <p class="text-white text-base sm:text-lg mb-6 sm:mb-8 leading-relaxed">
                         {{ Str::limit(strip_tags($featuredNews->content), 200) }}
                     </p>
+                    
+                    <!-- Read Full Article Button -->
                     <a href="#news-articles" class="inline-block px-6 py-3 bg-red-600 hover:bg-red-700 text-white font-semibold rounded-lg transition-colors shadow-lg">
                         Read Full Article
                     </a>
                 </div>
-                
-                <!-- Carousel Navigation -->
-                <div class="absolute bottom-6 left-1/2 transform -translate-x-1/2 flex items-center gap-3">
-                    <div class="flex gap-2">
-                        <div class="w-2 h-2 rounded-full bg-white"></div>
-                        <div class="w-2 h-2 rounded-full border-2 border-white"></div>
-                    </div>
-                    <div class="flex gap-2 ml-4">
-                        <button class="text-white hover:text-gray-300 transition-colors">
-                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
-                            </svg>
-                        </button>
-                        <button class="text-white hover:text-gray-300 transition-colors">
-                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
-                            </svg>
-                        </button>
-                    </div>
-                </div>
+            </div>
+            
+            <!-- Carousel Navigation Dots - Bottom Center -->
+            <div class="absolute bottom-6 left-1/2 transform -translate-x-1/2 flex items-center gap-2" style="z-index: 3;">
+                <div class="w-2 h-2 rounded-full bg-white"></div>
+                <div class="w-2 h-2 rounded-full border-2 border-white bg-transparent"></div>
             </div>
         </div>
     </div>
@@ -106,11 +102,11 @@
 
         <!-- News Articles List -->
         @if($news->count() > 0)
-            <div class="space-y-8 sm:space-y-12">
+            <div class="space-y-8 sm:space-y-10">
                 @foreach($news as $index => $item)
-                    <article class="flex flex-col md:flex-row gap-6 sm:gap-8 pb-8 sm:pb-12 border-b border-gray-200 last:border-b-0 relative">
+                    <article class="flex flex-col md:flex-row gap-6 sm:gap-8 pb-8 sm:pb-10 border-b border-gray-200 last:border-b-0">
 
-                        <!-- Article Image -->
+                        <!-- Article Image - Left Side -->
                         <div class="flex-shrink-0 w-full md:w-80 lg:w-96">
                             @php
                                 $articleImageUrl = $item->image_url;
@@ -124,9 +120,9 @@
                                 }
                             @endphp
                             @if($articleImageUrl)
-                                <img src="{{ $articleImageUrl }}" alt="{{ $item->title }}" class="w-full h-64 sm:h-80 object-cover rounded-lg shadow-md">
+                                <img src="{{ $articleImageUrl }}" alt="{{ $item->title }}" class="w-full h-64 sm:h-80 object-cover rounded-lg shadow-sm">
                             @else
-                                <div class="w-full h-64 sm:h-80 bg-gradient-to-br from-gray-200 to-gray-300 rounded-lg shadow-md flex items-center justify-center">
+                                <div class="w-full h-64 sm:h-80 bg-gradient-to-br from-gray-200 to-gray-300 rounded-lg shadow-sm flex items-center justify-center">
                                     <svg class="w-16 h-16 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z"></path>
                                     </svg>
@@ -134,25 +130,32 @@
                             @endif
                         </div>
 
-                        <!-- Article Content -->
-                        <div class="flex-1 pt-2">
-                            <h3 class="text-2xl sm:text-3xl font-bold text-gray-900 mb-3 sm:mb-4 leading-tight">
+                        <!-- Article Content - Right Side -->
+                        <div class="flex-1 flex flex-col justify-center">
+                            <!-- Title -->
+                            <h3 class="text-xl sm:text-2xl md:text-3xl font-bold text-gray-900 mb-3 leading-tight">
                                 {{ $item->title }}
                             </h3>
-                            <p class="text-sm text-gray-500 mb-4">
+                            
+                            <!-- Author and Date -->
+                            <p class="text-sm text-gray-600 mb-3">
                                 by {{ $item->author ?? ($item->creator ? $item->creator->name : 'Admin') }} | 
                                 {{ $item->published_at ? $item->published_at->format('M d, Y') : $item->created_at->format('M d, Y') }}
                             </p>
-                            <p class="text-gray-700 text-base sm:text-lg mb-4 sm:mb-6 leading-relaxed">
+                            
+                            <!-- Summary -->
+                            <p class="text-gray-700 text-sm sm:text-base mb-4 leading-relaxed">
                                 {{ Str::limit(strip_tags($item->content), 300) }}
                             </p>
-                            <div class="flex flex-wrap items-center gap-4">
+                            
+                            <!-- Category and Read Full Article -->
+                            <div class="flex flex-wrap items-center gap-3">
                                 @if($item->category)
-                                    <span class="inline-block px-4 py-2 bg-orange-100 text-orange-800 rounded-lg text-sm font-medium">
+                                    <span class="inline-block px-3 py-1.5 bg-orange-100 text-orange-800 rounded-md text-sm font-medium">
                                         {{ $item->category }}
                                     </span>
                                 @endif
-                                <a href="#" class="text-red-700 hover:text-red-800 font-medium underline text-sm sm:text-base">
+                                <a href="#" class="text-blue-600 hover:text-blue-800 font-medium text-sm sm:text-base">
                                     Read Full Article
                                 </a>
                             </div>

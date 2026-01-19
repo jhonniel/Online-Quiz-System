@@ -160,10 +160,10 @@ class UserController extends Controller
 
     public function show(User $user)
     {
-        // Only admins should access this profile view via middleware/routes,
-        // but we also guard here for safety.
-        if (!auth()->check() || !auth()->user()->isAdmin()) {
-            abort(403, 'Only administrators can view employee profiles.');
+        // Access is controlled by admin.permission:user_management middleware,
+        // but we also guard here for safety to ensure user has user_management permission.
+        if (!auth()->check() || !auth()->user()->canAccessUserManagement()) {
+            abort(403, 'You do not have permission to view user profiles.');
         }
 
         $balances = null;

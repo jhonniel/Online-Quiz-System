@@ -220,17 +220,19 @@
                                 </td>
                                 <td class="px-6 py-4 whitespace-nowrap">
                                     <div class="flex items-center">
-                                        <div class="flex-shrink-0 h-10 w-10">
+                                        <a href="{{ route('admin.users.show', $user) }}" class="flex-shrink-0 h-10 w-10 hover:opacity-80 transition-opacity duration-150">
                                             @if($user->profile_picture)
                                                 <img class="h-10 w-10 rounded-full object-cover" src="{{ $user->getProfilePictureUrl() }}" alt="{{ $user->name }}">
                                             @else
-                                                <div class="h-10 w-10 rounded-full bg-indigo-100 flex items-center justify-center">
+                                                <div class="h-10 w-10 rounded-full bg-indigo-100 flex items-center justify-center hover:bg-indigo-200 transition-colors duration-150">
                                                     <span class="text-sm font-medium text-indigo-600">{{ $user->getInitials() }}</span>
                                                 </div>
                                             @endif
-                                        </div>
+                                        </a>
                                         <div class="ml-4">
-                                            <div class="text-sm font-medium text-gray-900">{{ $user->name }}</div>
+                                            <a href="{{ route('admin.users.show', $user) }}" class="text-sm font-medium text-indigo-600 hover:text-indigo-800 hover:underline transition-colors duration-150">
+                                                {{ $user->name }}
+                                            </a>
                                             <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium {{ $user->getRoleBadgeClass() }}">
                                                 {{ $user->getRoleLabel() }}
                                             </span>
