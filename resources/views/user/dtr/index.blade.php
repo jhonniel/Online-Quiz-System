@@ -666,12 +666,11 @@ function updateDaysList() {
                            name="days[${dayIndex}][time]" 
                            id="time-input-${dayIndex}"
                            value=""
-                           pattern="^([0-1][0-9]|2[0-3]):[0-5][0-9]$"
                            placeholder="00:00"
-                           maxlength="5"
-                           class="time-input-field w-full px-3 py-2 pr-8 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                           style="font-family: monospace; text-align: center;"
-                           oninput="formatTimeSeparator(this)">
+                           class="time-input w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-center"
+                           style="text-align: center;"
+                           oninput="formatTimeInput(this)"
+                           onblur="formatTimeOnBlur(this)">
                     <button type="button" 
                             onclick="clearTimeField('time-input-${dayIndex}')"
                             class="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 focus:outline-none"
@@ -743,67 +742,79 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 });
 
-// Format time separator automatically (add colon between hours and minutes)
-function formatTimeSeparator(input) {
-    let value = input.value;
+// Format time input (same as admin DTR time input)
+function formatTimeInput(input) {
     const cursorPos = input.selectionStart;
+    const before = input.value;
     
-    // Allow clearing the field
+    // Format the value using the same logic as admin
+    function formatTime(value) {
+        // Keep only digits, max 4
+        let digits = value.replace(/\D/g, '').slice(0, 4);
+        if (digits.length <= 2) {
+            return digits;
+        }
+        const h = digits.slice(0, 2);
+        const m = digits.slice(2);
+        return m ? h + ':' + m : h;
+    }
+    
+    input.value = formatTime(input.value);
+    
+    // Best-effort keep cursor near end
+    if (document.activeElement === input) {
+        input.selectionStart = input.selectionEnd = input.value.length;
+    }
+}
+
+// Format time to HH:MM format on blur (when user finishes input)
+function formatTimeOnBlur(input) {
+    let value = input.value.trim();
+    
     if (value === '') {
+        input.value = '';
         return;
     }
     
-    // Remove all non-digit characters except existing colons
-    let digits = value.replace(/[^\d]/g, '');
+    // Remove all non-digit characters
+    let digits = value.replace(/\D/g, '');
     
-    // If user typed digits, auto-insert colon after 2 digits
-    if (digits.length >= 2 && !value.includes(':')) {
-        // Insert colon after 2 digits
-        value = digits.substring(0, 2) + ':' + digits.substring(2, 4);
-    } else if (digits.length > 0 && value.includes(':')) {
-        // If colon already exists, just keep digits and colon
+    if (digits.length === 0) {
+        input.value = '';
+        return;
+    }
+    
+    // Format to HH:MM (always 2 digits for hours and minutes)
+    let hours = '';
+    let minutes = '';
+    
+    if (value.includes(':')) {
+        // Already has colon, split it
         const parts = value.split(':');
-        if (parts.length === 2) {
-            // Keep existing format, just ensure only digits in each part
-            const hours = parts[0].replace(/[^\d]/g, '').substring(0, 2);
-            const minutes = parts[1].replace(/[^\d]/g, '').substring(0, 2);
-            value = hours + ':' + minutes;
-        }
-    } else if (digits.length > 0 && digits.length <= 2) {
-        // Less than 2 digits, just show digits
-        value = digits;
-    } else if (digits.length > 2 && digits.length <= 4) {
-        // 3-4 digits, add colon after 2
-        value = digits.substring(0, 2) + ':' + digits.substring(2, 4);
-    } else if (digits.length > 4) {
-        // More than 4 digits, limit to 4 and format
-        value = digits.substring(0, 2) + ':' + digits.substring(2, 4);
-    }
-    
-    // Limit to 5 characters (HH:MM)
-    if (value.length > 5) {
-        value = value.substring(0, 5);
-    }
-    
-    // Update input value
-    input.value = value;
-    
-    // Adjust cursor position
-    let newCursorPos = cursorPos;
-    if (value.length > 5) {
-        newCursorPos = 5;
-    } else if (value.includes(':') && cursorPos <= 2 && !value.substring(0, cursorPos).includes(':')) {
-        // If colon was just added and cursor is before it, move cursor after colon
-        newCursorPos = 3;
+        hours = parts[0].replace(/\D/g, '').slice(-2); // Take last 2 digits for hours
+        minutes = parts[1].replace(/\D/g, '').slice(0, 2); // Take first 2 digits for minutes
     } else {
-        newCursorPos = Math.min(cursorPos, value.length);
+        // No colon, split digits (last 2 are minutes)
+        if (digits.length >= 2) {
+            hours = digits.slice(0, digits.length - 2).slice(-2); // Take last 2 digits before minutes
+            minutes = digits.slice(-2); // Last 2 digits are minutes
+        } else {
+            // Less than 2 digits, treat as hours only
+            hours = digits.padStart(2, '0');
+            minutes = '00';
+        }
     }
     
-    // Set cursor position
-    setTimeout(() => {
-        input.setSelectionRange(newCursorPos, newCursorPos);
-    }, 0);
+    // Pad hours to 2 digits (always HH format)
+    hours = hours.padStart(2, '0').slice(0, 2);
+    
+    // Pad minutes to 2 digits (always MM format)
+    minutes = minutes.padStart(2, '0').slice(0, 2);
+    
+    // Format final value as HH:MM
+    input.value = hours + ':' + minutes;
 }
+
 
 // Clear time field
 function clearTimeField(inputId) {
@@ -827,12 +838,12 @@ function validateAttendanceForm(event) {
     timeInputs.forEach((input, index) => {
         const timeValue = input.value.trim();
         // Check if time is in HH:MM format
-        const timePattern = /^([0-1][0-9]|2[0-3]):[0-5][0-9]$/;
+        const timePattern = /^[0-9]{2}:[0-9]{2}$/;
         
         if (timeValue && timePattern.test(timeValue)) {
             hasValidTime = true;
         } else if (timeValue) {
-            invalidFields.push(`Day ${index + 1} has invalid time format "${timeValue}". Please use HH:MM format (e.g., 08:00).`);
+            invalidFields.push(`Day ${index + 1} has invalid time format "${timeValue}". Please use HH:MM format (e.g., 00:00, 08:30).`);
         }
     });
     
@@ -853,7 +864,7 @@ function validateAttendanceForm(event) {
     // Remove empty time fields before submission
     timeInputs.forEach((input) => {
         const timeValue = input.value.trim();
-        const timePattern = /^([0-1][0-9]|2[0-3]):[0-5][0-9]$/;
+        const timePattern = /^[0-9]{2}:[0-9]{2}$/;
         
         if (!timeValue || !timePattern.test(timeValue)) {
             // Remove the parent day container if time is invalid
@@ -879,33 +890,6 @@ document.getElementById('record-attendance-modal')?.addEventListener('click', fu
 });
 </script>
 
-<style>
-.time-input-field::placeholder {
-    color: #9ca3af; /* light gray */
-    opacity: 1; /* Ensure full opacity */
-    text-align: center;
-    font-family: monospace;
-}
-
-.time-input-field::-webkit-input-placeholder {
-    color: #9ca3af;
-    text-align: center;
-    font-family: monospace;
-}
-
-.time-input-field::-moz-placeholder {
-    color: #9ca3af;
-    text-align: center;
-    font-family: monospace;
-    opacity: 1;
-}
-
-.time-input-field:-ms-input-placeholder {
-    color: #9ca3af;
-    text-align: center;
-    font-family: monospace;
-}
-</style>
 @endif
 @endsection
 
