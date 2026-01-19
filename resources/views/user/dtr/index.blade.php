@@ -568,9 +568,9 @@ function updateDaysList() {
                        hidden>
                 <input type="text" 
                        name="days[${dayIndex}][time]" 
-                       value="08:00"
+                       value=""
                        pattern="^([0-1][0-9]|2[0-3]):[0-5][0-9]$"
-                       placeholder="08:00"
+                       placeholder="00:00"
                        maxlength="5"
                        required
                        class="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
