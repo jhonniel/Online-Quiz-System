@@ -71,7 +71,7 @@
                                                     <span class="badge bg-success">Graded</span>
                                                     <br>
                                                     <small class="text-muted">
-                                                        {{ \Carbon\Carbon::parse($attempt->graded_at)->format('M d, Y H:i') }}
+                                                        {{ \Carbon\Carbon::parse($attempt->graded_at)->format('M d, Y g:i A') }}
                                                     </small>
                                                 @else
                                                     <span class="badge bg-warning">Pending</span>
@@ -84,7 +84,7 @@
                                             </td>
                                             <td>
                                                 <small class="text-muted">
-                                                    {{ $attempt->created_at->format('M d, Y H:i') }}
+                                                    {{ $attempt->created_at->format('M d, Y g:i A') }}
                                                 </small>
                                             </td>
                                             <td>

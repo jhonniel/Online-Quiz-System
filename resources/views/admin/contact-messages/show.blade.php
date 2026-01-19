@@ -90,7 +90,7 @@
                 </div>
                 <div>
                     <dt class="text-xs sm:text-sm font-medium text-gray-500">Date</dt>
-                    <dd class="text-sm sm:text-base text-gray-900">{{ $contactMessage->created_at->format('M d, Y H:i') }}</dd>
+                    <dd class="text-sm sm:text-base text-gray-900">{{ $contactMessage->created_at->format('M d, Y g:i A') }}</dd>
                 </div>
                 @if($contactMessage->read_at)
                     <div>
@@ -122,7 +122,7 @@
                     <p class="text-sm sm:text-base text-green-700 whitespace-pre-wrap">{{ $contactMessage->admin_reply }}</p>
                 </div>
                 <p class="text-xs sm:text-sm text-green-600 mt-2">
-                    Replied on {{ $contactMessage->replied_at->format('M d, Y H:i') }}
+                    Replied on {{ $contactMessage->replied_at->format('M d, Y g:i A') }}
                     by {{ $contactMessage->repliedBy->name ?? 'Unknown' }}
                 </p>
             </div>

@@ -79,7 +79,7 @@
                                         <p class="text-sm">{{ $message->message }}</p>
                                     </div>
                                     <p class="text-xs text-gray-500 mt-1">
-                                        {{ $message->created_at->format('M d, H:i') }}
+                                        {{ $message->created_at->format('M d, g:i A') }}
                                         @if($message->isFromAdmin())
                                             - {{ $message->admin->name ?? 'Admin' }}
                                         @endif

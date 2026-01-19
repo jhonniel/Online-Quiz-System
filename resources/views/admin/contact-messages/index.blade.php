@@ -168,7 +168,7 @@
                                         </span>
                                     </td>
                                     <td class="px-3 sm:px-6 py-4 whitespace-nowrap text-xs sm:text-sm text-gray-500 hidden md:table-cell">
-                                        {{ $message->created_at->format('M d, Y H:i') }}
+                                        {{ $message->created_at->format('M d, Y g:i A') }}
                                     </td>
                                     <td class="px-3 sm:px-6 py-4 whitespace-nowrap text-sm font-medium">
                                         <div class="flex items-center space-x-1">

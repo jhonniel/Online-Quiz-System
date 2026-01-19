@@ -106,7 +106,7 @@
                             @endphp
                             <tr class="hover:bg-gray-50">
                                 <td class="px-3 sm:px-4 py-2 whitespace-nowrap text-xs sm:text-sm text-gray-600">
-                                    {{ $log->created_at ? $log->created_at->format('Y-m-d H:i:s') : 'N/A' }}
+                                    {{ $log->created_at ? $log->created_at->format('Y-m-d g:i:s A') : 'N/A' }}
                                 </td>
                                 <td class="px-3 sm:px-4 py-2 whitespace-nowrap text-xs sm:text-sm">
                                     <span class="inline-flex items-center px-2 py-1 rounded-full border text-[11px] font-semibold {{ $badgeColor }}">

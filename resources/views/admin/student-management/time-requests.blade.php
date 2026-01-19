@@ -151,7 +151,7 @@
                                 </span>
                             </td>
                             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                {{ $request->created_at->format('M d, Y H:i') }}
+                                {{ $request->created_at->format('M d, Y g:i A') }}
                             </td>
                             <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
                                 @if($request->status === 'pending')
@@ -172,7 +172,7 @@
                                             @if($request->reviewer)
                                                 Reviewed by {{ $request->reviewer->name }}
                                                 @if($request->reviewed_at)
-                                                    <br><span class="text-xs">{{ $request->reviewed_at->format('M d, Y H:i') }}</span>
+                                                    <br><span class="text-xs">{{ $request->reviewed_at->format('M d, Y g:i A') }}</span>
                                                 @endif
                                             @endif
                                         </div>

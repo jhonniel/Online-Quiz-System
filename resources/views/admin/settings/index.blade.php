@@ -1396,7 +1396,7 @@
                                 </div>
                                 <div class="text-right">
                                     <p class="text-xs text-gray-500">Last Checked</p>
-                                    <p class="text-sm font-semibold text-gray-700" id="last-checked-time">{{ now()->format('H:i:s') }}</p>
+                                    <p class="text-sm font-semibold text-gray-700" id="last-checked-time">{{ now()->format('g:i:s A') }}</p>
                                     <button onclick="refreshHealth()" class="mt-2 text-xs text-indigo-600 hover:text-indigo-800 flex items-center space-x-1">
                                         <svg class="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
@@ -1864,7 +1864,15 @@ document.addEventListener('DOMContentLoaded', function() {
         const now = new Date();
         const timeElement = document.getElementById('last-checked-time');
         if (timeElement) {
-            timeElement.textContent = now.toLocaleTimeString();
+            // Format time in 12-hour format with AM/PM
+            const hours = now.getHours();
+            const minutes = now.getMinutes();
+            const seconds = now.getSeconds();
+            const ampm = hours >= 12 ? 'PM' : 'AM';
+            const displayHours = hours % 12 || 12;
+            const displayMinutes = minutes.toString().padStart(2, '0');
+            const displaySeconds = seconds.toString().padStart(2, '0');
+            timeElement.textContent = `${displayHours}:${displayMinutes}:${displaySeconds} ${ampm}`;
         }
 
         // Update status
