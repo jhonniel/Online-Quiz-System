@@ -85,12 +85,18 @@
                     <label for="date_from" class="block text-sm font-medium text-gray-700 mb-2">Date From</label>
                     <input type="date" name="date_from" id="date_from" value="{{ request('date_from') }}"
                            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                    @if(!request('date_from'))
+                        <p class="mt-1 text-xs text-gray-500">Leave empty for all dates</p>
+                    @endif
                 </div>
 
                 <div>
                     <label for="date_to" class="block text-sm font-medium text-gray-700 mb-2">Date To</label>
                     <input type="date" name="date_to" id="date_to" value="{{ request('date_to') }}"
                            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                    @if(!request('date_to'))
+                        <p class="mt-1 text-xs text-gray-500">Leave empty for all dates</p>
+                    @endif
                 </div>
 
                 <div class="flex items-end">
@@ -161,12 +167,22 @@
                                         </button>
                                     </div>
                                 @else
-                                    <div class="text-gray-400">
-                                        @if($request->reviewer)
-                                            Reviewed by {{ $request->reviewer->name }}
-                                            @if($request->reviewed_at)
-                                                <br><span class="text-xs">{{ $request->reviewed_at->format('M d, Y H:i') }}</span>
+                                    <div class="flex items-center space-x-3">
+                                        <div class="text-gray-400">
+                                            @if($request->reviewer)
+                                                Reviewed by {{ $request->reviewer->name }}
+                                                @if($request->reviewed_at)
+                                                    <br><span class="text-xs">{{ $request->reviewed_at->format('M d, Y H:i') }}</span>
+                                                @endif
                                             @endif
+                                        </div>
+                                        @if($request->status === 'rejected' && auth()->user()->isSuperAdmin())
+                                            <span class="text-gray-300">|</span>
+                                            <button onclick="openDeleteModal({{ $request->id }}, '{{ $request->user->name }}', '{{ $request->date->format('M d, Y') }}')"
+                                                    class="text-red-600 hover:text-red-900"
+                                                    title="Delete rejected request">
+                                                Delete
+                                            </button>
                                         @endif
                                     </div>
                                 @endif
@@ -185,8 +201,21 @@
 
         <!-- Pagination -->
         @if($timeRequests->hasPages())
-            <div class="px-6 py-4 border-t border-gray-200">
-                {{ $timeRequests->links() }}
+            <div class="px-6 py-4 border-t border-gray-200 bg-gray-50">
+                <div class="flex items-center justify-between">
+                    <div class="text-sm text-gray-700">
+                        Showing {{ $timeRequests->firstItem() }} to {{ $timeRequests->lastItem() }} of {{ $timeRequests->total() }} results
+                    </div>
+                    <div class="flex items-center space-x-2">
+                        {{ $timeRequests->links() }}
+                    </div>
+                </div>
+            </div>
+        @else
+            <div class="px-6 py-4 border-t border-gray-200 bg-gray-50">
+                <div class="text-sm text-gray-700">
+                    Showing {{ $timeRequests->count() }} result(s)
+                </div>
             </div>
         @endif
     </div>
@@ -272,6 +301,57 @@
     </div>
 </div>
 
+<!-- Delete Modal -->
+<div id="delete-modal" class="hidden fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
+    <div class="relative top-20 mx-auto p-5 border w-11/12 md:w-1/2 shadow-lg rounded-md bg-white">
+        <div class="flex items-center justify-between mb-4">
+            <h3 class="text-lg font-bold text-gray-900">Delete Time Request</h3>
+            <button onclick="closeDeleteModal()" class="text-gray-400 hover:text-gray-600">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                </svg>
+            </button>
+        </div>
+
+        <div class="space-y-4">
+            <div class="bg-red-50 border-l-4 border-red-400 p-4">
+                <div class="flex">
+                    <div class="flex-shrink-0">
+                        <svg class="h-5 w-5 text-red-400" fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"/>
+                        </svg>
+                    </div>
+                    <div class="ml-3">
+                        <p class="text-sm text-red-700">
+                            Are you sure you want to delete this rejected time request? This action cannot be undone.
+                        </p>
+                        <div class="mt-2 text-sm text-red-600">
+                            <p><strong>Student:</strong> <span id="delete-student-name"></span></p>
+                            <p><strong>Date:</strong> <span id="delete-request-date"></span></p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <form id="delete-form" method="POST" action="">
+            @csrf
+            @method('DELETE')
+            <div class="mt-6 flex justify-end gap-3">
+                <button type="button" 
+                        onclick="closeDeleteModal()"
+                        class="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors">
+                    Cancel
+                </button>
+                <button type="submit" 
+                        class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors">
+                    Delete
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
 <script>
 function openApproveModal(requestId) {
     const modal = document.getElementById('approve-modal');
@@ -299,6 +379,22 @@ function closeRejectModal() {
     document.getElementById('reject-form').reset();
 }
 
+// Delete Modal Functions
+function openDeleteModal(requestId, studentName, requestDate) {
+    const modal = document.getElementById('delete-modal');
+    const form = document.getElementById('delete-form');
+    form.action = `/admin/time-requests/${requestId}`;
+    document.getElementById('delete-student-name').textContent = studentName;
+    document.getElementById('delete-request-date').textContent = requestDate;
+    modal.classList.remove('hidden');
+}
+
+function closeDeleteModal() {
+    const modal = document.getElementById('delete-modal');
+    modal.classList.add('hidden');
+    document.getElementById('delete-form').reset();
+}
+
 // Close modals when clicking outside
 document.getElementById('approve-modal')?.addEventListener('click', function(e) {
     if (e.target === this) {
@@ -309,6 +405,12 @@ document.getElementById('approve-modal')?.addEventListener('click', function(e) 
 document.getElementById('reject-modal')?.addEventListener('click', function(e) {
     if (e.target === this) {
         closeRejectModal();
+    }
+});
+
+document.getElementById('delete-modal')?.addEventListener('click', function(e) {
+    if (e.target === this) {
+        closeDeleteModal();
     }
 });
 </script>

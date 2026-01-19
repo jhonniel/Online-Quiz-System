@@ -31,8 +31,7 @@ class DtrTimeRequestController extends Controller
             $query = DtrTimeRequest::with(['user', 'reviewer'])
                 ->whereHas('user', function ($q) {
                     $q->where('role', 'student');
-                })
-                ->orderBy('created_at', 'desc');
+                });
 
             // Filter by status
             if ($request->filled('status')) {
@@ -44,13 +43,24 @@ class DtrTimeRequestController extends Controller
                 $query->where('user_id', $request->student_id);
             }
 
-            // Filter by date range
+            // Filter by date range (all dates by default if not specified)
             if ($request->filled('date_from')) {
                 $query->whereDate('date', '>=', $request->date_from);
             }
             if ($request->filled('date_to')) {
                 $query->whereDate('date', '<=', $request->date_to);
             }
+
+            // Sort: pending first, then approved/rejected
+            // Within each status group, sort by date desc (newest dates first), then by created_at desc
+            $query->orderByRaw("CASE 
+                WHEN status = 'pending' THEN 1 
+                WHEN status = 'approved' THEN 2 
+                WHEN status = 'rejected' THEN 3 
+                ELSE 4 
+            END")
+            ->orderBy('date', 'desc')
+            ->orderBy('created_at', 'desc');
 
             $timeRequests = $query->paginate(20)->appends($request->query());
 
@@ -152,5 +162,30 @@ class DtrTimeRequestController extends Controller
         ]);
 
         return back()->with('success', 'Time request rejected.');
+    }
+
+    /**
+     * Delete a rejected time request (only for super admins with full access)
+     */
+    public function destroy(DtrTimeRequest $dtrTimeRequest)
+    {
+        $user = Auth::user();
+        
+        // Only super admins (admins with full access) can delete
+        if (!$user->isSuperAdmin()) {
+            abort(403, 'Access denied. Only admins with full access can delete time requests.');
+        }
+        
+        // Only allow deletion of rejected requests
+        if ($dtrTimeRequest->status !== 'rejected') {
+            return back()->withErrors(['error' => 'Only rejected time requests can be deleted.']);
+        }
+
+        $studentName = $dtrTimeRequest->user->name;
+        $date = $dtrTimeRequest->date->format('M d, Y');
+        
+        $dtrTimeRequest->delete();
+
+        return back()->with('success', "Rejected time request for {$studentName} on {$date} has been deleted.");
     }
 }
