@@ -1578,8 +1578,19 @@
                                     </p>
                                 </div>
                                 <div class="bg-gray-50 rounded-lg p-4 border border-gray-200">
-                                    <p class="text-xs font-medium text-gray-500 uppercase mb-1">Timezone</p>
-                                    <p class="text-lg font-semibold text-gray-900">{{ $health['application']['timezone'] ?? 'Unknown' }}</p>
+                                    <label for="app_timezone" class="block text-xs font-medium text-gray-500 uppercase mb-2">Timezone</label>
+                                    <select name="app_timezone" id="app_timezone" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm">
+                                        <option value="Asia/Manila" {{ config('app.timezone') === 'Asia/Manila' ? 'selected' : '' }}>Asia/Manila (Philippines)</option>
+                                        <option value="UTC" {{ config('app.timezone') === 'UTC' ? 'selected' : '' }}>UTC</option>
+                                        <option value="America/New_York" {{ config('app.timezone') === 'America/New_York' ? 'selected' : '' }}>America/New_York (EST)</option>
+                                        <option value="America/Los_Angeles" {{ config('app.timezone') === 'America/Los_Angeles' ? 'selected' : '' }}>America/Los_Angeles (PST)</option>
+                                        <option value="Europe/London" {{ config('app.timezone') === 'Europe/London' ? 'selected' : '' }}>Europe/London (GMT)</option>
+                                        <option value="Asia/Tokyo" {{ config('app.timezone') === 'Asia/Tokyo' ? 'selected' : '' }}>Asia/Tokyo (Japan)</option>
+                                        <option value="Asia/Singapore" {{ config('app.timezone') === 'Asia/Singapore' ? 'selected' : '' }}>Asia/Singapore</option>
+                                        <option value="Asia/Hong_Kong" {{ config('app.timezone') === 'Asia/Hong_Kong' ? 'selected' : '' }}>Asia/Hong_Kong</option>
+                                        <option value="Australia/Sydney" {{ config('app.timezone') === 'Australia/Sydney' ? 'selected' : '' }}>Australia/Sydney</option>
+                                    </select>
+                                    <p class="mt-1 text-xs text-gray-500">Current: <strong>{{ $health['application']['timezone'] ?? 'Unknown' }}</strong></p>
                                 </div>
                                 @if(isset($health['database']['version']))
                                     <div class="bg-gray-50 rounded-lg p-4 border border-gray-200">

@@ -477,6 +477,7 @@ class SettingsController extends Controller
             'mail_from_address' => 'nullable|email|max:255',
             'mail_from_name' => 'nullable|string|max:255',
             'qr_code_prefix' => 'nullable|string|max:20',
+            'app_timezone' => 'nullable|string|max:50',
         ]);
 
         // Update system name
@@ -770,6 +771,29 @@ class SettingsController extends Controller
 
         $socialYouTube = $request->social_youtube ?? '';
         Setting::set('social_youtube', $socialYouTube, 'text', 'YouTube channel URL');
+
+        // Update Application Timezone
+        if ($request->filled('app_timezone')) {
+            $timezone = $request->app_timezone;
+            // Validate timezone
+            try {
+                new \DateTimeZone($timezone);
+                // Update config file
+                $configPath = config_path('app.php');
+                $configContent = file_get_contents($configPath);
+                // Replace timezone in config file
+                $configContent = preg_replace(
+                    "/'timezone'\s*=>\s*['\"][^'\"]*['\"]/",
+                    "'timezone' => '{$timezone}'",
+                    $configContent
+                );
+                file_put_contents($configPath, $configContent);
+                // Clear config cache
+                \Artisan::call('config:clear');
+            } catch (\Exception $e) {
+                \Log::error('Invalid timezone provided: ' . $timezone);
+            }
+        }
 
         // Clear cache to ensure changes are reflected immediately
         // Explicitly clear cache for leave balance settings
