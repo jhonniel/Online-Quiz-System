@@ -255,7 +255,9 @@ Route::prefix('admin')->middleware(['auth', 'admin'])->group(function () {
         Route::post('/hiring-applications/{application}/reject', [App\Http\Controllers\Admin\HiringApplicationController::class, 'reject'])->name('admin.hiring-applications.reject');
         Route::post('/hiring-applications/{application}/reconsider', [App\Http\Controllers\Admin\HiringApplicationController::class, 'reconsider'])->name('admin.hiring-applications.reconsider');
         Route::post('/hiring-applications/{application}/schedule-interview', [App\Http\Controllers\Admin\HiringApplicationController::class, 'scheduleInterview'])->name('admin.hiring-applications.schedule-interview');
+        Route::post('/hiring-applications/{application}/mark-interview-done', [App\Http\Controllers\Admin\HiringApplicationController::class, 'markInterviewDone'])->name('admin.hiring-applications.mark-interview-done');
         Route::post('/hiring-applications/{application}/mark-hired', [App\Http\Controllers\Admin\HiringApplicationController::class, 'markAsHired'])->name('admin.hiring-applications.mark-hired');
+        Route::post('/hiring-applications/{application}/cancel-hired', [App\Http\Controllers\Admin\HiringApplicationController::class, 'cancelHired'])->name('admin.hiring-applications.cancel-hired');
         Route::get('/hiring-applications/{application}/download-resume', [App\Http\Controllers\Admin\HiringApplicationController::class, 'downloadResume'])->name('admin.hiring-applications.download-resume');
         Route::get('/hiring-applications/{application}/view-resume', [App\Http\Controllers\Admin\HiringApplicationController::class, 'viewResume'])->name('admin.hiring-applications.view-resume');
         Route::patch('/hiring-applications/{application}/admin-notes', [App\Http\Controllers\Admin\HiringApplicationController::class, 'updateAdminNotes'])->name('admin.hiring-applications.update-admin-notes');

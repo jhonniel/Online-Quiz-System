@@ -26,7 +26,7 @@
     </div>
 
     <!-- Statistics Cards -->
-    <div class="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-5">
+    <div class="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-6">
         <div class="bg-white overflow-hidden shadow-sm rounded-lg border border-gray-200">
             <div class="p-6">
                 <div class="flex items-center">
@@ -109,8 +109,26 @@
                     </div>
                     <div class="ml-5 w-0 flex-1">
                         <dl>
-                            <dt class="text-sm font-medium text-gray-500 truncate">Interview</dt>
+                            <dt class="text-sm font-medium text-gray-500 truncate">Interview Scheduled</dt>
                             <dd class="text-2xl font-semibold text-gray-900">{{ $stats['interview_scheduled'] }}</dd>
+                        </dl>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-white overflow-hidden shadow-sm rounded-lg border border-gray-200">
+            <div class="p-6">
+                <div class="flex items-center">
+                    <div class="flex-shrink-0 bg-purple-500 rounded-md p-3">
+                        <svg class="h-6 w-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                        </svg>
+                    </div>
+                    <div class="ml-5 w-0 flex-1">
+                        <dl>
+                            <dt class="text-sm font-medium text-gray-500 truncate">Interview Done</dt>
+                            <dd class="text-2xl font-semibold text-gray-900">{{ $stats['done_interview'] ?? 0 }}</dd>
                         </dl>
                     </div>
                 </div>
@@ -253,6 +271,10 @@
                                 @elseif($application->status == 'interview_scheduled')
                                     <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
                                         Interview Scheduled
+                                    </span>
+                                @elseif($application->status == 'done_interview')
+                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
+                                        Interview Done
                                     </span>
                                 @elseif($application->status == 'hired')
                                     <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">

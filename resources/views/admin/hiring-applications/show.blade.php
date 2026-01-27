@@ -33,6 +33,10 @@
                     <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800">
                         Interview Scheduled
                     </span>
+                @elseif($application->status == 'done_interview')
+                    <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-purple-100 text-purple-800">
+                        Interview Done
+                    </span>
                 @elseif($application->status == 'hired')
                     <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800">
                         Hired
@@ -190,11 +194,33 @@
                         <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-red-100 text-red-800">
                             Rejected
                         </span>
-                    @elseif($application->status == 'interview_scheduled')
-                        <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800">
-                            Interview Scheduled
-                        </span>
-                    @elseif($application->status == 'hired')
+                @elseif($application->status == 'interview_scheduled')
+                    <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800">
+                        Interview Scheduled
+                    </span>
+                    @if($application->interview_date)
+                        <div class="mt-3">
+                            <label class="text-sm font-medium text-gray-500">Interview Date & Time</label>
+                            <p class="mt-1 text-sm text-gray-900">{{ $application->interview_date->format('F j, Y g:i A') }}</p>
+                        </div>
+                    @endif
+                    <div class="mt-3">
+                        <p class="text-sm text-gray-600">User can login and take quizzes.</p>
+                    </div>
+                @elseif($application->status == 'done_interview')
+                    <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-purple-100 text-purple-800">
+                        Interview Done
+                    </span>
+                    @if($application->interview_date)
+                        <div class="mt-3">
+                            <label class="text-sm font-medium text-gray-500">Interview Date & Time</label>
+                            <p class="mt-1 text-sm text-gray-900">{{ $application->interview_date->format('F j, Y g:i A') }}</p>
+                        </div>
+                    @endif
+                    <div class="mt-3">
+                        <p class="text-sm text-gray-600">Interview completed. Ready to mark as hired.</p>
+                    </div>
+                @elseif($application->status == 'hired')
                         <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800">
                             Hired
                         </span>
@@ -457,9 +483,59 @@
                                 </span>
                             </button>
                         </form>
+                        @if($application->user_id)
+                            <form action="{{ route('admin.hiring-applications.mark-interview-done', $application) }}" method="POST" class="mt-3">
+                                @csrf
+                                <div class="mb-3">
+                                    <label for="admin_notes_done" class="block text-sm font-medium text-gray-700 mb-1">
+                                        Notes (Optional)
+                                    </label>
+                                    <textarea name="admin_notes"
+                                              id="admin_notes_done"
+                                              rows="3"
+                                              placeholder="Add interview completion notes (optional)"
+                                              class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm">{{ old('admin_notes', $application->admin_notes) }}</textarea>
+                                </div>
+                                <button type="submit" class="action-button w-full inline-flex justify-center items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-purple-600 hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed" data-loading-text="Processing...">
+                                    <span class="button-text">Mark Interview as Done</span>
+                                    <span class="button-spinner hidden ml-2">
+                                        <svg class="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                        </svg>
+                                    </span>
+                                </button>
+                            </form>
+                        @endif
+                    @elseif($application->status == 'done_interview' && $application->user_id)
+                        <form action="{{ route('admin.hiring-applications.mark-hired', $application) }}" method="POST" onsubmit="return confirm('Are you sure you want to mark this applicant as hired? Their role will change from applicant to employee and they will be able to login.');">
+                            @csrf
+                            <div class="mb-3">
+                                <label for="admin_notes_hired_done" class="block text-sm font-medium text-gray-700 mb-1">
+                                    Notes (Optional)
+                                </label>
+                                <textarea name="admin_notes"
+                                          id="admin_notes_hired_done"
+                                          rows="3"
+                                          placeholder="Add notes about hiring (optional)"
+                                          class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm">{{ old('admin_notes', $application->admin_notes) }}</textarea>
+                            </div>
+                            <button type="submit" class="action-button w-full inline-flex justify-center items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-green-600 hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed" data-loading-text="Processing...">
+                                <span class="button-text">Mark as Hired</span>
+                                <span class="button-spinner hidden ml-2">
+                                    <svg class="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                    </svg>
+                                </span>
+                            </button>
+                            <p class="mt-2 text-xs text-gray-500">
+                                This will change the user role from applicant to employee and activate their account.
+                            </p>
+                        </form>
                     @endif
 
-                    @if(($application->status == 'interview_scheduled' || $application->status == 'accepted') && $application->user_id)
+                    @if(($application->status == 'interview_scheduled' || $application->status == 'accepted' || $application->status == 'done_interview') && $application->user_id)
                         <form action="{{ route('admin.hiring-applications.mark-hired', $application) }}" method="POST" onsubmit="return confirm('Are you sure you want to mark this applicant as hired? They will be able to login to their account.');">
                             @csrf
                             <div class="mb-3">
@@ -483,6 +559,33 @@
                             </button>
                             <p class="mt-2 text-xs text-gray-500">
                                 This will activate the user account and allow them to login.
+                            </p>
+                        </form>
+                    @endif
+                    @if($application->status == 'hired' && $application->user_id)
+                        <form action="{{ route('admin.hiring-applications.cancel-hired', $application) }}" method="POST" onsubmit="return confirm('Are you sure you want to cancel the hired status? The user account will be deactivated and they will not be able to login.');">
+                            @csrf
+                            <div class="mb-3">
+                                <label for="admin_notes_cancel" class="block text-sm font-medium text-gray-700 mb-1">
+                                    Notes (Optional)
+                                </label>
+                                <textarea name="admin_notes"
+                                          id="admin_notes_cancel"
+                                          rows="3"
+                                          placeholder="Add notes about cancellation (optional)"
+                                          class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm">{{ old('admin_notes', $application->admin_notes) }}</textarea>
+                            </div>
+                            <button type="submit" class="action-button w-full inline-flex justify-center items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-red-600 hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed" data-loading-text="Processing...">
+                                <span class="button-text">Cancel Hired Status</span>
+                                <span class="button-spinner hidden ml-2">
+                                    <svg class="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                    </svg>
+                                </span>
+                            </button>
+                            <p class="mt-2 text-xs text-gray-500">
+                                This will deactivate the user account and change status back to {{ $application->interview_date ? 'Interview Scheduled' : 'Accepted' }}.
                             </p>
                         </form>
                     @endif
@@ -520,20 +623,25 @@
                             'hiring_application_reconsidered' => 'Application Reconsidered',
                             'hiring_application_interview_scheduled' => 'Interview Scheduled',
                             'hiring_application_interview_rescheduled' => 'Interview Rescheduled',
+                            'hiring_application_interview_done' => 'Interview Done',
+                            'hiring_application_hired' => 'Marked as Hired',
+                            'hiring_application_hired_cancelled' => 'Hired Status Cancelled',
                             'hiring_application_deleted' => 'Application Deleted',
                             default => ucfirst(str_replace('_', ' ', str_replace('hiring_application_', '', $log->action))),
                         };
                         $borderColor = match($log->action) {
-                            'hiring_application_accepted', 'hiring_application_reconsidered' => 'border-green-500',
-                            'hiring_application_rejected' => 'border-red-500',
+                            'hiring_application_accepted', 'hiring_application_reconsidered', 'hiring_application_hired' => 'border-green-500',
+                            'hiring_application_rejected', 'hiring_application_hired_cancelled' => 'border-red-500',
                             'hiring_application_interview_scheduled', 'hiring_application_interview_rescheduled' => 'border-blue-500',
+                            'hiring_application_interview_done' => 'border-purple-500',
                             'hiring_application_deleted' => 'border-gray-400',
                             default => 'border-gray-400',
                         };
                         $badgeColor = match($log->action) {
-                            'hiring_application_accepted', 'hiring_application_reconsidered' => 'bg-green-100 text-green-800',
-                            'hiring_application_rejected' => 'bg-red-100 text-red-800',
+                            'hiring_application_accepted', 'hiring_application_reconsidered', 'hiring_application_hired' => 'bg-green-100 text-green-800',
+                            'hiring_application_rejected', 'hiring_application_hired_cancelled' => 'bg-red-100 text-red-800',
                             'hiring_application_interview_scheduled', 'hiring_application_interview_rescheduled' => 'bg-blue-100 text-blue-800',
+                            'hiring_application_interview_done' => 'bg-purple-100 text-purple-800',
                             'hiring_application_deleted' => 'bg-gray-100 text-gray-800',
                             default => 'bg-gray-100 text-gray-800',
                         };

@@ -119,6 +119,7 @@ class HiringApplicationController extends Controller
             'accepted' => (clone $baseQuery)->where('status', 'accepted')->count(),
             'rejected' => (clone $baseQuery)->where('status', 'rejected')->count(),
             'interview_scheduled' => (clone $baseQuery)->where('status', 'interview_scheduled')->count(),
+            'done_interview' => (clone $baseQuery)->where('status', 'done_interview')->count(),
         ];
 
         return view('admin.hiring-applications.index', compact('applications', 'stats', 'positions', 'positionFilter', 'perPage', 'search'));
@@ -460,6 +461,17 @@ class HiringApplicationController extends Controller
             'reviewed_at' => now(),
         ]);
 
+        // Ensure user account is activated so they can login and take quizzes
+        if ($application->user_id) {
+            $user = $application->user;
+            if ($user) {
+                $user->update([
+                    'is_approved' => true,
+                    'is_active' => true,
+                ]);
+            }
+        }
+
         // Log the action
         UserActivity::logActivity(
             Auth::user(),
@@ -574,12 +586,46 @@ class HiringApplicationController extends Controller
         abort(404, 'Resume not found.');
     }
 
+    public function markInterviewDone(Request $request, HiringApplication $application)
+    {
+        // Only allow marking interview as done if interview was scheduled
+        if ($application->status !== 'interview_scheduled') {
+            return redirect()->route('admin.hiring-applications.show', $application)
+                ->withErrors(['error' => 'Can only mark interview as done if interview is scheduled.']);
+        }
+
+        // Update application status to done_interview
+        $application->update([
+            'status' => 'done_interview',
+            'admin_notes' => $request->admin_notes ?? $application->admin_notes,
+            'reviewed_by' => Auth::id(),
+            'reviewed_at' => now(),
+        ]);
+
+        // Log the action
+        UserActivity::logActivity(
+            Auth::user(),
+            'action',
+            'hiring_application_interview_done',
+            [
+                'application_id' => $application->id,
+                'applicant_name' => $application->full_name,
+                'applicant_email' => $application->email,
+                'position' => $application->hiringPosition->title ?? $application->position_applied,
+                'admin_notes' => $request->admin_notes,
+            ]
+        );
+
+        return redirect()->route('admin.hiring-applications.show', $application)
+            ->with('success', 'Interview marked as done.');
+    }
+
     public function markAsHired(Request $request, HiringApplication $application)
     {
-        // Only allow marking as hired if interview was scheduled or application was accepted
-        if ($application->status !== 'interview_scheduled' && $application->status !== 'accepted') {
+        // Only allow marking as hired if interview is done, interview was scheduled, or application was accepted
+        if ($application->status !== 'done_interview' && $application->status !== 'interview_scheduled' && $application->status !== 'accepted') {
             return redirect()->route('admin.hiring-applications.show', $application)
-                ->withErrors(['error' => 'Can only mark as hired after interview is scheduled or application is accepted.']);
+                ->withErrors(['error' => 'Can only mark as hired after interview is done, interview is scheduled, or application is accepted.']);
         }
 
         // Ensure user account exists
@@ -594,6 +640,9 @@ class HiringApplicationController extends Controller
                 ->withErrors(['error' => 'User account not found.']);
         }
 
+        // Store the previous status before updating
+        $previousStatus = $application->status;
+
         // Update application status to hired
         $application->update([
             'status' => 'hired',
@@ -602,24 +651,41 @@ class HiringApplicationController extends Controller
             'reviewed_at' => now(),
         ]);
 
-        // Activate user account so they can login
-        $user->update([
+        // Prepare user update data
+        $userUpdateData = [
             'is_approved' => true,
             'is_active' => true,
-        ]);
+        ];
+
+        // If previous status was done_interview and user is applicant, change role to employee
+        if ($previousStatus === 'done_interview' && $user->role === 'applicant') {
+            $userUpdateData['role'] = 'employee';
+        }
+
+        // Activate user account so they can login
+        $user->update($userUpdateData);
 
         // Log the action
+        $logMetadata = [
+            'application_id' => $application->id,
+            'applicant_name' => $application->full_name,
+            'applicant_email' => $application->email,
+            'position' => $application->hiringPosition->title ?? $application->position_applied,
+            'admin_notes' => $request->admin_notes,
+        ];
+
+        // If role was changed from applicant to employee, log it
+        if ($previousStatus === 'done_interview' && isset($userUpdateData['role']) && $userUpdateData['role'] === 'employee') {
+            $logMetadata['role_changed'] = true;
+            $logMetadata['previous_role'] = 'applicant';
+            $logMetadata['new_role'] = 'employee';
+        }
+
         UserActivity::logActivity(
             Auth::user(),
             'action',
             'hiring_application_hired',
-            [
-                'application_id' => $application->id,
-                'applicant_name' => $application->full_name,
-                'applicant_email' => $application->email,
-                'position' => $application->hiringPosition->title ?? $application->position_applied,
-                'admin_notes' => $request->admin_notes,
-            ]
+            $logMetadata
         );
 
         // Send email notification to applicant if enabled
@@ -646,6 +712,85 @@ class HiringApplicationController extends Controller
 
         return redirect()->route('admin.hiring-applications.show', $application)
             ->with('success', 'Application marked as hired. User account is now active and can login.');
+    }
+
+    public function cancelHired(Request $request, HiringApplication $application)
+    {
+        // Only allow canceling if application is hired
+        if ($application->status !== 'hired') {
+            return redirect()->route('admin.hiring-applications.show', $application)
+                ->withErrors(['error' => 'Can only cancel hired applications.']);
+        }
+
+        // Ensure user account exists
+        if (!$application->user_id) {
+            return redirect()->route('admin.hiring-applications.show', $application)
+                ->withErrors(['error' => 'User account not found.']);
+        }
+
+        $user = $application->user;
+        if (!$user) {
+            return redirect()->route('admin.hiring-applications.show', $application)
+                ->withErrors(['error' => 'User account not found.']);
+        }
+
+        // Determine previous status - if interview was scheduled, go back to that, otherwise go to accepted
+        $previousStatus = $application->interview_date ? 'interview_scheduled' : 'accepted';
+
+        // Update application status
+        $application->update([
+            'status' => $previousStatus,
+            'admin_notes' => $request->admin_notes ?? $application->admin_notes,
+            'reviewed_by' => Auth::id(),
+            'reviewed_at' => now(),
+        ]);
+
+        // Deactivate user account so they cannot login
+        $user->update([
+            'is_approved' => false,
+            'is_active' => false,
+        ]);
+
+        // Log the action
+        UserActivity::logActivity(
+            Auth::user(),
+            'action',
+            'hiring_application_hired_cancelled',
+            [
+                'application_id' => $application->id,
+                'applicant_name' => $application->full_name,
+                'applicant_email' => $application->email,
+                'position' => $application->hiringPosition->title ?? $application->position_applied,
+                'admin_notes' => $request->admin_notes,
+                'previous_status' => 'hired',
+                'new_status' => $previousStatus,
+            ]
+        );
+
+        // Send email notification to applicant if enabled
+        $emailNotificationsEnabled = \App\Models\Setting::get('hiring_email_notifications', 'enabled');
+        if ($emailNotificationsEnabled === 'enabled') {
+            try {
+                // Ensure mail configuration is up to date from settings
+                MailConfigService::configure();
+
+                Mail::to($application->email)
+                    ->send(new \App\Mail\HiringApplicationStatusUpdate(
+                        $application,
+                        'hired_cancelled',
+                        $request->admin_notes ?? 'Your hiring status has been cancelled.',
+                        $application->hiringPosition
+                    ));
+            } catch (\Exception $e) {
+                Log::error('Failed to send hired cancellation email', [
+                    'error' => $e->getMessage(),
+                    'application_id' => $application->id
+                ]);
+            }
+        }
+
+        return redirect()->route('admin.hiring-applications.show', $application)
+            ->with('success', 'Hired status cancelled. User account has been deactivated.');
     }
 
     public function updateAdminNotes(Request $request, HiringApplication $application)
