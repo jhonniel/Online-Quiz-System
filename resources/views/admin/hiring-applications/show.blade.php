@@ -535,7 +535,7 @@
                         </form>
                     @endif
 
-                    @if(($application->status == 'interview_scheduled' || $application->status == 'accepted' || $application->status == 'done_interview') && $application->user_id)
+                    @if(($application->status == 'interview_scheduled' || $application->status == 'accepted') && $application->user_id)
                         <form action="{{ route('admin.hiring-applications.mark-hired', $application) }}" method="POST" onsubmit="return confirm('Are you sure you want to mark this applicant as hired? They will be able to login to their account.');">
                             @csrf
                             <div class="mb-3">
