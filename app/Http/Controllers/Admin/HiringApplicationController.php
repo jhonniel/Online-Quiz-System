@@ -602,6 +602,17 @@ class HiringApplicationController extends Controller
             'reviewed_at' => now(),
         ]);
 
+        // Ensure user account is activated so they can login and take quizzes
+        if ($application->user_id) {
+            $user = $application->user;
+            if ($user) {
+                $user->update([
+                    'is_approved' => true,
+                    'is_active' => true,
+                ]);
+            }
+        }
+
         // Log the action
         UserActivity::logActivity(
             Auth::user(),

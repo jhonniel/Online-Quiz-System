@@ -207,19 +207,19 @@
                     <div class="mt-3">
                         <p class="text-sm text-gray-600">User can login and take quizzes.</p>
                     </div>
-                @elseif($application->status == 'done_interview')
-                    <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-purple-100 text-purple-800">
-                        Interview Done
-                    </span>
-                    @if($application->interview_date)
+                    @elseif($application->status == 'done_interview')
+                        <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-purple-100 text-purple-800">
+                            Interview Done
+                        </span>
+                        @if($application->interview_date)
+                            <div class="mt-3">
+                                <label class="text-sm font-medium text-gray-500">Interview Date & Time</label>
+                                <p class="mt-1 text-sm text-gray-900">{{ $application->interview_date->format('F j, Y g:i A') }}</p>
+                            </div>
+                        @endif
                         <div class="mt-3">
-                            <label class="text-sm font-medium text-gray-500">Interview Date & Time</label>
-                            <p class="mt-1 text-sm text-gray-900">{{ $application->interview_date->format('F j, Y g:i A') }}</p>
+                            <p class="text-sm text-gray-600">User can login and take quizzes. Ready to mark as hired.</p>
                         </div>
-                    @endif
-                    <div class="mt-3">
-                        <p class="text-sm text-gray-600">Interview completed. Ready to mark as hired.</p>
-                    </div>
                 @elseif($application->status == 'hired')
                         <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800">
                             Hired
