@@ -224,7 +224,12 @@
                             <td class="right">00:00</td>
                             <td class="right">00:00</td>
                             <td class="center">On Leave</td>
-                            <td>Leave: {{ $leaveTypeLabel }}@if($leave->reason) - {{ Str::limit($leave->reason, 50) }}@endif</td>
+                            <td>
+                                Leave: {{ $leaveTypeLabel }}
+                                @if($leave->reason)
+                                    - {{ \Illuminate\Support\Str::limit($leave->reason, 50) }}
+                                @endif
+                            </td>
                         </tr>
                     @endforeach
                 </tbody>
@@ -263,7 +268,12 @@
                             <td class="right">00:00</td>
                             <td class="right">00:00</td>
                             <td class="center">Travel</td>
-                            <td>Travel Leave@if($travel->reason) - {{ Str::limit($travel->reason, 50) }}@endif</td>
+                            <td>
+                                Travel Leave
+                                @if($travel->reason)
+                                    - {{ \Illuminate\Support\Str::limit($travel->reason, 50) }}
+                                @endif
+                            </td>
                         </tr>
                     @endforeach
                 </tbody>
