@@ -106,12 +106,34 @@
 
                         // Build remarks with leave request info (excluding overtime type)
                         $remarks = $dtr->remarks ?: '';
-                        if (isset($dtr->leave_request) && $dtr->leave_request) {
+                        
+                        // Check for travel request
+                        $dateKey = $dtr->date->format('Y-m-d');
+                        $employeeId = $dtr->user_id;
+                        $travelRequest = $travelRequestMap[$employeeId][$dateKey] ?? null;
+                        
+                        if ($travelRequest) {
+                            $travelTypeLabel = $travelRequest->type_label ?? 'Travel';
+                            if ($remarks) {
+                                $remarks = $remarks . ' | Travel: ' . $travelTypeLabel;
+                            } else {
+                                $remarks = 'Travel: ' . $travelTypeLabel;
+                            }
+                        } elseif (isset($dtr->leave_request) && $dtr->leave_request) {
                             $leaveTypeLabel = $dtr->leave_request->type_label ?? ucfirst(str_replace('_', ' ', $dtr->leave_request->type));
                             if ($remarks) {
                                 $remarks = $remarks . ' | Leave: ' . $leaveTypeLabel;
                             } else {
                                 $remarks = 'Leave: ' . $leaveTypeLabel;
+                            }
+                        }
+                        
+                        // If status is travel but no travel request found, add travel note
+                        if ($dtr->status === 'travel' && !$travelRequest && strpos($remarks, 'Travel') === false) {
+                            if ($remarks) {
+                                $remarks = $remarks . ' | Travel';
+                            } else {
+                                $remarks = 'Travel';
                             }
                         }
                     @endphp
@@ -128,6 +150,125 @@
                 @endforeach
             </tbody>
         </table>
+
+        @php
+            $employeeId = $employeeGroup['employee']->id;
+            $hasLeaveRecords = isset($leaveRequestMap[$employeeId]) && count($leaveRequestMap[$employeeId]) > 0;
+            $hasTravelRecords = isset($travelRequestMap[$employeeId]) && count($travelRequestMap[$employeeId]) > 0;
+            
+            // Get leave dates that don't have DTR records
+            $leaveDatesWithoutDtr = [];
+            if ($hasLeaveRecords) {
+                foreach ($leaveRequestMap[$employeeId] as $dateKey => $leave) {
+                    $hasDtr = false;
+                    foreach ($employeeGroup['records'] as $dtr) {
+                        if ($dtr->date->format('Y-m-d') === $dateKey) {
+                            $hasDtr = true;
+                            break;
+                        }
+                    }
+                    if (!$hasDtr) {
+                        $leaveDatesWithoutDtr[$dateKey] = $leave;
+                    }
+                }
+            }
+            
+            // Get travel dates that don't have DTR records
+            $travelDatesWithoutDtr = [];
+            if ($hasTravelRecords) {
+                foreach ($travelRequestMap[$employeeId] as $dateKey => $travel) {
+                    $hasDtr = false;
+                    foreach ($employeeGroup['records'] as $dtr) {
+                        if ($dtr->date->format('Y-m-d') === $dateKey) {
+                            $hasDtr = true;
+                            break;
+                        }
+                    }
+                    if (!$hasDtr) {
+                        $travelDatesWithoutDtr[$dateKey] = $travel;
+                    }
+                }
+            }
+        @endphp
+
+        @if(count($leaveDatesWithoutDtr) > 0)
+            <div style="margin-top: 12px; margin-bottom: 4px;">
+                <div style="font-weight: bold; font-size: 10px; color: #1E40AF; background: #DBEAFE; padding: 4px 6px; border-radius: 4px;">
+                    Leave Records (No DTR Entry)
+                </div>
+            </div>
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th style="width: 12%;">Date</th>
+                        <th style="width: 8%;">Day</th>
+                        <th style="width: 12%;" class="right">Worked Hours</th>
+                        <th style="width: 12%;" class="right">Added Time</th>
+                        <th style="width: 12%;" class="right">Total Hours</th>
+                        <th style="width: 12%;" class="right">Overtime</th>
+                        <th style="width: 10%;" class="center">Status</th>
+                        <th style="width: 22%;">Remarks</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach($leaveDatesWithoutDtr as $dateKey => $leave)
+                        @php
+                            $leaveDate = \Carbon\Carbon::parse($dateKey);
+                            $leaveTypeLabel = $leave->type_label ?? ucfirst(str_replace('_', ' ', $leave->type));
+                        @endphp
+                        <tr style="background-color: #F0F9FF;">
+                            <td>{{ $leaveDate->format('M d, Y') }}</td>
+                            <td>{{ $leaveDate->format('D') }}</td>
+                            <td class="right">00:00</td>
+                            <td class="right">00:00</td>
+                            <td class="right">00:00</td>
+                            <td class="right">00:00</td>
+                            <td class="center">On Leave</td>
+                            <td>Leave: {{ $leaveTypeLabel }}@if($leave->reason) - {{ Str::limit($leave->reason, 50) }}@endif</td>
+                        </tr>
+                    @endforeach
+                </tbody>
+            </table>
+        @endif
+
+        @if(count($travelDatesWithoutDtr) > 0)
+            <div style="margin-top: 12px; margin-bottom: 4px;">
+                <div style="font-weight: bold; font-size: 10px; color: #7C3AED; background: #EDE9FE; padding: 4px 6px; border-radius: 4px;">
+                    Travel Records (No DTR Entry)
+                </div>
+            </div>
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th style="width: 12%;">Date</th>
+                        <th style="width: 8%;">Day</th>
+                        <th style="width: 12%;" class="right">Worked Hours</th>
+                        <th style="width: 12%;" class="right">Added Time</th>
+                        <th style="width: 12%;" class="right">Total Hours</th>
+                        <th style="width: 12%;" class="right">Overtime</th>
+                        <th style="width: 10%;" class="center">Status</th>
+                        <th style="width: 22%;">Remarks</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach($travelDatesWithoutDtr as $dateKey => $travel)
+                        @php
+                            $travelDate = \Carbon\Carbon::parse($dateKey);
+                        @endphp
+                        <tr style="background-color: #FAF5FF;">
+                            <td>{{ $travelDate->format('M d, Y') }}</td>
+                            <td>{{ $travelDate->format('D') }}</td>
+                            <td class="right">00:00</td>
+                            <td class="right">00:00</td>
+                            <td class="right">00:00</td>
+                            <td class="right">00:00</td>
+                            <td class="center">Travel</td>
+                            <td>Travel Leave@if($travel->reason) - {{ Str::limit($travel->reason, 50) }}@endif</td>
+                        </tr>
+                    @endforeach
+                </tbody>
+            </table>
+        @endif
     @endforeach
 </body>
 </html>

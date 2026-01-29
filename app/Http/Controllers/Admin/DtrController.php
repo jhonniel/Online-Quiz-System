@@ -2077,8 +2077,11 @@ class DtrController extends Controller
 
         // Get approved leave requests (excluding overtime type) for the date range
         $leaveRequestMap = [];
+        $travelRequestMap = [];
         if ($dateFrom && $dateTo) {
             $employeeIds = $dtrs->pluck('user_id')->unique();
+            
+            // Get all approved leave requests (excluding overtime type)
             $approvedLeaves = LeaveRequest::whereIn('user_id', $employeeIds)
                 ->where('status', 'approved')
                 ->where('type', '!=', 'overtime') // Exclude overtime type
@@ -2095,8 +2098,41 @@ class DtrController extends Controller
                 $period = new \Carbon\CarbonPeriod($start, $end);
                 foreach ($period as $day) {
                     $dateKey = $day->format('Y-m-d');
-                    if (!isset($leaveRequestMap[$leave->user_id][$dateKey])) {
-                        $leaveRequestMap[$leave->user_id][$dateKey] = $leave;
+                    // Separate travel requests from other leave requests
+                    if ($leave->type === 'travel') {
+                        if (!isset($travelRequestMap[$leave->user_id][$dateKey])) {
+                            $travelRequestMap[$leave->user_id][$dateKey] = $leave;
+                        }
+                    } else {
+                        if (!isset($leaveRequestMap[$leave->user_id][$dateKey])) {
+                            $leaveRequestMap[$leave->user_id][$dateKey] = $leave;
+                        }
+                    }
+                }
+            }
+        } else {
+            // If no date range, get all approved leave requests
+            $employeeIds = $dtrs->pluck('user_id')->unique();
+            $approvedLeaves = LeaveRequest::whereIn('user_id', $employeeIds)
+                ->where('status', 'approved')
+                ->where('type', '!=', 'overtime')
+                ->get();
+
+            foreach ($approvedLeaves as $leave) {
+                $start = Carbon::parse($leave->start_date);
+                $end = $leave->end_date ? Carbon::parse($leave->end_date) : $start->copy();
+                $period = new \Carbon\CarbonPeriod($start, $end);
+                foreach ($period as $day) {
+                    $dateKey = $day->format('Y-m-d');
+                    // Separate travel requests from other leave requests
+                    if ($leave->type === 'travel') {
+                        if (!isset($travelRequestMap[$leave->user_id][$dateKey])) {
+                            $travelRequestMap[$leave->user_id][$dateKey] = $leave;
+                        }
+                    } else {
+                        if (!isset($leaveRequestMap[$leave->user_id][$dateKey])) {
+                            $leaveRequestMap[$leave->user_id][$dateKey] = $leave;
+                        }
                     }
                 }
             }
@@ -2114,9 +2150,10 @@ class DtrController extends Controller
                     'total_overtime' => 0,
                 ];
             }
-            // Attach leave request info to each DTR record
+            // Attach leave request and travel request info to each DTR record
             $dateKey = $dtr->date->format('Y-m-d');
             $dtr->leave_request = $leaveRequestMap[$employeeId][$dateKey] ?? null;
+            $dtr->travel_request = $travelRequestMap[$employeeId][$dateKey] ?? null;
 
             $groupedByEmployee[$employeeId]['records'][] = $dtr;
             $groupedByEmployee[$employeeId]['total_hours'] += ($dtr->total_hours ?? 0);
@@ -2243,6 +2280,8 @@ class DtrController extends Controller
             'dateTo' => $dateTo ? Carbon::parse($dateTo)->format('F d, Y') : 'All Time',
             'selectedEmployee' => $selectedEmployee,
             'selectedDepartment' => $selectedDepartment,
+            'leaveRequestMap' => $leaveRequestMap,
+            'travelRequestMap' => $travelRequestMap,
         ];
 
         $pdf = Pdf::loadView('admin.dtr.export-pdf', $data)->setPaper('a4', 'landscape');
