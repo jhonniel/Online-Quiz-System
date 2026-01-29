@@ -105,12 +105,19 @@
                         }
 
                         // Build remarks with leave request info (excluding overtime type)
+                        // Only show approved leave requests
                         $remarks = $dtr->remarks ?: '';
                         
-                        // Check for travel request
+                        // Check for travel request (only approved)
                         $dateKey = $dtr->date->format('Y-m-d');
                         $employeeId = $dtr->user_id;
-                        $travelRequest = $travelRequestMap[$employeeId][$dateKey] ?? null;
+                        $travelRequest = null;
+                        if (isset($travelRequestMap[$employeeId][$dateKey])) {
+                            $tempTravel = $travelRequestMap[$employeeId][$dateKey];
+                            if ($tempTravel->status === 'approved') {
+                                $travelRequest = $tempTravel;
+                            }
+                        }
                         
                         if ($travelRequest) {
                             $travelTypeLabel = $travelRequest->type_label ?? 'Travel';
@@ -119,7 +126,7 @@
                             } else {
                                 $remarks = 'Travel: ' . $travelTypeLabel;
                             }
-                        } elseif (isset($dtr->leave_request) && $dtr->leave_request) {
+                        } elseif (isset($dtr->leave_request) && $dtr->leave_request && $dtr->leave_request->status === 'approved') {
                             $leaveTypeLabel = $dtr->leave_request->type_label ?? ucfirst(str_replace('_', ' ', $dtr->leave_request->type));
                             if ($remarks) {
                                 $remarks = $remarks . ' | Leave: ' . $leaveTypeLabel;
@@ -128,7 +135,7 @@
                             }
                         }
                         
-                        // If status is travel but no travel request found, add travel note
+                        // If status is travel but no approved travel request found, add travel note
                         if ($dtr->status === 'travel' && !$travelRequest && strpos($remarks, 'Travel') === false) {
                             if ($remarks) {
                                 $remarks = $remarks . ' | Travel';
@@ -156,10 +163,14 @@
             $hasLeaveRecords = isset($leaveRequestMap[$employeeId]) && count($leaveRequestMap[$employeeId]) > 0;
             $hasTravelRecords = isset($travelRequestMap[$employeeId]) && count($travelRequestMap[$employeeId]) > 0;
             
-            // Get leave dates that don't have DTR records
+            // Get leave dates that don't have DTR records (only approved leaves)
             $leaveDatesWithoutDtr = [];
             if ($hasLeaveRecords) {
                 foreach ($leaveRequestMap[$employeeId] as $dateKey => $leave) {
+                    // Only include approved leave requests
+                    if ($leave->status !== 'approved') {
+                        continue;
+                    }
                     $hasDtr = false;
                     foreach ($employeeGroup['records'] as $dtr) {
                         if ($dtr->date->format('Y-m-d') === $dateKey) {
@@ -173,10 +184,14 @@
                 }
             }
             
-            // Get travel dates that don't have DTR records
+            // Get travel dates that don't have DTR records (only approved travel)
             $travelDatesWithoutDtr = [];
             if ($hasTravelRecords) {
                 foreach ($travelRequestMap[$employeeId] as $dateKey => $travel) {
+                    // Only include approved travel requests
+                    if ($travel->status !== 'approved') {
+                        continue;
+                    }
                     $hasDtr = false;
                     foreach ($employeeGroup['records'] as $dtr) {
                         if ($dtr->date->format('Y-m-d') === $dateKey) {
