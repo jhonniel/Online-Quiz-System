@@ -2138,6 +2138,17 @@ class DtrController extends Controller
             }
         }
 
+        // Create a map of DTR records by employee and date for quick lookup
+        $dtrMapByEmployeeAndDate = [];
+        foreach ($dtrs as $dtr) {
+            $employeeId = $dtr->user_id;
+            $dateKey = $dtr->date->format('Y-m-d');
+            if (!isset($dtrMapByEmployeeAndDate[$employeeId])) {
+                $dtrMapByEmployeeAndDate[$employeeId] = [];
+            }
+            $dtrMapByEmployeeAndDate[$employeeId][$dateKey] = $dtr;
+        }
+        
         // Group by employee for better organization
         $groupedByEmployee = [];
         foreach ($dtrs as $dtr) {
