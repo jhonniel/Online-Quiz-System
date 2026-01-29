@@ -121,17 +121,27 @@
                         
                         if ($travelRequest) {
                             $travelTypeLabel = $travelRequest->type_label ?? 'Travel';
+                            $approvalTime = $travelRequest->reviewed_at ? $travelRequest->reviewed_at->format('M d, Y g:i A') : '';
+                            $travelText = 'Travel: ' . $travelTypeLabel;
+                            if ($approvalTime) {
+                                $travelText .= ' (Approved: ' . $approvalTime . ')';
+                            }
                             if ($remarks) {
-                                $remarks = $remarks . ' | Travel: ' . $travelTypeLabel;
+                                $remarks = $remarks . ' | ' . $travelText;
                             } else {
-                                $remarks = 'Travel: ' . $travelTypeLabel;
+                                $remarks = $travelText;
                             }
                         } elseif (isset($dtr->leave_request) && $dtr->leave_request && $dtr->leave_request->status === 'approved') {
                             $leaveTypeLabel = $dtr->leave_request->type_label ?? ucfirst(str_replace('_', ' ', $dtr->leave_request->type));
+                            $approvalTime = $dtr->leave_request->reviewed_at ? $dtr->leave_request->reviewed_at->format('M d, Y g:i A') : '';
+                            $leaveText = 'Leave: ' . $leaveTypeLabel;
+                            if ($approvalTime) {
+                                $leaveText .= ' (Approved: ' . $approvalTime . ')';
+                            }
                             if ($remarks) {
-                                $remarks = $remarks . ' | Leave: ' . $leaveTypeLabel;
+                                $remarks = $remarks . ' | ' . $leaveText;
                             } else {
-                                $remarks = 'Leave: ' . $leaveTypeLabel;
+                                $remarks = $leaveText;
                             }
                         }
                         
@@ -230,6 +240,7 @@
                         @php
                             $leaveDate = \Carbon\Carbon::parse($dateKey);
                             $leaveTypeLabel = $leave->type_label ?? ucfirst(str_replace('_', ' ', $leave->type));
+                            $approvalTime = $leave->reviewed_at ? $leave->reviewed_at->format('M d, Y g:i A') : '';
                         @endphp
                         <tr style="background-color: #F0F9FF;">
                             <td>{{ $leaveDate->format('M d, Y') }}</td>
@@ -241,6 +252,9 @@
                             <td class="center">On Leave</td>
                             <td>
                                 Leave: {{ $leaveTypeLabel }}
+                                @if($approvalTime)
+                                    (Approved: {{ $approvalTime }})
+                                @endif
                                 @if($leave->reason)
                                     - {{ \Illuminate\Support\Str::limit($leave->reason, 50) }}
                                 @endif
@@ -274,6 +288,7 @@
                     @foreach($travelDatesWithoutDtr as $dateKey => $travel)
                         @php
                             $travelDate = \Carbon\Carbon::parse($dateKey);
+                            $approvalTime = $travel->reviewed_at ? $travel->reviewed_at->format('M d, Y g:i A') : '';
                         @endphp
                         <tr style="background-color: #FAF5FF;">
                             <td>{{ $travelDate->format('M d, Y') }}</td>
@@ -285,6 +300,9 @@
                             <td class="center">Travel</td>
                             <td>
                                 Travel Leave
+                                @if($approvalTime)
+                                    (Approved: {{ $approvalTime }})
+                                @endif
                                 @if($travel->reason)
                                     - {{ \Illuminate\Support\Str::limit($travel->reason, 50) }}
                                 @endif
