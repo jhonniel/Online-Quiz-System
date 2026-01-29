@@ -45,20 +45,25 @@ class LoginRequest extends FormRequest
         $user = \App\Models\User::where('email', $this->email)->first();
 
         if ($user) {
-            // Check if user has a hiring application
-            $hiringApplication = \App\Models\HiringApplication::where('user_id', $user->id)
+            // Check all hiring applications for this user (by user_id or email)
+            $applications = \App\Models\HiringApplication::where('user_id', $user->id)
                 ->orWhere('email', $user->email)
-                ->latest()
-                ->first();
+                ->get();
 
-            // If user has a hiring application, only allow login when status is accepted, interview_scheduled, done_interview, or hired
-            if (
-                $hiringApplication &&
-                !in_array($hiringApplication->status, ['accepted', 'interview_scheduled', 'done_interview', 'hired'], true)
-            ) {
-                throw ValidationException::withMessages([
-                    'email' => 'Your application is still under review. You will be able to login once your application is accepted or your interview is scheduled.',
-                ]);
+            if ($applications->isNotEmpty()) {
+                // Allowed statuses for login
+                $allowedStatuses = ['accepted', 'interview_scheduled', 'done_interview', 'hired'];
+
+                // Allow login if ANY application is in an allowed status
+                $hasAllowed = $applications->contains(function ($app) use ($allowedStatuses) {
+                    return in_array($app->status, $allowedStatuses, true);
+                });
+
+                if (!$hasAllowed) {
+                    throw ValidationException::withMessages([
+                        'email' => 'Your application is still under review. You will be able to login once your application is accepted or your interview is scheduled.',
+                    ]);
+                }
             }
 
             if (!$user->is_approved) {

@@ -57,28 +57,33 @@ class RoleLoginController extends Controller
         $user = \App\Models\User::where('email', $request->email)->first();
 
         if ($user) {
-            // Check if user has a hiring application
-            $hiringApplication = \App\Models\HiringApplication::where('user_id', $user->id)
+            // Check all hiring applications for this user (by user_id or email)
+            $applications = \App\Models\HiringApplication::where('user_id', $user->id)
                 ->orWhere('email', $user->email)
-                ->latest()
-                ->first();
+                ->get();
 
-            // If user has a hiring application, only allow login when status is accepted, interview_scheduled, done_interview, or hired
-            if (
-                $hiringApplication &&
-                !in_array($hiringApplication->status, ['accepted', 'interview_scheduled', 'done_interview', 'hired'], true)
-            ) {
-                $message = 'Your application is still under review. You will be able to login once your application is accepted or your interview is scheduled.';
-                if ($request->ajax() || $request->expectsJson()) {
-                    return response()->json([
-                        'success' => false,
-                        'message' => $message,
-                        'type' => 'error'
-                    ], 403);
+            if ($applications->isNotEmpty()) {
+                // Allowed statuses for login
+                $allowedStatuses = ['accepted', 'interview_scheduled', 'done_interview', 'hired'];
+
+                // Allow login if ANY application is in an allowed status
+                $hasAllowed = $applications->contains(function ($app) use ($allowedStatuses) {
+                    return in_array($app->status, $allowedStatuses, true);
+                });
+
+                if (!$hasAllowed) {
+                    $message = 'Your application is still under review. You will be able to login once your application is accepted or your interview is scheduled.';
+                    if ($request->ajax() || $request->expectsJson()) {
+                        return response()->json([
+                            'success' => false,
+                            'message' => $message,
+                            'type' => 'error'
+                        ], 403);
+                    }
+                    return redirect()->back()
+                        ->withInput($request->only('email'))
+                        ->withErrors(['login' => [$message]]);
                 }
-                return redirect()->back()
-                    ->withInput($request->only('email'))
-                    ->withErrors(['login' => [$message]]);
             }
 
             // If user exists but is not approved, show approval message
