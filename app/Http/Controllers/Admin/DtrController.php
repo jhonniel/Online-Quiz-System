@@ -2138,17 +2138,6 @@ class DtrController extends Controller
             }
         }
 
-        // Create a map of DTR records by employee and date for quick lookup
-        $dtrMapByEmployeeAndDate = [];
-        foreach ($dtrs as $dtr) {
-            $employeeId = $dtr->user_id;
-            $dateKey = $dtr->date->format('Y-m-d');
-            if (!isset($dtrMapByEmployeeAndDate[$employeeId])) {
-                $dtrMapByEmployeeAndDate[$employeeId] = [];
-            }
-            $dtrMapByEmployeeAndDate[$employeeId][$dateKey] = $dtr;
-        }
-
         // Group by employee for better organization
         $groupedByEmployee = [];
         foreach ($dtrs as $dtr) {
@@ -2174,6 +2163,90 @@ class DtrController extends Controller
         // Format employee totals and calculate per-employee deficit and balance
         foreach ($groupedByEmployee as &$group) {
             $employee = $group['employee'];
+            $employeeId = $employee->id;
+
+            // Add hours from approved leave records (without DTR entries or with 0 hours)
+            $leaveHoursToAdd = 0;
+            $leaveOvertimeToAdd = 0;
+            
+            if (isset($leaveRequestMap[$employeeId])) {
+                foreach ($leaveRequestMap[$employeeId] as $dateKey => $leave) {
+                    if ($leave->status !== 'approved') {
+                        continue;
+                    }
+                    
+                    // Check if DTR exists for this date
+                    $hasDtr = false;
+                    $dtrRecord = null;
+                    if (isset($dtrMapByEmployeeAndDate[$employeeId][$dateKey])) {
+                        $dtrRecord = $dtrMapByEmployeeAndDate[$employeeId][$dateKey];
+                        $hasDtr = true;
+                    } else {
+                        // Also check in employeeGroup records
+                        foreach ($group['records'] as $dtr) {
+                            if ($dtr->date->format('Y-m-d') === $dateKey) {
+                                $dtrRecord = $dtr;
+                                $hasDtr = true;
+                                break;
+                            }
+                        }
+                    }
+                    
+                    // Add hours if no DTR exists OR if DTR exists but has 0 hours
+                    if (!$hasDtr || ($dtrRecord && ($dtrRecord->total_hours ?? 0) == 0)) {
+                        if ($dtrRecord && ($dtrRecord->total_hours ?? 0) > 0) {
+                            // Use DTR hours if available
+                            $leaveHoursToAdd += $dtrRecord->total_hours ?? 0;
+                            $leaveOvertimeToAdd += $dtrRecord->overtime_hours ?? 0;
+                        } else {
+                            // Default to 8 hours for approved leave
+                            $leaveHoursToAdd += 8.0;
+                        }
+                    }
+                }
+            }
+            
+            // Add hours from approved travel records (without DTR entries or with 0 hours)
+            if (isset($travelRequestMap[$employeeId])) {
+                foreach ($travelRequestMap[$employeeId] as $dateKey => $travel) {
+                    if ($travel->status !== 'approved') {
+                        continue;
+                    }
+                    
+                    // Check if DTR exists for this date
+                    $hasDtr = false;
+                    $dtrRecord = null;
+                    if (isset($dtrMapByEmployeeAndDate[$employeeId][$dateKey])) {
+                        $dtrRecord = $dtrMapByEmployeeAndDate[$employeeId][$dateKey];
+                        $hasDtr = true;
+                    } else {
+                        // Also check in employeeGroup records
+                        foreach ($group['records'] as $dtr) {
+                            if ($dtr->date->format('Y-m-d') === $dateKey) {
+                                $dtrRecord = $dtr;
+                                $hasDtr = true;
+                                break;
+                            }
+                        }
+                    }
+                    
+                    // Add hours if no DTR exists OR if DTR exists but has 0 hours
+                    if (!$hasDtr || ($dtrRecord && ($dtrRecord->total_hours ?? 0) == 0)) {
+                        if ($dtrRecord && ($dtrRecord->total_hours ?? 0) > 0) {
+                            // Use DTR hours if available
+                            $leaveHoursToAdd += $dtrRecord->total_hours ?? 0;
+                            $leaveOvertimeToAdd += $dtrRecord->overtime_hours ?? 0;
+                        } else {
+                            // Default to 8 hours for approved travel
+                            $leaveHoursToAdd += 8.0;
+                        }
+                    }
+                }
+            }
+            
+            // Add leave/travel hours to employee totals
+            $group['total_hours'] += $leaveHoursToAdd;
+            $group['total_overtime'] += $leaveOvertimeToAdd;
 
             $employeeTotalMinutes = (int) round($group['total_hours'] * 60);
             $employeeTotalH = intdiv($employeeTotalMinutes, 60);
@@ -2277,6 +2350,71 @@ class DtrController extends Controller
             $group['balance_overtime_formatted'] = ($employeeBalanceOvertimeHours < 0 ? '-' : '') . sprintf('%02d:%02d', $employeeBalanceOvertimeH, $employeeBalanceOvertimeM);
             $group['is_balance_negative'] = $employeeBalanceOvertimeHours < 0;
         }
+
+        // Recalculate overall totals to include leave/travel hours
+        $totalHoursWithLeaves = $totalHours;
+        $totalOvertimeWithLeaves = $totalOvertime;
+        
+        // Add hours from approved leave/travel records without DTR entries
+        $employeeIds = $dtrs->pluck('user_id')->unique();
+        foreach ($employeeIds as $employeeId) {
+            // Add leave hours
+            if (isset($leaveRequestMap[$employeeId])) {
+                foreach ($leaveRequestMap[$employeeId] as $dateKey => $leave) {
+                    if ($leave->status !== 'approved') {
+                        continue;
+                    }
+                    
+                    // Check if DTR exists
+                    $hasDtr = isset($dtrMapByEmployeeAndDate[$employeeId][$dateKey]);
+                    $dtrRecord = $hasDtr ? $dtrMapByEmployeeAndDate[$employeeId][$dateKey] : null;
+                    
+                    // Add if no DTR or DTR has 0 hours
+                    if (!$hasDtr || ($dtrRecord && ($dtrRecord->total_hours ?? 0) == 0)) {
+                        if ($dtrRecord && ($dtrRecord->total_hours ?? 0) > 0) {
+                            $totalHoursWithLeaves += $dtrRecord->total_hours ?? 0;
+                            $totalOvertimeWithLeaves += $dtrRecord->overtime_hours ?? 0;
+                        } else {
+                            $totalHoursWithLeaves += 8.0; // Default 8 hours for leave
+                        }
+                    }
+                }
+            }
+            
+            // Add travel hours
+            if (isset($travelRequestMap[$employeeId])) {
+                foreach ($travelRequestMap[$employeeId] as $dateKey => $travel) {
+                    if ($travel->status !== 'approved') {
+                        continue;
+                    }
+                    
+                    // Check if DTR exists
+                    $hasDtr = isset($dtrMapByEmployeeAndDate[$employeeId][$dateKey]);
+                    $dtrRecord = $hasDtr ? $dtrMapByEmployeeAndDate[$employeeId][$dateKey] : null;
+                    
+                    // Add if no DTR or DTR has 0 hours
+                    if (!$hasDtr || ($dtrRecord && ($dtrRecord->total_hours ?? 0) == 0)) {
+                        if ($dtrRecord && ($dtrRecord->total_hours ?? 0) > 0) {
+                            $totalHoursWithLeaves += $dtrRecord->total_hours ?? 0;
+                            $totalOvertimeWithLeaves += $dtrRecord->overtime_hours ?? 0;
+                        } else {
+                            $totalHoursWithLeaves += 8.0; // Default 8 hours for travel
+                        }
+                    }
+                }
+            }
+        }
+        
+        // Reformat totals with leave/travel hours included
+        $totalMinutesWithLeaves = (int) round($totalHoursWithLeaves * 60);
+        $totalHWithLeaves = intdiv($totalMinutesWithLeaves, 60);
+        $totalMWithLeaves = $totalMinutesWithLeaves % 60;
+        $totalHoursFormatted = sprintf('%02d:%02d', $totalHWithLeaves, $totalMWithLeaves);
+
+        $totalOvertimeMinutesWithLeaves = (int) round($totalOvertimeWithLeaves * 60);
+        $totalOvertimeHWithLeaves = intdiv($totalOvertimeMinutesWithLeaves, 60);
+        $totalOvertimeMWithLeaves = $totalOvertimeMinutesWithLeaves % 60;
+        $totalOvertimeFormatted = sprintf('%02d:%02d', $totalOvertimeHWithLeaves, $totalOvertimeMWithLeaves);
 
         $data = [
             'dtrs' => $dtrs,

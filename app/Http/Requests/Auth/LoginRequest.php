@@ -51,10 +51,13 @@ class LoginRequest extends FormRequest
                 ->latest()
                 ->first();
 
-            // If user has a hiring application, check if they are hired, interview is scheduled, or interview is done
-            if ($hiringApplication && $hiringApplication->status !== 'hired' && $hiringApplication->status !== 'interview_scheduled' && $hiringApplication->status !== 'done_interview') {
+            // If user has a hiring application, only allow login when status is accepted, interview_scheduled, done_interview, or hired
+            if (
+                $hiringApplication &&
+                !in_array($hiringApplication->status, ['accepted', 'interview_scheduled', 'done_interview', 'hired'], true)
+            ) {
                 throw ValidationException::withMessages([
-                    'email' => 'Your application is still under review. You will be able to login once your interview is scheduled or you are hired.',
+                    'email' => 'Your application is still under review. You will be able to login once your application is accepted or your interview is scheduled.',
                 ]);
             }
 
