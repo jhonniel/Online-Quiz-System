@@ -91,9 +91,29 @@
                         $otM = $otMinutes % 60;
                         $otFormatted = sprintf('%02d:%02d', $otH, $otM);
 
+                        // Build remarks with leave request info (excluding overtime type)
+                        // Only show approved leave requests
+                        $remarks = $dtr->remarks ?: '';
+                        
+                        // Check for travel request (only approved)
+                        $dateKey = $dtr->date->format('Y-m-d');
+                        $employeeId = $dtr->user_id;
+                        
+                        // Check if this DTR has an approved leave request
+                        $hasApprovedLeave = false;
+                        if (isset($leaveRequestMap[$employeeId][$dateKey])) {
+                            $leaveReq = $leaveRequestMap[$employeeId][$dateKey];
+                            if ($leaveReq->status === 'approved') {
+                                $hasApprovedLeave = true;
+                            }
+                        }
+                        
                         // Status logic: same as DTR list
                         if ($dtr->status === 'travel') {
                             $statusLabel = 'Travel';
+                        } elseif ($hasApprovedLeave || $dtr->status === 'on_leave') {
+                            // On Leave counts as Completed
+                            $statusLabel = 'Completed';
                         } else {
                             // Otherwise, show Under Time or Completed based on total hours
                             $totalMinutesForStatus = (int) round(($dtr->total_hours ?? 0) * 60);
@@ -103,14 +123,6 @@
                                 $statusLabel = 'Completed';
                             }
                         }
-
-                        // Build remarks with leave request info (excluding overtime type)
-                        // Only show approved leave requests
-                        $remarks = $dtr->remarks ?: '';
-                        
-                        // Check for travel request (only approved)
-                        $dateKey = $dtr->date->format('Y-m-d');
-                        $employeeId = $dtr->user_id;
                         $travelRequest = null;
                         if (isset($travelRequestMap[$employeeId][$dateKey])) {
                             $tempTravel = $travelRequestMap[$employeeId][$dateKey];
@@ -241,15 +253,21 @@
                             $leaveDate = \Carbon\Carbon::parse($dateKey);
                             $leaveTypeLabel = $leave->type_label ?? ucfirst(str_replace('_', ' ', $leave->type));
                             $approvalTime = $leave->reviewed_at ? $leave->reviewed_at->format('M d, Y g:i A') : '';
+                            // On Leave counts as 8 hours (completed day)
+                            $leaveHours = 8.0;
+                            $leaveMinutes = (int) round($leaveHours * 60);
+                            $leaveH = intdiv($leaveMinutes, 60);
+                            $leaveM = $leaveMinutes % 60;
+                            $leaveFormatted = sprintf('%02d:%02d', $leaveH, $leaveM);
                         @endphp
                         <tr style="background-color: #F0F9FF;">
                             <td>{{ $leaveDate->format('M d, Y') }}</td>
                             <td>{{ $leaveDate->format('D') }}</td>
+                            <td class="right">{{ $leaveFormatted }}</td>
                             <td class="right">00:00</td>
+                            <td class="right">{{ $leaveFormatted }}</td>
                             <td class="right">00:00</td>
-                            <td class="right">00:00</td>
-                            <td class="right">00:00</td>
-                            <td class="center">On Leave</td>
+                            <td class="center">Completed</td>
                             <td>
                                 Leave: {{ $leaveTypeLabel }}
                                 @if($approvalTime)
