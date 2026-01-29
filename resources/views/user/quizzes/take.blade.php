@@ -123,6 +123,7 @@ document.addEventListener('DOMContentLoaded', function() {
     let currentQuestionIndex = 0;
     let userAnswers = {};
     let remainingTime = null;
+    let isAutoSubmit = false; // Flag to track if submission is triggered by timer
 
     // Start Quiz Button Handler
     const startQuizBtn = document.getElementById('start-quiz-btn');
@@ -462,8 +463,12 @@ document.addEventListener('DOMContentLoaded', function() {
             return;
         }
 
-        // Show confirmation dialog
-        if (confirm(`Are you sure you want to submit this quiz? You have answered ${answerCount} out of ${totalQuestions} questions. You cannot change your answers after submission.`)) {
+        // Show confirmation dialog only for manual submissions, skip for auto-submit
+        const shouldSubmit = isAutoSubmit || confirm(`Are you sure you want to submit this quiz? You have answered ${answerCount} out of ${totalQuestions} questions. You cannot change your answers after submission.`);
+        
+        if (shouldSubmit) {
+            // Reset auto-submit flag after using it
+            isAutoSubmit = false;
             // Show loading state
             const submitBtn = document.getElementById('submit-btn');
             const submitIcon = document.getElementById('submit-icon');
@@ -614,7 +619,8 @@ document.addEventListener('DOMContentLoaded', function() {
         // Check if time has already expired
         if (timeLeft <= 0) {
             ToastNotification.warning('Time is up! Your quiz will be submitted automatically.');
-            // Trigger form submission programmatically
+            // Set auto-submit flag and trigger form submission programmatically
+            isAutoSubmit = true;
             document.getElementById('quiz-form').dispatchEvent(new Event('submit'));
             return;
         }
@@ -647,7 +653,8 @@ document.addEventListener('DOMContentLoaded', function() {
             if (timeLeft <= 0) {
                 clearInterval(timer);
                 ToastNotification.warning('Time is up! Your quiz will be submitted automatically.');
-                // Trigger form submission programmatically
+                // Set auto-submit flag and trigger form submission programmatically
+                isAutoSubmit = true;
                 document.getElementById('quiz-form').dispatchEvent(new Event('submit'));
             }
         }, 1000);

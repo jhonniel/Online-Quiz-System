@@ -175,9 +175,6 @@
                                 <span class="hidden md:inline">Topic</span>
                             </th>
                             <th scope="col" class="px-3 sm:px-4 lg:px-6 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                <span class="hidden lg:inline">Created By</span>
-                            </th>
-                            <th scope="col" class="px-3 sm:px-4 lg:px-6 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                 <span class="hidden lg:inline">Questions</span>
                             </th>
                             <th scope="col" class="px-3 sm:px-4 lg:px-6 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -225,9 +222,6 @@
                                     <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
                                         {{ $quiz->topic }}
                                     </span>
-                                </td>
-                                <td class="px-3 sm:px-4 lg:px-6 py-3 whitespace-nowrap text-sm text-gray-500 hidden lg:table-cell">
-                                    {{ $quiz->creator->name }}
                                 </td>
                                 <td class="px-3 sm:px-4 lg:px-6 py-3 whitespace-nowrap text-sm text-gray-500 hidden lg:table-cell">
                                     {{ $quiz->total_questions }}

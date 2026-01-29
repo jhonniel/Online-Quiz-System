@@ -633,6 +633,20 @@ class HiringApplicationController extends Controller
 
     public function markAsHired(Request $request, HiringApplication $application)
     {
+        // Only super admins can mark applicants as hired
+        if (!Auth::user()->isSuperAdmin()) {
+            abort(403, 'Access denied. Only super administrators can mark applicants as hired.');
+        }
+
+        // Check if this is an internship position - if so, redirect to accept intern
+        $isInternship = $application->hiringPosition && 
+                        strcasecmp($application->hiringPosition->employment_type ?? '', 'Internship') === 0;
+        
+        if ($isInternship) {
+            return redirect()->route('admin.hiring-applications.show', $application)
+                ->withErrors(['error' => 'Please use "Accept Intern" button for internship positions.']);
+        }
+
         // Only allow marking as hired if interview is done, interview was scheduled, or application was accepted
         if ($application->status !== 'done_interview' && $application->status !== 'interview_scheduled' && $application->status !== 'accepted') {
             return redirect()->route('admin.hiring-applications.show', $application)
@@ -723,6 +737,118 @@ class HiringApplicationController extends Controller
 
         return redirect()->route('admin.hiring-applications.show', $application)
             ->with('success', 'Application marked as hired. User account is now active and can login.');
+    }
+
+    public function acceptIntern(Request $request, HiringApplication $application)
+    {
+        // Only super admins can accept interns
+        if (!Auth::user()->isSuperAdmin()) {
+            abort(403, 'Access denied. Only super administrators can accept interns.');
+        }
+
+        // Check if this is an internship position
+        $isInternship = $application->hiringPosition && 
+                        strcasecmp($application->hiringPosition->employment_type ?? '', 'Internship') === 0;
+        
+        if (!$isInternship) {
+            return redirect()->route('admin.hiring-applications.show', $application)
+                ->withErrors(['error' => 'This action is only available for internship positions.']);
+        }
+
+        // Only allow accepting intern if interview is done, interview was scheduled, or application was accepted
+        if ($application->status !== 'done_interview' && $application->status !== 'interview_scheduled' && $application->status !== 'accepted') {
+            return redirect()->route('admin.hiring-applications.show', $application)
+                ->withErrors(['error' => 'Can only accept intern after interview is done, interview is scheduled, or application is accepted.']);
+        }
+
+        // Ensure user account exists
+        if (!$application->user_id) {
+            return redirect()->route('admin.hiring-applications.show', $application)
+                ->withErrors(['error' => 'User account must be created first. Please accept the application first.']);
+        }
+
+        $user = $application->user;
+        if (!$user) {
+            return redirect()->route('admin.hiring-applications.show', $application)
+                ->withErrors(['error' => 'User account not found.']);
+        }
+
+        // Store the previous status before updating
+        $previousStatus = $application->status;
+
+        // Update application status to hired
+        $application->update([
+            'status' => 'hired',
+            'admin_notes' => $request->admin_notes ?? $application->admin_notes,
+            'reviewed_by' => Auth::id(),
+            'reviewed_at' => now(),
+        ]);
+
+        // Prepare user update data - change role to student for interns
+        $userUpdateData = [
+            'is_approved' => true,
+            'is_active' => true,
+        ];
+
+        // If previous status was done_interview and user is applicant, change role to student (not employee)
+        if ($previousStatus === 'done_interview' && $user->role === 'applicant') {
+            $userUpdateData['role'] = 'student';
+        } elseif ($user->role === 'applicant') {
+            // Also change role to student if status is interview_scheduled or accepted
+            $userUpdateData['role'] = 'student';
+        }
+
+        // Activate user account so they can login
+        $user->update($userUpdateData);
+
+        // Log the action
+        $logMetadata = [
+            'application_id' => $application->id,
+            'applicant_name' => $application->full_name,
+            'applicant_email' => $application->email,
+            'position' => $application->hiringPosition->title ?? $application->position_applied,
+            'admin_notes' => $request->admin_notes,
+            'employment_type' => 'Internship',
+        ];
+
+        // If role was changed from applicant to student, log it
+        if (isset($userUpdateData['role']) && $userUpdateData['role'] === 'student') {
+            $logMetadata['role_changed'] = true;
+            $logMetadata['previous_role'] = 'applicant';
+            $logMetadata['new_role'] = 'student';
+        }
+
+        UserActivity::logActivity(
+            Auth::user(),
+            'action',
+            'hiring_application_intern_accepted',
+            $logMetadata
+        );
+
+        // Send email notification to applicant if enabled
+        $emailNotificationsEnabled = \App\Models\Setting::get('hiring_email_notifications', 'enabled');
+        if ($emailNotificationsEnabled === 'enabled') {
+            try {
+                // Ensure mail configuration is up to date from settings
+                MailConfigService::configure();
+
+                Mail::to($application->email)
+                    ->send(new \App\Mail\HiringApplicationStatusUpdate(
+                        $application,
+                        'hired',
+                        $request->admin_notes ?? 'Congratulations! Your internship application has been accepted.',
+                        $application->hiringPosition
+                    ));
+            } catch (\Exception $e) {
+                Log::error('Failed to send intern acceptance email', [
+                    'error' => $e->getMessage(),
+                    'application_id' => $application->id
+                ]);
+            }
+        }
+
+        return redirect()->route('admin.hiring-applications.show', $application)
+            ->with('success', 'Intern accepted. User account is now active with student role and can login.');
     }
 
     public function cancelHired(Request $request, HiringApplication $application)

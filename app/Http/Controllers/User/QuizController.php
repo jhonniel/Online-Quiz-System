@@ -358,14 +358,11 @@ class QuizController extends Controller
         }
 
         // Check if time has expired
-        if ($assignment->isTimeExpired()) {
-            if ($request->ajax()) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Time has expired. Your quiz cannot be submitted.',
-                    'type' => 'error'
-                ], 408);
-            }
+        // For non-AJAX submissions, block after time has expired.
+        // For AJAX submissions (including auto-submit when timer ends), allow the submission
+        // so that answers are still recorded for review.
+        $timeExpired = $assignment->isTimeExpired();
+        if ($timeExpired && !$request->ajax()) {
             abort(408, 'Time has expired.');
         }
 
