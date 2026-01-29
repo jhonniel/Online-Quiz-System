@@ -185,7 +185,7 @@
             $hasLeaveRecords = isset($leaveRequestMap[$employeeId]) && count($leaveRequestMap[$employeeId]) > 0;
             $hasTravelRecords = isset($travelRequestMap[$employeeId]) && count($travelRequestMap[$employeeId]) > 0;
             
-            // Get leave dates that don't have DTR records (only approved leaves)
+            // Get leave dates that don't have DTR records OR have DTR with 0 hours (only approved leaves)
             $leaveDatesWithoutDtr = [];
             if ($hasLeaveRecords) {
                 foreach ($leaveRequestMap[$employeeId] as $dateKey => $leave) {
@@ -194,19 +194,32 @@
                         continue;
                     }
                     $hasDtr = false;
-                    foreach ($employeeGroup['records'] as $dtr) {
-                        if ($dtr->date->format('Y-m-d') === $dateKey) {
-                            $hasDtr = true;
-                            break;
+                    $dtrRecord = null;
+                    // Check if DTR exists for this date
+                    if (isset($dtrMapByEmployeeAndDate[$employeeId][$dateKey])) {
+                        $dtrRecord = $dtrMapByEmployeeAndDate[$employeeId][$dateKey];
+                        $hasDtr = true;
+                    } else {
+                        // Also check in employeeGroup records
+                        foreach ($employeeGroup['records'] as $dtr) {
+                            if ($dtr->date->format('Y-m-d') === $dateKey) {
+                                $dtrRecord = $dtr;
+                                $hasDtr = true;
+                                break;
+                            }
                         }
                     }
-                    if (!$hasDtr) {
-                        $leaveDatesWithoutDtr[$dateKey] = $leave;
+                    // Include if no DTR exists OR if DTR exists but has 0 hours
+                    if (!$hasDtr || ($dtrRecord && ($dtrRecord->total_hours ?? 0) == 0)) {
+                        $leaveDatesWithoutDtr[$dateKey] = [
+                            'leave' => $leave,
+                            'dtr' => $dtrRecord, // Include DTR if it exists (even with 0 hours)
+                        ];
                     }
                 }
             }
             
-            // Get travel dates that don't have DTR records (only approved travel)
+            // Get travel dates that don't have DTR records OR have DTR with 0 hours (only approved travel)
             $travelDatesWithoutDtr = [];
             if ($hasTravelRecords) {
                 foreach ($travelRequestMap[$employeeId] as $dateKey => $travel) {
@@ -215,14 +228,27 @@
                         continue;
                     }
                     $hasDtr = false;
-                    foreach ($employeeGroup['records'] as $dtr) {
-                        if ($dtr->date->format('Y-m-d') === $dateKey) {
-                            $hasDtr = true;
-                            break;
+                    $dtrRecord = null;
+                    // Check if DTR exists for this date
+                    if (isset($dtrMapByEmployeeAndDate[$employeeId][$dateKey])) {
+                        $dtrRecord = $dtrMapByEmployeeAndDate[$employeeId][$dateKey];
+                        $hasDtr = true;
+                    } else {
+                        // Also check in employeeGroup records
+                        foreach ($employeeGroup['records'] as $dtr) {
+                            if ($dtr->date->format('Y-m-d') === $dateKey) {
+                                $dtrRecord = $dtr;
+                                $hasDtr = true;
+                                break;
+                            }
                         }
                     }
-                    if (!$hasDtr) {
-                        $travelDatesWithoutDtr[$dateKey] = $travel;
+                    // Include if no DTR exists OR if DTR exists but has 0 hours
+                    if (!$hasDtr || ($dtrRecord && ($dtrRecord->total_hours ?? 0) == 0)) {
+                        $travelDatesWithoutDtr[$dateKey] = [
+                            'travel' => $travel,
+                            'dtr' => $dtrRecord, // Include DTR if it exists (even with 0 hours)
+                        ];
                     }
                 }
             }
@@ -231,7 +257,7 @@
         @if(count($leaveDatesWithoutDtr) > 0)
             <div style="margin-top: 12px; margin-bottom: 4px;">
                 <div style="font-weight: bold; font-size: 10px; color: #1E40AF; background: #DBEAFE; padding: 4px 6px; border-radius: 4px;">
-                    Leave Records (No DTR Entry)
+                    Approved Leave Records
                 </div>
             </div>
             <table class="table">
@@ -248,25 +274,59 @@
                     </tr>
                 </thead>
                 <tbody>
-                    @foreach($leaveDatesWithoutDtr as $dateKey => $leave)
+                    @foreach($leaveDatesWithoutDtr as $dateKey => $leaveData)
                         @php
+                            $leave = is_array($leaveData) ? $leaveData['leave'] : $leaveData;
+                            $dtrRecord = is_array($leaveData) ? ($leaveData['dtr'] ?? null) : null;
                             $leaveDate = \Carbon\Carbon::parse($dateKey);
                             $leaveTypeLabel = $leave->type_label ?? ucfirst(str_replace('_', ' ', $leave->type));
                             $approvalTime = $leave->reviewed_at ? $leave->reviewed_at->format('M d, Y g:i A') : '';
-                            // On Leave counts as 8 hours (completed day)
-                            $leaveHours = 8.0;
-                            $leaveMinutes = (int) round($leaveHours * 60);
-                            $leaveH = intdiv($leaveMinutes, 60);
-                            $leaveM = $leaveMinutes % 60;
-                            $leaveFormatted = sprintf('%02d:%02d', $leaveH, $leaveM);
+                            
+                            // Use DTR hours if available, otherwise default to 8 hours
+                            if ($dtrRecord && ($dtrRecord->total_hours ?? 0) > 0) {
+                                $leaveHours = $dtrRecord->total_hours;
+                                $workedHours = max($leaveHours - ($dtrRecord->added_time_from_note ?? 0), 0);
+                                $addedTime = $dtrRecord->added_time_from_note ?? 0;
+                                $overtimeHours = $dtrRecord->overtime_hours ?? 0;
+                            } else {
+                                // Default to 8 hours for approved leave
+                                $leaveHours = 8.0;
+                                $workedHours = 8.0;
+                                $addedTime = 0;
+                                $overtimeHours = 0;
+                            }
+                            
+                            // Format worked hours
+                            $workedMinutes = (int) round($workedHours * 60);
+                            $workedH = intdiv($workedMinutes, 60);
+                            $workedM = $workedMinutes % 60;
+                            $workedFormatted = sprintf('%02d:%02d', $workedH, $workedM);
+                            
+                            // Format added time
+                            $addedMinutes = (int) round($addedTime * 60);
+                            $addedH = intdiv($addedMinutes, 60);
+                            $addedM = $addedMinutes % 60;
+                            $addedFormatted = sprintf('%02d:%02d', $addedH, $addedM);
+                            
+                            // Format total hours
+                            $totalMinutes = (int) round($leaveHours * 60);
+                            $totalH = intdiv($totalMinutes, 60);
+                            $totalM = $totalMinutes % 60;
+                            $totalFormatted = sprintf('%02d:%02d', $totalH, $totalM);
+                            
+                            // Format overtime
+                            $otMinutes = (int) round($overtimeHours * 60);
+                            $otH = intdiv($otMinutes, 60);
+                            $otM = $otMinutes % 60;
+                            $otFormatted = sprintf('%02d:%02d', $otH, $otM);
                         @endphp
                         <tr style="background-color: #F0F9FF;">
                             <td>{{ $leaveDate->format('M d, Y') }}</td>
                             <td>{{ $leaveDate->format('D') }}</td>
-                            <td class="right">{{ $leaveFormatted }}</td>
-                            <td class="right">00:00</td>
-                            <td class="right">{{ $leaveFormatted }}</td>
-                            <td class="right">00:00</td>
+                            <td class="right">{{ $workedFormatted }}</td>
+                            <td class="right">{{ $addedMinutes > 0 ? $addedFormatted : '00:00' }}</td>
+                            <td class="right">{{ $totalFormatted }}</td>
+                            <td class="right">{{ $otMinutes > 0 ? $otFormatted : '00:00' }}</td>
                             <td class="center">Completed</td>
                             <td>
                                 Leave: {{ $leaveTypeLabel }}
@@ -286,7 +346,7 @@
         @if(count($travelDatesWithoutDtr) > 0)
             <div style="margin-top: 12px; margin-bottom: 4px;">
                 <div style="font-weight: bold; font-size: 10px; color: #7C3AED; background: #EDE9FE; padding: 4px 6px; border-radius: 4px;">
-                    Travel Records (No DTR Entry)
+                    Approved Travel Records
                 </div>
             </div>
             <table class="table">
@@ -303,18 +363,58 @@
                     </tr>
                 </thead>
                 <tbody>
-                    @foreach($travelDatesWithoutDtr as $dateKey => $travel)
+                    @foreach($travelDatesWithoutDtr as $dateKey => $travelData)
                         @php
+                            $travel = is_array($travelData) ? $travelData['travel'] : $travelData;
+                            $dtrRecord = is_array($travelData) ? ($travelData['dtr'] ?? null) : null;
                             $travelDate = \Carbon\Carbon::parse($dateKey);
                             $approvalTime = $travel->reviewed_at ? $travel->reviewed_at->format('M d, Y g:i A') : '';
+                            
+                            // Use DTR hours if available, otherwise default to 8 hours
+                            if ($dtrRecord && ($dtrRecord->total_hours ?? 0) > 0) {
+                                $travelHours = $dtrRecord->total_hours;
+                                $workedHours = max($travelHours - ($dtrRecord->added_time_from_note ?? 0), 0);
+                                $addedTime = $dtrRecord->added_time_from_note ?? 0;
+                                $overtimeHours = $dtrRecord->overtime_hours ?? 0;
+                            } else {
+                                // Default to 8 hours for approved travel
+                                $travelHours = 8.0;
+                                $workedHours = 8.0;
+                                $addedTime = 0;
+                                $overtimeHours = 0;
+                            }
+                            
+                            // Format worked hours
+                            $workedMinutes = (int) round($workedHours * 60);
+                            $workedH = intdiv($workedMinutes, 60);
+                            $workedM = $workedMinutes % 60;
+                            $workedFormatted = sprintf('%02d:%02d', $workedH, $workedM);
+                            
+                            // Format added time
+                            $addedMinutes = (int) round($addedTime * 60);
+                            $addedH = intdiv($addedMinutes, 60);
+                            $addedM = $addedMinutes % 60;
+                            $addedFormatted = sprintf('%02d:%02d', $addedH, $addedM);
+                            
+                            // Format total hours
+                            $totalMinutes = (int) round($travelHours * 60);
+                            $totalH = intdiv($totalMinutes, 60);
+                            $totalM = $totalMinutes % 60;
+                            $totalFormatted = sprintf('%02d:%02d', $totalH, $totalM);
+                            
+                            // Format overtime
+                            $otMinutes = (int) round($overtimeHours * 60);
+                            $otH = intdiv($otMinutes, 60);
+                            $otM = $otMinutes % 60;
+                            $otFormatted = sprintf('%02d:%02d', $otH, $otM);
                         @endphp
                         <tr style="background-color: #FAF5FF;">
                             <td>{{ $travelDate->format('M d, Y') }}</td>
                             <td>{{ $travelDate->format('D') }}</td>
-                            <td class="right">00:00</td>
-                            <td class="right">00:00</td>
-                            <td class="right">00:00</td>
-                            <td class="right">00:00</td>
+                            <td class="right">{{ $workedFormatted }}</td>
+                            <td class="right">{{ $addedMinutes > 0 ? $addedFormatted : '00:00' }}</td>
+                            <td class="right">{{ $totalFormatted }}</td>
+                            <td class="right">{{ $otMinutes > 0 ? $otFormatted : '00:00' }}</td>
                             <td class="center">Travel</td>
                             <td>
                                 Travel Leave
