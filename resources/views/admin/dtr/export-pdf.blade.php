@@ -166,7 +166,7 @@
                         <td class="right">{{ $workedMinutes > 0 ? $workedFormatted : '00:00' }}</td>
                         <td class="right">{{ $extraMinutes > 0 ? $extraFormatted : '00:00' }}</td>
                         <td class="right">{{ $totalMinutes > 0 ? $totalFormatted : '00:00' }}</td>
-                        <td class="center">{{ $statusLabel }}</td>
+                        <td class="center"@if($statusLabel === 'Under Time') style="color: #DC2626; font-weight: bold;"@endif>{{ $statusLabel }}</td>
                         <td>{{ $remarks ?: '-' }}</td>
                     </tr>
                 @endforeach
