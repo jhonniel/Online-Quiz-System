@@ -303,15 +303,12 @@ class DtrController extends Controller
 
     /**
      * Export the authenticated employee/student's DTR records as PDF.
+     * NOTE: This functionality is disabled for employees/students.
      */
     public function exportPdf(Request $request)
     {
-        $user = Auth::user();
-
-        // Allow employees and students to access
-        if (!in_array($user->role, ['employee', 'student'])) {
-            abort(403, 'Only employees and students can export DTR records.');
-        }
+        // PDF export is not available for employees/students
+        abort(403, 'PDF export is not available for employees and students.');
 
         $query = Dtr::where('user_id', $user->id);
 

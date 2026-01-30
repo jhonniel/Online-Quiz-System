@@ -190,13 +190,6 @@
                             Record Attendance
                         </button>
                     @endif
-                    <a href="{{ route('user.dtr.export-pdf', request()->query()) }}"
-                       class="inline-flex items-center px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors text-sm font-medium">
-                        <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
-                        </svg>
-                        Generate PDF
-                    </a>
                 </div>
             </div>
         </div>
@@ -235,7 +228,6 @@
                                                 <th class="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Worked Hours</th>
                                                 <th class="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Added Time</th>
                                                 <th class="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total Hours</th>
-                                                <th class="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Overtime</th>
                                                 <th class="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
                                                 <th class="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Remarks</th>
                                             </tr>
@@ -251,11 +243,11 @@
                                                     } elseif ($dtr->status === 'on_leave') {
                                                         $statusLabel = 'Leave';
                                                         $statusClass = 'bg-purple-100 text-purple-800';
-                                                        $isCompleted = false;
+                                                        $isCompleted = true; // Show checkmark for leave entries
                                                     } elseif ($dtr->status === 'travel') {
                                                         $statusLabel = 'Travel';
                                                         $statusClass = 'bg-blue-100 text-blue-800';
-                                                        $isCompleted = false;
+                                                        $isCompleted = true; // Show checkmark for travel entries
                                                     } else {
                                                         $totalMinutesForStatus = (int) round(($dtr->total_hours ?? 0) * 60);
                                                         if ($totalMinutesForStatus < 480) {
@@ -284,8 +276,6 @@
                                                     $totalM = $totalMinutes % 60;
                                                     $totalFormatted = sprintf('%02d:%02d', $totalH, $totalM);
                                                     $totalOver8Hours = $totalMinutes > 480; // 8 hours = 480 minutes
-                                                    
-                                                    $otMinutes = (int) round(($dtr->overtime_hours ?? 0) * 60);
                                                 @endphp
                                                 <tr class="hover:bg-gray-50">
                                                     <td class="px-3 sm:px-6 py-4 whitespace-nowrap">
@@ -294,7 +284,7 @@
                                                     </td>
                                                     <td class="px-3 sm:px-6 py-4 whitespace-nowrap">
                                                         <div class="text-sm font-medium text-gray-900">
-                                                            @if($isCompleted || $workedOver8Hours)
+                                                            @if($isCompleted)
                                                                 <svg class="w-5 h-5 text-green-600" fill="currentColor" viewBox="0 0 20 20">
                                                                     <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
                                                                 </svg>
@@ -305,7 +295,7 @@
                                                     </td>
                                                     <td class="px-3 sm:px-6 py-4 whitespace-nowrap">
                                                         <div class="text-sm font-medium text-gray-900">
-                                                            @if($isCompleted || $extraMinutes > 0)
+                                                            @if($isCompleted)
                                                                 <svg class="w-5 h-5 text-green-600" fill="currentColor" viewBox="0 0 20 20">
                                                                     <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
                                                                 </svg>
@@ -316,23 +306,12 @@
                                                     </td>
                                                     <td class="px-3 sm:px-6 py-4 whitespace-nowrap">
                                                         <div class="text-sm font-medium text-gray-900">
-                                                            @if($isCompleted || $totalOver8Hours)
+                                                            @if($isCompleted)
                                                                 <svg class="w-5 h-5 text-green-600" fill="currentColor" viewBox="0 0 20 20">
                                                                     <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
                                                                 </svg>
                                                             @else
                                                                 {{ $totalMinutes > 0 ? $totalFormatted : '00:00' }}
-                                                            @endif
-                                                        </div>
-                                                    </td>
-                                                    <td class="px-3 sm:px-6 py-4 whitespace-nowrap">
-                                                        <div class="text-sm font-medium text-orange-600">
-                                                            @if($isCompleted || $otMinutes > 0)
-                                                                <svg class="w-5 h-5 text-green-600" fill="currentColor" viewBox="0 0 20 20">
-                                                                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
-                                                                </svg>
-                                                            @else
-                                                                <span class="text-gray-400">-</span>
                                                             @endif
                                                         </div>
                                                     </td>
@@ -352,20 +331,13 @@
                                         <tfoot class="bg-gradient-to-r from-indigo-50 to-purple-50 border-t-2 border-indigo-300">
                                             @php
                                                 $weeklyTotalHours = 0;
-                                                $weeklyOvertimeHours = 0;
                                                 foreach ($week['records'] as $dtr) {
                                                     $weeklyTotalHours += ($dtr->total_hours ?? 0);
-                                                    $weeklyOvertimeHours += ($dtr->overtime_hours ?? 0);
                                                 }
                                                 $weeklyTotalMinutes = (int) round($weeklyTotalHours * 60);
                                                 $weeklyTotalH = intdiv($weeklyTotalMinutes, 60);
                                                 $weeklyTotalM = $weeklyTotalMinutes % 60;
                                                 $weeklyTotalFormatted = sprintf('%02d:%02d', $weeklyTotalH, $weeklyTotalM);
-
-                                                $weeklyOvertimeMinutes = (int) round($weeklyOvertimeHours * 60);
-                                                $weeklyOvertimeH = intdiv($weeklyOvertimeMinutes, 60);
-                                                $weeklyOvertimeM = $weeklyOvertimeMinutes % 60;
-                                                $weeklyOvertimeFormatted = sprintf('%02d:%02d', $weeklyOvertimeH, $weeklyOvertimeM);
 
                                                 $weeklyBaseMinutes = 40 * 60;
                                                 $deficitMinutes = max(0, $weeklyBaseMinutes - $weeklyTotalMinutes);
@@ -383,15 +355,6 @@
                                                         </svg>
                                                     @else
                                                         {{ $weeklyTotalFormatted }}
-                                                    @endif
-                                                </td>
-                                                <td class="px-3 sm:px-6 py-3 text-sm font-bold text-orange-600">
-                                                    @if($isWeekComplete)
-                                                        <svg class="w-5 h-5 text-green-600 inline-block" fill="currentColor" viewBox="0 0 20 20">
-                                                            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
-                                                        </svg>
-                                                    @else
-                                                        {{ $weeklyOvertimeFormatted }}
                                                     @endif
                                                 </td>
                                                 <td colspan="2" class="px-3 sm:px-6 py-3 text-sm text-gray-600">
