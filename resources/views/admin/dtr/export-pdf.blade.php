@@ -57,14 +57,13 @@
         <table class="table">
             <thead>
                 <tr>
-                    <th style="width: 12%;">Date</th>
-                    <th style="width: 8%;">Day</th>
-                    <th style="width: 12%;" class="right">Worked Hours</th>
-                    <th style="width: 12%;" class="right">Added Time</th>
-                    <th style="width: 12%;" class="right">Total Hours</th>
-                    <th style="width: 12%;" class="right">Overtime</th>
-                    <th style="width: 10%;" class="center">Status</th>
-                    <th style="width: 22%;">Remarks</th>
+                    <th style="width: 14%;">Date</th>
+                    <th style="width: 9%;">Day</th>
+                    <th style="width: 14%;" class="right">Worked Hours</th>
+                    <th style="width: 14%;" class="right">Added Time</th>
+                    <th style="width: 14%;" class="right">Total Hours</th>
+                    <th style="width: 12%;" class="center">Status</th>
+                    <th style="width: 23%;">Remarks</th>
                 </tr>
             </thead>
             <tbody>
@@ -85,11 +84,6 @@
                         $totalH = intdiv($totalMinutes, 60);
                         $totalM = $totalMinutes % 60;
                         $totalFormatted = sprintf('%02d:%02d', $totalH, $totalM);
-
-                        $otMinutes = (int) round(($dtr->overtime_hours ?? 0) * 60);
-                        $otH = intdiv($otMinutes, 60);
-                        $otM = $otMinutes % 60;
-                        $otFormatted = sprintf('%02d:%02d', $otH, $otM);
 
                         // Build remarks with leave request info (excluding overtime type)
                         // Only show approved leave requests
@@ -172,7 +166,6 @@
                         <td class="right">{{ $workedMinutes > 0 ? $workedFormatted : '00:00' }}</td>
                         <td class="right">{{ $extraMinutes > 0 ? $extraFormatted : '00:00' }}</td>
                         <td class="right">{{ $totalMinutes > 0 ? $totalFormatted : '00:00' }}</td>
-                        <td class="right">{{ $otMinutes > 0 ? $otFormatted : '00:00' }}</td>
                         <td class="center">{{ $statusLabel }}</td>
                         <td>{{ $remarks ?: '-' }}</td>
                     </tr>
@@ -263,14 +256,13 @@
             <table class="table">
                 <thead>
                     <tr>
-                        <th style="width: 12%;">Date</th>
-                        <th style="width: 8%;">Day</th>
-                        <th style="width: 12%;" class="right">Worked Hours</th>
-                        <th style="width: 12%;" class="right">Added Time</th>
-                        <th style="width: 12%;" class="right">Total Hours</th>
-                        <th style="width: 12%;" class="right">Overtime</th>
-                        <th style="width: 10%;" class="center">Status</th>
-                        <th style="width: 22%;">Remarks</th>
+                        <th style="width: 14%;">Date</th>
+                        <th style="width: 9%;">Day</th>
+                        <th style="width: 14%;" class="right">Worked Hours</th>
+                        <th style="width: 14%;" class="right">Added Time</th>
+                        <th style="width: 14%;" class="right">Total Hours</th>
+                        <th style="width: 12%;" class="center">Status</th>
+                        <th style="width: 23%;">Remarks</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -287,13 +279,11 @@
                                 $leaveHours = $dtrRecord->total_hours;
                                 $workedHours = max($leaveHours - ($dtrRecord->added_time_from_note ?? 0), 0);
                                 $addedTime = $dtrRecord->added_time_from_note ?? 0;
-                                $overtimeHours = $dtrRecord->overtime_hours ?? 0;
                             } else {
                                 // Default to 8 hours for approved leave
                                 $leaveHours = 8.0;
                                 $workedHours = 8.0;
                                 $addedTime = 0;
-                                $overtimeHours = 0;
                             }
                             
                             // Format worked hours
@@ -313,12 +303,6 @@
                             $totalH = intdiv($totalMinutes, 60);
                             $totalM = $totalMinutes % 60;
                             $totalFormatted = sprintf('%02d:%02d', $totalH, $totalM);
-                            
-                            // Format overtime
-                            $otMinutes = (int) round($overtimeHours * 60);
-                            $otH = intdiv($otMinutes, 60);
-                            $otM = $otMinutes % 60;
-                            $otFormatted = sprintf('%02d:%02d', $otH, $otM);
                         @endphp
                         <tr style="background-color: #F0F9FF;">
                             <td>{{ $leaveDate->format('M d, Y') }}</td>
@@ -326,7 +310,6 @@
                             <td class="right">{{ $workedFormatted }}</td>
                             <td class="right">{{ $addedMinutes > 0 ? $addedFormatted : '00:00' }}</td>
                             <td class="right">{{ $totalFormatted }}</td>
-                            <td class="right">{{ $otMinutes > 0 ? $otFormatted : '00:00' }}</td>
                             <td class="center">Completed</td>
                             <td>
                                 Leave: {{ $leaveTypeLabel }}
@@ -352,14 +335,13 @@
             <table class="table">
                 <thead>
                     <tr>
-                        <th style="width: 12%;">Date</th>
-                        <th style="width: 8%;">Day</th>
-                        <th style="width: 12%;" class="right">Worked Hours</th>
-                        <th style="width: 12%;" class="right">Added Time</th>
-                        <th style="width: 12%;" class="right">Total Hours</th>
-                        <th style="width: 12%;" class="right">Overtime</th>
-                        <th style="width: 10%;" class="center">Status</th>
-                        <th style="width: 22%;">Remarks</th>
+                        <th style="width: 14%;">Date</th>
+                        <th style="width: 9%;">Day</th>
+                        <th style="width: 14%;" class="right">Worked Hours</th>
+                        <th style="width: 14%;" class="right">Added Time</th>
+                        <th style="width: 14%;" class="right">Total Hours</th>
+                        <th style="width: 12%;" class="center">Status</th>
+                        <th style="width: 23%;">Remarks</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -375,13 +357,11 @@
                                 $travelHours = $dtrRecord->total_hours;
                                 $workedHours = max($travelHours - ($dtrRecord->added_time_from_note ?? 0), 0);
                                 $addedTime = $dtrRecord->added_time_from_note ?? 0;
-                                $overtimeHours = $dtrRecord->overtime_hours ?? 0;
                             } else {
                                 // Default to 8 hours for approved travel
                                 $travelHours = 8.0;
                                 $workedHours = 8.0;
                                 $addedTime = 0;
-                                $overtimeHours = 0;
                             }
                             
                             // Format worked hours
@@ -401,12 +381,6 @@
                             $totalH = intdiv($totalMinutes, 60);
                             $totalM = $totalMinutes % 60;
                             $totalFormatted = sprintf('%02d:%02d', $totalH, $totalM);
-                            
-                            // Format overtime
-                            $otMinutes = (int) round($overtimeHours * 60);
-                            $otH = intdiv($otMinutes, 60);
-                            $otM = $otMinutes % 60;
-                            $otFormatted = sprintf('%02d:%02d', $otH, $otM);
                         @endphp
                         <tr style="background-color: #FAF5FF;">
                             <td>{{ $travelDate->format('M d, Y') }}</td>
@@ -414,7 +388,6 @@
                             <td class="right">{{ $workedFormatted }}</td>
                             <td class="right">{{ $addedMinutes > 0 ? $addedFormatted : '00:00' }}</td>
                             <td class="right">{{ $totalFormatted }}</td>
-                            <td class="right">{{ $otMinutes > 0 ? $otFormatted : '00:00' }}</td>
                             <td class="center">Travel</td>
                             <td>
                                 Travel Leave
