@@ -186,10 +186,10 @@
                         </svg>
                     </div>
                     <input type="text" name="search" id="search" value="{{ request('search') }}"
-                           placeholder="Search by student name or email..."
+                           placeholder="Search by student name, email, or school..."
                            class="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
                 </div>
-                <p class="mt-1 text-xs text-gray-500">Search allows you to find any student, even if they don't have remaining time needed.</p>
+                <p class="mt-1 text-xs text-gray-500">Search allows you to find any student by name, email, or school/university name, even if they don't have remaining time needed.</p>
             </div>
 
             <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">

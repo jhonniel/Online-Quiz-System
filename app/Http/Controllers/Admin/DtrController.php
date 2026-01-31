@@ -1047,12 +1047,16 @@ class DtrController extends Controller
             });
         }
 
-        // Filter by student search
+        // Filter by student search (name, email, or school/university)
         if ($request->filled('search')) {
             $searchTerm = $request->search;
             $query->whereHas('user', function($q) use ($searchTerm) {
                 $q->where('name', 'like', '%' . $searchTerm . '%')
-                  ->orWhere('email', 'like', '%' . $searchTerm . '%');
+                  ->orWhere('email', 'like', '%' . $searchTerm . '%')
+                  ->orWhereHas('university', function($universityQuery) use ($searchTerm) {
+                      $universityQuery->where('name', 'like', '%' . $searchTerm . '%')
+                                      ->orWhere('location', 'like', '%' . $searchTerm . '%');
+                  });
             });
         }
 
