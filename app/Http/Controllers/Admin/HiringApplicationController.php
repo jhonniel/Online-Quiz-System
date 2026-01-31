@@ -751,6 +751,12 @@ class HiringApplicationController extends Controller
                 ->withErrors(['error' => 'Interview date must be set before sending follow-up email.']);
         }
 
+        // Only allow sending follow-up for past interviews (beyond today's date)
+        if ($application->interview_date->gte(now())) {
+            return redirect()->route('admin.hiring-applications.show', $application)
+                ->withErrors(['error' => 'Follow-up email can only be sent for past interviews.']);
+        }
+
         // Get social media link from settings
         $socialMediaLink = \App\Models\Setting::get('interview_reschedule_social_media_link');
 

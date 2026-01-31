@@ -491,7 +491,7 @@
                                 </span>
                             </button>
                         </form>
-                        @if($application->interview_date && $application->interview_date->isPast())
+                        @if($application->interview_date && $application->interview_date->lt(now()))
                             <form action="{{ route('admin.hiring-applications.send-follow-up', $application) }}" method="POST" class="mt-3">
                                 @csrf
                                 <button type="submit" class="action-button w-full inline-flex justify-center items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed" data-loading-text="Sending...">
