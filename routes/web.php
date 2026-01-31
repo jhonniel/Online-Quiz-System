@@ -181,6 +181,11 @@ Route::prefix('admin')->middleware(['auth', 'admin'])->group(function () {
         Route::get('analytics/error-logs', [ErrorLogController::class, 'index'])->name('admin.analytics.error-logs');
     });
 
+    // Key Performance Indicator (KPI) - Only for super admins
+    Route::middleware(['auth'])->group(function () {
+        Route::get('kpi/dashboard', [App\Http\Controllers\Admin\KpiController::class, 'dashboard'])->name('admin.kpi.dashboard');
+    });
+
     // Employee Management
     Route::middleware(['admin.permission:employee_management'])->group(function () {
         // DTR Management (Employees)
