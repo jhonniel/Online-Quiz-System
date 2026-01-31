@@ -187,9 +187,13 @@ class HiringApplicationController extends Controller
             ->get();
 
         // Prepare map of day => interview entries
+        // Use ordered array to ensure all days are included
         $days = [];
-        $period = CarbonPeriod::create($startOfCalendar, $endOfCalendar);
+        // Create period that includes both start and end dates
+        // Use CarbonPeriod with step of 1 day to ensure all days are included
+        $period = CarbonPeriod::create($startOfCalendar, '1 day', $endOfCalendar);
 
+        // First, create all days in order
         foreach ($period as $date) {
             $key = $date->toDateString();
             $days[$key] = [
@@ -197,7 +201,17 @@ class HiringApplicationController extends Controller
                 'interviews' => [],
             ];
         }
+        
+        // Ensure the end date is included (CarbonPeriod might exclude it)
+        $endKey = $endOfCalendar->toDateString();
+        if (!isset($days[$endKey])) {
+            $days[$endKey] = [
+                'date' => $endOfCalendar->copy(),
+                'interviews' => [],
+            ];
+        }
 
+        // Then, add interviews to the corresponding days
         foreach ($applications as $application) {
             $interviewDate = $application->interview_date->toDateString();
             if (isset($days[$interviewDate])) {
@@ -211,16 +225,25 @@ class HiringApplicationController extends Controller
             }
         }
 
-        // Group days into weeks
+        // Group days into weeks - iterate through period again to maintain order
         $weeks = [];
         $week = [];
-        foreach ($days as $day) {
-            $week[] = $day;
-            if (count($week) === 7) {
-                $weeks[] = $week;
-                $week = [];
+        $currentDate = $startOfCalendar->copy();
+        
+        // Iterate through all dates from start to end (inclusive)
+        while ($currentDate <= $endOfCalendar) {
+            $key = $currentDate->toDateString();
+            if (isset($days[$key])) {
+                $week[] = $days[$key];
+                if (count($week) === 7) {
+                    $weeks[] = $week;
+                    $week = [];
+                }
             }
+            $currentDate->addDay();
         }
+        
+        // Add remaining days if any (final partial week)
         if (count($week) > 0) {
             $weeks[] = $week;
         }
