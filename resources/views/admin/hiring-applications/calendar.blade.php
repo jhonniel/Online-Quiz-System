@@ -86,12 +86,16 @@
                                     </div>
                                     <div class="space-y-1">
                                         @foreach($day['interviews'] as $interview)
+                                            @php
+                                                $bgColor = $interview['type'] === 'accepted' ? 'bg-green-100 hover:bg-green-200 text-green-800' : 'bg-indigo-100 hover:bg-indigo-200 text-indigo-800';
+                                                $label = $interview['type'] === 'accepted' ? 'Accepted' : 'Interview';
+                                            @endphp
                                             <a href="{{ route('admin.hiring-applications.show', $interview['id']) }}"
-                                               class="block px-2 py-1 text-xs rounded bg-indigo-100 hover:bg-indigo-200 text-indigo-800 transition-colors"
+                                               class="block px-2 py-1 text-xs rounded {{ $bgColor }} transition-colors"
                                                title="{{ $interview['applicant_name'] }} - {{ $interview['position'] }} ({{ $interview['interview_time'] }})">
-                                                <div class="font-semibold truncate">{{ $interview['interview_time'] }}</div>
+                                                <div class="font-semibold truncate">{{ $interview['interview_time'] }} - {{ $label }}</div>
                                                 <div class="truncate">{{ $interview['applicant_name'] }}</div>
-                                                <div class="truncate text-indigo-600">{{ $interview['position'] }}</div>
+                                                <div class="truncate {{ $interview['type'] === 'accepted' ? 'text-green-700' : 'text-indigo-600' }}">{{ $interview['position'] }}</div>
                                             </a>
                                         @endforeach
                                     </div>
@@ -105,13 +109,26 @@
     </div>
 
     <!-- Summary -->
-    @if($applications->count() > 0)
+    @php
+        $scheduledCount = $applications->where('status', 'interview_scheduled')->count();
+        $acceptedCount = $applications->where('status', 'accepted')->count();
+        $totalCount = $applications->count();
+    @endphp
+    @if($totalCount > 0)
         <div class="bg-white rounded-2xl shadow border border-gray-200 p-4">
-            <h3 class="text-lg font-bold text-gray-900 mb-3">Interview Summary for {{ $currentMonth->format('F Y') }}</h3>
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <h3 class="text-lg font-bold text-gray-900 mb-3">Summary for {{ $currentMonth->format('F Y') }}</h3>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div class="bg-indigo-50 rounded-lg p-4">
-                    <div class="text-sm font-medium text-indigo-600">Total Interviews</div>
-                    <div class="text-2xl font-bold text-indigo-900">{{ $applications->count() }}</div>
+                    <div class="text-sm font-medium text-indigo-600">Scheduled Interviews</div>
+                    <div class="text-2xl font-bold text-indigo-900">{{ $scheduledCount }}</div>
+                </div>
+                <div class="bg-green-50 rounded-lg p-4">
+                    <div class="text-sm font-medium text-green-600">Accepted Applicants</div>
+                    <div class="text-2xl font-bold text-green-900">{{ $acceptedCount }}</div>
+                </div>
+                <div class="bg-gray-50 rounded-lg p-4">
+                    <div class="text-sm font-medium text-gray-600">Total</div>
+                    <div class="text-2xl font-bold text-gray-900">{{ $totalCount }}</div>
                 </div>
             </div>
         </div>
@@ -120,8 +137,8 @@
             <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
             </svg>
-            <h3 class="mt-4 text-lg font-medium text-gray-900">No interviews scheduled</h3>
-            <p class="mt-2 text-sm text-gray-500">There are no scheduled interviews for {{ $currentMonth->format('F Y') }}.</p>
+            <h3 class="mt-4 text-lg font-medium text-gray-900">No activities scheduled</h3>
+            <p class="mt-2 text-sm text-gray-500">There are no scheduled interviews or accepted applicants for {{ $currentMonth->format('F Y') }}.</p>
         </div>
     @endif
 </div>

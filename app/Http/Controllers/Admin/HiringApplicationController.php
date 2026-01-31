@@ -191,13 +191,33 @@ class HiringApplicationController extends Controller
         $endOfCalendar = $endOfMonth->copy()->endOfWeek(Carbon::SUNDAY);
 
         // Get all applications with scheduled interviews in the calendar range
-        $applications = HiringApplication::with(['hiringPosition', 'user'])
+        $scheduledApplications = HiringApplication::with(['hiringPosition', 'user'])
             ->where('status', 'interview_scheduled')
             ->whereNotNull('interview_date')
             ->whereDate('interview_date', '>=', $startOfCalendar->toDateString())
             ->whereDate('interview_date', '<=', $endOfCalendar->toDateString())
-            ->orderBy('interview_date')
             ->get();
+
+        // Get all accepted applications in the calendar range (use reviewed_at or created_at as the date)
+        $acceptedApplications = HiringApplication::with(['hiringPosition', 'user'])
+            ->where('status', 'accepted')
+            ->where(function($query) use ($startOfCalendar, $endOfCalendar) {
+                $query->where(function($q) use ($startOfCalendar, $endOfCalendar) {
+                    // If reviewed_at exists, use it
+                    $q->whereNotNull('reviewed_at')
+                      ->whereDate('reviewed_at', '>=', $startOfCalendar->toDateString())
+                      ->whereDate('reviewed_at', '<=', $endOfCalendar->toDateString());
+                })->orWhere(function($q) use ($startOfCalendar, $endOfCalendar) {
+                    // Otherwise use created_at
+                    $q->whereNull('reviewed_at')
+                      ->whereDate('created_at', '>=', $startOfCalendar->toDateString())
+                      ->whereDate('created_at', '<=', $endOfCalendar->toDateString());
+                });
+            })
+            ->get();
+
+        // Combine all applications
+        $applications = $scheduledApplications->concat($acceptedApplications);
 
         // Prepare map of day => interview entries
         // Use ordered array to ensure all days are included
@@ -214,8 +234,8 @@ class HiringApplicationController extends Controller
             $currentDate->addDay();
         }
 
-        // Then, add interviews to the corresponding days
-        foreach ($applications as $application) {
+        // Add scheduled interviews to the corresponding days
+        foreach ($scheduledApplications as $application) {
             $interviewDate = $application->interview_date->toDateString();
             if (isset($days[$interviewDate])) {
                 $days[$interviewDate]['interviews'][] = [
@@ -224,6 +244,27 @@ class HiringApplicationController extends Controller
                     'position' => $application->hiringPosition ? $application->hiringPosition->title : ($application->position_applied ?: 'N/A'),
                     'interview_time' => $application->interview_date->format('g:i A'),
                     'email' => $application->email,
+                    'type' => 'interview',
+                    'status' => 'scheduled',
+                ];
+            }
+        }
+
+        // Add accepted applications to the corresponding days
+        foreach ($acceptedApplications as $application) {
+            // Use reviewed_at if available, otherwise use created_at
+            $acceptanceDate = $application->reviewed_at ? $application->reviewed_at : $application->created_at;
+            $dateKey = $acceptanceDate->toDateString();
+            
+            if (isset($days[$dateKey])) {
+                $days[$dateKey]['interviews'][] = [
+                    'id' => $application->id,
+                    'applicant_name' => $application->full_name,
+                    'position' => $application->hiringPosition ? $application->hiringPosition->title : ($application->position_applied ?: 'N/A'),
+                    'interview_time' => $acceptanceDate->format('g:i A'),
+                    'email' => $application->email,
+                    'type' => 'accepted',
+                    'status' => 'accepted',
                 ];
             }
         }
@@ -269,7 +310,9 @@ class HiringApplicationController extends Controller
             'currentMonth',
             'prevMonth',
             'nextMonth',
-            'applications'
+            'applications',
+            'scheduledApplications',
+            'acceptedApplications'
         ));
     }
 
