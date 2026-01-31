@@ -165,7 +165,20 @@ class HiringApplicationController extends Controller
         $monthParam = $request->input('month', $nowManila->format('Y-m'));
 
         try {
-            $currentMonth = Carbon::createFromFormat('Y-m', $monthParam, 'Asia/Manila')->startOfMonth();
+            // Parse the month parameter - ensure it's in Y-m format
+            // Add '-01' to make it a complete date for parsing
+            if (preg_match('/^(\d{4})-(\d{2})$/', $monthParam, $matches)) {
+                $year = (int)$matches[1];
+                $month = (int)$matches[2];
+                // Validate month is between 1-12
+                if ($month >= 1 && $month <= 12) {
+                    $currentMonth = Carbon::create($year, $month, 1, 0, 0, 0, 'Asia/Manila');
+                } else {
+                    throw new \Exception('Invalid month');
+                }
+            } else {
+                throw new \Exception('Invalid format');
+            }
         } catch (\Exception $e) {
             $currentMonth = $nowManila->copy()->startOfMonth();
         }
@@ -189,26 +202,16 @@ class HiringApplicationController extends Controller
         // Prepare map of day => interview entries
         // Use ordered array to ensure all days are included
         $days = [];
-        // Create period that includes both start and end dates
-        // Use CarbonPeriod with step of 1 day to ensure all days are included
-        $period = CarbonPeriod::create($startOfCalendar, '1 day', $endOfCalendar);
-
-        // First, create all days in order
-        foreach ($period as $date) {
-            $key = $date->toDateString();
-            $days[$key] = [
-                'date' => $date->copy(),
-                'interviews' => [],
-            ];
-        }
         
-        // Ensure the end date is included (CarbonPeriod might exclude it)
-        $endKey = $endOfCalendar->toDateString();
-        if (!isset($days[$endKey])) {
-            $days[$endKey] = [
-                'date' => $endOfCalendar->copy(),
+        // Manually create all days from start to end (inclusive) to ensure nothing is missed
+        $currentDate = $startOfCalendar->copy();
+        while ($currentDate <= $endOfCalendar) {
+            $key = $currentDate->toDateString();
+            $days[$key] = [
+                'date' => $currentDate->copy(),
                 'interviews' => [],
             ];
+            $currentDate->addDay();
         }
 
         // Then, add interviews to the corresponding days
@@ -233,17 +236,27 @@ class HiringApplicationController extends Controller
         // Iterate through all dates from start to end (inclusive)
         while ($currentDate <= $endOfCalendar) {
             $key = $currentDate->toDateString();
-            if (isset($days[$key])) {
-                $week[] = $days[$key];
-                if (count($week) === 7) {
-                    $weeks[] = $week;
-                    $week = [];
-                }
+            
+            // Ensure day exists in days array (create if missing)
+            if (!isset($days[$key])) {
+                $days[$key] = [
+                    'date' => $currentDate->copy(),
+                    'interviews' => [],
+                ];
             }
+            
+            $week[] = $days[$key];
+            
+            // When we have 7 days, start a new week
+            if (count($week) === 7) {
+                $weeks[] = $week;
+                $week = [];
+            }
+            
             $currentDate->addDay();
         }
         
-        // Add remaining days if any (final partial week)
+        // Add remaining days if any (final partial week - should be exactly 0 or 7, but handle edge cases)
         if (count($week) > 0) {
             $weeks[] = $week;
         }
