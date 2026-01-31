@@ -1078,7 +1078,33 @@ class DtrController extends Controller
             $studentsQuery->where('university_id', $request->university_id);
         }
 
-        $students = $studentsQuery->orderBy('name')->get();
+        $allStudents = $studentsQuery->orderBy('name')->get();
+
+        // Calculate remaining hours for each student and filter to only those with remaining time needed
+        $studentsWithRemainingTime = [];
+        foreach ($allStudents as $student) {
+            $requiredHours = (float) ($student->required_training_hours ?? 0);
+            $totalDtrHours = (float) Dtr::where('user_id', $student->id)->sum('total_hours');
+            $remainingHours = $requiredHours - $totalDtrHours;
+            
+            // Only include students with remaining time needed (remaining > 0)
+            if ($remainingHours > 0) {
+                $studentsWithRemainingTime[] = $student->id;
+            }
+        }
+
+        // Filter DTR query to only include students with remaining time needed
+        if (!empty($studentsWithRemainingTime)) {
+            $query->whereIn('user_id', $studentsWithRemainingTime);
+        } else {
+            // If no students have remaining time, return empty result
+            $query->whereRaw('1 = 0'); // Force empty result
+        }
+
+        // Filter students list to only those with remaining time
+        $students = $allStudents->filter(function($student) use ($studentsWithRemainingTime) {
+            return in_array($student->id, $studentsWithRemainingTime);
+        })->values();
 
         $dtrs = $query->orderBy('date', 'desc')
             ->orderBy('user_id')
