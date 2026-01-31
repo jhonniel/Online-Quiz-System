@@ -1047,6 +1047,15 @@ class DtrController extends Controller
             });
         }
 
+        // Filter by student search
+        if ($request->filled('search')) {
+            $searchTerm = $request->search;
+            $query->whereHas('user', function($q) use ($searchTerm) {
+                $q->where('name', 'like', '%' . $searchTerm . '%')
+                  ->orWhere('email', 'like', '%' . $searchTerm . '%');
+            });
+        }
+
         // Filter by student
         if ($request->filled('student_id')) {
             $query->where('user_id', $request->student_id);
@@ -1081,28 +1090,43 @@ class DtrController extends Controller
         $allStudents = $studentsQuery->orderBy('name')->get();
 
         // Calculate remaining hours for each student and filter to only those with remaining time needed
+        // BUT: If search is provided, show all matching students regardless of remaining time
         $studentsWithRemainingTime = [];
+        $searchProvided = $request->filled('search');
+        
         foreach ($allStudents as $student) {
             $requiredHours = (float) ($student->required_training_hours ?? 0);
             $totalDtrHours = (float) Dtr::where('user_id', $student->id)->sum('total_hours');
             $remainingHours = $requiredHours - $totalDtrHours;
             
             // Only include students with remaining time needed (remaining > 0)
-            if ($remainingHours > 0) {
+            // OR if search is provided, include all students (they'll be filtered by search query)
+            if ($remainingHours > 0 || $searchProvided) {
                 $studentsWithRemainingTime[] = $student->id;
             }
         }
 
         // Filter DTR query to only include students with remaining time needed
+        // UNLESS search is provided, then show all matching students
         if (!empty($studentsWithRemainingTime)) {
-            $query->whereIn('user_id', $studentsWithRemainingTime);
+            if (!$searchProvided) {
+                // Only filter by remaining time if no search is provided
+                $query->whereIn('user_id', $studentsWithRemainingTime);
+            }
+            // If search is provided, the search filter in the query already handles it
         } else {
-            // If no students have remaining time, return empty result
-            $query->whereRaw('1 = 0'); // Force empty result
+            // If no students have remaining time and no search, return empty result
+            if (!$searchProvided) {
+                $query->whereRaw('1 = 0'); // Force empty result
+            }
         }
 
-        // Filter students list to only those with remaining time
-        $students = $allStudents->filter(function($student) use ($studentsWithRemainingTime) {
+        // Filter students list to only those with remaining time (or all if search provided)
+        $students = $allStudents->filter(function($student) use ($studentsWithRemainingTime, $searchProvided) {
+            if ($searchProvided) {
+                // If search is provided, show all students (they'll be filtered by the search query)
+                return true;
+            }
             return in_array($student->id, $studentsWithRemainingTime);
         })->values();
 
