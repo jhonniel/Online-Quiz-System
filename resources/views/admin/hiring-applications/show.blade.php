@@ -38,8 +38,12 @@
                         Interview Done
                     </span>
                 @elseif($application->status == 'hired')
+                    @php
+                        $isInternship = $application->hiringPosition && $application->hiringPosition->employment_type === 'Internship';
+                        $statusLabel = $isInternship ? 'Internship Accepted' : 'Hired';
+                    @endphp
                     <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800">
-                        Hired
+                        {{ $statusLabel }}
                     </span>
                 @endif
             </div>
@@ -221,8 +225,12 @@
                             <p class="text-sm text-gray-600">User can login and take quizzes. Ready to mark as hired.</p>
                         </div>
                 @elseif($application->status == 'hired')
+                        @php
+                            $isInternship = $application->hiringPosition && $application->hiringPosition->employment_type === 'Internship';
+                            $statusLabel = $isInternship ? 'Internship Accepted' : 'Hired';
+                        @endphp
                         <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800">
-                            Hired
+                            {{ $statusLabel }}
                         </span>
                         <div class="mt-3">
                             <p class="text-sm text-gray-600">User account is active and can login.</p>

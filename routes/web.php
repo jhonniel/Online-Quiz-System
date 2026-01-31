@@ -250,6 +250,7 @@ Route::prefix('admin')->middleware(['auth', 'admin'])->group(function () {
 
         // Hiring Applications Management
         Route::get('/hiring-applications', [App\Http\Controllers\Admin\HiringApplicationController::class, 'index'])->name('admin.hiring-applications.index');
+        Route::get('/hiring-applications/calendar', [App\Http\Controllers\Admin\HiringApplicationController::class, 'calendar'])->name('admin.hiring-applications.calendar');
         Route::get('/hiring-applications/{application}', [App\Http\Controllers\Admin\HiringApplicationController::class, 'show'])->name('admin.hiring-applications.show');
         Route::post('/hiring-applications/{application}/accept', [App\Http\Controllers\Admin\HiringApplicationController::class, 'accept'])->name('admin.hiring-applications.accept');
         Route::post('/hiring-applications/{application}/reject', [App\Http\Controllers\Admin\HiringApplicationController::class, 'reject'])->name('admin.hiring-applications.reject');

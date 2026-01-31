@@ -183,6 +183,19 @@
                     </div>
                 @endif
                 <div class="flex items-center space-x-2">
+                    <label for="status" class="text-sm font-medium text-gray-700">Filter by Status:</label>
+                    <select name="status" id="status" onchange="this.form.submit()"
+                            class="px-3 py-2 border border-gray-300 rounded-md shadow-sm text-sm focus:ring-indigo-500 focus:border-indigo-500">
+                        <option value="">All Status</option>
+                        <option value="pending" {{ ($statusFilter ?? '') == 'pending' ? 'selected' : '' }}>Pending</option>
+                        <option value="accepted" {{ ($statusFilter ?? '') == 'accepted' ? 'selected' : '' }}>Accepted</option>
+                        <option value="interview_scheduled" {{ ($statusFilter ?? '') == 'interview_scheduled' ? 'selected' : '' }}>Interview Scheduled</option>
+                        <option value="done_interview" {{ ($statusFilter ?? '') == 'done_interview' ? 'selected' : '' }}>Interview Done</option>
+                        <option value="hired" {{ ($statusFilter ?? '') == 'hired' ? 'selected' : '' }}>Hired</option>
+                        <option value="rejected" {{ ($statusFilter ?? '') == 'rejected' ? 'selected' : '' }}>Rejected</option>
+                    </select>
+                </div>
+                <div class="flex items-center space-x-2">
                     <label for="per_page" class="text-sm font-medium text-gray-700">Show:</label>
                     <select name="per_page" id="per_page" onchange="this.form.submit()"
                             class="px-3 py-2 border border-gray-300 rounded-md shadow-sm text-sm focus:ring-indigo-500 focus:border-indigo-500">
@@ -277,8 +290,12 @@
                                         Interview Done
                                     </span>
                                 @elseif($application->status == 'hired')
+                                    @php
+                                        $isInternship = $application->hiringPosition && $application->hiringPosition->employment_type === 'Internship';
+                                        $statusLabel = $isInternship ? 'Internship Accepted' : 'Hired';
+                                    @endphp
                                     <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                                        Hired
+                                        {{ $statusLabel }}
                                     </span>
                                 @endif
                             </td>

@@ -6,6 +6,8 @@ use App\Http\Controllers\Controller;
 use App\Models\HiringApplication;
 use App\Models\UserActivity;
 use App\Services\MailConfigService;
+use Carbon\Carbon;
+use Carbon\CarbonPeriod;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Auth;
@@ -24,6 +26,11 @@ class HiringApplicationController extends Controller
         // Filter by position if provided
         if ($request->has('position') && $request->position) {
             $query->where('hiring_position_id', $request->position);
+        }
+
+        // Filter by status if provided
+        if ($request->has('status') && $request->status) {
+            $query->where('status', $request->status);
         }
 
         // Search
@@ -68,14 +75,40 @@ class HiringApplicationController extends Controller
         $perPage = $request->get('per_page', 20);
         $perPage = in_array($perPage, [10, 20, 50, 100]) ? $perPage : 20;
 
-        $applications = $query->orderBy('created_at', 'desc')->paginate($perPage)->withQueryString();
+        // Custom sorting: pending, accepted, interview_scheduled, done_interview, hired, rejected
+        $statusOrder = [
+            'pending' => 1,
+            'accepted' => 2,
+            'interview_scheduled' => 3,
+            'done_interview' => 4,
+            'hired' => 5,
+            'rejected' => 6,
+        ];
+        
+        $applications = $query->get()->sortBy(function ($application) use ($statusOrder) {
+            return $statusOrder[$application->status] ?? 999;
+        })->values();
+        
+        // Paginate manually
+        $currentPage = \Illuminate\Pagination\LengthAwarePaginator::resolveCurrentPage();
+        $perPage = $perPage;
+        $items = $applications->slice(($currentPage - 1) * $perPage, $perPage)->all();
+        $applications = new \Illuminate\Pagination\LengthAwarePaginator($items, $applications->count(), $perPage, $currentPage, [
+            'path' => \Illuminate\Pagination\LengthAwarePaginator::resolveCurrentPath(),
+            'pageName' => 'page',
+        ]);
+        $applications->appends(request()->query());
 
         $positionFilter = $request->position;
+        $statusFilter = $request->status;
         $positions = \App\Models\HiringPosition::orderBy('title')->get();
 
         $baseQuery = HiringApplication::query();
         if ($positionFilter) {
             $baseQuery->where('hiring_position_id', $positionFilter);
+        }
+        if ($statusFilter) {
+            $baseQuery->where('status', $statusFilter);
         }
         if ($search !== '') {
             $baseQuery->where(function ($q) use ($search, $searchTokens) {
@@ -122,7 +155,86 @@ class HiringApplicationController extends Controller
             'done_interview' => (clone $baseQuery)->where('status', 'done_interview')->count(),
         ];
 
-        return view('admin.hiring-applications.index', compact('applications', 'stats', 'positions', 'positionFilter', 'perPage', 'search'));
+        return view('admin.hiring-applications.index', compact('applications', 'stats', 'positions', 'positionFilter', 'statusFilter', 'perPage', 'search'));
+    }
+
+    public function calendar(Request $request)
+    {
+        // Use Manila timezone for current date/month context
+        $nowManila = Carbon::now('Asia/Manila');
+        $monthParam = $request->input('month', $nowManila->format('Y-m'));
+
+        try {
+            $currentMonth = Carbon::createFromFormat('Y-m', $monthParam, 'Asia/Manila')->startOfMonth();
+        } catch (\Exception $e) {
+            $currentMonth = $nowManila->copy()->startOfMonth();
+        }
+
+        $startOfMonth = $currentMonth->copy()->startOfMonth();
+        $endOfMonth = $currentMonth->copy()->endOfMonth();
+
+        // Extend to full weeks for calendar grid
+        $startOfCalendar = $startOfMonth->copy()->startOfWeek(Carbon::MONDAY);
+        $endOfCalendar = $endOfMonth->copy()->endOfWeek(Carbon::SUNDAY);
+
+        // Get all applications with scheduled interviews in the calendar range
+        $applications = HiringApplication::with(['hiringPosition', 'user'])
+            ->where('status', 'interview_scheduled')
+            ->whereNotNull('interview_date')
+            ->whereDate('interview_date', '>=', $startOfCalendar->toDateString())
+            ->whereDate('interview_date', '<=', $endOfCalendar->toDateString())
+            ->orderBy('interview_date')
+            ->get();
+
+        // Prepare map of day => interview entries
+        $days = [];
+        $period = CarbonPeriod::create($startOfCalendar, $endOfCalendar);
+
+        foreach ($period as $date) {
+            $key = $date->toDateString();
+            $days[$key] = [
+                'date' => $date->copy(),
+                'interviews' => [],
+            ];
+        }
+
+        foreach ($applications as $application) {
+            $interviewDate = $application->interview_date->toDateString();
+            if (isset($days[$interviewDate])) {
+                $days[$interviewDate]['interviews'][] = [
+                    'id' => $application->id,
+                    'applicant_name' => $application->full_name,
+                    'position' => $application->hiringPosition ? $application->hiringPosition->title : ($application->position_applied ?: 'N/A'),
+                    'interview_time' => $application->interview_date->format('g:i A'),
+                    'email' => $application->email,
+                ];
+            }
+        }
+
+        // Group days into weeks
+        $weeks = [];
+        $week = [];
+        foreach ($days as $day) {
+            $week[] = $day;
+            if (count($week) === 7) {
+                $weeks[] = $week;
+                $week = [];
+            }
+        }
+        if (count($week) > 0) {
+            $weeks[] = $week;
+        }
+
+        $prevMonth = $currentMonth->copy()->subMonth();
+        $nextMonth = $currentMonth->copy()->addMonth();
+
+        return view('admin.hiring-applications.calendar', compact(
+            'weeks',
+            'currentMonth',
+            'prevMonth',
+            'nextMonth',
+            'applications'
+        ));
     }
 
     public function show(HiringApplication $application)
