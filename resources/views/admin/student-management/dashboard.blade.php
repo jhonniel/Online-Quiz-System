@@ -29,10 +29,15 @@
                 $avgCompletion = $totalRequired > 0 ? ($totalDtr / max($totalRequired, 0.01)) * 100 : 0;
             @endphp
 
-            <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 w-full md:w-auto">
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 w-full md:w-auto">
                 <div class="bg-white/10 backdrop-blur-sm border border-white/20 rounded-xl px-4 py-3 sm:px-5 sm:py-4 text-indigo-50">
                     <div class="text-[11px] sm:text-xs uppercase tracking-wide text-indigo-100/80">Total Students</div>
                     <div class="mt-1 text-xl sm:text-2xl font-bold">{{ $totalStudents }}</div>
+                </div>
+                <div class="bg-white/10 backdrop-blur-sm border border-white/20 rounded-xl px-4 py-3 sm:px-5 sm:py-4 text-indigo-50">
+                    <div class="text-[11px] sm:text-xs uppercase tracking-wide text-indigo-100/80">With Remaining Time</div>
+                    <div class="mt-1 text-xl sm:text-2xl font-bold text-rose-200">{{ $studentsWithRemainingTime ?? 0 }}</div>
+                    <div class="mt-1 text-[10px] text-indigo-100/70">Students still need to complete hours</div>
                 </div>
                 <div class="bg-white/10 backdrop-blur-sm border border-white/20 rounded-xl px-4 py-3 sm:px-5 sm:py-4 text-indigo-50">
                     <div class="text-[11px] sm:text-xs uppercase tracking-wide text-indigo-100/80">Total Required Time</div>
@@ -94,6 +99,20 @@
                                 <td class="px-3 sm:px-6 py-3 whitespace-nowrap text-xs sm:text-sm text-gray-500">
                                     <div class="inline-flex items-center px-2.5 py-1 rounded-full bg-gray-100 text-[11px] font-medium text-gray-700">
                                         #{{ $index + 1 }}
+                                        @if($remaining > 0 && isset($row['arrow_direction']))
+                                            {{-- Only show arrow if student has remaining time needed --}}
+                                            @if($row['arrow_direction'] === 'down')
+                                                {{-- Arrow down (green) - rank declined --}}
+                                                <svg class="w-3 h-3 ml-1 text-emerald-600" fill="currentColor" viewBox="0 0 24 24">
+                                                    <path d="M12 20l8-8h-5V4h-6v8H4l8 8z"/>
+                                                </svg>
+                                            @else
+                                                {{-- Arrow up (red) - rank improved, same, or no history --}}
+                                                <svg class="w-3 h-3 ml-1 text-rose-600" fill="currentColor" viewBox="0 0 24 24">
+                                                    <path d="M12 4l-8 8h5v8h6v-8h5l-8-8z"/>
+                                                </svg>
+                                            @endif
+                                        @endif
                                     </div>
                                 </td>
                                 <td class="px-3 sm:px-6 py-3 whitespace-nowrap text-xs sm:text-sm text-gray-900">
