@@ -515,25 +515,57 @@ class LandingController extends Controller
                 abort(404, 'Invalid image path');
             }
 
-            $storage = Storage::disk('digitalocean');
-
-            // Check if file exists
-            if (!$storage->exists($imagePath)) {
-                \Log::warning('Image file does not exist in storage', [
-                    'path' => $imagePath,
-                    'disk' => 'digitalocean',
-                    'decoded_from' => $path
-                ]);
-                abort(404, 'Image not found');
+            // Try digitalocean disk first, fallback to public disk
+            $fileContents = null;
+            $storage = null;
+            
+            // Check if digitalocean disk is configured
+            $doConfig = config('filesystems.disks.digitalocean', []);
+            $isDoConfigured = !empty($doConfig['bucket']) && !empty($doConfig['key']) && !empty($doConfig['secret']);
+            
+            if ($isDoConfigured) {
+                try {
+                    $storage = Storage::disk('digitalocean');
+                    // Check if file exists
+                    if ($storage->exists($imagePath)) {
+                        $fileContents = $storage->get($imagePath);
+                    }
+                } catch (\Throwable $e) {
+                    \Log::warning('Failed to access digitalocean disk', [
+                        'path' => $imagePath,
+                        'error' => $e->getMessage()
+                    ]);
+                }
+            }
+            
+            // Fallback to public disk if digitalocean failed or not configured
+            if ($fileContents === null) {
+                try {
+                    $storage = Storage::disk('public');
+                    if ($storage->exists($imagePath)) {
+                        $fileContents = $storage->get($imagePath);
+                    } else {
+                        \Log::warning('Image file does not exist in storage', [
+                            'path' => $imagePath,
+                            'disk' => 'public',
+                            'decoded_from' => $path
+                        ]);
+                        abort(404, 'Image not found');
+                    }
+                } catch (\Throwable $e) {
+                    \Log::error('Failed to access public disk', [
+                        'path' => $imagePath,
+                        'error' => $e->getMessage()
+                    ]);
+                    abort(404, 'Image not found');
+                }
             }
 
             \Log::info('Image proxy success', [
                 'image_path' => $imagePath,
-                'encoded_path' => $path
+                'encoded_path' => $path,
+                'disk' => $isDoConfigured && $fileContents !== null ? 'digitalocean' : 'public'
             ]);
-
-            // Get the file contents
-            $fileContents = $storage->get($imagePath);
 
             // Determine content type based on file extension
             $extension = strtolower(pathinfo($imagePath, PATHINFO_EXTENSION));

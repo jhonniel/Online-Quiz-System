@@ -17,8 +17,20 @@
                 $featuredImageUrl = $featuredNews->image_url;
                 if ($featuredNews->image_path && !$featuredImageUrl) {
                     // Try digitalocean first, then public
-                    if (\Illuminate\Support\Facades\Storage::disk('digitalocean')->exists($featuredNews->image_path)) {
-                        $featuredImageUrl = \Illuminate\Support\Facades\Storage::disk('digitalocean')->url($featuredNews->image_path);
+                    $doConfig = config('filesystems.disks.digitalocean', []);
+                    $isDoConfigured = !empty($doConfig['bucket']) && !empty($doConfig['key']) && !empty($doConfig['secret']);
+                    if ($isDoConfigured) {
+                        try {
+                            if (\Illuminate\Support\Facades\Storage::disk('digitalocean')->exists($featuredNews->image_path)) {
+                                $featuredImageUrl = \Illuminate\Support\Facades\Storage::disk('digitalocean')->url($featuredNews->image_path);
+                            } elseif (\Illuminate\Support\Facades\Storage::disk('public')->exists($featuredNews->image_path)) {
+                                $featuredImageUrl = \Illuminate\Support\Facades\Storage::disk('public')->url($featuredNews->image_path);
+                            }
+                        } catch (\Throwable $e) {
+                            if (\Illuminate\Support\Facades\Storage::disk('public')->exists($featuredNews->image_path)) {
+                                $featuredImageUrl = \Illuminate\Support\Facades\Storage::disk('public')->url($featuredNews->image_path);
+                            }
+                        }
                     } elseif (\Illuminate\Support\Facades\Storage::disk('public')->exists($featuredNews->image_path)) {
                         $featuredImageUrl = \Illuminate\Support\Facades\Storage::disk('public')->url($featuredNews->image_path);
                     }
@@ -112,8 +124,20 @@
                                 $articleImageUrl = $item->image_url;
                                 if ($item->image_path && !$articleImageUrl) {
                                     // Try digitalocean first, then public
-                                    if (\Illuminate\Support\Facades\Storage::disk('digitalocean')->exists($item->image_path)) {
-                                        $articleImageUrl = \Illuminate\Support\Facades\Storage::disk('digitalocean')->url($item->image_path);
+                                    $doConfig = config('filesystems.disks.digitalocean', []);
+                                    $isDoConfigured = !empty($doConfig['bucket']) && !empty($doConfig['key']) && !empty($doConfig['secret']);
+                                    if ($isDoConfigured) {
+                                        try {
+                                            if (\Illuminate\Support\Facades\Storage::disk('digitalocean')->exists($item->image_path)) {
+                                                $articleImageUrl = \Illuminate\Support\Facades\Storage::disk('digitalocean')->url($item->image_path);
+                                            } elseif (\Illuminate\Support\Facades\Storage::disk('public')->exists($item->image_path)) {
+                                                $articleImageUrl = \Illuminate\Support\Facades\Storage::disk('public')->url($item->image_path);
+                                            }
+                                        } catch (\Throwable $e) {
+                                            if (\Illuminate\Support\Facades\Storage::disk('public')->exists($item->image_path)) {
+                                                $articleImageUrl = \Illuminate\Support\Facades\Storage::disk('public')->url($item->image_path);
+                                            }
+                                        }
                                     } elseif (\Illuminate\Support\Facades\Storage::disk('public')->exists($item->image_path)) {
                                         $articleImageUrl = \Illuminate\Support\Facades\Storage::disk('public')->url($item->image_path);
                                     }

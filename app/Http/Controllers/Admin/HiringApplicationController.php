@@ -607,13 +607,17 @@ class HiringApplicationController extends Controller
                 // Ensure mail configuration is up to date from settings
                 MailConfigService::configure();
 
+                // Get address from settings
+                $address = \App\Models\Setting::get('contact_address');
+
                 Mail::to($application->email)
                     ->send(new \App\Mail\InterviewRescheduled(
                         $application,
                         $request->interview_date,
                         $request->admin_notes,
                         $application->hiringPosition,
-                        $isReschedule
+                        $isReschedule,
+                        $address
                     ));
 
                 Log::info('Interview ' . ($isReschedule ? 'rescheduled' : 'scheduled') . ' email sent successfully', [
@@ -696,6 +700,56 @@ class HiringApplicationController extends Controller
         }
 
         abort(404, 'Resume not found.');
+    }
+
+    public function sendFollowUpEmail(Request $request, HiringApplication $application)
+    {
+        // Only allow sending follow-up for scheduled interviews
+        if ($application->status !== 'interview_scheduled') {
+            return redirect()->route('admin.hiring-applications.show', $application)
+                ->withErrors(['error' => 'Follow-up email can only be sent for scheduled interviews.']);
+        }
+
+        if (!$application->interview_date) {
+            return redirect()->route('admin.hiring-applications.show', $application)
+                ->withErrors(['error' => 'Interview date must be set before sending follow-up email.']);
+        }
+
+        // Get social media link from settings
+        $socialMediaLink = \App\Models\Setting::get('interview_reschedule_social_media_link');
+
+        try {
+            // Send follow-up email
+            Mail::to($application->email)->send(
+                new \App\Mail\InterviewFollowUp(
+                    $application,
+                    $application->interview_date,
+                    $application->hiringPosition,
+                    $socialMediaLink
+                )
+            );
+
+            // Log the action
+            UserActivity::logActivity(
+                Auth::user(),
+                'action',
+                'hiring_application_follow_up_sent',
+                [
+                    'application_id' => $application->id,
+                    'applicant_name' => $application->full_name,
+                    'applicant_email' => $application->email,
+                    'position' => $application->hiringPosition->title ?? $application->position_applied,
+                    'interview_date' => $application->interview_date->format('Y-m-d H:i:s'),
+                ]
+            );
+
+            return redirect()->route('admin.hiring-applications.show', $application)
+                ->with('success', 'Follow-up email sent successfully.');
+        } catch (\Exception $e) {
+            Log::error('Failed to send follow-up email: ' . $e->getMessage());
+            return redirect()->route('admin.hiring-applications.show', $application)
+                ->withErrors(['error' => 'Failed to send follow-up email. Please try again.']);
+        }
     }
 
     public function markInterviewDone(Request $request, HiringApplication $application)

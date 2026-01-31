@@ -17,6 +17,11 @@ Your interview for the **{{ $position->title ?? $application->position_applied }
 
 **Date & Time:** {{ \Carbon\Carbon::parse($interviewDate)->format('F j, Y g:i A') }}
 
+@if($address)
+**Location:**  
+{{ $address }}
+@endif
+
 @if($adminNotes)
 ## Additional Information
 

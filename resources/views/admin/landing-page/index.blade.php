@@ -108,12 +108,17 @@
                                     @php
                                         $heroPreview = null;
                                         try {
-                                            $storage = \Illuminate\Support\Facades\Storage::disk('digitalocean');
+                                            $doConfig = config('filesystems.disks.digitalocean', []);
+                                            $isDoConfigured = !empty($doConfig['bucket']) && !empty($doConfig['key']) && !empty($doConfig['secret']);
+                                            $storage = null;
+                                            if ($isDoConfigured) {
+                                                $storage = \Illuminate\Support\Facades\Storage::disk('digitalocean');
+                                            }
                                             $imgPath = $settings['hero_background_image'];
 
                                             if (filter_var($imgPath, FILTER_VALIDATE_URL)) {
                                                 $heroPreview = $imgPath;
-                                            } elseif ($storage->exists($imgPath)) {
+                                            } elseif ($storage && $storage->exists($imgPath)) {
                                                 if (method_exists($storage, 'temporaryUrl')) {
                                                     try {
                                                         $heroPreview = $storage->temporaryUrl($imgPath, now()->addHours(24));
@@ -422,12 +427,17 @@
                                                 @php
                                                     $previewUrl = null;
                                                     try {
-                                                        $storage = \Illuminate\Support\Facades\Storage::disk('digitalocean');
+                                                        $doConfig = config('filesystems.disks.digitalocean', []);
+                                                        $isDoConfigured = !empty($doConfig['bucket']) && !empty($doConfig['key']) && !empty($doConfig['secret']);
+                                                        $storage = null;
+                                                        if ($isDoConfigured) {
+                                                            $storage = \Illuminate\Support\Facades\Storage::disk('digitalocean');
+                                                        }
                                                         $imgPath = $settings['project_' . $i . '_image'];
 
                                                         if (filter_var($imgPath, FILTER_VALIDATE_URL)) {
                                                             $previewUrl = $imgPath;
-                                                        } elseif ($storage->exists($imgPath)) {
+                                                        } elseif ($storage && $storage->exists($imgPath)) {
                                                             if (method_exists($storage, 'temporaryUrl')) {
                                                                 try {
                                                                     $previewUrl = $storage->temporaryUrl($imgPath, now()->addHours(24));
@@ -512,7 +522,28 @@
                                             <label class="block text-sm font-medium text-gray-700 mb-2">Project Image</label>
                                             @if(!empty($project['image']))
                                                 <div class="mb-2">
-                                                    <img src="{{ \Illuminate\Support\Facades\Storage::disk('digitalocean')->exists($project['image']) ? \Illuminate\Support\Facades\Storage::disk('digitalocean')->url($project['image']) : $project['image'] }}"
+                                                    @php
+                                                        $imageUrl = $project['image'];
+                                                        $doConfig = config('filesystems.disks.digitalocean', []);
+                                                        $isDoConfigured = !empty($doConfig['bucket']) && !empty($doConfig['key']) && !empty($doConfig['secret']);
+                                                        if ($isDoConfigured) {
+                                                            try {
+                                                                if (\Illuminate\Support\Facades\Storage::disk('digitalocean')->exists($project['image'])) {
+                                                                    $imageUrl = \Illuminate\Support\Facades\Storage::disk('digitalocean')->url($project['image']);
+                                                                } elseif (\Illuminate\Support\Facades\Storage::disk('public')->exists($project['image'])) {
+                                                                    $imageUrl = \Illuminate\Support\Facades\Storage::disk('public')->url($project['image']);
+                                                                }
+                                                            } catch (\Throwable $e) {
+                                                                // Fallback to public disk
+                                                                if (\Illuminate\Support\Facades\Storage::disk('public')->exists($project['image'])) {
+                                                                    $imageUrl = \Illuminate\Support\Facades\Storage::disk('public')->url($project['image']);
+                                                                }
+                                                            }
+                                                        } elseif (\Illuminate\Support\Facades\Storage::disk('public')->exists($project['image'])) {
+                                                            $imageUrl = \Illuminate\Support\Facades\Storage::disk('public')->url($project['image']);
+                                                        }
+                                                    @endphp
+                                                    <img src="{{ $imageUrl }}"
                                                          alt="Additional Project {{ $index + 1 }}" class="w-32 h-32 rounded-lg object-cover">
                                                 </div>
                                             @endif

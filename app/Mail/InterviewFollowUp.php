@@ -9,28 +9,24 @@ use Illuminate\Mail\Mailables\Content;
 use Illuminate\Mail\Mailables\Envelope;
 use Illuminate\Queue\SerializesModels;
 
-class InterviewRescheduled extends Mailable
+class InterviewFollowUp extends Mailable
 {
     use Queueable, SerializesModels;
 
     public $application;
     public $position;
     public $interviewDate;
-    public $adminNotes;
-    public $isReschedule;
-    public $address;
+    public $socialMediaLink;
 
     /**
      * Create a new message instance.
      */
-    public function __construct($application, $interviewDate, $adminNotes = null, $position = null, $isReschedule = false, $address = null)
+    public function __construct($application, $interviewDate, $position = null, $socialMediaLink = null)
     {
         $this->application = $application;
         $this->position = $position;
         $this->interviewDate = $interviewDate;
-        $this->adminNotes = $adminNotes;
-        $this->isReschedule = $isReschedule;
-        $this->address = $address;
+        $this->socialMediaLink = $socialMediaLink;
     }
 
     /**
@@ -39,12 +35,8 @@ class InterviewRescheduled extends Mailable
     public function envelope(): Envelope
     {
         $positionTitle = $this->position ? $this->position->title : ($this->application->position_applied ?? 'Position');
-        $subject = $this->isReschedule
-            ? "Interview Rescheduled - {$positionTitle}"
-            : "Interview Scheduled - {$positionTitle}";
-
         return new Envelope(
-            subject: $subject,
+            subject: "Interview Follow-Up - {$positionTitle}",
         );
     }
 
@@ -54,14 +46,12 @@ class InterviewRescheduled extends Mailable
     public function content(): Content
     {
         return new Content(
-            markdown: 'emails.interview-rescheduled',
+            markdown: 'emails.interview-follow-up',
             with: [
                 'application' => $this->application,
                 'position' => $this->position,
                 'interviewDate' => $this->interviewDate,
-                'adminNotes' => $this->adminNotes,
-                'isReschedule' => $this->isReschedule,
-                'address' => $this->address,
+                'socialMediaLink' => $this->socialMediaLink,
             ],
         );
     }
@@ -76,6 +66,3 @@ class InterviewRescheduled extends Mailable
         return [];
     }
 }
-
-
-

@@ -73,8 +73,20 @@
                         $currentImageUrl = $news->image_url;
                         if ($news->image_path && !$currentImageUrl) {
                             // Try digitalocean first, then public
-                            if (\Illuminate\Support\Facades\Storage::disk('digitalocean')->exists($news->image_path)) {
-                                $currentImageUrl = \Illuminate\Support\Facades\Storage::disk('digitalocean')->url($news->image_path);
+                            $doConfig = config('filesystems.disks.digitalocean', []);
+                            $isDoConfigured = !empty($doConfig['bucket']) && !empty($doConfig['key']) && !empty($doConfig['secret']);
+                            if ($isDoConfigured) {
+                                try {
+                                    if (\Illuminate\Support\Facades\Storage::disk('digitalocean')->exists($news->image_path)) {
+                                        $currentImageUrl = \Illuminate\Support\Facades\Storage::disk('digitalocean')->url($news->image_path);
+                                    } elseif (\Illuminate\Support\Facades\Storage::disk('public')->exists($news->image_path)) {
+                                        $currentImageUrl = \Illuminate\Support\Facades\Storage::disk('public')->url($news->image_path);
+                                    }
+                                } catch (\Throwable $e) {
+                                    if (\Illuminate\Support\Facades\Storage::disk('public')->exists($news->image_path)) {
+                                        $currentImageUrl = \Illuminate\Support\Facades\Storage::disk('public')->url($news->image_path);
+                                    }
+                                }
                             } elseif (\Illuminate\Support\Facades\Storage::disk('public')->exists($news->image_path)) {
                                 $currentImageUrl = \Illuminate\Support\Facades\Storage::disk('public')->url($news->image_path);
                             }

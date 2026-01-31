@@ -34,9 +34,12 @@ class SettingsServiceProvider extends ServiceProvider
                     return null;
                 }
 
-                // Try digitalocean disk
+                // Try digitalocean disk only if configured
                 try {
-                    return Storage::disk('digitalocean')->url($path);
+                    $doConfig = config('filesystems.disks.digitalocean', []);
+                    if (!empty($doConfig['bucket']) && !empty($doConfig['key']) && !empty($doConfig['secret'])) {
+                        return Storage::disk('digitalocean')->url($path);
+                    }
                 } catch (\Throwable $e) {
                     // Ignore and fallback
                 }

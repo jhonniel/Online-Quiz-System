@@ -257,6 +257,7 @@ Route::prefix('admin')->middleware(['auth', 'admin'])->group(function () {
         Route::post('/hiring-applications/{application}/reconsider', [App\Http\Controllers\Admin\HiringApplicationController::class, 'reconsider'])->name('admin.hiring-applications.reconsider');
         Route::post('/hiring-applications/{application}/schedule-interview', [App\Http\Controllers\Admin\HiringApplicationController::class, 'scheduleInterview'])->name('admin.hiring-applications.schedule-interview');
         Route::post('/hiring-applications/{application}/mark-interview-done', [App\Http\Controllers\Admin\HiringApplicationController::class, 'markInterviewDone'])->name('admin.hiring-applications.mark-interview-done');
+        Route::post('/hiring-applications/{application}/send-follow-up', [App\Http\Controllers\Admin\HiringApplicationController::class, 'sendFollowUpEmail'])->name('admin.hiring-applications.send-follow-up');
         Route::post('/hiring-applications/{application}/mark-hired', [App\Http\Controllers\Admin\HiringApplicationController::class, 'markAsHired'])->name('admin.hiring-applications.mark-hired');
         Route::post('/hiring-applications/{application}/accept-intern', [App\Http\Controllers\Admin\HiringApplicationController::class, 'acceptIntern'])->name('admin.hiring-applications.accept-intern');
         Route::post('/hiring-applications/{application}/cancel-hired', [App\Http\Controllers\Admin\HiringApplicationController::class, 'cancelHired'])->name('admin.hiring-applications.cancel-hired');

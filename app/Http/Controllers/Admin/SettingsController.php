@@ -459,12 +459,14 @@ class SettingsController extends Controller
             'contact_phone_support_time' => 'nullable|string|max:255',
             'contact_live_chat_days' => 'nullable|string|max:255',
             'contact_live_chat_time' => 'nullable|string|max:255',
+            'contact_address' => 'nullable|string|max:500',
             // Social Media Links
             'social_facebook' => 'nullable|url|max:500',
             'social_twitter' => 'nullable|url|max:500',
             'social_linkedin' => 'nullable|url|max:500',
             'social_instagram' => 'nullable|url|max:500',
             'social_youtube' => 'nullable|url|max:500',
+            'interview_reschedule_social_media_link' => 'nullable|url|max:500',
             'default_sick_leave_balance' => 'nullable|numeric|min:0|max:365',
             // Landing Page - Employees
             // Email Configuration
@@ -756,6 +758,9 @@ class SettingsController extends Controller
         $contactLiveChatTime = $request->contact_live_chat_time ?? '';
         Setting::set('contact_live_chat_time', $contactLiveChatTime, 'text', 'Live chat support time');
 
+        $contactAddress = $request->contact_address ?? '';
+        Setting::set('contact_address', $contactAddress, 'text', 'Company address');
+
         // Social Media Links
         $socialFacebook = $request->social_facebook ?? '';
         Setting::set('social_facebook', $socialFacebook, 'text', 'Facebook page URL');
@@ -771,6 +776,9 @@ class SettingsController extends Controller
 
         $socialYouTube = $request->social_youtube ?? '';
         Setting::set('social_youtube', $socialYouTube, 'text', 'YouTube channel URL');
+
+        $interviewRescheduleSocialMediaLink = $request->interview_reschedule_social_media_link ?? '';
+        Setting::set('interview_reschedule_social_media_link', $interviewRescheduleSocialMediaLink, 'text', 'Social media link for interview reschedule requests');
 
         // Update Application Timezone
         if ($request->filled('app_timezone')) {
