@@ -43,4 +43,30 @@ class Setting extends Model
         }
         return $settings;
     }
+
+    /**
+     * Clear all setting-related cache entries
+     * 
+     * @return void
+     */
+    public static function clearCache(): void
+    {
+        try {
+            // Clear all setting cache entries
+            $settings = self::all();
+            foreach ($settings as $setting) {
+                \Illuminate\Support\Facades\Cache::forget("setting.{$setting->key}");
+            }
+            
+            // Try to clear cache tags if supported (Redis, Memcached)
+            try {
+                \Illuminate\Support\Facades\Cache::tags(['settings'])->flush();
+            } catch (\Exception $e) {
+                // Cache driver doesn't support tags, ignore
+            }
+        } catch (\Exception $e) {
+            // Log error but don't throw
+            \Log::warning('Failed to clear setting cache', ['error' => $e->getMessage()]);
+        }
+    }
 }

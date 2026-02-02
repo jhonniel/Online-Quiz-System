@@ -58,22 +58,14 @@
                 color: #1f2937; /* Ensure default text color is visible */
             }
             
-            /* Ensure text is visible - only override when needed */
-            .gradient-bg h1, .gradient-bg h2, .gradient-bg h3, .gradient-bg h4, .gradient-bg h5, .gradient-bg h6 {
-                color: #ffffff;
+            /* Ensure text is visible */
+            h1, h2, h3, h4, h5, h6 {
+                color: #111827;
+                font-weight: 700;
             }
             
-            /* Dark text on light backgrounds */
-            section:not(.gradient-bg) h1,
-            section:not(.gradient-bg) h2,
-            section:not(.gradient-bg) h3,
-            section:not(.gradient-bg) h4,
-            section:not(.gradient-bg) h5,
-            section:not(.gradient-bg) h6,
-            .bg-white h1, .bg-white h2, .bg-white h3, .bg-white h4, .bg-white h5, .bg-white h6,
-            .bg-gray-50 h1, .bg-gray-50 h2, .bg-gray-50 h3, .bg-gray-50 h4, .bg-gray-50 h5, .bg-gray-50 h6,
-            .bg-gray-100 h1, .bg-gray-100 h2, .bg-gray-100 h3, .bg-gray-100 h4, .bg-gray-100 h5, .bg-gray-100 h6 {
-                color: #111827;
+            p, span, div, a {
+                color: inherit;
             }
             
             /* Ensure primary color text is visible */
@@ -81,55 +73,17 @@
                 color: {{ $settings['primary_color'] ?? '#4F46E5' }} !important;
             }
             
-            /* Gray text colors - only apply when not explicitly white */
-            .text-gray-600:not(.text-white) {
-                color: #4b5563;
-            }
-            
-            .text-gray-700:not(.text-white) {
-                color: #374151;
-            }
-            
-            .text-gray-900:not(.text-white) {
-                color: #111827;
-            }
-            
-            /* Force dark text on light backgrounds */
-            .bg-white .text-gray-600,
-            .bg-gray-50 .text-gray-600,
-            .bg-gray-100 .text-gray-600 {
+            /* Ensure gray text is visible */
+            .text-gray-600, .text-gray-700, .text-gray-900 {
                 color: #4b5563 !important;
             }
             
-            .bg-white .text-gray-700,
-            .bg-gray-50 .text-gray-700,
-            .bg-gray-100 .text-gray-700 {
+            .text-gray-700 {
                 color: #374151 !important;
             }
             
-            .bg-white .text-gray-900,
-            .bg-gray-50 .text-gray-900,
-            .bg-gray-100 .text-gray-900 {
+            .text-gray-900 {
                 color: #111827 !important;
-            }
-            
-            /* Ensure icons are visible - white icons on primary/gradient backgrounds */
-            .gradient-bg svg:not(.text-primary):not(.text-gray-900):not(.text-gray-700):not(.text-gray-600),
-            .bg-primary svg:not(.text-primary):not(.text-gray-900):not(.text-gray-700):not(.text-gray-600) {
-                color: #ffffff;
-            }
-            
-            .bg-primary svg.text-white,
-            .bg-primary i.text-white {
-                color: #ffffff !important;
-            }
-            
-            /* Dark icons on light backgrounds */
-            section:not(.gradient-bg) svg:not(.text-white):not(.text-primary),
-            .bg-white svg:not(.text-white):not(.text-primary),
-            .bg-gray-50 svg:not(.text-white):not(.text-primary),
-            .bg-gray-100 svg:not(.text-white):not(.text-primary) {
-                color: #374151;
             }
             
             /* Ensure Font Awesome icons are visible */
