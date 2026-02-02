@@ -493,7 +493,15 @@
 
                     <div id="additional-projects-container" class="space-y-6">
                         @php
-                            $additionalProjects = json_decode(\App\Models\Setting::get('additional_projects', '[]'), true) ?? [];
+                            $additionalProjectsJson = \App\Models\Setting::get('additional_projects', '[]');
+                            // Handle both string (JSON) and array formats
+                            if (is_string($additionalProjectsJson)) {
+                                $additionalProjects = json_decode($additionalProjectsJson, true) ?? [];
+                            } elseif (is_array($additionalProjectsJson)) {
+                                $additionalProjects = $additionalProjectsJson;
+                            } else {
+                                $additionalProjects = [];
+                            }
                         @endphp
                         @if(!empty($additionalProjects))
                             @foreach($additionalProjects as $index => $project)

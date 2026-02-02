@@ -533,56 +533,84 @@ class LandingController extends Controller
                 abort(404, 'Invalid image path');
             }
 
-            // Try digitalocean disk first, fallback to public disk
+            // Try spaces (DigitalOcean) disk first, fallback to public disk
             $fileContents = null;
             $storage = null;
             
-            // Check if digitalocean disk is configured
-            $doConfig = config('filesystems.disks.digitalocean', []);
-            $isDoConfigured = !empty($doConfig['bucket']) && !empty($doConfig['key']) && !empty($doConfig['secret']);
+            // Check if spaces disk is configured
+            $spacesConfig = config('filesystems.disks.spaces', []);
+            $isSpacesConfigured = !empty($spacesConfig['bucket']) && !empty($spacesConfig['key']) && !empty($spacesConfig['secret']);
             
-            if ($isDoConfigured) {
+            if ($isSpacesConfigured) {
                 try {
-                    $storage = Storage::disk('digitalocean');
+                    $storage = Storage::disk('spaces');
                     // Check if file exists
                     if ($storage->exists($imagePath)) {
                         $fileContents = $storage->get($imagePath);
                     }
                 } catch (\Throwable $e) {
-                    \Log::warning('Failed to access digitalocean disk', [
+                    \Log::warning('Failed to access spaces disk', [
                         'path' => $imagePath,
                         'error' => $e->getMessage()
                     ]);
                 }
             }
             
-            // Fallback to public disk if digitalocean failed or not configured
+            // Fallback to public disk if spaces failed or not configured
             if ($fileContents === null) {
                 try {
                     $storage = Storage::disk('public');
                     if ($storage->exists($imagePath)) {
                         $fileContents = $storage->get($imagePath);
                     } else {
-                        \Log::warning('Image file does not exist in storage', [
-                            'path' => $imagePath,
-                            'disk' => 'public',
-                            'decoded_from' => $path
-                        ]);
-                        abort(404, 'Image not found');
+                        // Try without 'quiz/' prefix if path starts with it
+                        $alternatePath = $imagePath;
+                        if (strpos($imagePath, 'quiz/') === 0) {
+                            $alternatePath = substr($imagePath, 5); // Remove 'quiz/' prefix
+                            if ($storage->exists($alternatePath)) {
+                                $fileContents = $storage->get($alternatePath);
+                                \Log::info('Image found with alternate path', [
+                                    'original_path' => $imagePath,
+                                    'alternate_path' => $alternatePath
+                                ]);
+                            }
+                        }
+                        
+                        if ($fileContents === null) {
+                            \Log::warning('Image file does not exist in storage', [
+                                'path' => $imagePath,
+                                'alternate_path' => $alternatePath ?? 'N/A',
+                                'disk' => 'public',
+                                'decoded_from' => $path,
+                                'public_storage_path' => storage_path('app/public')
+                            ]);
+                            abort(404, 'Image not found');
+                        }
                     }
                 } catch (\Throwable $e) {
                     \Log::error('Failed to access public disk', [
                         'path' => $imagePath,
-                        'error' => $e->getMessage()
+                        'error' => $e->getMessage(),
+                        'trace' => $e->getTraceAsString()
                     ]);
                     abort(404, 'Image not found');
                 }
+            }
+            
+            // If still no file contents, return 404
+            if ($fileContents === null) {
+                \Log::error('Image file not found in any storage', [
+                    'path' => $imagePath,
+                    'spaces_configured' => $isSpacesConfigured,
+                    'decoded_from' => $path
+                ]);
+                abort(404, 'Image not found');
             }
 
             \Log::info('Image proxy success', [
                 'image_path' => $imagePath,
                 'encoded_path' => $path,
-                'disk' => $isDoConfigured && $fileContents !== null ? 'digitalocean' : 'public'
+                'disk' => $isSpacesConfigured && $fileContents !== null ? 'spaces' : 'public'
             ]);
 
             // Determine content type based on file extension
@@ -632,7 +660,7 @@ class LandingController extends Controller
             abort(404, 'Privacy Policy PDF not found.');
         }
 
-        $assetDisk = 'digitalocean';
+        $assetDisk = 'spaces';
 
         try {
             if (Storage::disk($assetDisk)->exists($privacyPolicyPdfPath)) {
@@ -676,7 +704,7 @@ class LandingController extends Controller
             abort(404, 'TOR PDF not found.');
         }
 
-        $assetDisk = 'digitalocean';
+        $assetDisk = 'spaces';
 
         try {
             if (Storage::disk($assetDisk)->exists($torPdfPath)) {
