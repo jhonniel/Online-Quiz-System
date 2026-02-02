@@ -28,4 +28,19 @@ class Setting extends Model
             ['value' => $value]
         );
     }
+
+    /**
+     * Get all settings as an array keyed by setting key
+     * 
+     * @return array
+     */
+    public static function getAll(): array
+    {
+        $settingsCollection = self::all()->keyBy('key');
+        $settings = [];
+        foreach ($settingsCollection as $key => $setting) {
+            $settings[$key] = $setting->value;
+        }
+        return $settings;
+    }
 }
