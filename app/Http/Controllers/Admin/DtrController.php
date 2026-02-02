@@ -1035,6 +1035,12 @@ class DtrController extends Controller
      */
     public function studentIndex(Request $request)
     {
+        // Check if user has student_management permission or is admin
+        $user = auth()->user();
+        if (!$user->isAdmin() && !$user->canAccessStudentManagement()) {
+            abort(403, 'Access denied. You do not have permission to access Student Management.');
+        }
+
         $query = Dtr::with(['user.university'])
             ->whereHas('user', function($q) {
                 $q->where('role', 'student');
@@ -1189,6 +1195,12 @@ class DtrController extends Controller
      */
     public function studentCreate()
     {
+        // Check if user has student_management permission or is admin
+        $user = auth()->user();
+        if (!$user->isAdmin() && !$user->canAccessStudentManagement()) {
+            abort(403, 'Access denied. You do not have permission to access Student Management.');
+        }
+
         $students = User::where('role', 'student')
             ->where('is_active', true)
             ->orderBy('name')
@@ -1205,6 +1217,12 @@ class DtrController extends Controller
      */
     public function studentStore(Request $request)
     {
+        // Check if user has student_management permission or is admin
+        $user = auth()->user();
+        if (!$user->isAdmin() && !$user->canAccessStudentManagement()) {
+            abort(403, 'Access denied. You do not have permission to perform this action.');
+        }
+
         $request->validate([
             'user_id' => 'required|exists:users,id',
             'date' => 'required|date',
@@ -1291,6 +1309,11 @@ class DtrController extends Controller
      */
     public function studentEdit(Dtr $dtr)
     {
+        // Check if user has student_management permission or is admin
+        $user = auth()->user();
+        if (!$user->isAdmin() && !$user->canAccessStudentManagement()) {
+            abort(403, 'Access denied. You do not have permission to perform this action.');
+        }
         // Verify this is a student DTR
         if (!$dtr->user || $dtr->user->role !== 'student') {
             abort(404, 'DTR record not found for students.');
@@ -1324,6 +1347,12 @@ class DtrController extends Controller
      */
     public function studentUpdate(Request $request, Dtr $dtr)
     {
+        // Check if user has student_management permission or is admin
+        $user = auth()->user();
+        if (!$user->isAdmin() && !$user->canAccessStudentManagement()) {
+            abort(403, 'Access denied. You do not have permission to perform this action.');
+        }
+
         // Log the incoming request
         Log::info('Student DTR Update Request', [
             'dtr_id' => $dtr->id,
@@ -1584,6 +1613,11 @@ class DtrController extends Controller
      */
     public function studentDestroy(Dtr $dtr)
     {
+        // Check if user has student_management permission or is admin
+        $user = auth()->user();
+        if (!$user->isAdmin() && !$user->canAccessStudentManagement()) {
+            abort(403, 'Access denied. You do not have permission to perform this action.');
+        }
         // Ensure the record belongs to a student
         if (!$dtr->user || $dtr->user->role !== 'student') {
             abort(404, 'DTR record not found for students.');
@@ -1620,6 +1654,11 @@ class DtrController extends Controller
      */
     public function studentBulkUpdate(Request $request)
     {
+        // Check if user has student_management permission or is admin
+        $user = auth()->user();
+        if (!$user->isAdmin() && !$user->canAccessStudentManagement()) {
+            abort(403, 'Access denied. You do not have permission to perform this action.');
+        }
         $request->validate([
             'dtr_ids' => 'required|array',
             'dtr_ids.*' => 'required|integer|exists:dtrs,id',
@@ -1745,6 +1784,11 @@ class DtrController extends Controller
      */
     public function studentBulkDelete(Request $request)
     {
+        // Check if user has student_management permission or is admin
+        $user = auth()->user();
+        if (!$user->isAdmin() && !$user->canAccessStudentManagement()) {
+            abort(403, 'Access denied. You do not have permission to perform this action.');
+        }
         $currentUser = auth()->user();
 
         // Only super admins (full access) can delete student DTR records
@@ -1803,6 +1847,11 @@ class DtrController extends Controller
      */
     public function studentExportPdf(Request $request)
     {
+        // Check if user has student_management permission or is admin
+        $user = auth()->user();
+        if (!$user->isAdmin() && !$user->canAccessStudentManagement()) {
+            abort(403, 'Access denied. You do not have permission to perform this action.');
+        }
         $query = Dtr::with(['user.university'])
             ->whereHas('user', function($q) {
                 $q->where('role', 'student');

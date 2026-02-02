@@ -24,8 +24,9 @@ class DtrTimeRequestController extends Controller
             }
             
             // Check if user has student_management permission or is admin
+            // Note: Route middleware already checks this, but keeping as backup
             if (!$user->isAdmin() && !$user->canAccessStudentManagement()) {
-                abort(403, 'Access denied. You do not have permission to access time requests.');
+                abort(403, 'Access denied. You do not have permission to access Student Management.');
             }
             
             $query = DtrTimeRequest::with(['user', 'reviewer'])
@@ -90,9 +91,9 @@ class DtrTimeRequestController extends Controller
     {
         $user = Auth::user();
         
-        // Only admins can approve
-        if (!$user->isAdmin()) {
-            abort(403, 'Access denied. Only admins can approve time requests.');
+        // Check if user has student_management permission or is admin
+        if (!$user->isAdmin() && !$user->canAccessStudentManagement()) {
+            abort(403, 'Access denied. You do not have permission to perform this action.');
         }
         
         if ($dtrTimeRequest->status !== 'pending') {
@@ -141,9 +142,9 @@ class DtrTimeRequestController extends Controller
     {
         $user = Auth::user();
         
-        // Only admins can reject
-        if (!$user->isAdmin()) {
-            abort(403, 'Access denied. Only admins can reject time requests.');
+        // Check if user has student_management permission or is admin
+        if (!$user->isAdmin() && !$user->canAccessStudentManagement()) {
+            abort(403, 'Access denied. You do not have permission to perform this action.');
         }
         
         if ($dtrTimeRequest->status !== 'pending') {

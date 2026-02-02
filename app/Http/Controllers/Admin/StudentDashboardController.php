@@ -13,6 +13,12 @@ class StudentDashboardController extends Controller
 {
     public function index(Request $request)
     {
+        // Check if user has student_management permission or is admin
+        $user = auth()->user();
+        if (!$user->isAdmin() && !$user->canAccessStudentManagement()) {
+            abort(403, 'Access denied. You do not have permission to access Student Management.');
+        }
+
         // Get all active students with their required training hours
         $students = User::with('university')
             ->where('role', 'student')

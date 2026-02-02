@@ -243,20 +243,6 @@ Route::prefix('admin')->middleware(['auth', 'admin'])->group(function () {
         Route::get('/dtr/template', [App\Http\Controllers\Admin\DtrController::class, 'downloadTemplate'])->name('admin.dtr.template');
         Route::get('/dtr/export-pdf', [App\Http\Controllers\Admin\DtrController::class, 'exportPdf'])->name('admin.dtr.export-pdf');
 
-        // Student DTR Management
-        Route::get('/student-dtr', [App\Http\Controllers\Admin\DtrController::class, 'studentIndex'])->name('admin.student-dtr.index');
-        Route::get('/student-dtr/create', [App\Http\Controllers\Admin\DtrController::class, 'studentCreate'])->name('admin.student-dtr.create');
-        Route::post('/student-dtr', [App\Http\Controllers\Admin\DtrController::class, 'studentStore'])->name('admin.student-dtr.store');
-        Route::get('/student-dtr/{dtr}/edit', [App\Http\Controllers\Admin\DtrController::class, 'studentEdit'])->name('admin.student-dtr.edit');
-        Route::put('/student-dtr/{dtr}', [App\Http\Controllers\Admin\DtrController::class, 'studentUpdate'])->name('admin.student-dtr.update');
-        Route::delete('/student-dtr/{dtr}', [App\Http\Controllers\Admin\DtrController::class, 'studentDestroy'])->name('admin.student-dtr.destroy');
-        Route::post('/student-dtr/bulk-update', [App\Http\Controllers\Admin\DtrController::class, 'studentBulkUpdate'])->name('admin.student-dtr.bulk-update');
-        Route::post('/student-dtr/bulk-delete', [App\Http\Controllers\Admin\DtrController::class, 'studentBulkDelete'])->name('admin.student-dtr.bulk-delete');
-        Route::get('/student-dtr/export/pdf', [App\Http\Controllers\Admin\DtrController::class, 'studentExportPdf'])->name('admin.student-dtr.export-pdf');
-
-    // Student Management Dashboard
-    Route::get('/student-management/dashboard', [StudentDashboardController::class, 'index'])->name('admin.student-management.dashboard');
-
         // Time Report (Employees)
         Route::get('/time-report', [App\Http\Controllers\Admin\TimeReportController::class, 'index'])->name('admin.time-report.index');
 
@@ -274,6 +260,19 @@ Route::prefix('admin')->middleware(['auth', 'admin'])->group(function () {
 
     // Student Management
     Route::middleware(['admin.permission:student_management'])->group(function () {
+        // Student Management Dashboard
+        Route::get('/student-management/dashboard', [StudentDashboardController::class, 'index'])->name('admin.student-management.dashboard');
+
+        // Student DTR Management
+        Route::get('/student-dtr', [App\Http\Controllers\Admin\DtrController::class, 'studentIndex'])->name('admin.student-dtr.index');
+        Route::get('/student-dtr/create', [App\Http\Controllers\Admin\DtrController::class, 'studentCreate'])->name('admin.student-dtr.create');
+        Route::post('/student-dtr', [App\Http\Controllers\Admin\DtrController::class, 'studentStore'])->name('admin.student-dtr.store');
+        Route::get('/student-dtr/{dtr}/edit', [App\Http\Controllers\Admin\DtrController::class, 'studentEdit'])->name('admin.student-dtr.edit');
+        Route::put('/student-dtr/{dtr}', [App\Http\Controllers\Admin\DtrController::class, 'studentUpdate'])->name('admin.student-dtr.update');
+        Route::delete('/student-dtr/{dtr}', [App\Http\Controllers\Admin\DtrController::class, 'studentDestroy'])->name('admin.student-dtr.destroy');
+        Route::post('/student-dtr/bulk-update', [App\Http\Controllers\Admin\DtrController::class, 'studentBulkUpdate'])->name('admin.student-dtr.bulk-update');
+        Route::post('/student-dtr/bulk-delete', [App\Http\Controllers\Admin\DtrController::class, 'studentBulkDelete'])->name('admin.student-dtr.bulk-delete');
+        Route::get('/student-dtr/export/pdf', [App\Http\Controllers\Admin\DtrController::class, 'studentExportPdf'])->name('admin.student-dtr.export-pdf');
 
         // Student Leave Requests Management
         Route::get('/student-leave-requests', [App\Http\Controllers\Admin\LeaveRequestController::class, 'studentIndex'])->name('admin.student-leave-requests.index');
@@ -281,10 +280,10 @@ Route::prefix('admin')->middleware(['auth', 'admin'])->group(function () {
         Route::post('/student-leave-requests/create-for-student', [App\Http\Controllers\Admin\LeaveRequestController::class, 'storeForStudent'])->name('admin.student-leave-requests.store-for-student');
         
         // Student Time Requests Management
-            Route::get('/time-requests', [App\Http\Controllers\Admin\DtrTimeRequestController::class, 'index'])->name('admin.time-requests.index');
-            Route::post('/time-requests/{dtrTimeRequest}/approve', [App\Http\Controllers\Admin\DtrTimeRequestController::class, 'approve'])->name('admin.time-requests.approve');
-            Route::post('/time-requests/{dtrTimeRequest}/reject', [App\Http\Controllers\Admin\DtrTimeRequestController::class, 'reject'])->name('admin.time-requests.reject');
-            Route::delete('/time-requests/{dtrTimeRequest}', [App\Http\Controllers\Admin\DtrTimeRequestController::class, 'destroy'])->name('admin.time-requests.destroy');
+        Route::get('/time-requests', [App\Http\Controllers\Admin\DtrTimeRequestController::class, 'index'])->name('admin.time-requests.index');
+        Route::post('/time-requests/{dtrTimeRequest}/approve', [App\Http\Controllers\Admin\DtrTimeRequestController::class, 'approve'])->name('admin.time-requests.approve');
+        Route::post('/time-requests/{dtrTimeRequest}/reject', [App\Http\Controllers\Admin\DtrTimeRequestController::class, 'reject'])->name('admin.time-requests.reject');
+        Route::delete('/time-requests/{dtrTimeRequest}', [App\Http\Controllers\Admin\DtrTimeRequestController::class, 'destroy'])->name('admin.time-requests.destroy');
     });
 
     // Hiring Process Management
