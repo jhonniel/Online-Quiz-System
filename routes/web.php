@@ -118,6 +118,9 @@ Route::prefix('admin')->middleware(['auth', 'admin'])->group(function () {
     Route::post('quizzes/export-csv', [AdminQuizController::class, 'exportToCsv'])->name('admin.quizzes.export-csv');
 
     // Task Management
+    // Task Analytics Dashboard (requires full access - super admin only for now)
+    Route::get('tasks/analytics', [App\Http\Controllers\Admin\TaskAnalyticsController::class, 'dashboard'])->name('admin.tasks.analytics');
+    
     Route::get('tasks', [App\Http\Controllers\Admin\TaskController::class, 'index'])->name('admin.tasks.index');
     Route::post('tasks', [App\Http\Controllers\Admin\TaskController::class, 'store'])->name('admin.tasks.store');
     Route::put('tasks/{task}', [App\Http\Controllers\Admin\TaskController::class, 'update'])->name('admin.tasks.update');
@@ -140,6 +143,41 @@ Route::prefix('admin')->middleware(['auth', 'admin'])->group(function () {
     Route::post('news/{news}/toggle-publish', [App\Http\Controllers\Admin\NewsController::class, 'togglePublish'])->name('admin.news.toggle-publish');
     Route::post('news/toggle-section', [App\Http\Controllers\Admin\NewsController::class, 'toggleNewsSection'])->name('admin.news.toggle-section');
     Route::post('tasks/{task}/assign-users', [App\Http\Controllers\Admin\TaskController::class, 'assignUsers'])->name('admin.tasks.assign-users');
+    
+    // Task Invitation Routes
+    Route::post('tasks/{task}/generate-invite-code', [App\Http\Controllers\Admin\TaskController::class, 'generateInviteCode'])->name('admin.tasks.generate-invite-code');
+    Route::post('tasks/{task}/get-invite-link', [App\Http\Controllers\Admin\TaskController::class, 'getInviteLink'])->name('admin.tasks.get-invite-link');
+    Route::post('tasks/{task}/generate-share-link', [App\Http\Controllers\Admin\TaskController::class, 'generateShareLink'])->name('admin.tasks.generate-share-link');
+    Route::post('tasks/{task}/invite-users', [App\Http\Controllers\Admin\TaskController::class, 'inviteUsers'])->name('admin.tasks.invite-users');
+    Route::post('tasks/join-by-code', [App\Http\Controllers\Admin\TaskController::class, 'joinByCode'])->name('admin.tasks.join-by-code')->middleware('auth');
+    Route::get('tasks/join-by-link/{token}', [App\Http\Controllers\Admin\TaskController::class, 'joinByLink'])->name('admin.tasks.join-by-link')->middleware('auth');
+    Route::post('tasks/invitations/{invitation}/accept', [App\Http\Controllers\Admin\TaskController::class, 'acceptInvitation'])->name('admin.tasks.invitations.accept');
+    Route::post('tasks/invitations/{invitation}/reject', [App\Http\Controllers\Admin\TaskController::class, 'rejectInvitation'])->name('admin.tasks.invitations.reject');
+    Route::get('tasks/pending-invitations', [App\Http\Controllers\Admin\TaskController::class, 'getPendingInvitations'])->name('admin.tasks.pending-invitations');
+    Route::post('tasks/{task}/convert-to-group', [App\Http\Controllers\Admin\TaskController::class, 'convertToGroup'])->name('admin.tasks.convert-to-group');
+    
+    // Custom Boards Management
+    Route::post('tasks/custom-boards', [App\Http\Controllers\Admin\TaskController::class, 'storeCustomBoard'])->name('admin.tasks.custom-boards.store');
+    Route::put('tasks/custom-boards/{customBoard}', [App\Http\Controllers\Admin\TaskController::class, 'updateCustomBoard'])->name('admin.tasks.custom-boards.update');
+    Route::delete('tasks/custom-boards/{customBoard}', [App\Http\Controllers\Admin\TaskController::class, 'destroyCustomBoard'])->name('admin.tasks.custom-boards.destroy');
+    Route::post('tasks/custom-boards/update-order', [App\Http\Controllers\Admin\TaskController::class, 'updateCustomBoardOrder'])->name('admin.tasks.custom-boards.update-order');
+            Route::post('tasks/custom-boards/{customBoard}/toggle-lock', [App\Http\Controllers\Admin\TaskController::class, 'toggleCustomBoardLock'])->name('admin.tasks.custom-boards.toggle-lock');
+            
+            // Task List Routes (for personal tasks)
+            Route::post('tasks/task-lists', [App\Http\Controllers\Admin\TaskController::class, 'storeTaskList'])->name('admin.tasks.task-lists.store');
+            Route::put('tasks/task-lists/{taskList}', [App\Http\Controllers\Admin\TaskController::class, 'updateTaskList'])->name('admin.tasks.task-lists.update');
+            Route::delete('tasks/task-lists/{taskList}', [App\Http\Controllers\Admin\TaskController::class, 'destroyTaskList'])->name('admin.tasks.task-lists.destroy');
+            
+            // Task List Sharing Routes
+            Route::post('tasks/task-lists/{taskList}/generate-invite-code', [App\Http\Controllers\Admin\TaskController::class, 'generateTaskListInviteCode'])->name('admin.tasks.task-lists.generate-invite-code');
+            Route::post('tasks/task-lists/{taskList}/generate-share-link', [App\Http\Controllers\Admin\TaskController::class, 'generateTaskListShareLink'])->name('admin.tasks.task-lists.generate-share-link');
+            Route::post('tasks/task-lists/join-by-code', [App\Http\Controllers\Admin\TaskController::class, 'joinTaskListByCode'])->name('admin.tasks.task-lists.join-by-code')->middleware('auth');
+            Route::get('tasks/task-lists/join-by-link/{token}', [App\Http\Controllers\Admin\TaskController::class, 'joinTaskListByLink'])->name('admin.tasks.join-task-list-by-link')->middleware('auth');
+            
+            // Custom Priority Routes
+            Route::post('tasks/custom-priorities', [App\Http\Controllers\Admin\TaskController::class, 'storeCustomPriority'])->name('admin.tasks.custom-priorities.store');
+            Route::put('tasks/custom-priorities/{customPriority}', [App\Http\Controllers\Admin\TaskController::class, 'updateCustomPriority'])->name('admin.tasks.custom-priorities.update');
+            Route::delete('tasks/custom-priorities/{customPriority}', [App\Http\Controllers\Admin\TaskController::class, 'destroyCustomPriority'])->name('admin.tasks.custom-priorities.destroy');
 
     // Quiz Assignment Management
     Route::post('quiz-assignments/{assignment}/reset', [AdminQuizController::class, 'resetAssignment'])->name('admin.quiz-assignments.reset');
@@ -184,6 +222,11 @@ Route::prefix('admin')->middleware(['auth', 'admin'])->group(function () {
     // Key Performance Indicator (KPI) - Only for super admins
     Route::middleware(['auth'])->group(function () {
         Route::get('kpi/dashboard', [App\Http\Controllers\Admin\KpiController::class, 'dashboard'])->name('admin.kpi.dashboard');
+    });
+
+    // Task Analytics - Only for super admins
+    Route::middleware(['auth'])->group(function () {
+        Route::get('tasks/analytics', [App\Http\Controllers\Admin\TaskAnalyticsController::class, 'dashboard'])->name('admin.tasks.analytics');
     });
 
     // Employee Management

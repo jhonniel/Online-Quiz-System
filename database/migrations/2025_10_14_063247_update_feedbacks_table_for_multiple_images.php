@@ -30,12 +30,21 @@ return new class extends Migration
             Schema::table('feedbacks', function (Blueprint $table) {
                 $table->dropColumn('image');
             });
-        } else {
+        } elseif ($driver === 'mysql') {
             // MySQL
             Schema::table('feedbacks', function (Blueprint $table) {
                 $table->renameColumn('image', 'images');
             });
             DB::statement('ALTER TABLE feedbacks MODIFY COLUMN images JSON');
+        } else {
+            // Other databases - use generic approach
+            Schema::table('feedbacks', function (Blueprint $table) {
+                $table->json('images')->nullable();
+            });
+            DB::statement("UPDATE feedbacks SET images = json_array(image) WHERE image IS NOT NULL");
+            Schema::table('feedbacks', function (Blueprint $table) {
+                $table->dropColumn('image');
+            });
         }
     }
 
@@ -60,11 +69,20 @@ return new class extends Migration
             Schema::table('feedbacks', function (Blueprint $table) {
                 $table->dropColumn('images');
             });
-        } else {
+        } elseif ($driver === 'mysql') {
             // MySQL
             DB::statement('ALTER TABLE feedbacks MODIFY COLUMN images VARCHAR(255)');
             Schema::table('feedbacks', function (Blueprint $table) {
                 $table->renameColumn('images', 'image');
+            });
+        } else {
+            // Other databases - use generic approach
+            Schema::table('feedbacks', function (Blueprint $table) {
+                $table->string('image')->nullable();
+            });
+            DB::statement("UPDATE feedbacks SET image = json_extract(images, '$[0]') WHERE images IS NOT NULL");
+            Schema::table('feedbacks', function (Blueprint $table) {
+                $table->dropColumn('images');
             });
         }
     }

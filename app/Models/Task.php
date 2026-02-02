@@ -13,11 +13,16 @@ class Task extends Model
     protected $fillable = [
         'title',
         'description',
+        'notes',
         'type',
         'status',
+        'priority',
         'order',
         'created_by',
+        'parent_id',
+        'task_list_id',
         'due_date',
+        'invite_code',
     ];
 
     protected $casts = [
@@ -59,6 +64,26 @@ class Task extends Model
         return $this->hasMany(TaskAttachment::class);
     }
 
+    public function parent()
+    {
+        return $this->belongsTo(Task::class, 'parent_id');
+    }
+
+    public function subtasks()
+    {
+        return $this->hasMany(Task::class, 'parent_id')->orderBy('order');
+    }
+
+    public function taskList()
+    {
+        return $this->belongsTo(TaskList::class);
+    }
+
+    public function invitations()
+    {
+        return $this->hasMany(TaskInvitation::class);
+    }
+
     // Scopes
     public function scopePersonal($query)
     {
@@ -85,6 +110,16 @@ class Task extends Model
         return $query->where('status', 'done');
     }
 
+    public function scopeParentTasks($query)
+    {
+        return $query->whereNull('parent_id');
+    }
+
+    public function scopeSubtasks($query)
+    {
+        return $query->whereNotNull('parent_id');
+    }
+
     // Helper methods
     public function isAssignedTo($userId)
     {
@@ -99,5 +134,18 @@ class Task extends Model
         
         return $this->assignments()->where('user_id', $userId)->exists() 
             || $this->created_by === $userId;
+    }
+
+    public function generateInviteCode()
+    {
+        if (!$this->invite_code) {
+            do {
+                $code = strtoupper(substr(md5(uniqid(rand(), true)), 0, 8));
+            } while (Task::where('invite_code', $code)->exists());
+            
+            $this->update(['invite_code' => $code]);
+        }
+        
+        return $this->invite_code;
     }
 }

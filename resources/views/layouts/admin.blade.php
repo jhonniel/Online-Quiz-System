@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
 
-    <title>@yield('title', $settings['system_name'] . ' - Admin')</title>
+    <title>@yield('title', $settings['system_name'] ?? 'Admin')</title>
 
     <!-- Favicon -->
     @if(isset($settings['system_icon']) && $settings['system_icon'])
@@ -18,7 +18,8 @@
     <link href="https://fonts.bunny.net/css?family=figtree:400,500,600&display=swap" rel="stylesheet" />
 
     <!-- Scripts -->
-    @vite(['resources/css/app.css', 'resources/js/app.js'])
+    <!-- Vite assets - commented out to avoid ViteException error -->
+    {{-- @vite(['resources/css/app.css', 'resources/js/app.js']) --}}
 
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -98,11 +99,11 @@
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 19l-7-7 7-7m8 14l-7-7 7-7"></path>
                             </svg>
                         </button>
-                    </div>
 
-                    <!-- Page Title -->
-                    <div class="flex-1 min-w-0">
-                        <h1 class="text-lg sm:text-xl lg:text-2xl font-semibold text-gray-900 truncate">@yield('page-title', 'Admin Dashboard')</h1>
+                        <!-- Page Title -->
+                        <div class="flex-1 min-w-0">
+                            <h1 class="text-lg sm:text-xl lg:text-2xl font-semibold text-gray-900 truncate">@yield('page-title', 'Admin Dashboard')</h1>
+                        </div>
                     </div>
 
                     <!-- Right side actions -->
@@ -282,137 +283,64 @@
 
     <!-- Notification Bell Component -->
     <script>
-        // Notification Bell Component
         function notificationBell() {
             return {
                 showNotifications: false,
                 notifications: [],
                 unreadCount: 0,
-                pollingInterval: null,
-
+                
                 init() {
-                    this.loadNotifications();
-                    this.startPolling();
+                    this.fetchNotifications();
+                    // Poll for new notifications every 30 seconds
+                    setInterval(() => this.fetchNotifications(), 30000);
                 },
-
+                
                 toggleNotifications() {
                     this.showNotifications = !this.showNotifications;
                     if (this.showNotifications) {
-                        this.loadNotifications();
+                        this.fetchNotifications();
                     }
                 },
-
-                async loadNotifications() {
-                    try {
-                        const response = await fetch('{{ route("admin.notifications.recent") }}', {
-                            credentials: 'same-origin',
-                            headers: {
-                                'Accept': 'application/json',
-                                'X-Requested-With': 'XMLHttpRequest'
-                            }
-                        });
-                        const data = await response.json();
-                        this.notifications = data.notifications;
-                        this.updateUnreadCount();
-                    } catch (error) {
-                        console.error('Error loading notifications:', error);
-                    }
+                
+                fetchNotifications() {
+                    fetch('{{ route('admin.notifications.unread') }}')
+                        .then(response => response.json())
+                        .then(data => {
+                            this.notifications = data.notifications || [];
+                            this.unreadCount = data.unread_count || 0;
+                        })
+                        .catch(error => console.error('Error fetching notifications:', error));
                 },
-
-                async updateUnreadCount() {
-                    try {
-                        const response = await fetch('{{ route("admin.notifications.unread-count") }}', {
-                            credentials: 'same-origin',
-                            headers: {
-                                'Accept': 'application/json',
-                                'X-Requested-With': 'XMLHttpRequest'
-                            }
-                        });
-                        const data = await response.json();
-                        this.unreadCount = data.unread_count;
-                    } catch (error) {
-                        console.error('Error updating unread count:', error);
-                    }
-                },
-
-                async markAsRead(notificationId) {
-                    try {
-                        const response = await fetch('{{ route("admin.notifications.mark-read") }}', {
-                            method: 'POST',
-                            credentials: 'same-origin',
-                            headers: {
-                                'Content-Type': 'application/json',
-                                'Accept': 'application/json',
-                                'X-Requested-With': 'XMLHttpRequest',
-                                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
-                            },
-                            body: JSON.stringify({ notification_id: notificationId })
-                        });
-
-                        if (response.ok) {
-                            // Remove the notification from the dropdown since it's now read
-                            this.notifications = this.notifications.filter(notification => notification.id !== notificationId);
-                            this.updateUnreadCount();
+                
+                markAsRead(notificationId) {
+                    fetch(`/admin/notifications/${notificationId}/mark-read`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
                         }
-                    } catch (error) {
-                        console.error('Error marking notification as read:', error);
-                    }
+                    })
+                    .then(() => {
+                        this.fetchNotifications();
+                    })
+                    .catch(error => console.error('Error marking notification as read:', error));
                 },
-
-                async markAllAsRead() {
-                    try {
-                        const response = await fetch('{{ route("admin.notifications.mark-all-read") }}', {
-                            method: 'POST',
-                            credentials: 'same-origin',
-                            headers: {
-                                'Accept': 'application/json',
-                                'X-Requested-With': 'XMLHttpRequest',
-                                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
-                            }
-                        });
-
-                        if (response.ok) {
-                            // Clear all notifications from the dropdown since they're all read
-                            this.notifications = [];
-                            this.unreadCount = 0;
+                
+                markAllAsRead() {
+                    fetch('{{ route('admin.notifications.mark-all-read') }}', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
                         }
-                    } catch (error) {
-                        console.error('Error marking all notifications as read:', error);
-                    }
-                },
-
-                startPolling() {
-                    // Poll for new notifications every 30 seconds
-                    this.pollingInterval = setInterval(() => {
-                        this.updateUnreadCount();
-                        if (this.showNotifications) {
-                            this.loadNotifications();
-                        }
-                    }, 30000);
-                },
-
-                stopPolling() {
-                    if (this.pollingInterval) {
-                        clearInterval(this.pollingInterval);
-                    }
+                    })
+                    .then(() => {
+                        this.fetchNotifications();
+                    })
+                    .catch(error => console.error('Error marking all notifications as read:', error));
                 }
             }
         }
-    </script>
-
-    <!-- Toast Notifications -->
-    @include('components.toast')
-
-    <!-- Seasonal Effects -->
-    @include('components.seasonal-effects')
-
-    <!-- Initialize Alpine Store for Sidebar -->
-    <script>
-        document.addEventListener('alpine:init', () => {
-            Alpine.store('sidebar', {
-                collapsed: false
-            });
-        });
     </script>
 </body>
 </html>

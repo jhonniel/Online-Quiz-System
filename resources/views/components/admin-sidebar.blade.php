@@ -660,6 +660,18 @@
                  x-transition:leave-end="opacity-0 transform scale-95"
                  :class="sidebarCollapsed ? 'hidden' : ''"
                  class="ml-6 mt-1 space-y-1">
+                @if(auth()->user()->isSuperAdmin())
+                <a href="{{ route('admin.tasks.analytics') }}"
+                   class="flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors duration-200 {{ request()->routeIs('admin.tasks.analytics') ? 'bg-indigo-700 text-white' : 'text-gray-400 hover:bg-gray-700 hover:text-gray-300' }}"
+                   :title="sidebarCollapsed ? 'Task Analytics' : ''">
+                    <svg class="h-5 w-5 flex-shrink-0 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
+                    </svg>
+                    <span class="transition-opacity duration-300" :class="sidebarCollapsed ? 'opacity-0 w-0 overflow-hidden' : 'opacity-100'">
+                        Task Analytics
+                    </span>
+                </a>
+                @endif
                 <a href="{{ route('admin.tasks.index', ['type' => 'personal']) }}"
                    class="flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors duration-200 {{ request()->routeIs('admin.tasks.index') && request('type') == 'personal' ? 'bg-indigo-700 text-white' : 'text-gray-400 hover:bg-gray-700 hover:text-gray-300' }}"
                    :title="sidebarCollapsed ? 'My Tasks' : ''">

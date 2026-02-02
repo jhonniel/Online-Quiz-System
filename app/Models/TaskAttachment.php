@@ -37,15 +37,24 @@ class TaskAttachment extends Model
             return null;
         }
 
-        $assetDisk = 'digitalocean';
-        try {
-            if (Storage::disk($assetDisk)->exists($this->file_path)) {
-                return Storage::disk($assetDisk)->url($this->file_path);
+        // Check if DigitalOcean Spaces is configured
+        $useDigitalOcean = !empty(env('DIGITALOCEAN_SPACES_KEY')) 
+            && !empty(env('DIGITALOCEAN_SPACES_SECRET')) 
+            && !empty(env('DIGITALOCEAN_SPACES_BUCKET'))
+            && !empty(env('DIGITALOCEAN_SPACES_ENDPOINT'));
+
+        // Try DigitalOcean first if configured
+        if ($useDigitalOcean) {
+            try {
+                if (Storage::disk('digitalocean')->exists($this->file_path)) {
+                    return Storage::disk('digitalocean')->url($this->file_path);
+                }
+            } catch (\Exception $e) {
+                // Fallback to public disk
             }
-        } catch (\Exception $e) {
-            // Fallback
         }
 
+        // Fallback to public disk
         try {
             if (Storage::disk('public')->exists($this->file_path)) {
                 return Storage::disk('public')->url($this->file_path);
