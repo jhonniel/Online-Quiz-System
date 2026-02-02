@@ -11,10 +11,15 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('tasks', function (Blueprint $table) {
-            $table->foreignId('task_list_id')->nullable()->after('parent_id')->constrained('task_lists')->onDelete('cascade');
-            $table->index('task_list_id');
-        });
+        // Check if task_lists table exists before adding foreign key
+        if (Schema::hasTable('task_lists')) {
+            Schema::table('tasks', function (Blueprint $table) {
+                if (!Schema::hasColumn('tasks', 'task_list_id')) {
+                    $table->foreignId('task_list_id')->nullable()->after('parent_id')->constrained('task_lists')->onDelete('cascade');
+                    $table->index('task_list_id');
+                }
+            });
+        }
     }
 
     /**
