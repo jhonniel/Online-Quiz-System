@@ -247,6 +247,9 @@ class LandingController extends Controller
         // Check if news section is enabled (for navbar)
         $newsSectionEnabled = Setting::get('news_section_enabled', '0') === '1';
 
+        // Get all settings for the layout
+        $settings = Setting::getAll();
+
         return view('landing.index', compact(
             'totalQuizzes',
             'totalUsers',
@@ -269,7 +272,8 @@ class LandingController extends Controller
             'heroBackgroundUrl',
             'employees',
             'projects',
-            'laptopImageUrl'
+            'laptopImageUrl',
+            'settings'
         ));
     }
 

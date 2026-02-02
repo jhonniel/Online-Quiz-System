@@ -15,7 +15,7 @@ class RoleLoginController extends Controller
             return redirect()->route('home');
         }
         
-        return view('auth.login');
+        return view('landing.login');
     }
 
     public function login(Request $request)

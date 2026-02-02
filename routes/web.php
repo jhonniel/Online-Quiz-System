@@ -337,6 +337,7 @@ Route::prefix('admin')->middleware(['auth', 'admin'])->group(function () {
     Route::middleware(['admin.permission:communication'])->group(function () {
 
         // Notification Management
+        Route::get('notifications/unread', [App\Http\Controllers\Admin\NotificationController::class, 'getUnread'])->name('admin.notifications.unread');
         Route::get('notifications/recent', [App\Http\Controllers\Admin\NotificationController::class, 'getRecent'])->name('admin.notifications.recent');
         Route::get('notifications/unread-count', [App\Http\Controllers\Admin\NotificationController::class, 'getUnreadCount'])->name('admin.notifications.unread-count');
         Route::post('notifications/mark-read', [App\Http\Controllers\Admin\NotificationController::class, 'markAsRead'])->name('admin.notifications.mark-read');
