@@ -190,7 +190,14 @@ class LandingController extends Controller
 
         // Get additional projects
         $additionalProjectsJson = Setting::get('additional_projects', '[]');
-        $additionalProjects = json_decode($additionalProjectsJson, true) ?? [];
+        // Handle both string (JSON) and array formats
+        if (is_string($additionalProjectsJson)) {
+            $additionalProjects = json_decode($additionalProjectsJson, true) ?? [];
+        } elseif (is_array($additionalProjectsJson)) {
+            $additionalProjects = $additionalProjectsJson;
+        } else {
+            $additionalProjects = [];
+        }
 
         // Merge additional projects with main projects and generate URLs
         if (!empty($additionalProjects) && is_array($additionalProjects)) {
@@ -334,7 +341,14 @@ class LandingController extends Controller
 
         // Get additional projects
         $additionalProjectsJson = Setting::get('additional_projects', '[]');
-        $additionalProjects = json_decode($additionalProjectsJson, true) ?? [];
+        // Handle both string (JSON) and array formats
+        if (is_string($additionalProjectsJson)) {
+            $additionalProjects = json_decode($additionalProjectsJson, true) ?? [];
+        } elseif (is_array($additionalProjectsJson)) {
+            $additionalProjects = $additionalProjectsJson;
+        } else {
+            $additionalProjects = [];
+        }
 
         // Merge additional projects with main projects and generate URLs
         if (!empty($additionalProjects) && is_array($additionalProjects)) {
