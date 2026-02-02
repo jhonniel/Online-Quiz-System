@@ -29,7 +29,7 @@ Route::get('/news', [LandingController::class, 'news'])->name('landing.news');
 Route::get('/about', [LandingController::class, 'about'])->name('landing.about');
 Route::get('/contact', [LandingController::class, 'contact'])->name('landing.contact');
 Route::post('/contact', [LandingController::class, 'storeContact'])->name('landing.contact.store');
-Route::get('/image-proxy/{path}', [LandingController::class, 'imageProxy'])->name('landing.image-proxy');
+Route::get('/image-proxy/{path}', [LandingController::class, 'imageProxy'])->where('path', '.*')->name('landing.image-proxy');
 Route::get('/privacy-policy', [LandingController::class, 'privacyPolicy'])->name('landing.privacy-policy');
 Route::get('/tor-pdf', [LandingController::class, 'torPdf'])->name('landing.tor-pdf');
 

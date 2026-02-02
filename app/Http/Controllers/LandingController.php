@@ -497,27 +497,27 @@ class LandingController extends Controller
     {
         try {
             // Laravel automatically URL-decodes route parameters
-            // We manually encoded +, /, and = as %2B, %2F, %3D
-            // Laravel will decode %3D to =, %2F to /, and %2B to +
-            // So the path should already be a valid base64 string
-            $decodedPath = $path;
-
-            // Replace spaces with + (in case Laravel converted + to spaces)
-            $decodedPath = str_replace(' ', '+', $decodedPath);
+            // So %3D becomes =, %2F becomes /, %2B becomes +
+            // The $path parameter should already be a valid base64 string
+            
+            // However, we need to handle cases where + might have been converted to spaces
+            // Replace spaces with + (base64 uses +, but URL decoding might convert it to spaces)
+            $decodedPath = str_replace(' ', '+', $path);
 
             // Decode the base64 string
             $imagePath = base64_decode($decodedPath, true);
 
             if (empty($imagePath) || $imagePath === false) {
                 \Log::warning('Failed to decode image path', [
-                    'raw_path' => $path,
+                    'route_path' => $path,
                     'decoded_path' => $decodedPath,
                     'path_length' => strlen($path ?? ''),
                     'first_50_chars' => substr($path ?? '', 0, 50),
                     'last_10_chars' => substr($path ?? '', -10),
-                    'has_plus' => strpos($path, '+') !== false,
-                    'has_space' => strpos($path, ' ') !== false,
-                    'has_equals' => strpos($path, '=') !== false
+                    'has_plus' => strpos($path ?? '', '+') !== false,
+                    'has_space' => strpos($path ?? '', ' ') !== false,
+                    'has_equals' => strpos($path ?? '', '=') !== false,
+                    'base64_valid' => base64_decode($decodedPath, true) !== false ? 'YES' : 'NO'
                 ]);
                 abort(404, 'Image path not found');
             }
@@ -608,10 +608,16 @@ class LandingController extends Controller
             ]);
         } catch (\Exception $e) {
             \Log::error('Error proxying image', [
-                'path' => $path,
-                'error' => $e->getMessage()
+                'route_path' => $path,
+                'decoded_path' => $decodedPath ?? 'N/A',
+                'image_path' => $imagePath ?? 'N/A',
+                'error' => $e->getMessage(),
+                'error_class' => get_class($e),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+                'trace' => $e->getTraceAsString()
             ]);
-            abort(500, 'Error loading image');
+            abort(500, 'Error loading image: ' . $e->getMessage());
         }
     }
 
