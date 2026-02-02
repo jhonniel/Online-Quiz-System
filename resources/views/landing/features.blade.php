@@ -214,28 +214,4 @@
         </div>
     </div>
 </section>
-
-<!-- CTA Section -->
-<section class="py-20 gradient-bg text-white">
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-        <h2 class="text-3xl md:text-4xl font-bold mb-4">Ready to Experience These Features?</h2>
-        <p class="text-xl mb-8 text-gray-100">Join our platform and start creating or taking quizzes today</p>
-
-        @auth
-            @if(auth()->user()->isAdmin())
-                <a href="{{ route('admin.dashboard') }}" class="bg-white text-primary px-8 py-3 rounded-lg font-semibold hover:bg-gray-100 transition-colors">
-                    Go to Admin Dashboard
-                </a>
-            @else
-                <a href="{{ route('user.dashboard') }}" class="bg-white text-primary px-8 py-3 rounded-lg font-semibold hover:bg-gray-100 transition-colors">
-                    Go to My Dashboard
-                </a>
-            @endif
-        @else
-            <a href="{{ route('login') }}" class="bg-white text-primary px-8 py-3 rounded-lg font-semibold hover:bg-gray-100 transition-colors">
-                Get Started Now
-            </a>
-        @endauth
-    </div>
-</section>
 @endsection
