@@ -26,4 +26,19 @@ class Quiz extends Model
     {
         return $this->hasMany(QuizAttempt::class);
     }
+
+    public function assignments()
+    {
+        return $this->hasMany(QuizAssignment::class);
+    }
+
+    public function attemptHistory()
+    {
+        return $this->hasMany(QuizAttemptHistory::class);
+    }
+
+    public function questions()
+    {
+        return $this->hasMany(Question::class);
+    }
 }

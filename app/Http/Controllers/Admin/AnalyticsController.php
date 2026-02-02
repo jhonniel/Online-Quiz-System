@@ -154,21 +154,22 @@ class AnalyticsController extends Controller
             }])
             ->with(['attempts' => function($query) {
                 $query->whereNotNull('completed_at');
-            }])
+            }, 'questions'])
             ->where('is_active', true)
             ->get()
             ->map(function($quiz) {
                 $attempts = $quiz->attempts;
-                $totalPoints = $attempts->sum('points_earned');
-                $maxPossiblePoints = $quiz->questions->sum('points');
+                $totalPoints = $attempts ? $attempts->sum('points_earned') : 0;
+                $maxPossiblePoints = $quiz->questions ? $quiz->questions->sum('points') : 0;
+                $attemptsCount = $attempts ? $attempts->count() : 0;
 
                 return [
                     'quiz' => $quiz,
-                    'total_attempts' => $attempts->count(),
-                    'average_score' => $attempts->count() > 0 ? round($totalPoints / $attempts->count(), 2) : 0,
-                    'highest_score' => $attempts->max('points_earned') ?? 0,
-                    'completion_rate' => $attempts->count() > 0 ? round(($attempts->whereNotNull('completed_at')->count() / $attempts->count()) * 100, 2) : 0,
-                    'difficulty_score' => ($maxPossiblePoints > 0 && $attempts->count() > 0) ? round(($totalPoints / ($attempts->count() * $maxPossiblePoints)) * 100, 2) : 0
+                    'total_attempts' => $attemptsCount,
+                    'average_score' => $attemptsCount > 0 ? round($totalPoints / $attemptsCount, 2) : 0,
+                    'highest_score' => $attempts ? ($attempts->max('points_earned') ?? 0) : 0,
+                    'completion_rate' => $attemptsCount > 0 && $attempts ? round(($attempts->whereNotNull('completed_at')->count() / $attemptsCount) * 100, 2) : 0,
+                    'difficulty_score' => ($maxPossiblePoints > 0 && $attemptsCount > 0) ? round(($totalPoints / ($attemptsCount * $maxPossiblePoints)) * 100, 2) : 0
                 ];
             })
             ->sortByDesc('total_attempts');

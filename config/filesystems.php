@@ -36,6 +36,16 @@ return [
             'url' => env('DO_SPACES_URL'),
             'visibility' => 'public',
         ],
+        'digitalocean' => [
+            'driver' => 's3',
+            'key' => env('DIGITALOCEAN_SPACES_KEY') ?: env('DO_SPACES_KEY'),
+            'secret' => env('DIGITALOCEAN_SPACES_SECRET') ?: env('DO_SPACES_SECRET'),
+            'endpoint' => env('DIGITALOCEAN_SPACES_ENDPOINT') ?: env('DO_SPACES_ENDPOINT'),
+            'region' => env('DIGITALOCEAN_SPACES_REGION') ?: env('DO_SPACES_REGION', 'us-east-1'),
+            'bucket' => env('DIGITALOCEAN_SPACES_BUCKET') ?: env('DO_SPACES_BUCKET'),
+            'url' => env('DIGITALOCEAN_SPACES_URL') ?: env('DO_SPACES_URL'),
+            'visibility' => 'public',
+        ],
     ],
     'links' => [
         public_path('storage') => storage_path('app/public'),
