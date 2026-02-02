@@ -533,26 +533,47 @@ class LandingController extends Controller
                 abort(404, 'Invalid image path');
             }
 
-            // Try spaces (DigitalOcean) disk first, fallback to public disk
+            // Try digitalocean disk first, then spaces, then public disk
             $fileContents = null;
             $storage = null;
             
-            // Check if spaces disk is configured
-            $spacesConfig = config('filesystems.disks.spaces', []);
-            $isSpacesConfigured = !empty($spacesConfig['bucket']) && !empty($spacesConfig['key']) && !empty($spacesConfig['secret']);
+            // Check if digitalocean disk is configured
+            $doConfig = config('filesystems.disks.digitalocean', []);
+            $isDoConfigured = !empty($doConfig['bucket']) && !empty($doConfig['key']) && !empty($doConfig['secret']);
             
-            if ($isSpacesConfigured) {
+            if ($isDoConfigured) {
                 try {
-                    $storage = Storage::disk('spaces');
+                    $storage = Storage::disk('digitalocean');
                     // Check if file exists
                     if ($storage->exists($imagePath)) {
                         $fileContents = $storage->get($imagePath);
                     }
                 } catch (\Throwable $e) {
-                    \Log::warning('Failed to access spaces disk', [
+                    \Log::warning('Failed to access digitalocean disk', [
                         'path' => $imagePath,
                         'error' => $e->getMessage()
                     ]);
+                }
+            }
+            
+            // Try spaces disk if digitalocean didn't work
+            if ($fileContents === null) {
+                $spacesConfig = config('filesystems.disks.spaces', []);
+                $isSpacesConfigured = !empty($spacesConfig['bucket']) && !empty($spacesConfig['key']) && !empty($spacesConfig['secret']);
+                
+                if ($isSpacesConfigured) {
+                    try {
+                        $storage = Storage::disk('spaces');
+                        // Check if file exists
+                        if ($storage->exists($imagePath)) {
+                            $fileContents = $storage->get($imagePath);
+                        }
+                    } catch (\Throwable $e) {
+                        \Log::warning('Failed to access spaces disk', [
+                            'path' => $imagePath,
+                            'error' => $e->getMessage()
+                        ]);
+                    }
                 }
             }
             
@@ -601,16 +622,28 @@ class LandingController extends Controller
             if ($fileContents === null) {
                 \Log::error('Image file not found in any storage', [
                     'path' => $imagePath,
-                    'spaces_configured' => $isSpacesConfigured,
+                    'digitalocean_configured' => $isDoConfigured,
+                    'spaces_configured' => !empty(config('filesystems.disks.spaces', [])['bucket']),
                     'decoded_from' => $path
                 ]);
                 abort(404, 'Image not found');
             }
 
+            $usedDisk = 'public';
+            if ($isDoConfigured && $fileContents !== null) {
+                $usedDisk = 'digitalocean';
+            } elseif ($fileContents !== null) {
+                $spacesConfig = config('filesystems.disks.spaces', []);
+                $isSpacesConfigured = !empty($spacesConfig['bucket']) && !empty($spacesConfig['key']) && !empty($spacesConfig['secret']);
+                if ($isSpacesConfigured) {
+                    $usedDisk = 'spaces';
+                }
+            }
+            
             \Log::info('Image proxy success', [
                 'image_path' => $imagePath,
                 'encoded_path' => $path,
-                'disk' => $isSpacesConfigured && $fileContents !== null ? 'spaces' : 'public'
+                'disk' => $usedDisk
             ]);
 
             // Determine content type based on file extension
