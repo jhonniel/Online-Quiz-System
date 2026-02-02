@@ -8,9 +8,23 @@
     <title>@yield('title', $settings['system_name'] ?? 'Admin')</title>
 
     <!-- Favicon -->
-    @if(isset($settings['system_icon']) && $settings['system_icon'])
-        <link rel="icon" type="image/x-icon" href="{{ Storage::url($settings['system_icon']) }}">
-        <link rel="shortcut icon" type="image/x-icon" href="{{ Storage::url($settings['system_icon']) }}">
+    @if(isset($settings['system_icon']) && $settings['system_icon'] && isset($settings['system_icon_url']) && $settings['system_icon_url'])
+        @php
+            $iconPath = $settings['system_icon'] ?? '';
+            $extension = strtolower(pathinfo($iconPath, PATHINFO_EXTENSION));
+            $mimeType = match($extension) {
+                'png' => 'image/png',
+                'jpg', 'jpeg' => 'image/jpeg',
+                'gif' => 'image/gif',
+                'svg' => 'image/svg+xml',
+                'webp' => 'image/webp',
+                'ico' => 'image/x-icon',
+                default => 'image/x-icon'
+            };
+        @endphp
+        <link rel="icon" type="{{ $mimeType }}" href="{{ $settings['system_icon_url'] }}">
+        <link rel="shortcut icon" type="{{ $mimeType }}" href="{{ $settings['system_icon_url'] }}">
+        <link rel="apple-touch-icon" href="{{ $settings['system_icon_url'] }}">
     @endif
 
     <!-- Fonts -->
