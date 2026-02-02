@@ -547,6 +547,32 @@ class LandingController extends Controller
                     // Check if file exists
                     if ($storage->exists($imagePath)) {
                         $fileContents = $storage->get($imagePath);
+                    } else {
+                        // Try alternate paths if the file doesn't exist
+                        $alternatePaths = [];
+                        
+                        // If path starts with root path prefix, try without it
+                        $assetRoot = trim(env('DIGITALOCEAN_SPACES_ROOT_PATH', ''), '/');
+                        if ($assetRoot && strpos($imagePath, $assetRoot . '/') === 0) {
+                            $alternatePaths[] = substr($imagePath, strlen($assetRoot) + 1);
+                        }
+                        
+                        // If path doesn't start with root path, try with it
+                        if ($assetRoot && strpos($imagePath, $assetRoot . '/') !== 0) {
+                            $alternatePaths[] = $assetRoot . '/' . ltrim($imagePath, '/');
+                        }
+                        
+                        // Try alternate paths
+                        foreach ($alternatePaths as $altPath) {
+                            if ($storage->exists($altPath)) {
+                                $fileContents = $storage->get($altPath);
+                                \Log::info('Image found with alternate path on digitalocean', [
+                                    'original_path' => $imagePath,
+                                    'alternate_path' => $altPath
+                                ]);
+                                break;
+                            }
+                        }
                     }
                 } catch (\Throwable $e) {
                     \Log::warning('Failed to access digitalocean disk', [
@@ -567,6 +593,32 @@ class LandingController extends Controller
                         // Check if file exists
                         if ($storage->exists($imagePath)) {
                             $fileContents = $storage->get($imagePath);
+                        } else {
+                            // Try alternate paths if the file doesn't exist
+                            $alternatePaths = [];
+                            
+                            // If path starts with root path prefix, try without it
+                            $assetRoot = trim(env('DIGITALOCEAN_SPACES_ROOT_PATH', ''), '/');
+                            if ($assetRoot && strpos($imagePath, $assetRoot . '/') === 0) {
+                                $alternatePaths[] = substr($imagePath, strlen($assetRoot) + 1);
+                            }
+                            
+                            // If path doesn't start with root path, try with it
+                            if ($assetRoot && strpos($imagePath, $assetRoot . '/') !== 0) {
+                                $alternatePaths[] = $assetRoot . '/' . ltrim($imagePath, '/');
+                            }
+                            
+                            // Try alternate paths
+                            foreach ($alternatePaths as $altPath) {
+                                if ($storage->exists($altPath)) {
+                                    $fileContents = $storage->get($altPath);
+                                    \Log::info('Image found with alternate path on spaces', [
+                                        'original_path' => $imagePath,
+                                        'alternate_path' => $altPath
+                                    ]);
+                                    break;
+                                }
+                            }
                         }
                     } catch (\Throwable $e) {
                         \Log::warning('Failed to access spaces disk', [
