@@ -67,7 +67,7 @@ class SettingsServiceProvider extends ServiceProvider
                 'system_description' => Setting::get('system_description', 'Online Management System'),
                 'primary_color' => Setting::get('primary_color', '#4F46E5'),
                 'secondary_color' => Setting::get('secondary_color', '#6B7280'),
-                'hiring_application_public_access' => Setting::get('hiring_application_public_access', 'disabled'),
+                'hiring_application_public_access' => Setting::get('hiring_application_public_access', 'enabled'),
                 'hiring_application_url' => Setting::get('hiring_application_url', 'hiring/apply'),
                 // Contact Information
                 'contact_email' => Setting::get('contact_email', 'support@system.com'),

@@ -55,35 +55,6 @@
                 font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
                 -webkit-font-smoothing: antialiased;
                 -moz-osx-font-smoothing: grayscale;
-                color: #1f2937; /* Ensure default text color is visible */
-            }
-            
-            /* Ensure text is visible */
-            h1, h2, h3, h4, h5, h6 {
-                color: #111827;
-                font-weight: 700;
-            }
-            
-            p, span, div, a {
-                color: inherit;
-            }
-            
-            /* Ensure primary color text is visible */
-            .text-primary {
-                color: {{ $settings['primary_color'] ?? '#4F46E5' }} !important;
-            }
-            
-            /* Ensure gray text is visible */
-            .text-gray-600, .text-gray-700, .text-gray-900 {
-                color: #4b5563 !important;
-            }
-            
-            .text-gray-700 {
-                color: #374151 !important;
-            }
-            
-            .text-gray-900 {
-                color: #111827 !important;
             }
             
             /* Ensure Font Awesome icons are visible */
@@ -228,7 +199,7 @@
                         @endif
                         <a href="{{ route('landing.about') }}" class="px-4 py-2 text-gray-700 hover:text-primary font-medium transition-colors rounded-lg hover:bg-gray-50">About</a>
                         <a href="{{ route('landing.contact') }}" class="px-4 py-2 text-gray-700 hover:text-primary font-medium transition-colors rounded-lg hover:bg-gray-50">Contact</a>
-                        @if(($settings['hiring_application_public_access'] ?? 'disabled') === 'enabled')
+                        @if(($settings['hiring_application_public_access'] ?? 'enabled') === 'enabled')
                             <a href="{{ url('/' . ltrim($settings['hiring_application_url'] ?? 'hiring/apply', '/')) }}" class="px-4 py-2 text-gray-700 hover:text-primary font-medium transition-colors rounded-lg hover:bg-gray-50">Careers</a>
                         @endif
 
@@ -266,7 +237,7 @@
                     @endif
                     <a href="{{ route('landing.about') }}" class="block px-4 py-3 text-gray-700 hover:text-primary hover:bg-gray-50 rounded-lg font-medium transition-colors">About</a>
                     <a href="{{ route('landing.contact') }}" class="block px-4 py-3 text-gray-700 hover:text-primary hover:bg-gray-50 rounded-lg font-medium transition-colors">Contact</a>
-                    @if(($settings['hiring_application_public_access'] ?? 'disabled') === 'enabled')
+                    @if(($settings['hiring_application_public_access'] ?? 'enabled') === 'enabled')
                         <a href="{{ url('/' . ltrim($settings['hiring_application_url'] ?? 'hiring/apply', '/')) }}" class="block px-4 py-3 text-gray-700 hover:text-primary hover:bg-gray-50 rounded-lg font-medium transition-colors">Careers</a>
                     @endif
 
