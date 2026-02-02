@@ -28,37 +28,33 @@ class SettingsServiceProvider extends ServiceProvider
             // Get existing settings from view data if they exist
             $existingSettings = $view->getData()['settings'] ?? [];
 
-            // Helper to build URL with DigitalOcean disk first, fallback to public/local
+            // Helper to build URL with image proxy (same as LandingController)
             $buildUrl = function ($path) {
-                if (!$path) {
+                // Handle empty/null values
+                if (empty($path) || $path === 'not found' || $path === null || trim($path) === '' || trim($path) === '/') {
                     return null;
                 }
 
-                // Try digitalocean disk only if configured
-                try {
-                    $doConfig = config('filesystems.disks.digitalocean', []);
-                    if (!empty($doConfig['bucket']) && !empty($doConfig['key']) && !empty($doConfig['secret'])) {
-                        return Storage::disk('digitalocean')->url($path);
-                    }
-                } catch (\Throwable $e) {
-                    // Ignore and fallback
+                // Normalize the path
+                $imagePath = trim($path);
+
+                // If it's already a full URL (external), return it as-is
+                if (filter_var($imagePath, FILTER_VALIDATE_URL)) {
+                    return $imagePath;
                 }
 
-                // Fallback to public disk if file exists
-                try {
-                    if (Storage::disk('public')->exists($path)) {
-                        return Storage::disk('public')->url($path);
-                    }
-                } catch (\Throwable $e) {
-                    // Ignore and fallback
-                }
-
-                // Last resort: Storage::url (may use default disk)
-                try {
-                    return Storage::url($path);
-                } catch (\Throwable $e) {
+                // Validate that the path looks like a valid file path
+                if (strlen($imagePath) < 2 || $imagePath === '/' || $imagePath === '\\') {
                     return null;
                 }
+
+                // Use image proxy route to avoid CORS issues and handle DigitalOcean Spaces correctly
+                // Encode the path to handle special characters
+                $encodedPath = base64_encode($imagePath);
+                // Base64 strings contain +, /, and = which need special handling in URLs
+                $urlEncodedPath = str_replace(['+', '/', '='], ['%2B', '%2F', '%3D'], $encodedPath);
+                // Construct URL manually to avoid route helper encoding issues
+                return url('/image-proxy/' . $urlEncodedPath);
             };
 
             // Base settings that should be available in all views

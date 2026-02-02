@@ -33,6 +33,9 @@
         <link rel="preconnect" href="https://fonts.bunny.net">
         <link href="https://fonts.bunny.net/css?family=inter:400,500,600,700,800&display=swap" rel="stylesheet" />
 
+        <!-- Font Awesome Icons -->
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" integrity="sha512-iecdLmaskl7CVkqkXNQ/ZH/XLlvWZOJyj7Yy7tcenmpD1ypASozpmT/E0iPtmFIB46ZmdtAc9eNBvH0H/ZpiBw==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+
         <!-- Scripts -->
         @vite(['resources/css/app.css', 'resources/js/app.js'])
 
@@ -45,7 +48,58 @@
         <!-- Custom Styles -->
         <style>
             * {
-                font-family: 'Inter', sans-serif;
+                font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            }
+            
+            body {
+                font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+                -webkit-font-smoothing: antialiased;
+                -moz-osx-font-smoothing: grayscale;
+                color: #1f2937; /* Ensure default text color is visible */
+            }
+            
+            /* Ensure text is visible */
+            h1, h2, h3, h4, h5, h6 {
+                color: #111827;
+                font-weight: 700;
+            }
+            
+            p, span, div, a {
+                color: inherit;
+            }
+            
+            /* Ensure primary color text is visible */
+            .text-primary {
+                color: {{ $settings['primary_color'] ?? '#4F46E5' }} !important;
+            }
+            
+            /* Ensure gray text is visible */
+            .text-gray-600, .text-gray-700, .text-gray-900 {
+                color: #4b5563 !important;
+            }
+            
+            .text-gray-700 {
+                color: #374151 !important;
+            }
+            
+            .text-gray-900 {
+                color: #111827 !important;
+            }
+            
+            /* Ensure Font Awesome icons are visible */
+            i[class*="fa-"], i[class*="fab"], i[class*="fas"], i[class*="far"], i[class*="fal"], i[class*="fad"] {
+                font-family: "Font Awesome 6 Free", "Font Awesome 6 Brands", "Font Awesome 6 Pro" !important;
+                font-weight: 900;
+                font-style: normal;
+                font-variant: normal;
+                text-rendering: auto;
+                line-height: 1;
+                display: inline-block;
+            }
+            
+            i[class*="fab"] {
+                font-family: "Font Awesome 6 Brands" !important;
+                font-weight: 400;
             }
 
             .gradient-bg {
