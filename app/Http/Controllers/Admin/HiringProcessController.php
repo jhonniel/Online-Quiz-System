@@ -84,11 +84,15 @@ class HiringProcessController extends Controller
         ];
     }
 
-    public function applicants()
+    public function applicants(Request $request)
     {
         $user = Auth::user();
         $minimumScore = Setting::get('minimum_quiz_score', 70);
         $autoApproveScore = Setting::get('auto_approve_score', 90);
+
+        // Get search and filter parameters for hired applicants
+        $hiredSearch = trim((string) $request->input('hired_search', ''));
+        $hiredPositionFilter = $request->input('hired_position', '');
 
         // Get allowed position IDs for the current user
         $allowedPositionIds = $user->getAllowedPositionIds();
@@ -166,63 +170,102 @@ class HiringProcessController extends Controller
                 ->values();
         }
 
+        // Initialize hiredApplicants as empty collection first
+        $hiredApplicants = collect();
+
         // Get hired and accepted applicants separately
-        $hiredApplicationsQuery = HiringApplication::with(['hiringPosition', 'user'])
-            ->whereIn('status', ['hired', 'accepted']);
+        try {
+            $hiredApplicationsQuery = HiringApplication::with(['hiringPosition', 'user'])
+                ->whereIn('status', ['hired', 'accepted']);
 
-        // Filter by allowed positions if user has restrictions
-        if ($allowedPositionIds !== null) {
-            if (!empty($allowedPositionIds)) {
-                $hiredApplicationsQuery->whereIn('hiring_position_id', $allowedPositionIds);
-            } else {
-                $hiredApplicationsQuery->whereRaw('1 = 0'); // Return no results
+            // Filter by allowed positions if user has restrictions
+            if ($allowedPositionIds !== null) {
+                if (!empty($allowedPositionIds)) {
+                    $hiredApplicationsQuery->whereIn('hiring_position_id', $allowedPositionIds);
+                } else {
+                    $hiredApplicationsQuery->whereRaw('1 = 0'); // Return no results
+                }
             }
-        }
 
-        $hiredApplications = $hiredApplicationsQuery->get();
+            $hiredApplications = $hiredApplicationsQuery->get();
 
-        // Process hired/accepted applicants
-        $hiredApplicants = $hiredApplications->map(function($application) {
-            $user = $application->user;
-            $bestAttempt = null;
-            $bestScore = 0;
-            $bestQuiz = 'N/A';
-            $attemptsCount = 0;
-            $lastAttempt = null;
+            // Process hired/accepted applicants - ensure it's always a collection
+            $hiredApplicants = $hiredApplications->map(function($application) {
+                $user = $application->user;
+                $bestAttempt = null;
+                $bestScore = 0;
+                $bestQuiz = 'N/A';
+                $attemptsCount = 0;
+                $lastAttempt = null;
 
-            if ($user) {
-                $bestAttempt = $user->quizAttemptHistory()
-                    ->whereNotNull('score')
-                    ->orderBy('score', 'desc')
-                    ->first();
-                
-                if ($bestAttempt) {
-                    $bestScore = $bestAttempt->score;
-                    $bestQuiz = $bestAttempt->quiz ? $bestAttempt->quiz->title : 'N/A';
-                    $lastAttempt = $bestAttempt->created_at;
+                if ($user) {
+                    $bestAttempt = $user->quizAttemptHistory()
+                        ->whereNotNull('score')
+                        ->orderBy('score', 'desc')
+                        ->first();
+                    
+                    if ($bestAttempt) {
+                        $bestScore = $bestAttempt->score;
+                        $bestQuiz = $bestAttempt->quiz ? $bestAttempt->quiz->title : 'N/A';
+                        $lastAttempt = $bestAttempt->created_at;
+                    }
+
+                    $attemptsCount = $user->quizAttemptHistory()->whereNotNull('score')->count();
                 }
 
-                $attemptsCount = $user->quizAttemptHistory()->whereNotNull('score')->count();
+                return [
+                    'id' => $user ? $user->id : null,
+                    'name' => $application->full_name ?? ($user ? $user->name : 'N/A'),
+                    'email' => $application->email ?? ($user ? $user->email : 'N/A'),
+                    'best_score' => $bestScore,
+                    'best_quiz' => $bestQuiz,
+                    'status' => $application->status, // 'hired' or 'accepted'
+                    'attempts_count' => $attemptsCount,
+                    'last_attempt' => $lastAttempt,
+                    'position' => $application->hiringPosition ? $application->hiringPosition->title : ($application->position_applied ?? 'N/A'),
+                    'position_id' => $application->hiringPosition ? $application->hiringPosition->id : null,
+                    'application_id' => $application->id,
+                    'reviewed_at' => $application->reviewed_at,
+                ];
+            })
+            ->sortByDesc('reviewed_at')
+            ->values();
+
+            // Apply search filter
+            if ($hiredSearch !== '') {
+                $hiredApplicants = $hiredApplicants->filter(function($applicant) use ($hiredSearch) {
+                    $searchLower = strtolower($hiredSearch);
+                    return str_contains(strtolower($applicant['name']), $searchLower) ||
+                           str_contains(strtolower($applicant['email']), $searchLower) ||
+                           str_contains(strtolower($applicant['position']), $searchLower) ||
+                           str_contains(strtolower($applicant['status']), $searchLower) ||
+                           (is_numeric($hiredSearch) && (
+                               $applicant['id'] == (int)$hiredSearch ||
+                               $applicant['application_id'] == (int)$hiredSearch
+                           ));
+                })->values();
             }
 
-            return [
-                'id' => $user ? $user->id : null,
-                'name' => $application->full_name ?? ($user ? $user->name : 'N/A'),
-                'email' => $application->email ?? ($user ? $user->email : 'N/A'),
-                'best_score' => $bestScore,
-                'best_quiz' => $bestQuiz,
-                'status' => $application->status, // 'hired' or 'accepted'
-                'attempts_count' => $attemptsCount,
-                'last_attempt' => $lastAttempt,
-                'position' => $application->hiringPosition ? $application->hiringPosition->title : ($application->position_applied ?? 'N/A'),
-                'application_id' => $application->id,
-                'reviewed_at' => $application->reviewed_at,
-            ];
-        })
-        ->sortByDesc('reviewed_at')
-        ->values();
+            // Apply position filter
+            if ($hiredPositionFilter !== '') {
+                $hiredApplicants = $hiredApplicants->filter(function($applicant) use ($hiredPositionFilter) {
+                    return $applicant['position_id'] == (int)$hiredPositionFilter;
+                })->values();
+            }
+        } catch (\Exception $e) {
+            // If there's an error, keep hiredApplicants as empty collection
+            \Log::error('Error fetching hired applicants: ' . $e->getMessage());
+            $hiredApplicants = collect();
+        }
 
-        return view('admin.hiring-process.applicants', compact('applicants', 'hiredApplicants', 'minimumScore', 'autoApproveScore'));
+        // Get positions for filter dropdown (only positions user has access to)
+        $positions = \App\Models\HiringPosition::query();
+        if ($allowedPositionIds !== null && !empty($allowedPositionIds)) {
+            $positions->whereIn('id', $allowedPositionIds);
+        }
+        $positions = $positions->orderBy('title')->get();
+
+        return view('admin.hiring-process.applicants', compact('applicants', 'hiredApplicants', 'minimumScore', 'autoApproveScore', 'positions', 'hiredSearch', 'hiredPositionFilter'));
     }
 }
 

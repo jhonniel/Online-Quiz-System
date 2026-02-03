@@ -26,7 +26,7 @@
     </div>
 
     <!-- Filters -->
-    <div class="bg-white shadow-sm rounded-lg border border-gray-200 p-4">
+    <div id="filters-section" class="bg-white shadow-sm rounded-lg border border-gray-200 p-4">
         <div class="flex items-center justify-between">
             <div class="flex items-center space-x-4">
                 <span class="text-sm font-medium text-gray-700">Minimum Score: <span class="text-indigo-600">{{ $minimumScore }}%</span></span>
@@ -41,7 +41,7 @@
     </div>
 
     <!-- Applicants Table -->
-    <div class="bg-white shadow-sm rounded-lg border border-gray-200 overflow-hidden">
+    <div id="applications-section" class="bg-white shadow-sm rounded-lg border border-gray-200 overflow-hidden">
         <div class="px-6 py-4 border-b border-gray-200">
             <h2 class="text-lg font-medium text-gray-900">Applications</h2>
             <p class="text-sm text-gray-500 mt-1">Applicants pending review or awaiting action</p>
@@ -145,11 +145,77 @@
     </div>
 
     <!-- Hired Applicants Table -->
-    <div class="bg-white shadow-sm rounded-lg border border-gray-200 overflow-hidden mt-6">
+    <div id="hired-applicants" class="bg-white shadow-sm rounded-lg border border-gray-200 overflow-hidden mt-6">
         <div class="px-6 py-4 border-b border-gray-200">
             <h2 class="text-lg font-medium text-gray-900">Hired Applicants</h2>
             <p class="text-sm text-gray-500 mt-1">Applicants who have been hired or accepted</p>
         </div>
+
+        <!-- Filters for Hired Applicants -->
+        <div class="px-6 py-4 border-b border-gray-200 bg-gray-50">
+            <form method="GET" action="{{ route('admin.hiring-process.applicants') }}" id="hired-applicants-form" class="flex items-center justify-between flex-wrap gap-4">
+                <!-- Preserve other query parameters -->
+                @if(request('search'))
+                    <input type="hidden" name="search" value="{{ request('search') }}">
+                @endif
+                @if(request('position'))
+                    <input type="hidden" name="position" value="{{ request('position') }}">
+                @endif
+                @if(request('status'))
+                    <input type="hidden" name="status" value="{{ request('status') }}">
+                @endif
+
+                <div class="flex items-center space-x-4 flex-wrap flex-1">
+                    <!-- Search -->
+                    <div class="flex-1 min-w-[240px] max-w-md">
+                        <div class="relative">
+                            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                <svg class="h-4 w-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                                </svg>
+                            </div>
+                            <input type="text"
+                                   id="hired-search-input"
+                                   name="hired_search"
+                                   value="{{ request('hired_search', $hiredSearch ?? '') }}"
+                                   placeholder="Search hired applicants (name, email, position, status, ID)..."
+                                   autocomplete="off"
+                                   class="block w-full pl-9 pr-10 py-2 border border-gray-300 rounded-md shadow-sm text-sm focus:ring-indigo-500 focus:border-indigo-500">
+                            @if(request('hired_search'))
+                                <button type="button"
+                                        id="hired-clear-search-btn"
+                                        class="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600"
+                                        title="Clear search">
+                                    <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                                    </svg>
+                                </button>
+                            @endif
+                        </div>
+                    </div>
+
+                    <!-- Position Filter -->
+                    @if(isset($positions) && $positions->count() > 0)
+                        <div class="flex items-center space-x-2">
+                            <label for="hired_position" class="text-sm font-medium text-gray-700">Position:</label>
+                            <select name="hired_position" id="hired_position" onchange="submitHiredForm()"
+                                    class="px-3 py-2 border border-gray-300 rounded-md shadow-sm text-sm focus:ring-indigo-500 focus:border-indigo-500">
+                                <option value="">All Positions</option>
+                                @foreach($positions as $pos)
+                                    <option value="{{ $pos->id }}" {{ ($hiredPositionFilter ?? '') == $pos->id ? 'selected' : '' }}>
+                                        {{ $pos->title }}
+                                    </option>
+                                @endforeach
+                            </select>
+                        </div>
+                    @endif
+                </div>
+                <div class="text-sm text-gray-500 whitespace-nowrap">
+                    Total: {{ count($hiredApplicants) }} hired applicants
+                </div>
+            </form>
+        </div>
+
         <div class="overflow-x-auto">
             <table class="min-w-full divide-y divide-gray-200">
                 <thead class="bg-gray-50">
@@ -256,5 +322,102 @@
         </div>
     </div>
 </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Check if URL hash is #hired-applicants
+    if (window.location.hash === '#hired-applicants') {
+        // Hide the Applications section
+        const applicationsSection = document.getElementById('applications-section');
+        if (applicationsSection) {
+            applicationsSection.style.display = 'none';
+        }
+        
+        // Hide the filters section
+        const filtersSection = document.getElementById('filters-section');
+        if (filtersSection) {
+            filtersSection.style.display = 'none';
+        }
+        
+        // Scroll to hired applicants section
+        setTimeout(function() {
+            const hiredSection = document.getElementById('hired-applicants');
+            if (hiredSection) {
+                hiredSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }
+        }, 100);
+    }
+    
+    // Handle hash changes (if user clicks anchor link while on page)
+    window.addEventListener('hashchange', function() {
+        const applicationsSection = document.getElementById('applications-section');
+        const filtersSection = document.getElementById('filters-section');
+        
+        if (window.location.hash === '#hired-applicants') {
+            if (applicationsSection) {
+                applicationsSection.style.display = 'none';
+            }
+            if (filtersSection) {
+                filtersSection.style.display = 'none';
+            }
+        } else {
+            if (applicationsSection) {
+                applicationsSection.style.display = '';
+            }
+            if (filtersSection) {
+                filtersSection.style.display = '';
+            }
+        }
+    });
+
+    // Hired Applicants Search Functionality
+    const hiredForm = document.getElementById('hired-applicants-form');
+    const hiredSearchInput = document.getElementById('hired-search-input');
+    const hiredClearBtn = document.getElementById('hired-clear-search-btn');
+
+    // Function to submit form with hash
+    window.submitHiredForm = function() {
+        const form = document.getElementById('hired-applicants-form');
+        if (form) {
+            // Build URL with query string and hash
+            const formData = new FormData(form);
+            const params = new URLSearchParams();
+            
+            // Add all form data to params
+            for (const [key, value] of formData.entries()) {
+                if (value) {
+                    params.append(key, value);
+                }
+            }
+            
+            // Build URL with hash
+            const url = form.action + '?' + params.toString() + '#hired-applicants';
+            window.location.href = url;
+        }
+    };
+
+    let hiredSearchTimeout = null;
+    if (hiredForm && hiredSearchInput) {
+        hiredSearchInput.addEventListener('input', function () {
+            if (hiredSearchTimeout) clearTimeout(hiredSearchTimeout);
+            hiredSearchTimeout = setTimeout(() => {
+                submitHiredForm();
+            }, 350);
+        });
+    }
+
+    if (hiredClearBtn && hiredSearchInput && hiredForm) {
+        hiredClearBtn.addEventListener('click', function () {
+            hiredSearchInput.value = '';
+            submitHiredForm();
+        });
+    }
+
+    // Update form action to include hash on page load if we're on hired applicants section
+    if (hiredForm && window.location.hash === '#hired-applicants') {
+        // Form will submit with hash preserved via JavaScript
+    }
+});
+</script>
 @endsection
 
