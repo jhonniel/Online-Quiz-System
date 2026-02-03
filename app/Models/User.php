@@ -576,6 +576,11 @@ class User extends Authenticatable
         return $this->hasOne(AdminPermission::class);
     }
 
+    public function hiringApplications()
+    {
+        return $this->hasMany(HiringApplication::class);
+    }
+
     /**
      * Check if user has access to a specific admin feature.
      * Super admins (admins without permission records) have access to all features.
@@ -699,6 +704,39 @@ class User extends Authenticatable
         // Return allowed_departments (null or empty means all departments)
         $allowedDepartments = $adminPermission->allowed_departments;
         return empty($allowedDepartments) ? null : $allowedDepartments;
+    }
+
+    /**
+     * Get allowed position IDs for hiring process filtering.
+     * Returns null if user can access all positions, empty array if no access.
+     */
+    public function getAllowedPositionIds(): ?array
+    {
+        // Super admins can manage all positions (return null means all)
+        if ($this->isSuperAdmin()) {
+            return null;
+        }
+
+        // If user doesn't have Hiring Process permission, return empty array
+        if (!$this->canAccessHiringProcess()) {
+            return [];
+        }
+
+        // Load the relationship if not already loaded
+        if (!$this->relationLoaded('adminPermission')) {
+            $this->load('adminPermission');
+        }
+
+        $adminPermission = $this->adminPermission;
+
+        // If no permission record exists, return empty array
+        if (!$adminPermission) {
+            return [];
+        }
+
+        // Return allowed_positions (null or empty means all positions)
+        $allowedPositions = $adminPermission->allowed_positions;
+        return empty($allowedPositions) ? null : $allowedPositions;
     }
 
     /**

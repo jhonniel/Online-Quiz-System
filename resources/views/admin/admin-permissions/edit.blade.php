@@ -170,18 +170,47 @@
                     </div>
 
                     <!-- Hiring Process -->
-                    <div class="flex items-start space-x-3 p-4 border border-gray-200 rounded-lg hover:bg-gray-50">
-                        <input type="checkbox"
-                               name="hiring_process"
-                               id="hiring_process"
-                               value="1"
-                               {{ ($permission && $permission->hiring_process) ? 'checked' : '' }}
-                               class="mt-1 h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded">
-                        <div class="flex-1">
-                            <label for="hiring_process" class="block text-sm font-medium text-gray-900 cursor-pointer">
-                                Hiring Process
-                            </label>
-                            <p class="mt-1 text-sm text-gray-500">Access to hiring positions and applications</p>
+                    <div class="md:col-span-2">
+                        <div class="flex items-start space-x-3 p-4 border border-gray-200 rounded-lg hover:bg-gray-50">
+                            <input type="checkbox"
+                                   name="hiring_process"
+                                   id="hiring_process"
+                                   value="1"
+                                   {{ ($permission && $permission->hiring_process) ? 'checked' : '' }}
+                                   class="mt-1 h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
+                                   onchange="togglePositionSelection()">
+                            <div class="flex-1">
+                                <label for="hiring_process" class="block text-sm font-medium text-gray-900 cursor-pointer">
+                                    Hiring Process
+                                </label>
+                                <p class="mt-1 text-sm text-gray-500">Access to hiring positions and applications</p>
+
+                                <!-- Position Selection (shown only when Hiring Process is checked) -->
+                                <div id="position-selection" class="mt-4 {{ ($permission && $permission->hiring_process) ? '' : 'hidden' }}">
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                                        Allowed Positions
+                                        <span class="text-xs text-gray-500 font-normal">(Leave empty to allow all positions)</span>
+                                    </label>
+                                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 max-h-48 overflow-y-auto p-3 bg-gray-50 rounded-md border border-gray-200">
+                                        @foreach($hiringPositions as $position)
+                                            <div class="flex items-center">
+                                                <input type="checkbox"
+                                                       name="allowed_positions[]"
+                                                       id="pos_{{ $position->id }}"
+                                                       value="{{ $position->id }}"
+                                                       {{ ($permission && $permission->allowed_positions && in_array($position->id, $permission->allowed_positions)) ? 'checked' : '' }}
+                                                       class="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded">
+                                                <label for="pos_{{ $position->id }}" class="ml-2 text-sm text-gray-700 cursor-pointer">
+                                                    {{ $position->title }}
+                                                </label>
+                                            </div>
+                                        @endforeach
+                                    </div>
+                                    @if($hiringPositions->isEmpty())
+                                        <p class="mt-2 text-sm text-gray-500">No hiring positions available. <a href="{{ route('admin.hiring-positions.index') }}" class="text-indigo-600 hover:text-indigo-800">Create positions</a> first.</p>
+                                    @endif
+                                </div>
+                            </div>
                         </div>
                     </div>
 
@@ -284,9 +313,28 @@ function toggleDepartmentSelection() {
     }
 }
 
+function togglePositionSelection() {
+    const hiringProcessCheckbox = document.getElementById('hiring_process');
+    const positionSelection = document.getElementById('position-selection');
+
+    if (hiringProcessCheckbox && positionSelection) {
+        if (hiringProcessCheckbox.checked) {
+            positionSelection.classList.remove('hidden');
+        } else {
+            positionSelection.classList.add('hidden');
+            // Uncheck all position checkboxes when Hiring Process is disabled
+            const positionCheckboxes = positionSelection.querySelectorAll('input[type="checkbox"]');
+            positionCheckboxes.forEach(checkbox => {
+                checkbox.checked = false;
+            });
+        }
+    }
+}
+
 // Initialize on page load
 document.addEventListener('DOMContentLoaded', function() {
     toggleDepartmentSelection();
+    togglePositionSelection();
 });
 </script>
 @endsection

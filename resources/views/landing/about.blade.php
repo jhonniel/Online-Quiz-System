@@ -104,31 +104,4 @@
 </section>
 @endif
 
-@if(!empty($aboutPageCtaTitle))
-<!-- CTA Section -->
-<section class="py-20 gradient-bg text-white">
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-        <h2 class="text-3xl md:text-4xl font-bold mb-4">{{ $aboutPageCtaTitle }}</h2>
-        @if(!empty($aboutPageCtaDescription))
-            <p class="text-xl mb-8 text-gray-100">{{ $aboutPageCtaDescription }}</p>
-        @endif
-
-        @auth
-            @if(auth()->user()->isAdmin())
-                <a href="{{ route('admin.dashboard') }}" class="bg-white text-primary px-8 py-3 rounded-lg font-semibold hover:bg-gray-100 transition-colors">
-                    {{ $aboutPageCtaButtonText ?: 'Access Admin Panel' }}
-                </a>
-            @else
-                <a href="{{ route('user.dashboard') }}" class="bg-white text-primary px-8 py-3 rounded-lg font-semibold hover:bg-gray-100 transition-colors">
-                    {{ $aboutPageCtaButtonText ?: 'Access Student Portal' }}
-                </a>
-            @endif
-        @else
-            <a href="{{ route('login') }}" class="bg-white text-primary px-8 py-3 rounded-lg font-semibold hover:bg-gray-100 transition-colors">
-                {{ $aboutPageCtaButtonText ?: 'Get Started Today' }}
-            </a>
-        @endauth
-    </div>
-</section>
-@endif
 @endsection

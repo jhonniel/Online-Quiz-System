@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\User;
 use App\Models\AdminPermission;
 use App\Models\Department;
+use App\Models\HiringPosition;
 use Illuminate\Http\Request;
 
 class AdminPermissionController extends Controller
@@ -141,8 +142,9 @@ class AdminPermissionController extends Controller
 
         $permission = $user->adminPermission;
         $departments = Department::active()->orderBy('name')->get();
+        $hiringPositions = HiringPosition::where('is_active', true)->orderBy('title')->get();
 
-        return view('admin.admin-permissions.edit', compact('user', 'permission', 'departments', 'isFullAccessAdmin'));
+        return view('admin.admin-permissions.edit', compact('user', 'permission', 'departments', 'hiringPositions', 'isFullAccessAdmin'));
     }
 
     /**
@@ -169,6 +171,8 @@ class AdminPermissionController extends Controller
             'allowed_departments.*' => 'exists:departments,id',
             'student_management' => 'boolean',
             'hiring_process' => 'boolean',
+            'allowed_positions' => 'nullable|array',
+            'allowed_positions.*' => 'exists:hiring_positions,id',
             'communication' => 'boolean',
             'user_management' => 'boolean',
             'system' => 'boolean',
@@ -192,6 +196,14 @@ class AdminPermissionController extends Controller
         } else {
             // If employee_management is disabled, clear allowed_departments
             $permissions['allowed_departments'] = null;
+        }
+
+        // Handle allowed positions - only set if hiring_process is enabled
+        if ($request->has('hiring_process')) {
+            $permissions['allowed_positions'] = $request->input('allowed_positions', []);
+        } else {
+            // If hiring_process is disabled, clear allowed_positions
+            $permissions['allowed_positions'] = null;
         }
 
         // Update or create permission record
