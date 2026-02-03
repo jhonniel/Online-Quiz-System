@@ -164,6 +164,9 @@
                 @if(request('status'))
                     <input type="hidden" name="status" value="{{ request('status') }}">
                 @endif
+                @if(request('view'))
+                    <input type="hidden" name="view" value="{{ request('view') }}">
+                @endif
 
                 <div class="flex items-center space-x-4 flex-wrap flex-1">
                     <!-- Search -->
@@ -325,8 +328,11 @@
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
+    const urlParams = new URLSearchParams(window.location.search);
+    const hiredOnlyMode = window.location.hash === '#hired-applicants' || urlParams.get('view') === 'hired';
+
     // Check if URL hash is #hired-applicants
-    if (window.location.hash === '#hired-applicants') {
+    if (hiredOnlyMode) {
         // Hide the Applications section
         const applicationsSection = document.getElementById('applications-section');
         if (applicationsSection) {
@@ -353,7 +359,10 @@ document.addEventListener('DOMContentLoaded', function() {
         const applicationsSection = document.getElementById('applications-section');
         const filtersSection = document.getElementById('filters-section');
         
-        if (window.location.hash === '#hired-applicants') {
+        const urlParams = new URLSearchParams(window.location.search);
+        const hiredOnlyMode = window.location.hash === '#hired-applicants' || urlParams.get('view') === 'hired';
+
+        if (hiredOnlyMode) {
             if (applicationsSection) {
                 applicationsSection.style.display = 'none';
             }
