@@ -93,10 +93,11 @@ class HiringProcessController extends Controller
         // Get allowed position IDs for the current user
         $allowedPositionIds = $user->getAllowedPositionIds();
 
-        // Build query for hiring applications
+        // Build query for hiring applications (excluding hired and accepted)
         $applicationsQuery = HiringApplication::with(['hiringPosition', 'user.quizAttemptHistory' => function($query) {
             $query->whereNotNull('score')->orderBy('score', 'desc');
-        }]);
+        }])
+        ->whereNotIn('status', ['hired', 'accepted']); // Exclude hired and accepted
 
         // Filter by allowed positions if user has restrictions
         if ($allowedPositionIds !== null) {
@@ -145,6 +146,8 @@ class HiringProcessController extends Controller
                     if ($allowedPositionIds !== null && !empty($allowedPositionIds)) {
                         $userApplications = $userApplications->whereIn('hiring_position_id', $allowedPositionIds);
                     }
+                    // Exclude hired and accepted applications from positions list
+                    $userApplications = $userApplications->whereNotIn('status', ['hired', 'accepted']);
                     $positions = $userApplications->pluck('hiringPosition.title')->filter()->unique()->values();
 
                     return [
@@ -163,7 +166,63 @@ class HiringProcessController extends Controller
                 ->values();
         }
 
-        return view('admin.hiring-process.applicants', compact('applicants', 'minimumScore', 'autoApproveScore'));
+        // Get hired and accepted applicants separately
+        $hiredApplicationsQuery = HiringApplication::with(['hiringPosition', 'user'])
+            ->whereIn('status', ['hired', 'accepted']);
+
+        // Filter by allowed positions if user has restrictions
+        if ($allowedPositionIds !== null) {
+            if (!empty($allowedPositionIds)) {
+                $hiredApplicationsQuery->whereIn('hiring_position_id', $allowedPositionIds);
+            } else {
+                $hiredApplicationsQuery->whereRaw('1 = 0'); // Return no results
+            }
+        }
+
+        $hiredApplications = $hiredApplicationsQuery->get();
+
+        // Process hired/accepted applicants
+        $hiredApplicants = $hiredApplications->map(function($application) {
+            $user = $application->user;
+            $bestAttempt = null;
+            $bestScore = 0;
+            $bestQuiz = 'N/A';
+            $attemptsCount = 0;
+            $lastAttempt = null;
+
+            if ($user) {
+                $bestAttempt = $user->quizAttemptHistory()
+                    ->whereNotNull('score')
+                    ->orderBy('score', 'desc')
+                    ->first();
+                
+                if ($bestAttempt) {
+                    $bestScore = $bestAttempt->score;
+                    $bestQuiz = $bestAttempt->quiz ? $bestAttempt->quiz->title : 'N/A';
+                    $lastAttempt = $bestAttempt->created_at;
+                }
+
+                $attemptsCount = $user->quizAttemptHistory()->whereNotNull('score')->count();
+            }
+
+            return [
+                'id' => $user ? $user->id : null,
+                'name' => $application->full_name ?? ($user ? $user->name : 'N/A'),
+                'email' => $application->email ?? ($user ? $user->email : 'N/A'),
+                'best_score' => $bestScore,
+                'best_quiz' => $bestQuiz,
+                'status' => $application->status, // 'hired' or 'accepted'
+                'attempts_count' => $attemptsCount,
+                'last_attempt' => $lastAttempt,
+                'position' => $application->hiringPosition ? $application->hiringPosition->title : ($application->position_applied ?? 'N/A'),
+                'application_id' => $application->id,
+                'reviewed_at' => $application->reviewed_at,
+            ];
+        })
+        ->sortByDesc('reviewed_at')
+        ->values();
+
+        return view('admin.hiring-process.applicants', compact('applicants', 'hiredApplicants', 'minimumScore', 'autoApproveScore'));
     }
 }
 

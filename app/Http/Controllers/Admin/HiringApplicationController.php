@@ -16,16 +16,67 @@ use Illuminate\Support\Facades\Log;
 
 class HiringApplicationController extends Controller
 {
+    /**
+     * Apply position-based filtering to the query based on user's allowed positions
+     */
+    private function applyPositionFilter($query)
+    {
+        $user = Auth::user();
+        $allowedPositionIds = $user->getAllowedPositionIds();
+
+        // If user has position restrictions, filter by allowed positions
+        if ($allowedPositionIds !== null) {
+            if (!empty($allowedPositionIds)) {
+                $query->whereIn('hiring_position_id', $allowedPositionIds);
+            } else {
+                // Empty array means no access
+                $query->whereRaw('1 = 0'); // Return no results
+            }
+        }
+        // If $allowedPositionIds is null, user can see all positions (super admin or no restrictions)
+
+        return $query;
+    }
+
+    /**
+     * Check if user can access a specific position
+     */
+    private function canAccessPosition($positionId)
+    {
+        $user = Auth::user();
+        $allowedPositionIds = $user->getAllowedPositionIds();
+
+        // Super admins or users with no restrictions can access all positions
+        if ($allowedPositionIds === null) {
+            return true;
+        }
+
+        // If empty array, no access
+        if (empty($allowedPositionIds)) {
+            return false;
+        }
+
+        // Check if position is in allowed list
+        return in_array($positionId, $allowedPositionIds);
+    }
+
     public function index(Request $request)
     {
         $query = HiringApplication::with(['reviewer', 'user', 'hiringPosition']);
 
+        // Apply position-based filtering first
+        $query = $this->applyPositionFilter($query);
+
         $search = trim((string) $request->input('search', ''));
         $searchTokens = $search !== '' ? preg_split('/\s+/', $search, -1, PREG_SPLIT_NO_EMPTY) : [];
 
-        // Filter by position if provided
+        // Filter by position if provided (but only if user has access to it)
         if ($request->has('position') && $request->position) {
-            $query->where('hiring_position_id', $request->position);
+            $positionId = $request->position;
+            // Only apply filter if user can access this position
+            if ($this->canAccessPosition($positionId)) {
+                $query->where('hiring_position_id', $positionId);
+            }
         }
 
         // Filter by status if provided
@@ -101,9 +152,23 @@ class HiringApplicationController extends Controller
 
         $positionFilter = $request->position;
         $statusFilter = $request->status;
-        $positions = \App\Models\HiringPosition::orderBy('title')->get();
+        
+        // Filter positions dropdown to only show allowed positions
+        $user = Auth::user();
+        $allowedPositionIds = $user->getAllowedPositionIds();
+        if ($allowedPositionIds !== null) {
+            if (!empty($allowedPositionIds)) {
+                $positions = \App\Models\HiringPosition::whereIn('id', $allowedPositionIds)->orderBy('title')->get();
+            } else {
+                $positions = collect(); // No positions available
+            }
+        } else {
+            $positions = \App\Models\HiringPosition::orderBy('title')->get();
+        }
 
         $baseQuery = HiringApplication::query();
+        // Apply position-based filtering to base query for stats
+        $baseQuery = $this->applyPositionFilter($baseQuery);
         if ($positionFilter) {
             $baseQuery->where('hiring_position_id', $positionFilter);
         }
@@ -191,15 +256,18 @@ class HiringApplicationController extends Controller
         $endOfCalendar = $endOfMonth->copy()->endOfWeek(Carbon::SUNDAY);
 
         // Get all applications with scheduled interviews in the calendar range
-        $scheduledApplications = HiringApplication::with(['hiringPosition', 'user'])
+        $scheduledQuery = HiringApplication::with(['hiringPosition', 'user'])
             ->where('status', 'interview_scheduled')
             ->whereNotNull('interview_date')
             ->whereDate('interview_date', '>=', $startOfCalendar->toDateString())
-            ->whereDate('interview_date', '<=', $endOfCalendar->toDateString())
-            ->get();
+            ->whereDate('interview_date', '<=', $endOfCalendar->toDateString());
+        
+        // Apply position-based filtering
+        $scheduledQuery = $this->applyPositionFilter($scheduledQuery);
+        $scheduledApplications = $scheduledQuery->get();
 
         // Get all accepted applications in the calendar range (use reviewed_at or created_at as the date)
-        $acceptedApplications = HiringApplication::with(['hiringPosition', 'user'])
+        $acceptedQuery = HiringApplication::with(['hiringPosition', 'user'])
             ->where('status', 'accepted')
             ->where(function($query) use ($startOfCalendar, $endOfCalendar) {
                 $query->where(function($q) use ($startOfCalendar, $endOfCalendar) {
@@ -213,8 +281,11 @@ class HiringApplicationController extends Controller
                       ->whereDate('created_at', '>=', $startOfCalendar->toDateString())
                       ->whereDate('created_at', '<=', $endOfCalendar->toDateString());
                 });
-            })
-            ->get();
+            });
+        
+        // Apply position-based filtering
+        $acceptedQuery = $this->applyPositionFilter($acceptedQuery);
+        $acceptedApplications = $acceptedQuery->get();
 
         // Combine all applications
         $applications = $scheduledApplications->concat($acceptedApplications);
@@ -318,6 +389,11 @@ class HiringApplicationController extends Controller
 
     public function show(HiringApplication $application)
     {
+        // Check if user can access this application's position
+        if (!$this->canAccessPosition($application->hiring_position_id)) {
+            abort(403, 'Access denied. You do not have permission to view applications for this position.');
+        }
+
         $application->load(['reviewer', 'user', 'hiringPosition']);
 
         // Get activity logs for this application
@@ -338,6 +414,11 @@ class HiringApplicationController extends Controller
 
     public function accept(Request $request, HiringApplication $application)
     {
+        // Check if user can access this application's position
+        if (!$this->canAccessPosition($application->hiring_position_id)) {
+            abort(403, 'Access denied. You do not have permission to accept applications for this position.');
+        }
+
         $request->validate([
             'admin_notes' => 'nullable|string|max:1000',
             'interview_date' => 'required|date|after_or_equal:now',
@@ -445,6 +526,11 @@ class HiringApplicationController extends Controller
 
     public function reject(Request $request, HiringApplication $application)
     {
+        // Check if user can access this application's position
+        if (!$this->canAccessPosition($application->hiring_position_id)) {
+            abort(403, 'Access denied. You do not have permission to reject applications for this position.');
+        }
+
         $request->validate([
             'admin_notes' => 'nullable|string|max:1000',
         ]);
@@ -498,6 +584,11 @@ class HiringApplicationController extends Controller
 
     public function reconsider(Request $request, HiringApplication $application)
     {
+        // Check if user can access this application's position
+        if (!$this->canAccessPosition($application->hiring_position_id)) {
+            abort(403, 'Access denied. You do not have permission to reconsider applications for this position.');
+        }
+
         // Only allow full admins (not employees with limited access) to reconsider applications
         if (!Auth::user()->isAdmin()) {
             abort(403, 'Only full administrators can reconsider applications.');
@@ -634,6 +725,11 @@ class HiringApplicationController extends Controller
 
     public function scheduleInterview(Request $request, HiringApplication $application)
     {
+        // Check if user can access this application's position
+        if (!$this->canAccessPosition($application->hiring_position_id)) {
+            abort(403, 'Access denied. You do not have permission to schedule interviews for this position.');
+        }
+
         $request->validate([
             'admin_notes' => 'nullable|string|max:1000',
             'interview_date' => 'required|date|after_or_equal:now',
@@ -722,6 +818,11 @@ class HiringApplicationController extends Controller
 
     public function downloadResume(HiringApplication $application)
     {
+        // Check if user can access this application's position
+        if (!$this->canAccessPosition($application->hiring_position_id)) {
+            abort(403, 'Access denied. You do not have permission to download resumes for this position.');
+        }
+
         if (!$application->resume_path) {
             abort(404, 'Resume not found.');
         }
@@ -751,6 +852,11 @@ class HiringApplicationController extends Controller
 
     public function viewResume(HiringApplication $application)
     {
+        // Check if user can access this application's position
+        if (!$this->canAccessPosition($application->hiring_position_id)) {
+            abort(403, 'Access denied. You do not have permission to view resumes for this position.');
+        }
+
         if (!$application->resume_path) {
             abort(404, 'Resume not found.');
         }
@@ -783,6 +889,11 @@ class HiringApplicationController extends Controller
 
     public function sendFollowUpEmail(Request $request, HiringApplication $application)
     {
+        // Check if user can access this application's position
+        if (!$this->canAccessPosition($application->hiring_position_id)) {
+            abort(403, 'Access denied. You do not have permission to send follow-up emails for this position.');
+        }
+
         // Only allow sending follow-up for scheduled interviews
         if ($application->status !== 'interview_scheduled') {
             return redirect()->route('admin.hiring-applications.show', $application)
@@ -839,6 +950,11 @@ class HiringApplicationController extends Controller
 
     public function markInterviewDone(Request $request, HiringApplication $application)
     {
+        // Check if user can access this application's position
+        if (!$this->canAccessPosition($application->hiring_position_id)) {
+            abort(403, 'Access denied. You do not have permission to mark interviews as done for this position.');
+        }
+
         // Only allow marking interview as done if interview was scheduled
         if ($application->status !== 'interview_scheduled') {
             return redirect()->route('admin.hiring-applications.show', $application)
@@ -884,6 +1000,11 @@ class HiringApplicationController extends Controller
 
     public function markAsHired(Request $request, HiringApplication $application)
     {
+        // Check if user can access this application's position
+        if (!$this->canAccessPosition($application->hiring_position_id)) {
+            abort(403, 'Access denied. You do not have permission to mark applicants as hired for this position.');
+        }
+
         // Only super admins can mark applicants as hired
         if (!Auth::user()->isSuperAdmin()) {
             abort(403, 'Access denied. Only super administrators can mark applicants as hired.');
@@ -992,6 +1113,11 @@ class HiringApplicationController extends Controller
 
     public function acceptIntern(Request $request, HiringApplication $application)
     {
+        // Check if user can access this application's position
+        if (!$this->canAccessPosition($application->hiring_position_id)) {
+            abort(403, 'Access denied. You do not have permission to accept interns for this position.');
+        }
+
         // Only super admins can accept interns
         if (!Auth::user()->isSuperAdmin()) {
             abort(403, 'Access denied. Only super administrators can accept interns.');
@@ -1104,6 +1230,11 @@ class HiringApplicationController extends Controller
 
     public function cancelHired(Request $request, HiringApplication $application)
     {
+        // Check if user can access this application's position
+        if (!$this->canAccessPosition($application->hiring_position_id)) {
+            abort(403, 'Access denied. You do not have permission to cancel hired status for this position.');
+        }
+
         // Only allow canceling if application is hired
         if ($application->status !== 'hired') {
             return redirect()->route('admin.hiring-applications.show', $application)
@@ -1183,6 +1314,11 @@ class HiringApplicationController extends Controller
 
     public function updateAdminNotes(Request $request, HiringApplication $application)
     {
+        // Check if user can access this application's position
+        if (!$this->canAccessPosition($application->hiring_position_id)) {
+            abort(403, 'Access denied. You do not have permission to update admin notes for this position.');
+        }
+
         $request->validate([
             'admin_notes' => 'nullable|string|max:1000',
         ]);
@@ -1197,6 +1333,11 @@ class HiringApplicationController extends Controller
 
     public function destroy(HiringApplication $application)
     {
+        // Check if user can access this application's position
+        if (!$this->canAccessPosition($application->hiring_position_id)) {
+            abort(403, 'Access denied. You do not have permission to delete applications for this position.');
+        }
+
         // Only allow full admins (not employees with limited access) to delete applications
         if (!Auth::user()->isAdmin()) {
             abort(403, 'Only full administrators can delete applications.');
