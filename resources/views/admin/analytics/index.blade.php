@@ -462,6 +462,79 @@
         </div>
     </div>
 
+    <!-- Quiz Performance Ranking Section -->
+    @if(isset($quizRankings) && $quizRankings->isNotEmpty())
+    <div class="bg-white shadow rounded-lg">
+        <div class="px-4 py-5 sm:p-6">
+            <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
+                <div>
+                    <h3 class="text-lg leading-6 font-medium text-gray-900">Quiz Performance Ranking</h3>
+                    <p class="text-sm text-gray-500 mt-1">
+                        Students ranked by total quiz scores from all completed attempts.
+                    </p>
+                </div>
+                <div class="inline-flex items-center px-3 py-1.5 rounded-full bg-indigo-50 border border-indigo-200 text-xs text-indigo-600">
+                    <span class="w-2 h-2 rounded-full bg-indigo-500 mr-2"></span>
+                    Based on quiz attempt history scores
+                </div>
+            </div>
+
+            <div class="overflow-x-auto">
+                <table class="min-w-full divide-y divide-gray-200 text-sm">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th class="px-3 sm:px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Rank</th>
+                            <th class="px-3 sm:px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Student</th>
+                            <th class="px-3 sm:px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">School / University</th>
+                            <th class="px-3 sm:px-6 py-3 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider">Total Score</th>
+                            <th class="px-3 sm:px-6 py-3 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider">Attempts</th>
+                            <th class="px-3 sm:px-6 py-3 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider">Average Score</th>
+                        </tr>
+                    </thead>
+                    <tbody class="bg-white divide-y divide-gray-100">
+                        @foreach($quizRankings as $ranking)
+                            <tr class="hover:bg-gray-50 transition-colors">
+                                <td class="px-3 sm:px-6 py-3 whitespace-nowrap text-xs sm:text-sm text-gray-500">
+                                    <div class="inline-flex items-center px-2.5 py-1 rounded-full bg-gray-100 text-[11px] font-medium text-gray-700">
+                                        #{{ $ranking['rank'] }}
+                                        @if(isset($ranking['arrow_direction']))
+                                            @if($ranking['arrow_direction'] === 'up')
+                                                <span class="ml-1 text-emerald-600">⬆️</span>
+                                            @elseif($ranking['arrow_direction'] === 'down')
+                                                <span class="ml-1 text-rose-600">⬇️</span>
+                                            @endif
+                                        @endif
+                                    </div>
+                                </td>
+                                <td class="px-3 sm:px-6 py-3 whitespace-nowrap text-xs sm:text-sm text-gray-900">
+                                    <div class="font-semibold truncate max-w-[160px] sm:max-w-xs">
+                                        {{ $ranking['student']->name }}
+                                    </div>
+                                    <div class="text-[11px] text-gray-500 truncate max-w-[160px] sm:max-w-xs">
+                                        {{ $ranking['student']->email }}
+                                    </div>
+                                </td>
+                                <td class="px-3 sm:px-6 py-3 whitespace-nowrap text-xs sm:text-sm text-gray-700">
+                                    {{ optional($ranking['university'])->name ?? '—' }}
+                                </td>
+                                <td class="px-3 sm:px-6 py-3 whitespace-nowrap text-xs sm:text-sm text-right text-gray-900 font-semibold">
+                                    {{ number_format($ranking['total_score'], 0) }}
+                                </td>
+                                <td class="px-3 sm:px-6 py-3 whitespace-nowrap text-xs sm:text-sm text-right text-gray-700">
+                                    {{ $ranking['total_attempts'] }}
+                                </td>
+                                <td class="px-3 sm:px-6 py-3 whitespace-nowrap text-xs sm:text-sm text-right text-gray-700">
+                                    {{ number_format($ranking['average_score'], 2) }}
+                                </td>
+                            </tr>
+                        @endforeach
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    @endif
+
     <!-- Top Performers by Quiz -->
     <div class="bg-white shadow rounded-lg">
         <div class="px-4 py-5 sm:p-6">
