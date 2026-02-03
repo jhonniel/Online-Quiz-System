@@ -260,6 +260,9 @@ Route::prefix('admin')->middleware(['auth', 'admin'])->group(function () {
 
     // Student Management
     Route::middleware(['admin.permission:student_management'])->group(function () {
+        // Students List
+        Route::get('/student-management/students', [StudentDashboardController::class, 'students'])->name('admin.student-management.students');
+
         // Student Management Dashboard
         Route::get('/student-management/dashboard', [StudentDashboardController::class, 'index'])->name('admin.student-management.dashboard');
 

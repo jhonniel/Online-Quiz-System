@@ -8,9 +8,65 @@ use App\Models\Dtr;
 use App\Models\QuizAttemptHistory;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 
 class StudentDashboardController extends Controller
 {
+    public function students(Request $request)
+    {
+        // Check if user has student_management permission or is admin
+        $user = auth()->user();
+        if (!$user->isAdmin() && !$user->canAccessStudentManagement()) {
+            abort(403, 'Access denied. You do not have permission to access Student Management.');
+        }
+
+        $search = trim((string) $request->input('search', ''));
+        $perPage = (int) $request->input('per_page', 20);
+        if (!in_array($perPage, [10, 20, 50, 100], true)) {
+            $perPage = 20;
+        }
+
+        // Aggregate DTRs to determine internship start/end (first and last DTR dates)
+        $dtrAgg = Dtr::query()
+            ->selectRaw('user_id, MIN(date) as internship_start, MAX(date) as internship_last, COALESCE(SUM(total_hours), 0) as internship_total_hours')
+            ->groupBy('user_id');
+
+        $studentsQuery = User::query()
+            ->with('university')
+            ->where('role', 'student')
+            ->leftJoinSub($dtrAgg, 'dtr_agg', function ($join) {
+                $join->on('dtr_agg.user_id', '=', 'users.id');
+            })
+            ->select([
+                'users.*',
+                DB::raw('dtr_agg.internship_start as internship_start'),
+                DB::raw('dtr_agg.internship_last as internship_last'),
+                DB::raw('COALESCE(dtr_agg.internship_total_hours, 0) as internship_total_hours'),
+            ]);
+
+        if ($search !== '') {
+            $studentsQuery->where(function ($q) use ($search) {
+                if (ctype_digit($search)) {
+                    $q->orWhere('users.id', (int) $search);
+                }
+
+                $q->orWhere('users.name', 'like', "%{$search}%")
+                    ->orWhere('users.email', 'like', "%{$search}%")
+                    ->orWhereHas('university', function ($uq) use ($search) {
+                        $uq->where('name', 'like', "%{$search}%")
+                            ->orWhere('location', 'like', "%{$search}%");
+                    });
+            });
+        }
+
+        $students = $studentsQuery
+            ->orderBy('users.name')
+            ->paginate($perPage)
+            ->appends($request->query());
+
+        return view('admin.student-management.students', compact('students', 'search', 'perPage'));
+    }
+
     public function index(Request $request)
     {
         // Check if user has student_management permission or is admin

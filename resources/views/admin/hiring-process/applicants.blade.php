@@ -12,7 +12,7 @@
                     </svg>
                 </div>
                 <div class="ml-4">
-                    <h1 class="text-2xl font-bold text-white">Applicants</h1>
+                    <h1 class="text-2xl font-bold text-white">Hired and Accepted Applicants</h1>
                     <p class="text-indigo-100">Review all applicants and their quiz performance</p>
                 </div>
             </div>
