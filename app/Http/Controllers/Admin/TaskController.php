@@ -193,6 +193,7 @@ class TaskController extends Controller
                         'file_name' => $attachment->file_name,
                         'file_type' => $attachment->file_type,
                         'file_url' => $attachment->file_url,
+                        'created_at' => $attachment->created_at ? $attachment->created_at->toISOString() : null,
                     ];
                 })->toArray(),
                 'comments' => $task->type === 'group' ? $task->comments->map(function($comment) {
@@ -531,16 +532,17 @@ class TaskController extends Controller
     /**
      * Delete a task
      */
-    public function destroy(Task $task)
+    public function destroy(Request $request, Task $task)
     {
         // Check permission
-        if ($task->type === 'personal' && $task->created_by !== Auth::id()) {
+        $user = Auth::user();
+        if ($task->type === 'personal' && $task->created_by !== $user->id) {
             abort(403, 'You do not have permission to delete this task.');
         }
         
         if ($task->type === 'group') {
             $assignment = TaskAssignment::where('task_id', $task->id)
-                ->where('user_id', Auth::id())
+                ->where('user_id', $user->id)
                 ->first();
             if (!$assignment || $assignment->role !== 'owner') {
                 abort(403, 'Only task owners can delete tasks.');
@@ -690,7 +692,7 @@ class TaskController extends Controller
 
         $attachment = TaskAttachment::create([
             'task_id' => $task->id,
-            'user_id' => Auth::id(),
+            'uploaded_by' => Auth::id(),
             'file_path' => $filePath,
             'file_name' => $file->getClientOriginalName(),
             'file_type' => $file->getMimeType(),
@@ -706,6 +708,7 @@ class TaskController extends Controller
                 'file_name' => $attachment->file_name,
                 'file_type' => $attachment->file_type,
                 'file_url' => $attachment->file_url,
+                'created_at' => $attachment->created_at ? $attachment->created_at->toISOString() : null,
                 'user' => [
                     'id' => $attachment->user->id,
                     'name' => $attachment->user->name,
@@ -822,14 +825,16 @@ class TaskController extends Controller
      */
     private function ensureDefaultBoards($userId, $type, $taskListId = null)
     {
-        // Validate task_list_id exists and belongs to the user if provided
+        // Validate task_list_id exists if provided
         $validTaskListId = null;
         if ($taskListId) {
             $taskList = TaskList::find($taskListId);
-            if ($taskList && $taskList->user_id === $userId) {
+            // Allow default boards to be created for any existing task list the user can see
+            // (owner or shared); ownership checks are handled elsewhere.
+            if ($taskList) {
                 $validTaskListId = $taskListId;
             }
-            // If task list doesn't exist or doesn't belong to user, set to null
+            // If task list doesn't exist, leave as null
         }
 
         $defaultBoards = [

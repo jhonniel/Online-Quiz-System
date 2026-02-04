@@ -12,7 +12,7 @@ class TaskAttachment extends Model
 
     protected $fillable = [
         'task_id',
-        'user_id',
+        'uploaded_by',
         'file_path',
         'file_name',
         'file_type',
@@ -27,7 +27,8 @@ class TaskAttachment extends Model
 
     public function user()
     {
-        return $this->belongsTo(User::class);
+        // Uploader of the file (uses uploaded_by column)
+        return $this->belongsTo(User::class, 'uploaded_by');
     }
 
     // Helper methods

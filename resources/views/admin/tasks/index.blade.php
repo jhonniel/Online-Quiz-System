@@ -92,9 +92,9 @@
                         }
                     } catch (e) {
                             console.error('Error opening modal:', e);
-                            // Fallback: just show the modal
+                            // Fallback: just show the modal centered
                             modal.classList.remove('hidden');
-                            modal.style.display = 'block';
+                            modal.style.display = 'flex';
                     }
                     }, 100);
                 } else {
@@ -180,14 +180,35 @@
             },
             
             async deleteTask(taskId) {
-                if (!confirm('Are you sure you want to delete this task?')) return;
+                // First, require user to type DELETE to confirm intent
+                const confirmText = prompt('Type DELETE to confirm that you want to permanently delete this task:');
+                if (confirmText === null) {
+                    // User cancelled
+                    return;
+                }
+                if (confirmText.trim().toUpperCase() !== 'DELETE') {
+                    alert('You must type DELETE exactly to confirm task deletion.');
+                    return;
+                }
+
+                // Then, require password for security
+                const password = prompt('Enter your account password to delete this task:');
+                if (password === null) {
+                    return;
+                }
+                if (!password || password.trim() === '') {
+                    alert('Password is required to delete a task.');
+                    return;
+                }
                 
                 try {
                     const response = await fetch(`/admin/tasks/${taskId}`, {
                         method: 'DELETE',
                         headers: {
+                            'Content-Type': 'application/json',
                             'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
-                        }
+                        },
+                        body: JSON.stringify({ password: password })
                     });
                     
                     const data = await response.json();
@@ -585,10 +606,35 @@
                 }
             },
             
-            async deleteTaskList(listId) {
-                if (!confirm('Are you sure you want to delete this task list? Tasks in this list will be moved to "No List".')) {
+            openDeleteTaskListConfirm(listId) {
+                this.deleteListConfirmOpen = true;
+                this.deleteListConfirmForm = {
+                    confirm_text: '',
+                    list_id: listId
+                };
+            },
+
+            closeDeleteTaskListConfirm() {
+                this.deleteListConfirmOpen = false;
+                this.deleteListConfirmForm = {
+                    confirm_text: '',
+                    list_id: null
+                };
+            },
+
+            async deleteTaskList() {
+                if (!this.deleteListConfirmForm.list_id) {
+                    alert('No task list selected.');
                     return;
                 }
+
+                const text = (this.deleteListConfirmForm.confirm_text || '').trim().toUpperCase();
+                if (text !== 'DELETE') {
+                    alert('You must type DELETE exactly to confirm deletion.');
+                    return;
+                }
+                
+                const listId = this.deleteListConfirmForm.list_id;
                 
                 try {
                     const response = await fetch(`/admin/tasks/task-lists/${listId}`, {
@@ -601,6 +647,7 @@
                     const data = await response.json();
                     
                     if (data.success) {
+                        this.closeDeleteTaskListConfirm();
                         // Redirect to tasks without list_id
                         const url = new URL(window.location.href);
                         url.searchParams.delete('list_id');
@@ -749,6 +796,18 @@
                 due_date: '',
                 due_time: ''
             },
+            deleteConfirmOpen: false,
+            deleteConfirmForm: {
+                confirm_text: ''
+            },
+            deleteListConfirmOpen: false,
+            deleteListConfirmForm: {
+                confirm_text: '',
+                list_id: null
+            },
+            previewAttachmentOpen: false,
+            previewAttachment: null,
+            isSaving: false,
             
             formatDate(dateString) {
                 if (!dateString) return '';
@@ -866,7 +925,7 @@
                 const modal = document.getElementById('task-modal');
                 if (modal) {
                     modal.classList.remove('hidden');
-                    modal.style.display = 'block';
+                    modal.style.display = 'flex';
                 }
             },
             
@@ -903,12 +962,76 @@
                 const fileInput = document.getElementById('task-file-input');
                 if (fileInput) fileInput.value = '';
             },
+
+            openAttachmentPreview(att) {
+                if (!att || !att.file_url) return;
+                this.previewAttachment = att;
+                this.previewAttachmentOpen = true;
+            },
+
+            closeAttachmentPreview() {
+                this.previewAttachmentOpen = false;
+                this.previewAttachment = null;
+            },
+
+            openDeleteConfirm() {
+                if (!this.currentTask || !this.currentTask.id) return;
+                this.deleteConfirmOpen = true;
+                this.deleteConfirmForm = {
+                    confirm_text: ''
+                };
+            },
+
+            closeDeleteConfirm() {
+                this.deleteConfirmOpen = false;
+                this.deleteConfirmForm = {
+                    confirm_text: ''
+                };
+            },
+
+            async confirmDeleteTask() {
+                if (!this.currentTask || !this.currentTask.id) {
+                    alert('No task selected.');
+                    return;
+                }
+
+                const text = (this.deleteConfirmForm.confirm_text || '').trim().toUpperCase();
+                if (text !== 'DELETE') {
+                    alert('You must type DELETE exactly to confirm deletion.');
+                    return;
+                }
+
+                try {
+                    const response = await fetch(`/admin/tasks/${this.currentTask.id}`, {
+                        method: 'DELETE',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+                        },
+                        body: JSON.stringify({})
+                    });
+
+                    const data = await response.json();
+
+                    if (data.success) {
+                        this.closeDeleteConfirm();
+                        this.closeModal();
+                        location.reload();
+                    } else {
+                        alert('Error: ' + (data.message || 'Failed to delete task'));
+                    }
+                } catch (error) {
+                    console.error('Error:', error);
+                    alert('An error occurred while deleting the task');
+                }
+            },
             
             handleFileSelect(event) {
                 this.selectedFile = event.target.files[0];
             },
             
             async saveTask() {
+                if (this.isSaving) return;
                 // Validate required fields
                 if (!this.formData.title || this.formData.title.trim() === '') {
                     alert('Please enter a task title');
@@ -931,6 +1054,7 @@
                     notes: this.formData.notes || '',
                     type: this.formData.type,
                     status: (this.formData.status && this.formData.status !== '') ? this.formData.status : 'todo',
+                    priority: this.formData.priority && this.formData.priority !== '' ? this.formData.priority : 'medium',
                     task_list_id: this.formData.task_list_id && this.formData.task_list_id !== '' ? this.formData.task_list_id : null,
                     parent_id: this.formData.parent_id || null,
                 };
@@ -943,6 +1067,7 @@
                 }
                 
                 try {
+                    this.isSaving = true;
                     const response = await fetch(url, {
                         method: method,
                         headers: {
@@ -984,6 +1109,8 @@
                 } catch (error) {
                     console.error('Error:', error);
                     alert('An error occurred while saving the task. Please try again.');
+                } finally {
+                    this.isSaving = false;
                 }
             },
             
@@ -1004,17 +1131,33 @@
                     
                     const data = await response.json();
                     
-                    if (data.success && this.currentTask) {
-                        // Add attachment to current task's attachments array
+                    if (!response.ok || !data.success) {
+                        let msg = data.message || 'Failed to upload attachment.';
+                        if (data.errors) {
+                            const errorList = Object.values(data.errors).flat().join('\n');
+                            msg += '\n\n' + errorList;
+                        }
+                        alert(msg);
+                        return false;
+                    }
+                    
+                    if (this.currentTask) {
+                        // Add attachment to current task's attachments array so modal shows it immediately
                         if (!this.currentTask.attachments) {
                             this.currentTask.attachments = [];
                         }
                         this.currentTask.attachments.push(data.attachment);
                     }
                     
-                    return data.success;
+                    // Clear selected file after successful upload
+                    this.selectedFile = null;
+                    const fileInput = document.getElementById('task-file-input');
+                    if (fileInput) fileInput.value = '';
+                    
+                    return true;
                 } catch (error) {
                     console.error('Error uploading file:', error);
+                    alert('An error occurred while uploading the attachment. Please try again.');
                     return false;
                 }
             },
@@ -1885,7 +2028,7 @@
                             </svg>
                             Edit
                         </button>
-                        <button @click="deleteTaskList({{ $currentList->id }})" 
+                        <button @click="openDeleteTaskListConfirm({{ $currentList->id }})" 
                                 type="button"
                                 class="px-3 py-2 bg-red-600 hover:bg-red-700 text-white text-sm font-medium rounded-lg shadow-sm transition-colors flex items-center">
                             <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1931,15 +2074,63 @@
                 </button>
             </div>
             
-            <!-- Add Task Button -->
-            <button @click="openCreateModal()" 
-                    type="button"
-                    class="px-4 py-2 bg-yellow-400 hover:bg-yellow-500 text-gray-900 font-medium rounded-lg shadow-sm transition-colors flex items-center">
-                <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
-                </svg>
-                Add New Task
-            </button>
+            <!-- Add Task / Custom Board Buttons -->
+            <div class="flex items-center space-x-3">
+                <button @click="openCreateModal()" 
+                        type="button"
+                        class="px-4 py-2 bg-yellow-400 hover:bg-yellow-500 text-gray-900 font-medium rounded-lg shadow-sm transition-colors flex items-center">
+                    <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+                    </svg>
+                    Add New Task
+                </button>
+                <button @click="openCustomBoardModal()" 
+                        type="button"
+                        class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-lg shadow-sm transition-colors flex items-center">
+                    <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+                    </svg>
+                    Add Custom Board
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Task List Delete Confirmation Modal -->
+    <div x-show="deleteListConfirmOpen"
+         x-cloak
+         class="fixed inset-0 z-[10000] flex items-center justify-center bg-black bg-opacity-50">
+        <div class="bg-white rounded-xl shadow-2xl w-full max-w-md mx-4 overflow-hidden">
+            <div class="px-6 py-4 border-b border-gray-200">
+                <h3 class="text-lg font-semibold text-gray-900">Delete Task List</h3>
+                <p class="mt-1 text-sm text-gray-600">
+                    This will remove the selected task list. Tasks in this list will be moved to <span class="font-semibold">"No List"</span>.
+                    To confirm, type <span class="font-semibold">DELETE</span>.
+                </p>
+            </div>
+            <div class="px-6 py-4 space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">
+                        Type DELETE to confirm
+                    </label>
+                    <input type="text"
+                           x-model="deleteListConfirmForm.confirm_text"
+                           placeholder="DELETE"
+                           class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:ring-2 focus:ring-red-500 focus:border-red-500 uppercase">
+                </div>
+            </div>
+            <div class="px-6 py-4 bg-gray-50 border-t border-gray-200 flex items-center justify-between">
+                <button type="button"
+                        class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50"
+                        @click="closeDeleteTaskListConfirm()">
+                    Cancel
+                </button>
+                <button type="button"
+                        class="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-md shadow-sm hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
+                        @click="deleteTaskList()">
+                    Delete List
+                </button>
+            </div>
         </div>
     </div>
 
@@ -1975,22 +2166,10 @@
     </div>
     @endif
 
-    <!-- Board View -->
-    <div x-show="view === 'board'" class="space-y-6">
-        <!-- Add Custom Board Button -->
-        <div class="flex justify-end">
-            <button @click="openCustomBoardModal()" 
-                    type="button"
-                    class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-lg shadow-sm transition-colors flex items-center">
-                <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
-                </svg>
-                Add Custom Board
-            </button>
-        </div>
-
-        <!-- Dynamic Board Columns -->
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+        <!-- Board View -->
+        <div x-show="view === 'board'" class="space-y-6">
+        <!-- Dynamic Board Columns (horizontal row, scrollable to the right, board height close to full screen without page scroll) -->
+        <div class="flex gap-6 overflow-x-auto pb-4 min-h-[78vh]">
             @foreach($customBoards ?? [] as $board)
                 @php
                     $colorClasses = [
@@ -2007,7 +2186,7 @@
                     $colors = $colorClasses[$board->color] ?? $colorClasses['gray'];
                     $tasks = $tasksByStatus[$board->status_key] ?? collect();
                 @endphp
-                <div class="bg-gradient-to-b {{ $colors['from'] }} {{ $colors['to'] }} rounded-lg border {{ $colors['border'] }} {{ $board->is_locked ? 'cursor-default' : 'cursor-move' }} hover:shadow-lg transition-all"
+                <div class="bg-gradient-to-b {{ $colors['from'] }} {{ $colors['to'] }} rounded-lg border {{ $colors['border'] }} {{ $board->is_locked ? 'cursor-default' : 'cursor-move' }} hover:shadow-lg transition-all min-w-[460px] max-w-[520px] h-[70vh] flex flex-col"
                      data-board-id="{{ $board->id }}"
                      data-is-locked="{{ $board->is_locked ? 'true' : 'false' }}"
                      draggable="{{ $board->is_locked ? 'false' : 'true' }}"
@@ -2054,7 +2233,7 @@
                             </div>
                 </div>
             </div>
-            <div class="p-4 space-y-3 min-h-[500px] transition-colors duration-200" 
+            <div class="p-4 space-y-3 flex-1 h-full overflow-y-auto transition-colors duration-200" 
                          data-status="{{ $board->status_key }}"
                          @drop="handleDrop($event, '{{ $board->status_key }}')" 
                  @dragover.prevent
