@@ -2,6 +2,92 @@
 
 @section('page-title', $type === 'personal' ? 'My Tasks' : 'Group Tasks')
 
+@push('styles')
+<style>
+    /* Task Card Drag Animations */
+    .task-card {
+        transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1), 
+                    box-shadow 0.2s cubic-bezier(0.4, 0, 0.2, 1), 
+                    opacity 0.2s cubic-bezier(0.4, 0, 0.2, 1),
+                    rotate 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        user-select: none;
+        position: relative;
+    }
+    
+    .task-card:hover:not(.dragging) {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    }
+    
+    .task-card.dragging {
+        transform: rotate(3deg) scale(1.05) !important;
+        box-shadow: 0 12px 32px rgba(0, 0, 0, 0.3) !important;
+        opacity: 0.85 !important;
+        z-index: 1000 !important;
+        cursor: grabbing !important;
+        pointer-events: none;
+    }
+    
+    .task-card.drag-over {
+        transform: translateY(-4px);
+        box-shadow: 0 6px 16px rgba(59, 130, 246, 0.3);
+        border-color: #3b82f6;
+    }
+    
+    /* Add a subtle pulse animation when hovering over draggable task */
+    .task-card:active {
+        transform: scale(0.98);
+    }
+    
+    /* Drop Zone Animations */
+    .drop-zone {
+        transition: background-color 0.2s ease, border-color 0.2s ease;
+    }
+    
+    .drop-zone.drag-over {
+        background-color: rgba(59, 130, 246, 0.1);
+        border-color: #3b82f6;
+        border-style: dashed;
+    }
+    
+    /* Smooth drag ghost */
+    .drag-ghost {
+        opacity: 0.5;
+        transform: rotate(5deg);
+    }
+    
+    /* Prevent text selection during drag */
+    .task-card.dragging * {
+        pointer-events: none;
+    }
+    
+    /* Cursor styles */
+    .cursor-grab {
+        cursor: grab;
+    }
+    
+    .cursor-grabbing {
+        cursor: grabbing;
+    }
+    
+    /* Animation for task appearing in new position */
+    @keyframes slideIn {
+        from {
+            opacity: 0;
+            transform: translateY(-10px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+    
+    .task-card {
+        animation: slideIn 0.3s ease-out;
+    }
+</style>
+@endpush
+
 @section('breadcrumb')
     <li>
         <div class="flex items-center">
@@ -57,6 +143,109 @@
             },
             draggedBoard: null,
             
+            // Modal system for alerts, confirms, and prompts
+            alertModal: {
+                open: false,
+                title: '',
+                message: '',
+                type: 'info' // info, success, error, warning
+            },
+            confirmModal: {
+                open: false,
+                title: '',
+                message: '',
+                onConfirm: null,
+                onCancel: null
+            },
+            promptModal: {
+                open: false,
+                title: '',
+                message: '',
+                placeholder: '',
+                value: '',
+                onConfirm: null,
+                onCancel: null,
+                inputType: 'text' // text, password
+            },
+            
+            // Helper functions for modals
+            showAlert(title, message, type = 'info') {
+                this.alertModal = {
+                    open: true,
+                    title: title || 'Notification',
+                    message: message,
+                    type: type
+                };
+            },
+            
+            closeAlert() {
+                this.alertModal.open = false;
+            },
+            
+            showConfirm(title, message, onConfirm, onCancel = null) {
+                this.confirmModal = {
+                    open: true,
+                    title: title || 'Confirm',
+                    message: message,
+                    onConfirm: onConfirm,
+                    onCancel: onCancel
+                };
+            },
+            
+            closeConfirm() {
+                this.confirmModal.open = false;
+                this.confirmModal.onConfirm = null;
+                this.confirmModal.onCancel = null;
+            },
+            
+            handleConfirm() {
+                if (this.confirmModal.onConfirm) {
+                    this.confirmModal.onConfirm();
+                }
+                this.closeConfirm();
+            },
+            
+            handleCancel() {
+                if (this.confirmModal.onCancel) {
+                    this.confirmModal.onCancel();
+                }
+                this.closeConfirm();
+            },
+            
+            showPrompt(title, message, placeholder = '', inputType = 'text', onConfirm, onCancel = null) {
+                this.promptModal = {
+                    open: true,
+                    title: title || 'Input',
+                    message: message,
+                    placeholder: placeholder,
+                    value: '',
+                    inputType: inputType,
+                    onConfirm: onConfirm,
+                    onCancel: onCancel
+                };
+            },
+            
+            closePrompt() {
+                this.promptModal.open = false;
+                this.promptModal.value = '';
+                this.promptModal.onConfirm = null;
+                this.promptModal.onCancel = null;
+            },
+            
+            handlePromptConfirm() {
+                if (this.promptModal.onConfirm) {
+                    this.promptModal.onConfirm(this.promptModal.value);
+                }
+                this.closePrompt();
+            },
+            
+            handlePromptCancel() {
+                if (this.promptModal.onCancel) {
+                    this.promptModal.onCancel();
+                }
+                this.closePrompt();
+            },
+            
             openCreateModal() {
                 // Simple approach: directly access the modal component
                 const modal = document.getElementById('task-modal');
@@ -98,7 +287,7 @@
                     }
                     }, 100);
                 } else {
-                    alert('Modal not found. Please refresh the page.');
+                    this.showAlert('Error', 'Modal not found. Please refresh the page.', 'error');
                 }
             },
             
@@ -127,8 +316,54 @@
                 this.draggedTask = task;
                 event.dataTransfer.effectAllowed = 'move';
                 event.dataTransfer.setData('text/plain', task.id);
-                // Add visual feedback
-                event.currentTarget.style.opacity = '0.5';
+                
+                const taskElement = event.currentTarget;
+                
+                // Add dragging class for animations
+                taskElement.classList.add('dragging');
+                
+                // Create a custom drag image (ghost)
+                const dragImage = taskElement.cloneNode(true);
+                dragImage.style.width = taskElement.offsetWidth + 'px';
+                dragImage.style.opacity = '0.8';
+                dragImage.style.transform = 'rotate(5deg) scale(1.05)';
+                dragImage.style.position = 'absolute';
+                dragImage.style.top = '-1000px';
+                dragImage.classList.add('drag-ghost');
+                document.body.appendChild(dragImage);
+                
+                // Set custom drag image
+                event.dataTransfer.setDragImage(dragImage, event.offsetX, event.offsetY);
+                
+                // Remove the temporary element after a short delay
+                setTimeout(() => {
+                    document.body.removeChild(dragImage);
+                }, 0);
+                
+                // Add visual feedback to other tasks
+                document.querySelectorAll('.task-card').forEach(card => {
+                    if (card !== taskElement) {
+                        card.style.opacity = '0.6';
+                    }
+                });
+            },
+            
+            handleDragEnd(event) {
+                // Remove dragging class
+                event.currentTarget.classList.remove('dragging');
+                
+                // Reset all task cards
+                document.querySelectorAll('.task-card').forEach(card => {
+                    card.style.opacity = '1';
+                    card.style.transform = '';
+                });
+                
+                // Reset drop zones
+                document.querySelectorAll('.drop-zone').forEach(zone => {
+                    zone.classList.remove('drag-over');
+                });
+                
+                this.draggedTask = null;
             },
             
             handleDrop(event, newStatus) {
@@ -140,75 +375,108 @@
                 const taskId = this.draggedTask.id;
                 const oldStatus = this.draggedTask.status;
                 
-                if (oldStatus === newStatus) {
-                    this.draggedTask = null;
-                    // Reset opacity
-                    document.querySelectorAll('[draggable="true"]').forEach(el => {
-                        el.style.opacity = '1';
+                // Get the drop container
+                const dropContainer = event.currentTarget;
+                const allTasksInBoard = Array.from(dropContainer.querySelectorAll('[draggable="true"]'));
+                
+                // Find the position where the task was dropped
+                let newOrder = 0;
+                
+                // Get the element under the drop point
+                const dropY = event.clientY;
+                const tasksInOrder = [];
+                
+                // Collect all tasks (excluding the dragged one) with their positions
+                for (let i = 0; i < allTasksInBoard.length; i++) {
+                    const taskEl = allTasksInBoard[i];
+                    // Skip the dragged task itself
+                    if (taskEl.dataset.taskId == taskId) continue;
+                    
+                    const taskRect = taskEl.getBoundingClientRect();
+                    tasksInOrder.push({
+                        element: taskEl,
+                        top: taskRect.top,
+                        centerY: taskRect.top + taskRect.height / 2,
+                        index: tasksInOrder.length
                     });
-                    return;
                 }
                 
-                // Allow dropping tasks on locked boards (lock only prevents board reordering)
-                // Update task status
-                fetch(`/admin/tasks/${taskId}`, {
-                    method: 'PUT',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
-                    },
-                    body: JSON.stringify({
-                        status: newStatus
-                    })
-                })
-                .then(response => response.json())
-                .then(data => {
-                    if (data.success) {
-                        location.reload();
-                    } else {
-                        alert('Error updating task: ' + (data.message || 'Unknown error'));
-                        location.reload();
+                // Sort by current visual position (top)
+                tasksInOrder.sort((a, b) => a.top - b.top);
+                
+                // Find where to insert based on drop position
+                let insertIndex = tasksInOrder.length; // Default to end
+                for (let i = 0; i < tasksInOrder.length; i++) {
+                    if (dropY < tasksInOrder[i].centerY) {
+                        insertIndex = i;
+                        break;
                     }
-                })
-                .catch(error => {
-                    console.error('Error:', error);
-                    alert('An error occurred while updating the task');
-                    location.reload();
-                });
+                }
+                
+                // The new order is simply the insert index
+                newOrder = insertIndex;
+                
+                // Remove drag-over class from drop zone
+                event.currentTarget.classList.remove('drag-over');
+                
+                if (oldStatus === newStatus) {
+                    // Reordering within the same board
+                    this.reorderTaskInBoard(taskId, newStatus, newOrder);
+                } else {
+                    // Moving to a different board (status change)
+                    this.moveTaskToBoard(taskId, oldStatus, newStatus, newOrder);
+                }
                 
                 this.draggedTask = null;
             },
             
-            async deleteTask(taskId) {
-                // First, require user to type DELETE to confirm intent
-                const confirmText = prompt('Type DELETE to confirm that you want to permanently delete this task:');
-                if (confirmText === null) {
-                    // User cancelled
-                    return;
-                }
-                if (confirmText.trim().toUpperCase() !== 'DELETE') {
-                    alert('You must type DELETE exactly to confirm task deletion.');
-                    return;
-                }
-
-                // Then, require password for security
-                const password = prompt('Enter your account password to delete this task:');
-                if (password === null) {
-                    return;
-                }
-                if (!password || password.trim() === '') {
-                    alert('Password is required to delete a task.');
-                    return;
-                }
-                
+            async reorderTaskInBoard(taskId, status, newOrder) {
                 try {
-                    const response = await fetch(`/admin/tasks/${taskId}`, {
-                        method: 'DELETE',
+                    const response = await fetch(`/admin/tasks/${taskId}/reorder`, {
+                        method: 'POST',
                         headers: {
                             'Content-Type': 'application/json',
                             'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
                         },
-                        body: JSON.stringify({ password: password })
+                        body: JSON.stringify({
+                            status: status,
+                            order: newOrder
+                        })
+                    });
+                    
+                    const data = await response.json();
+                    
+                    if (data.success) {
+                        // Reload to reflect new order
+                        location.reload();
+                    } else {
+                        this.showAlert('Error', 'Error reordering task: ' + (data.message || 'Unknown error'), 'error');
+                        setTimeout(() => location.reload(), 1500);
+                    }
+                } catch (error) {
+                    console.error('Error:', error);
+                    this.showAlert('Error', 'An error occurred while reordering the task', 'error');
+                    setTimeout(() => location.reload(), 1500);
+                } finally {
+                    // Reset opacity
+                    document.querySelectorAll('[draggable="true"]').forEach(el => {
+                        el.style.opacity = '1';
+                    });
+                }
+            },
+            
+            async moveTaskToBoard(taskId, oldStatus, newStatus, newOrder) {
+                try {
+                    const response = await fetch(`/admin/tasks/${taskId}`, {
+                        method: 'PUT',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+                        },
+                        body: JSON.stringify({
+                            status: newStatus,
+                            order: newOrder
+                        })
                     });
                     
                     const data = await response.json();
@@ -216,11 +484,64 @@
                     if (data.success) {
                         location.reload();
                     } else {
-                        alert('Error: ' + (data.message || 'Failed to delete task'));
+                        this.showAlert('Error', 'Error updating task: ' + (data.message || 'Unknown error'), 'error');
+                        setTimeout(() => location.reload(), 1500);
                     }
                 } catch (error) {
                     console.error('Error:', error);
-                    alert('An error occurred while deleting the task');
+                    this.showAlert('Error', 'An error occurred while updating the task', 'error');
+                    setTimeout(() => location.reload(), 1500);
+                } finally {
+                    // Reset opacity
+                    document.querySelectorAll('[draggable="true"]').forEach(el => {
+                        el.style.opacity = '1';
+                    });
+                }
+            },
+            
+            deleteTask(taskId) {
+                // First, require user to type DELETE to confirm intent
+                this.showPrompt(
+                    'Delete Task',
+                    'Type DELETE to confirm that you want to permanently delete this task:',
+                    'Type DELETE here',
+                    'text',
+                    (confirmText) => {
+                        if (!confirmText || confirmText.trim().toUpperCase() !== 'DELETE') {
+                            this.showAlert('Error', 'You must type DELETE exactly to confirm task deletion.', 'error');
+                            return;
+                        }
+                        
+                        // Task deletion only requires typing DELETE, no password needed
+                        this.performDeleteTask(taskId, confirmText.trim().toUpperCase());
+                    }
+                );
+            },
+            
+            async performDeleteTask(taskId, confirmText) {
+                try {
+                    const response = await fetch(`/admin/tasks/${taskId}`, {
+                        method: 'DELETE',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+                        },
+                        body: JSON.stringify({
+                            confirm_text: confirmText
+                        })
+                    });
+                    
+                    const data = await response.json();
+                    
+                    if (data.success) {
+                        this.showAlert('Success', 'Task deleted successfully.', 'success');
+                        setTimeout(() => location.reload(), 1000);
+                    } else {
+                        this.showAlert('Error', data.message || 'Failed to delete task', 'error');
+                    }
+                } catch (error) {
+                    console.error('Error:', error);
+                    this.showAlert('Error', 'An error occurred while deleting the task', 'error');
                 }
             },
             
@@ -263,7 +584,7 @@
             
             async saveCustomBoard() {
                 if (!this.customBoardForm.name || !this.customBoardForm.name.trim()) {
-                    alert('Please enter a board name');
+                    this.showAlert('Validation Error', 'Please enter a board name', 'warning');
                     return;
                 }
                 
@@ -291,21 +612,26 @@
                     } else {
                         let errorMessage = data.message || 'Failed to save custom board';
                         if (data.errors) {
-                            const errorList = Object.values(data.errors).flat().join('\n');
-                            errorMessage = errorMessage + '\n\n' + errorList;
+                            const errorList = Object.values(data.errors).flat().join(', ');
+                            errorMessage = errorMessage + ': ' + errorList;
                         }
-                        alert('Error: ' + errorMessage);
+                        this.showAlert('Error', errorMessage, 'error');
                     }
                 } catch (error) {
                     console.error('Error:', error);
-                    alert('An error occurred while saving the custom board. Please try again.');
+                    this.showAlert('Error', 'An error occurred while saving the custom board. Please try again.', 'error');
                 }
             },
             
-            async deleteCustomBoard(boardId) {
-                if (!confirm('Are you sure you want to delete this custom board? All tasks in this board will be moved to "To Do".')) {
-                    return;
-                }
+            deleteCustomBoard(boardId) {
+                this.showConfirm(
+                    'Delete Custom Board',
+                    'Are you sure you want to delete this custom board? All tasks in this board will be moved to "To Do".',
+                    () => this.performDeleteCustomBoard(boardId)
+                );
+            },
+            
+            async performDeleteCustomBoard(boardId) {
                 
                 try {
                     const response = await fetch(`/admin/tasks/custom-boards/${boardId}`, {
@@ -318,13 +644,14 @@
                     const data = await response.json();
                     
                     if (data.success) {
-                        location.reload();
+                        this.showAlert('Success', 'Custom board deleted successfully.', 'success');
+                        setTimeout(() => location.reload(), 1000);
                     } else {
-                        alert('Error: ' + (data.message || 'Failed to delete custom board'));
+                        this.showAlert('Error', data.message || 'Failed to delete custom board', 'error');
                     }
                 } catch (error) {
                     console.error('Error:', error);
-                    alert('An error occurred while deleting the custom board');
+                    this.showAlert('Error', 'An error occurred while deleting the custom board', 'error');
                 }
             },
             
@@ -370,7 +697,7 @@
                     document.querySelectorAll('[data-board-id]').forEach(el => {
                         el.style.opacity = '1';
                     });
-                    alert('Cannot move board to a locked position');
+                    this.showAlert('Cannot Move Board', 'Cannot move board to a locked position', 'warning');
                     return;
                 }
                 
@@ -440,14 +767,14 @@
                     if (data.success) {
                         location.reload();
                     } else {
-                        alert('Error updating board order: ' + (data.message || 'Unknown error'));
-                        location.reload();
+                        this.showAlert('Error', 'Error updating board order: ' + (data.message || 'Unknown error'), 'error');
+                        setTimeout(() => location.reload(), 1500);
                     }
                 })
                 .catch(error => {
                     console.error('Error:', error);
-                    alert('An error occurred while updating board order');
-                    location.reload();
+                    this.showAlert('Error', 'An error occurred while updating board order', 'error');
+                    setTimeout(() => location.reload(), 1500);
                 });
                 
                 this.draggedBoard = null;
@@ -467,11 +794,11 @@
                     if (data.success) {
                         location.reload();
                     } else {
-                        alert('Error: ' + (data.message || 'Failed to toggle lock status'));
+                        this.showAlert('Error', data.message || 'Failed to toggle lock status', 'error');
                     }
                 } catch (error) {
                     console.error('Error:', error);
-                    alert('An error occurred while toggling lock status');
+                    this.showAlert('Error', 'An error occurred while toggling lock status', 'error');
                 }
             },
             
@@ -494,11 +821,11 @@
                         // Reload to update the UI
                         location.reload();
                     } else {
-                        alert('Error: ' + (data.message || 'Failed to update subtask'));
+                        this.showAlert('Error', data.message || 'Failed to update subtask', 'error');
                     }
                 } catch (error) {
                     console.error('Error:', error);
-                    alert('An error occurred while updating the subtask');
+                    this.showAlert('Error', 'An error occurred while updating the subtask', 'error');
                 }
             },
             
@@ -521,11 +848,11 @@
                         // Reload to update the UI
                         location.reload();
                     } else {
-                        alert('Error: ' + (data.message || 'Failed to update priority'));
+                        this.showAlert('Error', data.message || 'Failed to update priority', 'error');
                     }
                 } catch (error) {
                     console.error('Error:', error);
-                    alert('An error occurred while updating the priority');
+                    this.showAlert('Error', 'An error occurred while updating the priority', 'error');
                 }
             },
             
@@ -584,11 +911,11 @@
                     if (data.success) {
                         location.reload();
                     } else {
-                        alert('Error: ' + (data.message || 'Failed to save task list'));
+                        this.showAlert('Error', data.message || 'Failed to save task list', 'error');
                     }
                 } catch (error) {
                     console.error('Error:', error);
-                    alert('An error occurred while saving the task list');
+                    this.showAlert('Error', 'An error occurred while saving the task list', 'error');
                 }
             },
             
@@ -624,13 +951,13 @@
 
             async deleteTaskList() {
                 if (!this.deleteListConfirmForm.list_id) {
-                    alert('No task list selected.');
+                    this.showAlert('Error', 'No task list selected.', 'error');
                     return;
                 }
 
                 const text = (this.deleteListConfirmForm.confirm_text || '').trim().toUpperCase();
                 if (text !== 'DELETE') {
-                    alert('You must type DELETE exactly to confirm deletion.');
+                    this.showAlert('Validation Error', 'You must type DELETE exactly to confirm deletion.', 'warning');
                     return;
                 }
                 
@@ -653,11 +980,157 @@
                         url.searchParams.delete('list_id');
                         window.location.href = url.toString();
                     } else {
-                        alert('Error: ' + (data.message || 'Failed to delete task list'));
+                        this.showAlert('Error', data.message || 'Failed to delete task list', 'error');
                     }
                 } catch (error) {
                     console.error('Error:', error);
-                    alert('An error occurred while deleting the task list');
+                    this.showAlert('Error', 'An error occurred while deleting the task list', 'error');
+                }
+            },
+            
+            async shareTaskListCode(listId, existingCode) {
+                try {
+                    let inviteCode = existingCode;
+                    
+                    // If no code exists, generate one
+                    if (!inviteCode || inviteCode.trim() === '') {
+                        const response = await fetch(`/admin/tasks/task-lists/${listId}/generate-invite-code`, {
+                            method: 'POST',
+                            headers: {
+                                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+                            }
+                        });
+                        
+                        const data = await response.json();
+                        
+                        if (data.success && data.invite_code) {
+                            inviteCode = data.invite_code;
+                        } else {
+                            this.showAlert('Error', data.message || 'Failed to generate invite code', 'error');
+                            return;
+                        }
+                    }
+                    
+                    // Copy to clipboard
+                    await navigator.clipboard.writeText(inviteCode);
+                    this.showAlert('Success', 'Invite code copied to clipboard: ' + inviteCode, 'success');
+                } catch (error) {
+                    console.error('Error:', error);
+                    this.showAlert('Error', 'An error occurred while copying the invite code', 'error');
+                }
+            },
+            
+            async shareTaskListLink(listId) {
+                try {
+                    const response = await fetch(`/admin/tasks/task-lists/${listId}/generate-share-link`, {
+                        method: 'POST',
+                        headers: {
+                            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+                        }
+                    });
+                    
+                    const data = await response.json();
+                    
+                    if (data.success && data.share_link) {
+                        // Copy to clipboard
+                        await navigator.clipboard.writeText(data.share_link);
+                        this.showAlert('Success', 'Share link copied to clipboard!\n\n' + data.share_link, 'success');
+                    } else {
+                        this.showAlert('Error', data.message || 'Failed to generate share link', 'error');
+                    }
+                } catch (error) {
+                    console.error('Error:', error);
+                    this.showAlert('Error', 'An error occurred while generating the share link', 'error');
+                }
+            },
+            
+            shareTaskListViaEmail(listId, existingCode) {
+                // Prompt for email address
+                this.showPrompt(
+                    'Share Task List via Email',
+                    'Enter the email address to send the invitation to:',
+                    'email@example.com',
+                    'email',
+                    async (email) => {
+                        if (!email || !email.trim()) {
+                            this.showAlert('Validation Error', 'Please enter a valid email address', 'warning');
+                            return;
+                        }
+                        
+                        // Basic email validation
+                        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+                        if (!emailRegex.test(email.trim())) {
+                            this.showAlert('Validation Error', 'Please enter a valid email address', 'warning');
+                            return;
+                        }
+                        
+                        await this.performShareTaskListViaEmail(listId, existingCode, email.trim());
+                    }
+                );
+            },
+            
+            async performShareTaskListViaEmail(listId, existingCode, email) {
+                try {
+                    let inviteCode = existingCode;
+                    let shareLink = '';
+                    
+                    // Generate invite code if needed
+                    if (!inviteCode || inviteCode.trim() === '') {
+                        const codeResponse = await fetch(`/admin/tasks/task-lists/${listId}/generate-invite-code`, {
+                            method: 'POST',
+                            headers: {
+                                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+                            }
+                        });
+                        
+                        const codeData = await codeResponse.json();
+                        
+                        if (codeData.success && codeData.invite_code) {
+                            inviteCode = codeData.invite_code;
+                        } else {
+                            this.showAlert('Error', codeData.message || 'Failed to generate invite code', 'error');
+                            return;
+                        }
+                    }
+                    
+                    // Generate share link
+                    const linkResponse = await fetch(`/admin/tasks/task-lists/${listId}/generate-share-link`, {
+                        method: 'POST',
+                        headers: {
+                            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+                        }
+                    });
+                    
+                    const linkData = await linkResponse.json();
+                    
+                    if (linkData.success && linkData.share_link) {
+                        shareLink = linkData.share_link;
+                    }
+                    
+                    // Send email via backend
+                    const sendResponse = await fetch(`/admin/tasks/task-lists/${listId}/send-invitation-email`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+                        },
+                        body: JSON.stringify({
+                            email: email,
+                            invite_code: inviteCode,
+                            share_link: shareLink
+                        })
+                    });
+                    
+                    const sendData = await sendResponse.json();
+                    
+                    if (sendData.success) {
+                        this.showAlert('Success', 'Invitation email sent successfully to ' + email, 'success');
+                    } else {
+                        this.showAlert('Error', sendData.message || 'Failed to send invitation email', 'error');
+                    }
+                } catch (error) {
+                    console.error('Error:', error);
+                    this.showAlert('Error', 'An error occurred while sending the invitation email', 'error');
                 }
             },
             
@@ -694,7 +1167,7 @@
             
             async saveCustomPriority() {
                 if (!this.customPriorityForm.name || !this.customPriorityForm.name.trim()) {
-                    alert('Please enter a priority name');
+                    this.showAlert('Validation Error', 'Please enter a priority name', 'warning');
                     return;
                 }
                 
@@ -722,21 +1195,26 @@
                     } else {
                         let errorMessage = data.message || 'Failed to save custom priority';
                         if (data.errors) {
-                            const errorList = Object.values(data.errors).flat().join('\n');
-                            errorMessage = errorMessage + '\n\n' + errorList;
+                            const errorList = Object.values(data.errors).flat().join(', ');
+                            errorMessage = errorMessage + ': ' + errorList;
                         }
-                        alert('Error: ' + errorMessage);
+                        this.showAlert('Error', errorMessage, 'error');
                     }
                 } catch (error) {
                     console.error('Error:', error);
-                    alert('An error occurred while saving the custom priority. Please try again.');
+                    this.showAlert('Error', 'An error occurred while saving the custom priority. Please try again.', 'error');
                 }
             },
             
-            async deleteCustomPriority(priorityId) {
-                if (!confirm('Are you sure you want to delete this custom priority? All tasks using this priority will be set to "medium".')) {
-                    return;
-                }
+            deleteCustomPriority(priorityId) {
+                this.showConfirm(
+                    'Delete Custom Priority',
+                    'Are you sure you want to delete this custom priority? All tasks using this priority will be set to "medium".',
+                    () => this.performDeleteCustomPriority(priorityId)
+                );
+            },
+            
+            async performDeleteCustomPriority(priorityId) {
                 
                 try {
                     const response = await fetch(`/admin/tasks/custom-priorities/${priorityId}`, {
@@ -749,13 +1227,14 @@
                     const data = await response.json();
                     
                     if (data.success) {
-                        location.reload();
+                        this.showAlert('Success', 'Custom priority deleted successfully.', 'success');
+                        setTimeout(() => location.reload(), 1000);
                     } else {
-                        alert('Error: ' + (data.message || 'Failed to delete custom priority'));
+                        this.showAlert('Error', data.message || 'Failed to delete custom priority', 'error');
                     }
                 } catch (error) {
                     console.error('Error:', error);
-                    alert('An error occurred while deleting the custom priority');
+                    this.showAlert('Error', 'An error occurred while deleting the custom priority', 'error');
                 }
             }
         }
@@ -809,6 +1288,109 @@
             previewAttachment: null,
             isSaving: false,
             
+            // Modal system for alerts, confirms, and prompts
+            alertModal: {
+                open: false,
+                title: '',
+                message: '',
+                type: 'info'
+            },
+            confirmModal: {
+                open: false,
+                title: '',
+                message: '',
+                onConfirm: null,
+                onCancel: null
+            },
+            promptModal: {
+                open: false,
+                title: '',
+                message: '',
+                placeholder: '',
+                value: '',
+                onConfirm: null,
+                onCancel: null,
+                inputType: 'text'
+            },
+            
+            // Helper functions for modals
+            showAlert(title, message, type = 'info') {
+                this.alertModal = {
+                    open: true,
+                    title: title || 'Notification',
+                    message: message,
+                    type: type
+                };
+            },
+            
+            closeAlert() {
+                this.alertModal.open = false;
+            },
+            
+            showConfirm(title, message, onConfirm, onCancel = null) {
+                this.confirmModal = {
+                    open: true,
+                    title: title || 'Confirm',
+                    message: message,
+                    onConfirm: onConfirm,
+                    onCancel: onCancel
+                };
+            },
+            
+            closeConfirm() {
+                this.confirmModal.open = false;
+                this.confirmModal.onConfirm = null;
+                this.confirmModal.onCancel = null;
+            },
+            
+            handleConfirm() {
+                if (this.confirmModal.onConfirm) {
+                    this.confirmModal.onConfirm();
+                }
+                this.closeConfirm();
+            },
+            
+            handleCancel() {
+                if (this.confirmModal.onCancel) {
+                    this.confirmModal.onCancel();
+                }
+                this.closeConfirm();
+            },
+            
+            showPrompt(title, message, placeholder = '', inputType = 'text', onConfirm, onCancel = null) {
+                this.promptModal = {
+                    open: true,
+                    title: title || 'Input',
+                    message: message,
+                    placeholder: placeholder,
+                    value: '',
+                    inputType: inputType,
+                    onConfirm: onConfirm,
+                    onCancel: onCancel
+                };
+            },
+            
+            closePrompt() {
+                this.promptModal.open = false;
+                this.promptModal.value = '';
+                this.promptModal.onConfirm = null;
+                this.promptModal.onCancel = null;
+            },
+            
+            handlePromptConfirm() {
+                if (this.promptModal.onConfirm) {
+                    this.promptModal.onConfirm(this.promptModal.value);
+                }
+                this.closePrompt();
+            },
+            
+            handlePromptCancel() {
+                if (this.promptModal.onCancel) {
+                    this.promptModal.onCancel();
+                }
+                this.closePrompt();
+            },
+            
             formatDate(dateString) {
                 if (!dateString) return '';
                 const date = new Date(dateString);
@@ -818,7 +1400,7 @@
             
             async joinByCode() {
                 if (!this.joinCode || this.joinCode.trim().length !== 8) {
-                    alert('Please enter a valid 8-character invite code');
+                    this.showAlert('Validation Error', 'Please enter a valid 8-character invite code', 'warning');
                     return;
                 }
                 
@@ -837,15 +1419,15 @@
                     const data = await response.json();
                     
                     if (data.success) {
-                        alert('Successfully joined the task!');
+                        this.showAlert('Success', 'Successfully joined the task!', 'success');
                         this.joinCode = '';
-                        location.reload();
+                        setTimeout(() => location.reload(), 1000);
                     } else {
-                        alert('Error: ' + (data.message || 'Failed to join task'));
+                        this.showAlert('Error', data.message || 'Failed to join task', 'error');
                     }
                 } catch (error) {
                     console.error('Error:', error);
-                    alert('An error occurred while joining the task. Please try again.');
+                    this.showAlert('Error', 'An error occurred while joining the task. Please try again.', 'error');
                 }
             },
             
@@ -991,13 +1573,13 @@
 
             async confirmDeleteTask() {
                 if (!this.currentTask || !this.currentTask.id) {
-                    alert('No task selected.');
+                    this.showAlert('Error', 'No task selected.', 'error');
                     return;
                 }
 
                 const text = (this.deleteConfirmForm.confirm_text || '').trim().toUpperCase();
                 if (text !== 'DELETE') {
-                    alert('You must type DELETE exactly to confirm deletion.');
+                    this.showAlert('Validation Error', 'You must type DELETE exactly to confirm deletion.', 'warning');
                     return;
                 }
 
@@ -1016,13 +1598,14 @@
                     if (data.success) {
                         this.closeDeleteConfirm();
                         this.closeModal();
-                        location.reload();
+                        this.showAlert('Success', 'Task deleted successfully.', 'success');
+                        setTimeout(() => location.reload(), 1000);
                     } else {
-                        alert('Error: ' + (data.message || 'Failed to delete task'));
+                        this.showAlert('Error', data.message || 'Failed to delete task', 'error');
                     }
                 } catch (error) {
                     console.error('Error:', error);
-                    alert('An error occurred while deleting the task');
+                    this.showAlert('Error', 'An error occurred while deleting the task', 'error');
                 }
             },
             
@@ -1034,12 +1617,12 @@
                 if (this.isSaving) return;
                 // Validate required fields
                 if (!this.formData.title || this.formData.title.trim() === '') {
-                    alert('Please enter a task title');
+                    this.showAlert('Validation Error', 'Please enter a task title', 'warning');
                     return;
                 }
                 
                 if (!this.formData.type) {
-                    alert('Task type is missing. Please refresh the page and try again.');
+                    this.showAlert('Error', 'Task type is missing. Please refresh the page and try again.', 'error');
                     return;
                 }
                 
@@ -1101,14 +1684,14 @@
                     } else {
                         let errorMessage = data.message || 'Failed to save task';
                         if (data.errors) {
-                            const errorList = Object.values(data.errors).flat().join('\n');
-                            errorMessage = errorMessage + '\n\n' + errorList;
+                            const errorList = Object.values(data.errors).flat().join(', ');
+                            errorMessage = errorMessage + ': ' + errorList;
                         }
-                        alert('Error: ' + errorMessage);
+                        this.showAlert('Error', errorMessage, 'error');
                     }
                 } catch (error) {
                     console.error('Error:', error);
-                    alert('An error occurred while saving the task. Please try again.');
+                    this.showAlert('Error', 'An error occurred while saving the task. Please try again.', 'error');
                 } finally {
                     this.isSaving = false;
                 }
@@ -1134,10 +1717,10 @@
                     if (!response.ok || !data.success) {
                         let msg = data.message || 'Failed to upload attachment.';
                         if (data.errors) {
-                            const errorList = Object.values(data.errors).flat().join('\n');
-                            msg += '\n\n' + errorList;
+                            const errorList = Object.values(data.errors).flat().join(', ');
+                            msg += ': ' + errorList;
                         }
-                        alert(msg);
+                        this.showAlert('Error', msg, 'error');
                         return false;
                     }
                     
@@ -1157,7 +1740,7 @@
                     return true;
                 } catch (error) {
                     console.error('Error uploading file:', error);
-                    alert('An error occurred while uploading the attachment. Please try again.');
+                    this.showAlert('Error', 'An error occurred while uploading the attachment. Please try again.', 'error');
                     return false;
                 }
             },
@@ -1204,12 +1787,12 @@
             
             async saveSubtask() {
                 if (!this.subtaskForm.title || !this.subtaskForm.title.trim()) {
-                    alert('Please enter a subtask title');
+                    this.showAlert('Validation Error', 'Please enter a subtask title', 'warning');
                     return;
                 }
                 
                 if (!this.currentTask || !this.currentTask.id) {
-                    alert('No parent task selected');
+                    this.showAlert('Error', 'No parent task selected', 'error');
                     return;
                 }
                 
@@ -1239,14 +1822,14 @@
                     } else {
                         let errorMessage = data.message || 'Failed to create subtask';
                         if (data.errors) {
-                            const errorList = Object.values(data.errors).flat().join('\n');
-                            errorMessage = errorMessage + '\n\n' + errorList;
+                            const errorList = Object.values(data.errors).flat().join(', ');
+                            errorMessage = errorMessage + ': ' + errorList;
                         }
-                        alert('Error: ' + errorMessage);
+                        this.showAlert('Error', errorMessage, 'error');
                     }
                 } catch (error) {
                     console.error('Error:', error);
-                    alert('An error occurred while creating the subtask');
+                    this.showAlert('Error', 'An error occurred while creating the subtask', 'error');
                 }
             },
             
@@ -1272,18 +1855,23 @@
                         }
                         location.reload();
                     } else {
-                        alert('Error: ' + (data.message || 'Failed to update subtask'));
+                        this.showAlert('Error', data.message || 'Failed to update subtask', 'error');
                     }
                 } catch (error) {
                     console.error('Error:', error);
-                    alert('An error occurred while updating the subtask');
+                    this.showAlert('Error', 'An error occurred while updating the subtask', 'error');
                 }
             },
             
-            async deleteSubtask(subtaskId) {
-                if (!confirm('Are you sure you want to delete this subtask?')) {
-                    return;
-                }
+            deleteSubtask(subtaskId) {
+                this.showConfirm(
+                    'Delete Subtask',
+                    'Are you sure you want to delete this subtask?',
+                    () => this.performDeleteSubtask(subtaskId)
+                );
+            },
+            
+            async performDeleteSubtask(subtaskId) {
                 
                 try {
                     const response = await fetch(`/admin/tasks/${subtaskId}`, {
@@ -1297,13 +1885,14 @@
                     
                     if (data.success) {
                         this.currentTask.subtasks = this.currentTask.subtasks.filter(s => s.id !== subtaskId);
-                        location.reload();
+                        this.showAlert('Success', 'Subtask deleted successfully.', 'success');
+                        setTimeout(() => location.reload(), 1000);
                     } else {
-                        alert('Error: ' + (data.message || 'Failed to delete subtask'));
+                        this.showAlert('Error', data.message || 'Failed to delete subtask', 'error');
                     }
                 } catch (error) {
                     console.error('Error:', error);
-                    alert('An error occurred while deleting the subtask');
+                    this.showAlert('Error', 'An error occurred while deleting the subtask', 'error');
                 }
             },
             
@@ -1343,13 +1932,13 @@
                     } else {
                         // Restore comment if failed
                         this.newComment = commentText;
-                        alert('Failed to add comment: ' + (data.message || 'Unknown error'));
+                        this.showAlert('Error', 'Failed to add comment: ' + (data.message || 'Unknown error'), 'error');
                     }
                 } catch (error) {
                     console.error('Error adding comment:', error);
                     // Restore comment if failed
                     this.newComment = commentText;
-                    alert('An error occurred while adding the comment. Please try again.');
+                    this.showAlert('Error', 'An error occurred while adding the comment. Please try again.', 'error');
                 }
             },
             
@@ -1399,17 +1988,17 @@
             
             async convertToGroup() {
                 if (!this.currentTask || !this.currentTask.id) {
-                    alert('No task selected');
+                    this.showAlert('Error', 'No task selected', 'error');
                     return;
                 }
                 
                 if (this.currentTask.type !== 'personal') {
-                    alert('This task is already a group task');
+                    this.showAlert('Error', 'This task is already a group task', 'error');
                     return;
                 }
                 
                 if (this.shareMethod === 'manual' && (!this.formData.share_users || this.formData.share_users.length === 0)) {
-                    alert('Please select at least one user to invite');
+                    this.showAlert('Validation Error', 'Please select at least one user to invite', 'warning');
                     return;
                 }
                 
@@ -1449,17 +2038,19 @@
                             message += '\n\n' + data.invited_count + ' invitation(s) sent.';
                         }
                         
-                        alert(message);
+                        this.showAlert('Success', message, 'success');
                         
                         // Close modal and redirect to group tasks
-                        this.closeModal();
-                        window.location.href = '/admin/tasks?type=group';
+                        setTimeout(() => {
+                            this.closeModal();
+                            window.location.href = '/admin/tasks?type=group';
+                        }, 1500);
                     } else {
-                        alert('Error: ' + (data.message || 'Failed to convert task'));
+                        this.showAlert('Error', data.message || 'Failed to convert task', 'error');
                     }
                 } catch (error) {
                     console.error('Error:', error);
-                    alert('An error occurred while converting the task. Please try again.');
+                    this.showAlert('Error', 'An error occurred while converting the task. Please try again.', 'error');
                 }
             },
             
@@ -1468,9 +2059,9 @@
                 if (input && this.currentTask && this.currentTask.invite_code) {
                     input.select();
                     document.execCommand('copy');
-                    alert('✅ Invite code copied to clipboard!\n\nYou can now paste it and share with others via:\n• Email\n• Chat apps (WhatsApp, Telegram, etc.)\n• Messaging platforms\n• Social media\n\nUsers must be logged in to join using this code.');
+                    this.showAlert('Success', '✅ Invite code copied to clipboard!\n\nYou can now paste it and share with others via:\n• Email\n• Chat apps (WhatsApp, Telegram, etc.)\n• Messaging platforms\n• Social media\n\nUsers must be logged in to join using this code.', 'success');
                 } else if (!this.currentTask || !this.currentTask.invite_code) {
-                    alert('Please generate an invite code first.');
+                    this.showAlert('Error', 'Please generate an invite code first.', 'warning');
                 }
             },
             
@@ -1489,13 +2080,13 @@
                     
                     if (data.success) {
                         this.currentTask.invite_code = data.invite_code;
-                        alert('Invite code generated successfully!');
+                        this.showAlert('Success', 'Invite code generated successfully!', 'success');
                     } else {
-                        alert('Error: ' + (data.message || 'Failed to generate invite code'));
+                        this.showAlert('Error', data.message || 'Failed to generate invite code', 'error');
                     }
                 } catch (error) {
                     console.error('Error:', error);
-                    alert('An error occurred while generating invite code');
+                    this.showAlert('Error', 'An error occurred while generating invite code', 'error');
                 }
             },
             
@@ -1871,8 +2462,15 @@
                 }
             },
             
-            async deleteAttachment(attachmentId) {
-                if (!confirm('Are you sure you want to delete this attachment?')) return;
+            deleteAttachment(attachmentId) {
+                this.showConfirm(
+                    'Delete Attachment',
+                    'Are you sure you want to delete this attachment?',
+                    () => this.performDeleteAttachment(attachmentId)
+                );
+            },
+            
+            async performDeleteAttachment(attachmentId) {
                 
                 try {
                     const response = await fetch(`/admin/tasks/attachments/${attachmentId}`, {
@@ -2233,11 +2831,13 @@
                             </div>
                 </div>
             </div>
-            <div class="p-4 space-y-3 flex-1 h-full overflow-y-auto transition-colors duration-200" 
+            <div class="p-4 space-y-3 flex-1 h-full overflow-y-auto drop-zone transition-colors duration-200" 
                          data-status="{{ $board->status_key }}"
                          @drop="handleDrop($event, '{{ $board->status_key }}')" 
                  @dragover.prevent
                  @dragenter.prevent
+                 @dragenter="event.currentTarget.classList.add('drag-over')"
+                 @dragleave="event.currentTarget.classList.remove('drag-over')"
                          :class="draggedTask ? '{{ $colors['hover'] }} border-2 {{ $colors['hover-border'] }} border-dashed rounded-lg' : ''">
                         @foreach($tasks as $task)
                     @include('admin.tasks.partials.task-card', ['task' => $task, 'type' => $type, 'customPriorities' => $customPriorities ?? collect()])
@@ -2511,6 +3111,114 @@
         </form>
     </div>
 </div>
+
+    <!-- Alert Modal -->
+    <div x-show="alertModal.open" 
+         x-cloak
+         class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-[10000]"
+         @click.self="closeAlert()"
+         style="display: none;">
+        <div class="relative top-20 mx-auto p-5 border w-11/12 md:w-1/2 lg:w-1/3 shadow-lg rounded-md bg-white" @click.stop>
+            <div class="flex items-center justify-between mb-4">
+                <h3 class="text-lg font-bold" 
+                    :class="{
+                        'text-blue-600': alertModal.type === 'info',
+                        'text-green-600': alertModal.type === 'success',
+                        'text-red-600': alertModal.type === 'error',
+                        'text-yellow-600': alertModal.type === 'warning'
+                    }"
+                    x-text="alertModal.title"></h3>
+                <button @click="closeAlert()" class="text-gray-400 hover:text-gray-600">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                </button>
+            </div>
+            <div class="mb-4">
+                <p class="text-sm text-gray-700 whitespace-pre-line" x-text="alertModal.message"></p>
+            </div>
+            <div class="flex justify-end">
+                <button @click="closeAlert()" 
+                        class="px-4 py-2 rounded-md text-sm font-medium"
+                        :class="{
+                            'bg-blue-600 text-white hover:bg-blue-700': alertModal.type === 'info',
+                            'bg-green-600 text-white hover:bg-green-700': alertModal.type === 'success',
+                            'bg-red-600 text-white hover:bg-red-700': alertModal.type === 'error',
+                            'bg-yellow-600 text-white hover:bg-yellow-700': alertModal.type === 'warning'
+                        }">
+                    OK
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Confirm Modal -->
+    <div x-show="confirmModal.open" 
+         x-cloak
+         class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-[10000]"
+         @click.self="handleCancel()"
+         style="display: none;">
+        <div class="relative top-20 mx-auto p-5 border w-11/12 md:w-1/2 lg:w-1/3 shadow-lg rounded-md bg-white" @click.stop>
+            <div class="flex items-center justify-between mb-4">
+                <h3 class="text-lg font-bold text-gray-900" x-text="confirmModal.title"></h3>
+                <button @click="handleCancel()" class="text-gray-400 hover:text-gray-600">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                </button>
+            </div>
+            <div class="mb-4">
+                <p class="text-sm text-gray-700 whitespace-pre-line" x-text="confirmModal.message"></p>
+            </div>
+            <div class="flex justify-end space-x-3">
+                <button @click="handleCancel()" 
+                        class="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50">
+                    Cancel
+                </button>
+                <button @click="handleConfirm()" 
+                        class="px-4 py-2 bg-red-600 text-white rounded-md text-sm font-medium hover:bg-red-700">
+                    Confirm
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Prompt Modal -->
+    <div x-show="promptModal.open" 
+         x-cloak
+         class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-[10000]"
+         @click.self="handlePromptCancel()"
+         style="display: none;">
+        <div class="relative top-20 mx-auto p-5 border w-11/12 md:w-1/2 lg:w-1/3 shadow-lg rounded-md bg-white" @click.stop>
+            <div class="flex items-center justify-between mb-4">
+                <h3 class="text-lg font-bold text-gray-900" x-text="promptModal.title"></h3>
+                <button @click="handlePromptCancel()" class="text-gray-400 hover:text-gray-600">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                </button>
+            </div>
+            <div class="mb-4">
+                <p class="text-sm text-gray-700 mb-3 whitespace-pre-line" x-text="promptModal.message"></p>
+                <input type="text" 
+                       :type="promptModal.inputType"
+                       x-model="promptModal.value"
+                       :placeholder="promptModal.placeholder"
+                       @keyup.enter="handlePromptConfirm()"
+                       class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500">
+            </div>
+            <div class="flex justify-end space-x-3">
+                <button @click="handlePromptCancel()" 
+                        class="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50">
+                    Cancel
+                </button>
+                <button @click="handlePromptConfirm()" 
+                        class="px-4 py-2 bg-indigo-600 text-white rounded-md text-sm font-medium hover:bg-indigo-700">
+                    OK
+                </button>
+            </div>
+        </div>
+    </div>
 
 </div>
 <!-- End of taskManager scope -->

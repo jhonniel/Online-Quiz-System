@@ -77,6 +77,28 @@
         .sidebar-scroll::-webkit-scrollbar-thumb:hover {
             background: #9ca3af;
         }
+
+        /* Main content spacing - force it to work */
+        body .main-content-wrapper {
+            margin-left: 16rem !important;
+        }
+        
+        @media (min-width: 1024px) {
+            body .main-content-wrapper {
+                margin-left: 16rem !important;
+            }
+        }
+        
+        @media (max-width: 1023px) {
+            body .main-content-wrapper {
+                margin-left: 0 !important;
+            }
+        }
+        
+        /* Ensure content inside has proper spacing */
+        .main-content-wrapper > main {
+            margin-left: 0 !important;
+        }
     </style>
 </head>
 <body class="font-sans antialiased bg-gray-100" 
@@ -88,15 +110,26 @@
               window.dispatchEvent(new CustomEvent('sidebar-collapse-changed', { detail: value }));
           });
       ">
-    <div class="flex h-screen">
-        <!-- Admin Sidebar -->
-        @include('components.admin-sidebar')
+    <!-- Admin Sidebar -->
+    @include('components.admin-sidebar')
 
-        <!-- Main Content Area -->
-        <div class="flex-1 flex flex-col overflow-hidden transition-all duration-300"
-             :class="sidebarCollapsed ? 'lg:ml-16' : 'lg:ml-64'">
+    <!-- Main Content Area -->
+    <div class="main-content-wrapper flex-1 flex flex-col overflow-hidden"
+         style="margin-left: 16rem !important;"
+         x-init="
+             const updateMargin = () => {
+                 if (window.innerWidth >= 1024) {
+                     $el.style.setProperty('margin-left', sidebarCollapsed ? '4rem' : '16rem', 'important');
+                 } else {
+                     $el.style.setProperty('margin-left', '0', 'important');
+                 }
+             };
+             updateMargin();
+             $watch('sidebarCollapsed', updateMargin);
+             window.addEventListener('resize', updateMargin);
+         ">
             <!-- Top Navigation Bar -->
-            <header class="bg-white shadow-sm border-b border-gray-200 flex-shrink-0">
+            <header class="bg-white shadow-sm border-b border-gray-200 flex-shrink-0 sticky top-0 z-30">
                 <div class="flex items-center justify-between h-14 px-3 sm:px-4 lg:px-6">
                     <div class="flex items-center space-x-3">
                         <!-- Mobile menu button -->

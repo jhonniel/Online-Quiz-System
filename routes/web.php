@@ -118,12 +118,11 @@ Route::prefix('admin')->middleware(['auth', 'admin'])->group(function () {
     Route::post('quizzes/export-csv', [AdminQuizController::class, 'exportToCsv'])->name('admin.quizzes.export-csv');
 
     // Task Management
-    // Task Analytics Dashboard (requires full access - super admin only for now)
     Route::get('tasks/analytics', [App\Http\Controllers\Admin\TaskAnalyticsController::class, 'dashboard'])->name('admin.tasks.analytics');
-    
     Route::get('tasks', [App\Http\Controllers\Admin\TaskController::class, 'index'])->name('admin.tasks.index');
     Route::post('tasks', [App\Http\Controllers\Admin\TaskController::class, 'store'])->name('admin.tasks.store');
     Route::put('tasks/{task}', [App\Http\Controllers\Admin\TaskController::class, 'update'])->name('admin.tasks.update');
+    Route::post('tasks/{task}/reorder', [App\Http\Controllers\Admin\TaskController::class, 'reorder'])->name('admin.tasks.reorder');
     Route::delete('tasks/{task}', [App\Http\Controllers\Admin\TaskController::class, 'destroy'])->name('admin.tasks.destroy');
     Route::post('tasks/update-order', [App\Http\Controllers\Admin\TaskController::class, 'updateOrder'])->name('admin.tasks.update-order');
     Route::post('tasks/{task}/comments', [App\Http\Controllers\Admin\TaskController::class, 'addComment'])->name('admin.tasks.add-comment');
@@ -171,6 +170,7 @@ Route::prefix('admin')->middleware(['auth', 'admin'])->group(function () {
             // Task List Sharing Routes
             Route::post('tasks/task-lists/{taskList}/generate-invite-code', [App\Http\Controllers\Admin\TaskController::class, 'generateTaskListInviteCode'])->name('admin.tasks.task-lists.generate-invite-code');
             Route::post('tasks/task-lists/{taskList}/generate-share-link', [App\Http\Controllers\Admin\TaskController::class, 'generateTaskListShareLink'])->name('admin.tasks.task-lists.generate-share-link');
+            Route::post('tasks/task-lists/{taskList}/send-invitation-email', [App\Http\Controllers\Admin\TaskController::class, 'sendTaskListInvitationEmail'])->name('admin.tasks.task-lists.send-invitation-email');
             Route::post('tasks/task-lists/join-by-code', [App\Http\Controllers\Admin\TaskController::class, 'joinTaskListByCode'])->name('admin.tasks.task-lists.join-by-code')->middleware('auth');
             Route::get('tasks/task-lists/join-by-link/{token}', [App\Http\Controllers\Admin\TaskController::class, 'joinTaskListByLink'])->name('admin.tasks.join-task-list-by-link')->middleware('auth');
             
@@ -224,10 +224,6 @@ Route::prefix('admin')->middleware(['auth', 'admin'])->group(function () {
         Route::get('kpi/dashboard', [App\Http\Controllers\Admin\KpiController::class, 'dashboard'])->name('admin.kpi.dashboard');
     });
 
-    // Task Analytics - Only for super admins
-    Route::middleware(['auth'])->group(function () {
-        Route::get('tasks/analytics', [App\Http\Controllers\Admin\TaskAnalyticsController::class, 'dashboard'])->name('admin.tasks.analytics');
-    });
 
     // Employee Management
     Route::middleware(['admin.permission:employee_management'])->group(function () {

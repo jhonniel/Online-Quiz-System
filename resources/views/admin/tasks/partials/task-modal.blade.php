@@ -272,5 +272,76 @@
             </div>
         </div>
     </div>
+
+    <!-- Alert Modal for Task Modal -->
+    <div x-show="alertModal.open" 
+         x-cloak
+         class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-[10020]"
+         @click.self="closeAlert()"
+         style="display: none;">
+        <div class="relative top-20 mx-auto p-5 border w-11/12 md:w-1/2 lg:w-1/3 shadow-lg rounded-md bg-white" @click.stop>
+            <div class="flex items-center justify-between mb-4">
+                <h3 class="text-lg font-bold" 
+                    :class="{
+                        'text-blue-600': alertModal.type === 'info',
+                        'text-green-600': alertModal.type === 'success',
+                        'text-red-600': alertModal.type === 'error',
+                        'text-yellow-600': alertModal.type === 'warning'
+                    }"
+                    x-text="alertModal.title"></h3>
+                <button @click="closeAlert()" class="text-gray-400 hover:text-gray-600">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                </button>
+            </div>
+            <div class="mb-4">
+                <p class="text-sm text-gray-700 whitespace-pre-line" x-text="alertModal.message"></p>
+            </div>
+            <div class="flex justify-end">
+                <button @click="closeAlert()" 
+                        class="px-4 py-2 rounded-md text-sm font-medium"
+                        :class="{
+                            'bg-blue-600 text-white hover:bg-blue-700': alertModal.type === 'info',
+                            'bg-green-600 text-white hover:bg-green-700': alertModal.type === 'success',
+                            'bg-red-600 text-white hover:bg-red-700': alertModal.type === 'error',
+                            'bg-yellow-600 text-white hover:bg-yellow-700': alertModal.type === 'warning'
+                        }">
+                    OK
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Confirm Modal for Task Modal -->
+    <div x-show="confirmModal.open" 
+         x-cloak
+         class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-[10020]"
+         @click.self="handleCancel()"
+         style="display: none;">
+        <div class="relative top-20 mx-auto p-5 border w-11/12 md:w-1/2 lg:w-1/3 shadow-lg rounded-md bg-white" @click.stop>
+            <div class="flex items-center justify-between mb-4">
+                <h3 class="text-lg font-bold text-gray-900" x-text="confirmModal.title"></h3>
+                <button @click="handleCancel()" class="text-gray-400 hover:text-gray-600">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                </button>
+            </div>
+            <div class="mb-4">
+                <p class="text-sm text-gray-700 whitespace-pre-line" x-text="confirmModal.message"></p>
+            </div>
+            <div class="flex justify-end space-x-3">
+                <button @click="handleCancel()" 
+                        class="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50">
+                    Cancel
+                </button>
+                <button @click="handleConfirm()" 
+                        class="px-4 py-2 bg-red-600 text-white rounded-md text-sm font-medium hover:bg-red-700">
+                    Confirm
+                </button>
+            </div>
+        </div>
+    </div>
 </div>
 

@@ -14,8 +14,10 @@ use App\Models\TaskActivityLog;
 use App\Models\CustomPriority;
 use App\Models\TaskInvitation;
 use App\Models\User;
+use App\Mail\TaskListInvitation as TaskListInvitationMail;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
 
@@ -435,14 +437,47 @@ class TaskController extends Controller
                 $this->logTaskActivity($task, 'status_changed', 'status', $task->status, $request->status, "Status changed from {$task->status} to {$request->status}");
             }
             
-            // Update order when status changes
-            if ($request->status !== $task->status) {
+            // Update order when status changes (if order not explicitly provided)
+            if ($request->status !== $task->status && !$request->has('order')) {
                 $maxOrder = Task::where('type', $task->type)
                     ->where('status', $request->status)
                     ->where('created_by', $task->created_by)
                     ->max('order') ?? 0;
                 $updateData['order'] = $maxOrder + 1;
             }
+        }
+        
+        // Handle order update (for reordering within same board or when moving)
+        if ($request->has('order')) {
+            $newOrder = (int) $request->order;
+            $oldOrder = $task->order ?? 0;
+            
+            // Get all tasks in the same status/type/created_by
+            $query = Task::where('type', $task->type)
+                ->where('status', $request->has('status') ? $request->status : $task->status)
+                ->where('created_by', $task->created_by)
+                ->where('id', '!=', $task->id);
+            
+            // If it's a personal task with task_list_id, also filter by that
+            if ($task->type === 'personal' && $task->task_list_id) {
+                $query->where('task_list_id', $task->task_list_id);
+            }
+            
+            $tasksInSameBoard = $query->orderBy('order')->get();
+            
+            // Reorder tasks
+            $order = 0;
+            foreach ($tasksInSameBoard as $t) {
+                if ($order === $newOrder) {
+                    $order++; // Skip the position for the moved task
+                }
+                if ($t->order != $order) {
+                    $t->update(['order' => $order]);
+                }
+                $order++;
+            }
+            
+            $updateData['order'] = $newOrder;
         }
         
         if ($request->has('priority')) {
@@ -526,6 +561,66 @@ class TaskController extends Controller
         return response()->json([
             'success' => true,
             'message' => 'Task order updated successfully.'
+        ]);
+    }
+
+    /**
+     * Reorder a task within the same board
+     */
+    public function reorder(Request $request, Task $task)
+    {
+        $request->validate([
+            'status' => 'required|string',
+            'order' => 'required|integer|min:0',
+        ]);
+
+        $user = Auth::user();
+        
+        // Check permission
+        if ($task->type === 'personal' && $task->created_by !== $user->id) {
+            abort(403, 'You do not have permission to reorder this task.');
+        }
+
+        $newOrder = (int) $request->order;
+        $oldOrder = $task->order ?? 0;
+        
+        // Get all tasks in the same status/type/created_by
+        $query = Task::where('type', $task->type)
+            ->where('status', $request->status)
+            ->where('created_by', $task->created_by)
+            ->where('id', '!=', $task->id);
+        
+        // If it's a personal task with task_list_id, also filter by that
+        if ($task->type === 'personal' && $task->task_list_id) {
+            $query->where('task_list_id', $task->task_list_id);
+        }
+        
+        $tasksInSameBoard = $query->orderBy('order')->get();
+        
+        // Reorder tasks: shift other tasks to make room
+        $order = 0;
+        foreach ($tasksInSameBoard as $t) {
+            if ($order === $newOrder) {
+                $order++; // Skip the position for the moved task
+            }
+            if ($t->order != $order) {
+                $t->update(['order' => $order]);
+            }
+            $order++;
+        }
+        
+        // Update the moved task
+        $task->update([
+            'order' => $newOrder,
+            'status' => $request->status // Ensure status matches
+        ]);
+        
+        // Log the reorder
+        $this->logTaskActivity($task, 'reordered', 'order', $oldOrder, $newOrder, "Task reordered from position {$oldOrder} to {$newOrder}");
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Task reordered successfully.'
         ]);
     }
 
@@ -1187,6 +1282,45 @@ class TaskController extends Controller
             'token' => $invitation->token,
             'message' => 'Share link generated successfully.'
         ]);
+    }
+
+    /**
+     * Send task list invitation email
+     */
+    public function sendTaskListInvitationEmail(Request $request, TaskList $taskList)
+    {
+        if ($taskList->user_id !== Auth::id()) {
+            abort(403, 'Only task list owners can send invitation emails.');
+        }
+
+        $request->validate([
+            'email' => 'required|email',
+            'invite_code' => 'required|string',
+            'share_link' => 'nullable|string',
+        ]);
+
+        try {
+            $inviterName = Auth::user()->name;
+            
+            Mail::to($request->email)->send(
+                new TaskListInvitationMail(
+                    $taskList->name,
+                    $request->invite_code,
+                    $request->share_link ?? '',
+                    $inviterName
+                )
+            );
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Invitation email sent successfully.'
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to send invitation email: ' . $e->getMessage()
+            ], 500);
+        }
     }
 
     /**

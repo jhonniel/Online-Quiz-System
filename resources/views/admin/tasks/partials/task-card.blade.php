@@ -1,7 +1,9 @@
 <div
-    class="bg-white/80 backdrop-blur-sm rounded-lg shadow-sm border border-white/60 hover:shadow-md transition-all cursor-pointer group"
+    class="task-card bg-white/80 backdrop-blur-sm rounded-lg shadow-sm border border-white/60 hover:shadow-md transition-all cursor-grab active:cursor-grabbing group"
     draggable="true"
-    @dragstart="handleDragStart($event, { id: {{ $task->id }}, status: '{{ $task->status }}' })"
+    data-task-id="{{ $task->id }}"
+    data-task-order="{{ $task->order ?? 0 }}"
+    @dragstart="handleDragStart($event, { id: {{ $task->id }}, status: '{{ $task->status }}', order: {{ $task->order ?? 0 }} })"
     @dragend="handleDragEnd($event)"
     @click="openEditModal({ id: {{ $task->id }} })"
 >

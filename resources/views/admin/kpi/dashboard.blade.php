@@ -1,9 +1,10 @@
 @extends('layouts.admin')
 
 @section('title', 'Key Performance Indicator Dashboard')
+@section('page-title', 'KPI Dashboard')
 
 @section('content')
-<div class="space-y-6">
+<div class="space-y-4 sm:space-y-6 px-2 sm:px-0">
     <!-- Page Header -->
     <div class="px-4 py-6 sm:px-6 sm:py-8 bg-gradient-to-r from-indigo-600 via-purple-600 to-indigo-700 shadow-lg rounded-2xl">
         <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-6">

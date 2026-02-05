@@ -682,7 +682,6 @@
                  x-transition:leave-end="opacity-0 transform scale-95"
                  :class="sidebarCollapsed ? 'hidden' : ''"
                  class="ml-6 mt-1 space-y-1">
-                @if(auth()->user()->isSuperAdmin())
                 <a href="{{ route('admin.tasks.analytics') }}"
                    class="flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors duration-200 {{ request()->routeIs('admin.tasks.analytics') ? 'bg-indigo-700 text-white' : 'text-gray-400 hover:bg-gray-700 hover:text-gray-300' }}"
                    :title="sidebarCollapsed ? 'Task Analytics' : ''">
@@ -693,7 +692,6 @@
                         Task Analytics
                     </span>
                 </a>
-                @endif
                 <a href="{{ route('admin.tasks.index', ['type' => 'personal']) }}"
                    class="flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors duration-200 {{ request()->routeIs('admin.tasks.index') && request('type') == 'personal' ? 'bg-indigo-700 text-white' : 'text-gray-400 hover:bg-gray-700 hover:text-gray-300' }}"
                    :title="sidebarCollapsed ? 'My Tasks' : ''">
