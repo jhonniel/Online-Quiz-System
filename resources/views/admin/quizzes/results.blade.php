@@ -194,7 +194,16 @@
                                     </td>
                                     <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
                                         <div class="flex space-x-2">
-                                            <button onclick="showStudentDetails({{ $userId }})" class="text-indigo-600 hover:text-indigo-900">
+                                            <button
+                                                onclick="showStudentDetails(
+                                                    {{ $userId }},
+                                                    @js($user->name),
+                                                    @js($user->email),
+                                                    {{ $attemptCount }},
+                                                    {{ $bestScore }},
+                                                    @js($lastAttempt->created_at->format('M j, Y g:i A'))
+                                                )"
+                                                class="text-indigo-600 hover:text-indigo-900">
                                                 View Details
                                             </button>
                                             <a href="{{ route('admin.quizzes.user-history', ['quizId' => $quiz->id, 'userId' => $userId]) }}"
@@ -242,36 +251,48 @@
 </div>
 
 <script>
-function showStudentDetails(userId) {
+function showStudentDetails(userId, name, email, attemptCount, bestScore, lastAttemptAt) {
     const modal = document.getElementById('studentDetailsModal');
     const content = document.getElementById('studentDetailsContent');
 
-    // Show loading state
-    content.innerHTML = `
-        <div class="flex justify-center items-center py-8">
-            <svg class="animate-spin h-8 w-8 text-indigo-600" fill="none" viewBox="0 0 24 24">
-                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-            </svg>
-            <span class="ml-2 text-gray-600">Loading student details...</span>
-        </div>
-    `;
-
     modal.classList.remove('hidden');
 
-    // For now, just show a placeholder
-    setTimeout(() => {
-        content.innerHTML = `
-            <div class="text-center py-8">
-                <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                </svg>
-                <h3 class="mt-2 text-sm font-medium text-gray-900">Student Details</h3>
-                <p class="mt-1 text-sm text-gray-500">Detailed student performance will be shown here.</p>
-                <p class="mt-2 text-sm text-gray-400">Student ID: ${userId}</p>
+    // Simple summary details for now
+    content.innerHTML = `
+        <div class="space-y-4">
+            <div class="flex items-center space-x-3">
+                <div class="h-10 w-10 rounded-full bg-indigo-100 flex items-center justify-center">
+                    <span class="text-sm font-semibold text-indigo-700">
+                        ${name ? name.charAt(0).toUpperCase() : '?'}
+                    </span>
+                </div>
+                <div>
+                    <div class="text-base font-semibold text-gray-900">${name || 'Student'}</div>
+                    <div class="text-sm text-gray-500">${email || ''}</div>
+                    <div class="text-xs text-gray-400 mt-1">Student ID: ${userId}</div>
+                </div>
             </div>
-        `;
-    }, 1000);
+
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div class="bg-gray-50 rounded-lg p-4">
+                    <div class="text-xs font-medium text-gray-500 uppercase tracking-wide">Best Score</div>
+                    <div class="mt-1 text-xl font-bold text-gray-900">${bestScore ?? 0} pts</div>
+                </div>
+                <div class="bg-gray-50 rounded-lg p-4">
+                    <div class="text-xs font-medium text-gray-500 uppercase tracking-wide">Attempts</div>
+                    <div class="mt-1 text-xl font-bold text-gray-900">${attemptCount ?? 0}</div>
+                </div>
+                <div class="bg-gray-50 rounded-lg p-4">
+                    <div class="text-xs font-medium text-gray-500 uppercase tracking-wide">Last Attempt</div>
+                    <div class="mt-1 text-sm font-semibold text-gray-900">${lastAttemptAt || 'N/A'}</div>
+                </div>
+            </div>
+
+            <div class="text-xs text-gray-500">
+                For full question-by-question history, use the <span class="font-semibold">View History</span> link in the table.
+            </div>
+        </div>
+    `;
 }
 
 function closeStudentDetailsModal() {
