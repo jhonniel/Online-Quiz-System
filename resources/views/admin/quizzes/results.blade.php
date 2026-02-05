@@ -193,8 +193,9 @@
                                         {{ $lastAttempt->created_at->format('M j, Y g:i A') }}
                                     </td>
                                     <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                                        <div class="flex space-x-2">
+                                        <div class="flex items-center space-x-2">
                                             <button
+                                                type="button"
                                                 onclick="showStudentDetails(
                                                     {{ $userId }},
                                                     @js($user->name),
@@ -203,12 +204,14 @@
                                                     {{ $bestScore }},
                                                     @js($lastAttempt->created_at->format('M j, Y g:i A'))
                                                 )"
-                                                class="text-indigo-600 hover:text-indigo-900">
+                                                class="text-indigo-600 hover:text-indigo-900 cursor-pointer bg-transparent border-0 p-0">
                                                 View Details
                                             </button>
+                                            <span class="text-gray-300">|</span>
                                             <a href="{{ route('admin.quizzes.user-history', ['quizId' => $quiz->id, 'userId' => $userId]) }}"
-                                               class="text-green-600 hover:text-green-900">
-                                                View History
+                                               class="text-green-600 hover:text-green-800 font-medium"
+                                               style="color: #16a34a !important; text-decoration: none !important; display: inline-block !important;">
+                                                View
                                             </a>
                                         </div>
                                     </td>
