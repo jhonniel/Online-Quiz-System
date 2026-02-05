@@ -34,4 +34,13 @@ class QuizAttempt extends Model
     {
         return $this->belongsTo(Question::class);
     }
+
+    /**
+     * Legacy relationship to the selected answer option (for old data).
+     * Newer attempts may have null answer_id and instead use user_answer.
+     */
+    public function answer()
+    {
+        return $this->belongsTo(Answer::class);
+    }
 }
