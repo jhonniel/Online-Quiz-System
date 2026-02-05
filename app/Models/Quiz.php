@@ -9,6 +9,11 @@ class Quiz extends Model
     protected $fillable = [
         'title',
         'description',
+        'quiz_code',
+        'time_limit',
+        'topic',
+        'total_questions',
+        'questions_to_show',
         'is_active',
         'created_by',
     ];
