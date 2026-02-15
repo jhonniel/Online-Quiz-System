@@ -35,7 +35,7 @@
 
     <!-- Filters -->
     <div class="bg-white shadow rounded-lg p-4 sm:p-6 mb-6">
-        <form method="GET" action="{{ route('admin.time-report.index') }}" class="space-y-4">
+        <form method="GET" action="{{ url('/admin/time-report') }}" class="space-y-4">
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
                 <div class="flex flex-col">
                     <label for="department_id" class="block text-sm font-medium text-gray-700 mb-2">Department</label>
@@ -80,7 +80,7 @@
                 <button type="submit" class="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2">
                     Apply Filters
                 </button>
-                <a href="{{ route('admin.time-report.index') }}" class="px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2">
+                <a href="{{ url('/admin/time-report') }}" class="px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2">
                     Reset
                 </a>
             </div>
@@ -93,7 +93,7 @@
                 $prevWeekParams = array_merge(request()->query(), ['week_start' => $previousWeek]);
                 $nextWeekParams = array_merge(request()->query(), ['week_start' => $nextWeek]);
             @endphp
-            <a href="{{ route('admin.time-report.index', $prevWeekParams) }}"
+            <a href="{{ url('/admin/time-report?' . http_build_query($prevWeekParams)) }}"
                class="inline-flex items-center px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50">
                 <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
@@ -107,7 +107,7 @@
                     Week of {{ $weekStartDate->format('M d') }} - {{ $weekEndDate->format('M d, Y') }}
                 @endif
             </div>
-            <a href="{{ route('admin.time-report.index', $nextWeekParams) }}"
+            <a href="{{ url('/admin/time-report?' . http_build_query($nextWeekParams)) }}"
                class="inline-flex items-center px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50">
                 Next Week
                 <svg class="w-4 h-4 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">

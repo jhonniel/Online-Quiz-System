@@ -422,10 +422,7 @@ class HiringApplicationController extends Controller
             ]);
 
             // Redirect to success page with application ID and position title
-            return redirect()->route('hiring.application.success', [
-                'application_id' => $application->id,
-                'position_title' => $position->title
-            ])->with('application_id', $application->id)
+            return redirect('/hiring/application/success?' . http_build_query(['application_id' => $application->id, 'position_title' => $position->title]))->with('application_id', $application->id)
               ->with('position_title', $position->title)
               ->with('success', true);
         } catch (\Exception $e) {

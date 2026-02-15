@@ -45,7 +45,7 @@ class ImportController extends Controller
             $totalQuestions = $quiz->questions()->count();
             $quiz->update(['total_questions' => $totalQuestions]);
 
-            return redirect()->route('quizzes.index')
+            return redirect('/admin/quizzes')
                 ->with('success', "Quiz '{$quiz->title}' created successfully with {$totalQuestions} questions imported from Excel!");
 
         } catch (\Exception $e) {

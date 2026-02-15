@@ -26,21 +26,21 @@
                     <div class="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center items-center animate-fade-in-up animate-delay-200 px-4 pb-4 sm:pb-0">
                         @auth
                             @if(auth()->user()->isAdmin())
-                                <a href="{{ route('admin.dashboard') }}" class="w-full sm:w-auto bg-white text-primary px-6 py-3 sm:px-8 sm:py-4 rounded-xl font-semibold hover:bg-gray-50 transition-all shadow-xl hover:shadow-2xl transform hover:-translate-y-1 text-sm sm:text-base text-center">
+                                <a href="{{ url('/admin/dashboard') }}" class="w-full sm:w-auto bg-white text-primary px-6 py-3 sm:px-8 sm:py-4 rounded-xl font-semibold hover:bg-gray-50 transition-all shadow-xl hover:shadow-2xl transform hover:-translate-y-1 text-sm sm:text-base text-center">
                                     Go to Dashboard
                                 </a>
                             @else
-                                <a href="{{ route('user.dashboard') }}" class="w-full sm:w-auto bg-white text-primary px-6 py-3 sm:px-8 sm:py-4 rounded-xl font-semibold hover:bg-gray-50 transition-all shadow-xl hover:shadow-2xl transform hover:-translate-y-1 text-sm sm:text-base text-center">
+                                <a href="{{ url('/dashboard') }}" class="w-full sm:w-auto bg-white text-primary px-6 py-3 sm:px-8 sm:py-4 rounded-xl font-semibold hover:bg-gray-50 transition-all shadow-xl hover:shadow-2xl transform hover:-translate-y-1 text-sm sm:text-base text-center">
                                     Go to Dashboard
                                 </a>
                             @endif
                         @else
-                            <a href="{{ $heroPrimaryButtonUrl ?? route('login') }}" class="w-full sm:w-auto bg-white text-primary px-6 py-3 sm:px-8 sm:py-4 rounded-xl font-semibold hover:bg-gray-50 transition-all shadow-xl hover:shadow-2xl transform hover:-translate-y-1 text-sm sm:text-base text-center whitespace-nowrap">
+                            <a href="{{ $heroPrimaryButtonUrl ?? url('/login') }}" class="w-full sm:w-auto bg-white text-primary px-6 py-3 sm:px-8 sm:py-4 rounded-xl font-semibold hover:bg-gray-50 transition-all shadow-xl hover:shadow-2xl transform hover:-translate-y-1 text-sm sm:text-base text-center whitespace-nowrap">
                                 {{ $heroPrimaryButtonText }}
                             </a>
                         @endauth
                         @if(!empty($heroSecondaryButtonText))
-                            <a href="{{ $heroSecondaryButtonUrl ?? route('landing.projects') }}" class="w-full sm:w-auto border-2 border-white text-white px-6 py-3 sm:px-8 sm:py-4 rounded-xl font-semibold hover:bg-white hover:text-gray-900 transition-all backdrop-blur-sm text-sm sm:text-base text-center whitespace-nowrap">
+                            <a href="{{ $heroSecondaryButtonUrl ?? url('/projects') }}" class="w-full sm:w-auto border-2 border-white text-white px-6 py-3 sm:px-8 sm:py-4 rounded-xl font-semibold hover:bg-white hover:text-gray-900 transition-all backdrop-blur-sm text-sm sm:text-base text-center whitespace-nowrap">
                                 {{ $heroSecondaryButtonText }}
                             </a>
                         @endif
@@ -68,21 +68,21 @@
             <div class="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center items-center animate-fade-in-up animate-delay-200 px-4 pb-4 sm:pb-0">
                 @auth
                     @if(auth()->user()->isAdmin())
-                        <a href="{{ route('admin.dashboard') }}" class="w-full sm:w-auto bg-white text-primary px-6 py-3 sm:px-8 sm:py-4 rounded-xl font-semibold hover:bg-gray-50 transition-all shadow-xl hover:shadow-2xl transform hover:-translate-y-1 text-sm sm:text-base text-center">
+                        <a href="{{ url('/admin/dashboard') }}" class="w-full sm:w-auto bg-white text-primary px-6 py-3 sm:px-8 sm:py-4 rounded-xl font-semibold hover:bg-gray-50 transition-all shadow-xl hover:shadow-2xl transform hover:-translate-y-1 text-sm sm:text-base text-center">
                             Go to Dashboard
                         </a>
                     @else
-                        <a href="{{ route('user.dashboard') }}" class="w-full sm:w-auto bg-white text-primary px-6 py-3 sm:px-8 sm:py-4 rounded-xl font-semibold hover:bg-gray-50 transition-all shadow-xl hover:shadow-2xl transform hover:-translate-y-1 text-sm sm:text-base text-center">
+                        <a href="{{ url('/dashboard') }}" class="w-full sm:w-auto bg-white text-primary px-6 py-3 sm:px-8 sm:py-4 rounded-xl font-semibold hover:bg-gray-50 transition-all shadow-xl hover:shadow-2xl transform hover:-translate-y-1 text-sm sm:text-base text-center">
                             Go to Dashboard
                         </a>
                     @endif
                 @else
-                    <a href="{{ $heroPrimaryButtonUrl ?? route('login') }}" class="w-full sm:w-auto bg-white text-primary px-6 py-3 sm:px-8 sm:py-4 rounded-xl font-semibold hover:bg-gray-50 transition-all shadow-xl hover:shadow-2xl transform hover:-translate-y-1 text-sm sm:text-base text-center whitespace-nowrap">
+                    <a href="{{ $heroPrimaryButtonUrl ?? url('/login') }}" class="w-full sm:w-auto bg-white text-primary px-6 py-3 sm:px-8 sm:py-4 rounded-xl font-semibold hover:bg-gray-50 transition-all shadow-xl hover:shadow-2xl transform hover:-translate-y-1 text-sm sm:text-base text-center whitespace-nowrap">
                         {{ $heroPrimaryButtonText }}
                     </a>
                 @endauth
                 @if(!empty($heroSecondaryButtonText))
-                    <a href="{{ $heroSecondaryButtonUrl ?? route('landing.projects') }}" class="w-full sm:w-auto border-2 border-white text-white px-6 py-3 sm:px-8 sm:py-4 rounded-xl font-semibold hover:bg-white hover:text-gray-900 transition-all backdrop-blur-sm text-sm sm:text-base text-center whitespace-nowrap">
+                    <a href="{{ $heroSecondaryButtonUrl ?? url('/projects') }}" class="w-full sm:w-auto border-2 border-white text-white px-6 py-3 sm:px-8 sm:py-4 rounded-xl font-semibold hover:bg-white hover:text-gray-900 transition-all backdrop-blur-sm text-sm sm:text-base text-center whitespace-nowrap">
                         {{ $heroSecondaryButtonText }}
                     </a>
                 @endif
@@ -606,7 +606,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         </div>
                     @endif
 
-                    @if ($errors->any())
+                    @if (isset($errors) && $errors->any())
                         <div class="mb-4 sm:mb-6 bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative" role="alert">
                             <strong class="font-bold">Error!</strong>
                             <span class="block sm:inline">Please fix the following errors:</span>
@@ -618,7 +618,14 @@ document.addEventListener('DOMContentLoaded', function() {
                         </div>
                     @endif
 
-                    <form action="{{ route('landing.contact.store') }}" method="POST" class="space-y-4 sm:space-y-6">
+                    @php
+                        try {
+                            $contactRoute = url('/contact');
+                        } catch (Exception $e) {
+                            $contactRoute = '/contact';
+                        }
+                    @endphp
+                    <form action="{{ $contactRoute }}" method="POST" class="space-y-4 sm:space-y-6">
                         @csrf
 
                         <div>

@@ -859,7 +859,7 @@ class SettingsController extends Controller
         Cache::forget('setting.file_storage_student_access');
         Setting::clearCache();
 
-        return redirect()->route('admin.settings.index')
+        return redirect('/admin/settings')
             ->with('success', 'Settings updated successfully.');
     }
 

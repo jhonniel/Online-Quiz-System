@@ -16,7 +16,7 @@
                     <p class="text-indigo-100">Review all applicants and their quiz performance</p>
                 </div>
             </div>
-            <a href="{{ route('admin.hiring-process.index') }}" class="inline-flex items-center px-4 py-2 border border-white border-opacity-20 rounded-md text-sm font-medium text-white hover:bg-white hover:bg-opacity-10">
+            <a href="{{ url('/admin/hiring-process') }}" class="inline-flex items-center px-4 py-2 border border-white border-opacity-20 rounded-md text-sm font-medium text-white hover:bg-white hover:bg-opacity-10">
                 <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
                 </svg>
@@ -123,7 +123,7 @@
                                 @endif
                             </td>
                             <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                                <a href="{{ route('admin.users.show', $applicant['id']) }}" class="text-indigo-600 hover:text-indigo-900">
+                                <a href="{{ url('/admin/users/' . $applicant['id']) }}" class="text-indigo-600 hover:text-indigo-900">
                                     View Profile
                                 </a>
                             </td>
@@ -153,7 +153,7 @@
 
         <!-- Filters for Hired Applicants -->
         <div class="px-6 py-4 border-b border-gray-200 bg-gray-50">
-            <form method="GET" action="{{ route('admin.hiring-process.applicants') }}" id="hired-applicants-form" class="flex items-center justify-between flex-wrap gap-4">
+            <form method="GET" action="{{ url('/admin/hiring-process/applicants') }}" id="hired-applicants-form" class="flex items-center justify-between flex-wrap gap-4">
                 <!-- Preserve other query parameters -->
                 @if(request('search'))
                     <input type="hidden" name="search" value="{{ request('search') }}">
@@ -299,11 +299,11 @@
                             </td>
                             <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                                 @if($applicant['application_id'])
-                                    <a href="{{ route('admin.hiring-applications.show', $applicant['application_id']) }}" class="text-indigo-600 hover:text-indigo-900">
+                                    <a href="{{ url('/admin/hiring-applications/' . $applicant['application_id']) }}" class="text-indigo-600 hover:text-indigo-900">
                                         View Application
                                     </a>
                                 @elseif($applicant['id'])
-                                    <a href="{{ route('admin.users.show', $applicant['id']) }}" class="text-indigo-600 hover:text-indigo-900">
+                                    <a href="{{ url('/admin/users/' . $applicant['id']) }}" class="text-indigo-600 hover:text-indigo-900">
                                         View Profile
                                     </a>
                                 @endif

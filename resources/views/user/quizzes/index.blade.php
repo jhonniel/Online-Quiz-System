@@ -11,7 +11,7 @@
             <p class="mt-1 text-sm text-gray-600">View and take your assigned quizzes.</p>
         </div>
         <div class="mt-4 flex md:mt-0 md:ml-4">
-            <a href="{{ route('user.quizzes.enter-code') }}"
+            <a href="{{ url('/quizzes/enter-code') }}"
                class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
                 <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
@@ -60,12 +60,12 @@
                                     </td>
                                     <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
                                         @if(!$assignment->is_completed)
-                                            <a href="{{ route('user.quizzes.enter-code') }}"
+                                            <a href="{{ url('/quizzes/enter-code') }}"
                                                class="text-indigo-600 hover:text-indigo-900 font-medium">
                                                 Take Quiz
                                             </a>
                                         @else
-                                            <a href="{{ route('user.quizzes.result', $assignment->quiz) }}"
+                                            <a href="{{ url('/quizzes/' . $assignment->quiz->id . '/result') }}"
                                                class="text-green-600 hover:text-green-900 font-medium">
                                                 View Result
                                             </a>
@@ -84,7 +84,7 @@
                     <h3 class="mt-2 text-sm font-medium text-gray-900">No quizzes assigned</h3>
                     <p class="mt-1 text-sm text-gray-500">You don't have any quizzes assigned to you yet.</p>
                     <div class="mt-6">
-                        <a href="{{ route('user.quizzes.enter-code') }}"
+                        <a href="{{ url('/quizzes/enter-code') }}"
                            class="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
                             <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>

@@ -80,7 +80,7 @@
                     @endif
                 </div>
                 <div class="mt-3">
-                    <a href="{{ route('user.quizzes.take', $ongoingQuiz->quiz) }}"
+                    <a href="{{ url('/quizzes/' . $ongoingQuiz->quiz->id . '/take') }}"
                        class="inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-blue-700 bg-blue-100 hover:bg-blue-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
                         <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.828 14.828a4 4 0 01-5.656 0M9 10h1m4 0h1m-6 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -247,14 +247,14 @@
                                         <div x-show="open" @click.away="open = false" x-transition:enter="transition ease-out duration-100" x-transition:enter-start="transform opacity-0 scale-95" x-transition:enter-end="transform opacity-100 scale-100" x-transition:leave="transition ease-in duration-75" x-transition:leave-start="transform opacity-100 scale-100" x-transition:leave-end="transform opacity-0 scale-95" class="origin-top-right absolute right-0 mt-2 w-48 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 z-20">
                                             <div class="py-1">
                                                 @if($isAssigned && $isCompleted)
-                                                    <a href="{{ route('user.quizzes.result', $quiz) }}" class="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
+                                                    <a href="{{ url('/quizzes/' . $quiz->id . '/result') }}" class="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
                                                         <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                                                         </svg>
                                                         View Result
                                                     </a>
                                                 @elseif($isAssigned && $assignment->status === 'in_progress')
-                                                    <a href="{{ route('user.quizzes.take', $quiz) }}" class="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
+                                                    <a href="{{ url('/quizzes/' . $quiz->id . '/take') }}" class="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
                                                         <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.828 14.828a4 4 0 01-5.656 0M9 10h1m4 0h1m-6 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                                                         </svg>
@@ -311,7 +311,7 @@
                 </button>
             </div>
 
-                <form id="quizCodeForm" method="POST" action="{{ route('user.quizzes.validate-code') }}">
+                <form id="quizCodeForm" method="POST" action="{{ url('/quizzes/validate-code') }}">
                     @csrf
                     <div class="mb-4">
                         <label for="quiz_code" class="block text-sm font-medium text-gray-700 mb-2">

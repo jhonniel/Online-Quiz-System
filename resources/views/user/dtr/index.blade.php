@@ -73,7 +73,7 @@
 
     <!-- Filter Form -->
     <div class="bg-white rounded-lg shadow border border-gray-200 p-4 mx-2 sm:mx-3 lg:mx-4 xl:mx-6 mt-4">
-        <form method="GET" action="{{ route('user.dtr.index') }}" class="space-y-4">
+        <form method="GET" action="{{ url('/dtr') }}" class="space-y-4">
             <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <!-- Date From -->
                 <div>
@@ -111,7 +111,7 @@
                     </svg>
                     Filter
                 </button>
-                <a href="{{ route('user.dtr.index') }}" class="inline-flex items-center px-4 sm:px-6 py-2 border border-gray-300 text-xs sm:text-sm font-medium rounded-lg text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                <a href="{{ url('/dtr') }}" class="inline-flex items-center px-4 sm:px-6 py-2 border border-gray-300 text-xs sm:text-sm font-medium rounded-lg text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
                     Reset
                 </a>
             </div>
@@ -446,7 +446,7 @@ document.addEventListener('DOMContentLoaded', function() {
             </button>
         </div>
 
-        <form action="{{ route('user.dtr-time-requests.store') }}" method="POST" id="record-attendance-form" onsubmit="return validateAttendanceForm(event)">
+        <form action="{{ url('/dtr-time-requests') }}" method="POST" id="record-attendance-form" onsubmit="return validateAttendanceForm(event)">
             @csrf
             <input type="hidden" name="filter_date_from" value="{{ request('date_from') }}">
             <input type="hidden" name="filter_date_to" value="{{ request('date_to') }}">

@@ -520,7 +520,7 @@ class HiringApplicationController extends Controller
             }
         }
 
-        return redirect()->route('admin.hiring-applications.show', $application)
+        return redirect('/admin/hiring-applications/' . $application->id)
             ->with('success', 'Application accepted. User account created and credentials sent via email.');
     }
 
@@ -578,7 +578,7 @@ class HiringApplicationController extends Controller
             }
         }
 
-        return redirect()->route('admin.hiring-applications.show', $application)
+        return redirect('/admin/hiring-applications/' . $application->id)
             ->with('success', 'Application rejected.');
     }
 
@@ -596,7 +596,7 @@ class HiringApplicationController extends Controller
 
         // Only allow reconsideration if application is rejected
         if ($application->status !== 'rejected') {
-            return redirect()->route('admin.hiring-applications.show', $application)
+            return redirect('/admin/hiring-applications/' . $application->id)
                 ->with('error', 'Only rejected applications can be reconsidered.');
         }
 
@@ -719,7 +719,7 @@ class HiringApplicationController extends Controller
             }
         }
 
-        return redirect()->route('admin.hiring-applications.show', $application)
+        return redirect('/admin/hiring-applications/' . $application->id)
             ->with('success', 'Application reconsidered and accepted. User account created and credentials sent via email.');
     }
 
@@ -812,7 +812,7 @@ class HiringApplicationController extends Controller
 
         $successMessage = $isReschedule ? 'Interview rescheduled. Email notification sent to applicant.' : 'Interview scheduled. Email notification sent to applicant.';
 
-        return redirect()->route('admin.hiring-applications.show', $application)
+        return redirect('/admin/hiring-applications/' . $application->id)
             ->with('success', $successMessage);
     }
 
@@ -896,18 +896,18 @@ class HiringApplicationController extends Controller
 
         // Only allow sending follow-up for scheduled interviews
         if ($application->status !== 'interview_scheduled') {
-            return redirect()->route('admin.hiring-applications.show', $application)
+            return redirect('/admin/hiring-applications/' . $application->id)
                 ->withErrors(['error' => 'Follow-up email can only be sent for scheduled interviews.']);
         }
 
         if (!$application->interview_date) {
-            return redirect()->route('admin.hiring-applications.show', $application)
+            return redirect('/admin/hiring-applications/' . $application->id)
                 ->withErrors(['error' => 'Interview date must be set before sending follow-up email.']);
         }
 
         // Only allow sending follow-up for past interviews (beyond today's date)
         if ($application->interview_date->gte(now())) {
-            return redirect()->route('admin.hiring-applications.show', $application)
+            return redirect('/admin/hiring-applications/' . $application->id)
                 ->withErrors(['error' => 'Follow-up email can only be sent for past interviews.']);
         }
 
@@ -939,11 +939,11 @@ class HiringApplicationController extends Controller
                 ]
             );
 
-            return redirect()->route('admin.hiring-applications.show', $application)
+            return redirect('/admin/hiring-applications/' . $application->id)
                 ->with('success', 'Follow-up email sent successfully.');
         } catch (\Exception $e) {
             Log::error('Failed to send follow-up email: ' . $e->getMessage());
-            return redirect()->route('admin.hiring-applications.show', $application)
+            return redirect('/admin/hiring-applications/' . $application->id)
                 ->withErrors(['error' => 'Failed to send follow-up email. Please try again.']);
         }
     }
@@ -957,7 +957,7 @@ class HiringApplicationController extends Controller
 
         // Only allow marking interview as done if interview was scheduled
         if ($application->status !== 'interview_scheduled') {
-            return redirect()->route('admin.hiring-applications.show', $application)
+            return redirect('/admin/hiring-applications/' . $application->id)
                 ->withErrors(['error' => 'Can only mark interview as done if interview is scheduled.']);
         }
 
@@ -994,7 +994,7 @@ class HiringApplicationController extends Controller
             ]
         );
 
-        return redirect()->route('admin.hiring-applications.show', $application)
+        return redirect('/admin/hiring-applications/' . $application->id)
             ->with('success', 'Interview marked as done.');
     }
 
@@ -1015,25 +1015,25 @@ class HiringApplicationController extends Controller
                         strcasecmp($application->hiringPosition->employment_type ?? '', 'Internship') === 0;
         
         if ($isInternship) {
-            return redirect()->route('admin.hiring-applications.show', $application)
+            return redirect('/admin/hiring-applications/' . $application->id)
                 ->withErrors(['error' => 'Please use "Accept Intern" button for internship positions.']);
         }
 
         // Only allow marking as hired if interview is done, interview was scheduled, or application was accepted
         if ($application->status !== 'done_interview' && $application->status !== 'interview_scheduled' && $application->status !== 'accepted') {
-            return redirect()->route('admin.hiring-applications.show', $application)
+            return redirect('/admin/hiring-applications/' . $application->id)
                 ->withErrors(['error' => 'Can only mark as hired after interview is done, interview is scheduled, or application is accepted.']);
         }
 
         // Ensure user account exists
         if (!$application->user_id) {
-            return redirect()->route('admin.hiring-applications.show', $application)
+            return redirect('/admin/hiring-applications/' . $application->id)
                 ->withErrors(['error' => 'User account must be created first. Please accept the application first.']);
         }
 
         $user = $application->user;
         if (!$user) {
-            return redirect()->route('admin.hiring-applications.show', $application)
+            return redirect('/admin/hiring-applications/' . $application->id)
                 ->withErrors(['error' => 'User account not found.']);
         }
 
@@ -1107,7 +1107,7 @@ class HiringApplicationController extends Controller
             }
         }
 
-        return redirect()->route('admin.hiring-applications.show', $application)
+        return redirect('/admin/hiring-applications/' . $application->id)
             ->with('success', 'Application marked as hired. User account is now active and can login.');
     }
 
@@ -1128,25 +1128,25 @@ class HiringApplicationController extends Controller
                         strcasecmp($application->hiringPosition->employment_type ?? '', 'Internship') === 0;
         
         if (!$isInternship) {
-            return redirect()->route('admin.hiring-applications.show', $application)
+            return redirect('/admin/hiring-applications/' . $application->id)
                 ->withErrors(['error' => 'This action is only available for internship positions.']);
         }
 
         // Only allow accepting intern if interview is done, interview was scheduled, or application was accepted
         if ($application->status !== 'done_interview' && $application->status !== 'interview_scheduled' && $application->status !== 'accepted') {
-            return redirect()->route('admin.hiring-applications.show', $application)
+            return redirect('/admin/hiring-applications/' . $application->id)
                 ->withErrors(['error' => 'Can only accept intern after interview is done, interview is scheduled, or application is accepted.']);
         }
 
         // Ensure user account exists
         if (!$application->user_id) {
-            return redirect()->route('admin.hiring-applications.show', $application)
+            return redirect('/admin/hiring-applications/' . $application->id)
                 ->withErrors(['error' => 'User account must be created first. Please accept the application first.']);
         }
 
         $user = $application->user;
         if (!$user) {
-            return redirect()->route('admin.hiring-applications.show', $application)
+            return redirect('/admin/hiring-applications/' . $application->id)
                 ->withErrors(['error' => 'User account not found.']);
         }
 
@@ -1224,7 +1224,7 @@ class HiringApplicationController extends Controller
             }
         }
 
-        return redirect()->route('admin.hiring-applications.show', $application)
+        return redirect('/admin/hiring-applications/' . $application->id)
             ->with('success', 'Intern accepted. User account is now active with student role and can login.');
     }
 
@@ -1237,19 +1237,19 @@ class HiringApplicationController extends Controller
 
         // Only allow canceling if application is hired
         if ($application->status !== 'hired') {
-            return redirect()->route('admin.hiring-applications.show', $application)
+            return redirect('/admin/hiring-applications/' . $application->id)
                 ->withErrors(['error' => 'Can only cancel hired applications.']);
         }
 
         // Ensure user account exists
         if (!$application->user_id) {
-            return redirect()->route('admin.hiring-applications.show', $application)
+            return redirect('/admin/hiring-applications/' . $application->id)
                 ->withErrors(['error' => 'User account not found.']);
         }
 
         $user = $application->user;
         if (!$user) {
-            return redirect()->route('admin.hiring-applications.show', $application)
+            return redirect('/admin/hiring-applications/' . $application->id)
                 ->withErrors(['error' => 'User account not found.']);
         }
 
@@ -1308,7 +1308,7 @@ class HiringApplicationController extends Controller
             }
         }
 
-        return redirect()->route('admin.hiring-applications.show', $application)
+        return redirect('/admin/hiring-applications/' . $application->id)
             ->with('success', 'Hired status cancelled. User account has been deactivated.');
     }
 
@@ -1327,7 +1327,7 @@ class HiringApplicationController extends Controller
             'admin_notes' => $request->admin_notes,
         ]);
 
-        return redirect()->route('admin.hiring-applications.show', $application)
+        return redirect('/admin/hiring-applications/' . $application->id)
             ->with('success', 'Admin notes updated successfully.');
     }
 
@@ -1360,7 +1360,7 @@ class HiringApplicationController extends Controller
             ]
         );
 
-        return redirect()->route('admin.hiring-applications.index')
+        return redirect('/admin/hiring-applications')
             ->with('success', 'Application deleted successfully.');
     }
 }

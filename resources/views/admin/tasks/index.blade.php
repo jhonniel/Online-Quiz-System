@@ -143,6 +143,10 @@
             },
             draggedBoard: null,
             
+            // Attachment preview
+            previewAttachmentOpen: false,
+            previewAttachment: null,
+            
             // Modal system for alerts, confirms, and prompts
             alertModal: {
                 open: false,
@@ -499,6 +503,39 @@
                 }
             },
             
+            async updateBoardName(boardId, newName, onSuccess) {
+                if (!newName || newName.trim() === '') {
+                    this.showAlert('Error', 'Board name cannot be empty', 'error');
+                    return;
+                }
+                
+                try {
+                    const response = await fetch(`/admin/tasks/custom-boards/${boardId}`, {
+                        method: 'PUT',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+                        },
+                        body: JSON.stringify({
+                            name: newName.trim()
+                        })
+                    });
+                    
+                    const data = await response.json();
+                    
+                    if (data.success) {
+                        if (onSuccess) onSuccess();
+                        // Reload to reflect changes
+                        setTimeout(() => location.reload(), 300);
+                    } else {
+                        this.showAlert('Error', data.message || 'Failed to update board name', 'error');
+                    }
+                } catch (error) {
+                    console.error('Error:', error);
+                    this.showAlert('Error', 'An error occurred while updating board name', 'error');
+                }
+            },
+            
             deleteTask(taskId) {
                 // First, require user to type DELETE to confirm intent
                 this.showPrompt(
@@ -682,7 +719,90 @@
                 event.preventDefault();
                 event.stopPropagation();
                 
-                if (!this.draggedBoard || this.draggedBoard === targetBoardId) {
+                if (!this.draggedBoard) {
+                    this.draggedBoard = null;
+                    document.querySelectorAll('[data-board-id]').forEach(el => {
+                        el.style.opacity = '1';
+                    });
+                    return;
+                }
+                
+                // If targetBoardId is null, we're dropping on the container (list view)
+                if (targetBoardId === null) {
+                    // Find the container and determine position based on drop Y position
+                    const container = event.currentTarget;
+                    const draggedBoardEl = document.querySelector(`[data-board-id="${this.draggedBoard}"]`);
+                    
+                    if (!draggedBoardEl || !container) {
+                        this.draggedBoard = null;
+                        document.querySelectorAll('[data-board-id]').forEach(el => {
+                            el.style.opacity = '1';
+                        });
+                        return;
+                    }
+                    
+                    // Get all boards in the container
+                    const allBoards = Array.from(container.querySelectorAll('[data-board-id]'));
+                    const dropY = event.clientY;
+                    
+                    // Find insertion point based on Y position
+                    let insertBefore = null;
+                    for (const boardEl of allBoards) {
+                        if (boardEl === draggedBoardEl) continue;
+                        const rect = boardEl.getBoundingClientRect();
+                        if (dropY < rect.top + rect.height / 2) {
+                            insertBefore = boardEl;
+                            break;
+                        }
+                    }
+                    
+                    // Reorder in DOM
+                    if (insertBefore) {
+                        container.insertBefore(draggedBoardEl, insertBefore);
+                    } else {
+                        container.appendChild(draggedBoardEl);
+                    }
+                    
+                    // Calculate new order
+                    const reorderedBoards = Array.from(container.querySelectorAll('[data-board-id]'));
+                    const newOrder = reorderedBoards.map((el, index) => {
+                        const boardId = parseInt(el.dataset.boardId);
+                        return {
+                            id: boardId,
+                            order: index + 1
+                        };
+                    });
+                    
+                    // Update order on server
+                    fetch('/admin/tasks/custom-boards/update-order', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+                        },
+                        body: JSON.stringify({ boards: newOrder })
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            location.reload();
+                        } else {
+                            this.showAlert('Error', 'Error updating board order: ' + (data.message || 'Unknown error'), 'error');
+                            setTimeout(() => location.reload(), 1500);
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                        this.showAlert('Error', 'An error occurred while updating board order', 'error');
+                        setTimeout(() => location.reload(), 1500);
+                    });
+                    
+                    this.draggedBoard = null;
+                    return;
+                }
+                
+                // Original logic for dropping on a specific board
+                if (this.draggedBoard === targetBoardId) {
                     this.draggedBoard = null;
                     document.querySelectorAll('[data-board-id]').forEach(el => {
                         el.style.opacity = '1';
@@ -1244,6 +1364,7 @@
     function taskModal() {
         return {
             currentTask: null,
+            customBoards: @json($customBoards ?? []),
             formData: {
                 title: '',
                 description: '',
@@ -1398,6 +1519,19 @@
                 return date.toLocaleDateString('en-US', options);
             },
             
+            // Get available boards filtered by current task_list_id
+            getAvailableBoards() {
+                const taskListId = this.formData.task_list_id;
+                if (!taskListId || taskListId === '') {
+                    // If no task list is selected, return boards with null task_list_id
+                    return this.customBoards.filter(board => !board.task_list_id || board.task_list_id === null);
+                }
+                // Filter boards that match the current task_list_id
+                return this.customBoards.filter(board => {
+                    return board.task_list_id == taskListId || board.task_list_id === parseInt(taskListId);
+                });
+            },
+            
             async joinByCode() {
                 if (!this.joinCode || this.joinCode.trim().length !== 8) {
                     this.showAlert('Validation Error', 'Please enter a valid 8-character invite code', 'warning');
@@ -1448,13 +1582,15 @@
                         assignments: Array.isArray(task.assignments) ? task.assignments : [],
                         subtasks: Array.isArray(task.subtasks) ? task.subtasks : []
                     };
+                    
+                    // Set task_list_id first to filter available boards
+                    const taskListId = task.task_list_id || '{{ $taskListId ?? '' }}';
                     this.formData = {
                         title: task.title || '',
                         description: task.description || '',
                         notes: task.notes || '',
-                        status: task.status || 'todo',
                         priority: task.priority || 'medium',
-                        task_list_id: task.task_list_id || '{{ $taskListId ?? '' }}',
+                        task_list_id: taskListId,
                         due_date: task.due_date ? new Date(task.due_date).toISOString().split('T')[0] : '',
                         due_time: task.due_date ? new Date(task.due_date).toTimeString().slice(0, 5) : '',
                         assigned_users: task.assignments ? task.assignments.map(a => a.user_id) : [],
@@ -1464,6 +1600,13 @@
                         type: task.type || taskType,
                         parent_id: task.parent_id || null
                     };
+                    
+                    // Set status to current task status if available, otherwise use first available board
+                    const availableBoards = this.getAvailableBoards();
+                    const currentStatus = task.status || 'todo';
+                    const statusExists = availableBoards.some(board => board.status_key === currentStatus);
+                    this.formData.status = statusExists ? currentStatus : (availableBoards.length > 0 ? availableBoards[0].status_key : 'todo');
+                    
                     this.shareMethod = 'code';
                     this.inviteLink = '';
                     this.shareLink = '';
@@ -1481,12 +1624,12 @@
                 } else {
                     // Creating new task
                     this.currentTask = null;
+                    const taskListId = '{{ $taskListId ?? '' }}';
                     this.formData = {
                         title: '',
                         description: '',
                         notes: '',
-                        status: 'todo',
-                        task_list_id: '{{ $taskListId ?? '' }}',
+                        task_list_id: taskListId,
                         due_date: '',
                         due_time: '',
                         assigned_users: [],
@@ -1496,6 +1639,12 @@
                         type: taskType || '{{ $type }}',
                         parent_id: null
                     };
+                    
+                    // Set status to first available board's status
+                    const availableBoards = this.getAvailableBoards();
+                    this.formData.status = availableBoards.length > 0 ? availableBoards[0].status_key : 'todo';
+                    this.formData.priority = 'medium';
+                    
                     this.shareMethod = 'code';
                     this.inviteLink = '';
                     this.shareLink = '';
@@ -2804,7 +2953,45 @@
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path>
                                 </svg>
                                 @endif
-                                <h2 class="text-lg font-semibold {{ $colors['text'] }}">{{ $board->name }}</h2>
+                                <div class="flex-1" x-data="{ editing: false, boardName: '{{ addslashes($board->name) }}', originalName: '{{ addslashes($board->name) }}' }">
+                                    <template x-if="!editing">
+                                        <div class="flex items-center space-x-2">
+                                            <h2 class="text-lg font-semibold {{ $colors['text'] }}" x-text="boardName"></h2>
+                                            <button @click="editing = true" 
+                                                    class="p-1 {{ $colors['text'] }} opacity-60 hover:opacity-100 transition-opacity"
+                                                    title="Edit board name">
+                                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
+                                                </svg>
+                                            </button>
+                                        </div>
+                                    </template>
+                                    <template x-if="editing">
+                                        <div class="flex items-center space-x-2">
+                                            <input type="text" 
+                                                   x-model="boardName"
+                                                   @keydown.enter="updateBoardName({{ $board->id }}, boardName, () => { editing = false; originalName = boardName; })"
+                                                   @keydown.escape="boardName = originalName; editing = false"
+                                                   class="flex-1 px-2 py-1 text-lg font-semibold {{ $colors['text'] }} bg-white/50 border border-white/30 rounded focus:outline-none focus:ring-2 focus:ring-white/50"
+                                                   x-ref="nameInput"
+                                                   x-init="$watch('editing', value => value && $nextTick(() => $refs.nameInput.focus()))">
+                                            <button @click="updateBoardName({{ $board->id }}, boardName, () => { editing = false; originalName = boardName; })"
+                                                    class="p-1 {{ $colors['text'] }} hover:opacity-80 transition-opacity"
+                                                    title="Save">
+                                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                                                </svg>
+                                            </button>
+                                            <button @click="boardName = originalName; editing = false"
+                                                    class="p-1 {{ $colors['text'] }} hover:opacity-80 transition-opacity"
+                                                    title="Cancel">
+                                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                                                </svg>
+                                            </button>
+                                        </div>
+                                    </template>
+                                </div>
                 </div>
                             <div class="flex items-center space-x-2">
                                 <span class="{{ $colors['bg'] }} {{ $colors['text'] }} text-xs font-semibold px-2.5 py-1 rounded-full">{{ $tasks->count() }}</span>
@@ -2816,9 +3003,7 @@
                                     </button>
                                     <div x-show="open" @click.away="open = false" x-cloak class="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg z-10 border border-gray-200">
                                         <div class="py-1">
-                                            @if(!$board->is_default)
-                                            <button @click="open = false; editCustomBoard({{ $board->id }})" class="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Edit</button>
-                                            @endif
+                                            <button @click="open = false; editCustomBoard({{ $board->id }})" class="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Edit Board Settings</button>
                                             <button @click="open = false; toggleBoardLock({{ $board->id }})" class="block w-full text-left px-4 py-2 text-sm {{ $board->is_locked ? 'text-green-600' : 'text-gray-700' }} hover:bg-gray-100">
                                                 {{ $board->is_locked ? '🔓 Unlock Position' : '🔒 Lock Position' }}
                                             </button>
@@ -2849,31 +3034,270 @@
     </div>
 
     <!-- List View -->
-    <div x-show="view === 'list'" class="bg-white rounded-lg shadow-sm border border-gray-200">
-        <div class="overflow-x-auto">
-            <table class="min-w-full divide-y divide-gray-200">
-                <thead class="bg-gray-50">
-                    <tr>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Task</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Due Date</th>
-                        @if($type === 'group')
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Assigned To</th>
-                        @endif
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
-                    </tr>
-                </thead>
-                <tbody class="bg-white divide-y divide-gray-200">
-                    @foreach($tasks as $task)
-                        @include('admin.tasks.partials.task-row', ['task' => $task, 'type' => $type])
-                    @endforeach
-                </tbody>
-            </table>
+    <div x-show="view === 'list'" 
+         class="space-y-6"
+         @dragover.prevent
+         @drop="handleBoardDrop($event, null)">
+        @foreach($customBoards ?? [] as $board)
+            @php
+                $colorClasses = [
+                    'pink' => ['bg' => 'bg-pink-50', 'border' => 'border-pink-200', 'text' => 'text-pink-700', 'header-bg' => 'bg-pink-100'],
+                    'orange' => ['bg' => 'bg-orange-50', 'border' => 'border-orange-200', 'text' => 'text-orange-700', 'header-bg' => 'bg-orange-100'],
+                    'purple' => ['bg' => 'bg-purple-50', 'border' => 'border-purple-200', 'text' => 'text-purple-700', 'header-bg' => 'bg-purple-100'],
+                    'blue' => ['bg' => 'bg-blue-50', 'border' => 'border-blue-200', 'text' => 'text-blue-700', 'header-bg' => 'bg-blue-100'],
+                    'green' => ['bg' => 'bg-green-50', 'border' => 'border-green-200', 'text' => 'text-green-700', 'header-bg' => 'bg-green-100'],
+                    'yellow' => ['bg' => 'bg-yellow-50', 'border' => 'border-yellow-200', 'text' => 'text-yellow-700', 'header-bg' => 'bg-yellow-100'],
+                    'red' => ['bg' => 'bg-red-50', 'border' => 'border-red-200', 'text' => 'text-red-700', 'header-bg' => 'bg-red-100'],
+                    'indigo' => ['bg' => 'bg-indigo-50', 'border' => 'border-indigo-200', 'text' => 'text-indigo-700', 'header-bg' => 'bg-indigo-100'],
+                    'gray' => ['bg' => 'bg-gray-50', 'border' => 'border-gray-200', 'text' => 'text-gray-700', 'header-bg' => 'bg-gray-100'],
+                ];
+                $colors = $colorClasses[$board->color] ?? $colorClasses['gray'];
+                $boardTasks = $tasksByStatus[$board->status_key] ?? collect();
+            @endphp
+            <div class="bg-white rounded-lg shadow-sm border {{ $colors['border'] }} overflow-hidden"
+                 data-board-id="{{ $board->id }}"
+                 data-is-locked="{{ $board->is_locked ? 'true' : 'false' }}"
+                 draggable="{{ $board->is_locked ? 'false' : 'true' }}"
+                 @dragstart="handleBoardDragStart($event, {{ $board->id }})"
+                 @dragend="handleBoardDragEnd($event)"
+                 @dragover.prevent
+                 @drop="handleBoardDrop($event, {{ $board->id }})">
+                <!-- Board Header -->
+                <div class="{{ $colors['header-bg'] }} {{ $colors['border'] }} border-b px-6 py-4">
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center space-x-3 flex-1">
+                            @if(!$board->is_locked)
+                            <svg class="w-5 h-5 {{ $colors['text'] }} opacity-50 cursor-move" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="cursor: grab;">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8h16M4 16h16"></path>
+                            </svg>
+                            @else
+                            <svg class="w-5 h-5 {{ $colors['text'] }} opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24" title="Position Locked">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path>
+                            </svg>
+                            @endif
+                            <div class="flex-1" x-data="{ editing: false, boardName: '{{ addslashes($board->name) }}', originalName: '{{ addslashes($board->name) }}' }">
+                                <template x-if="!editing">
+                                    <div class="flex items-center space-x-2">
+                                        <h3 class="text-lg font-semibold {{ $colors['text'] }}" x-text="boardName"></h3>
+                                        <button @click="editing = true" 
+                                                class="p-1 {{ $colors['text'] }} opacity-60 hover:opacity-100 transition-opacity"
+                                                title="Edit board name">
+                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
+                                            </svg>
+                                        </button>
+                                    </div>
+                                </template>
+                                <template x-if="editing">
+                                    <div class="flex items-center space-x-2">
+                                        <input type="text" 
+                                               x-model="boardName"
+                                               @keydown.enter="updateBoardName({{ $board->id }}, boardName, () => { editing = false; originalName = boardName; })"
+                                               @keydown.escape="boardName = originalName; editing = false"
+                                               class="flex-1 px-2 py-1 text-lg font-semibold {{ $colors['text'] }} bg-white/50 border border-white/30 rounded focus:outline-none focus:ring-2 focus:ring-white/50"
+                                               x-ref="nameInput"
+                                               x-init="$watch('editing', value => value && $nextTick(() => $refs.nameInput.focus()))">
+                                        <button @click="updateBoardName({{ $board->id }}, boardName, () => { editing = false; originalName = boardName; })"
+                                                class="p-1 {{ $colors['text'] }} hover:opacity-80 transition-opacity"
+                                                title="Save">
+                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                                            </svg>
+                                        </button>
+                                        <button @click="boardName = originalName; editing = false"
+                                                class="p-1 {{ $colors['text'] }} hover:opacity-80 transition-opacity"
+                                                title="Cancel">
+                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                                            </svg>
+                                        </button>
+                                    </div>
+                                </template>
+                            </div>
+                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium {{ $colors['bg'] }} {{ $colors['text'] }} border {{ $colors['border'] }}">
+                                {{ $boardTasks->count() }} {{ $boardTasks->count() === 1 ? 'task' : 'tasks' }}
+                            </span>
+                        </div>
+                    </div>
+                </div>
+                
+                @if($boardTasks->count() > 0)
+                <!-- Tasks Table -->
+                <div class="overflow-x-auto">
+                    <table class="min-w-full divide-y divide-gray-200">
+                        <thead class="bg-gray-50">
+                            <tr>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Task</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Priority</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Due Date</th>
+                                @if($type === 'group')
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Assigned To</th>
+                                @endif
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody class="bg-white divide-y divide-gray-200">
+                            @foreach($boardTasks as $task)
+                                @include('admin.tasks.partials.task-row', ['task' => $task, 'type' => $type, 'customPriorities' => $customPriorities ?? collect()])
+                            @endforeach
+                        </tbody>
+                    </table>
+                </div>
+                @else
+                <!-- Empty State for Board -->
+                <div class="px-6 py-12 text-center">
+                    <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path>
+                    </svg>
+                    <h3 class="mt-2 text-sm font-medium text-gray-900">No tasks in this board</h3>
+                    <p class="mt-1 text-sm text-gray-500">Tasks with status "{{ $board->name }}" will appear here.</p>
+                </div>
+                @endif
+            </div>
+        @endforeach
+        
+        <!-- Tasks not in any custom board (fallback) -->
+        @php
+            $boardStatusKeys = collect($customBoards ?? [])->pluck('status_key')->toArray();
+            $unassignedTasks = $tasks->whereNull('parent_id')->filter(function($task) use ($boardStatusKeys) {
+                return !in_array($task->status, $boardStatusKeys);
+            });
+        @endphp
+        @if($unassignedTasks->count() > 0)
+        <div class="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+            <!-- Board Header -->
+            <div class="bg-gray-100 border-b border-gray-200 px-6 py-4">
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center space-x-3">
+                        <h3 class="text-lg font-semibold text-gray-700">Other Tasks</h3>
+                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-50 text-gray-700 border border-gray-200">
+                            {{ $unassignedTasks->count() }} {{ $unassignedTasks->count() === 1 ? 'task' : 'tasks' }}
+                        </span>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Tasks Table -->
+            <div class="overflow-x-auto">
+                    <table class="min-w-full divide-y divide-gray-200">
+                        <thead class="bg-gray-50">
+                            <tr>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Task</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Priority</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Due Date</th>
+                                @if($type === 'group')
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Assigned To</th>
+                                @endif
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody class="bg-white divide-y divide-gray-200">
+                        @foreach($unassignedTasks as $task)
+                            @include('admin.tasks.partials.task-row', ['task' => $task, 'type' => $type, 'customPriorities' => $customPriorities ?? collect()])
+                        @endforeach
+                    </tbody>
+                </table>
+            </div>
         </div>
+        @endif
+        
+        <!-- Empty State -->
+        @if(($customBoards ?? collect())->isEmpty() || collect($tasksByStatus ?? [])->sum(function($tasks) { return $tasks->count(); }) === 0)
+        <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-12 text-center">
+            <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path>
+            </svg>
+            <h3 class="mt-2 text-sm font-medium text-gray-900">No tasks</h3>
+            <p class="mt-1 text-sm text-gray-500">Get started by creating a new task.</p>
+        </div>
+        @endif
     </div>
 
     <!-- Create/Edit Task Modal -->
     @include('admin.tasks.partials.task-modal', ['type' => $type, 'users' => $users ?? collect(), 'customBoards' => $customBoards ?? collect()])
+    
+    <!-- Attachment Preview Modal (for List View) -->
+    <div x-show="previewAttachmentOpen"
+         x-cloak
+         class="fixed inset-0 z-[10010] flex items-center justify-center bg-black bg-opacity-80"
+         style="display: none;">
+        <div class="relative max-w-4xl w-full mx-4">
+            <button type="button"
+                    class="absolute top-3 right-3 text-white hover:text-gray-300 z-10"
+                    @click="closeAttachmentPreview()">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                          d="M6 18L18 6M6 6l12 12"></path>
+                </svg>
+            </button>
+            <div class="bg-gray-900 rounded-xl overflow-hidden shadow-2xl">
+                <div class="px-4 py-3 border-b border-gray-800 flex items-center justify-between">
+                    <div class="text-sm text-gray-100 truncate" x-text="previewAttachment ? (previewAttachment.file_name || 'Attachment') : ''"></div>
+                    <a :href="previewAttachment ? previewAttachment.file_url : '#'" 
+                       :download="previewAttachment ? previewAttachment.file_name : ''"
+                       class="ml-4 inline-flex items-center px-3 py-1.5 text-xs font-medium text-gray-300 bg-gray-800 hover:bg-gray-700 rounded-md transition-colors">
+                        <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path>
+                        </svg>
+                        Download
+                    </a>
+                </div>
+                <div class="bg-black flex items-center justify-center max-h-[80vh] p-4">
+                    <template x-if="previewAttachment && previewAttachment.file_url">
+                        <div class="w-full">
+                            <!-- Image Preview -->
+                            <template x-if="previewAttachment.file_type && previewAttachment.file_type.startsWith('image/')">
+                                <img :src="previewAttachment.file_url"
+                                     :alt="previewAttachment.file_name || 'Attachment'"
+                                     class="max-h-[78vh] max-w-full mx-auto object-contain rounded-lg">
+                            </template>
+                            <!-- PDF Preview -->
+                            <template x-if="previewAttachment.file_type === 'application/pdf'">
+                                <iframe :src="previewAttachment.file_url"
+                                        class="w-full h-[78vh] border-0 rounded-lg"
+                                        frameborder="0">
+                                </iframe>
+                            </template>
+                            <!-- Video Preview -->
+                            <template x-if="previewAttachment.file_type && previewAttachment.file_type.startsWith('video/')">
+                                <video :src="previewAttachment.file_url"
+                                       controls
+                                       class="max-h-[78vh] max-w-full mx-auto rounded-lg">
+                                    Your browser does not support the video tag.
+                                </video>
+                            </template>
+                            <!-- Audio Preview -->
+                            <template x-if="previewAttachment.file_type && previewAttachment.file_type.startsWith('audio/')">
+                                <audio :src="previewAttachment.file_url"
+                                       controls
+                                       class="w-full max-w-md mx-auto">
+                                    Your browser does not support the audio tag.
+                                </audio>
+                            </template>
+                            <!-- Fallback for other file types -->
+                            <template x-if="!previewAttachment.file_type || (!previewAttachment.file_type.startsWith('image/') && previewAttachment.file_type !== 'application/pdf' && !previewAttachment.file_type.startsWith('video/') && !previewAttachment.file_type.startsWith('audio/'))">
+                                <div class="text-center py-12">
+                                    <svg class="mx-auto h-16 w-16 text-gray-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7v10a4 4 0 008 0V7m-4 0h5a2 2 0 012 2v6a7 7 0 11-14 0V9a2 2 0 012-2h5"></path>
+                                    </svg>
+                                    <p class="text-gray-300 text-lg mb-2">Preview not available</p>
+                                    <p class="text-gray-500 text-sm mb-4">This file type cannot be previewed in the browser.</p>
+                                    <a :href="previewAttachment.file_url" 
+                                       :download="previewAttachment.file_name"
+                                       class="inline-flex items-center px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-md transition-colors">
+                                        <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path>
+                                        </svg>
+                                        Download File
+                                    </a>
+                                </div>
+                            </template>
+                        </div>
+                    </template>
+                </div>
+            </div>
+        </div>
+    </div>
     
     <!-- Custom Board Modal -->
     <div x-show="customBoardModalOpen" 

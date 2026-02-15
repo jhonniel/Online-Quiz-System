@@ -130,7 +130,7 @@
             </nav>
         </div>
 
-            <form action="{{ route('admin.settings.update') }}" method="POST" enctype="multipart/form-data">
+            <form action="{{ url('/admin/settings') }}" method="POST" enctype="multipart/form-data">
                 @csrf
 
             <div class="p-8">
@@ -1724,7 +1724,7 @@
 
                 <!-- Action Buttons -->
                 <div class="mt-8 pt-6 border-t border-gray-200 flex justify-end space-x-3">
-                    <a href="{{ route('admin.dashboard') }}"
+                    <a href="{{ url('/admin/dashboard') }}"
                        class="inline-flex items-center px-6 py-3 border border-gray-300 text-sm font-medium rounded-lg text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition duration-200">
                         <svg class="h-5 w-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
@@ -1862,7 +1862,7 @@ document.addEventListener('DOMContentLoaded', function() {
             refreshBtn.innerHTML = '';
         }
 
-        fetch('{{ route("admin.settings.health") }}', {
+        fetch('{{ url('/admin/settings/health') }}', {
             method: 'GET',
             headers: {
                 'X-Requested-With': 'XMLHttpRequest',
@@ -2109,7 +2109,7 @@ document.addEventListener('DOMContentLoaded', function() {
         // Hide previous result
         resultDiv.classList.add('hidden');
 
-        fetch('{{ route("admin.settings.test-email") }}', {
+        fetch('{{ url('/admin/settings/test-email') }}', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -2396,7 +2396,7 @@ window.sendTestEmail = function() {
         resultDiv.classList.add('hidden');
     }
 
-    fetch('{{ route("admin.settings.test-email") }}', {
+    fetch('{{ url('/admin/settings/test-email') }}', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',

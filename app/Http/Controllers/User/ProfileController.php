@@ -104,11 +104,11 @@ class ProfileController extends Controller
                     'success' => true,
                     'message' => 'Profile updated successfully!',
                     'type' => 'success',
-                    'redirect_url' => route('profile.show')
+                    'redirect_url' => url('/profile')
                 ]);
             }
 
-            return redirect()->route('profile.show')
+            return redirect('/profile')
                 ->with('success', 'Profile updated successfully!');
 
         } catch (\Illuminate\Validation\ValidationException $e) {

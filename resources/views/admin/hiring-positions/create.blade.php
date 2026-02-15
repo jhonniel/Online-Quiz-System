@@ -5,7 +5,7 @@
     <!-- Page Header -->
     <div class="bg-gradient-to-r from-indigo-500 to-indigo-600 rounded-lg shadow-sm p-6">
         <div class="flex items-center">
-            <a href="{{ route('admin.hiring-positions.index') }}" class="mr-4 text-white hover:text-indigo-100">
+            <a href="{{ url('/admin/hiring-positions') }}" class="mr-4 text-white hover:text-indigo-100">
                 <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
                 </svg>
@@ -19,7 +19,7 @@
 
     <!-- Form -->
     <div class="bg-white shadow-sm rounded-lg border border-gray-200 overflow-hidden">
-        <form action="{{ route('admin.hiring-positions.store') }}" method="POST" enctype="multipart/form-data" class="p-6 space-y-6">
+        <form action="{{ url('/admin/hiring-positions') }}" method="POST" enctype="multipart/form-data" class="p-6 space-y-6">
             @csrf
 
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -151,7 +151,7 @@
 
             <!-- Actions -->
             <div class="flex items-center justify-end space-x-3 pt-6 border-t border-gray-200">
-                <a href="{{ route('admin.hiring-positions.index') }}"
+                <a href="{{ url('/admin/hiring-positions') }}"
                    class="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50">
                     Cancel
                 </a>

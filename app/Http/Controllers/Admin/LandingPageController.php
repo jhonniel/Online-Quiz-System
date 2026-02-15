@@ -20,9 +20,9 @@ class LandingPageController extends Controller
         $settings['hero_title'] = Setting::get('hero_title', 'Transform Your Assessment Experience');
         $settings['hero_subtitle'] = Setting::get('hero_subtitle', 'A powerful, intuitive platform designed for modern educational assessment and learning management.');
         $settings['hero_primary_button_text'] = Setting::get('hero_primary_button_text', 'Get Started Free');
-        $settings['hero_primary_button_url'] = Setting::get('hero_primary_button_url', route('login'));
+        $settings['hero_primary_button_url'] = Setting::get('hero_primary_button_url', url('/login'));
         $settings['hero_secondary_button_text'] = Setting::get('hero_secondary_button_text', 'Explore Features');
-        $settings['hero_secondary_button_url'] = Setting::get('hero_secondary_button_url', route('landing.projects'));
+        $settings['hero_secondary_button_url'] = Setting::get('hero_secondary_button_url', url('/projects'));
         $settings['hero_background_image'] = Setting::get('hero_background_image', null);
 
         // Team members
@@ -397,7 +397,7 @@ class LandingPageController extends Controller
 
         Setting::clearCache();
 
-        return redirect()->route('admin.landing-page.index')
+        return redirect('/admin/landing-page')
             ->with('success', 'Landing page settings updated successfully.');
     }
 }

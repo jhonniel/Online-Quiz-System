@@ -16,7 +16,7 @@
                     <p class="text-indigo-100">List of all students and their internship duration</p>
                 </div>
             </div>
-            <a href="{{ route('admin.student-management.dashboard') }}" class="inline-flex items-center px-4 py-2 border border-white border-opacity-20 rounded-md text-sm font-medium text-white hover:bg-white hover:bg-opacity-10">
+            <a href="{{ url('/admin/student-management/dashboard') }}" class="inline-flex items-center px-4 py-2 border border-white border-opacity-20 rounded-md text-sm font-medium text-white hover:bg-white hover:bg-opacity-10">
                 <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
                 </svg>
@@ -27,7 +27,7 @@
 
     <!-- Filters -->
     <div class="bg-white shadow-sm rounded-lg border border-gray-200 p-4">
-        <form method="GET" action="{{ route('admin.student-management.students') }}" class="flex items-center justify-between flex-wrap gap-4">
+        <form method="GET" action="{{ url('/admin/student-management/students') }}" class="flex items-center justify-between flex-wrap gap-4">
             <div class="flex items-center space-x-4 flex-wrap">
                 <div class="flex-1 min-w-[240px] max-w-md">
                     <div class="relative">
@@ -43,7 +43,7 @@
                                autocomplete="off"
                                class="block w-full pl-9 pr-10 py-2 border border-gray-300 rounded-md shadow-sm text-sm focus:ring-indigo-500 focus:border-indigo-500">
                         @if(request('search'))
-                            <a href="{{ route('admin.student-management.students', array_filter(['per_page' => request('per_page')])) }}"
+                            <a href="{{ url('/admin/student-management/students?' . http_build_query(array_filter(['per_page' => request('per_page')]))) }}"
                                class="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600"
                                title="Clear search">
                                 <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">

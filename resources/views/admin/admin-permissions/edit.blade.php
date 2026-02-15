@@ -30,7 +30,7 @@
                 <h2 class="text-xl sm:text-2xl font-bold text-white">Edit Admin Permissions</h2>
                 <p class="mt-1 text-sm text-indigo-100">Manage feature access for {{ $user->name }} ({{ $user->getRoleLabel() }})</p>
             </div>
-            <a href="{{ route('admin.admin-permissions.index') }}"
+            <a href="{{ url('/admin/admin-permissions') }}"
                class="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-700 hover:bg-indigo-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
                 <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
@@ -42,7 +42,7 @@
 
     <!-- Form Card -->
     <div class="flex-1 bg-white rounded-lg shadow-sm border border-gray-200 mx-2 sm:mx-3 lg:mx-4 xl:mx-6 p-4 sm:p-6">
-        <form action="{{ route('admin.admin-permissions.update', $user) }}" method="POST">
+        <form action="{{ url('/admin/admin-permissions/' . $user->id) }}" method="POST">
             @csrf
             @method('PUT')
 
@@ -146,7 +146,7 @@
                                         @endforeach
                                     </div>
                                     @if($departments->isEmpty())
-                                        <p class="mt-2 text-sm text-gray-500">No departments available. <a href="{{ route('admin.departments.index') }}" class="text-indigo-600 hover:text-indigo-800">Create departments</a> first.</p>
+                                        <p class="mt-2 text-sm text-gray-500">No departments available. <a href="{{ url('/admin/departments') }}" class="text-indigo-600 hover:text-indigo-800">Create departments</a> first.</p>
                                     @endif
                                 </div>
                             </div>
@@ -207,7 +207,7 @@
                                         @endforeach
                                     </div>
                                     @if($hiringPositions->isEmpty())
-                                        <p class="mt-2 text-sm text-gray-500">No hiring positions available. <a href="{{ route('admin.hiring-positions.index') }}" class="text-indigo-600 hover:text-indigo-800">Create positions</a> first.</p>
+                                        <p class="mt-2 text-sm text-gray-500">No hiring positions available. <a href="{{ url('/admin/hiring-positions') }}" class="text-indigo-600 hover:text-indigo-800">Create positions</a> first.</p>
                                     @endif
                                 </div>
                             </div>
@@ -266,7 +266,7 @@
 
             <!-- Actions -->
             <div class="mt-8 flex items-center justify-end space-x-3 pt-6 border-t border-gray-200">
-                <a href="{{ route('admin.admin-permissions.index') }}"
+                <a href="{{ url('/admin/admin-permissions') }}"
                    class="px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
                     Cancel
                 </a>
@@ -280,7 +280,7 @@
         <!-- Remove Permissions (Make Super Admin/Employee) -->
         @if($permission)
             <div class="mt-6 pt-6 border-t border-gray-200">
-                <form action="{{ route('admin.admin-permissions.destroy', $user) }}" method="POST"
+                <form action="{{ url('/admin/admin-permissions/' . $user->id) }}" method="POST"
                       onsubmit="return confirm('Are you sure you want to remove all permission restrictions for this {{ strtolower($user->getRoleLabel()) }}? They will have full access to all features.');">
                     @csrf
                     @method('DELETE')

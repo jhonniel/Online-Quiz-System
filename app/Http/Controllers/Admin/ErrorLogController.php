@@ -44,7 +44,7 @@ class ErrorLogController extends Controller
                 'trace' => $e->getTraceAsString()
             ]);
             
-            return redirect()->route('admin.analytics.index')
+            return redirect('/admin/analytics')
                 ->with('error', 'An error occurred while loading error logs. Please try again.');
         }
     }

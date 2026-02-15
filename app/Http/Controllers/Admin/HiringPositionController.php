@@ -99,7 +99,7 @@ class HiringPositionController extends Controller
             'thumbnail_path' => $thumbnailPath,
         ]);
 
-        return redirect()->route('admin.hiring-positions.index')
+        return redirect('/admin/hiring-positions')
             ->with('success', 'Hiring position created successfully.');
     }
 
@@ -164,7 +164,7 @@ class HiringPositionController extends Controller
             'thumbnail_path' => $thumbnailPath,
         ]);
 
-        return redirect()->route('admin.hiring-positions.index')
+        return redirect('/admin/hiring-positions')
             ->with('success', 'Hiring position updated successfully.');
     }
 
@@ -172,13 +172,13 @@ class HiringPositionController extends Controller
     {
         // Check if position has applications
         if ($hiringPosition->applications()->count() > 0) {
-            return redirect()->route('admin.hiring-positions.index')
+            return redirect('/admin/hiring-positions')
                 ->with('error', 'Cannot delete position with existing applications. Please delete or reassign applications first.');
         }
 
         $hiringPosition->delete();
 
-        return redirect()->route('admin.hiring-positions.index')
+        return redirect('/admin/hiring-positions')
             ->with('success', 'Hiring position deleted successfully.');
     }
 

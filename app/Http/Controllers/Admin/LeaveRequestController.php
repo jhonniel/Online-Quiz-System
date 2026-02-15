@@ -749,7 +749,7 @@ class LeaveRequestController extends Controller
             // Don't fail the request if email fails
         }
 
-        return redirect()->route('admin.leave-requests.show', $leaveRequest)
+        return redirect('/admin/leave-requests/' . $leaveRequest->id)
             ->with('success', 'Leave request approved successfully.');
     }
 
@@ -761,13 +761,13 @@ class LeaveRequestController extends Controller
     {
         // Only allow force accept for offset requests
         if ($leaveRequest->type !== 'offset') {
-            return redirect()->route('admin.leave-requests.show', $leaveRequest)
+            return redirect('/admin/leave-requests/' . $leaveRequest->id)
                 ->with('error', 'Force accept is only available for offset requests.');
         }
 
         // Only allow for pending requests
         if (!$leaveRequest->isPending()) {
-            return redirect()->route('admin.leave-requests.show', $leaveRequest)
+            return redirect('/admin/leave-requests/' . $leaveRequest->id)
                 ->with('error', 'This request has already been processed.');
         }
 
@@ -825,7 +825,7 @@ class LeaveRequestController extends Controller
             // Don't fail the request if email fails
         }
 
-        return redirect()->route('admin.leave-requests.show', $leaveRequest)
+        return redirect('/admin/leave-requests/' . $leaveRequest->id)
             ->with('success', 'Offset request force accepted. Negative balance will be applied to employee account.');
     }
 
@@ -888,7 +888,7 @@ class LeaveRequestController extends Controller
             // Don't fail the request if email fails
         }
 
-        return redirect()->route('admin.leave-requests.show', $leaveRequest)
+        return redirect('/admin/leave-requests/' . $leaveRequest->id)
             ->with('success', 'Leave request rejected successfully.');
     }
 
@@ -955,7 +955,7 @@ class LeaveRequestController extends Controller
             // Don't fail the request if email fails
         }
 
-        return redirect()->route('admin.leave-requests.show', $leaveRequest)
+        return redirect('/admin/leave-requests/' . $leaveRequest->id)
             ->with('success', 'Leave request marked for resubmission. The employee will need to correct any errors.');
     }
 
@@ -1470,20 +1470,20 @@ class LeaveRequestController extends Controller
             ->first();
 
         if (!$filedByAdminLog) {
-            return redirect()->route('admin.leave-requests.index')
+            return redirect('/admin/leave-requests')
                 ->with('error', 'This leave request cannot be deleted. Only requests filed by admins can be deleted.');
         }
 
         // Check if the current admin is the one who filed it
         if ($filedByAdminLog->performed_by !== Auth::id()) {
-            return redirect()->route('admin.leave-requests.index')
+            return redirect('/admin/leave-requests')
                 ->with('error', 'You can only delete leave requests that you filed.');
         }
 
         // Delete the leave request (logs will be cascade deleted)
         $leaveRequest->delete();
 
-        return redirect()->route('admin.leave-requests.index')
+        return redirect('/admin/leave-requests')
             ->with('success', 'Leave request deleted successfully.');
     }
 }

@@ -75,7 +75,7 @@ class ForumController extends Controller
 
         ForumThread::create($data);
 
-        return redirect()->route('admin.forum.index')
+        return redirect('/admin/forum')
             ->with('success', 'Forum thread created successfully!');
     }
 
@@ -128,7 +128,7 @@ class ForumController extends Controller
 
         $forum->update($data);
 
-        return redirect()->route('admin.forum.index')
+        return redirect('/admin/forum')
             ->with('success', 'Forum thread updated successfully!');
     }
 
@@ -141,7 +141,7 @@ class ForumController extends Controller
 
         $forum->delete();
 
-        return redirect()->route('admin.forum.index')
+        return redirect('/admin/forum')
             ->with('success', 'Forum thread deleted successfully!');
     }
 

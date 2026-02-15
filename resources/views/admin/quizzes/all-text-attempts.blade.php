@@ -10,7 +10,7 @@
                 <div class="card-header d-flex justify-content-between align-items-center">
                     <h3 class="card-title">All Text Question Attempts</h3>
                     <div class="card-tools">
-                        <a href="{{ route('admin.manual-grading') }}" class="btn btn-sm btn-primary">
+                        <a href="{{ url('/admin/manual-grading') }}" class="btn btn-sm btn-primary">
                             <i class="fas fa-edit"></i> Manual Grading
                         </a>
                     </div>
@@ -89,7 +89,7 @@
                                             </td>
                                             <td>
                                                 <div class="btn-group" role="group">
-                                                    <a href="{{ route('admin.quiz-attempts.details', $attempt->id) }}"
+                                                    <a href="{{ url('/admin/quiz-attempts/' . $attempt->id . '/details') }}"
                                                        class="btn btn-sm btn-outline-primary"
                                                        title="View Details">
                                                         <i class="fas fa-eye"></i>

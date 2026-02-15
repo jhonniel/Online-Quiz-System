@@ -93,11 +93,11 @@ class QuizController extends Controller
                 'success' => true,
                 'message' => 'Quiz code validated successfully! Redirecting to quiz...',
                 'type' => 'success',
-                'redirect_url' => route('user.quizzes.take', $quiz)
+                'redirect_url' => url('/quizzes/' . $quiz->id . '/take')
             ]);
         }
 
-        return redirect()->route('user.quizzes.take', $quiz);
+        return redirect('/quizzes/' . $quiz->id . '/take');
     }
 
     public function start(Request $request, Quiz $quiz)
@@ -125,10 +125,10 @@ class QuizController extends Controller
                     'success' => true,
                     'message' => 'Quiz already started. Redirecting...',
                     'type' => 'info',
-                    'redirect_url' => route('user.quizzes.take', $quiz)
+                    'redirect_url' => url('/quizzes/' . $quiz->id . '/take')
                 ]);
             }
-            return redirect()->route('user.quizzes.take', $quiz);
+            return redirect('/quizzes/' . $quiz->id . '/take');
         }
 
         // Start the quiz
@@ -142,11 +142,11 @@ class QuizController extends Controller
                 'success' => true,
                 'message' => 'Quiz started successfully!',
                 'type' => 'success',
-                'redirect_url' => route('user.quizzes.take', $quiz)
+                'redirect_url' => url('/quizzes/' . $quiz->id . '/take')
             ]);
         }
 
-        return redirect()->route('user.quizzes.take', $quiz);
+        return redirect('/quizzes/' . $quiz->id . '/take');
     }
 
     public function take(Quiz $quiz)
@@ -191,7 +191,7 @@ class QuizController extends Controller
 
         // If time has expired, redirect to a time expired page or show message
         if ($timeExpired) {
-            return redirect()->route('user.quizzes.time-expired', $quiz)
+            return redirect('/quizzes/' . $quiz->id . '/time-expired')
                 ->with('error', 'Time has expired for this quiz.');
         }
 
@@ -455,11 +455,11 @@ class QuizController extends Controller
                     'success' => true,
                     'message' => $message,
                     'type' => 'success',
-                    'redirect_url' => route('user.quizzes.result', $quiz)
+                    'redirect_url' => url('/quizzes/' . $quiz->id . '/result')
                 ]);
             }
 
-            return redirect()->route('user.quizzes.result', $quiz)
+            return redirect('/quizzes/' . $quiz->id . '/result')
                 ->with('success', $hasTextQuestions
                     ? 'Quiz submitted successfully! Your score is partial and will be updated after manual review of text answers.'
                     : 'Quiz submitted successfully!');
@@ -528,11 +528,11 @@ class QuizController extends Controller
                 'success' => true,
                 'message' => 'Quiz cancelled successfully. You can restart it anytime.',
                 'type' => 'success',
-                'redirect_url' => route('user.dashboard')
+                'redirect_url' => url('/dashboard')
             ]);
         }
 
-        return redirect()->route('user.dashboard')
+        return redirect('/dashboard')
             ->with('success', 'Quiz cancelled successfully. You can restart it anytime.');
     }
 

@@ -71,11 +71,11 @@ class FeedbackController extends Controller
                 'success' => true,
                 'message' => 'Feedback submitted successfully! Thank you for helping us improve the system.',
                 'type' => 'success',
-                'redirect_url' => route('user.feedback.index')
+                'redirect_url' => url('/feedback')
             ]);
         }
 
-        return redirect()->route('user.feedback.index')
+        return redirect('/feedback')
             ->with('success', 'Feedback submitted successfully! Thank you for helping us improve the system.');
     }
 

@@ -25,7 +25,7 @@
 
     <!-- Filters -->
     <div class="bg-white rounded-2xl shadow-xl border border-gray-200 p-4 sm:p-6">
-        <form method="GET" action="{{ route('admin.kpi.dashboard') }}" class="space-y-4">
+        <form method="GET" action="{{ url('/admin/kpi/dashboard') }}" class="space-y-4">
             <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                 <!-- Date From -->
                 <div>
@@ -63,7 +63,7 @@
                     </svg>
                     Filter
                 </button>
-                <a href="{{ route('admin.kpi.dashboard') }}" class="inline-flex items-center px-4 sm:px-6 py-2 border border-gray-300 text-xs sm:text-sm font-medium rounded-lg text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                <a href="{{ url('/admin/kpi/dashboard') }}" class="inline-flex items-center px-4 sm:px-6 py-2 border border-gray-300 text-xs sm:text-sm font-medium rounded-lg text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
                     Reset
                 </a>
             </div>

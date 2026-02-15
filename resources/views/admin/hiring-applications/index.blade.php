@@ -138,7 +138,7 @@
 
     <!-- Filters -->
     <div class="bg-white shadow-sm rounded-lg border border-gray-200 p-4">
-        <form method="GET" action="{{ route('admin.hiring-applications.index') }}" class="flex items-center justify-between flex-wrap gap-4">
+        <form method="GET" action="{{ url('/admin/hiring-applications') }}" class="flex items-center justify-between flex-wrap gap-4">
             <div class="flex items-center space-x-4 flex-wrap">
                 <!-- Search -->
                 <div class="flex-1 min-w-[240px] max-w-md">
@@ -253,7 +253,7 @@
                             <td class="px-6 py-4 whitespace-nowrap">
                                 <div class="text-sm text-gray-900">
                                     @if($application->hiringPosition)
-                                        <a href="{{ route('admin.hiring-positions.show', $application->hiringPosition) }}" class="text-indigo-600 hover:text-indigo-900">
+                                        <a href="{{ url('/admin/hiring-positions/' . $application->hiringPosition->id) }}" class="text-indigo-600 hover:text-indigo-900">
                                             {{ $application->hiringPosition->title }}
                                         </a>
                                         @if($application->hiringPosition->employment_type === 'Internship' && $application->school)
@@ -301,7 +301,7 @@
                                 {{ $application->created_at->format('M j, Y') }}
                             </td>
                             <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                                <a href="{{ route('admin.hiring-applications.show', $application) }}" class="text-indigo-600 hover:text-indigo-900">
+                                <a href="{{ url('/admin/hiring-applications/' . $application->id) }}" class="text-indigo-600 hover:text-indigo-900">
                                     View
                                 </a>
                             </td>
@@ -331,7 +331,7 @@
 
 <script>
     document.addEventListener('DOMContentLoaded', function () {
-        const form = document.querySelector('form[action="{{ route('admin.hiring-applications.index') }}"]');
+        const form = document.querySelector('form[action="{{ url('/admin/hiring-applications') }}"]');
         const input = document.getElementById('applications-search-input');
         const clearBtn = document.getElementById('applications-clear-search-btn');
 

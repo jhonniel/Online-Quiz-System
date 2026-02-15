@@ -13,7 +13,7 @@
             </p>
         </div>
         <div class="mt-4 flex md:mt-0 md:ml-4">
-            <a href="{{ route('quizzes.index') }}"
+            <a href="{{ url('/admin/quizzes') }}"
                class="bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-700 transition-colors">
                 <svg class="w-4 h-4 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
@@ -208,7 +208,7 @@
                                                 View Details
                                             </button>
                                             <span class="text-gray-300">|</span>
-                                            <a href="{{ route('admin.quizzes.user-history', ['quizId' => $quiz->id, 'userId' => $userId]) }}"
+                                            <a href="{{ url('/admin/quizzes/' . $quiz->id . '/users/' . $userId . '/history') }}"
                                                class="text-green-600 hover:text-green-800 font-medium"
                                                style="color: #16a34a !important; text-decoration: none !important; display: inline-block !important;">
                                                 View

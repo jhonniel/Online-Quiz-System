@@ -109,7 +109,7 @@ class FeedbackController extends Controller
             ]);
         }
 
-        return redirect()->route('admin.feedback.show', $feedback)
+        return redirect('/admin/feedback/' . $feedback->id)
             ->with('success', 'Feedback updated successfully!');
     }
 
@@ -151,7 +151,7 @@ class FeedbackController extends Controller
             ]);
         }
 
-        return redirect()->route('admin.feedback.index')
+        return redirect('/admin/feedback')
             ->with('success', 'Feedback deleted successfully!');
     }
 

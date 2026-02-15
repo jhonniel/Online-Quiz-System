@@ -128,7 +128,14 @@
                         </div>
                     @endif
 
-                    <form action="{{ route('landing.contact.store') }}" method="POST" class="space-y-6">
+                    @php
+                        try {
+                            $contactStoreRoute = url('/contact');
+                        } catch (Exception $e) {
+                            $contactStoreRoute = '/contact';
+                        }
+                    @endphp
+                    <form action="{{ $contactStoreRoute }}" method="POST" class="space-y-6">
                         @csrf
 
                         <div>

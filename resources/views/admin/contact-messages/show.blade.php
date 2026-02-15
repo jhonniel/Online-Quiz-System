@@ -8,7 +8,7 @@
             <svg class="w-4 h-4 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
                 <path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd"></path>
             </svg>
-            <a href="{{ route('contact-messages.index') }}" class="ml-2 text-sm font-medium text-gray-500 hover:text-gray-700">Contact Messages</a>
+            <a href="{{ url('/admin/contact-messages') }}" class="ml-2 text-sm font-medium text-gray-500 hover:text-gray-700">Contact Messages</a>
         </div>
     </li>
     <li>
@@ -38,7 +38,7 @@
                 </div>
             </div>
             <div class="flex items-center space-x-2">
-                <a href="{{ route('contact-messages.index') }}"
+                <a href="{{ url('/admin/contact-messages') }}"
                    class="inline-flex items-center px-3 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
                     <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
@@ -131,7 +131,7 @@
             <div class="bg-white border border-gray-200 rounded-lg p-4 sm:p-6">
                 <h3 class="text-base sm:text-lg font-medium text-gray-900 mb-3 sm:mb-4">Send Reply</h3>
 
-                <form action="{{ route('contact-messages.reply', $contactMessage) }}" method="POST" class="space-y-4">
+                <form action="{{ url('/admin/contact-messages/' . $contactMessage->id . '/reply') }}" method="POST" class="space-y-4">
                     @csrf
 
                     <div>
@@ -158,7 +158,7 @@
         <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 pt-4 border-t border-gray-200">
             <div class="flex space-x-3">
                 @if(!$contactMessage->isClosed())
-                    <form method="POST" action="{{ route('contact-messages.close', $contactMessage) }}" class="inline">
+                    <form method="POST" action="{{ url('/admin/contact-messages/' . $contactMessage->id . '/close') }}" class="inline">
                         @csrf
                         @method('PATCH')
                         <button type="submit"
@@ -169,7 +169,7 @@
                 @endif
             </div>
 
-            <form method="POST" action="{{ route('contact-messages.destroy', $contactMessage) }}" class="inline"
+            <form method="POST" action="{{ url('/admin/contact-messages/' . $contactMessage->id) }}" class="inline"
                   onsubmit="return confirmMessageAction('delete', this)">
                 @csrf
                 @method('DELETE')

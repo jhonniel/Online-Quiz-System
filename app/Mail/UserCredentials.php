@@ -45,7 +45,7 @@ class UserCredentials extends Mailable
     public function content(): Content
     {
         return new Content(
-            markdown: 'emails.user-credentials',
+            view: 'emails.user-credentials',
             with: [
                 'user' => $this->user,
                 'email' => $this->email,

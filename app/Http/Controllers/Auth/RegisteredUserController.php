@@ -134,11 +134,11 @@ class RegisteredUserController extends Controller
         if ($isHiringApplication) {
             // Auto-login for hiring applications
             Auth::login($user);
-            return redirect()->route('dashboard')
+            return redirect('/home')
                 ->with('success', 'Welcome! Your account has been created and you can now proceed to the interview stage.');
         } else {
             // Don't auto-login, wait for approval
-            return redirect()->route('login')
+            return redirect('/login')
                 ->with('success', 'Registration successful! Your account is pending admin approval. You will be notified once approved.');
         }
     }

@@ -981,7 +981,7 @@ class FileController extends Controller
         }
 
         if ($file->isFolder()) {
-            return redirect()->route('admin.files.index', ['folder_id' => $file->id]);
+            return redirect('/admin/files?folder_id=' . $file->id);
         }
 
         try {

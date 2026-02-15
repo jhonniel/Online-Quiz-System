@@ -53,7 +53,7 @@ class HiringApplicationCredentials extends Mailable
     public function content(): Content
     {
         return new Content(
-            markdown: 'emails.hiring-application-credentials',
+            view: 'emails.hiring-application-credentials',
             with: [
                 'application' => $this->application,
                 'position' => $this->position,

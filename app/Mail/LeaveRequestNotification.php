@@ -40,7 +40,8 @@ class LeaveRequestNotification extends Mailable
     public function content(): Content
     {
         return new Content(
-            markdown: 'emails.leave-request-notification',
+            // Use a plain Blade view instead of markdown to avoid markdown mail dependencies
+            view: 'emails.leave-request-notification',
         );
     }
 

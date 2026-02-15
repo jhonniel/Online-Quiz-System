@@ -9,7 +9,7 @@
                 <p class="mt-1 text-sm text-gray-600">Update user account information.</p>
             </div>
 
-            <form action="{{ route('admin.users.update', $user) }}" method="POST">
+            <form action="{{ url('/admin/users/' . $user->id) }}" method="POST">
                 @csrf
                 @method('PUT')
 
@@ -129,7 +129,7 @@
                             </select>
                         </div>
                         <p class="mt-1 text-xs text-gray-500">
-                            <a href="{{ route('admin.departments.create') }}" target="_blank" class="text-indigo-600 hover:text-indigo-800 underline">Create new department</a> if not in the list
+                            <a href="{{ url('/admin/departments/create') }}" target="_blank" class="text-indigo-600 hover:text-indigo-800 underline">Create new department</a> if not in the list
                         </p>
                         @error('department_id')
                             <p class="mt-2 text-sm text-red-600">{{ $message }}</p>
@@ -230,7 +230,7 @@
 
                 <!-- Actions -->
                 <div class="mt-8 flex justify-end space-x-3">
-                    <a href="{{ route('admin.users.index') }}"
+                    <a href="{{ url('/admin/users') }}"
                        class="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
                         Cancel
                     </a>

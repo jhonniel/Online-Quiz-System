@@ -245,7 +245,7 @@
         @if(!session('success'))
         <!-- Application Form -->
         <div id="application-form-container" class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-            <form id="hiring-application-form" action="{{ isset($position) && $position ? route('hiring.apply.position.store', $position->slug) : route('hiring.apply') }}" method="POST" enctype="multipart/form-data" class="space-y-6">
+            <form id="hiring-application-form" action="{{ isset($position) && $position ? url('/hiring/apply/' . $position->slug) : url('/hiring/apply') }}" method="POST" enctype="multipart/form-data" class="space-y-6">
                 @csrf
 
                 <!-- Name Fields -->
@@ -404,9 +404,9 @@
 
                             // For Internship positions, use TOR PDF if available, otherwise fallback to privacy policy
                             if ($isInternship && $torPdfPath) {
-                                $pdfLink = route('landing.tor-pdf');
+                                $pdfLink = url('/tor-pdf');
                             } elseif ($privacyPolicyPdfPath) {
-                                $pdfLink = route('landing.privacy-policy');
+                                $pdfLink = url('/privacy-policy');
                             } else {
                                 $pdfLink = null;
                             }

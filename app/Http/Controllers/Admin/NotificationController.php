@@ -74,7 +74,7 @@ class NotificationController extends Controller
         }
 
         $recipientText = $request->recipient_type === 'all' ? 'all users' : 'selected users';
-        return redirect()->route('admin.notifications.index')
+        return redirect('/admin/notifications')
             ->with('success', "Notification sent to {$createdCount} {$recipientText} successfully!");
     }
 
@@ -99,7 +99,7 @@ class NotificationController extends Controller
             $createdCount++;
         }
 
-        return redirect()->route('admin.notifications.index')
+        return redirect('/admin/notifications')
             ->with('success', "Notification sent to all {$createdCount} users successfully!");
     }
 
@@ -113,7 +113,7 @@ class NotificationController extends Controller
     {
         $notification->delete();
 
-        return redirect()->route('admin.notifications.index')
+        return redirect('/admin/notifications')
             ->with('success', 'Notification deleted successfully!');
     }
 
@@ -126,7 +126,7 @@ class NotificationController extends Controller
 
         $deletedCount = Notification::whereIn('id', $request->notification_ids)->delete();
 
-        return redirect()->route('admin.notifications.index')
+        return redirect('/admin/notifications')
             ->with('success', "{$deletedCount} notification(s) deleted successfully!");
     }
 
@@ -137,7 +137,7 @@ class NotificationController extends Controller
             'read_at' => now(),
         ]);
 
-        return redirect()->route('admin.notifications.index')
+        return redirect('/admin/notifications')
             ->with('success', "{$updatedCount} notification(s) marked as read!");
     }
 

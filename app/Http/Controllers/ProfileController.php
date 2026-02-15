@@ -36,7 +36,7 @@ class ProfileController extends Controller
 
         $user->save();
 
-        return Redirect::route('profile.edit')->with('status', 'profile-updated');
+        return Redirect::to('/profile/edit')->with('status', 'profile-updated');
     }
 
     /**
@@ -69,7 +69,7 @@ class ProfileController extends Controller
         $user->profile_picture = $path;
         $user->save();
 
-        return Redirect::route('profile.edit')->with('status', 'profile-picture-updated');
+        return Redirect::to('/profile/edit')->with('status', 'profile-picture-updated');
     }
 
     /**
@@ -89,7 +89,7 @@ class ProfileController extends Controller
             $user->save();
         }
 
-        return Redirect::route('profile.edit')->with('status', 'profile-picture-removed');
+        return Redirect::to('/profile/edit')->with('status', 'profile-picture-removed');
     }
 
     /**

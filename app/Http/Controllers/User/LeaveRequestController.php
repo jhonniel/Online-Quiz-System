@@ -461,7 +461,7 @@ class LeaveRequestController extends Controller
             }
         }
 
-        return redirect()->route('user.leave-requests.index')
+        return redirect('/leave-requests')
             ->with('success', 'Leave request submitted successfully. It will be reviewed by an administrator.');
     }
 
@@ -549,7 +549,7 @@ class LeaveRequestController extends Controller
 
         // Only allow editing of pending requests that were previously reviewed (resubmission)
         if (!$leaveRequest->isPending() || !$leaveRequest->reviewed_at) {
-            return redirect()->route('user.leave-requests.show', $leaveRequest)
+            return redirect('/leave-requests/' . $leaveRequest->id)
                 ->withErrors(['error' => 'You can only edit leave requests that have been requested for resubmission.']);
         }
 
@@ -630,7 +630,7 @@ class LeaveRequestController extends Controller
 
         // Only allow updating of pending requests that were previously reviewed (resubmission)
         if (!$leaveRequest->isPending() || !$leaveRequest->reviewed_at) {
-            return redirect()->route('user.leave-requests.show', $leaveRequest)
+            return redirect('/leave-requests/' . $leaveRequest->id)
                 ->withErrors(['error' => 'You can only update leave requests that have been requested for resubmission.']);
         }
 
@@ -745,7 +745,7 @@ class LeaveRequestController extends Controller
             'admin_notes' => null, // Clear admin notes on resubmission
         ]);
 
-        return redirect()->route('user.leave-requests.show', $leaveRequest)
+        return redirect('/leave-requests/' . $leaveRequest->id)
             ->with('success', 'Leave request updated successfully. It will be reviewed again by an administrator.');
     }
 
@@ -773,7 +773,7 @@ class LeaveRequestController extends Controller
 
         $leaveRequest->delete();
 
-        return redirect()->route('user.leave-requests.index')
+        return redirect('/leave-requests')
             ->with('success', 'Leave request deleted successfully.');
     }
 }

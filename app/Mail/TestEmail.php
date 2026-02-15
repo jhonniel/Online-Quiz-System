@@ -37,7 +37,9 @@ class TestEmail extends Mailable
     public function content(): Content
     {
         return new Content(
-            markdown: 'emails.test-email',
+            // Use a simple Blade view instead of markdown so we don't depend on
+            // the CSS-to-inline-styles / CssSelectorConverter pipeline.
+            view: 'emails.test-email',
         );
     }
 

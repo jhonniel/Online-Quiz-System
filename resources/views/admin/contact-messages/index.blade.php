@@ -172,10 +172,10 @@
                                     </td>
                                     <td class="px-3 sm:px-6 py-4 whitespace-nowrap text-sm font-medium">
                                         <div class="flex items-center space-x-1">
-                                            <a href="{{ route('contact-messages.show', $message) }}"
+                                            <a href="{{ url('/admin/contact-messages/' . $message->id) }}"
                                                class="text-indigo-600 hover:text-indigo-900 px-2 py-1 rounded hover:bg-indigo-50 text-xs sm:text-sm">View</a>
 
-                                            <form method="POST" action="{{ route('contact-messages.destroy', $message) }}" class="inline"
+                                            <form method="POST" action="{{ url('/admin/contact-messages/' . $message->id) }}" class="inline"
                                                   onsubmit="return confirmMessageAction('delete', this)">
                                                 @csrf
                                                 @method('DELETE')

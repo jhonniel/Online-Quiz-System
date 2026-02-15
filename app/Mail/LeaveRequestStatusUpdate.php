@@ -53,7 +53,7 @@ class LeaveRequestStatusUpdate extends Mailable
     public function content(): Content
     {
         return new Content(
-            markdown: 'emails.leave-request-status-update',
+            view: 'emails.leave-request-status-update',
         );
     }
 

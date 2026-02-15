@@ -9,7 +9,7 @@
                 <h1 class="text-2xl font-bold text-gray-900">Edit News</h1>
                 <p class="text-sm text-gray-600 mt-1">Update news article details</p>
             </div>
-            <a href="{{ route('admin.news.index') }}" class="text-gray-600 hover:text-gray-900">
+            <a href="{{ url('/admin/news') }}" class="text-gray-600 hover:text-gray-900">
                 <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
                 </svg>
@@ -18,7 +18,7 @@
     </div>
 
     <!-- Form -->
-    <form action="{{ route('admin.news.update', $news) }}" method="POST" enctype="multipart/form-data" class="bg-white rounded-lg shadow-sm border border-gray-200 p-6 space-y-6">
+    <form action="{{ url('/admin/news/' . $news->id) }}" method="POST" enctype="multipart/form-data" class="bg-white rounded-lg shadow-sm border border-gray-200 p-6 space-y-6">
         @csrf
         @method('PUT')
 
@@ -159,7 +159,7 @@
 
         <!-- Actions -->
         <div class="flex items-center justify-end gap-3 pt-4 border-t border-gray-200">
-            <a href="{{ route('admin.news.index') }}" class="px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50">
+            <a href="{{ url('/admin/news') }}" class="px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50">
                 Cancel
             </a>
             <button type="submit" class="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">

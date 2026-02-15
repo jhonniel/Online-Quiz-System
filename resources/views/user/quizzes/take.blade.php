@@ -64,7 +64,7 @@
                 </div>
             </div>
 
-            <form id="quiz-form" action="{{ route('user.quizzes.submit', $quiz) }}" method="POST" class="hidden">
+            <form id="quiz-form" action="{{ url('/quizzes/' . $quiz->id . '/submit') }}" method="POST" class="hidden">
                 @csrf
                 <input type="hidden" name="user_answers" id="user_answers_input">
 
@@ -147,7 +147,7 @@ document.addEventListener('DOMContentLoaded', function() {
         const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
 
         // Fetch questions from API
-        fetch('{{ route("user.quizzes.questions", $quiz) }}', {
+        fetch('{{ url("/quizzes/" . $quiz->id . "/questions") }}', {
             method: 'GET',
             headers: {
                 'Content-Type': 'application/json',
@@ -494,7 +494,7 @@ document.addEventListener('DOMContentLoaded', function() {
             console.log('Answer count:', Object.keys(userAnswers).length);
 
             // Submit via AJAX
-            fetch('{{ route("user.quizzes.submit", $quiz) }}', {
+            fetch('{{ url("/quizzes/" . $quiz->id . "/submit") }}', {
                 method: 'POST',
                 headers: {
                     'X-Requested-With': 'XMLHttpRequest',
@@ -573,7 +573,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 // Get CSRF token
                 const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
 
-                fetch('{{ route("user.quizzes.cancel", $quiz) }}', {
+                fetch('{{ url("/quizzes/" . $quiz->id . "/cancel") }}', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',

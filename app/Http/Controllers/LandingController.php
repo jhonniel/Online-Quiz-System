@@ -33,9 +33,9 @@ class LandingController extends Controller
 
                 // Redirect to admin dashboard if user is admin or has admin permissions
                 if ($user->isAdmin() || $user->hasAnyAdminPermission()) {
-                    return redirect()->route('admin.dashboard');
+                    return redirect('/admin/dashboard');
                 } else {
-                    return redirect()->route('user.dashboard');
+                    return redirect('/dashboard');
                 }
             }
         }
@@ -133,9 +133,9 @@ class LandingController extends Controller
         $heroTitle = Setting::get('hero_title', 'Transform Your Assessment Experience');
         $heroSubtitle = Setting::get('hero_subtitle', $systemDescription);
         $heroPrimaryButtonText = Setting::get('hero_primary_button_text', 'Get Started Free');
-        $heroPrimaryButtonUrl = Setting::get('hero_primary_button_url', route('login'));
+        $heroPrimaryButtonUrl = Setting::get('hero_primary_button_url', url('/login'));
         $heroSecondaryButtonText = Setting::get('hero_secondary_button_text', 'Explore Features');
-        $heroSecondaryButtonUrl = Setting::get('hero_secondary_button_url', route('landing.projects'));
+        $heroSecondaryButtonUrl = Setting::get('hero_secondary_button_url', url('/projects'));
         $heroBackgroundPath = Setting::get('hero_background_image', null);
         $heroBackgroundUrl = $getImageUrl($heroBackgroundPath);
 
@@ -486,7 +486,7 @@ class LandingController extends Controller
             'status' => 'new',
         ]);
 
-        return redirect()->route('landing.contact')
+        return redirect('/contact')
             ->with('success', 'Thank you for your message! We will get back to you soon.');
     }
 

@@ -6,7 +6,7 @@
     <div class="bg-gradient-to-r from-indigo-500 to-indigo-600 rounded-lg shadow-sm p-4 flex-shrink-0">
         <div class="flex flex-col sm:flex-row sm:items-center gap-3">
             <div class="flex items-center">
-                <a href="{{ route('user.feedback.index') }}" class="mr-3 p-2 rounded-lg hover:bg-white hover:bg-opacity-20 transition-colors duration-200">
+                <a href="{{ url('/feedback') }}" class="mr-3 p-2 rounded-lg hover:bg-white hover:bg-opacity-20 transition-colors duration-200">
                     <svg class="w-5 h-5 sm:w-6 sm:h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
                     </svg>
@@ -31,7 +31,7 @@
                 <h2 class="text-lg font-medium text-gray-900">Feedback Submission Form</h2>
                 <p class="mt-1 text-sm text-gray-500">Please provide detailed information to help us understand and address your feedback effectively.</p>
             </div>
-        <form id="feedback-form" action="{{ route('user.feedback.store') }}" method="POST" enctype="multipart/form-data" class="space-y-8">
+        <form id="feedback-form" action="{{ url('/feedback') }}" method="POST" enctype="multipart/form-data" class="space-y-8">
             @csrf
 
             <!-- Feedback Type -->
@@ -172,7 +172,7 @@
 
             <!-- Action Buttons -->
             <div class="flex justify-end space-x-4 pt-6 border-t border-gray-200">
-                <a href="{{ route('user.feedback.index') }}">
+                <a href="{{ url('/feedback') }}">
                     <x-formal-button variant="outline" size="md">
                         <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>

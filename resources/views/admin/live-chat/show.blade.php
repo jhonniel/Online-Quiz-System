@@ -17,7 +17,7 @@
         <div class="px-4 py-5 sm:p-6">
             <div class="flex justify-between items-center mb-6">
                 <div class="flex items-center space-x-4">
-                    <a href="{{ route('live-chat.index') }}"
+                    <a href="{{ url('/admin/live-chat') }}"
                        class="text-gray-400 hover:text-gray-600">
                         <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
@@ -79,7 +79,7 @@
                                         <p class="text-sm">{{ $message->message }}</p>
                                     </div>
                                     <p class="text-xs text-gray-500 mt-1">
-                                        {{ $message->created_at->format('M d, g:i A') }}
+                                        {{ $message->created_at ? \Carbon\Carbon::parse($message->created_at)->format('M d, g:i A') : 'N/A' }}
                                         @if($message->isFromAdmin())
                                             - {{ $message->admin->name ?? 'Admin' }}
                                         @endif
@@ -262,7 +262,7 @@ document.addEventListener('DOMContentLoaded', function() {
         messageInput.value = '';
 
         // Send to server
-        fetch(`{{ route('live-chat.store', $ticket->ticket_number) }}`, {
+        fetch(`{{ url('/admin/live-chat/' . $ticket->ticket_number . '/message') }}`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -336,7 +336,7 @@ document.addEventListener('DOMContentLoaded', function() {
         closeButton.addEventListener('click', function() {
             const reason = prompt('Reason for closing (optional):');
             if (reason !== null) {
-                fetch(`{{ route('live-chat.close', $ticket->ticket_number) }}`, {
+                fetch(`{{ url('/admin/live-chat/' . $ticket->ticket_number . '/close') }}`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -370,7 +370,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 // Simple form submission approach
                 const form = document.createElement('form');
                 form.method = 'POST';
-                form.action = '{{ route("live-chat.reopen", $ticket->ticket_number) }}';
+                form.action = '{{ url("/admin/live-chat/" . $ticket->ticket_number . "/reopen") }}';
 
                 const csrfInput = document.createElement('input');
                 csrfInput.type = 'hidden';
@@ -411,7 +411,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 // Create form and submit
                 const form = document.createElement('form');
                 form.method = 'POST';
-                form.action = '{{ route("live-chat.reopen", $ticket->ticket_number) }}';
+                form.action = '{{ url("/admin/live-chat/" . $ticket->ticket_number . "/reopen") }}';
 
                 const csrfInput = document.createElement('input');
                 csrfInput.type = 'hidden';
@@ -448,7 +448,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     // Create form and submit
                     const form = document.createElement('form');
                     form.method = 'POST';
-                    form.action = '{{ route("live-chat.deny-reopen", $ticket->ticket_number) }}';
+                    form.action = '{{ url("/admin/live-chat/" . $ticket->ticket_number . "/deny-reopen") }}';
 
                     const csrfInput = document.createElement('input');
                     csrfInput.type = 'hidden';

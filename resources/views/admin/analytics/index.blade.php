@@ -612,7 +612,7 @@
                                                         </span>
                                                     </td>
                                                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                                        {{ $attempt->completed_at->format('M j, Y g:i A') }}
+                                                        {{ $attempt->completed_at ? \Carbon\Carbon::parse($attempt->completed_at)->format('M j, Y g:i A') : 'N/A' }}
                                                     </td>
                                                 </tr>
                                             @endforeach
@@ -696,7 +696,7 @@
                                         {{ $score['university']->name ?? 'N/A' }}
                                     </td>
                                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                        {{ $score['attempt']->completed_at->format('M j, Y g:i A') }}
+                                        {{ $score['attempt']->completed_at ? \Carbon\Carbon::parse($score['attempt']->completed_at)->format('M j, Y g:i A') : 'N/A' }}
                                     </td>
                                 </tr>
                             @endforeach

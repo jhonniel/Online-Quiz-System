@@ -94,14 +94,14 @@
                     <button type="button" id="login-tab" class="flex-1 py-3 px-4 text-base font-bold rounded-md transition-colors duration-200 bg-white text-gray-900 shadow-sm">
                         LOGIN
                     </button>
-                    <a href="{{ route('register') }}" id="register-tab" class="flex-1 py-3 px-4 text-base font-bold rounded-md transition-colors duration-200 text-gray-600 hover:text-gray-800 text-center">
+                    <a href="{{ url('/register') }}" id="register-tab" class="flex-1 py-3 px-4 text-base font-bold rounded-md transition-colors duration-200 text-gray-600 hover:text-gray-800 text-center">
                         REGISTER
                     </a>
                 </div>
 
                 <!-- Fallback register link in case JavaScript fails -->
                 <div class="text-center mb-4">
-                    <a href="{{ route('register') }}" class="text-sm text-teal-600 hover:text-teal-800 underline">
+                    <a href="{{ url('/register') }}" class="text-sm text-teal-600 hover:text-teal-800 underline">
                         Don't have an account? Register here
                     </a>
                 </div>
@@ -109,7 +109,12 @@
 
                 <!-- Login Form -->
                 <div id="login-form" class="bg-white rounded-2xl shadow-xl p-8">
-                <form id="login-form-element" class="space-y-6" action="{{ route('login') }}" method="POST">
+                @if(session('error'))
+                    <div class="mb-4 p-3 bg-amber-50 border border-amber-200 rounded-lg text-sm text-amber-800">
+                        {{ session('error') }}
+                    </div>
+                @endif
+                <form id="login-form-element" class="space-y-6" action="{{ url('/login') }}" method="POST">
                     @csrf
 
                     <!-- Error Hint Area -->
@@ -184,7 +189,7 @@
                     </div>
 
                     <div class="text-base">
-                        <a href="{{ route('password.request') }}" class="font-bold text-teal-600 hover:text-teal-500 transition-colors duration-200">
+                        <a href="{{ url('/forgot-password') }}" class="font-bold text-teal-600 hover:text-teal-500 transition-colors duration-200">
                             Forgot password?
                         </a>
                     </div>
@@ -227,7 +232,7 @@
 
             <!-- Back to Home -->
             <div class="mt-6 text-center">
-                <a href="{{ route('landing.index') }}" class="inline-flex items-center text-sm font-medium text-gray-600 hover:text-gray-800 transition-colors duration-200">
+                <a href="{{ url('/') }}" class="inline-flex items-center text-sm font-medium text-gray-600 hover:text-gray-800 transition-colors duration-200">
                     <svg class="w-4 h-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
                     </svg>

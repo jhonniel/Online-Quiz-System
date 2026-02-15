@@ -27,7 +27,7 @@
                                     ->temporaryUrl($torPdfPath, now()->addMinutes(60));
                             } else {
                                 // Fallback: use the direct stream route
-                                $torUrl = route('landing.tor-pdf');
+                                $torUrl = url('/tor-pdf');
                             }
                         } else {
                             // Fallback to public disk
@@ -35,12 +35,12 @@
                                 $torUrl = \Illuminate\Support\Facades\Storage::disk('public')->url($torPdfPath);
                             } else {
                                 // Use the stream route as last resort
-                                $torUrl = route('landing.tor-pdf');
+                                $torUrl = url('/tor-pdf');
                             }
                         }
                     } catch (\Exception $e) {
                         // Use the stream route as fallback
-                        $torUrl = route('landing.tor-pdf');
+                        $torUrl = url('/tor-pdf');
                     }
                 }
             @endphp

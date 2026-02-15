@@ -140,7 +140,7 @@ class QuizController extends Controller
             ]);
         }
 
-        return redirect()->route('quizzes.index')
+        return redirect('/admin/quizzes')
             ->with('success', 'Quiz created successfully.');
     }
 
@@ -258,14 +258,14 @@ class QuizController extends Controller
             $quiz->update(['total_questions' => count($request->questions)]);
         }
 
-            return redirect()->route('quizzes.index')
+            return redirect('/admin/quizzes')
                 ->with('success', 'Quiz updated successfully.');
     }
 
     public function destroy(Quiz $quiz)
     {
         $quiz->delete();
-        return redirect()->route('quizzes.index')
+        return redirect('/admin/quizzes')
             ->with('success', 'Quiz deleted successfully.');
     }
 
@@ -403,7 +403,7 @@ class QuizController extends Controller
             $totalQuestions = $quiz->questions()->count();
             $quiz->update(['total_questions' => $totalQuestions]);
 
-            return redirect()->route('quizzes.show', $quiz)
+            return redirect('/admin/quizzes/' . $quiz->id)
                 ->with('success', "Successfully imported questions! Total questions: {$totalQuestions}");
 
         } catch (\Exception $e) {
@@ -470,7 +470,7 @@ class QuizController extends Controller
             $totalQuestions = $quiz->questions()->count();
             $quiz->update(['total_questions' => $totalQuestions]);
 
-            return redirect()->route('quizzes.index')
+            return redirect('/admin/quizzes')
                 ->with('success', "Quiz '{$quiz->title}' created successfully with {$totalQuestions} questions imported from Excel!");
 
         } catch (\Exception $e) {
@@ -662,7 +662,7 @@ class QuizController extends Controller
             return redirect()->back()->with('error', 'Quiz assignment not found.');
         }
 
-        return redirect()->route('admin.quiz-assignments.history', $assignment);
+        return redirect('/admin/quiz-assignments/' . $assignment->id . '/history');
     }
 
     public function allowRetake(Request $request, QuizAssignment $assignment)

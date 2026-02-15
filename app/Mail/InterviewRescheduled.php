@@ -54,7 +54,7 @@ class InterviewRescheduled extends Mailable
     public function content(): Content
     {
         return new Content(
-            markdown: 'emails.interview-rescheduled',
+            view: 'emails.interview-rescheduled',
             with: [
                 'application' => $this->application,
                 'position' => $this->position,

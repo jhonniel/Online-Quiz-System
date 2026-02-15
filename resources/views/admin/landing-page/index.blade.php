@@ -44,7 +44,7 @@
         </div>
     @endif
 
-    <form action="{{ route('admin.landing-page.update') }}" method="POST" enctype="multipart/form-data">
+    <form action="{{ url('/admin/landing-page') }}" method="POST" enctype="multipart/form-data">
         @csrf
 
         <div class="bg-white rounded-2xl shadow-xl border border-gray-200 overflow-hidden">
@@ -85,7 +85,7 @@
                             <label for="hero_primary_button_url" class="block text-sm font-medium text-gray-700 mb-2">Primary Button URL</label>
                             <input type="url" id="hero_primary_button_url" name="hero_primary_button_url"
                                    value="{{ $settings['hero_primary_button_url'] ?? '' }}"
-                                   placeholder="{{ route('login') }}"
+                                   placeholder="{{ url('/login') }}"
                                    class="w-full px-4 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
                         </div>
                         <div>
@@ -98,7 +98,7 @@
                             <label for="hero_secondary_button_url" class="block text-sm font-medium text-gray-700 mb-2">Secondary Button URL</label>
                             <input type="url" id="hero_secondary_button_url" name="hero_secondary_button_url"
                                    value="{{ $settings['hero_secondary_button_url'] ?? '' }}"
-                                   placeholder="{{ route('landing.projects') }}"
+                                   placeholder="{{ url('/projects') }}"
                                    class="w-full px-4 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
                         </div>
                         <div class="md:col-span-2">
@@ -234,7 +234,7 @@
                         </div>
                         <div>
                             <h3 class="text-lg font-semibold text-gray-900">About Page Configuration</h3>
-                            <p class="text-sm text-gray-500">Configure the content for <a href="{{ route('landing.about') }}" target="_blank" class="text-indigo-600 hover:text-indigo-700 underline">/about</a> page</p>
+                            <p class="text-sm text-gray-500">Configure the content for <a href="{{ url('/about') }}" target="_blank" class="text-indigo-600 hover:text-indigo-700 underline">/about</a> page</p>
                         </div>
                     </div>
 
@@ -570,7 +570,7 @@
 
                 <!-- Action Buttons -->
                 <div class="mt-8 pt-6 border-t border-gray-200 flex justify-end space-x-3">
-                    <a href="{{ route('admin.dashboard') }}"
+                    <a href="{{ url('/admin/dashboard') }}"
                        class="inline-flex items-center px-6 py-3 border border-gray-300 text-sm font-medium rounded-lg text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition duration-200">
                         <svg class="h-5 w-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>

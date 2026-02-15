@@ -17,7 +17,7 @@
                     <p class="text-indigo-100 text-sm">View your leave request information</p>
                 </div>
             </div>
-            <a href="{{ route('user.leave-requests.index') }}"
+            <a href="{{ url('/leave-requests') }}"
                class="inline-flex items-center px-4 py-2 bg-white/20 backdrop-blur-sm border border-white/30 rounded-lg text-white hover:bg-white/30 transition duration-200">
                 <svg class="h-5 w-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
@@ -39,7 +39,7 @@
                     @if($leaveRequest->isPending())
                         <div class="flex items-center space-x-2">
                             @if($leaveRequest->reviewed_at)
-                                <a href="{{ route('user.leave-requests.edit', $leaveRequest) }}"
+                                <a href="{{ url('/leave-requests/' . $leaveRequest->id . '/edit') }}"
                                    class="inline-flex items-center px-4 py-2 border border-indigo-300 text-sm font-medium rounded-lg text-indigo-700 bg-white hover:bg-indigo-50">
                                     <svg class="h-4 w-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
@@ -47,7 +47,7 @@
                                     Edit Request
                                 </a>
                             @endif
-                            <form action="{{ route('user.leave-requests.destroy', $leaveRequest) }}" method="POST" class="inline"
+                            <form action="{{ url('/leave-requests/' . $leaveRequest->id) }}" method="POST" class="inline"
                                   onsubmit="return confirm('Are you sure you want to delete this leave request?');">
                                 @csrf
                                 @method('DELETE')

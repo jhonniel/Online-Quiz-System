@@ -96,7 +96,7 @@
 
     <!-- Filters -->
     <div class="bg-white rounded-lg shadow border border-gray-200 p-4 sm:p-6">
-        <form method="GET" action="{{ route('admin.student-leave-requests.index') }}" class="space-y-4">
+        <form method="GET" action="{{ url('/admin/student-leave-requests') }}" class="space-y-4">
             <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
                 <div>
                     <label for="status" class="block text-sm font-medium text-gray-700 mb-2">Status</label>
@@ -150,7 +150,7 @@
 
             @if(request('status') || request('type') || request('student') || request('search'))
                 <div class="flex justify-end">
-                    <a href="{{ route('admin.student-leave-requests.index') }}"
+                    <a href="{{ url('/admin/student-leave-requests') }}"
                        class="text-sm text-gray-600 hover:text-gray-900 underline">
                         Clear filters
                     </a>
@@ -216,7 +216,7 @@
                                     {{ $request->created_at->format('M d, Y') }}
                                 </td>
                                 <td class="px-3 sm:px-6 py-4 text-xs sm:text-sm font-medium">
-                                    <a href="{{ route('admin.leave-requests.show', $request) }}"
+                                    <a href="{{ url('/admin/leave-requests/' . $request->id) }}"
                                        class="text-indigo-600 hover:text-indigo-900 whitespace-nowrap">
                                         View Details
                                     </a>
@@ -245,7 +245,7 @@
 
 <script>
     document.addEventListener('DOMContentLoaded', function () {
-        const form = document.querySelector('form[action="{{ route('admin.student-leave-requests.index') }}"]');
+        const form = document.querySelector('form[action="{{ url('/admin/student-leave-requests') }}"]');
         const searchInput = document.getElementById('search');
 
         let t = null;

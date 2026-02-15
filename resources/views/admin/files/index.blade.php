@@ -78,10 +78,10 @@
     <!-- Breadcrumb -->
     @if(count($breadcrumbs) > 0)
         <div class="mb-6 flex items-center space-x-2 text-sm">
-            <a href="{{ route('admin.files.index') }}" class="text-indigo-600 hover:text-indigo-800">Home</a>
+            <a href="{{ url('/admin/files') }}" class="text-indigo-600 hover:text-indigo-800">Home</a>
             @foreach($breadcrumbs as $breadcrumb)
                 <span class="text-gray-400">/</span>
-                <a href="{{ route('admin.files.index', ['folder_id' => $breadcrumb->id]) }}" class="text-indigo-600 hover:text-indigo-800">{{ $breadcrumb->name }}</a>
+                <a href="{{ url('/admin/files?' . http_build_query(['folder_id' => $breadcrumb->id])) }}" class="text-indigo-600 hover:text-indigo-800">{{ $breadcrumb->name }}</a>
             @endforeach
         </div>
     @endif
@@ -113,7 +113,7 @@
                                 </div>
                             @endif
 
-                            <a href="{{ route('admin.files.index', ['folder_id' => $item->id]) }}" class="block text-center">
+                            <a href="{{ url('/admin/files?' . http_build_query(['folder_id' => $item->id])) }}" class="block text-center">
                                 <div class="flex justify-center mb-3">
                                     <svg class="w-16 h-16 text-yellow-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-4l-2-2H5a2 2 0 00-2 2z"></path>
@@ -153,7 +153,7 @@
                                     $thumbnailUrl = null;
                                     if ($isImage) {
                                         // Use app route so it works for private Spaces too (redirects to signed URL)
-                                        $thumbnailUrl = route('admin.files.view', $item);
+                                        $thumbnailUrl = url('/admin/files/' . $item->id . '/view');
                                     }
                                 @endphp
 
@@ -161,7 +161,7 @@
                                     @if($thumbnailUrl)
                                         <img src="{{ $thumbnailUrl }}" alt="{{ $item->name }}"
                                              class="w-full h-full object-cover cursor-pointer hover:opacity-90 transition-opacity"
-                                             onclick="openPreviewModal('{{ $item->id }}', '{{ addslashes($item->name) }}', '{{ $item->mime_type }}', '{{ route('admin.files.view', $item) }}')">
+                                             onclick="openPreviewModal('{{ $item->id }}', '{{ addslashes($item->name) }}', '{{ $item->mime_type }}', '{{ url('/admin/files/' . $item->id . '/view') }}')">
                                     @else
                                         <div class="w-full h-full flex items-center justify-center">
                                             @if(str_starts_with($item->mime_type ?? '', 'application/pdf'))
@@ -201,9 +201,9 @@
                                      class="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg z-10 border border-gray-200">
                                     <div class="py-1">
                                         @if($item->isFile())
-                                            <button onclick="openPreviewModal('{{ $item->id }}', '{{ addslashes($item->name) }}', '{{ $item->mime_type }}', '{{ route('admin.files.view', $item) }}')"
+                                            <button onclick="openPreviewModal('{{ $item->id }}', '{{ addslashes($item->name) }}', '{{ $item->mime_type }}', '{{ url('/admin/files/' . $item->id . '/view') }}')"
                                                     class="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Preview</button>
-                                            <a href="{{ route('admin.files.download', $item) }}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Download</a>
+                                            <a href="{{ url('/admin/files/' . $item->id . '/download') }}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Download</a>
                                         @endif
                                         @if($item->uploaded_by == auth()->id())
                                             <button onclick="openShareModal({{ $item->id }}, '{{ $item->type }}')"
@@ -212,7 +212,7 @@
                                         <button onclick="openEditModal({{ $item->id }}, '{{ addslashes($item->name) }}', '{{ addslashes($item->description ?? '') }}', '{{ $item->type }}')"
                                                 class="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Rename</button>
                                         @if($item->uploaded_by == auth()->id())
-                                            <form action="{{ route('admin.files.destroy', $item) }}" method="POST" class="inline" onsubmit="return confirm('Are you sure you want to delete this {{ $item->type }}?');">
+                                            <form action="{{ url('/admin/files/' . $item->id) }}" method="POST" class="inline" onsubmit="return confirm('Are you sure you want to delete this {{ $item->type }}?');">
                                                 @csrf
                                                 @method('DELETE')
                                                 <button type="submit" class="block w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-gray-100">Delete</button>
@@ -266,7 +266,7 @@
                     <p id="upload-status" class="text-xs text-gray-500 mt-2">Preparing upload...</p>
                 </div>
 
-                <form id="upload-file-form" action="{{ route('admin.files.store') }}" method="POST" enctype="multipart/form-data">
+                <form id="upload-file-form" action="{{ url('/admin/files') }}" method="POST" enctype="multipart/form-data">
                     @csrf
                     <input type="hidden" name="folder_id" value="{{ $currentFolder->id ?? null }}">
                     <div class="mb-4">
@@ -307,7 +307,7 @@
                         </svg>
                     </button>
                 </div>
-                <form action="{{ route('admin.files.create-folder') }}" method="POST">
+                <form action="{{ url('/admin/files/create-folder') }}" method="POST">
                     @csrf
                     <input type="hidden" name="folder_id" value="{{ $currentFolder->id ?? null }}">
                     <div class="mb-4">
@@ -444,17 +444,17 @@
 
     <script>
         // Use named-route templates (prevents bad URLs / 404s)
-        const ADMIN_FILES_UPDATE_URL = @json(route('admin.files.update', ['file' => '__FILE__']));
-        const ADMIN_FILES_SHARE_URL = @json(route('admin.files.share', ['file' => '__FILE__']));
-        const ADMIN_FILES_UNSHARE_URL = @json(route('admin.files.unshare', ['file' => '__FILE__']));
-        const ADMIN_FILES_SHARED_USERS_URL = @json(route('admin.files.shared-users', ['file' => '__FILE__']));
-        const ADMIN_FILES_DOWNLOAD_URL = @json(route('admin.files.download', ['file' => '__FILE__']));
-        const ADMIN_FILES_PRESIGN_URL = @json(route('admin.files.presign'));
-        const ADMIN_FILES_CONFIRM_URL = @json(route('admin.files.confirm'));
-        const ADMIN_FILES_MULTIPART_INITIATE_URL = @json(route('admin.files.multipart.initiate'));
-        const ADMIN_FILES_MULTIPART_PRESIGN_CHUNK_URL = @json(route('admin.files.multipart.presign-chunk'));
-        const ADMIN_FILES_MULTIPART_COMPLETE_URL = @json(route('admin.files.multipart.complete'));
-        const ADMIN_FILES_MULTIPART_ABORT_URL = @json(route('admin.files.multipart.abort'));
+        const ADMIN_FILES_UPDATE_URL = @json(url('/admin/files/__FILE__'));
+        const ADMIN_FILES_SHARE_URL = @json(url('/admin/files/__FILE__/share'));
+        const ADMIN_FILES_UNSHARE_URL = @json(url('/admin/files/__FILE__/unshare'));
+        const ADMIN_FILES_SHARED_USERS_URL = @json(url('/admin/files/__FILE__/shared-users'));
+        const ADMIN_FILES_DOWNLOAD_URL = @json(url('/admin/files/__FILE__/download'));
+        const ADMIN_FILES_PRESIGN_URL = @json(url('/admin/files/presign'));
+        const ADMIN_FILES_CONFIRM_URL = @json(url('/admin/files/confirm'));
+        const ADMIN_FILES_MULTIPART_INITIATE_URL = @json(url('/admin/files/multipart/initiate'));
+        const ADMIN_FILES_MULTIPART_PRESIGN_CHUNK_URL = @json(url('/admin/files/multipart/presign-chunk'));
+        const ADMIN_FILES_MULTIPART_COMPLETE_URL = @json(url('/admin/files/multipart/complete'));
+        const ADMIN_FILES_MULTIPART_ABORT_URL = @json(url('/admin/files/multipart/abort'));
 
         let currentShareItemId = null;
 

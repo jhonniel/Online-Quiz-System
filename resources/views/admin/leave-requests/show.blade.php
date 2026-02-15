@@ -17,7 +17,7 @@
                     <p class="text-sm sm:text-base text-indigo-100 mt-1">Review and manage this leave request</p>
                 </div>
             </div>
-            <a href="{{ route('admin.leave-requests.index') }}"
+            <a href="{{ url('/admin/leave-requests') }}"
                class="inline-flex items-center justify-center px-3 py-2 sm:px-4 sm:py-2 text-xs sm:text-sm bg-white/10 backdrop-blur-sm border border-white/20 rounded-lg text-white hover:bg-white/20 transition duration-200">
                 <svg class="h-4 w-4 sm:h-5 sm:w-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
@@ -708,7 +708,7 @@
                             </div>
                         </div>
                         <h3 class="text-base sm:text-lg font-bold text-gray-900 mb-3 sm:mb-4">Force Approve Request</h3>
-                        <form action="{{ route('admin.leave-requests.force-accept', $leaveRequest) }}" method="POST" class="space-y-3 sm:space-y-4">
+                        <form action="{{ url('/admin/leave-requests/' . $leaveRequest->id . '/force-accept') }}" method="POST" class="space-y-3 sm:space-y-4">
                             @csrf
                             <div>
                                 <label for="force_accept_notes" class="block text-xs sm:text-sm font-medium text-gray-700 mb-2">Notes (Optional)</label>
@@ -738,7 +738,7 @@
                     <!-- Normal Approve Form -->
                     <div class="bg-white rounded-lg shadow border border-gray-200 p-4 sm:p-6">
                         <h3 class="text-base sm:text-lg font-bold text-gray-900 mb-3 sm:mb-4">Approve Request</h3>
-                        <form action="{{ route('admin.leave-requests.approve', $leaveRequest) }}" method="POST" class="space-y-3 sm:space-y-4">
+                        <form action="{{ url('/admin/leave-requests/' . $leaveRequest->id . '/approve') }}" method="POST" class="space-y-3 sm:space-y-4">
                             @csrf
                             <div>
                                 <label for="approve_notes" class="block text-xs sm:text-sm font-medium text-gray-700 mb-2">Notes (Optional)</label>
@@ -769,7 +769,7 @@
                 <!-- Reject Form -->
                 <div class="bg-white rounded-lg shadow border border-gray-200 p-4 sm:p-6">
                     <h3 class="text-base sm:text-lg font-bold text-gray-900 mb-3 sm:mb-4">Reject Request</h3>
-                    <form action="{{ route('admin.leave-requests.reject', $leaveRequest) }}" method="POST" class="space-y-3 sm:space-y-4">
+                    <form action="{{ url('/admin/leave-requests/' . $leaveRequest->id . '/reject') }}" method="POST" class="space-y-3 sm:space-y-4">
                         @csrf
                         <div>
                             <label for="reject_notes" class="block text-xs sm:text-sm font-medium text-gray-700 mb-2">Reason for Rejection</label>
@@ -800,7 +800,7 @@
                 <div class="bg-white rounded-lg shadow border border-gray-200 p-4 sm:p-6">
                     <h3 class="text-base sm:text-lg font-bold text-gray-900 mb-3 sm:mb-4">Request Resubmission</h3>
                     <p class="text-xs sm:text-sm text-gray-600 mb-3 sm:mb-4">If there are errors in the request, you can ask the employee to resubmit it.</p>
-                    <form action="{{ route('admin.leave-requests.resubmit', $leaveRequest) }}" method="POST" class="space-y-3 sm:space-y-4">
+                    <form action="{{ url('/admin/leave-requests/' . $leaveRequest->id . '/resubmit') }}" method="POST" class="space-y-3 sm:space-y-4">
                         @csrf
                         <div>
                             <label for="resubmit_notes" class="block text-xs sm:text-sm font-medium text-gray-700 mb-2">What needs to be corrected?</label>
@@ -838,7 +838,7 @@
                             This request has already been {{ $leaveRequest->status }}.
                         </p>
                         @if($leaveRequest->isRejected() || $leaveRequest->isApproved())
-                            <form action="{{ route('admin.leave-requests.resubmit', $leaveRequest) }}" method="POST" class="mt-3 sm:mt-4">
+                            <form action="{{ url('/admin/leave-requests/' . $leaveRequest->id . '/resubmit') }}" method="POST" class="mt-3 sm:mt-4">
                                 @csrf
                                 <div class="mb-3 sm:mb-4">
                                     <label for="resubmit_notes_existing" class="block text-xs sm:text-sm font-medium text-gray-700 mb-2">Notes for Resubmission</label>

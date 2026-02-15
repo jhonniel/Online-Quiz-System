@@ -16,7 +16,7 @@
                     <p class="text-sm sm:text-base text-indigo-100 mt-1">View scheduled interviews on a monthly calendar.</p>
                 </div>
             </div>
-            <a href="{{ route('admin.hiring-applications.index') }}"
+            <a href="{{ url('/admin/hiring-applications') }}"
                class="inline-flex items-center justify-center px-3 py-2 sm:px-4 sm:py-2 text-xs sm:text-sm bg-white/10 backdrop-blur-sm border border-white/20 rounded-lg text-white hover:bg-white/20 transition duration-200">
                 <svg class="h-4 w-4 sm:h-5 sm:w-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
@@ -30,7 +30,7 @@
     <!-- Calendar Navigation -->
     <div class="bg-white rounded-2xl shadow border border-gray-200 p-4">
         <div class="flex items-center justify-between">
-            <a href="{{ route('admin.hiring-applications.calendar') }}?month={{ $prevMonth->format('Y-m') }}"
+            <a href="{{ url('/admin/hiring-applications/calendar') }}?month={{ $prevMonth->format('Y-m') }}"
                class="inline-flex items-center px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50">
                 <svg class="h-4 w-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
@@ -38,7 +38,7 @@
                 Previous
             </a>
             <h2 class="text-lg font-bold text-gray-900">{{ $currentMonth->format('F Y') }}</h2>
-            <a href="{{ route('admin.hiring-applications.calendar') }}?month={{ $nextMonth->format('Y-m') }}"
+            <a href="{{ url('/admin/hiring-applications/calendar') }}?month={{ $nextMonth->format('Y-m') }}"
                class="inline-flex items-center px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50">
                 Next
                 <svg class="h-4 w-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -90,7 +90,7 @@
                                                 $bgColor = $interview['type'] === 'accepted' ? 'bg-green-100 hover:bg-green-200 text-green-800' : 'bg-indigo-100 hover:bg-indigo-200 text-indigo-800';
                                                 $label = $interview['type'] === 'accepted' ? 'Accepted' : 'Interview';
                                             @endphp
-                                            <a href="{{ route('admin.hiring-applications.show', $interview['id']) }}"
+                                            <a href="{{ url('/admin/hiring-applications/' . $interview['id']) }}"
                                                class="block px-2 py-1 text-xs rounded {{ $bgColor }} transition-colors"
                                                title="{{ $interview['applicant_name'] }} - {{ $interview['position'] }} ({{ $interview['interview_time'] }})">
                                                 <div class="font-semibold truncate">{{ $interview['interview_time'] }} - {{ $label }}</div>

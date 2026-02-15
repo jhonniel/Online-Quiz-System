@@ -25,7 +25,7 @@
                     </div>
                 </div>
             </div>
-            <a href="{{ route('admin.users.index') }}"
+            <a href="{{ url('/admin/users') }}"
                class="inline-flex items-center px-4 py-2 bg-white/10 backdrop-blur-sm border border-white/30 rounded-lg text-white hover:bg-white/20 transition duration-200">
                 <svg class="h-5 w-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
@@ -80,7 +80,7 @@
                     <div>
                         <p class="text-xs font-semibold text-gray-500 uppercase tracking-wide">Last Activity</p>
                         <p class="mt-1 text-sm text-gray-900">
-                            {{ $user->last_activity ? $user->last_activity->format('M d, Y g:i A') : 'No recent activity' }}
+                            {{ $user->last_activity ? \Carbon\Carbon::parse($user->last_activity)->format('M d, Y g:i A') : 'No recent activity' }}
                         </p>
                     </div>
                 </div>
@@ -175,7 +175,7 @@
                         <p class="text-xs text-gray-500 mb-3">
                             Update this employee's yearly leave allowances. Used days are based on approved leave requests.
                         </p>
-                        <form action="{{ route('admin.users.leave-balance', $user) }}" method="POST" class="grid grid-cols-1 gap-3">
+                        <form action="{{ url('/admin/users/' . $user->id . '/leave-balance') }}" method="POST" class="grid grid-cols-1 gap-3">
                             @csrf
                             @method('PATCH')
                             <input type="hidden" name="year" value="{{ now()->year }}">

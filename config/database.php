@@ -2,13 +2,27 @@
 
 use Illuminate\Support\Str;
 
+// Always resolve to absolute path for SQLite
+$sqlitePath = env('DB_DATABASE');
+if (empty($sqlitePath)) {
+    $sqlitePath = base_path('database/database.sqlite');
+}
+// Ensure absolute path
+if (!empty($sqlitePath) && substr($sqlitePath, 0, 1) !== '/') {
+    $sqlitePath = base_path($sqlitePath);
+}
+// Resolve realpath if file exists
+if (file_exists($sqlitePath)) {
+    $sqlitePath = realpath($sqlitePath);
+}
+
 return [
     'default' => env('DB_CONNECTION', 'sqlite'),
     'connections' => [
         'sqlite' => [
             'driver' => 'sqlite',
             'url' => env('DATABASE_URL'),
-            'database' => env('DB_DATABASE', database_path('database.sqlite')),
+            'database' => $sqlitePath,
             'prefix' => '',
             'foreign_key_constraints' => env('DB_FOREIGN_KEYS', true),
         ],

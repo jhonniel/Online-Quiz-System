@@ -12,7 +12,7 @@ class RoleLoginController extends Controller
     public function showLoginForm()
     {
         if (Auth::check()) {
-            return redirect()->route('home');
+            return redirect('/home');
         }
         
         return view('landing.login');
@@ -31,7 +31,7 @@ class RoleLoginController extends Controller
         if (Auth::attempt($credentials, $remember)) {
             $request->session()->regenerate();
             
-            return redirect()->intended(route('home'));
+            return redirect()->intended('/home');
         }
 
         throw ValidationException::withMessages([
@@ -46,6 +46,6 @@ class RoleLoginController extends Controller
         $request->session()->invalidate();
         $request->session()->regenerateToken();
         
-        return redirect()->route('login');
+        return redirect('/login');
     }
 }

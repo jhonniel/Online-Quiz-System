@@ -68,7 +68,7 @@ class UniversityController extends Controller
             'is_active' => $request->has('is_active'),
         ]);
 
-        return redirect()->route('admin.universities.index')
+        return redirect('/admin/universities')
             ->with('success', 'University created successfully.');
     }
 
@@ -110,7 +110,7 @@ class UniversityController extends Controller
             'is_active' => $request->has('is_active'),
         ]);
 
-        return redirect()->route('admin.universities.index')
+        return redirect('/admin/universities')
             ->with('success', 'University updated successfully.');
     }
 
@@ -121,13 +121,13 @@ class UniversityController extends Controller
     {
         // Check if university has users
         if ($university->users()->count() > 0) {
-            return redirect()->route('admin.universities.index')
+            return redirect('/admin/universities')
                 ->with('error', 'Cannot delete university. It has ' . $university->users()->count() . ' user(s) associated with it.');
         }
 
         $university->delete();
 
-        return redirect()->route('admin.universities.index')
+        return redirect('/admin/universities')
             ->with('success', 'University deleted successfully.');
     }
 
@@ -139,7 +139,7 @@ class UniversityController extends Controller
         $university->update(['is_active' => !$university->is_active]);
 
         $status = $university->is_active ? 'activated' : 'deactivated';
-        return redirect()->route('admin.universities.index')
+        return redirect('/admin/universities')
             ->with('success', "University {$status} successfully.");
     }
 }

@@ -60,7 +60,7 @@ class DepartmentController extends Controller
             'is_active' => $request->has('is_active'),
         ]);
 
-        return redirect()->route('admin.departments.index')
+        return redirect('/admin/departments')
             ->with('success', 'Department created successfully.');
     }
 
@@ -87,7 +87,7 @@ class DepartmentController extends Controller
             'is_active' => $request->has('is_active'),
         ]);
 
-        return redirect()->route('admin.departments.index')
+        return redirect('/admin/departments')
             ->with('success', 'Department updated successfully.');
     }
 
@@ -95,13 +95,13 @@ class DepartmentController extends Controller
     {
         // Check if department has users
         if ($department->users()->count() > 0) {
-            return redirect()->route('admin.departments.index')
+            return redirect('/admin/departments')
                 ->with('error', 'Cannot delete department with assigned employees. Please reassign employees first.');
         }
 
         $department->delete();
 
-        return redirect()->route('admin.departments.index')
+        return redirect('/admin/departments')
             ->with('success', 'Department deleted successfully.');
     }
 

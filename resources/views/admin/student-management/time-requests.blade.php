@@ -57,7 +57,7 @@
 
     <!-- Filters -->
     <div class="bg-white rounded-lg shadow border border-gray-200 p-4 sm:p-6">
-        <form method="GET" action="{{ route('admin.time-requests.index') }}" class="space-y-4">
+        <form method="GET" action="{{ url('/admin/time-requests') }}" class="space-y-4">
             <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
                 <div>
                     <label for="status" class="block text-sm font-medium text-gray-700 mb-2">Status</label>

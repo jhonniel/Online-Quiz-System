@@ -89,14 +89,14 @@
                     <p class="text-sm text-gray-600 mt-1">View and manage all unread notifications</p>
                 </div>
                 <div class="flex items-center space-x-3">
-                    <a href="{{ route('admin.notifications.index') }}"
+                    <a href="{{ url('/admin/notifications') }}"
                        class="inline-flex items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
                         <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
                         </svg>
                         All Notifications
                     </a>
-                    <form method="POST" action="{{ route('admin.notifications.mark-all-read') }}" class="inline">
+                    <form method="POST" action="{{ url('/admin/notifications/mark-all-read') }}" class="inline">
                         @csrf
                         <button type="submit" onclick="return confirm('Are you sure you want to mark all notifications as read?')"
                                 class="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
@@ -173,13 +173,13 @@
                             </td>
                             <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
                                 <div class="flex items-center space-x-2">
-                                    <form method="POST" action="{{ route('admin.notifications.mark-read') }}" class="inline">
+                                    <form method="POST" action="{{ url('/admin/notifications/mark-read') }}" class="inline">
                                         @csrf
                                         <input type="hidden" name="notification_id" value="{{ $notification->id }}">
                                         <button type="submit" class="text-indigo-600 hover:text-indigo-900">Mark Read</button>
                                     </form>
                                     <span class="text-gray-300">|</span>
-                                    <a href="{{ route('admin.notifications.show', $notification) }}"
+                                    <a href="{{ url('/admin/notifications/' . $notification->id) }}"
                                        class="text-indigo-600 hover:text-indigo-900">View</a>
                                 </div>
                             </td>

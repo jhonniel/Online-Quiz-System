@@ -18,7 +18,7 @@
                     </svg>
                     Filter
                 </button>
-                <a href="{{ route('forum.saved') }}" class="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                <a href="{{ url('/forum/saved') }}" class="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
                     <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z"></path>
                     </svg>
@@ -57,7 +57,7 @@
                                     </svg>
                                 @endif
                                 <h3 class="text-lg font-semibold text-gray-900 truncate">
-                                    <a href="{{ route('forum.show', $thread) }}" class="hover:text-indigo-600 transition-colors">
+                                    <a href="{{ url('/forum/' . $thread->id) }}" class="hover:text-indigo-600 transition-colors">
                                         {{ $thread->title }}
                                     </a>
                                 </h3>
@@ -136,7 +136,7 @@
                                 <span>Share</span>
                             </button>
 
-                            <a href="{{ route('forum.show', $thread) }}#comments"
+                            <a href="{{ url('/forum/' . $thread->id) }}#comments"
                                class="flex items-center space-x-1 px-3 py-2 text-sm font-medium rounded-md transition-colors text-gray-600 hover:text-indigo-600 hover:bg-indigo-50">
                                 <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path>
@@ -145,7 +145,7 @@
                             </a>
                         </div>
 
-                        <a href="{{ route('forum.show', $thread) }}"
+                        <a href="{{ url('/forum/' . $thread->id) }}"
                            class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-indigo-600 bg-indigo-100 hover:bg-indigo-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
                             Read More
                         </a>
@@ -297,7 +297,7 @@ let notificationPollingInterval;
 function startNotificationPolling() {
     // Poll for new notifications every 10 seconds
     notificationPollingInterval = setInterval(function() {
-        fetch('{{ route("notifications.unread-count") }}')
+        fetch('{{ url("/notifications/unread-count") }}')
             .then(response => response.json())
             .then(data => {
                 // Update notification bell count if it exists

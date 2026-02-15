@@ -33,7 +33,7 @@
 
             <!-- Form -->
             <div class="bg-white/80 backdrop-blur-sm py-10 px-6 shadow-2xl sm:rounded-3xl sm:px-10 border border-white/20">
-                <form method="POST" action="{{ route('password.store') }}" class="space-y-6">
+                <form method="POST" action="{{ url('/reset-password') }}" class="space-y-6">
                     @csrf
 
                     <!-- Password Reset Token -->
@@ -108,7 +108,7 @@
 
                 <!-- Back to Login -->
                 <div class="mt-8 text-center">
-                    <a href="{{ route('login') }}" class="inline-flex items-center text-sm font-medium text-gray-600 hover:text-gray-800 transition-colors duration-200">
+                    <a href="{{ url('/login') }}" class="inline-flex items-center text-sm font-medium text-gray-600 hover:text-gray-800 transition-colors duration-200">
                         <svg class="w-4 h-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
                         </svg>

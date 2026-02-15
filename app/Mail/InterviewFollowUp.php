@@ -46,7 +46,7 @@ class InterviewFollowUp extends Mailable
     public function content(): Content
     {
         return new Content(
-            markdown: 'emails.interview-follow-up',
+            view: 'emails.interview-follow-up',
             with: [
                 'application' => $this->application,
                 'position' => $this->position,

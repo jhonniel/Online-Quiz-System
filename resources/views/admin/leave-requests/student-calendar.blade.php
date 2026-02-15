@@ -16,7 +16,7 @@
                     <p class="text-sm sm:text-base text-indigo-100 mt-1">View student leave requests on a monthly calendar.</p>
                 </div>
             </div>
-            <a href="{{ route('admin.student-leave-requests.index') }}"
+            <a href="{{ url('/admin/student-leave-requests') }}"
                class="inline-flex items-center justify-center px-3 py-2 sm:px-4 sm:py-2 text-xs sm:text-sm bg-white/10 backdrop-blur-sm border border-white/20 rounded-lg text-white hover:bg-white/20 transition duration-200">
                 <svg class="h-4 w-4 sm:h-5 sm:w-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
@@ -36,12 +36,12 @@
                     Tap a name to focus on that student's leave, or choose "All Students" to view everyone.
                 </p>
                 <div class="space-y-1 max-h-[calc(100vh-20rem)] sm:max-h-[calc(100vh-24rem)] overflow-y-auto text-xs sm:text-sm -mx-1">
-                    <a href="{{ route('admin.student-leave-requests.calendar', ['month' => $currentMonth->format('Y-m')]) }}"
+                    <a href="{{ url('/admin/student-leave-calendar?month=' . $currentMonth->format('Y-m')) }}"
                        class="flex items-center justify-between px-3 py-1.5 rounded-md mx-1 transition-colors duration-150 {{ !$selectedStudent ? 'bg-indigo-50 text-indigo-700 font-semibold' : 'text-gray-700 hover:bg-gray-50' }}">
                         <span>All Students</span>
                     </a>
                     @foreach($students as $student)
-                        <a href="{{ route('admin.student-leave-requests.calendar', ['month' => $currentMonth->format('Y-m'), 'student' => $student->id]) }}"
+                        <a href="{{ url('/admin/student-leave-calendar?month=' . $currentMonth->format('Y-m') . '&student=' . $student->id) }}"
                            class="flex items-center justify-between px-3 py-1.5 rounded-md mx-1 transition-colors duration-150 {{ $selectedStudent == $student->id ? 'bg-indigo-50 text-indigo-700 font-semibold' : 'text-gray-700 hover:bg-gray-50' }}">
                             <span class="truncate">{{ $student->name }}</span>
                         </a>
@@ -52,7 +52,7 @@
             <!-- Quick Create Leave for Student(s) -->
             <div class="bg-white rounded-2xl shadow border border-gray-200 p-3 sm:p-4">
                 <h2 class="text-xs sm:text-sm font-bold text-gray-900 mb-2">File Leave for Student(s)</h2>
-                <form action="{{ route('admin.student-leave-requests.store-for-student') }}" method="POST" class="space-y-3">
+                <form action="{{ url('/admin/student-leave-requests/create-for-student') }}" method="POST" class="space-y-3">
                     @csrf
 
                     <div class="space-y-1">
@@ -111,7 +111,7 @@
             <!-- Month Navigation -->
             <div class="bg-white rounded-2xl shadow border border-gray-200 p-3 sm:p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-3">
                 <div class="flex items-center justify-between sm:justify-start space-x-2 sm:space-x-3">
-                    <a href="{{ route('admin.student-leave-requests.calendar', ['month' => $prevMonth, 'student' => $selectedStudent]) }}"
+                    <a href="{{ url('/admin/student-leave-calendar?month=' . $prevMonth . '&student=' . $selectedStudent) }}"
                        class="inline-flex items-center px-2.5 sm:px-3 py-1.5 border border-gray-300 rounded-md text-xs sm:text-sm text-gray-700 bg-white hover:bg-gray-50">
                         <svg class="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
@@ -122,7 +122,7 @@
                     <span class="text-base sm:text-lg font-semibold text-gray-900 px-2 sm:px-0">
                         {{ $currentMonth->format('F Y') }}
                     </span>
-                    <a href="{{ route('admin.student-leave-requests.calendar', ['month' => $nextMonth, 'student' => $selectedStudent]) }}"
+                    <a href="{{ url('/admin/student-leave-calendar?month=' . $nextMonth . '&student=' . $selectedStudent) }}"
                        class="inline-flex items-center px-2.5 sm:px-3 py-1.5 border border-gray-300 rounded-md text-xs sm:text-sm text-gray-700 bg-white hover:bg-gray-50">
                         <span class="hidden sm:inline">Next</span>
                         <svg class="h-3.5 w-3.5 sm:h-4 sm:w-4 sm:ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -194,7 +194,7 @@
                                                     default => 'bg-gray-50 text-gray-700 border-gray-100',
                                                 };
                                             @endphp
-                                            <a href="{{ route('admin.leave-requests.show', $entry['id']) }}"
+                                            <a href="{{ url('/admin/leave-requests/' . $entry['id']) }}"
                                                class="block border {{ $statusClass }} rounded px-1 sm:px-1.5 py-0.5 text-[9px] sm:text-[10px] md:text-[11px] hover:border-indigo-300 hover:bg-indigo-50/70">
                                                 <div class="font-semibold truncate">
                                                     {{ $entry['student']->name }}
@@ -307,7 +307,7 @@ function showAllStudentLeaveRequests(dateString, requests) {
         requests.forEach(function(entry) {
             const statusClass = studentGetStatusClass(entry.status);
             const statusBadge = studentGetStatusBadge(entry.status);
-            const showUrl = '{{ route("admin.leave-requests.show", ":id") }}'.replace(':id', entry.id);
+            const showUrl = '{{ url("/admin/leave-requests/") }}' + entry.id;
 
             const requestDiv = document.createElement('div');
             requestDiv.className = `border ${statusClass} rounded-lg p-3 hover:shadow-md transition-shadow`;

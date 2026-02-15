@@ -42,6 +42,34 @@
 
     <!-- Custom Scrollbar Styles -->
     <style>
+        /* CRITICAL FIX: Ensure main content has proper left padding to not appear behind sidebar */
+        html body .main-content-wrapper {
+            margin-left: 16rem !important;
+            width: calc(100% - 16rem) !important;
+        }
+        
+        html body .main-content-wrapper > main {
+            padding-left: 2rem !important;
+            padding-right: 2rem !important;
+        }
+        
+        @media (max-width: 1023px) {
+            html body .main-content-wrapper {
+                margin-left: 0 !important;
+                width: 100% !important;
+            }
+            html body .main-content-wrapper > main {
+                padding-left: 1rem !important;
+                padding-right: 1rem !important;
+            }
+        }
+        
+        @media (min-width: 640px) and (max-width: 1023px) {
+            html body .main-content-wrapper > main {
+                padding-left: 1.5rem !important;
+                padding-right: 1.5rem !important;
+            }
+        }
         .overflow-x-auto::-webkit-scrollbar {
             height: 8px;
         }
@@ -79,24 +107,106 @@
         }
 
         /* Main content spacing - force it to work */
+        body {
+            position: relative;
+        }
+        
         body .main-content-wrapper {
+            position: relative !important;
             margin-left: 16rem !important;
+            width: calc(100% - 16rem) !important;
+            min-width: 0 !important;
+            z-index: 1 !important;
         }
         
         @media (min-width: 1024px) {
             body .main-content-wrapper {
                 margin-left: 16rem !important;
+                width: calc(100% - 16rem) !important;
             }
         }
         
         @media (max-width: 1023px) {
             body .main-content-wrapper {
                 margin-left: 0 !important;
+                width: 100% !important;
             }
         }
         
         /* Ensure content inside has proper spacing */
         .main-content-wrapper > main {
+            margin-left: 0 !important;
+            position: relative !important;
+        }
+        
+        /* Ensure sidebar stays on top */
+        .fixed.inset-y-0.left-0.z-50 {
+            z-index: 50 !important;
+        }
+        
+        /* Force main content to start after sidebar on desktop */
+        @media (min-width: 1024px) {
+            body .main-content-wrapper {
+                margin-left: 16rem !important;
+                width: calc(100% - 16rem) !important;
+                padding-left: 0 !important;
+                left: 0 !important;
+            }
+            
+            /* Ensure sidebar is visible on desktop */
+            .fixed.inset-y-0.left-0.z-50 {
+                transform: translateX(0) !important;
+            }
+            
+            /* Force padding on main content */
+            .main-content-wrapper > main {
+                padding-left: 2rem !important;
+                padding-right: 2rem !important;
+            }
+        }
+        
+        @media (min-width: 640px) and (max-width: 1023px) {
+            .main-content-wrapper > main {
+                padding-left: 1.5rem !important;
+                padding-right: 1.5rem !important;
+            }
+        }
+        
+        @media (max-width: 639px) {
+            .main-content-wrapper > main {
+                padding-left: 1rem !important;
+                padding-right: 1rem !important;
+            }
+        }
+        
+        /* Ensure all content inside main has proper positioning and padding */
+        body .main-content-wrapper main {
+            position: relative !important;
+            z-index: 1 !important;
+            margin-left: 0 !important;
+            padding-left: 1rem !important;
+            padding-right: 1rem !important;
+            box-sizing: border-box !important;
+        }
+        
+        @media (min-width: 640px) {
+            body .main-content-wrapper main {
+                padding-left: 1.5rem !important;
+                padding-right: 1.5rem !important;
+            }
+        }
+        
+        @media (min-width: 1024px) {
+            body .main-content-wrapper main {
+                padding-left: 2rem !important;
+                padding-right: 2rem !important;
+            }
+        }
+        
+        /* Force analytics page content to respect margin */
+        .main-content-wrapper .space-y-4,
+        .main-content-wrapper .space-y-6 {
+            position: relative !important;
             margin-left: 0 !important;
         }
     </style>
@@ -115,13 +225,20 @@
 
     <!-- Main Content Area -->
     <div class="main-content-wrapper flex-1 flex flex-col overflow-hidden"
-         style="margin-left: 16rem !important;"
+         style="position: relative !important; margin-left: 16rem !important; width: calc(100% - 16rem) !important; min-width: 0 !important; z-index: 1 !important; left: 0 !important;"
          x-init="
              const updateMargin = () => {
                  if (window.innerWidth >= 1024) {
-                     $el.style.setProperty('margin-left', sidebarCollapsed ? '4rem' : '16rem', 'important');
+                     const margin = sidebarCollapsed ? '4rem' : '16rem';
+                     $el.style.setProperty('margin-left', margin, 'important');
+                     $el.style.setProperty('width', 'calc(100% - ' + margin + ')', 'important');
+                     $el.style.setProperty('position', 'relative', 'important');
+                     $el.style.setProperty('z-index', '1', 'important');
+                     $el.style.setProperty('left', '0', 'important');
                  } else {
                      $el.style.setProperty('margin-left', '0', 'important');
+                     $el.style.setProperty('width', '100%', 'important');
+                     $el.style.setProperty('position', 'relative', 'important');
                  }
              };
              updateMargin();
@@ -158,7 +275,7 @@
                         <nav class="hidden lg:flex" aria-label="Breadcrumb">
                             <ol class="flex items-center space-x-1">
                                 <li>
-                                    <a href="{{ route('admin.dashboard') }}" class="text-gray-500 hover:text-gray-700 p-1">
+                                    <a href="{{ url('/admin/dashboard') }}" class="text-gray-500 hover:text-gray-700 p-1">
                                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2H5a2 2 0 00-2-2z"></path>
                                         </svg>
@@ -169,7 +286,7 @@
                         </nav>
 
                         <!-- Quick Send Notification Button -->
-                        <a href="{{ route('admin.notifications.create') }}"
+                        <a href="{{ url('/admin/notifications/create') }}"
                            class="inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors duration-200"
                            title="Send Notification">
                             <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -225,7 +342,7 @@
                                     </template>
                                 </div>
                                 <div class="p-4 border-t border-gray-200">
-                                    <a href="{{ route('admin.notifications.index') }}" class="text-sm text-indigo-600 hover:text-indigo-800">View all notifications</a>
+                                    <a href="{{ url('/admin/notifications') }}" class="text-sm text-indigo-600 hover:text-indigo-800">View all notifications</a>
                                 </div>
                             </div>
                         </div>
@@ -254,14 +371,14 @@
                                  x-transition:leave-start="transform opacity-100 scale-100"
                                  x-transition:leave-end="transform opacity-0 scale-95"
                                  class="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 z-50 border border-gray-200">
-                                <a href="{{ route('admin.dashboard') }}"
+                                <a href="{{ url('/admin/dashboard') }}"
                                    class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center">
                                     <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2H5a2 2 0 00-2-2z"></path>
                                     </svg>
                                     Dashboard
                                 </a>
-                                <a href="{{ route('admin.settings.index') }}"
+                                <a href="{{ url('/admin/settings') }}"
                                    class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center">
                                     <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path>
@@ -270,7 +387,7 @@
                                     Settings
                                 </a>
                                 <div class="border-t border-gray-100"></div>
-                                <form method="POST" action="{{ route('logout') }}">
+                                <form method="POST" action="{{ url('/logout') }}">
                                     @csrf
                                     <button type="submit"
                                             class="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center">
@@ -287,40 +404,34 @@
             </header>
 
             <!-- Main Content -->
-            <main class="flex-1 overflow-y-auto bg-gray-50">
-                <div class="h-full">
-                    <div class="h-full">
-                        <!-- Flash Messages -->
-                        @if(session('success'))
-                            <div class="mb-3 bg-green-100 border border-green-400 text-green-700 px-4 py-2 rounded text-sm mx-2 sm:mx-3 lg:mx-4 xl:mx-6">
-                                {{ session('success') }}
-                            </div>
-                        @endif
-
-                        @if(session('error'))
-                            <div class="mb-3 bg-red-100 border border-red-400 text-red-700 px-4 py-2 rounded text-sm mx-2 sm:mx-3 lg:mx-4 xl:mx-6">
-                                {{ session('error') }}
-                            </div>
-                        @endif
-
-                        @if(session('warning'))
-                            <div class="mb-3 bg-yellow-100 border border-yellow-400 text-yellow-700 px-4 py-2 rounded text-sm mx-2 sm:mx-3 lg:mx-4 xl:mx-6">
-                                {{ session('warning') }}
-                            </div>
-                        @endif
-
-                        @if(session('info'))
-                            <div class="mb-3 bg-blue-100 border border-blue-400 text-blue-700 px-4 py-2 rounded text-sm mx-2 sm:mx-3 lg:mx-4 xl:mx-6">
-                                {{ session('info') }}
-                            </div>
-                        @endif
-
-                        <!-- Page Content -->
-                        <div class="h-full">
-                            @yield('content')
-                        </div>
+            <main class="flex-1 overflow-y-auto bg-gray-50" style="padding-left: 2rem !important; padding-right: 2rem !important; min-width: 0 !important; box-sizing: border-box !important; display: block !important; position: relative !important;">
+                <!-- Flash Messages -->
+                @if(session('success'))
+                    <div class="mb-3 bg-green-100 border border-green-400 text-green-700 px-4 py-2 rounded text-sm">
+                        {{ session('success') }}
                     </div>
-                </div>
+                @endif
+
+                @if(session('error'))
+                    <div class="mb-3 bg-red-100 border border-red-400 text-red-700 px-4 py-2 rounded text-sm">
+                        {{ session('error') }}
+                    </div>
+                @endif
+
+                @if(session('warning'))
+                    <div class="mb-3 bg-yellow-100 border border-yellow-400 text-yellow-700 px-4 py-2 rounded text-sm">
+                        {{ session('warning') }}
+                    </div>
+                @endif
+
+                @if(session('info'))
+                    <div class="mb-3 bg-blue-100 border border-blue-400 text-blue-700 px-4 py-2 rounded text-sm">
+                        {{ session('info') }}
+                    </div>
+                @endif
+
+                <!-- Page Content -->
+                @yield('content')
             </main>
         </div>
     </div>
@@ -334,6 +445,7 @@
                 showNotifications: false,
                 notifications: [],
                 unreadCount: 0,
+                isLoading: false,
                 
                 init() {
                     this.fetchNotifications();
@@ -349,13 +461,34 @@
                 },
                 
                 fetchNotifications() {
-                    fetch('{{ route('admin.notifications.unread') }}')
-                        .then(response => response.json())
+                    fetch('{{ url('/admin/notifications/unread') }}', {
+                        method: 'GET',
+                        headers: {
+                            'Accept': 'application/json',
+                            'Content-Type': 'application/json',
+                            'X-Requested-With': 'XMLHttpRequest'
+                        },
+                        credentials: 'same-origin'
+                    })
+                        .then(response => {
+                            if (!response.ok) {
+                                throw new Error('Network response was not ok');
+                            }
+                            const contentType = response.headers.get('content-type');
+                            if (!contentType || !contentType.includes('application/json')) {
+                                throw new Error('Response is not JSON');
+                            }
+                            return response.json();
+                        })
                         .then(data => {
                             this.notifications = data.notifications || [];
                             this.unreadCount = data.unread_count || 0;
                         })
-                        .catch(error => console.error('Error fetching notifications:', error));
+                        .catch(error => {
+                            console.error('Error fetching notifications:', error);
+                            this.notifications = [];
+                            this.unreadCount = 0;
+                        });
                 },
                 
                 markAsRead(notificationId) {
@@ -373,7 +506,7 @@
                 },
                 
                 markAllAsRead() {
-                    fetch('{{ route('admin.notifications.mark-all-read') }}', {
+                    fetch('{{ url('/admin/notifications/mark-all-read') }}', {
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/json',

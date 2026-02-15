@@ -16,7 +16,7 @@
                     <p class="text-indigo-100 mt-1">Update an existing student time record</p>
                 </div>
             </div>
-            <a href="{{ route('admin.student-dtr.index') }}"
+            <a href="{{ url('/admin/student-dtr') }}"
                class="inline-flex items-center px-4 py-2 bg-white/10 backdrop-blur-sm border border-white/20 rounded-lg text-white hover:bg-white/20 transition duration-200">
                 <svg class="h-5 w-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
@@ -51,7 +51,7 @@
 
     <!-- Form -->
     <div class="bg-white rounded-2xl shadow-xl border border-gray-200 p-8">
-        <form id="dtr-edit-form" action="{{ route('admin.student-dtr.update', $dtr) }}" method="POST" class="space-y-6" onsubmit="return validateForm(event);">
+        <form id="dtr-edit-form" action="{{ url('/admin/student-dtr/' . $dtr->id) }}" method="POST" class="space-y-6" onsubmit="return validateForm(event);">
             @csrf
             @method('PUT')
 
@@ -195,7 +195,7 @@
 
             <!-- Form Actions -->
             <div class="flex items-center justify-end space-x-3 pt-6 border-t border-gray-200">
-                <a href="{{ route('admin.student-dtr.index') }}"
+                <a href="{{ url('/admin/student-dtr') }}"
                    class="inline-flex items-center px-6 py-3 border border-gray-300 text-sm font-medium rounded-lg text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition duration-200">
                     <svg class="h-5 w-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
@@ -216,7 +216,7 @@
     <!-- Delete Form - OUTSIDE the edit form to prevent conflicts -->
     @if(auth()->check() && auth()->user()->isSuperAdmin())
         <div class="mt-4 bg-white rounded-2xl shadow-xl border border-gray-200 p-6">
-            <form id="dtr-delete-form" action="{{ route('admin.student-dtr.destroy', $dtr) }}"
+            <form id="dtr-delete-form" action="{{ url('/admin/student-dtr/' . $dtr->id) }}"
                   method="POST"
                   onsubmit="return confirm('Are you sure you want to delete this student DTR record? This action cannot be undone.');"
                   class="inline-block">

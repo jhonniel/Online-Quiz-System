@@ -45,7 +45,7 @@ class ContactMessageController extends Controller
 
         $contactMessage->reply($request->admin_reply, auth()->user());
 
-        return redirect()->route('contact-messages.show', $contactMessage)
+        return redirect('/admin/contact-messages/' . $contactMessage->id)
             ->with('success', 'Reply sent successfully.');
     }
 
@@ -53,7 +53,7 @@ class ContactMessageController extends Controller
     {
         $contactMessage->close();
 
-        return redirect()->route('contact-messages.index')
+        return redirect('/admin/contact-messages')
             ->with('success', 'Message closed successfully.');
     }
 
@@ -61,7 +61,7 @@ class ContactMessageController extends Controller
     {
         $contactMessage->delete();
 
-        return redirect()->route('contact-messages.index')
+        return redirect('/admin/contact-messages')
             ->with('success', 'Message deleted successfully.');
     }
 }

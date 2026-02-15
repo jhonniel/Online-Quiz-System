@@ -77,7 +77,7 @@
                                     class="inline-flex items-center justify-center px-3 py-2 rounded-md border border-transparent bg-indigo-600 text-xs sm:text-sm font-semibold text-white hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-1">
                                 Apply
                             </button>
-                            <a href="{{ route('admin.analytics.error-logs') }}"
+                            <a href="{{ url('/admin/analytics/error-logs') }}"
                                class="inline-flex items-center justify-center px-3 py-2 rounded-md border border-gray-300 text-xs sm:text-sm font-semibold text-gray-700 bg-white hover:bg-gray-50">
                                 Reset
                             </a>
@@ -106,7 +106,7 @@
                             @endphp
                             <tr class="hover:bg-gray-50">
                                 <td class="px-3 sm:px-4 py-2 whitespace-nowrap text-xs sm:text-sm text-gray-600">
-                                    {{ $log->created_at ? $log->created_at->format('Y-m-d g:i:s A') : 'N/A' }}
+                                    {{ $log->created_at ? \Carbon\Carbon::parse($log->created_at)->format('Y-m-d g:i:s A') : 'N/A' }}
                                 </td>
                                 <td class="px-3 sm:px-4 py-2 whitespace-nowrap text-xs sm:text-sm">
                                     <span class="inline-flex items-center px-2 py-1 rounded-full border text-[11px] font-semibold {{ $badgeColor }}">

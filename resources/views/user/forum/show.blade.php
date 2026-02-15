@@ -13,7 +13,7 @@ function parseMentions($content) {
 <div class="h-screen flex flex-col space-y-2 overflow-hidden">
     <!-- Back Button -->
     <div class="flex-shrink-0 mx-2 sm:mx-3 lg:mx-4 xl:mx-6">
-        <a href="{{ route('forum.index') }}" class="inline-flex items-center text-sm text-gray-500 hover:text-gray-700">
+        <a href="{{ url('/forum') }}" class="inline-flex items-center text-sm text-gray-500 hover:text-gray-700">
             <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
             </svg>
@@ -395,7 +395,7 @@ function parseMentions($content) {
 <script>
 // Like functionality
 function toggleLike(threadId) {
-    fetch('{{ route("forum.like") }}', {
+    fetch('{{ url("/forum/like") }}', {
         method: 'POST',
         headers: {
             'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
@@ -414,7 +414,7 @@ function toggleLike(threadId) {
 
 // Save functionality
 function toggleSave(threadId) {
-    fetch('{{ route("forum.save") }}', {
+    fetch('{{ url("/forum/save") }}', {
         method: 'POST',
         headers: {
             'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
@@ -447,7 +447,7 @@ document.getElementById('shareForm').addEventListener('submit', function(e) {
 
     const formData = new FormData(this);
 
-    fetch('{{ route("forum.share") }}', {
+    fetch('{{ url("/forum/share") }}', {
         method: 'POST',
         headers: {
             'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
@@ -470,7 +470,7 @@ document.getElementById('commentForm').addEventListener('submit', function(e) {
 
     const formData = new FormData(this);
 
-    fetch('{{ route("forum.comment") }}', {
+    fetch('{{ url("/forum/comment") }}', {
         method: 'POST',
         headers: {
             'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
@@ -508,7 +508,7 @@ function handleReplySubmit(e) {
     submitButton.textContent = 'Posting...';
     submitButton.disabled = true;
 
-    fetch('{{ route("forum.comment") }}', {
+    fetch('{{ url("/forum/comment") }}', {
         method: 'POST',
         headers: {
             'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
@@ -578,7 +578,7 @@ function showReplyForm(commentId, userName) {
 
 // Comment like functionality
 function toggleCommentLike(commentId) {
-    fetch('{{ route("forum.comment.like") }}', {
+    fetch('{{ url("/forum/comment/like") }}', {
         method: 'POST',
         headers: {
             'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
@@ -601,7 +601,7 @@ let notificationPollingInterval;
 function startNotificationPolling() {
     // Poll for new notifications every 10 seconds
     notificationPollingInterval = setInterval(function() {
-        fetch('{{ route("notifications.unread-count") }}')
+        fetch('{{ url("/notifications/unread-count") }}')
             .then(response => response.json())
             .then(data => {
                 // Update notification bell count if it exists

@@ -111,7 +111,7 @@
             <div class="text-center mb-6">
                 <p class="text-sm text-gray-600">
                     Already have an account?
-                    <a href="{{ route('login') }}" class="text-teal-600 hover:text-teal-800 font-medium underline">
+                    <a href="{{ url('/login') }}" class="text-teal-600 hover:text-teal-800 font-medium underline">
                         Login here
                     </a>
                 </p>
@@ -177,7 +177,7 @@
                     .animate-twinkle { animation: twinkle 2s ease-in-out infinite; }
                 </style>
 
-                <form method="POST" action="{{ route('register') }}" class="space-y-6">
+                <form method="POST" action="{{ url('/register') }}" class="space-y-6">
                     @csrf
                     @if(isset($token) && $token)
                         <input type="hidden" name="acceptance_token" value="{{ $token }}">

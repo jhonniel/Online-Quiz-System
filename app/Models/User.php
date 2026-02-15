@@ -281,7 +281,7 @@ class User extends Authenticatable
         } elseif ($diff < 1440) {
             return floor($diff / 60) . ' hours ago';
         } else {
-            return $this->last_activity->format('M j, Y g:i A');
+            return \Carbon\Carbon::parse($this->last_activity)->format('M j, Y g:i A');
         }
     }
 

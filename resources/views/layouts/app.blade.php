@@ -78,7 +78,7 @@
                         <div class="flex">
                             <!-- Logo -->
                             <div class="shrink-0 flex items-center">
-                                <a href="{{ route('home') }}" class="flex items-center space-x-2">
+                                <a href="{{ url('/home') }}" class="flex items-center space-x-2">
                                     @if($settings['system_logo'])
                                     <img src="{{ $settings['system_logo_url'] ?? '' }}"
                                              alt="{{ $settings['system_name'] }}"
@@ -94,10 +94,10 @@
                             <div class="hidden space-x-8 sm:-my-px sm:ml-10 sm:flex">
                                 @auth
                                     @if(!auth()->user()->isAdmin())
-                                        <a href="{{ route('user.dashboard') }}" class="border-indigo-400 text-gray-900 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium">
+                                        <a href="{{ url('/dashboard') }}" class="border-indigo-400 text-gray-900 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium">
                                             Dashboard
                                         </a>
-                                        <a href="{{ route('user.feedback.index') }}" class="border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium">
+                                        <a href="{{ url('/feedback') }}" class="border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium">
                                             Feedback
                                         </a>
                                     @endif
@@ -145,21 +145,21 @@
                                                      x-transition:leave-start="transform opacity-100 scale-100"
                                                      x-transition:leave-end="transform opacity-0 scale-95"
                                                      class="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 z-50 border border-gray-200">
-                                                    <a href="{{ route('profile.edit') }}"
+                                                    <a href="{{ url('/profile/edit') }}"
                                                        class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center">
                                                         <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
                                                         </svg>
                                                         Edit Profile
                                                     </a>
-                    <a href="{{ route('user.dashboard') }}"
+                    <a href="{{ url('/dashboard') }}"
                        class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center">
                         <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2H5a2 2 0 00-2-2z"></path>
                         </svg>
                         Dashboard
                     </a>
-                    <a href="{{ route('friends.index') }}"
+                    <a href="{{ url('/friends') }}"
                        class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center justify-between">
                         <div class="flex items-center">
                             <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -169,7 +169,7 @@
                         </div>
                         <span id="friend-request-count" class="hidden bg-red-500 text-white text-xs rounded-full px-2 py-1 min-w-[20px] text-center">0</span>
                     </a>
-                    <a href="{{ route('user-chat.index') }}"
+                    <a href="{{ url('/user-chat') }}"
                        class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center justify-between">
                         <div class="flex items-center">
                             <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -180,7 +180,7 @@
                         <span id="unread-message-count" class="hidden bg-red-500 text-white text-xs rounded-full px-2 py-1 min-w-[20px] text-center">0</span>
                     </a>
                                                     <div class="border-t border-gray-100"></div>
-                                                    <form method="POST" action="{{ route('logout') }}">
+                                                    <form method="POST" action="{{ url('/logout') }}">
                                                         @csrf
                                                         <button type="submit"
                                                                 class="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center">
@@ -198,7 +198,7 @@
                                             </span>
                                         @endif
 
-                                        <form method="POST" action="{{ route('logout') }}">
+                                        <form method="POST" action="{{ url('/logout') }}">
                                             @csrf
                                             <button type="submit" class="text-sm text-gray-500 hover:text-gray-700">
                                                 Logout
@@ -365,7 +365,7 @@
                             return;
                         }
 
-                        fetch(`{{ route("chat.ticket", ":ticketNumber") }}`.replace(':ticketNumber', currentTicketNumber))
+                        fetch(`{{ url("/chat/tickets/") . ":ticketNumber" }}`.replace(':ticketNumber', currentTicketNumber))
                             .then(response => response.json())
                             .then(data => {
                                 if (data.messages) {
@@ -472,7 +472,7 @@
                             .map(msg => msg.id);
 
                         if (unreadMessageIds.length > 0) {
-                            fetch('{{ route("chat.mark-read") }}', {
+                            fetch('{{ url("/chat/mark-read") }}', {
                                 method: 'POST',
                                 headers: {
                                     'Content-Type': 'application/json',
@@ -494,7 +494,7 @@
 
                     // Update unread count
                     function updateUnreadCount() {
-                        fetch('{{ route("chat.unread-count") }}')
+                        fetch('{{ url("/chat/unread-count") }}')
                             .then(response => response.json())
                             .then(data => {
                                 unreadCount = data.count;
@@ -555,7 +555,7 @@
                             requestData.ticket_number = currentTicketNumber;
                         }
 
-                        fetch('{{ route("chat.store") }}', {
+                        fetch('{{ url("/chat/messages") }}', {
                             method: 'POST',
                             headers: {
                                 'Content-Type': 'application/json',
@@ -587,7 +587,7 @@
 
                         const reason = prompt('Please provide a reason for reopening this chat:');
                         if (reason && reason.trim()) {
-                            fetch(`{{ route("chat.reopen", ":ticketNumber") }}`.replace(':ticketNumber', currentTicketNumber), {
+                            fetch(`{{ url("/chat/tickets/") . ":ticketNumber" . "/reopen" }}`.replace(':ticketNumber', currentTicketNumber), {
                                 method: 'POST',
                                 headers: {
                                     'Content-Type': 'application/json',
@@ -613,7 +613,7 @@
 
                     // Inbox functionality
                     function loadTickets() {
-                        fetch('{{ route("chat.tickets") }}')
+                        fetch('{{ url("/chat/tickets") }}')
                             .then(response => response.json())
                             .then(data => {
                                 tickets = data;
@@ -695,7 +695,7 @@
                     function createNewTicket() {
                         const subject = prompt('What is this ticket about? (optional)');
                         if (subject !== null) {
-                            fetch('{{ route("chat.create") }}', {
+                            fetch('{{ url("/chat/create") }}', {
                                 method: 'POST',
                                 headers: {
                                     'Content-Type': 'application/json',
@@ -741,7 +741,7 @@
 
                     // Load first available ticket
                     function loadFirstTicket() {
-                        fetch('{{ route("chat.tickets") }}')
+                        fetch('{{ url("/chat/tickets") }}')
                             .then(response => response.json())
                             .then(data => {
                                 if (data.length > 0) {
@@ -757,7 +757,7 @@
                     // Load notification counts
                     function loadNotificationCounts() {
                         // Load friend request count
-                        fetch('{{ route("friends.index") }}')
+                        fetch('{{ url("/friends") }}')
                             .then(response => response.text())
                             .then(html => {
                                 // Parse the HTML to extract pending requests count
@@ -779,7 +779,7 @@
                             });
 
                         // Load unread message count
-                        fetch('{{ route("user-chat.unread-count") }}')
+                        fetch('{{ url("/user-chat/unread-count") }}')
                             .then(response => response.json())
                             .then(data => {
                                 const unreadMessageCount = document.getElementById('unread-message-count');
@@ -853,7 +853,7 @@
 
                 // Update user status
                 function updateUserStatus(status) {
-                    fetch('{{ route("status.update") }}', {
+                    fetch('{{ url("/status/update") }}', {
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/json',

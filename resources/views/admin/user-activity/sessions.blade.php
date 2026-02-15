@@ -22,7 +22,7 @@
             <p class="mt-1 text-sm text-gray-600">Monitor active user sessions and login history</p>
         </div>
         <div class="mt-4 sm:mt-0 flex space-x-3">
-            <a href="{{ route('admin.user-activity.index') }}"
+            <a href="{{ url('/admin/user-activity') }}"
                class="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
                 <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
@@ -30,7 +30,7 @@
                 </svg>
                 View Activities
             </a>
-            <a href="{{ route('admin.user-activity.statistics') }}"
+            <a href="{{ url('/admin/user-activity/statistics') }}"
                class="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
                 <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
@@ -111,7 +111,7 @@
 
     <!-- Filters -->
     <div class="bg-white shadow rounded-lg p-6">
-        <form method="GET" action="{{ route('admin.user-activity.sessions') }}" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <form method="GET" action="{{ url('/admin/user-activity/sessions') }}" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             <!-- Status Filter -->
             <div>
                 <label for="status" class="block text-sm font-medium text-gray-700 mb-1">Status</label>
@@ -161,7 +161,7 @@
                     </svg>
                     Apply Filters
                 </button>
-                <a href="{{ route('admin.user-activity.sessions') }}"
+                <a href="{{ url('/admin/user-activity/sessions') }}"
                    class="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
                     Clear Filters
                 </a>

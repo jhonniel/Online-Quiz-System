@@ -20,7 +20,7 @@
         <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <!-- Search -->
             <div class="flex-1 max-w-md">
-                <form id="quizzes-search-form" method="GET" action="{{ route('quizzes.index') }}">
+                <form id="quizzes-search-form" method="GET" action="{{ url('/admin/quizzes') }}">
                     @if(request()->has('per_page'))
                         <input type="hidden" name="per_page" value="{{ request('per_page') }}">
                     @endif
@@ -60,7 +60,7 @@
                     Filter
                 </button>
                 @if(auth()->user()->isAdmin())
-                <form id="export-quizzes-form" method="POST" action="{{ route('admin.quizzes.export-csv') }}" style="display: none;">
+                <form id="export-quizzes-form" method="POST" action="{{ url('/admin/quizzes/export-csv') }}" style="display: none;">
                     @csrf
                     <input type="hidden" name="quiz_ids" id="export-quiz-ids" value="">
                 </form>
@@ -72,13 +72,13 @@
                     <span id="export-count-badge" class="hidden ml-2 bg-indigo-600 text-white text-xs rounded-full px-2 py-0.5">0</span>
                 </button>
                 @endif
-                <a href="{{ route('admin.quizzes.import-form') }}" class="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md shadow-sm text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                <a href="{{ url('/admin/quizzes/import/form') }}" class="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md shadow-sm text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
                     <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10"></path>
                     </svg>
                     Import
                 </a>
-                <a href="{{ route('quizzes.create') }}" class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                <a href="{{ url('/admin/quizzes/create') }}" class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
                     <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
                     </svg>
@@ -255,7 +255,7 @@
                                              x-transition:leave-end="transform opacity-0 scale-95"
                                              class="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 z-50 border border-gray-200">
 
-                                            <a href="{{ route('quizzes.show', $quiz) }}" class="w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center">
+                                            <a href="{{ url('/admin/quizzes/' . $quiz->id) }}" class="w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center">
                                                 <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
                                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
@@ -263,7 +263,7 @@
                                                 View
                                             </a>
 
-                                            <a href="{{ route('quizzes.edit', $quiz) }}" class="w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center">
+                                            <a href="{{ url('/admin/quizzes/' . $quiz->id . '/edit') }}" class="w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center">
                                                 <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
                                                 </svg>
@@ -286,7 +286,7 @@
                                                 </button>
                                             @endif
 
-                                            <a href="{{ route('admin.quizzes.results', $quiz) }}" class="w-full px-4 py-2 text-sm text-green-700 hover:bg-green-50 flex items-center">
+                                            <a href="{{ url('/admin/quizzes/' . $quiz->id . '/results') }}" class="w-full px-4 py-2 text-sm text-green-700 hover:bg-green-50 flex items-center">
                                                 <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
                                                 </svg>
@@ -295,7 +295,7 @@
 
                                             <div class="border-t border-gray-100"></div>
 
-                                            <form method="POST" action="{{ route('quizzes.destroy', $quiz) }}" class="block" onsubmit="return confirmQuizAction('delete', this)">
+                                            <form method="POST" action="{{ url('/admin/quizzes/' . $quiz->id) }}" class="block" onsubmit="return confirmQuizAction('delete', this)">
                                                 @csrf
                                                 @method('DELETE')
                                                 <button type="submit" class="w-full text-left px-4 py-2 text-sm text-red-700 hover:bg-red-50 flex items-center">
@@ -356,7 +356,7 @@
                     <h3 class="mt-2 text-sm font-medium text-gray-900">No quizzes</h3>
                     <p class="mt-1 text-sm text-gray-500">Get started by creating a new quiz.</p>
                     <div class="mt-6">
-                        <a href="{{ route('quizzes.create') }}" class="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                        <a href="{{ url('/admin/quizzes/create') }}" class="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
                             Create Quiz
                         </a>
                     </div>

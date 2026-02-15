@@ -4,6 +4,7 @@ use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\RedirectController;
 use App\Http\Controllers\LandingController;
 use App\Http\Controllers\Auth\RoleLoginController;
+use App\Http\Controllers\Auth\RegisteredUserController;
 use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\UserController as AdminUserController;
 use App\Http\Controllers\Admin\QuizController as AdminQuizController;
@@ -33,6 +34,13 @@ Route::get('/image-proxy/{path}', [LandingController::class, 'imageProxy'])->whe
 Route::get('/privacy-policy', [LandingController::class, 'privacyPolicy'])->name('landing.privacy-policy');
 Route::get('/tor-pdf', [LandingController::class, 'torPdf'])->name('landing.tor-pdf');
 
+// Say-it: Anonymous confession board (no login, /Say-it only)
+Route::get('/Say-it', [App\Http\Controllers\SayItController::class, 'index']);
+Route::post('/Say-it', [App\Http\Controllers\SayItController::class, 'storePost']);
+Route::get('/Say-it/{post}', [App\Http\Controllers\SayItController::class, 'show'])->where('post', '[0-9]+');
+Route::post('/Say-it/comment', [App\Http\Controllers\SayItController::class, 'storeComment']);
+Route::post('/Say-it/vote', [App\Http\Controllers\SayItController::class, 'vote']);
+
 // QR Code Scanning Route (Public) - Uses hashed token for one-time access
 Route::get('/qr/{token}', [App\Http\Controllers\QrCodeController::class, 'scan'])->name('qr.scan');
 
@@ -45,6 +53,10 @@ Route::get('/hiring/application/success', [App\Http\Controllers\HiringApplicatio
 Route::get('/login', [RoleLoginController::class, 'showLoginForm'])->name('login');
 Route::post('/login', [RoleLoginController::class, 'login']);
 Route::post('/logout', [RoleLoginController::class, 'logout'])->name('logout');
+
+// Registration (named route required by landing login and hiring views)
+Route::get('/register', [RegisteredUserController::class, 'create'])->name('register')->middleware('guest');
+Route::post('/register', [RegisteredUserController::class, 'store'])->middleware('guest');
 
 // Include Auth Routes (Password Reset, etc.)
 require __DIR__.'/auth.php';
@@ -117,8 +129,10 @@ Route::prefix('admin')->middleware(['auth', 'admin'])->group(function () {
     Route::get('quizzes/template/download', [AdminQuizController::class, 'downloadTemplate'])->name('admin.quizzes.template.download');
     Route::post('quizzes/export-csv', [AdminQuizController::class, 'exportToCsv'])->name('admin.quizzes.export-csv');
 
-    // Task Management
-    Route::get('tasks/analytics', [App\Http\Controllers\Admin\TaskAnalyticsController::class, 'dashboard'])->name('admin.tasks.analytics');
+    // Task Management - Dashboard and Analytics (Super Admin Only)
+    Route::get('tasks/dashboard', [App\Http\Controllers\Admin\TaskController::class, 'dashboard'])->name('admin.tasks.dashboard');
+    Route::get('tasks/dashboard/chart-data', [App\Http\Controllers\Admin\TaskController::class, 'getChartData'])->name('admin.tasks.dashboard.chart-data');
+    // Task Management - My Tasks and Group Tasks (Available to Students and Employees)
     Route::get('tasks', [App\Http\Controllers\Admin\TaskController::class, 'index'])->name('admin.tasks.index');
     Route::post('tasks', [App\Http\Controllers\Admin\TaskController::class, 'store'])->name('admin.tasks.store');
     Route::put('tasks/{task}', [App\Http\Controllers\Admin\TaskController::class, 'update'])->name('admin.tasks.update');
@@ -287,12 +301,12 @@ Route::prefix('admin')->middleware(['auth', 'admin'])->group(function () {
 
     // Hiring Process Management
     Route::middleware(['admin.permission:hiring_process'])->group(function () {
-    Route::get('/hiring-process', [App\Http\Controllers\Admin\HiringProcessController::class, 'index'])->name('admin.hiring-process.index');
-    Route::get('/hiring-process/applicants', [App\Http\Controllers\Admin\HiringProcessController::class, 'applicants'])->name('admin.hiring-process.applicants');
+        Route::get('/hiring-process', [App\Http\Controllers\Admin\HiringProcessController::class, 'index'])->name('admin.hiring-process.index');
+        Route::get('/hiring-process/applicants', [App\Http\Controllers\Admin\HiringProcessController::class, 'applicants'])->name('admin.hiring-process.applicants');
 
-    // Hiring Positions Management
-    Route::resource('hiring-positions', App\Http\Controllers\Admin\HiringPositionController::class)->names('admin.hiring-positions');
-    Route::patch('hiring-positions/{hiringPosition}/toggle-status', [App\Http\Controllers\Admin\HiringPositionController::class, 'toggleStatus'])->name('admin.hiring-positions.toggle-status');
+        // Hiring Positions Management
+        Route::resource('hiring-positions', App\Http\Controllers\Admin\HiringPositionController::class)->names('admin.hiring-positions');
+        Route::patch('hiring-positions/{hiringPosition}/toggle-status', [App\Http\Controllers\Admin\HiringPositionController::class, 'toggleStatus'])->name('admin.hiring-positions.toggle-status');
 
         // Hiring Applications Management
         Route::get('/hiring-applications', [App\Http\Controllers\Admin\HiringApplicationController::class, 'index'])->name('admin.hiring-applications.index');
@@ -331,6 +345,13 @@ Route::prefix('admin')->middleware(['auth', 'admin'])->group(function () {
     Route::post('files/{file}/unshare', [App\Http\Controllers\Admin\FileController::class, 'unshare'])->name('admin.files.unshare');
     Route::get('files/{file}/shared-users', [App\Http\Controllers\Admin\FileController::class, 'getSharedUsers'])->name('admin.files.shared-users');
 
+    // Confession (Say-it) – full access only, checked in controller
+    Route::get('confession', [App\Http\Controllers\Admin\ConfessionController::class, 'index']);
+    Route::get('confession/dashboard', [App\Http\Controllers\Admin\ConfessionController::class, 'dashboard']);
+    Route::get('confession/banned-words', [App\Http\Controllers\Admin\ConfessionBannedWordController::class, 'index'])->name('admin.confession.banned-words');
+    Route::post('confession/banned-words', [App\Http\Controllers\Admin\ConfessionBannedWordController::class, 'store']);
+    Route::delete('confession/banned-words/{banned_word}', [App\Http\Controllers\Admin\ConfessionBannedWordController::class, 'destroy'])->name('admin.confession.banned-words.destroy');
+
     // Communication
     Route::middleware(['admin.permission:communication'])->group(function () {
 
@@ -351,9 +372,19 @@ Route::prefix('admin')->middleware(['auth', 'admin'])->group(function () {
         Route::patch('contact-messages/{contactMessage}/close', [AdminContactMessageController::class, 'close'])->name('contact-messages.close');
 
         // Live Chat Management
-    Route::get('live-chat', [AdminLiveChatController::class, 'index'])->name('live-chat.index');
-    Route::get('live-chat/{ticketNumber}', [AdminLiveChatController::class, 'show'])->name('live-chat.show');
-
+        Route::get('live-chat', [AdminLiveChatController::class, 'index'])->name('live-chat.index');
+        Route::get('live-chat/{ticketNumber}', [AdminLiveChatController::class, 'show'])->name('live-chat.show');
+        Route::post('live-chat/{ticketNumber}/message', [AdminLiveChatController::class, 'store'])->name('live-chat.store');
+        Route::get('live-chat/{ticketNumber}/messages', [AdminLiveChatController::class, 'getMessages'])->name('live-chat.messages');
+        Route::get('live-chat/{ticketNumber}/new-messages', [AdminLiveChatController::class, 'getNewMessages'])->name('live-chat.new-messages');
+        Route::get('live-chat/unread-count', [AdminLiveChatController::class, 'getUnreadCount'])->name('live-chat.unread-count');
+        Route::post('live-chat/{ticketNumber}/close', [AdminLiveChatController::class, 'closeTicket'])->name('live-chat.close');
+        Route::post('live-chat/{ticketNumber}/reopen', [AdminLiveChatController::class, 'reopenTicket'])->name('live-chat.reopen');
+        Route::post('live-chat/{ticketNumber}/deny-reopen', [AdminLiveChatController::class, 'denyReopen'])->name('live-chat.deny-reopen');
+        Route::get('live-chat/preloaded-messages', [AdminLiveChatController::class, 'getPreloadedMessages'])->name('live-chat.preloaded-messages');
+        Route::post('live-chat/{ticketNumber}/typing/start', [AdminLiveChatController::class, 'startTyping'])->name('live-chat.typing.start');
+        Route::post('live-chat/{ticketNumber}/typing/stop', [AdminLiveChatController::class, 'stopTyping'])->name('live-chat.typing.stop');
+        Route::get('live-chat/{ticketNumber}/typing', [AdminLiveChatController::class, 'getTypingIndicators'])->name('live-chat.typing');
     });
 
     // System Management
@@ -376,17 +407,6 @@ Route::prefix('admin')->middleware(['auth', 'admin'])->group(function () {
         Route::get('user-activity/sessions', [App\Http\Controllers\Admin\UserActivityController::class, 'sessions'])->name('admin.user-activity.sessions');
         Route::get('user-activity/statistics', [App\Http\Controllers\Admin\UserActivityController::class, 'statistics'])->name('admin.user-activity.statistics');
         Route::post('user-activity/cleanup', [App\Http\Controllers\Admin\UserActivityController::class, 'cleanup'])->name('admin.user-activity.cleanup');
-    Route::post('live-chat/{ticketNumber}/message', [AdminLiveChatController::class, 'store'])->name('live-chat.store');
-    Route::get('live-chat/{ticketNumber}/messages', [AdminLiveChatController::class, 'getMessages'])->name('live-chat.messages');
-    Route::get('live-chat/{ticketNumber}/new-messages', [AdminLiveChatController::class, 'getNewMessages'])->name('live-chat.new-messages');
-    Route::get('live-chat/unread-count', [AdminLiveChatController::class, 'getUnreadCount'])->name('live-chat.unread-count');
-    Route::post('live-chat/{ticketNumber}/close', [AdminLiveChatController::class, 'closeTicket'])->name('live-chat.close');
-    Route::post('live-chat/{ticketNumber}/reopen', [AdminLiveChatController::class, 'reopenTicket'])->name('live-chat.reopen');
-    Route::post('live-chat/{ticketNumber}/deny-reopen', [AdminLiveChatController::class, 'denyReopen'])->name('live-chat.deny-reopen');
-    Route::get('live-chat/preloaded-messages', [AdminLiveChatController::class, 'getPreloadedMessages'])->name('live-chat.preloaded-messages');
-    Route::post('live-chat/{ticketNumber}/typing/start', [AdminLiveChatController::class, 'startTyping'])->name('live-chat.typing.start');
-    Route::post('live-chat/{ticketNumber}/typing/stop', [AdminLiveChatController::class, 'stopTyping'])->name('live-chat.typing.stop');
-    Route::get('live-chat/{ticketNumber}/typing', [AdminLiveChatController::class, 'getTypingIndicators'])->name('live-chat.typing');
 
         // Status Management
         Route::get('status/online-users', [StatusController::class, 'getOnlineUsers'])->name('status.online-users');
@@ -463,37 +483,9 @@ Route::middleware(['auth'])->group(function () {
     Route::post('/friends/send-request', [App\Http\Controllers\FriendshipController::class, 'sendRequest'])->name('friends.send-request');
     Route::post('/friends/{friendshipId}/accept', [App\Http\Controllers\FriendshipController::class, 'acceptRequest'])->name('friends.accept');
     Route::post('/friends/{friendshipId}/reject', [App\Http\Controllers\FriendshipController::class, 'rejectRequest'])->name('friends.reject');
+    Route::post('/friends/{friendshipId}/cancel', [App\Http\Controllers\FriendshipController::class, 'cancelRequest'])->name('friends.cancel');
     Route::post('/friends/{friendId}/remove', [App\Http\Controllers\FriendshipController::class, 'removeFriend'])->name('friends.remove');
     Route::post('/friends/{userId}/block', [App\Http\Controllers\FriendshipController::class, 'blockUser'])->name('friends.block');
-    Route::get('/test-friends', function() {
-        return view('friends.index', [
-            'friends' => collect(),
-            'pendingRequests' => collect(),
-            'sentRequests' => collect()
-        ]);
-    })->name('test.friends');
-    Route::get('/friends-debug', function() {
-        return view('friends.test');
-    })->name('friends.debug');
-    Route::get('/friends-simple', function() {
-        $user = auth()->user();
-        if (!$user) {
-            return redirect('/login');
-        }
-
-        $friends = $user->friends()->get();
-        $pendingRequests = $user->pendingFriendRequests()->with('user')->get();
-        $sentRequests = $user->sentFriendRequests()->with('friend')->get();
-
-        return view('friends.simple', compact('friends', 'pendingRequests', 'sentRequests'));
-    })->name('friends.simple');
-    Route::get('/friends/search', [App\Http\Controllers\FriendshipController::class, 'search'])->name('friends.search');
-    Route::post('/friends/send-request', [App\Http\Controllers\FriendshipController::class, 'sendRequest'])->name('friends.send-request');
-    Route::post('/friends/{friendship}/accept', [App\Http\Controllers\FriendshipController::class, 'acceptRequest'])->name('friends.accept');
-    Route::post('/friends/{friendship}/reject', [App\Http\Controllers\FriendshipController::class, 'rejectRequest'])->name('friends.reject');
-    Route::post('/friends/{friendship}/cancel', [App\Http\Controllers\FriendshipController::class, 'cancelRequest'])->name('friends.cancel');
-    Route::delete('/friends/{friend}/remove', [App\Http\Controllers\FriendshipController::class, 'removeFriend'])->name('friends.remove');
-    Route::post('/friends/{user}/block', [App\Http\Controllers\FriendshipController::class, 'blockUser'])->name('friends.block');
 
     // User Chat Routes
     Route::get('/user-chat', [App\Http\Controllers\UserChatController::class, 'index'])->name('user-chat.index');

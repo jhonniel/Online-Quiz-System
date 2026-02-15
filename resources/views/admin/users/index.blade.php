@@ -61,7 +61,7 @@
         <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
             <!-- Search -->
             <div class="flex-1 max-w-md">
-                <form id="users-search-form" method="GET" action="{{ route('admin.users.index') }}">
+                <form id="users-search-form" method="GET" action="{{ url('/admin/users') }}">
                     @if(request()->has('per_page'))
                         <input type="hidden" name="per_page" value="{{ request('per_page') }}">
                     @endif
@@ -107,7 +107,7 @@
                     </svg>
                     <span class="hidden sm:inline">Send Credentials</span>
                 </button>
-                <a href="{{ route('admin.users.create') }}" class="inline-flex items-center px-3 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                <a href="{{ url('/admin/users/create') }}" class="inline-flex items-center px-3 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
                     <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
                     </svg>
@@ -166,7 +166,7 @@
     <!-- Users Table -->
     <div class="bg-white shadow-sm border-t border-b border-gray-200 overflow-hidden flex-1 flex flex-col">
         @if($users->count() > 0)
-            <form id="bulk-role-form" method="POST" action="{{ route('admin.users.bulk-assign-role') }}">
+            <form id="bulk-role-form" method="POST" action="{{ url('/admin/users/bulk-assign-role') }}">
                 @csrf
                 <input type="hidden" name="role" id="role-input" value="">
             </form>
@@ -220,7 +220,7 @@
                                 </td>
                                 <td class="px-6 py-4 whitespace-nowrap">
                                     <div class="flex items-center">
-                                        <a href="{{ route('admin.users.show', $user) }}" class="flex-shrink-0 h-10 w-10 hover:opacity-80 transition-opacity duration-150">
+                                        <a href="{{ url('/admin/users/' . $user->id) }}" class="flex-shrink-0 h-10 w-10 hover:opacity-80 transition-opacity duration-150">
                                             @if($user->profile_picture)
                                                 <img class="h-10 w-10 rounded-full object-cover" src="{{ $user->getProfilePictureUrl() }}" alt="{{ $user->name }}">
                                             @else
@@ -230,7 +230,7 @@
                                             @endif
                                         </a>
                                         <div class="ml-4">
-                                            <a href="{{ route('admin.users.show', $user) }}" class="text-sm font-medium text-indigo-600 hover:text-indigo-800 hover:underline transition-colors duration-150">
+                                            <a href="{{ url('/admin/users/' . $user->id) }}" class="text-sm font-medium text-indigo-600 hover:text-indigo-800 hover:underline transition-colors duration-150">
                                                 {{ $user->name }}
                                             </a>
                                             <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium {{ $user->getRoleBadgeClass() }}">
@@ -298,7 +298,7 @@
                                              x-transition:leave-end="transform opacity-0 scale-95"
                                              class="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 z-50 border border-gray-200">
 
-                                            <a href="{{ route('admin.users.show', $user) }}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center">
+                                            <a href="{{ url('/admin/users/' . $user->id) }}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center">
                                                 <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
@@ -306,7 +306,7 @@
                                                 View Profile
                                             </a>
 
-                                            <a href="{{ route('admin.users.edit', $user) }}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center">
+                                            <a href="{{ url('/admin/users/' . $user->id . '/edit') }}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center">
                                                 <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
                                                 </svg>
@@ -314,7 +314,7 @@
                                             </a>
 
                                             @if(!$user->is_approved)
-                                                <form method="POST" action="{{ route('admin.users.approve', $user) }}" class="block">
+                                                <form method="POST" action="{{ url('/admin/users/' . $user->id . '/approve') }}" class="block">
                                                     @csrf
                                                     @method('PATCH')
                                                     <button type="submit" class="w-full text-left px-4 py-2 text-sm text-green-700 hover:bg-green-50 flex items-center" onclick="return confirmUserAction('approve', this)">
@@ -325,7 +325,7 @@
                                                     </button>
                                                 </form>
                                             @else
-                                                <form method="POST" action="{{ route('admin.users.disapprove', $user) }}" class="block">
+                                                <form method="POST" action="{{ url('/admin/users/' . $user->id . '/disapprove') }}" class="block">
                                                     @csrf
                                                     @method('PATCH')
                                                     <button type="submit" class="w-full text-left px-4 py-2 text-sm text-yellow-700 hover:bg-yellow-50 flex items-center" onclick="return confirmUserAction('disapprove', this)">
@@ -337,7 +337,7 @@
                                                 </form>
                                             @endif
 
-                                            <form method="POST" action="{{ route('admin.users.toggle-status', $user) }}" class="block">
+                                            <form method="POST" action="{{ url('/admin/users/' . $user->id . '/toggle-status') }}" class="block">
                                                 @csrf
                                                 @method('PATCH')
                                                 <button type="submit" class="w-full text-left px-4 py-2 text-sm {{ $user->is_active ? 'text-red-700 hover:bg-red-50' : 'text-green-700 hover:bg-green-50' }} flex items-center">
@@ -367,7 +367,7 @@
 
                                             <div class="border-t border-gray-100"></div>
 
-                                            <form method="POST" action="{{ route('admin.users.destroy', $user) }}" class="block" onsubmit="return confirmUserAction('delete', this)">
+                                            <form method="POST" action="{{ url('/admin/users/' . $user->id) }}" class="block" onsubmit="return confirmUserAction('delete', this)">
                                                 @csrf
                                                 @method('DELETE')
                                                 <button type="submit" class="w-full text-left px-4 py-2 text-sm text-red-700 hover:bg-red-50 flex items-center">
@@ -428,7 +428,7 @@
                 <h3 class="mt-2 text-sm font-medium text-gray-900">No users found</h3>
                 <p class="mt-1 text-sm text-gray-500">Get started by creating a new user.</p>
                 <div class="mt-6">
-                    <a href="{{ route('admin.users.create') }}" class="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                    <a href="{{ url('/admin/users/create') }}" class="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
                         <svg class="-ml-1 mr-2 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
                         </svg>
@@ -692,7 +692,7 @@
         if (confirm(`Send credentials email to ${userIds.length} selected user(s)?`)) {
             const form = document.createElement('form');
             form.method = 'POST';
-            form.action = '{{ route("admin.users.send-bulk-credentials") }}';
+            form.action = '{{ url("/admin/users/send-bulk-credentials") }}';
 
             const csrfToken = document.createElement('input');
             csrfToken.type = 'hidden';

@@ -17,21 +17,21 @@
                 </div>
             </div>
             <div class="flex flex-wrap items-center gap-2 sm:gap-3">
-                <a href="{{ route('admin.student-dtr.create') }}"
+                <a href="{{ url('/admin/student-dtr/create') }}"
                    class="inline-flex items-center px-3 py-2 sm:px-4 sm:py-2 bg-white/10 backdrop-blur-sm border border-white/20 rounded-lg text-white hover:bg-white/20 transition duration-200 text-xs sm:text-sm">
                     <svg class="h-4 w-4 sm:h-5 sm:w-5 mr-1 sm:mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
                     </svg>
                     Add DTR Record
                 </a>
-                <a href="{{ route('admin.dtr.template') }}"
+                <a href="{{ url('/admin/dtr/template') }}"
                    class="inline-flex items-center px-3 py-2 sm:px-4 sm:py-2 bg-white/10 backdrop-blur-sm border border-white/20 rounded-lg text-white hover:bg-white/20 transition duration-200 text-xs sm:text-sm">
                     <svg class="h-4 w-4 sm:h-5 sm:w-5 mr-1 sm:mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
                     </svg>
                     Download Template
                 </a>
-                <a href="{{ route('admin.student-dtr.export-pdf', request()->query()) }}"
+                <a href="{{ url('/admin/student-dtr/export/pdf?' . http_build_query(request()->query())) }}"
                    class="inline-flex items-center px-3 py-2 sm:px-4 sm:py-2 bg-white/10 backdrop-blur-sm border border-white/20 rounded-lg text-white hover:bg-white/20 transition duration-200 text-xs sm:text-sm">
                     <svg class="h-4 w-4 sm:h-5 sm:w-5 mr-1 sm:mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"></path>
@@ -115,7 +115,7 @@
         <!-- Collapsible Content -->
         <div id="import-section" class="hidden border-t border-gray-200">
             <div class="p-4 sm:p-6">
-                <form action="{{ route('admin.dtr.import') }}" method="POST" enctype="multipart/form-data" class="space-y-4">
+                <form action="{{ url('/admin/dtr/import') }}" method="POST" enctype="multipart/form-data" class="space-y-4">
             @csrf
             <input type="hidden" name="type" value="student">
             <div class="flex flex-col sm:flex-row sm:items-end gap-4">
@@ -175,7 +175,7 @@
 
     <!-- Filters -->
     <div class="bg-white rounded-2xl shadow-xl border border-gray-200 p-4 sm:p-6">
-        <form method="GET" action="{{ route('admin.student-dtr.index') }}" class="space-y-4">
+        <form method="GET" action="{{ url('/admin/student-dtr') }}" class="space-y-4">
             <!-- Search Bar -->
             <div class="mb-4">
                 <label for="search" class="block text-sm font-medium text-gray-700 mb-2">Search Student</label>
@@ -254,7 +254,7 @@
                     </svg>
                     Filter
                 </button>
-                <a href="{{ route('admin.student-dtr.index') }}" class="inline-flex items-center px-4 sm:px-6 py-2 border border-gray-300 text-xs sm:text-sm font-medium rounded-lg text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                <a href="{{ url('/admin/student-dtr') }}" class="inline-flex items-center px-4 sm:px-6 py-2 border border-gray-300 text-xs sm:text-sm font-medium rounded-lg text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
                     Reset
                 </a>
             </div>
@@ -439,12 +439,12 @@
                                                             <div class="text-sm text-gray-500 max-w-xs truncate" title="{{ $dtr->remarks }}">
                                                                 {{ $dtr->remarks ?: '-' }}
                                                             </div>
-                                                            <a href="{{ route('admin.student-dtr.edit', $dtr) }}"
+                                                            <a href="{{ url('/admin/student-dtr/' . $dtr->id . '/edit') }}"
                                                                class="inline-flex items-center px-2.5 py-1.5 border border-indigo-200 text-xs font-medium rounded-md text-indigo-700 bg-indigo-50 hover:bg-indigo-100">
                                                                 Edit
                                                             </a>
                                                             @if(auth()->check() && auth()->user()->isSuperAdmin())
-                                                                <form action="{{ route('admin.student-dtr.destroy', $dtr) }}"
+                                                                <form action="{{ url('/admin/student-dtr/' . $dtr->id) }}"
                                                                       method="POST"
                                                                       onsubmit="return confirm('Are you sure you want to delete this student DTR record? This action cannot be undone.');">
                                                                     @csrf
@@ -843,7 +843,7 @@
         const selectedIds = Array.from(checkboxes).map(cb => cb.value);
         const form = document.createElement('form');
         form.method = 'POST';
-        form.action = '{{ route("admin.student-dtr.bulk-delete") }}';
+        form.action = '{{ url("/admin/student-dtr/bulk-delete") }}';
         
         const csrfToken = document.createElement('input');
         csrfToken.type = 'hidden';
@@ -876,7 +876,7 @@
                     </svg>
                 </button>
             </div>
-            <form action="{{ route('admin.student-dtr.bulk-update') }}" method="POST">
+            <form action="{{ url('/admin/student-dtr/bulk-update') }}" method="POST">
                 @csrf
                 <div id="bulk-edit-records" class="space-y-4">
                     <!-- Records will be dynamically inserted here -->

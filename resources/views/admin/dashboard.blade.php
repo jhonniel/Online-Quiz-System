@@ -418,10 +418,10 @@
             <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4 gap-3">
                 <h3 class="text-base sm:text-lg leading-6 font-medium text-gray-900">Recent Leave Requests</h3>
                 <div class="flex flex-col sm:flex-row gap-2 sm:gap-2">
-                    <a href="{{ route('admin.leave-requests.index') }}" class="text-xs sm:text-sm text-indigo-600 hover:text-indigo-800 font-medium whitespace-nowrap">
+                    <a href="{{ url('/admin/leave-requests') }}" class="text-xs sm:text-sm text-indigo-600 hover:text-indigo-800 font-medium whitespace-nowrap">
                         Employee Requests →
                     </a>
-                    <a href="{{ route('admin.student-leave-requests.index') }}" class="text-xs sm:text-sm text-purple-600 hover:text-purple-800 font-medium whitespace-nowrap">
+                    <a href="{{ url('/admin/student-leave-requests') }}" class="text-xs sm:text-sm text-purple-600 hover:text-purple-800 font-medium whitespace-nowrap">
                         Student Requests →
                     </a>
                 </div>
@@ -463,9 +463,9 @@
                         <div class="text-left sm:text-right flex-shrink-0">
                             <p class="text-xs text-gray-500">{{ $leaveRequest->created_at->diffForHumans() }}</p>
                             @if($leaveRequest->user->role === 'employee')
-                                <a href="{{ route('admin.leave-requests.show', $leaveRequest) }}" class="text-xs text-indigo-600 hover:text-indigo-800 inline-block mt-1">View →</a>
+                                <a href="{{ url('/admin/leave-requests/' . $leaveRequest->id) }}" class="text-xs text-indigo-600 hover:text-indigo-800 inline-block mt-1">View →</a>
                             @else
-                                <a href="{{ route('admin.leave-requests.show', $leaveRequest) }}" class="text-xs text-purple-600 hover:text-purple-800 inline-block mt-1">View →</a>
+                                <a href="{{ url('/admin/leave-requests/' . $leaveRequest->id) }}" class="text-xs text-purple-600 hover:text-purple-800 inline-block mt-1">View →</a>
                             @endif
                         </div>
                     </div>
@@ -485,13 +485,13 @@
                 <div>
                     <h4 class="text-xs sm:text-sm font-semibold text-gray-700 mb-2">Content Management</h4>
                     <div class="flex flex-wrap gap-2">
-                        <a href="{{ route('quizzes.create') }}" class="inline-flex items-center px-3 py-1.5 sm:px-4 sm:py-2 border border-transparent text-xs sm:text-sm font-medium rounded-md shadow-sm text-white bg-green-600 hover:bg-green-700">
+                        <a href="{{ url('/admin/quizzes/create') }}" class="inline-flex items-center px-3 py-1.5 sm:px-4 sm:py-2 border border-transparent text-xs sm:text-sm font-medium rounded-md shadow-sm text-white bg-green-600 hover:bg-green-700">
                     Create Quiz
                 </a>
-                        <a href="{{ route('quizzes.index') }}" class="inline-flex items-center px-3 py-1.5 sm:px-4 sm:py-2 border border-gray-300 text-xs sm:text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
+                        <a href="{{ url('/admin/quizzes') }}" class="inline-flex items-center px-3 py-1.5 sm:px-4 sm:py-2 border border-gray-300 text-xs sm:text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
                             Manage Quizzes
                         </a>
-                        <a href="{{ route('admin.import') }}" class="inline-flex items-center px-3 py-1.5 sm:px-4 sm:py-2 border border-gray-300 text-xs sm:text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
+                        <a href="{{ url('/admin/import') }}" class="inline-flex items-center px-3 py-1.5 sm:px-4 sm:py-2 border border-gray-300 text-xs sm:text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
                             Import Questions
                         </a>
                     </div>
@@ -501,16 +501,16 @@
                 <div>
                     <h4 class="text-xs sm:text-sm font-semibold text-gray-700 mb-2">Employee Management</h4>
                     <div class="flex flex-wrap gap-2">
-                        <a href="{{ route('admin.dtr.create') }}" class="inline-flex items-center px-3 py-1.5 sm:px-4 sm:py-2 border border-transparent text-xs sm:text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700">
+                        <a href="{{ url('/admin/dtr/create') }}" class="inline-flex items-center px-3 py-1.5 sm:px-4 sm:py-2 border border-transparent text-xs sm:text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700">
                             Create DTR
                         </a>
-                        <a href="{{ route('admin.dtr.index') }}" class="inline-flex items-center px-3 py-1.5 sm:px-4 sm:py-2 border border-gray-300 text-xs sm:text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
+                        <a href="{{ url('/admin/dtr') }}" class="inline-flex items-center px-3 py-1.5 sm:px-4 sm:py-2 border border-gray-300 text-xs sm:text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
                             View DTR
                         </a>
-                        <a href="{{ route('admin.leave-requests.index') }}" class="inline-flex items-center px-3 py-1.5 sm:px-4 sm:py-2 border border-gray-300 text-xs sm:text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
+                        <a href="{{ url('/admin/leave-requests') }}" class="inline-flex items-center px-3 py-1.5 sm:px-4 sm:py-2 border border-gray-300 text-xs sm:text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
                             Leave Requests
                         </a>
-                        <a href="{{ route('admin.leave-requests.calendar') }}" class="inline-flex items-center px-3 py-1.5 sm:px-4 sm:py-2 border border-gray-300 text-xs sm:text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
+                        <a href="{{ url('/admin/leave-calendar') }}" class="inline-flex items-center px-3 py-1.5 sm:px-4 sm:py-2 border border-gray-300 text-xs sm:text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
                             Leave Calendar
                         </a>
                     </div>
@@ -520,16 +520,16 @@
                 <div>
                     <h4 class="text-xs sm:text-sm font-semibold text-gray-700 mb-2">Student Management</h4>
                     <div class="flex flex-wrap gap-2">
-                        <a href="{{ route('admin.student-dtr.create') }}" class="inline-flex items-center px-3 py-1.5 sm:px-4 sm:py-2 border border-transparent text-xs sm:text-sm font-medium rounded-md shadow-sm text-white bg-purple-600 hover:bg-purple-700">
+                        <a href="{{ url('/admin/student-dtr/create') }}" class="inline-flex items-center px-3 py-1.5 sm:px-4 sm:py-2 border border-transparent text-xs sm:text-sm font-medium rounded-md shadow-sm text-white bg-purple-600 hover:bg-purple-700">
                             Create Student DTR
                         </a>
-                        <a href="{{ route('admin.student-dtr.index') }}" class="inline-flex items-center px-3 py-1.5 sm:px-4 sm:py-2 border border-gray-300 text-xs sm:text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
+                        <a href="{{ url('/admin/student-dtr') }}" class="inline-flex items-center px-3 py-1.5 sm:px-4 sm:py-2 border border-gray-300 text-xs sm:text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
                             View Student DTR
                         </a>
-                        <a href="{{ route('admin.student-leave-requests.index') }}" class="inline-flex items-center px-3 py-1.5 sm:px-4 sm:py-2 border border-gray-300 text-xs sm:text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
+                        <a href="{{ url('/admin/student-leave-requests') }}" class="inline-flex items-center px-3 py-1.5 sm:px-4 sm:py-2 border border-gray-300 text-xs sm:text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
                             Student Leave Requests
                         </a>
-                        <a href="{{ route('admin.student-leave-requests.calendar') }}" class="inline-flex items-center px-3 py-1.5 sm:px-4 sm:py-2 border border-gray-300 text-xs sm:text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
+                        <a href="{{ url('/admin/student-leave-calendar') }}" class="inline-flex items-center px-3 py-1.5 sm:px-4 sm:py-2 border border-gray-300 text-xs sm:text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
                             Student Leave Calendar
                         </a>
                     </div>
@@ -539,19 +539,19 @@
                 <div>
                     <h4 class="text-xs sm:text-sm font-semibold text-gray-700 mb-2">User & System Management</h4>
                     <div class="flex flex-wrap gap-2">
-                        <a href="{{ route('admin.users.create') }}" class="inline-flex items-center px-3 py-1.5 sm:px-4 sm:py-2 border border-transparent text-xs sm:text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700">
+                        <a href="{{ url('/admin/users/create') }}" class="inline-flex items-center px-3 py-1.5 sm:px-4 sm:py-2 border border-transparent text-xs sm:text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700">
                             Create User
                         </a>
-                        <a href="{{ route('admin.users.index') }}" class="inline-flex items-center px-3 py-1.5 sm:px-4 sm:py-2 border border-gray-300 text-xs sm:text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
+                        <a href="{{ url('/admin/users') }}" class="inline-flex items-center px-3 py-1.5 sm:px-4 sm:py-2 border border-gray-300 text-xs sm:text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
                     Manage Users
                 </a>
-                        <a href="{{ route('admin.universities.index') }}" class="inline-flex items-center px-3 py-1.5 sm:px-4 sm:py-2 border border-gray-300 text-xs sm:text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
+                        <a href="{{ url('/admin/universities') }}" class="inline-flex items-center px-3 py-1.5 sm:px-4 sm:py-2 border border-gray-300 text-xs sm:text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
                             Manage Universities
                         </a>
-                        <a href="{{ route('admin.settings.index') }}" class="inline-flex items-center px-3 py-1.5 sm:px-4 sm:py-2 border border-gray-300 text-xs sm:text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
+                        <a href="{{ url('/admin/settings') }}" class="inline-flex items-center px-3 py-1.5 sm:px-4 sm:py-2 border border-gray-300 text-xs sm:text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
                             System Settings
                         </a>
-                        <a href="{{ route('admin.forum.index') }}" class="inline-flex items-center px-3 py-1.5 sm:px-4 sm:py-2 border border-transparent text-xs sm:text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700">
+                        <a href="{{ url('/admin/forum') }}" class="inline-flex items-center px-3 py-1.5 sm:px-4 sm:py-2 border border-transparent text-xs sm:text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700">
                             <svg class="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path>
                     </svg>
@@ -898,7 +898,7 @@
 document.addEventListener('DOMContentLoaded', function() {
     // Real-time user activity updates
     function updateActivityData() {
-        fetch('{{ route("admin.activity-data") }}')
+        fetch('{{ url('/admin/activity-data') }}')
             .then(response => response.json())
             .then(data => {
                 // Update online count

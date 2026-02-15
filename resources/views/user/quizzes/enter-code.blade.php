@@ -13,7 +13,7 @@
 
     <div class="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
         <div class="bg-white py-8 px-4 shadow sm:rounded-lg sm:px-10">
-            <form class="space-y-6" action="{{ route('user.quizzes.validate-code') }}" method="POST">
+            <form class="space-y-6" action="{{ url('/quizzes/validate-code') }}" method="POST">
                 @csrf
 
                 <div>
@@ -72,7 +72,7 @@ function goToDashboard() {
     console.log('Navigating to dashboard...');
     try {
         // Try multiple navigation methods
-        window.location.href = '{{ route("user.dashboard") }}';
+        window.location.href = '{{ url("/dashboard") }}';
     } catch (error) {
         console.error('Navigation error:', error);
         // Fallback to direct URL
@@ -107,7 +107,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     // Debug: Log the dashboard URL
-    console.log('Dashboard URL: {{ route("user.dashboard") }}');
+    console.log('Dashboard URL: {{ url("/dashboard") }}');
 });
 </script>
 @endsection

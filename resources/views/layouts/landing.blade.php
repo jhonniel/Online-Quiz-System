@@ -167,6 +167,16 @@
             }
         </style>
     </head>
+    @php
+        // Helper function to safely get route URLs
+        $getRoute = function($name, $default = '/') {
+            try {
+                return route($name);
+            } catch (Exception $e) {
+                return $default;
+            }
+        };
+    @endphp
     <body class="font-sans antialiased bg-white">
         <!-- Navigation -->
         <nav id="main-nav" class="fixed top-0 left-0 right-0 z-50 bg-white shadow-sm transition-all duration-300">
@@ -174,7 +184,7 @@
                 <div class="flex justify-between items-center h-20">
                     <!-- Logo -->
                     <div class="flex items-center space-x-3">
-                        <a href="{{ route('landing.index') }}" class="flex items-center space-x-3 group">
+                        <a href="{{ $getRoute('landing.index', '/') }}" class="flex items-center space-x-3 group">
                             @if($settings['system_logo'])
                                 <img src="{{ $settings['system_logo_url'] ?? '' }}"
                                      alt="{{ $settings['system_name'] }}"
@@ -192,24 +202,24 @@
 
                     <!-- Desktop Navigation Links -->
                     <div class="hidden lg:flex items-center space-x-1">
-                        <a href="{{ route('landing.index') }}" class="px-4 py-2 text-gray-700 hover:text-primary font-medium transition-colors rounded-lg hover:bg-gray-50">Home</a>
-                        <a href="{{ route('landing.projects') }}" class="px-4 py-2 text-gray-700 hover:text-primary font-medium transition-colors rounded-lg hover:bg-gray-50">Projects</a>
+                        <a href="{{ $getRoute('landing.index', '/') }}" class="px-4 py-2 text-gray-700 hover:text-primary font-medium transition-colors rounded-lg hover:bg-gray-50">Home</a>
+                        <a href="{{ $getRoute('landing.projects', '/projects') }}" class="px-4 py-2 text-gray-700 hover:text-primary font-medium transition-colors rounded-lg hover:bg-gray-50">Projects</a>
                         @if(\App\Models\Setting::get('news_section_enabled', '0') === '1')
-                            <a href="{{ route('landing.news') }}" class="px-4 py-2 text-gray-700 hover:text-primary font-medium transition-colors rounded-lg hover:bg-gray-50">News</a>
+                            <a href="{{ $getRoute('landing.news', '/news') }}" class="px-4 py-2 text-gray-700 hover:text-primary font-medium transition-colors rounded-lg hover:bg-gray-50">News</a>
                         @endif
-                        <a href="{{ route('landing.about') }}" class="px-4 py-2 text-gray-700 hover:text-primary font-medium transition-colors rounded-lg hover:bg-gray-50">About</a>
-                        <a href="{{ route('landing.contact') }}" class="px-4 py-2 text-gray-700 hover:text-primary font-medium transition-colors rounded-lg hover:bg-gray-50">Contact</a>
+                        <a href="{{ $getRoute('landing.about', '/about') }}" class="px-4 py-2 text-gray-700 hover:text-primary font-medium transition-colors rounded-lg hover:bg-gray-50">About</a>
+                        <a href="{{ $getRoute('landing.contact', '/contact') }}" class="px-4 py-2 text-gray-700 hover:text-primary font-medium transition-colors rounded-lg hover:bg-gray-50">Contact</a>
                         @if(($settings['hiring_application_public_access'] ?? 'enabled') === 'enabled')
                             <a href="{{ url('/' . ltrim($settings['hiring_application_url'] ?? 'hiring/apply', '/')) }}" class="px-4 py-2 text-gray-700 hover:text-primary font-medium transition-colors rounded-lg hover:bg-gray-50">Careers</a>
                         @endif
 
                         @auth
                             @if(auth()->user()->isAdmin() || (auth()->user()->isEmployee() && auth()->user()->hasAnyAdminPermission()))
-                                <a href="{{ route('admin.dashboard') }}" class="ml-4 px-6 py-2 bg-primary text-white rounded-lg font-semibold hover:opacity-90 transition-opacity shadow-md hover:shadow-lg">
+                                <a href="{{ $getRoute('admin.dashboard', '/admin/dashboard') }}" class="ml-4 px-6 py-2 bg-primary text-white rounded-lg font-semibold hover:opacity-90 transition-opacity shadow-md hover:shadow-lg">
                                     Dashboard
                                 </a>
                             @else
-                                <a href="{{ route('user.dashboard') }}" class="ml-4 px-6 py-2 bg-primary text-white rounded-lg font-semibold hover:opacity-90 transition-opacity shadow-md hover:shadow-lg">
+                                <a href="{{ $getRoute('user.dashboard', '/user/dashboard') }}" class="ml-4 px-6 py-2 bg-primary text-white rounded-lg font-semibold hover:opacity-90 transition-opacity shadow-md hover:shadow-lg">
                                     Dashboard
                                 </a>
                             @endif
@@ -230,24 +240,24 @@
             <!-- Mobile menu -->
             <div class="lg:hidden hidden bg-white border-t shadow-lg" id="mobile-menu">
                 <div class="px-4 pt-2 pb-4 space-y-1">
-                    <a href="{{ route('landing.index') }}" class="block px-4 py-3 text-gray-700 hover:text-primary hover:bg-gray-50 rounded-lg font-medium transition-colors">Home</a>
-                    <a href="{{ route('landing.projects') }}" class="block px-4 py-3 text-gray-700 hover:text-primary hover:bg-gray-50 rounded-lg font-medium transition-colors">Projects</a>
+                    <a href="{{ $getRoute('landing.index', '/') }}" class="block px-4 py-3 text-gray-700 hover:text-primary hover:bg-gray-50 rounded-lg font-medium transition-colors">Home</a>
+                    <a href="{{ $getRoute('landing.projects', '/projects') }}" class="block px-4 py-3 text-gray-700 hover:text-primary hover:bg-gray-50 rounded-lg font-medium transition-colors">Projects</a>
                     @if(\App\Models\Setting::get('news_section_enabled', '0') === '1')
-                        <a href="{{ route('landing.news') }}" class="block px-4 py-3 text-gray-700 hover:text-primary hover:bg-gray-50 rounded-lg font-medium transition-colors">News</a>
+                        <a href="{{ $getRoute('landing.news', '/news') }}" class="block px-4 py-3 text-gray-700 hover:text-primary hover:bg-gray-50 rounded-lg font-medium transition-colors">News</a>
                     @endif
-                    <a href="{{ route('landing.about') }}" class="block px-4 py-3 text-gray-700 hover:text-primary hover:bg-gray-50 rounded-lg font-medium transition-colors">About</a>
-                    <a href="{{ route('landing.contact') }}" class="block px-4 py-3 text-gray-700 hover:text-primary hover:bg-gray-50 rounded-lg font-medium transition-colors">Contact</a>
+                    <a href="{{ $getRoute('landing.about', '/about') }}" class="block px-4 py-3 text-gray-700 hover:text-primary hover:bg-gray-50 rounded-lg font-medium transition-colors">About</a>
+                    <a href="{{ $getRoute('landing.contact', '/contact') }}" class="block px-4 py-3 text-gray-700 hover:text-primary hover:bg-gray-50 rounded-lg font-medium transition-colors">Contact</a>
                     @if(($settings['hiring_application_public_access'] ?? 'enabled') === 'enabled')
                         <a href="{{ url('/' . ltrim($settings['hiring_application_url'] ?? 'hiring/apply', '/')) }}" class="block px-4 py-3 text-gray-700 hover:text-primary hover:bg-gray-50 rounded-lg font-medium transition-colors">Careers</a>
                     @endif
 
                     @auth
                         @if(auth()->user()->isAdmin() || (auth()->user()->isEmployee() && auth()->user()->hasAnyAdminPermission()))
-                            <a href="{{ route('admin.dashboard') }}" class="block px-4 py-3 bg-primary text-white rounded-lg font-semibold text-center mt-4">
+                            <a href="{{ $getRoute('admin.dashboard', '/admin/dashboard') }}" class="block px-4 py-3 bg-primary text-white rounded-lg font-semibold text-center mt-4">
                                 Go to Dashboard
                             </a>
                         @else
-                            <a href="{{ route('user.dashboard') }}" class="block px-4 py-3 bg-primary text-white rounded-lg font-semibold text-center mt-4">
+                            <a href="{{ $getRoute('user.dashboard', '/user/dashboard') }}" class="block px-4 py-3 bg-primary text-white rounded-lg font-semibold text-center mt-4">
                                 Go to Dashboard
                             </a>
                         @endif
@@ -326,10 +336,10 @@
                     <div>
                         <h3 class="text-lg font-semibold mb-4">Quick Links</h3>
                         <ul class="space-y-2">
-                            <li><a href="{{ route('landing.index') }}" class="text-gray-400 hover:text-white transition-colors">Home</a></li>
-                            <li><a href="{{ route('landing.projects') }}" class="text-gray-400 hover:text-white transition-colors">Projects</a></li>
-                            <li><a href="{{ route('landing.about') }}" class="text-gray-400 hover:text-white transition-colors">About</a></li>
-                            <li><a href="{{ route('landing.contact') }}" class="text-gray-400 hover:text-white transition-colors">Contact</a></li>
+                            <li><a href="{{ $getRoute('landing.index', '/') }}" class="text-gray-400 hover:text-white transition-colors">Home</a></li>
+                            <li><a href="{{ $getRoute('landing.projects', '/projects') }}" class="text-gray-400 hover:text-white transition-colors">Projects</a></li>
+                            <li><a href="{{ $getRoute('landing.about', '/about') }}" class="text-gray-400 hover:text-white transition-colors">About</a></li>
+                            <li><a href="{{ $getRoute('landing.contact', '/contact') }}" class="text-gray-400 hover:text-white transition-colors">Contact</a></li>
                         </ul>
                     </div>
 
@@ -339,12 +349,12 @@
                         <ul class="space-y-2">
                             @auth
                                 @if(auth()->user()->isAdmin() || (auth()->user()->isEmployee() && auth()->user()->hasAnyAdminPermission()))
-                                    <li><a href="{{ route('admin.dashboard') }}" class="text-gray-400 hover:text-white transition-colors">Admin Dashboard</a></li>
+                                    <li><a href="{{ $getRoute('admin.dashboard', '/admin/dashboard') }}" class="text-gray-400 hover:text-white transition-colors">Admin Dashboard</a></li>
                                 @else
-                                    <li><a href="{{ route('user.dashboard') }}" class="text-gray-400 hover:text-white transition-colors">User Dashboard</a></li>
+                                    <li><a href="{{ $getRoute('user.dashboard', '/user/dashboard') }}" class="text-gray-400 hover:text-white transition-colors">User Dashboard</a></li>
                                 @endif
                             @else
-                                <li><a href="{{ route('login') }}" class="text-gray-400 hover:text-white transition-colors">Login</a></li>
+                                <li><a href="{{ $getRoute('login', '/login') }}" class="text-gray-400 hover:text-white transition-colors">Login</a></li>
                             @endauth
                         </ul>
                     </div>
@@ -358,7 +368,7 @@
                                 $privacyPolicyPdfPath = $settings['privacy_policy_pdf'] ?? null;
                             @endphp
                             @if($privacyPolicyPdfPath)
-                                <a href="{{ route('landing.privacy-policy') }}" target="_blank" class="text-gray-400 hover:text-white text-sm transition-colors">Privacy Policy</a>
+                                <a href="{{ url('/privacy-policy') }}" target="_blank" class="text-gray-400 hover:text-white text-sm transition-colors">Privacy Policy</a>
                             @else
                                 <a href="#" class="text-gray-400 hover:text-white text-sm transition-colors">Privacy Policy</a>
                             @endif

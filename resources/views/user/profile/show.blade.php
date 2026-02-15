@@ -17,7 +17,7 @@
                 </div>
             </div>
             <div class="flex items-center space-x-2">
-                <a href="{{ route('profile.edit') }}"
+                <a href="{{ url('/profile/edit') }}"
                    class="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-all duration-200">
                     <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
@@ -149,14 +149,14 @@
 
             <!-- Action Buttons -->
             <div class="flex flex-col sm:flex-row gap-3">
-                <a href="{{ route('profile.edit') }}"
+                <a href="{{ url('/profile/edit') }}"
                    class="inline-flex items-center justify-center px-6 py-3 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors duration-200">
                     <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
                     </svg>
                     Edit Profile
                 </a>
-                <a href="{{ route('user-chat.index') }}"
+                <a href="{{ url('/user-chat') }}"
                    class="inline-flex items-center justify-center px-6 py-3 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors duration-200">
                     <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path>
@@ -252,7 +252,7 @@
                                     </div>
                                     <div class="flex flex-col space-y-1">
                                         @if($request->status === 'accepted')
-                                            <a href="{{ route('user-chat.index') }}?friend={{ $request->user->id }}"
+                                            <a href="{{ url('/user-chat') }}?friend={{ $request->user->id }}"
                                                class="bg-indigo-500 text-white px-3 py-1 rounded-md text-xs font-medium hover:bg-indigo-600 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-colors duration-200 text-center">
                                                 Chat
                                             </a>
@@ -312,7 +312,7 @@
                                     </div>
                                     <div class="flex flex-col">
                                         @if($request->status === 'accepted')
-                                            <a href="{{ route('user-chat.index') }}?friend={{ $request->friend->id }}"
+                                            <a href="{{ url('/user-chat') }}?friend={{ $request->friend->id }}"
                                                class="bg-indigo-500 text-white px-3 py-1 rounded-md text-xs font-medium hover:bg-indigo-600 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-colors duration-200 text-center">
                                                 Chat
                                             </a>
@@ -368,7 +368,7 @@
                                         </div>
                                     </div>
                                     <div class="flex flex-col space-y-1">
-                                        <a href="{{ route('user-chat.index') }}?friend={{ $friend->id }}"
+                                        <a href="{{ url('/user-chat') }}?friend={{ $friend->id }}"
                                            class="bg-indigo-500 text-white px-3 py-1 rounded-md text-xs font-medium hover:bg-indigo-600 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-colors duration-200">
                                             Chat
                                         </a>
@@ -471,7 +471,7 @@
             `;
             resultsDiv.classList.remove('hidden');
 
-            fetch(`{{ route('friends.search') }}?q=${encodeURIComponent(query)}`, {
+            fetch(`{{ url('/friends/search') }}?q=${encodeURIComponent(query)}`, {
                 method: 'GET',
                 headers: {
                     'Accept': 'application/json',
@@ -515,7 +515,7 @@
                                         </div>
                                         <div class="flex-shrink-0">
                                             ${user.friendship_status === 'accepted' ?
-                                                `<a href="{{ route('user-chat.index') }}?friend=${user.id}" class="inline-flex items-center px-3 py-1.5 rounded-md text-xs font-medium bg-indigo-500 text-white hover:bg-indigo-600 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-colors duration-200">
+                                                `<a href="{{ url('/user-chat') }}?friend=${user.id}" class="inline-flex items-center px-3 py-1.5 rounded-md text-xs font-medium bg-indigo-500 text-white hover:bg-indigo-600 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-colors duration-200">
                                                     Chat
                                                 </a>` :
                                                 user.friendship_status === 'pending' ?
@@ -576,7 +576,7 @@
             showNotification('Friend request already sent', 'warning');
         } else if (status === 'accepted') {
             // Navigate to chat with the friend
-            window.location.href = '{{ route("user-chat.index") }}?friend=' + userId;
+            window.location.href = '{{ url("/user-chat") }}?friend=' + userId;
         } else if (status === 'blocked') {
             showNotification('User is blocked', 'error');
         }
@@ -587,7 +587,7 @@
     function sendFriendRequest(userId, userName) {
         showLoading();
 
-        fetch('{{ route("friends.send-request") }}', {
+        fetch('{{ url("/friends/send-request") }}', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',

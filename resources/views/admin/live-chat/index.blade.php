@@ -144,7 +144,7 @@
             <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 lg:gap-6">
                 @foreach($tickets as $ticket)
                     <div class="bg-white border border-gray-200 rounded-lg p-4 sm:p-6 hover:shadow-md transition-shadow cursor-pointer"
-                         onclick="window.location.href='{{ route('live-chat.show', $ticket->ticket_number) }}'">
+                         onclick="window.location.href='{{ url('/admin/live-chat/' . $ticket->ticket_number) }}'">
                         <div class="flex items-center justify-between mb-3 sm:mb-4">
                             <div class="flex items-center space-x-2 sm:space-x-3 min-w-0 flex-1">
                                 <div class="relative flex-shrink-0">
@@ -188,7 +188,7 @@
                                     {{ $ticket->messages->first()->message }}
                                 </p>
                                 <p class="text-xs text-gray-500 mt-1">
-                                    {{ $ticket->messages->first()->created_at->diffForHumans() }}
+                                    {{ $ticket->messages->first()->created_at ? \Carbon\Carbon::parse($ticket->messages->first()->created_at)->diffForHumans() : 'N/A' }}
                                 </p>
                             @else
                                 <p class="text-xs sm:text-sm text-gray-500 truncate">{{ $ticket->description }}</p>
@@ -222,7 +222,7 @@
 document.addEventListener('DOMContentLoaded', function() {
     // Update unread count
     function updateUnreadCount() {
-        fetch('{{ route("live-chat.unread-count") }}')
+        fetch('{{ url("/admin/live-chat/unread-count") }}')
             .then(response => response.json())
             .then(data => {
                 const countElement = document.getElementById('unread-count');
@@ -242,7 +242,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // Update user presence counts
     function updatePresenceCounts() {
         // Fetch online users
-        fetch('{{ route("status.online-users") }}')
+        fetch('{{ url("/admin/status/online-users") }}')
             .then(response => response.json())
             .then(data => {
                 document.getElementById('online-count').textContent = data.length;
@@ -250,7 +250,7 @@ document.addEventListener('DOMContentLoaded', function() {
             .catch(error => console.error('Error fetching online users:', error));
 
         // Fetch away users
-        fetch('{{ route("status.away-users") }}')
+        fetch('{{ url("/admin/status/away-users") }}')
             .then(response => response.json())
             .then(data => {
                 document.getElementById('away-count').textContent = data.length;
@@ -258,7 +258,7 @@ document.addEventListener('DOMContentLoaded', function() {
             .catch(error => console.error('Error fetching away users:', error));
 
         // Fetch idle users
-        fetch('{{ route("status.idle-users") }}')
+        fetch('{{ url("/admin/status/idle-users") }}')
             .then(response => response.json())
             .then(data => {
                 document.getElementById('idle-count').textContent = data.length;

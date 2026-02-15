@@ -66,11 +66,11 @@
     <!-- Admin Sidebar -->
     <div class="fixed inset-y-0 left-0 z-50 bg-gray-900 transition-all duration-300 ease-in-out flex flex-col"
          :class="[
-             sidebarOpen ? 'translate-x-0' : '-translate-x-full',
+             sidebarOpen || isDesktop ? 'translate-x-0' : '-translate-x-full',
              sidebarCollapsed ? 'w-16' : 'w-64'
          ]"
          style="transform: translateX(0);"
-         x-bind:style="sidebarOpen ? 'transform: translateX(0);' : 'transform: translateX(-100%);'"
+         x-bind:style="(sidebarOpen || isDesktop) ? 'transform: translateX(0) !important;' : 'transform: translateX(-100%);'"
          x-init="
              if (typeof Alpine !== 'undefined') {
                  if (!Alpine.store('sidebar')) {
@@ -108,7 +108,7 @@
     <nav class="mt-6 px-3 flex-1 overflow-y-auto sidebar-scroll">
         <!-- Dashboard -->
         <div class="mb-6">
-            <a href="{{ route('admin.dashboard') }}"
+            <a href="{{ url('/admin/dashboard') }}"
                class="flex items-center px-2 py-2 text-sm font-medium rounded-md transition-colors duration-200 {{ request()->routeIs('admin.dashboard') ? 'bg-indigo-700 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white' }}"
                :class="sidebarCollapsed ? 'justify-center px-2' : 'px-3'"
                :title="sidebarCollapsed ? 'Dashboard' : ''">
@@ -144,7 +144,7 @@
                 </svg>
             </button>
             <div class="space-y-1" x-show="sidebarCollapsed ? true : open" x-transition:enter="transition ease-out duration-100" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100" x-transition:leave="transition ease-in duration-75" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0">
-                <a href="{{ route('quizzes.index') }}"
+                <a href="{{ url('/admin/quizzes') }}"
                    class="flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors duration-200 {{ request()->routeIs('quizzes.*') ? 'bg-indigo-700 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white' }}"
                    :class="sidebarCollapsed ? 'justify-center' : ''"
                    :title="sidebarCollapsed ? 'Quizzes' : ''">
@@ -155,7 +155,7 @@
                         Quizzes
                     </span>
                 </a>
-                <a href="{{ route('admin.manual-grading') }}"
+                <a href="{{ url('/admin/manual-grading') }}"
                    class="flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors duration-200 {{ request()->routeIs('admin.manual-grading') ? 'bg-indigo-700 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white' }}"
                    :class="sidebarCollapsed ? 'justify-center' : ''"
                    :title="sidebarCollapsed ? 'Manual Grading' : ''">
@@ -166,7 +166,7 @@
                         Manual Grading
                     </span>
                 </a>
-                <a href="{{ route('admin.forum.index') }}"
+                <a href="{{ url('/admin/forum') }}"
                    class="flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors duration-200 {{ request()->routeIs('admin.forum.*') ? 'bg-indigo-700 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white' }}"
                    :class="sidebarCollapsed ? 'justify-center' : ''"
                    :title="sidebarCollapsed ? 'Forum' : ''">
@@ -177,7 +177,7 @@
                         Forum
                     </span>
                 </a>
-                <a href="{{ route('admin.news.index') }}"
+                <a href="{{ url('/admin/news') }}"
                    class="flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors duration-200 {{ request()->routeIs('admin.news.*') ? 'bg-indigo-700 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white' }}"
                    :class="sidebarCollapsed ? 'justify-center' : ''"
                    :title="sidebarCollapsed ? 'News' : ''">
@@ -187,6 +187,55 @@
                     <span class="transition-opacity duration-300" :class="sidebarCollapsed ? 'opacity-0 w-0 overflow-hidden' : 'opacity-100'">
                         News
                     </span>
+                </a>
+            </div>
+        </div>
+        @endif
+
+        <!-- CONFESSION (full access only) -->
+        @if(auth()->user()->isSuperAdmin())
+        <div class="mb-6" x-data="{
+            open: (localStorage.getItem('nav-confession') || 'true') === 'true',
+            toggle() {
+                this.open = !this.open;
+                localStorage.setItem('nav-confession', this.open);
+            }
+        }">
+            <button @click="toggle()"
+                    class="w-full flex items-center justify-between px-3 py-2 text-xs font-semibold text-gray-400 uppercase tracking-wider hover:text-gray-300 transition-opacity duration-300"
+                    :class="sidebarCollapsed ? 'opacity-0 h-0 overflow-hidden pointer-events-none' : 'opacity-100'">
+                <span>CONFESSION</span>
+                <svg class="w-4 h-4 transition-transform duration-200" :class="{ 'rotate-180': open }" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                </svg>
+            </button>
+            <div class="space-y-1" x-show="sidebarCollapsed ? true : open" x-transition:enter="transition ease-out duration-100" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100" x-transition:leave="transition ease-in duration-75" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0">
+                <a href="{{ url('/admin/confession') }}"
+                   class="flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors duration-200 {{ request()->path() === 'admin/confession' ? 'bg-indigo-700 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white' }}"
+                   :class="sidebarCollapsed ? 'justify-center' : ''"
+                   :title="sidebarCollapsed ? 'Contents' : ''">
+                    <svg class="h-5 w-5 flex-shrink-0" :class="sidebarCollapsed ? '' : 'mr-3'" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012 2v6M5 11v6a2 2 0 002 2h14a2 2 0 002-2v-6a2 2 0 00-2-2M5 11V5a2 2 0 012-2m0 0h14"></path>
+                    </svg>
+                    <span class="transition-opacity duration-300" :class="sidebarCollapsed ? 'opacity-0 w-0 overflow-hidden' : 'opacity-100'">Contents</span>
+                </a>
+                <a href="{{ url('/admin/confession/dashboard') }}"
+                   class="flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors duration-200 {{ request()->path() === 'admin/confession/dashboard' ? 'bg-indigo-700 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white' }}"
+                   :class="sidebarCollapsed ? 'justify-center' : ''"
+                   :title="sidebarCollapsed ? 'Dashboard' : ''">
+                    <svg class="h-5 w-5 flex-shrink-0" :class="sidebarCollapsed ? '' : 'mr-3'" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
+                    </svg>
+                    <span class="transition-opacity duration-300" :class="sidebarCollapsed ? 'opacity-0 w-0 overflow-hidden' : 'opacity-100'">Dashboard</span>
+                </a>
+                <a href="{{ url('admin/confession/banned-words') }}"
+                   class="flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors duration-200 {{ request()->path() === 'admin/confession/banned-words' ? 'bg-indigo-700 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white' }}"
+                   :class="sidebarCollapsed ? 'justify-center' : ''"
+                   :title="sidebarCollapsed ? 'Banned words' : ''">
+                    <svg class="h-5 w-5 flex-shrink-0" :class="sidebarCollapsed ? '' : 'mr-3'" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"></path>
+                    </svg>
+                    <span class="transition-opacity duration-300" :class="sidebarCollapsed ? 'opacity-0 w-0 overflow-hidden' : 'opacity-100'">Banned words</span>
                 </a>
             </div>
         </div>
@@ -210,7 +259,7 @@
                 </svg>
             </button>
             <div class="space-y-1" x-show="sidebarCollapsed ? true : open" x-transition:enter="transition ease-out duration-100" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100" x-transition:leave="transition ease-in duration-75" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0">
-                <a href="{{ route('admin.analytics.index') }}"
+                <a href="{{ url('/admin/analytics') }}"
                    class="flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors duration-200 {{ request()->routeIs('admin.analytics.index') ? 'bg-indigo-700 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white' }}"
                    :class="sidebarCollapsed ? 'justify-center' : ''"
                    :title="sidebarCollapsed ? 'Analytics' : ''">
@@ -221,7 +270,7 @@
                         Analytics
                     </span>
                 </a>
-                <a href="{{ route('admin.analytics.error-logs') }}"
+                <a href="{{ url('/admin/analytics/error-logs') }}"
                    class="flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors duration-200 {{ request()->routeIs('admin.analytics.error-logs') ? 'bg-indigo-700 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white' }}"
                    :class="sidebarCollapsed ? 'justify-center' : ''"
                    :title="sidebarCollapsed ? 'Error Logs' : ''">
@@ -232,7 +281,7 @@
                         Error Logs
                     </span>
                 </a>
-                <a href="{{ route('admin.user-activity.index') }}"
+                <a href="{{ url('/admin/user-activity') }}"
                    class="flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors duration-200 {{ request()->routeIs('admin.user-activity.*') ? 'bg-indigo-700 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white' }}"
                    :class="sidebarCollapsed ? 'justify-center' : ''"
                    :title="sidebarCollapsed ? 'User Activity' : ''">
@@ -266,7 +315,7 @@
                 </svg>
             </button>
             <div class="space-y-1" x-show="sidebarCollapsed ? true : open" x-transition:enter="transition ease-out duration-100" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100" x-transition:leave="transition ease-in duration-75" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0">
-                <a href="{{ route('admin.kpi.dashboard') }}"
+                <a href="{{ url('/admin/kpi/dashboard') }}"
                    class="flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors duration-200 {{ request()->routeIs('admin.kpi.*') ? 'bg-indigo-700 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white' }}"
                    :class="sidebarCollapsed ? 'justify-center' : ''"
                    :title="sidebarCollapsed ? 'KPI Dashboard' : ''">
@@ -299,7 +348,7 @@
                 </svg>
             </button>
             <div class="space-y-1" x-show="sidebarCollapsed ? true : open" x-transition:enter="transition ease-out duration-100" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100" x-transition:leave="transition ease-in duration-75" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0">
-                <a href="{{ route('admin.dtr.index') }}"
+                <a href="{{ url('/admin/dtr') }}"
                    class="flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors duration-200 {{ request()->routeIs('admin.dtr.*') ? 'bg-indigo-700 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white' }}"
                    :class="sidebarCollapsed ? 'justify-center' : ''"
                    :title="sidebarCollapsed ? 'DTR' : ''">
@@ -310,7 +359,7 @@
                         DTR (Time Records)
                     </span>
                 </a>
-                <a href="{{ route('admin.time-report.index') }}"
+                <a href="{{ url('/admin/time-report') }}"
                    class="flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors duration-200 {{ request()->routeIs('admin.time-report.*') ? 'bg-indigo-700 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white' }}"
                    :class="sidebarCollapsed ? 'justify-center' : ''"
                    :title="sidebarCollapsed ? 'Time Report' : ''">
@@ -321,7 +370,7 @@
                         Time Report
                     </span>
                 </a>
-                <a href="{{ route('admin.leave-requests.index') }}"
+                <a href="{{ url('/admin/leave-requests') }}"
                    class="flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors duration-200 {{ request()->routeIs('admin.leave-requests.index') ? 'bg-indigo-700 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white' }}"
                    :class="sidebarCollapsed ? 'justify-center' : ''"
                    :title="sidebarCollapsed ? 'Leave Requests' : ''">
@@ -332,7 +381,7 @@
                         Leave Requests
                     </span>
                 </a>
-                <a href="{{ route('admin.leave-requests.calendar') }}"
+                <a href="{{ url('/admin/leave-calendar') }}"
                    class="flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors duration-200 {{ request()->routeIs('admin.leave-requests.calendar') ? 'bg-indigo-700 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white' }}"
                    :class="sidebarCollapsed ? 'justify-center' : ''"
                    :title="sidebarCollapsed ? 'Leave Calendar' : ''">
@@ -365,7 +414,7 @@
                 </svg>
             </button>
             <div class="space-y-1" x-show="sidebarCollapsed ? true : open" x-transition:enter="transition ease-out duration-100" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100" x-transition:leave="transition ease-in duration-75" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0">
-                <a href="{{ route('admin.student-management.students') }}"
+                <a href="{{ url('/admin/student-management/students') }}"
                    class="flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors duration-200 {{ request()->routeIs('admin.student-management.students') ? 'bg-indigo-700 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white' }}"
                    :class="sidebarCollapsed ? 'justify-center' : ''"
                    :title="sidebarCollapsed ? 'Students' : ''">
@@ -376,7 +425,7 @@
                         Students
                     </span>
                 </a>
-                <a href="{{ route('admin.student-management.dashboard') }}"
+                <a href="{{ url('/admin/student-management/dashboard') }}"
                    class="flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors duration-200 {{ request()->routeIs('admin.student-management.dashboard') ? 'bg-indigo-700 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white' }}"
                    :class="sidebarCollapsed ? 'justify-center' : ''"
                    :title="sidebarCollapsed ? 'Student Time Dashboard' : ''">
@@ -387,7 +436,7 @@
                         Student Time Dashboard
                     </span>
                 </a>
-                <a href="{{ route('admin.student-dtr.index') }}"
+                <a href="{{ url('/admin/student-dtr') }}"
                    class="flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors duration-200 {{ request()->routeIs('admin.student-dtr.*') ? 'bg-indigo-700 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white' }}"
                    :class="sidebarCollapsed ? 'justify-center' : ''"
                    :title="sidebarCollapsed ? 'Student DTR' : ''">
@@ -398,7 +447,7 @@
                         DTR (Time Records)
                     </span>
                 </a>
-                <a href="{{ route('admin.student-leave-requests.index') }}"
+                <a href="{{ url('/admin/student-leave-requests') }}"
                    class="flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors duration-200 {{ request()->routeIs('admin.student-leave-requests.index') ? 'bg-indigo-700 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white' }}"
                    :class="sidebarCollapsed ? 'justify-center' : ''"
                    :title="sidebarCollapsed ? 'Student Leave Requests' : ''">
@@ -409,7 +458,7 @@
                         Student Leave Requests
                     </span>
                 </a>
-                <a href="{{ route('admin.student-leave-requests.calendar') }}"
+                <a href="{{ url('/admin/student-leave-calendar') }}"
                    class="flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors duration-200 {{ request()->routeIs('admin.student-leave-requests.calendar') ? 'bg-indigo-700 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white' }}"
                    :class="sidebarCollapsed ? 'justify-center' : ''"
                    :title="sidebarCollapsed ? 'Student Leave Calendar' : ''">
@@ -421,7 +470,7 @@
                     </span>
                 </a>
                 @if(auth()->user()->isAdmin() || auth()->user()->hasAnyAdminPermission())
-                <a href="{{ route('admin.time-requests.index') }}"
+                <a href="{{ url('/admin/time-requests') }}"
                    class="flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors duration-200 {{ request()->routeIs('admin.time-requests.*') ? 'bg-indigo-700 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white' }}"
                    :class="sidebarCollapsed ? 'justify-center' : ''"
                    :title="sidebarCollapsed ? 'Time Requests' : ''">
@@ -455,7 +504,7 @@
                 </svg>
             </button>
             <div class="space-y-1" x-show="sidebarCollapsed ? true : open" x-transition:enter="transition ease-out duration-100" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100" x-transition:leave="transition ease-in duration-75" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0">
-                <a href="{{ route('admin.hiring-process.index') }}"
+                <a href="{{ url('/admin/hiring-process') }}"
                    class="flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors duration-200 {{ request()->routeIs('admin.hiring-process.index') ? 'bg-indigo-700 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white' }}"
                    :class="sidebarCollapsed ? 'justify-center' : ''"
                    :title="sidebarCollapsed ? 'Hiring Process' : ''">
@@ -466,7 +515,7 @@
                         Hiring Process
                     </span>
                 </a>
-                <a href="{{ route('admin.hiring-positions.index') }}"
+                <a href="{{ url('/admin/hiring-positions') }}"
                    class="flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors duration-200 {{ request()->routeIs('admin.hiring-positions.*') ? 'bg-indigo-700 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white' }}"
                    :class="sidebarCollapsed ? 'justify-center' : ''"
                    :title="sidebarCollapsed ? 'Positions' : ''">
@@ -477,7 +526,7 @@
                         Positions
                     </span>
                 </a>
-                <a href="{{ route('admin.hiring-applications.index') }}"
+                <a href="{{ url('/admin/hiring-applications') }}"
                    class="flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors duration-200 {{ request()->routeIs('admin.hiring-applications.index') || request()->routeIs('admin.hiring-applications.show') ? 'bg-indigo-700 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white' }}"
                    :class="sidebarCollapsed ? 'justify-center' : ''"
                    :title="sidebarCollapsed ? 'Applications' : ''">
@@ -488,8 +537,8 @@
                         Applications
                     </span>
                 </a>
-                <a href="{{ route('admin.hiring-process.applicants', ['view' => 'hired']) }}#hired-applicants"
-                   class="flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors duration-200 {{ request()->routeIs('admin.hiring-process.applicants') && request('view') === 'hired' ? 'bg-indigo-700 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white' }}"
+                <a href="{{ url('/admin/hiring-process/applicants?view=hired') }}#hired-applicants"
+                   class="flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors duration-200 {{ request()->is('admin/hiring-process/applicants') && request('view') === 'hired' ? 'bg-indigo-700 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white' }}"
                    :class="sidebarCollapsed ? 'justify-center' : ''"
                    :title="sidebarCollapsed ? 'Hired Applicants' : ''">
                     <svg class="h-5 w-5 flex-shrink-0" :class="sidebarCollapsed ? '' : 'mr-3'" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -499,7 +548,7 @@
                         Hired Applicants
                     </span>
                 </a>
-                <a href="{{ route('admin.hiring-applications.calendar') }}"
+                <a href="{{ url('/admin/hiring-applications/calendar') }}"
                    class="flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors duration-200 {{ request()->routeIs('admin.hiring-applications.calendar') ? 'bg-indigo-700 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white' }}"
                    :class="sidebarCollapsed ? 'justify-center' : ''"
                    :title="sidebarCollapsed ? 'Calendar Interview' : ''">
@@ -532,7 +581,7 @@
                 </svg>
             </button>
             <div class="space-y-1" x-show="sidebarCollapsed ? true : open" x-transition:enter="transition ease-out duration-100" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100" x-transition:leave="transition ease-in duration-75" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0">
-                <a href="{{ route('contact-messages.index') }}"
+                <a href="{{ url('/admin/contact-messages') }}"
                    class="flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors duration-200 {{ request()->routeIs('contact-messages.*') ? 'bg-indigo-700 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white' }}"
                    :class="sidebarCollapsed ? 'justify-center' : ''"
                    :title="sidebarCollapsed ? 'Messages' : ''">
@@ -543,7 +592,7 @@
                         Messages
                     </span>
                 </a>
-                <a href="{{ route('live-chat.index') }}"
+                <a href="{{ url('/admin/live-chat') }}"
                    class="flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors duration-200 {{ request()->routeIs('live-chat.*') ? 'bg-indigo-700 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white' }}"
                    :class="sidebarCollapsed ? 'justify-center' : ''"
                    :title="sidebarCollapsed ? 'Live Chat' : ''">
@@ -554,7 +603,7 @@
                         Live Chat
                     </span>
                 </a>
-                <a href="{{ route('admin.feedback.index') }}"
+                <a href="{{ url('/admin/feedback') }}"
                    class="flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors duration-200 {{ request()->routeIs('admin.feedback.*') ? 'bg-indigo-700 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white' }}"
                    :class="sidebarCollapsed ? 'justify-center' : ''"
                    :title="sidebarCollapsed ? 'Feedback' : ''">
@@ -587,7 +636,7 @@
                 </svg>
             </button>
             <div class="space-y-1" x-show="sidebarCollapsed ? true : open" x-transition:enter="transition ease-out duration-100" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100" x-transition:leave="transition ease-in duration-75" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0">
-                <a href="{{ route('admin.users.index') }}"
+                <a href="{{ url('/admin/users') }}"
                    class="flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors duration-200 {{ request()->routeIs('admin.users.*') ? 'bg-indigo-700 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white' }}"
                    :class="sidebarCollapsed ? 'justify-center' : ''"
                    :title="sidebarCollapsed ? 'Users' : ''">
@@ -598,7 +647,7 @@
                         Users
                     </span>
                 </a>
-                <a href="{{ route('admin.universities.index') }}"
+                <a href="{{ url('/admin/universities') }}"
                    class="flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors duration-200 {{ request()->routeIs('admin.universities.*') ? 'bg-indigo-700 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white' }}"
                    :class="sidebarCollapsed ? 'justify-center' : ''"
                    :title="sidebarCollapsed ? 'Universities' : ''">
@@ -609,7 +658,7 @@
                         Universities
                     </span>
                 </a>
-                <a href="{{ route('admin.departments.index') }}"
+                <a href="{{ url('/admin/departments') }}"
                    class="flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors duration-200 {{ request()->routeIs('admin.departments.*') ? 'bg-indigo-700 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white' }}"
                    :class="sidebarCollapsed ? 'justify-center' : ''"
                    :title="sidebarCollapsed ? 'Departments' : ''">
@@ -626,7 +675,7 @@
 
         <!-- File Storage -->
         <div class="mb-6">
-            <a href="{{ route('admin.files.index') }}"
+            <a href="{{ url('/admin/files') }}"
                class="flex items-center px-2 py-2 text-sm font-medium rounded-md transition-colors duration-200 {{ request()->routeIs('admin.files.*') ? 'bg-indigo-700 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white' }}"
                :class="sidebarCollapsed ? 'justify-center px-2' : 'px-3'"
                :title="sidebarCollapsed ? 'File Storage' : ''">
@@ -682,17 +731,19 @@
                  x-transition:leave-end="opacity-0 transform scale-95"
                  :class="sidebarCollapsed ? 'hidden' : ''"
                  class="ml-6 mt-1 space-y-1">
-                <a href="{{ route('admin.tasks.analytics') }}"
-                   class="flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors duration-200 {{ request()->routeIs('admin.tasks.analytics') ? 'bg-indigo-700 text-white' : 'text-gray-400 hover:bg-gray-700 hover:text-gray-300' }}"
-                   :title="sidebarCollapsed ? 'Task Analytics' : ''">
+                @if(auth()->user()->isSuperAdmin())
+                <a href="{{ url('/admin/tasks/dashboard') }}"
+                   class="flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors duration-200 {{ request()->routeIs('admin.tasks.dashboard') ? 'bg-indigo-700 text-white' : 'text-gray-400 hover:bg-gray-700 hover:text-gray-300' }}"
+                   :title="sidebarCollapsed ? 'Task Dashboard' : ''">
                     <svg class="h-5 w-5 flex-shrink-0 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2H5a2 2 0 00-2-2z"></path>
                     </svg>
                     <span class="transition-opacity duration-300" :class="sidebarCollapsed ? 'opacity-0 w-0 overflow-hidden' : 'opacity-100'">
-                        Task Analytics
+                        Task Dashboard
                     </span>
                 </a>
-                <a href="{{ route('admin.tasks.index', ['type' => 'personal']) }}"
+                @endif
+                <a href="{{ url('/admin/tasks?type=personal') }}"
                    class="flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors duration-200 {{ request()->routeIs('admin.tasks.index') && request('type') == 'personal' ? 'bg-indigo-700 text-white' : 'text-gray-400 hover:bg-gray-700 hover:text-gray-300' }}"
                    :title="sidebarCollapsed ? 'My Tasks' : ''">
                     <svg class="h-5 w-5 flex-shrink-0 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -702,7 +753,7 @@
                         My Tasks
                     </span>
                 </a>
-                <a href="{{ route('admin.tasks.index', ['type' => 'group']) }}"
+                <a href="{{ url('/admin/tasks?type=group') }}"
                    class="flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors duration-200 {{ request()->routeIs('admin.tasks.index') && request('type') == 'group' ? 'bg-indigo-700 text-white' : 'text-gray-400 hover:bg-gray-700 hover:text-gray-300' }}"
                    :title="sidebarCollapsed ? 'Group Tasks' : ''">
                     <svg class="h-5 w-5 flex-shrink-0 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -733,7 +784,7 @@
                 </svg>
             </button>
             <div class="space-y-1" x-show="sidebarCollapsed ? true : open" x-transition:enter="transition ease-out duration-100" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100" x-transition:leave="transition ease-in duration-75" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0">
-                <a href="{{ route('admin.settings.index') }}"
+                <a href="{{ url('/admin/settings') }}"
                    class="flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors duration-200 settings-link {{ request()->routeIs('admin.settings.*') ? 'bg-indigo-700 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white' }}"
                    :class="sidebarCollapsed ? 'justify-center' : ''"
                    :title="sidebarCollapsed ? 'Settings' : ''"
@@ -746,7 +797,7 @@
                         Settings
                     </span>
                 </a>
-                <a href="{{ route('admin.landing-page.index') }}"
+                <a href="{{ url('/admin/landing-page') }}"
                    class="flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors duration-200 {{ request()->routeIs('admin.landing-page.*') ? 'bg-indigo-700 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white' }}"
                    :class="sidebarCollapsed ? 'justify-center' : ''"
                    :title="sidebarCollapsed ? 'Landing Page' : ''">
@@ -757,7 +808,7 @@
                         Landing Page
                     </span>
                 </a>
-                <a href="{{ route('admin.stacks.index') }}"
+                <a href="{{ url('/admin/stacks') }}"
                    class="flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors duration-200 {{ request()->routeIs('admin.stacks.*') ? 'bg-indigo-700 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white' }}"
                    :class="sidebarCollapsed ? 'justify-center' : ''"
                    :title="sidebarCollapsed ? 'Stacks' : ''">
@@ -769,7 +820,7 @@
                     </span>
                 </a>
                 @if(auth()->user()->canAccessSystem())
-                <a href="{{ route('admin.admin-permissions.index') }}"
+                <a href="{{ url('/admin/admin-permissions') }}"
                    class="flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors duration-200 {{ request()->routeIs('admin.admin-permissions.*') ? 'bg-indigo-700 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white' }}"
                    :class="sidebarCollapsed ? 'justify-center' : ''"
                    :title="sidebarCollapsed ? 'Admin Permissions' : ''">
@@ -804,7 +855,7 @@
             </button>
             <div class="space-y-1" x-show="sidebarCollapsed ? true : open" x-transition:enter="transition ease-out duration-100" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100" x-transition:leave="transition ease-in duration-75" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0">
                 <!-- User Dashboard -->
-                <a href="{{ route('user.dashboard') }}"
+                <a href="{{ url('/dashboard') }}"
                    class="flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors duration-200 {{ request()->routeIs('user.dashboard') ? 'bg-indigo-700 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white' }}"
                    :class="sidebarCollapsed ? 'justify-center' : ''"
                    :title="sidebarCollapsed ? 'User Dashboard' : ''">
@@ -817,7 +868,7 @@
                 </a>
 
                 <!-- Quizzes -->
-                <a href="{{ route('user.quizzes.index') }}"
+                <a href="{{ url('/quizzes') }}"
                    class="flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors duration-200 {{ request()->routeIs('user.quizzes.*') ? 'bg-indigo-700 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white' }}"
                    :class="sidebarCollapsed ? 'justify-center' : ''"
                    :title="sidebarCollapsed ? 'Quizzes' : ''">
@@ -831,7 +882,7 @@
 
                 <!-- DTR (Employee Only) -->
                 @if(auth()->user()->role === 'employee')
-                <a href="{{ route('user.dtr.index') }}"
+                <a href="{{ url('/dtr') }}"
                    class="flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors duration-200 {{ request()->routeIs('user.dtr.*') ? 'bg-indigo-700 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white' }}"
                    :class="sidebarCollapsed ? 'justify-center' : ''"
                    :title="sidebarCollapsed ? 'DTR' : ''">
@@ -846,7 +897,7 @@
 
                 <!-- Leave Requests (Employee & Student) -->
                 @if(in_array(auth()->user()->role, ['employee', 'student']))
-                <a href="{{ route('user.leave-requests.index') }}"
+                <a href="{{ url('/leave-requests') }}"
                    class="flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors duration-200 {{ request()->routeIs('user.leave-requests.*') ? 'bg-indigo-700 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white' }}"
                    :class="sidebarCollapsed ? 'justify-center' : ''"
                    :title="sidebarCollapsed ? 'Leave Requests' : ''">
@@ -860,7 +911,7 @@
                 @endif
 
                 <!-- Chat -->
-                <a href="{{ route('user-chat.index') }}"
+                <a href="{{ url('/user-chat') }}"
                    class="flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors duration-200 {{ request()->routeIs('user-chat.*') ? 'bg-indigo-700 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white' }}"
                    :class="sidebarCollapsed ? 'justify-center' : ''"
                    :title="sidebarCollapsed ? 'Chat' : ''">
@@ -873,7 +924,7 @@
                 </a>
 
                 <!-- Forum -->
-                <a href="{{ route('forum.index') }}"
+                <a href="{{ url('/forum') }}"
                    class="flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors duration-200 {{ request()->routeIs('forum.*') ? 'bg-indigo-700 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white' }}"
                    :class="sidebarCollapsed ? 'justify-center' : ''"
                    :title="sidebarCollapsed ? 'Forum' : ''">
@@ -886,7 +937,7 @@
                 </a>
 
                 <!-- Feedback -->
-                <a href="{{ route('user.feedback.index') }}"
+                <a href="{{ url('/feedback') }}"
                    class="flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors duration-200 {{ request()->routeIs('user.feedback.*') ? 'bg-indigo-700 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white' }}"
                    :class="sidebarCollapsed ? 'justify-center' : ''"
                    :title="sidebarCollapsed ? 'Feedback' : ''">
@@ -900,7 +951,7 @@
 
                 <!-- Application (Applicant) -->
                 @if(auth()->user()->role === 'applicant')
-                <a href="{{ route('user.hiring-application.show') }}"
+                <a href="{{ url('/hiring-application') }}"
                    class="flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors duration-200 {{ request()->routeIs('user.hiring-application.*') ? 'bg-indigo-700 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white' }}"
                    :class="sidebarCollapsed ? 'justify-center' : ''"
                    :title="sidebarCollapsed ? 'Application' : ''">
@@ -929,7 +980,7 @@
                 <p class="text-sm font-medium text-white truncate">{{ auth()->user()->name }}</p>
                 <p class="text-xs text-gray-400 truncate">{{ auth()->user()->getRoleLabel() }}</p>
             </div>
-                <form method="POST" action="{{ route('logout') }}" :class="sidebarCollapsed ? 'ml-0' : ''">
+                <form method="POST" action="{{ url('/logout') }}" :class="sidebarCollapsed ? 'ml-0' : ''">
                 @csrf
                 <button type="submit" class="text-gray-400 hover:text-white" :title="sidebarCollapsed ? 'Logout' : ''">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">

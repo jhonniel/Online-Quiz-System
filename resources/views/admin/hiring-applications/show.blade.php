@@ -6,7 +6,7 @@
     <div class="bg-gradient-to-r from-indigo-500 to-indigo-600 rounded-lg shadow-sm p-6">
         <div class="flex items-center justify-between">
             <div class="flex items-center">
-                <a href="{{ route('admin.hiring-applications.index') }}" class="mr-4 text-white hover:text-indigo-100">
+                <a href="{{ url('/admin/hiring-applications') }}" class="mr-4 text-white hover:text-indigo-100">
                     <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
                     </svg>
@@ -130,7 +130,7 @@
                     <div class="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
                         <h2 class="text-lg font-medium text-gray-900">Resume</h2>
                         @if($application->resume_path)
-                            <a href="{{ route('admin.hiring-applications.download-resume', $application) }}"
+                            <a href="{{ url('/admin/hiring-applications/' . $application->id . '/download-resume') }}"
                                class="inline-flex items-center px-3 py-1.5 border border-gray-300 rounded-md shadow-sm text-xs font-medium text-gray-700 bg-white hover:bg-gray-50">
                                 <svg class="w-3 h-3 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
@@ -144,7 +144,7 @@
                             <div>
                                 <label class="text-sm font-medium text-gray-500 block mb-2">Uploaded Resume</label>
                                 <div class="border border-gray-300 rounded-lg overflow-hidden bg-gray-50">
-                                    <iframe src="{{ route('admin.hiring-applications.view-resume', $application) }}"
+                                    <iframe src="{{ url('/admin/hiring-applications/' . $application->id . '/view-resume') }}"
                                             class="w-full h-[600px] border-0"
                                             title="Resume Preview">
                                     </iframe>
@@ -241,7 +241,7 @@
                         <div class="mt-4 pt-4 border-t border-gray-200">
                             <label class="text-sm font-medium text-gray-500">Acceptance Link</label>
                             <div class="mt-2 flex">
-                                <input type="text" readonly value="{{ route('hiring.accept', $application->acceptance_token) }}"
+                                <input type="text" readonly value="{{ url('/hiring/accept/' . $application->acceptance_token) }}"
                                        class="flex-1 px-3 py-2 text-xs border border-gray-300 rounded-l-md bg-gray-50">
                                 <button onclick="copyToClipboard(this.previousElementSibling.value)"
                                         class="px-3 py-2 border border-l-0 border-gray-300 rounded-r-md bg-gray-50 hover:bg-gray-100">
@@ -287,7 +287,7 @@
                     <h2 class="text-lg font-medium text-gray-900">Admin Notes</h2>
                 </div>
                 <div class="px-6 py-6">
-                    <form action="{{ route('admin.hiring-applications.update-admin-notes', $application) }}" method="POST">
+                    <form action="{{ url('/admin/hiring-applications/' . $application->id . '/admin-notes') }}" method="POST">
                         @csrf
                         @method('PATCH')
                         <textarea name="admin_notes"
@@ -320,7 +320,7 @@
                 </div>
                 <div class="px-6 py-6 space-y-3">
                     @if($application->status == 'pending')
-                        <form action="{{ route('admin.hiring-applications.accept', $application) }}" method="POST">
+                        <form action="{{ url('/admin/hiring-applications/' . $application->id . '/accept') }}" method="POST">
                             @csrf
                             <div class="mb-3">
                                 <label for="interview_date" class="block text-sm font-medium text-gray-700 mb-1">
@@ -360,7 +360,7 @@
                                 A user account will be automatically created with role "Applicant" and credentials will be sent via email.
                             </p>
                         </form>
-                        <form action="{{ route('admin.hiring-applications.reject', $application) }}" method="POST">
+                        <form action="{{ url('/admin/hiring-applications/' . $application->id . '/reject') }}" method="POST">
                             @csrf
                             <textarea name="admin_notes" rows="3" placeholder="Add notes (optional)"
                                       class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm mb-3"></textarea>
@@ -375,7 +375,7 @@
                             </button>
                         </form>
                     @elseif($application->status == 'rejected' && auth()->user()->isAdmin())
-                        <form action="{{ route('admin.hiring-applications.reconsider', $application) }}" method="POST">
+                        <form action="{{ url('/admin/hiring-applications/' . $application->id . '/reconsider') }}" method="POST">
                             @csrf
                             <div class="mb-3">
                                 <label for="interview_date_reconsider" class="block text-sm font-medium text-gray-700 mb-1">
@@ -416,7 +416,7 @@
                             </p>
                         </form>
                     @elseif($application->status == 'accepted')
-                        <form action="{{ route('admin.hiring-applications.schedule-interview', $application) }}" method="POST">
+                        <form action="{{ url('/admin/hiring-applications/' . $application->id . '/schedule-interview') }}" method="POST">
                             @csrf
                             <div class="mb-3">
                                 <label for="interview_date_schedule" class="block text-sm font-medium text-gray-700 mb-1">
@@ -454,7 +454,7 @@
                             </button>
                         </form>
                     @elseif($application->status == 'interview_scheduled')
-                        <form action="{{ route('admin.hiring-applications.schedule-interview', $application) }}" method="POST">
+                        <form action="{{ url('/admin/hiring-applications/' . $application->id . '/schedule-interview') }}" method="POST">
                             @csrf
                             <div class="mb-3">
                                 <label for="interview_date_reschedule" class="block text-sm font-medium text-gray-700 mb-1">
@@ -492,7 +492,7 @@
                             </button>
                         </form>
                         @if($application->interview_date && $application->interview_date->lt(now()))
-                            <form action="{{ route('admin.hiring-applications.send-follow-up', $application) }}" method="POST" class="mt-3">
+                            <form action="{{ url('/admin/hiring-applications/' . $application->id . '/send-follow-up') }}" method="POST" class="mt-3">
                                 @csrf
                                 <button type="submit" class="action-button w-full inline-flex justify-center items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed" data-loading-text="Sending...">
                                     <span class="button-text">Send Follow-Up Email</span>
@@ -509,7 +509,7 @@
                             </form>
                         @endif
                         @if($application->user_id)
-                            <form action="{{ route('admin.hiring-applications.mark-interview-done', $application) }}" method="POST" class="mt-3">
+                            <form action="{{ url('/admin/hiring-applications/' . $application->id . '/mark-interview-done') }}" method="POST" class="mt-3">
                                 @csrf
                                 <div class="mb-3">
                                     <label for="admin_notes_done" class="block text-sm font-medium text-gray-700 mb-1">
@@ -537,7 +537,7 @@
                             $isInternship = $application->hiringPosition && strcasecmp($application->hiringPosition->employment_type ?? '', 'Internship') === 0;
                         @endphp
                         @if($isInternship)
-                            <form action="{{ route('admin.hiring-applications.accept-intern', $application) }}" method="POST" onsubmit="return confirm('Are you sure you want to accept this intern? Their role will change from applicant to student and they will be able to login.');">
+                            <form action="{{ url('/admin/hiring-applications/' . $application->id . '/accept-intern') }}" method="POST" onsubmit="return confirm('Are you sure you want to accept this intern? Their role will change from applicant to student and they will be able to login.');">
                                 @csrf
                                 <div class="mb-3">
                                     <label for="admin_notes_intern_done" class="block text-sm font-medium text-gray-700 mb-1">
@@ -563,7 +563,7 @@
                                 </p>
                             </form>
                         @else
-                            <form action="{{ route('admin.hiring-applications.mark-hired', $application) }}" method="POST" onsubmit="return confirm('Are you sure you want to mark this applicant as hired? Their role will change from applicant to employee and they will be able to login.');">
+                            <form action="{{ url('/admin/hiring-applications/' . $application->id . '/mark-hired') }}" method="POST" onsubmit="return confirm('Are you sure you want to mark this applicant as hired? Their role will change from applicant to employee and they will be able to login.');">
                                 @csrf
                                 <div class="mb-3">
                                     <label for="admin_notes_hired_done" class="block text-sm font-medium text-gray-700 mb-1">
@@ -596,7 +596,7 @@
                             $isInternship = $application->hiringPosition && strcasecmp($application->hiringPosition->employment_type ?? '', 'Internship') === 0;
                         @endphp
                         @if($isInternship)
-                            <form action="{{ route('admin.hiring-applications.accept-intern', $application) }}" method="POST" onsubmit="return confirm('Are you sure you want to accept this intern? Their role will change from applicant to student and they will be able to login.');">
+                            <form action="{{ url('/admin/hiring-applications/' . $application->id . '/accept-intern') }}" method="POST" onsubmit="return confirm('Are you sure you want to accept this intern? Their role will change from applicant to student and they will be able to login.');">
                                 @csrf
                                 <div class="mb-3">
                                     <label for="admin_notes_intern" class="block text-sm font-medium text-gray-700 mb-1">
@@ -622,7 +622,7 @@
                                 </p>
                             </form>
                         @else
-                            <form action="{{ route('admin.hiring-applications.mark-hired', $application) }}" method="POST" onsubmit="return confirm('Are you sure you want to mark this applicant as hired? They will be able to login to their account.');">
+                            <form action="{{ url('/admin/hiring-applications/' . $application->id . '/mark-hired') }}" method="POST" onsubmit="return confirm('Are you sure you want to mark this applicant as hired? They will be able to login to their account.');">
                                 @csrf
                                 <div class="mb-3">
                                     <label for="admin_notes_hired" class="block text-sm font-medium text-gray-700 mb-1">
@@ -650,7 +650,7 @@
                         @endif
                     @endif
                     @if($application->status == 'hired' && $application->user_id)
-                        <form action="{{ route('admin.hiring-applications.cancel-hired', $application) }}" method="POST" onsubmit="return confirm('Are you sure you want to cancel the hired status? The user account will be deactivated and they will not be able to login.');">
+                        <form action="{{ url('/admin/hiring-applications/' . $application->id . '/cancel-hired') }}" method="POST" onsubmit="return confirm('Are you sure you want to cancel the hired status? The user account will be deactivated and they will not be able to login.');">
                             @csrf
                             <div class="mb-3">
                                 <label for="admin_notes_cancel" class="block text-sm font-medium text-gray-700 mb-1">
@@ -677,7 +677,7 @@
                         </form>
                     @endif
                     @if(auth()->user()->isAdmin())
-                        <form action="{{ route('admin.hiring-applications.destroy', $application) }}" method="POST" class="delete-form">
+                        <form action="{{ url('/admin/hiring-applications/' . $application->id) }}" method="POST" class="delete-form">
                         @csrf
                         @method('DELETE')
                         <button type="submit" class="action-button w-full inline-flex justify-center items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed" data-loading-text="Deleting...">

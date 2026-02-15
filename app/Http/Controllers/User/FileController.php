@@ -566,7 +566,7 @@ class FileController extends Controller
         }
 
         if ($file->isFolder()) {
-            return redirect()->route('user.files.index', ['folder_id' => $file->id]);
+            return redirect('/files?folder_id=' . $file->id);
         }
 
         try {

@@ -97,7 +97,7 @@
                 <div class="flex-1 flex flex-col overflow-y-auto bg-gray-800">
                     <nav class="flex-1 px-2 py-4 space-y-1">
                         <!-- Dashboard -->
-                        <a href="{{ route('user.dashboard') }}"
+                        <a href="{{ url('/dashboard') }}"
                            class="group flex items-center px-2 py-2 text-sm font-medium rounded-md transition-colors duration-200 {{ request()->routeIs('user.dashboard') ? 'bg-indigo-700 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white' }}"
                            :class="sidebarCollapsed ? 'justify-center' : ''"
                            :title="sidebarCollapsed ? 'Dashboard' : ''">
@@ -110,7 +110,7 @@
                         </a>
 
                         <!-- Quizzes -->
-                        <a href="{{ route('user.quizzes.index') }}"
+                        <a href="{{ url('/quizzes') }}"
                            class="group flex items-center px-2 py-2 text-sm font-medium rounded-md transition-colors duration-200 {{ request()->routeIs('user.quizzes.*') ? 'bg-indigo-700 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white' }}"
                            :class="sidebarCollapsed ? 'justify-center' : ''"
                            :title="sidebarCollapsed ? 'Quizzes' : ''">
@@ -124,7 +124,7 @@
 
                         <!-- Application (Applicant) -->
                         @if(auth()->user()->role === 'applicant')
-                        <a href="{{ route('user.hiring-application.show') }}"
+                        <a href="{{ url('/hiring-application') }}"
                            class="group flex items-center px-2 py-2 text-sm font-medium rounded-md transition-colors duration-200 {{ request()->routeIs('user.hiring-application.*') ? 'bg-indigo-700 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white' }}"
                            :class="sidebarCollapsed ? 'justify-center' : ''"
                            :title="sidebarCollapsed ? 'Application' : ''">
@@ -139,7 +139,7 @@
 
                         <!-- DTR (Employee Only) -->
                         @if(in_array(auth()->user()->role, ['employee', 'student']))
-                        <a href="{{ route('user.dtr.index') }}"
+                        <a href="{{ url('/dtr') }}"
                            class="group flex items-center px-2 py-2 text-sm font-medium rounded-md transition-colors duration-200 {{ request()->routeIs('user.dtr.*') ? 'bg-indigo-700 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white' }}"
                            :class="sidebarCollapsed ? 'justify-center' : ''"
                            :title="sidebarCollapsed ? 'DTR' : ''">
@@ -163,7 +163,7 @@
                             }
                         @endphp
                         @if($showFileStorage)
-                        <a href="{{ route('user.files.index') }}"
+                        <a href="{{ url('/files') }}"
                            class="group flex items-center px-2 py-2 text-sm font-medium rounded-md transition-colors duration-200 {{ request()->routeIs('user.files.*') ? 'bg-indigo-700 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white' }}"
                            :class="sidebarCollapsed ? 'justify-center' : ''"
                            :title="sidebarCollapsed ? 'File Storage' : ''">
@@ -178,7 +178,7 @@
 
                         <!-- Leave Requests (Employee & Student) -->
                         @if(in_array(auth()->user()->role, ['employee', 'student']))
-                        <a href="{{ route('user.leave-requests.index') }}"
+                        <a href="{{ url('/leave-requests') }}"
                            class="group flex items-center px-2 py-2 text-sm font-medium rounded-md transition-colors duration-200 {{ request()->routeIs('user.leave-requests.*') ? 'bg-indigo-700 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white' }}"
                            :class="sidebarCollapsed ? 'justify-center' : ''"
                            :title="sidebarCollapsed ? 'Leave Requests' : ''">
@@ -192,7 +192,7 @@
                         @endif
 
                         <!-- Chat -->
-                        <a href="{{ route('user-chat.index') }}"
+                        <a href="{{ url('/user-chat') }}"
                            class="group flex items-center px-2 py-2 text-sm font-medium rounded-md transition-colors duration-200 {{ request()->routeIs('user-chat.*') ? 'bg-indigo-700 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white' }}"
                            :class="sidebarCollapsed ? 'justify-center' : ''"
                            :title="sidebarCollapsed ? 'Chat' : ''">
@@ -206,7 +206,7 @@
                         </a>
 
                         <!-- Forum -->
-                        <a href="{{ route('forum.index') }}"
+                        <a href="{{ url('/forum') }}"
                            class="group flex items-center px-2 py-2 text-sm font-medium rounded-md transition-colors duration-200 {{ request()->routeIs('forum.index') || request()->routeIs('forum.show') || request()->routeIs('forum.saved') ? 'bg-indigo-700 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white' }}"
                            :class="sidebarCollapsed ? 'justify-center' : ''"
                            :title="sidebarCollapsed ? 'Forum' : ''">
@@ -219,7 +219,7 @@
                         </a>
 
                         <!-- Feedback -->
-                        <a href="{{ route('user.feedback.index') }}"
+                        <a href="{{ url('/feedback') }}"
                            class="group flex items-center px-2 py-2 text-sm font-medium rounded-md transition-colors duration-200 {{ request()->routeIs('user.feedback.*') ? 'bg-indigo-700 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white' }}"
                            :class="sidebarCollapsed ? 'justify-center' : ''"
                            :title="sidebarCollapsed ? 'Feedback' : ''">
@@ -233,7 +233,7 @@
 
                         <!-- Term of Reference (TOR) - Student Only -->
                         @if(auth()->user()->role === 'student')
-                        <a href="{{ route('user.tor') }}"
+                        <a href="{{ url('/tor') }}"
                            class="group flex items-center px-2 py-2 text-sm font-medium rounded-md transition-colors duration-200 {{ request()->routeIs('user.tor') ? 'bg-indigo-700 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white' }}"
                            :class="sidebarCollapsed ? 'justify-center' : ''"
                            :title="sidebarCollapsed ? 'Term of Reference (TOR)' : ''">
@@ -249,7 +249,7 @@
                         <!-- Admin Access (for employees with permissions) -->
                         @if(auth()->user()->isEmployee() && auth()->user()->hasAnyAdminPermission())
                         <div class="pt-4 mt-4 border-t border-gray-700">
-                            <a href="{{ route('admin.dashboard') }}"
+                            <a href="{{ url('/admin/dashboard') }}"
                                class="group flex items-center px-2 py-2 text-sm font-medium rounded-md transition-colors duration-200 {{ request()->routeIs('admin.*') ? 'bg-purple-700 text-white' : 'text-purple-300 hover:bg-purple-700 hover:text-white' }}"
                                :class="sidebarCollapsed ? 'justify-center' : ''"
                                :title="sidebarCollapsed ? 'Admin Access' : ''">
@@ -268,7 +268,7 @@
                     <!-- User Profile Section -->
                     <div class="flex-shrink-0 flex border-t border-gray-700 p-4">
                         <div class="flex items-center w-full" :class="sidebarCollapsed ? 'justify-center' : ''">
-                            <a href="{{ route('profile.show') }}" class="flex items-center flex-1 hover:bg-gray-700 rounded-md p-1 transition-colors duration-200" :class="sidebarCollapsed ? 'justify-center' : ''">
+                            <a href="{{ url('/profile') }}" class="flex items-center flex-1 hover:bg-gray-700 rounded-md p-1 transition-colors duration-200" :class="sidebarCollapsed ? 'justify-center' : ''">
                                 <div class="flex-shrink-0">
                                     @if(auth()->user()->profile_picture)
                                         <img src="{{ auth()->user()->getProfilePictureUrl() }}"
@@ -302,7 +302,7 @@
                                      x-transition:leave-start="transform opacity-100 scale-100"
                                      x-transition:leave-end="transform opacity-0 scale-95"
                                      class="absolute right-0 bottom-0 mb-12 w-48 bg-white rounded-md shadow-lg py-1 z-50 border border-gray-200">
-                                    <a href="{{ route('profile.edit') }}"
+                                    <a href="{{ url('/profile/edit') }}"
                                        class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center">
                                         <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
@@ -310,7 +310,7 @@
                                         Edit Profile
                                     </a>
                                     <div class="border-t border-gray-100"></div>
-                                    <form method="POST" action="{{ route('logout') }}">
+                                    <form method="POST" action="{{ url('/logout') }}">
                                         @csrf
                                         <button type="submit"
                                                 class="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center">
@@ -366,7 +366,7 @@
 
                     <!-- Mobile navigation -->
                     <nav class="flex-1 px-2 py-4 space-y-1">
-                        <a href="{{ route('user.dashboard') }}"
+                        <a href="{{ url('/dashboard') }}"
                            @click="sidebarOpen = false"
                            class="group flex items-center px-2 py-2 text-sm font-medium rounded-md transition-colors duration-200 {{ request()->routeIs('user.dashboard') ? 'bg-indigo-700 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white' }}">
                             <svg class="mr-3 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -375,7 +375,7 @@
                             Dashboard
                         </a>
 
-                        <a href="{{ route('user.quizzes.index') }}"
+                        <a href="{{ url('/quizzes') }}"
                            @click="sidebarOpen = false"
                            class="group flex items-center px-2 py-2 text-sm font-medium rounded-md transition-colors duration-200 {{ request()->routeIs('user.quizzes.*') ? 'bg-indigo-700 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white' }}">
                             <svg class="mr-3 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -385,7 +385,7 @@
                         </a>
 
                         @if(auth()->user()->role === 'applicant')
-                        <a href="{{ route('user.hiring-application.show') }}"
+                        <a href="{{ url('/hiring-application') }}"
                            @click="sidebarOpen = false"
                            class="group flex items-center px-2 py-2 text-sm font-medium rounded-md transition-colors duration-200 {{ request()->routeIs('user.hiring-application.*') ? 'bg-indigo-700 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white' }}">
                             <svg class="mr-3 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -405,7 +405,7 @@
                             }
                         @endphp
                         @if($showFileStorageMobile)
-                        <a href="{{ route('user.files.index') }}"
+                        <a href="{{ url('/files') }}"
                            @click="sidebarOpen = false"
                            class="group flex items-center px-2 py-2 text-sm font-medium rounded-md transition-colors duration-200 {{ request()->routeIs('user.files.*') ? 'bg-indigo-700 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white' }}">
                             <svg class="mr-3 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -416,7 +416,7 @@
                         @endif
 
                         @if(in_array(auth()->user()->role, ['employee', 'student']))
-                        <a href="{{ route('user.dtr.index') }}"
+                        <a href="{{ url('/dtr') }}"
                            @click="sidebarOpen = false"
                            class="group flex items-center px-2 py-2 text-sm font-medium rounded-md transition-colors duration-200 {{ request()->routeIs('user.dtr.*') ? 'bg-indigo-700 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white' }}">
                             <svg class="mr-3 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -427,7 +427,7 @@
                         @endif
 
                         @if(in_array(auth()->user()->role, ['employee', 'student']))
-                        <a href="{{ route('user.leave-requests.index') }}"
+                        <a href="{{ url('/leave-requests') }}"
                            @click="sidebarOpen = false"
                            class="group flex items-center px-2 py-2 text-sm font-medium rounded-md transition-colors duration-200 {{ request()->routeIs('user.leave-requests.*') ? 'bg-indigo-700 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white' }}">
                             <svg class="mr-3 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -437,7 +437,7 @@
                         </a>
                         @endif
 
-                        <a href="{{ route('user-chat.index') }}"
+                        <a href="{{ url('/user-chat') }}"
                            @click="sidebarOpen = false"
                            class="group flex items-center px-2 py-2 text-sm font-medium rounded-md transition-colors duration-200 {{ request()->routeIs('user-chat.*') ? 'bg-indigo-700 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white' }}">
                             <svg class="mr-3 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -447,7 +447,7 @@
                             <span id="unread-message-count-mobile" class="hidden ml-auto bg-red-500 text-white text-xs rounded-full px-2 py-1 min-w-[20px] text-center">0</span>
                         </a>
 
-                        <a href="{{ route('forum.index') }}"
+                        <a href="{{ url('/forum') }}"
                            @click="sidebarOpen = false"
                            class="group flex items-center px-2 py-2 text-sm font-medium rounded-md transition-colors duration-200 {{ request()->routeIs('forum.index') || request()->routeIs('forum.show') || request()->routeIs('forum.saved') ? 'bg-indigo-700 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white' }}">
                             <svg class="mr-3 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -456,7 +456,7 @@
                             Forum
                         </a>
 
-                        <a href="{{ route('user.feedback.index') }}"
+                        <a href="{{ url('/feedback') }}"
                            @click="sidebarOpen = false"
                            class="group flex items-center px-2 py-2 text-sm font-medium rounded-md transition-colors duration-200 {{ request()->routeIs('user.feedback.*') ? 'bg-indigo-700 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white' }}">
                             <svg class="mr-3 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -466,7 +466,7 @@
                         </a>
 
                         @if(auth()->user()->role === 'student')
-                        <a href="{{ route('user.tor') }}"
+                        <a href="{{ url('/tor') }}"
                            @click="sidebarOpen = false"
                            class="group flex items-center px-2 py-2 text-sm font-medium rounded-md transition-colors duration-200 {{ request()->routeIs('user.tor') ? 'bg-indigo-700 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white' }}">
                             <svg class="mr-3 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -479,7 +479,7 @@
                         <!-- Admin Access (for any user with admin permissions) -->
                         @if(auth()->user()->hasAnyAdminPermission())
                         <div class="pt-4 mt-4 border-t border-gray-700">
-                            <a href="{{ route('admin.dashboard') }}"
+                            <a href="{{ url('/admin/dashboard') }}"
                                @click="sidebarOpen = false"
                                class="group flex items-center px-2 py-2 text-sm font-medium rounded-md transition-colors duration-200 {{ request()->routeIs('admin.*') ? 'bg-purple-700 text-white' : 'text-purple-300 hover:bg-purple-700 hover:text-white' }}">
                                 <svg class="mr-3 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -527,7 +527,7 @@
                                      x-transition:leave-start="transform opacity-100 scale-100"
                                      x-transition:leave-end="transform opacity-0 scale-95"
                                      class="absolute right-0 bottom-0 mb-12 w-48 bg-white rounded-md shadow-lg py-1 z-50 border border-gray-200">
-                                    <a href="{{ route('profile.edit') }}"
+                                    <a href="{{ url('/profile/edit') }}"
                                        @click="sidebarOpen = false"
                                        class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center">
                                         <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -536,7 +536,7 @@
                                         Edit Profile
                                     </a>
                                     <div class="border-t border-gray-100"></div>
-                                    <form method="POST" action="{{ route('logout') }}">
+                                    <form method="POST" action="{{ url('/logout') }}">
                                         @csrf
                                         <button type="submit"
                                                 class="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center">
@@ -625,7 +625,7 @@
                                 </template>
                             </div>
                             <div class="p-4 border-t border-gray-200">
-                                <a href="{{ route('notifications.index') }}" class="text-sm text-indigo-600 hover:text-indigo-800">View all notifications</a>
+                                <a href="{{ url('/notifications') }}" class="text-sm text-indigo-600 hover:text-indigo-800">View all notifications</a>
                             </div>
                         </div>
                     </div>
@@ -658,7 +658,7 @@
                              x-transition:leave-start="transform opacity-100 scale-100"
                              x-transition:leave-end="transform opacity-0 scale-95"
                              class="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 z-50 border border-gray-200">
-                            <a href="{{ route('profile.edit') }}"
+                            <a href="{{ url('/profile/edit') }}"
                                class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center">
                                 <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
@@ -666,7 +666,7 @@
                                 Edit Profile
                             </a>
                             <div class="border-t border-gray-100"></div>
-                            <form method="POST" action="{{ route('logout') }}">
+                            <form method="POST" action="{{ url('/logout') }}">
                                 @csrf
                                 <button type="submit"
                                         class="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center">
@@ -837,7 +837,7 @@
                             return;
                         }
 
-                        fetch(`{{ route("chat.ticket", ":ticketNumber") }}`.replace(':ticketNumber', currentTicketNumber))
+                        fetch(`{{ url("/chat/tickets/") . ":ticketNumber" }}`.replace(':ticketNumber', currentTicketNumber))
                             .then(response => response.json())
                             .then(data => {
                                 if (data.messages) {
@@ -944,7 +944,7 @@
                             .map(msg => msg.id);
 
                         if (unreadMessageIds.length > 0) {
-                            fetch('{{ route("chat.mark-read") }}', {
+                            fetch('{{ url("/chat/mark-read") }}', {
                                 method: 'POST',
                                 headers: {
                                     'Content-Type': 'application/json',
@@ -966,7 +966,7 @@
 
                     // Update unread count
                     function updateUnreadCount() {
-                        fetch('{{ route("chat.unread-count") }}')
+                        fetch('{{ url("/chat/unread-count") }}')
                             .then(response => response.json())
                             .then(data => {
                                 unreadCount = data.count;
@@ -1027,7 +1027,7 @@
                             requestData.ticket_number = currentTicketNumber;
                         }
 
-                        fetch('{{ route("chat.store") }}', {
+                        fetch('{{ url("/chat/messages") }}', {
                             method: 'POST',
                             headers: {
                                 'Content-Type': 'application/json',
@@ -1060,7 +1060,7 @@
 
                         const reason = prompt('Please provide a reason for reopening this chat:');
                         if (reason && reason.trim()) {
-                            fetch(`{{ route("chat.reopen", ":ticketNumber") }}`.replace(':ticketNumber', currentTicketNumber), {
+                            fetch(`{{ url("/chat/tickets/") . ":ticketNumber" . "/reopen" }}`.replace(':ticketNumber', currentTicketNumber), {
                                 method: 'POST',
                                 headers: {
                                     'Content-Type': 'application/json',
@@ -1086,7 +1086,7 @@
 
                     // Inbox functionality
                     function loadTickets() {
-                        fetch('{{ route("chat.tickets") }}')
+                        fetch('{{ url("/chat/tickets") }}')
                             .then(response => response.json())
                             .then(data => {
                                 tickets = data;
@@ -1168,7 +1168,7 @@
                     function createNewTicket() {
                         const subject = prompt('What is this ticket about? (optional)');
                         if (subject !== null) {
-                            fetch('{{ route("chat.create") }}', {
+                            fetch('{{ url("/chat/create") }}', {
                                 method: 'POST',
                                 headers: {
                                     'Content-Type': 'application/json',
@@ -1214,7 +1214,7 @@
 
                     // Load first available ticket
                     function loadFirstTicket() {
-                        fetch('{{ route("chat.tickets") }}')
+                        fetch('{{ url("/chat/tickets") }}')
                             .then(response => response.json())
                             .then(data => {
                                 if (data.length > 0) {
@@ -1230,7 +1230,7 @@
                     // Load notification counts
                     function loadNotificationCounts() {
                         // Load friend request count
-                        fetch('{{ route("friends.index") }}')
+                        fetch('{{ url("/friends") }}')
                             .then(response => response.text())
                             .then(html => {
                                 // Parse the HTML to extract pending requests count
@@ -1246,7 +1246,7 @@
                             });
 
                         // Load unread message count
-                        fetch('{{ route("user-chat.unread-count") }}')
+                        fetch('{{ url("/user-chat/unread-count") }}')
                             .then(response => response.json())
                             .then(data => {
                                 const unreadMessageCount = document.getElementById('unread-message-count');
@@ -1324,7 +1324,7 @@
 
                 // Update user status
                 function updateUserStatus(status) {
-                    fetch('{{ route("status.update") }}', {
+                    fetch('{{ url("/status/update") }}', {
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/json',
@@ -1393,7 +1393,7 @@
 
                         async loadNotifications() {
                             try {
-                                const response = await fetch('{{ route("notifications.recent") }}');
+                                const response = await fetch('{{ url("/notifications/recent") }}');
                                 const data = await response.json();
                                 this.notifications = data.notifications;
                                 this.updateUnreadCount();
@@ -1404,7 +1404,7 @@
 
                         async updateUnreadCount() {
                             try {
-                                const response = await fetch('{{ route("notifications.unread-count") }}');
+                                const response = await fetch('{{ url("/notifications/unread-count") }}');
                                 const data = await response.json();
                                 this.unreadCount = data.unread_count;
                             } catch (error) {
@@ -1414,7 +1414,7 @@
 
                         async markAsRead(notificationId) {
                             try {
-                                const response = await fetch('{{ route("notifications.mark-read") }}', {
+                                const response = await fetch('{{ url("/notifications/mark-read") }}', {
                                     method: 'POST',
                                     headers: {
                                         'Content-Type': 'application/json',
@@ -1435,7 +1435,7 @@
 
                         async markAllAsRead() {
                             try {
-                                const response = await fetch('{{ route("notifications.mark-read") }}', {
+                                const response = await fetch('{{ url("/notifications/mark-read") }}', {
                                     method: 'POST',
                                     headers: {
                                         'Content-Type': 'application/json',

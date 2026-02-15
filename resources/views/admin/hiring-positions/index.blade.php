@@ -16,7 +16,7 @@
                     <p class="text-indigo-100">Manage available job positions</p>
                 </div>
             </div>
-            <a href="{{ route('admin.hiring-positions.create') }}" class="inline-flex items-center px-4 py-2 border border-white border-opacity-20 rounded-md text-sm font-medium text-white hover:bg-white hover:bg-opacity-10">
+            <a href="{{ url('/admin/hiring-positions/create') }}" class="inline-flex items-center px-4 py-2 border border-white border-opacity-20 rounded-md text-sm font-medium text-white hover:bg-white hover:bg-opacity-10">
                 <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
                 </svg>
@@ -103,7 +103,7 @@
     <!-- Search Bar -->
     <div class="bg-white shadow-sm rounded-lg border border-gray-200 p-4">
         <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-            <form id="hiring-positions-search-form" method="GET" action="{{ route('admin.hiring-positions.index') }}" class="flex-1 max-w-md">
+            <form id="hiring-positions-search-form" method="GET" action="{{ url('/admin/hiring-positions') }}" class="flex-1 max-w-md">
                 @if(request()->has('per_page'))
                     <input type="hidden" name="per_page" value="{{ request('per_page') }}">
                 @endif
@@ -211,20 +211,20 @@
                             </td>
                             <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                                 <div class="flex items-center justify-end space-x-2">
-                                    <a href="{{ route('admin.hiring-positions.show', $position) }}" class="text-indigo-600 hover:text-indigo-900">
+                                    <a href="{{ url('/admin/hiring-positions/' . $position->id) }}" class="text-indigo-600 hover:text-indigo-900">
                                         View
                                     </a>
-                                    <a href="{{ route('admin.hiring-positions.edit', $position) }}" class="text-blue-600 hover:text-blue-900">
+                                    <a href="{{ url('/admin/hiring-positions/' . $position->id . '/edit') }}" class="text-blue-600 hover:text-blue-900">
                                         Edit
                                     </a>
-                                    <form action="{{ route('admin.hiring-positions.toggle-status', $position) }}" method="POST" class="inline">
+                                    <form action="{{ url('/admin/hiring-positions/' . $position->id . '/toggle-status') }}" method="POST" class="inline">
                                         @csrf
                                         @method('PATCH')
                                         <button type="submit" class="text-yellow-600 hover:text-yellow-900">
                                             {{ $position->is_active ? 'Deactivate' : 'Activate' }}
                                         </button>
                                     </form>
-                                    <form action="{{ route('admin.hiring-positions.destroy', $position) }}" method="POST" class="inline" onsubmit="return confirm('Are you sure you want to delete this position?');">
+                                    <form action="{{ url('/admin/hiring-positions/' . $position->id) }}" method="POST" class="inline" onsubmit="return confirm('Are you sure you want to delete this position?');">
                                         @csrf
                                         @method('DELETE')
                                         <button type="submit" class="text-red-600 hover:text-red-900">
@@ -243,7 +243,7 @@
                                 <h3 class="mt-2 text-sm font-medium text-gray-900">No positions found</h3>
                                 <p class="mt-1 text-sm text-gray-500">Get started by creating a new hiring position.</p>
                                 <div class="mt-6">
-                                    <a href="{{ route('admin.hiring-positions.create') }}" class="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700">
+                                    <a href="{{ url('/admin/hiring-positions/create') }}" class="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700">
                                         Create Position
                                     </a>
                                 </div>

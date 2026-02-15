@@ -42,7 +42,7 @@ class HiringApplicationReceived extends Mailable
     public function content(): Content
     {
         return new Content(
-            markdown: 'emails.hiring-application-received',
+            view: 'emails.hiring-application-received',
             with: [
                 'application' => $this->application,
                 'position' => $this->position,

@@ -15,7 +15,7 @@
             <p class="text-gray-600 mb-4">This QR code link is invalid or not found.</p>
             <p class="text-sm text-gray-500 mb-6">Please scan the QR code again to view the employee information.</p>
             <div class="flex flex-col sm:flex-row gap-3 justify-center">
-                <a href="{{ route('landing.index') }}" class="inline-flex items-center px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors">
+                <a href="{{ url('/') }}" class="inline-flex items-center px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors">
                     <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
                     </svg>

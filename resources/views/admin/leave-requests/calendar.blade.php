@@ -16,7 +16,7 @@
                     <p class="text-sm sm:text-base text-indigo-100 mt-1">View employee leave requests on a monthly calendar.</p>
                 </div>
             </div>
-            <a href="{{ route('admin.leave-requests.index') }}"
+            <a href="{{ url('/admin/leave-requests') }}"
                class="inline-flex items-center justify-center px-3 py-2 sm:px-4 sm:py-2 text-xs sm:text-sm bg-white/10 backdrop-blur-sm border border-white/20 rounded-lg text-white hover:bg-white/20 transition duration-200">
                 <svg class="h-4 w-4 sm:h-5 sm:w-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
@@ -58,7 +58,7 @@
                             $allEmployeesParams['department_id'] = $selectedDepartmentId;
                         }
                     @endphp
-                    <a href="{{ route('admin.leave-requests.calendar', $allEmployeesParams) }}"
+                    <a href="{{ url('/admin/leave-calendar?' . http_build_query($allEmployeesParams)) }}"
                        class="flex items-center justify-between px-3 py-1.5 rounded-md mx-1 transition-colors duration-150 {{ !$selectedEmployeeId ? 'bg-indigo-50 text-indigo-700 font-semibold' : 'text-gray-700 hover:bg-gray-50' }}">
                         <span>All Employees</span>
                     </a>
@@ -69,7 +69,7 @@
                                 $employeeParams['department_id'] = $selectedDepartmentId;
                             }
                         @endphp
-                        <a href="{{ route('admin.leave-requests.calendar', $employeeParams) }}"
+                        <a href="{{ url('/admin/leave-calendar?' . http_build_query($employeeParams)) }}"
                            class="flex items-center justify-between px-3 py-1.5 rounded-md mx-1 transition-colors duration-150 {{ $selectedEmployeeId == $employee->id ? 'bg-indigo-50 text-indigo-700 font-semibold' : 'text-gray-700 hover:bg-gray-50' }}">
                             <span class="truncate">{{ $employee->name }}</span>
                         </a>
@@ -80,7 +80,7 @@
             <!-- Quick Create Leave for Employee -->
             <div class="bg-white rounded-2xl shadow border border-gray-200 p-3 sm:p-4">
                 <h2 class="text-xs sm:text-sm font-bold text-gray-900 mb-2">File Leave for Employee(s)</h2>
-                <form action="{{ route('admin.leave-requests.store-for-employee') }}" method="POST" class="space-y-3">
+                <form action="{{ url('/admin/leave-requests/create-for-employee') }}" method="POST" class="space-y-3">
                     @csrf
                     <div class="space-y-1">
                         <label for="create_user_ids" class="block text-xs font-medium text-gray-700">Select Employee(s)</label>
@@ -156,7 +156,7 @@
                             $prevMonthParams['department_id'] = $selectedDepartmentId;
                         }
                     @endphp
-                    <a href="{{ route('admin.leave-requests.calendar', $prevMonthParams) }}"
+                    <a href="{{ url('/admin/leave-calendar?' . http_build_query($prevMonthParams)) }}"
                        class="inline-flex items-center px-2.5 sm:px-3 py-1.5 border border-gray-300 rounded-md text-xs sm:text-sm text-gray-700 bg-white hover:bg-gray-50">
                         <svg class="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
@@ -176,7 +176,7 @@
                             $nextMonthParams['department_id'] = $selectedDepartmentId;
                         }
                     @endphp
-                    <a href="{{ route('admin.leave-requests.calendar', $nextMonthParams) }}"
+                    <a href="{{ url('/admin/leave-calendar?' . http_build_query($nextMonthParams)) }}"
                        class="inline-flex items-center px-2.5 sm:px-3 py-1.5 border border-gray-300 rounded-md text-xs sm:text-sm text-gray-700 bg-white hover:bg-gray-50">
                         <span class="hidden sm:inline">Next</span>
                         <svg class="h-3.5 w-3.5 sm:h-4 sm:w-4 sm:ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -248,7 +248,7 @@
                                                     default => 'bg-gray-50 text-gray-700 border-gray-100',
                                                 };
                                             @endphp
-                                            <a href="{{ route('admin.leave-requests.show', $entry['id']) }}"
+                                            <a href="{{ url('/admin/leave-requests/' . $entry['id']) }}"
                                                class="block border {{ $statusClass }} rounded px-1 sm:px-1.5 py-0.5 text-[9px] sm:text-[10px] md:text-[11px] hover:border-indigo-300 hover:bg-indigo-50/70">
                                                 <div class="font-semibold truncate">
                                                     {{ $entry['employee']->name }}
@@ -350,7 +350,7 @@ function showAllLeaveRequests(dateString, requests) {
 
             const requestDiv = document.createElement('div');
             requestDiv.className = `border ${statusClass} rounded-lg p-3 hover:shadow-md transition-shadow`;
-            const showUrl = '{{ route("admin.leave-requests.show", ":id") }}'.replace(':id', entry.id);
+            const showUrl = '{{ url("/admin/leave-requests/") }}' + entry.id;
             requestDiv.innerHTML = `
                 <div class="flex items-start justify-between">
                     <div class="flex-1">
@@ -454,7 +454,7 @@ document.addEventListener('DOMContentLoaded', function() {
     updateFileLeaveButton();
 
     // Form submission validation
-    const form = document.querySelector('form[action="{{ route("admin.leave-requests.store-for-employee") }}"]');
+    const form = document.querySelector('form[action="{{ url('/admin/leave-requests/create-for-employee') }}"]');
     if (form) {
         form.addEventListener('submit', function(e) {
             const selectedEmployees = document.querySelectorAll('.employee-checkbox:checked');
@@ -498,7 +498,7 @@ function filterByDepartment(departmentId) {
         newParams.set('department_id', departmentId);
     }
 
-    window.location.href = '{{ route("admin.leave-requests.calendar") }}?' + newParams.toString();
+    window.location.href = '{{ url("/admin/leave-calendar") }}?' + newParams.toString();
 }
 
 // Handle travel leave type selection - show/hide custom hours field

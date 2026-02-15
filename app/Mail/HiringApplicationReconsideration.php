@@ -53,7 +53,7 @@ class HiringApplicationReconsideration extends Mailable
     public function content(): Content
     {
         return new Content(
-            markdown: 'emails.hiring-application-reconsideration',
+            view: 'emails.hiring-application-reconsideration',
             with: [
                 'application' => $this->application,
                 'position' => $this->position,

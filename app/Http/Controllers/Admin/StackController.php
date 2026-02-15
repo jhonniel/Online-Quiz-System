@@ -65,7 +65,7 @@ class StackController extends Controller
             'is_active' => $request->has('is_active') ? true : false,
         ]);
 
-        return redirect()->route('admin.stacks.index')
+        return redirect('/admin/stacks')
             ->with('success', 'Stack created successfully.');
     }
 
@@ -139,7 +139,7 @@ class StackController extends Controller
             'is_active' => $request->has('is_active') ? true : false,
         ]);
 
-        return redirect()->route('admin.stacks.index')
+        return redirect('/admin/stacks')
             ->with('success', 'Stack updated successfully.');
     }
 
@@ -158,7 +158,7 @@ class StackController extends Controller
 
         $stack->delete();
 
-        return redirect()->route('admin.stacks.index')
+        return redirect('/admin/stacks')
             ->with('success', 'Stack deleted successfully.');
     }
 }

@@ -500,7 +500,7 @@ class DtrController extends Controller
         }
 
         if ($created > 0) {
-            return redirect()->route('admin.dtr.index')
+            return redirect('/admin/dtr')
                 ->with('success', implode(' ', $messages));
         } else {
             return redirect()->back()
@@ -611,7 +611,7 @@ class DtrController extends Controller
             // Calculate and store weekly deficit
             $this->calculateAndStoreWeeklyDeficit($request->user_id, Carbon::parse($request->date));
 
-            return redirect()->route('admin.dtr.index')
+            return redirect('/admin/dtr')
                 ->with('success', 'DTR record updated successfully.');
         } catch (\Exception $e) {
             Log::error('DTR update failed: ' . $e->getMessage());
@@ -636,7 +636,7 @@ class DtrController extends Controller
             // Recalculate weekly deficit after deletion
             $this->calculateAndStoreWeeklyDeficit($userId, Carbon::parse($date));
 
-            return redirect()->route('admin.dtr.index')
+            return redirect('/admin/dtr')
                 ->with('success', 'DTR record deleted successfully.');
         } catch (\Exception $e) {
             Log::error('DTR deletion failed: ' . $e->getMessage());
@@ -728,7 +728,7 @@ class DtrController extends Controller
                     ->delete();
             }
 
-            return redirect()->route('admin.dtr.index')
+            return redirect('/admin/dtr')
                 ->with('success', "Recalculated {$recalculatedCount} deficit records. Fixed {$fixedCount} incorrect records.");
         } catch (\Exception $e) {
             Log::error('Deficit recalculation failed: ' . $e->getMessage());
@@ -908,9 +908,9 @@ class DtrController extends Controller
                 $message .= " {$skipped} record(s) skipped.";
             }
 
-            $redirectRoute = $importType === 'student' ? 'admin.student-dtr.index' : 'admin.dtr.index';
+            $redirectUrl = $importType === 'student' ? '/admin/student-dtr' : '/admin/dtr';
 
-            return redirect()->route($redirectRoute)
+            return redirect($redirectUrl)
                 ->with('success', $message)
                 ->with('import_errors', $errors);
 
@@ -918,9 +918,9 @@ class DtrController extends Controller
             DB::rollBack();
             Log::error('DTR import failed: ' . $e->getMessage());
 
-            $redirectRoute = $request->input('type') === 'student' ? 'admin.student-dtr.index' : 'admin.dtr.index';
+            $redirectUrl = $request->input('type') === 'student' ? '/admin/student-dtr' : '/admin/dtr';
 
-            return redirect()->route($redirectRoute)
+            return redirect($redirectUrl)
                 ->with('error', 'Import failed: ' . $e->getMessage());
         }
     }
@@ -1293,7 +1293,7 @@ class DtrController extends Controller
             // Calculate and store weekly deficit
             $this->calculateAndStoreWeeklyDeficit($request->user_id, Carbon::parse($request->date));
 
-            return redirect()->route('admin.student-dtr.index')
+            return redirect('/admin/student-dtr')
                 ->with('success', 'Student DTR record added successfully.');
         } catch (\Exception $e) {
             Log::error('Student DTR creation failed: ' . $e->getMessage());
@@ -1567,7 +1567,7 @@ class DtrController extends Controller
                 ]
             ]);
 
-                return redirect()->route('admin.student-dtr.index')
+                return redirect('/admin/student-dtr')
                     ->with('success', 'Student DTR record updated successfully.');
             } catch (\Exception $e) {
                 // Rollback is automatic in transaction
@@ -1639,7 +1639,7 @@ class DtrController extends Controller
             // Recalculate weekly deficit after deletion
             $this->calculateAndStoreWeeklyDeficit($userId, Carbon::parse($date));
 
-            return redirect()->route('admin.student-dtr.index')
+            return redirect('/admin/student-dtr')
                 ->with('success', 'Student DTR record deleted successfully.');
         } catch (\Exception $e) {
             Log::error('Student DTR deletion failed: ' . $e->getMessage());
@@ -1769,7 +1769,7 @@ class DtrController extends Controller
                 $this->calculateAndStoreWeeklyDeficit($userId, Carbon::parse($date));
             }
 
-            return redirect()->route('admin.student-dtr.index')
+            return redirect('/admin/student-dtr')
                 ->with('success', "Successfully updated {$updatedCount} record(s).");
         } catch (\Exception $e) {
             Log::error('Bulk update failed: ' . $e->getMessage());
@@ -1832,7 +1832,7 @@ class DtrController extends Controller
                 $this->calculateAndStoreWeeklyDeficit($userId, Carbon::parse($date));
             }
 
-            return redirect()->route('admin.student-dtr.index')
+            return redirect('/admin/student-dtr')
                 ->with('success', "Successfully deleted {$deletedCount} record(s).");
         } catch (\Exception $e) {
             Log::error('Bulk delete failed: ' . $e->getMessage());

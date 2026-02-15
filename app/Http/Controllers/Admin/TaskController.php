@@ -24,6 +24,615 @@ use Illuminate\Support\Facades\Validator;
 class TaskController extends Controller
 {
     /**
+     * Display Task Dashboard - All tasks for admins
+     */
+    public function dashboard(Request $request)
+    {
+        $user = Auth::user();
+        
+        // Only admins can access this dashboard
+        if (!$user->isSuperAdmin()) {
+            abort(403, 'Access denied. Only administrators with full access can view the Task Dashboard.');
+        }
+        
+        $view = $request->get('view', 'board'); // 'board' or 'list'
+        
+        // Get ALL tasks (both personal and group) for admin view
+        $tasksQuery = Task::whereNull('parent_id') // Only show parent tasks
+            ->with([
+                'creator',
+                'assignments.user',
+                'attachments',
+                'comments.user',
+                'subtasks',
+                'taskList'
+            ])
+            ->orderBy('created_at', 'desc');
+        
+        // Apply filters if provided
+        $statusFilter = $request->get('status');
+        if ($statusFilter) {
+            $tasksQuery->where('status', $statusFilter);
+        }
+        
+        $typeFilter = $request->get('type');
+        if ($typeFilter && $typeFilter !== 'all') {
+            $tasksQuery->where('type', $typeFilter);
+        }
+        
+        $tasks = $tasksQuery->get();
+        
+        // Group tasks by status for board view
+        $tasksByStatus = [
+            'todo' => $tasks->where('status', 'todo'),
+            'in_progress' => $tasks->where('status', 'in_progress'),
+            'done' => $tasks->where('status', 'done'),
+        ];
+        
+        // Calculate chart data
+        // Task status distribution
+        $statusDistribution = [
+            'todo' => $tasks->where('status', 'todo')->count(),
+            'in_progress' => $tasks->where('status', 'in_progress')->count(),
+            'done' => $tasks->where('status', 'done')->count(),
+        ];
+        
+        // Task type distribution
+        $typeDistribution = [
+            'personal' => $tasks->where('type', 'personal')->count(),
+            'group' => $tasks->where('type', 'group')->count(),
+        ];
+        
+        // Task creation trends (last 30 days)
+        $creationTrends = [];
+        $startDate = \Carbon\Carbon::now()->subDays(30);
+        $endDate = \Carbon\Carbon::now();
+        $currentDate = $startDate->copy();
+        
+        while ($currentDate <= $endDate) {
+            $dateKey = $currentDate->format('Y-m-d');
+            $tasksOnDate = $tasks->filter(function($task) use ($currentDate) {
+                return $task->created_at && $task->created_at->isSameDay($currentDate);
+            });
+            
+            $creationTrends[$dateKey] = [
+                'date' => $currentDate->format('M d'),
+                'total' => $tasksOnDate->count(),
+                'completed' => $tasksOnDate->where('status', 'done')->count(),
+                'in_progress' => $tasksOnDate->where('status', 'in_progress')->count(),
+                'todo' => $tasksOnDate->where('status', 'todo')->count(),
+            ];
+            $currentDate->addDay();
+        }
+        
+        // Completion rate over time (last 30 days)
+        $completionRate = [];
+        $currentDate = $startDate->copy();
+        while ($currentDate <= $endDate) {
+            $dateKey = $currentDate->format('Y-m-d');
+            $tasksUpToDate = Task::whereNull('parent_id')
+                ->where('created_at', '<=', $currentDate->endOfDay())
+                ->when($typeFilter && $typeFilter !== 'all', function($q) use ($typeFilter) {
+                    $q->where('type', $typeFilter);
+                })
+                ->get();
+            
+            $total = $tasksUpToDate->count();
+            $completed = $tasksUpToDate->where('status', 'done')->count();
+            
+            $completionRate[$dateKey] = [
+                'date' => $currentDate->format('M d'),
+                'total' => $total,
+                'completed' => $completed,
+                'rate' => $total > 0 ? round(($completed / $total) * 100, 2) : 0,
+            ];
+            $currentDate->addDay();
+        }
+        
+        // Priority distribution
+        $priorityDistribution = [
+            'high' => $tasks->where('priority', 'high')->count(),
+            'medium' => $tasks->where('priority', 'medium')->count(),
+            'low' => $tasks->where('priority', 'low')->count(),
+        ];
+        
+        // Tasks by user (top creators)
+        $tasksByUser = $tasks->groupBy('created_by')
+            ->map(function($userTasks, $userId) {
+                $user = User::find($userId);
+                if (!$user) return null;
+                return [
+                    'user' => $user,
+                    'total' => $userTasks->count(),
+                    'completed' => $userTasks->where('status', 'done')->count(),
+                ];
+            })
+            ->filter()
+            ->sortByDesc('total')
+            ->take(10)
+            ->values();
+        
+        // Users with most completed tasks (done tasks)
+        $usersWithMostCompleted = Task::whereNull('parent_id')
+            ->where('status', 'done')
+            ->when($typeFilter && $typeFilter !== 'all', function($q) use ($typeFilter) {
+                $q->where('type', $typeFilter);
+            })
+            ->with('creator')
+            ->get()
+            ->groupBy('created_by')
+            ->map(function($userTasks, $userId) {
+                $user = User::find($userId);
+                if (!$user) return null;
+                return [
+                    'user' => $user,
+                    'completed_count' => $userTasks->count(),
+                ];
+            })
+            ->filter()
+            ->sortByDesc('completed_count')
+            ->take(10)
+            ->values();
+        
+        // Task changes/updates over time (last 30 days)
+        $taskChangesOverTime = [];
+        $currentDate = $startDate->copy();
+        
+        while ($currentDate <= $endDate) {
+            $dateKey = $currentDate->format('Y-m-d');
+            $changesOnDate = \App\Models\TaskActivityLog::whereDate('created_at', $currentDate)
+                ->whereIn('action', ['updated', 'status_changed', 'priority_changed', 'moved'])
+                ->count();
+            
+            $taskChangesOverTime[$dateKey] = [
+                'date' => $currentDate->format('M d'),
+                'changes' => $changesOnDate,
+            ];
+            $currentDate->addDay();
+        }
+        
+        // Task changes by user (who made most changes)
+        $taskChangesByUser = \App\Models\TaskActivityLog::whereIn('action', ['updated', 'status_changed', 'priority_changed', 'moved'])
+            ->where('created_at', '>=', $startDate)
+            ->with('user')
+            ->get()
+            ->groupBy('user_id')
+            ->map(function($logs, $userId) {
+                $user = User::find($userId);
+                if (!$user) return null;
+                return [
+                    'user' => $user,
+                    'changes_count' => $logs->count(),
+                ];
+            })
+            ->filter()
+            ->sortByDesc('changes_count')
+            ->take(10)
+            ->values();
+        
+        // Get all users for assignment dropdown
+        $users = User::where('is_active', true)
+            ->orderBy('name')
+            ->get();
+        
+        // Get custom boards
+        $customBoards = CustomBoard::orderBy('order')->get();
+        
+        // Task List Statistics
+        // Task Lists by User (who created most task lists)
+        $taskListsByUser = TaskList::with('user')
+            ->get()
+            ->groupBy('user_id')
+            ->map(function($lists, $userId) {
+                $user = User::find($userId);
+                if (!$user) return null;
+                return [
+                    'user' => $user,
+                    'task_lists_count' => $lists->count(),
+                    'total_tasks' => $lists->sum(function($list) {
+                        return $list->tasks()->count();
+                    }),
+                ];
+            })
+            ->filter()
+            ->sortByDesc('task_lists_count')
+            ->take(10)
+            ->values();
+        
+        // Task Lists Creation Trends (last 30 days)
+        $taskListCreationTrends = [];
+        $currentDate = $startDate->copy();
+        while ($currentDate <= $endDate) {
+            $dateKey = $currentDate->format('Y-m-d');
+            $listsOnDate = TaskList::whereDate('created_at', $currentDate)->count();
+            
+            $taskListCreationTrends[$dateKey] = [
+                'date' => $currentDate->format('M d'),
+                'created' => $listsOnDate,
+            ];
+            $currentDate->addDay();
+        }
+        
+        // Tasks per Task List (top task lists by task count)
+        $tasksPerTaskList = TaskList::with(['user', 'tasks'])
+            ->get()
+            ->map(function($list) {
+                return [
+                    'task_list' => [
+                        'id' => $list->id,
+                        'name' => $list->name,
+                        'user_name' => $list->user->name ?? 'Unknown',
+                    ],
+                    'total_tasks' => $list->tasks()->count(),
+                    'completed_tasks' => $list->tasks()->where('status', 'done')->count(),
+                    'in_progress_tasks' => $list->tasks()->where('status', 'in_progress')->count(),
+                    'todo_tasks' => $list->tasks()->where('status', 'todo')->count(),
+                ];
+            })
+            ->sortByDesc('total_tasks')
+            ->take(10)
+            ->values();
+        
+        // Task Lists with Most Tasks (line graph over time)
+        $taskListGrowthOverTime = [];
+        $currentDate = $startDate->copy();
+        while ($currentDate <= $endDate) {
+            $dateKey = $currentDate->format('Y-m-d');
+            $totalLists = TaskList::where('created_at', '<=', $currentDate->endOfDay())->count();
+            $totalTasksInLists = Task::whereNotNull('task_list_id')
+                ->where('created_at', '<=', $currentDate->endOfDay())
+                ->count();
+            
+            $taskListGrowthOverTime[$dateKey] = [
+                'date' => $currentDate->format('M d'),
+                'total_lists' => $totalLists,
+                'total_tasks' => $totalTasksInLists,
+            ];
+            $currentDate->addDay();
+        }
+        
+        // Format tasks for JSON (for JavaScript)
+        $tasksJson = $tasks->map(function($task) {
+            return [
+                'id' => $task->id,
+                'title' => $task->title,
+                'description' => $task->description,
+                'notes' => $task->notes,
+                'status' => $task->status,
+                'type' => $task->type,
+                'parent_id' => $task->parent_id,
+                'due_date' => $task->due_date ? $task->due_date->toISOString() : null,
+                'priority' => $task->priority,
+                'created_by' => $task->created_by,
+                'creator' => [
+                    'id' => $task->creator->id,
+                    'name' => $task->creator->name,
+                ],
+                'subtasks' => $task->subtasks->map(function($subtask) {
+                    return [
+                        'id' => $subtask->id,
+                        'title' => $subtask->title,
+                        'description' => $subtask->description,
+                        'status' => $subtask->status,
+                        'due_date' => $subtask->due_date ? $subtask->due_date->toISOString() : null,
+                    ];
+                })->toArray(),
+                'attachments' => $task->attachments->map(function($attachment) {
+                    return [
+                        'id' => $attachment->id,
+                        'file_name' => $attachment->file_name,
+                        'file_type' => $attachment->file_type,
+                        'file_url' => $attachment->file_url,
+                        'created_at' => $attachment->created_at ? $attachment->created_at->toISOString() : null,
+                    ];
+                })->toArray(),
+                'comments' => $task->comments->map(function($comment) {
+                    return [
+                        'id' => $comment->id,
+                        'comment' => $comment->comment,
+                        'created_at' => $comment->created_at->toISOString(),
+                        'user' => [
+                            'id' => $comment->user->id,
+                            'name' => $comment->user->name,
+                        ],
+                    ];
+                })->toArray(),
+                'assignments' => $task->assignments->map(function($assignment) {
+                    return [
+                        'user_id' => $assignment->user_id,
+                        'role' => $assignment->role,
+                        'user' => [
+                            'id' => $assignment->user->id,
+                            'name' => $assignment->user->name,
+                        ],
+                    ];
+                })->toArray(),
+            ];
+        })->toArray();
+        
+        // Get custom priorities
+        $customPriorities = CustomPriority::forUser($user->id)->get();
+        
+        return view('admin.tasks.dashboard', compact(
+            'tasks', 
+            'tasksByStatus', 
+            'view', 
+            'users', 
+            'tasksJson', 
+            'customBoards', 
+            'customPriorities', 
+            'statusFilter', 
+            'typeFilter',
+            'statusDistribution',
+            'typeDistribution',
+            'creationTrends',
+            'completionRate',
+            'priorityDistribution',
+            'tasksByUser',
+            'usersWithMostCompleted',
+            'taskChangesOverTime',
+            'taskChangesByUser',
+            'taskListsByUser',
+            'taskListCreationTrends',
+            'tasksPerTaskList',
+            'taskListGrowthOverTime'
+        ));
+    }
+    
+    /**
+     * Get chart data for AJAX requests
+     */
+    public function getChartData(Request $request)
+    {
+        $user = Auth::user();
+        
+        if (!$user->isSuperAdmin()) {
+            return response()->json(['error' => 'Unauthorized'], 403);
+        }
+        
+        $statusFilter = $request->get('status');
+        $typeFilter = $request->get('type', 'all');
+        
+        // Get filtered tasks
+        $tasksQuery = Task::whereNull('parent_id')
+            ->with([
+                'creator',
+                'assignments.user',
+                'attachments',
+                'comments.user',
+                'subtasks',
+                'taskList'
+            ])
+            ->orderBy('created_at', 'desc');
+        
+        if ($statusFilter) {
+            $tasksQuery->where('status', $statusFilter);
+        }
+        
+        if ($typeFilter && $typeFilter !== 'all') {
+            $tasksQuery->where('type', $typeFilter);
+        }
+        
+        $tasks = $tasksQuery->get();
+        
+        // Calculate all chart data (same logic as dashboard method)
+        $statusDistribution = [
+            'todo' => $tasks->where('status', 'todo')->count(),
+            'in_progress' => $tasks->where('status', 'in_progress')->count(),
+            'done' => $tasks->where('status', 'done')->count(),
+        ];
+        
+        $typeDistribution = [
+            'personal' => $tasks->where('type', 'personal')->count(),
+            'group' => $tasks->where('type', 'group')->count(),
+        ];
+        
+        $startDate = \Carbon\Carbon::now()->subDays(30);
+        $endDate = \Carbon\Carbon::now();
+        $currentDate = $startDate->copy();
+        
+        $creationTrends = [];
+        while ($currentDate <= $endDate) {
+            $dateKey = $currentDate->format('Y-m-d');
+            $tasksOnDate = $tasks->filter(function($task) use ($currentDate) {
+                return $task->created_at && $task->created_at->isSameDay($currentDate);
+            });
+            
+            $creationTrends[$dateKey] = [
+                'date' => $currentDate->format('M d'),
+                'total' => $tasksOnDate->count(),
+                'completed' => $tasksOnDate->where('status', 'done')->count(),
+                'in_progress' => $tasksOnDate->where('status', 'in_progress')->count(),
+                'todo' => $tasksOnDate->where('status', 'todo')->count(),
+            ];
+            $currentDate->addDay();
+        }
+        
+        $completionRate = [];
+        $currentDate = $startDate->copy();
+        while ($currentDate <= $endDate) {
+            $dateKey = $currentDate->format('Y-m-d');
+            $tasksUpToDate = Task::whereNull('parent_id')
+                ->where('created_at', '<=', $currentDate->endOfDay())
+                ->when($typeFilter && $typeFilter !== 'all', function($q) use ($typeFilter) {
+                    $q->where('type', $typeFilter);
+                })
+                ->get();
+            
+            $total = $tasksUpToDate->count();
+            $completed = $tasksUpToDate->where('status', 'done')->count();
+            
+            $completionRate[$dateKey] = [
+                'date' => $currentDate->format('M d'),
+                'total' => $total,
+                'completed' => $completed,
+                'rate' => $total > 0 ? round(($completed / $total) * 100, 2) : 0,
+            ];
+            $currentDate->addDay();
+        }
+        
+        $priorityDistribution = [
+            'high' => $tasks->where('priority', 'high')->count(),
+            'medium' => $tasks->where('priority', 'medium')->count(),
+            'low' => $tasks->where('priority', 'low')->count(),
+        ];
+        
+        $tasksByUser = $tasks->groupBy('created_by')
+            ->map(function($userTasks, $userId) {
+                $user = User::find($userId);
+                if (!$user) return null;
+                return [
+                    'user' => ['id' => $user->id, 'name' => $user->name],
+                    'total' => $userTasks->count(),
+                    'completed' => $userTasks->where('status', 'done')->count(),
+                ];
+            })
+            ->filter()
+            ->sortByDesc('total')
+            ->take(10)
+            ->values();
+        
+        $usersWithMostCompleted = Task::whereNull('parent_id')
+            ->where('status', 'done')
+            ->when($typeFilter && $typeFilter !== 'all', function($q) use ($typeFilter) {
+                $q->where('type', $typeFilter);
+            })
+            ->with('creator')
+            ->get()
+            ->groupBy('created_by')
+            ->map(function($userTasks, $userId) {
+                $user = User::find($userId);
+                if (!$user) return null;
+                return [
+                    'user' => ['id' => $user->id, 'name' => $user->name],
+                    'completed_count' => $userTasks->count(),
+                ];
+            })
+            ->filter()
+            ->sortByDesc('completed_count')
+            ->take(10)
+            ->values();
+        
+        $taskChangesOverTime = [];
+        $currentDate = $startDate->copy();
+        while ($currentDate <= $endDate) {
+            $dateKey = $currentDate->format('Y-m-d');
+            $changesOnDate = TaskActivityLog::whereDate('created_at', $currentDate)
+                ->whereIn('action', ['updated', 'status_changed', 'priority_changed', 'moved'])
+                ->count();
+            
+            $taskChangesOverTime[$dateKey] = [
+                'date' => $currentDate->format('M d'),
+                'changes' => $changesOnDate,
+            ];
+            $currentDate->addDay();
+        }
+        
+        $taskChangesByUser = TaskActivityLog::whereIn('action', ['updated', 'status_changed', 'priority_changed', 'moved'])
+            ->where('created_at', '>=', $startDate)
+            ->with('user')
+            ->get()
+            ->groupBy('user_id')
+            ->map(function($logs, $userId) {
+                $user = User::find($userId);
+                if (!$user) return null;
+                return [
+                    'user' => ['id' => $user->id, 'name' => $user->name],
+                    'changes_count' => $logs->count(),
+                ];
+            })
+            ->filter()
+            ->sortByDesc('changes_count')
+            ->take(10)
+            ->values();
+        
+        // Task List Statistics (same logic as dashboard method)
+        $taskListsByUser = TaskList::with('user')
+            ->get()
+            ->groupBy('user_id')
+            ->map(function($lists, $userId) {
+                $user = User::find($userId);
+                if (!$user) return null;
+                return [
+                    'user' => ['id' => $user->id, 'name' => $user->name],
+                    'task_lists_count' => $lists->count(),
+                    'total_tasks' => $lists->sum(function($list) {
+                        return $list->tasks()->count();
+                    }),
+                ];
+            })
+            ->filter()
+            ->sortByDesc('task_lists_count')
+            ->take(10)
+            ->values();
+        
+        $taskListCreationTrends = [];
+        $currentDate = $startDate->copy();
+        while ($currentDate <= $endDate) {
+            $dateKey = $currentDate->format('Y-m-d');
+            $listsOnDate = TaskList::whereDate('created_at', $currentDate)->count();
+            
+            $taskListCreationTrends[$dateKey] = [
+                'date' => $currentDate->format('M d'),
+                'created' => $listsOnDate,
+            ];
+            $currentDate->addDay();
+        }
+        
+        $tasksPerTaskList = TaskList::with(['user', 'tasks'])
+            ->get()
+            ->map(function($list) {
+                return [
+                    'task_list' => [
+                        'id' => $list->id,
+                        'name' => $list->name,
+                        'user_name' => $list->user->name ?? 'Unknown',
+                    ],
+                    'total_tasks' => $list->tasks()->count(),
+                    'completed_tasks' => $list->tasks()->where('status', 'done')->count(),
+                    'in_progress_tasks' => $list->tasks()->where('status', 'in_progress')->count(),
+                    'todo_tasks' => $list->tasks()->where('status', 'todo')->count(),
+                ];
+            })
+            ->sortByDesc('total_tasks')
+            ->take(10)
+            ->values();
+        
+        $taskListGrowthOverTime = [];
+        $currentDate = $startDate->copy();
+        while ($currentDate <= $endDate) {
+            $dateKey = $currentDate->format('Y-m-d');
+            $totalLists = TaskList::where('created_at', '<=', $currentDate->endOfDay())->count();
+            $totalTasksInLists = Task::whereNotNull('task_list_id')
+                ->where('created_at', '<=', $currentDate->endOfDay())
+                ->count();
+            
+            $taskListGrowthOverTime[$dateKey] = [
+                'date' => $currentDate->format('M d'),
+                'total_lists' => $totalLists,
+                'total_tasks' => $totalTasksInLists,
+            ];
+            $currentDate->addDay();
+        }
+        
+        return response()->json([
+            'statusDistribution' => $statusDistribution,
+            'typeDistribution' => $typeDistribution,
+            'creationTrends' => $creationTrends,
+            'completionRate' => $completionRate,
+            'priorityDistribution' => $priorityDistribution,
+            'tasksByUser' => $tasksByUser,
+            'usersWithMostCompleted' => $usersWithMostCompleted,
+            'taskChangesOverTime' => $taskChangesOverTime,
+            'taskChangesByUser' => $taskChangesByUser,
+            'taskListsByUser' => $taskListsByUser,
+            'taskListCreationTrends' => $taskListCreationTrends,
+            'tasksPerTaskList' => $tasksPerTaskList,
+            'taskListGrowthOverTime' => $taskListGrowthOverTime,
+        ]);
+    }
+    
+    /**
      * Display a listing of tasks (My Tasks or Group Tasks)
      */
     public function index(Request $request)
@@ -496,14 +1105,48 @@ class TaskController extends Controller
             } elseif ($request->due_date && !$request->has('due_time')) {
                 $dueDate .= ' 23:59:59';
             }
-            $updateData['due_date'] = $dueDate ? date('Y-m-d H:i:s', strtotime($dueDate)) : null;
+            $newDueDate = $dueDate ? date('Y-m-d H:i:s', strtotime($dueDate)) : null;
+            
+            // Log due date change
+            if ($task->due_date != $newDueDate) {
+                $oldDueDate = $task->due_date ? $task->due_date->format('Y-m-d H:i:s') : null;
+                $this->logTaskActivity($task, 'due_date_changed', 'due_date', $oldDueDate, $newDueDate, "Due date changed from " . ($oldDueDate ?? 'none') . " to " . ($newDueDate ?? 'none'));
+            }
+            $updateData['due_date'] = $newDueDate;
+        }
+        
+        // Log task_list_id change if applicable
+        if ($request->has('task_list_id') && $task->task_list_id != $request->task_list_id) {
+            $oldListId = $task->task_list_id;
+            $newListId = $request->task_list_id;
+            $oldListName = $oldListId ? TaskList::find($oldListId)->name ?? 'Unknown' : 'None';
+            $newListName = $newListId ? TaskList::find($newListId)->name ?? 'Unknown' : 'None';
+            $this->logTaskActivity($task, 'task_list_changed', 'task_list_id', $oldListId, $newListId, "Task moved from list '{$oldListName}' to '{$newListName}'");
+            $updateData['task_list_id'] = $newListId;
         }
 
         $task->update($updateData);
         
         // Log general update if other fields changed
-        if ($request->has('title') || $request->has('description') || $request->has('notes')) {
-            $this->logTaskActivity($task, 'updated', null, null, null, 'Task details updated');
+        if ($request->has('title') && $request->title !== $task->getOriginal('title')) {
+            $this->logTaskActivity($task, 'title_changed', 'title', $task->getOriginal('title'), $request->title, "Title changed from '{$task->getOriginal('title')}' to '{$request->title}'");
+        }
+        
+        if ($request->has('description') && $request->description !== $task->getOriginal('description')) {
+            $this->logTaskActivity($task, 'description_changed', 'description', $task->getOriginal('description'), $request->description, 'Description updated');
+        }
+        
+        if ($request->has('notes') && $request->notes !== $task->getOriginal('notes')) {
+            $this->logTaskActivity($task, 'notes_changed', 'notes', $task->getOriginal('notes'), $request->notes, 'Notes updated');
+        }
+        
+        // Log order change if it happened without status change
+        if ($request->has('order') && !$request->has('status')) {
+            $oldOrder = $task->getOriginal('order') ?? 0;
+            $newOrder = (int) $request->order;
+            if ($oldOrder != $newOrder) {
+                $this->logTaskActivity($task, 'reordered', 'order', $oldOrder, $newOrder, "Task reordered from position {$oldOrder} to {$newOrder} within the same board");
+            }
         }
         $task->load(['creator', 'attachments', 'comments.user', 'assignments.user']);
 
@@ -609,14 +1252,25 @@ class TaskController extends Controller
             $order++;
         }
         
+        // Check if status changed
+        $oldStatus = $task->status;
+        $statusChanged = $oldStatus !== $request->status;
+        
         // Update the moved task
         $task->update([
             'order' => $newOrder,
             'status' => $request->status // Ensure status matches
         ]);
         
-        // Log the reorder
-        $this->logTaskActivity($task, 'reordered', 'order', $oldOrder, $newOrder, "Task reordered from position {$oldOrder} to {$newOrder}");
+        // Log the reorder or move
+        if ($statusChanged) {
+            $this->logTaskActivity($task, 'moved', 'status', $oldStatus, $request->status, "Task moved from {$oldStatus} to {$request->status} and reordered to position {$newOrder}", [
+                'old_order' => $oldOrder,
+                'new_order' => $newOrder
+            ]);
+        } else {
+            $this->logTaskActivity($task, 'reordered', 'order', $oldOrder, $newOrder, "Task reordered from position {$oldOrder} to {$newOrder}");
+        }
 
         return response()->json([
             'success' => true,
@@ -674,6 +1328,13 @@ class TaskController extends Controller
             }
         }
 
+        // Log deletion before deleting
+        $this->logTaskActivity($task, 'deleted', null, null, null, "Task deleted: {$task->title}", [
+            'title' => $task->title,
+            'status' => $task->status,
+            'priority' => $task->priority,
+        ]);
+
         $task->delete();
 
         return response()->json([
@@ -710,6 +1371,12 @@ class TaskController extends Controller
             'task_id' => $task->id,
             'user_id' => Auth::id(),
             'comment' => $request->comment,
+        ]);
+
+        // Log comment addition
+        $this->logTaskActivity($task, 'comment_added', 'comment', null, $request->comment, "Comment added to task", [
+            'comment_id' => $comment->id,
+            'comment_length' => strlen($request->comment)
         ]);
 
         $comment->load('user');
@@ -794,6 +1461,13 @@ class TaskController extends Controller
             'file_size' => $file->getSize(),
         ]);
 
+        // Log attachment upload
+        $this->logTaskActivity($task, 'attachment_uploaded', 'attachment', null, $file->getClientOriginalName(), "Attachment uploaded: {$file->getClientOriginalName()}", [
+            'attachment_id' => $attachment->id,
+            'file_type' => $file->getMimeType(),
+            'file_size' => $file->getSize(),
+        ]);
+
         $attachment->load('user');
 
         return response()->json([
@@ -859,6 +1533,13 @@ class TaskController extends Controller
                 // Ignore deletion errors
             }
         }
+
+        // Log attachment deletion before deleting
+        $this->logTaskActivity($task, 'attachment_deleted', 'attachment', $attachment->file_name, null, "Attachment deleted: {$attachment->file_name}", [
+            'attachment_id' => $attachment->id,
+            'file_type' => $attachment->file_type,
+            'file_size' => $attachment->file_size,
+        ]);
 
         $attachment->delete();
 
@@ -1035,16 +1716,24 @@ class TaskController extends Controller
             abort(403, 'You do not have permission to update this board.');
         }
 
-        // Prevent editing default boards
-        if ($customBoard->is_default) {
-            abort(400, 'Default boards cannot be modified.');
-        }
-
         $validator = Validator::make($request->all(), [
             'name' => 'sometimes|required|string|max:255',
             'color' => 'sometimes|required|string|max:50',
             'order' => 'sometimes|integer',
         ]);
+        
+        // Allow editing name and order for default boards, but not color
+        $updateData = [];
+        if ($request->has('name')) {
+            $updateData['name'] = $request->name;
+        }
+        if ($request->has('order')) {
+            $updateData['order'] = $request->order;
+        }
+        // Only allow color change for non-default boards
+        if (!$customBoard->is_default && $request->has('color')) {
+            $updateData['color'] = $request->color;
+        }
 
         if ($validator->fails()) {
             return response()->json([
@@ -1053,12 +1742,12 @@ class TaskController extends Controller
             ], 422);
         }
 
-        $customBoard->update($request->only(['name', 'color', 'order']));
+        $customBoard->update($updateData);
 
         return response()->json([
             'success' => true,
-            'board' => $customBoard,
-            'message' => 'Custom board updated successfully.'
+            'board' => $customBoard->fresh(),
+            'message' => 'Board updated successfully.'
         ]);
     }
 
@@ -1274,7 +1963,7 @@ class TaskController extends Controller
             ]);
         }
 
-        $shareLink = route('admin.tasks.join-task-list-by-link', ['token' => $invitation->token]);
+        $shareLink = url('/admin/tasks/task-lists/join-by-link/' . $invitation->token);
 
         return response()->json([
             'success' => true,
@@ -1393,9 +2082,9 @@ class TaskController extends Controller
     public function joinTaskListByLink(Request $request, $token)
     {
         if (!Auth::check()) {
-            return redirect()->route('login')
+            return redirect('/login')
                 ->with('error', 'Please log in to join this task list.')
-                ->with('redirect', route('admin.tasks.join-task-list-by-link', ['token' => $token]));
+                ->with('redirect', url('/admin/tasks/task-lists/join-by-link/' . $token));
         }
 
         $invitation = TaskListInvitation::where('token', $token)
@@ -1403,7 +2092,7 @@ class TaskController extends Controller
             ->first();
 
         if (!$invitation || !$invitation->isValid()) {
-            return redirect()->route('admin.tasks.index', ['type' => 'personal'])
+            return redirect('/admin/tasks?type=personal')
                 ->with('error', 'Invalid or expired invitation link.');
         }
 
@@ -1412,13 +2101,13 @@ class TaskController extends Controller
 
         // If invitation is for a specific user, check if it matches
         if ($invitation->user_id && $invitation->user_id !== $user->id) {
-            return redirect()->route('admin.tasks.index', ['type' => 'personal'])
+            return redirect('/admin/tasks?type=personal')
                 ->with('error', 'This invitation is for another user.');
         }
 
         // Check if user is already a member
         if ($taskList->isOwner($user->id) || $taskList->isSharedWith($user->id)) {
-            return redirect()->route('admin.tasks.index', ['type' => 'personal', 'list_id' => $taskList->id])
+            return redirect('/admin/tasks?type=personal&list_id=' . $taskList->id)
                 ->with('info', 'You are already a member of this task list.');
         }
 
@@ -1428,7 +2117,7 @@ class TaskController extends Controller
             'user_id' => $user->id, // Set user_id if it was a public invitation
         ]);
 
-        return redirect()->route('admin.tasks.index', ['type' => 'personal', 'list_id' => $taskList->id])
+        return redirect('/admin/tasks?type=personal&list_id=' . $taskList->id)
             ->with('success', 'Successfully joined the task list: ' . $taskList->name);
     }
 
@@ -1575,7 +2264,7 @@ class TaskController extends Controller
         return response()->json([
             'success' => true,
             'invite_code' => $code,
-            'invite_link' => route('admin.tasks.join-by-link', ['token' => $task->invitations()->where('status', 'pending')->first()?->token ?? '']),
+            'invite_link' => url('/admin/tasks/join-by-link/' . ($task->invitations()->where('status', 'pending')->first()?->token ?? '')),
             'message' => 'Invite code generated successfully.'
         ]);
     }
@@ -1616,7 +2305,7 @@ class TaskController extends Controller
             ]);
         }
 
-        $inviteLink = route('admin.tasks.join-by-link', ['token' => $invitation->token]);
+        $inviteLink = url('/admin/tasks/join-by-link/' . $invitation->token);
 
         return response()->json([
             'success' => true,
@@ -1653,7 +2342,7 @@ class TaskController extends Controller
             ]);
         }
 
-        $shareLink = route('admin.tasks.join-by-link', ['token' => $invitation->token]);
+        $shareLink = url('/admin/tasks/join-by-link/' . $invitation->token);
 
         return response()->json([
             'success' => true,
@@ -1767,9 +2456,9 @@ class TaskController extends Controller
     {
         // Ensure user is authenticated
         if (!Auth::check()) {
-            return redirect()->route('login')
+            return redirect('/login')
                 ->with('error', 'Please log in to join this task.')
-                ->with('redirect', route('admin.tasks.join-by-link', ['token' => $token]));
+                ->with('redirect', url('/admin/tasks/join-by-link/' . $token));
         }
 
         $invitation = TaskInvitation::where('token', $token)
@@ -1777,7 +2466,7 @@ class TaskController extends Controller
             ->first();
 
         if (!$invitation || !$invitation->isValid()) {
-            return redirect()->route('admin.tasks.index', ['type' => 'group'])
+            return redirect('/admin/tasks?type=group')
                 ->with('error', 'Invalid or expired invitation link.');
         }
 
@@ -1786,7 +2475,7 @@ class TaskController extends Controller
 
         // If invitation is for a specific user, check if it matches
         if ($invitation->user_id && $invitation->user_id !== $user->id) {
-            return redirect()->route('admin.tasks.index', ['type' => 'group'])
+            return redirect('/admin/tasks?type=group')
                 ->with('error', 'This invitation is for another user.');
         }
 
@@ -1814,7 +2503,7 @@ class TaskController extends Controller
 
         // Check if user is already assigned
         if ($task->isAssignedTo($user->id)) {
-            return redirect()->route('admin.tasks.index', ['type' => 'group'])
+            return redirect('/admin/tasks?type=group')
                 ->with('info', 'You are already a member of this task.');
         }
 
@@ -1831,7 +2520,7 @@ class TaskController extends Controller
             'role' => $invitation->role,
         ]);
 
-        return redirect()->route('admin.tasks.index', ['type' => 'group'])
+        return redirect('/admin/tasks?type=group')
             ->with('success', 'Successfully joined the task: ' . $task->title);
     }
 
@@ -2036,7 +2725,7 @@ class TaskController extends Controller
                 ]);
             }
 
-            $responseData['invite_link'] = route('admin.tasks.join-by-link', ['token' => $invitation->token]);
+            $responseData['invite_link'] = url('/admin/tasks/join-by-link/' . $invitation->token);
             $responseData['token'] = $invitation->token;
         } elseif ($request->share_method === 'manual') {
             // Create invitations for selected users

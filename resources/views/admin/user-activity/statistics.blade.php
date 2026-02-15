@@ -22,7 +22,7 @@
             <p class="mt-1 text-sm text-gray-600">Comprehensive analytics and insights into user behavior</p>
         </div>
         <div class="mt-4 sm:mt-0 flex space-x-3">
-            <a href="{{ route('admin.user-activity.index') }}"
+            <a href="{{ url('/admin/user-activity') }}"
                class="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
                 <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
@@ -30,7 +30,7 @@
                 </svg>
                 View Activities
             </a>
-            <a href="{{ route('admin.user-activity.sessions') }}"
+            <a href="{{ url('/admin/user-activity/sessions') }}"
                class="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
                 <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z"></path>
@@ -195,7 +195,7 @@
                 <h3 class="text-lg font-medium text-gray-900">Data Management</h3>
                 <p class="text-sm text-gray-600">Clean up old activity logs to maintain system performance</p>
             </div>
-            <form method="POST" action="{{ route('admin.user-activity.cleanup') }}" class="flex items-center space-x-3">
+            <form method="POST" action="{{ url('/admin/user-activity/cleanup') }}" class="flex items-center space-x-3">
                 @csrf
                 <select name="days" class="border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500">
                     <option value="30">30 days</option>
