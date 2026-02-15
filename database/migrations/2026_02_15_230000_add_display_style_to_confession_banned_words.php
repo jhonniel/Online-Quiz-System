@@ -9,7 +9,7 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('confession_banned_words', function (Blueprint $table) {
-            $table->string('display_style', 20)->default('full')->after('word');
+            $table->string('display_style', 20)->default('full');
         });
     }
 

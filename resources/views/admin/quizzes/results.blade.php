@@ -190,10 +190,10 @@
                                         {{ $bestScore }} pts
                                     </td>
                                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                        {{ $lastAttempt->created_at->format('M j, Y g:i A') }}
+                                        {{ \Carbon\Carbon::parse($lastAttempt->created_at)->format('M j, Y g:i A') }}
                                     </td>
                                     <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                                        <div class="flex items-center space-x-2">
+                                        <div class="flex items-center gap-2 flex-wrap">
                                             <button
                                                 type="button"
                                                 onclick="showStudentDetails(
@@ -202,16 +202,14 @@
                                                     @js($user->email),
                                                     {{ $attemptCount }},
                                                     {{ $bestScore }},
-                                                    @js($lastAttempt->created_at->format('M j, Y g:i A'))
+                                                    @js(\Carbon\Carbon::parse($lastAttempt->created_at)->format('M j, Y g:i A'))
                                                 )"
-                                                class="text-indigo-600 hover:text-indigo-900 cursor-pointer bg-transparent border-0 p-0">
+                                                class="inline-flex items-center px-3 py-1.5 rounded-md text-sm font-medium text-indigo-700 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200">
                                                 View Details
                                             </button>
-                                            <span class="text-gray-300">|</span>
-                                            <a href="{{ url('/admin/quizzes/' . $quiz->id . '/users/' . $userId . '/history') }}"
-                                               class="text-green-600 hover:text-green-800 font-medium"
-                                               style="color: #16a34a !important; text-decoration: none !important; display: inline-block !important;">
-                                                View
+                                            <a href="{{ url('admin/quizzes/' . $quiz->id . '/users/' . $userId . '/history') }}"
+                                               class="inline-flex items-center px-3 py-1.5 rounded-md text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700">
+                                                View History
                                             </a>
                                         </div>
                                     </td>
