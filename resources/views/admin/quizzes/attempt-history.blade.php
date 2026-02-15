@@ -129,7 +129,7 @@
                                             <button onclick="viewAttemptDetails({{ $attempt->id }})" class="text-indigo-600 hover:text-indigo-900">
                                                 View Details
                                             </button>
-                                            <a href="{{ route('admin.quiz-assignments.history.pdf', $assignment) }}" class="text-gray-600 hover:text-gray-900" title="Download PDF">
+                                            <a href="{{ url('admin/quiz-assignments/' . $assignment->id . '/history/pdf') }}" class="text-gray-600 hover:text-gray-900" title="Download PDF">
                                                 PDF
                                             </a>
                                         </div>
@@ -162,20 +162,20 @@
                     </span>
                 </div>
                 <div class="flex space-x-3">
-                    <a href="{{ route('admin.quiz-assignments.history.pdf', $assignment) }}"
+                    <a href="{{ url('admin/quiz-assignments/' . $assignment->id . '/history/pdf') }}"
                        class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-md transition-colors duration-200"
                        target="_blank">
                         Download PDF
                     </a>
                     @if($assignment->canRetake())
-                        <form action="{{ route('admin.quiz-assignments.reset', $assignment) }}" method="POST" class="inline">
+                        <form action="{{ url('admin/quiz-assignments/' . $assignment->id . '/reset') }}" method="POST" class="inline">
                             @csrf
                             <button type="submit" class="bg-yellow-600 hover:bg-yellow-700 text-white px-4 py-2 rounded-md transition-colors duration-200">
                                 Reset for Retake
                             </button>
                         </form>
                     @else
-                        <form action="{{ route('admin.quiz-assignments.allow-retake', $assignment) }}" method="POST" class="inline">
+                        <form action="{{ url('admin/quiz-assignments/' . $assignment->id . '/allow-retake') }}" method="POST" class="inline">
                             @csrf
                             <button type="submit" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-md transition-colors duration-200">
                                 Allow Retake

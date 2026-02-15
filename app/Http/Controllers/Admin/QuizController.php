@@ -685,7 +685,7 @@ class QuizController extends Controller
         $totalQuestions = $assignment->quiz->total_questions;
 
         $timeTaken = $assignment->started_at ?
-            now()->timestamp - $assignment->started_at->timestamp : null;
+            now()->timestamp - \Carbon\Carbon::parse($assignment->started_at)->timestamp : null;
 
         // Determine status
         $status = 'completed';

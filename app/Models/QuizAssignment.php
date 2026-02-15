@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 
@@ -61,7 +62,7 @@ class QuizAssignment extends Model
             return null;
         }
 
-        $elapsedSeconds = now()->timestamp - $this->started_at->timestamp;
+        $elapsedSeconds = now()->timestamp - Carbon::parse($this->started_at)->timestamp;
         $totalSeconds = $this->quiz->time_limit * 60;
 
         return max(0, $totalSeconds - $elapsedSeconds);
@@ -73,7 +74,7 @@ class QuizAssignment extends Model
             return false;
         }
 
-        $elapsedSeconds = now()->timestamp - $this->started_at->timestamp;
+        $elapsedSeconds = now()->timestamp - Carbon::parse($this->started_at)->timestamp;
         $totalSeconds = $this->quiz->time_limit * 60;
 
         return $elapsedSeconds >= $totalSeconds;
@@ -85,7 +86,7 @@ class QuizAssignment extends Model
             return 0;
         }
 
-        return now()->timestamp - $this->started_at->timestamp;
+        return now()->timestamp - Carbon::parse($this->started_at)->timestamp;
     }
 
     // Status helper methods

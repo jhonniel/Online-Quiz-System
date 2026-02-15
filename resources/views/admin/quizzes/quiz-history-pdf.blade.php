@@ -54,7 +54,7 @@
                     <td class="right">{{ $row['total_score'] }}</td>
                     <td class="right">{{ $row['avg_correct'] }} / {{ $quiz->total_questions }}</td>
                     <td class="right">{{ $row['avg_percent'] }}%</td>
-                    <td>{{ $row['last_attempt_at'] ? $row['last_attempt_at']->format('M j, Y g:i A') : 'N/A' }}</td>
+                    <td>{{ $row['last_attempt_at'] ? \Carbon\Carbon::parse($row['last_attempt_at'])->format('M j, Y g:i A') : 'N/A' }}</td>
                 </tr>
             @endforeach
         </tbody>

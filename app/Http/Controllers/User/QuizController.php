@@ -601,7 +601,7 @@ class QuizController extends Controller
         // Ensure we have a started_at time - use assignment started_at or current time
         $startedAt = $assignment->started_at ?? now();
         $timeTaken = $assignment->started_at ?
-            now()->timestamp - $assignment->started_at->timestamp : null;
+            now()->timestamp - \Carbon\Carbon::parse($assignment->started_at)->timestamp : null;
 
         // Get the current attempt's answers from QuizAttempt table
         $currentAttemptAnswers = QuizAttempt::where('quiz_id', $assignment->quiz_id)

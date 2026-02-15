@@ -38,7 +38,7 @@
                 </div>
             </div>
             <div class="flex space-x-3">
-                <a href="{{ route('admin.quizzes.export-history-pdf', $quiz) }}"
+                <a href="{{ url('admin/quizzes/' . $quiz->id . '/export-history/pdf') }}"
                    class="inline-flex items-center px-4 py-2 border border-white text-sm font-medium rounded-md text-white bg-transparent hover:bg-white hover:text-indigo-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-white transition-colors duration-200">
                     <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
@@ -146,7 +146,7 @@
                 <div class="border border-gray-200 rounded-lg p-6">
                     <div class="flex items-center justify-between mb-4">
                         <h3 class="text-lg font-medium text-gray-900">Import Questions from Excel</h3>
-                        <a href="{{ route('admin.quizzes.template.download') }}"
+                        <a href="{{ url('admin/quizzes/template/download') }}"
                            class="inline-flex items-center px-3 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
                             <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
@@ -155,7 +155,7 @@
                         </a>
                     </div>
 
-                    <form action="{{ route('admin.quizzes.import-questions', $quiz) }}" method="POST" enctype="multipart/form-data" class="space-y-4">
+                    <form action="{{ url('admin/quizzes/' . $quiz->id . '/import-questions') }}" method="POST" enctype="multipart/form-data" class="space-y-4">
                         @csrf
                         <div>
                             <label for="excel_file" class="block text-sm font-medium text-gray-700">Excel File</label>
@@ -360,19 +360,19 @@
                                     </td>
                                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                                         @if($assignment->last_attempt_at)
-                                            {{ $assignment->last_attempt_at->format('M j, Y g:i A') }}
+                                            {{ \Carbon\Carbon::parse($assignment->last_attempt_at)->format('M j, Y g:i A') }}
                                         @else
                                             <span class="text-gray-400">Never</span>
                                         @endif
                                     </td>
                                     <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
                                         <div class="flex space-x-2">
-                                            <a href="{{ route('admin.quiz-assignments.history', $assignment) }}"
+                                            <a href="{{ url('admin/quiz-assignments/' . $assignment->id . '/history') }}"
                                                class="text-indigo-600 hover:text-indigo-900">
                                                 View History
                                             </a>
                                             @if($assignment->canRetake())
-                                                <form action="{{ route('admin.quiz-assignments.reset', $assignment) }}" method="POST" class="inline">
+                                                <form action="{{ url('admin/quiz-assignments/' . $assignment->id . '/reset') }}" method="POST" class="inline">
                                                     @csrf
                                                     <button type="submit" class="text-yellow-600 hover:text-yellow-900"
                                                             onclick="return confirm('Are you sure you want to reset this quiz assignment? The user will be able to retake the quiz.')">
@@ -380,7 +380,7 @@
                                                     </button>
                                                 </form>
                                             @else
-                                                <form action="{{ route('admin.quiz-assignments.allow-retake', $assignment) }}" method="POST" class="inline">
+                                                <form action="{{ url('admin/quiz-assignments/' . $assignment->id . '/allow-retake') }}" method="POST" class="inline">
                                                     @csrf
                                                     <button type="submit" class="text-green-600 hover:text-green-900">
                                                         Allow Retake
