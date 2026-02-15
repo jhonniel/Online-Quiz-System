@@ -26,12 +26,12 @@ class ConfessionPost extends Model
 
     public function comments(): HasMany
     {
-        return $this->hasMany(ConfessionComment::class)->whereNull('parent_id')->orderBy('created_at');
+        return $this->hasMany(ConfessionComment::class)->whereNull('parent_id');
     }
 
     public function allComments(): HasMany
     {
-        return $this->hasMany(ConfessionComment::class)->orderBy('created_at');
+        return $this->hasMany(ConfessionComment::class);
     }
 
     public function votes(): HasMany

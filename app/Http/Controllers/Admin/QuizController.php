@@ -358,10 +358,10 @@ class QuizController extends Controller
 
     public function exportQuizHistoryPdf(Quiz $quiz)
     {
-        $quiz->load(['assignments.user', 'assignments.attemptHistory']);
+        $quiz->load(['assignments.user']);
 
         $rows = $quiz->assignments->map(function ($assignment) use ($quiz) {
-            $attempts = $assignment->attemptHistory;
+            $attempts = $assignment->attemptHistory()->orderBy('attempt_number')->get();
             $attemptCount = $attempts->count();
             $avgCorrect = $attemptCount > 0 ? round($attempts->avg('correct_answers'), 2) : 0;
             $avgPercent = ($attemptCount > 0 && $quiz->total_questions) ? round(($avgCorrect / $quiz->total_questions) * 100, 2) : 0;
@@ -596,11 +596,24 @@ class QuizController extends Controller
 
     public function getAttemptDetails($attemptId)
     {
-        $attempt = QuizAttemptHistory::with(['quiz.questions', 'user'])
-            ->findOrFail($attemptId);
+        try {
+            $attempt = QuizAttemptHistory::with(['quiz.questions', 'user'])
+                ->find($attemptId);
+
+            if (!$attempt) {
+                return response()->json(['error' => 'Attempt not found'], 404);
+            }
+
+        if (!$attempt->quiz) {
+            return response()->json(['error' => 'Quiz not found for this attempt'], 404);
+        }
+
+        if (!$attempt->user) {
+            return response()->json(['error' => 'User not found for this attempt'], 404);
+        }
 
         // Get the quiz questions with their correct answers
-        $questions = $attempt->quiz->questions->map(function($question) {
+        $questions = $attempt->quiz->questions->map(function ($question) {
             return [
                 'id' => $question->id,
                 'question_text' => $question->question_text,
@@ -633,8 +646,8 @@ class QuizController extends Controller
                 'correct_answers' => $attempt->correct_answers,
                 'time_taken_seconds' => $attempt->time_taken_seconds,
                 'status' => $attempt->status,
-                'started_at' => $attempt->started_at,
-                'completed_at' => $attempt->completed_at,
+                'started_at' => $attempt->started_at ? \Carbon\Carbon::parse($attempt->started_at)->toIso8601String() : null,
+                'completed_at' => $attempt->completed_at ? \Carbon\Carbon::parse($attempt->completed_at)->toIso8601String() : null,
             ],
             'quiz' => [
                 'id' => $attempt->quiz->id,
@@ -649,13 +662,17 @@ class QuizController extends Controller
             'questions' => $questions,
             'user_answers' => $userAnswers,
         ]);
+        } catch (\Throwable $e) {
+            \Log::error('getAttemptDetails failed', ['attemptId' => $attemptId, 'error' => $e->getMessage()]);
+            return response()->json(['error' => 'Unable to load attempt details. Please try again.'], 500);
+        }
     }
 
     public function getUserQuizHistory($quizId, $userId)
     {
         $assignment = QuizAssignment::where('quiz_id', $quizId)
             ->where('user_id', $userId)
-            ->with(['quiz', 'user', 'attemptHistory'])
+            ->with(['quiz', 'user'])
             ->first();
 
         if (!$assignment) {

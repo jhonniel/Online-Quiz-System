@@ -55,12 +55,7 @@ class SayItController extends Controller
 
     public function show(ConfessionPost $post)
     {
-        $post->load(['comments.replies.replies' => function ($q) {
-            $q->orderBy('created_at');
-        }, 'comments.replies', 'comments' => function ($q) {
-            $q->orderBy('created_at');
-        }]);
-        // Flatten for nested display: load all comments for this post ordered by created_at
+        // Load all comments for this post (flat list) for nested display in the view
         $allComments = $post->allComments()->orderBy('created_at')->get();
 
         return view('say-it.show', compact('post', 'allComments'));

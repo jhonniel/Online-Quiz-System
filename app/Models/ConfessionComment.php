@@ -37,7 +37,7 @@ class ConfessionComment extends Model
 
     public function replies(): HasMany
     {
-        return $this->hasMany(ConfessionComment::class, 'parent_id')->orderBy('created_at');
+        return $this->hasMany(ConfessionComment::class, 'parent_id');
     }
 
     public function votes(): HasMany

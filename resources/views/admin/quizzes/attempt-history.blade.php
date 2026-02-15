@@ -119,10 +119,10 @@
                                         </span>
                                     </td>
                                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                        {{ $attempt->started_at ? $attempt->started_at->format('M j, Y g:i A') : 'N/A' }}
+                                        {{ $attempt->started_at ? \Carbon\Carbon::parse($attempt->started_at)->format('M j, Y g:i A') : 'N/A' }}
                                     </td>
                                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                        {{ $attempt->completed_at ? $attempt->completed_at->format('M j, Y g:i A') : 'N/A' }}
+                                        {{ $attempt->completed_at ? \Carbon\Carbon::parse($attempt->completed_at)->format('M j, Y g:i A') : 'N/A' }}
                                     </td>
                                     <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
                                         <div class="flex items-center space-x-3">
@@ -219,15 +219,22 @@ function viewAttemptDetails(attemptId) {
     document.getElementById('attemptModal').classList.remove('hidden');
 
     // Make AJAX call to get attempt details
-    fetch(`/admin/quiz-attempts/${attemptId}/details`, {
-        method: 'GET',
-        headers: {
-            'X-Requested-With': 'XMLHttpRequest',
-            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+    const url = `{{ url('admin/quiz-attempts') }}/${attemptId}/details`;
+    const csrfMeta = document.querySelector('meta[name="csrf-token"]');
+    const headers = { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' };
+    if (csrfMeta) headers['X-CSRF-TOKEN'] = csrfMeta.getAttribute('content');
+
+    fetch(url, { method: 'GET', headers })
+    .then(response => {
+        if (!response.ok) {
+            return response.json().then(err => { throw new Error(err.error || err.message || 'Request failed'); }).catch(() => { throw new Error('Request failed (' + response.status + ')'); });
         }
+        return response.json();
     })
-    .then(response => response.json())
     .then(data => {
+        if (data.error) {
+            throw new Error(data.error);
+        }
         displayAttemptDetails(data);
     })
     .catch(error => {
@@ -235,7 +242,7 @@ function viewAttemptDetails(attemptId) {
         document.getElementById('attemptDetails').innerHTML = `
             <div class="text-center py-8">
                 <p class="text-red-500">Error loading attempt details</p>
-                <p class="text-sm text-gray-400 mt-2">Please try again later</p>
+                <p class="text-sm text-gray-400 mt-2">${error.message || 'Please try again later'}</p>
             </div>
         `;
     });

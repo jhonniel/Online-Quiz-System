@@ -86,8 +86,8 @@
                     <td>{{ $attempt->percentage }}%</td>
                     <td>{{ $attempt->time_taken_formatted }}</td>
                     <td>{{ $attempt->getStatusText() }}</td>
-                    <td>{{ $attempt->started_at ? $attempt->started_at->format('M j, Y g:i A') : 'N/A' }}</td>
-                    <td>{{ $attempt->completed_at ? $attempt->completed_at->format('M j, Y g:i A') : 'N/A' }}</td>
+                    <td>{{ $attempt->started_at ? \Carbon\Carbon::parse($attempt->started_at)->format('M j, Y g:i A') : 'N/A' }}</td>
+                    <td>{{ $attempt->completed_at ? \Carbon\Carbon::parse($attempt->completed_at)->format('M j, Y g:i A') : 'N/A' }}</td>
                 </tr>
                 @php $detail = collect($attempts_detailed)->firstWhere('id', $attempt->id); @endphp
                 @if($detail && !empty($detail['questions']))
