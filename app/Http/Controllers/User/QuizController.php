@@ -320,14 +320,36 @@ class QuizController extends Controller
                 ];
             })->values(),
             'remaining_time' => $remainingTime,
+            'saved_progress' => $assignment->progress_answers ?? [],
         ]);
+    }
+
+    public function saveProgress(Request $request, Quiz $quiz)
+    {
+        $request->validate([
+            'answers' => 'required|array',
+            'answers.*' => 'nullable',
+        ]);
+
+        $assignment = QuizAssignment::where('quiz_id', $quiz->id)
+            ->where('user_id', auth()->id())
+            ->first();
+
+        if (!$assignment || $assignment->is_completed) {
+            return response()->json(['success' => false, 'message' => 'Not authorized.'], 403);
+        }
+
+        $assignment->progress_answers = $request->answers;
+        $assignment->save();
+
+        return response()->json(['success' => true]);
     }
 
     public function submit(Request $request, Quiz $quiz)
     {
         $request->validate([
             'answers' => 'required|array',
-            'answers.*' => 'required',
+            'answers.*' => 'nullable', // allow empty for text/fill_blank
         ]);
 
         // Check if user is assigned to this quiz
@@ -373,60 +395,44 @@ class QuizController extends Controller
             $hasTextQuestions = false;
 
             foreach ($request->answers as $questionId => $userAnswer) {
-                $question = Question::findOrFail($questionId);
+                $question = Question::where('quiz_id', $quiz->id)->findOrFail($questionId);
                 $pointsEarned = 0;
                 $isCorrect = false;
-
-                // Debug logging
-                \Log::info('Answer checking:', [
-                    'question_id' => $questionId,
-                    'question_type' => $question->question_type,
-                    'user_answer' => $userAnswer,
-                    'correct_answer' => $question->correct_answer,
-                    'question_text' => $question->question_text,
-                    'option_a' => $question->option_a,
-                    'option_b' => $question->option_b,
-                    'option_c' => $question->option_c,
-                    'option_d' => $question->option_d,
-                    'comparison_result' => $userAnswer === $question->correct_answer
-                ]);
+                $userAnswerValue = is_array($userAnswer) ? json_encode($userAnswer) : (string) $userAnswer;
 
                 if ($question->question_type === 'multiple_choice') {
-                    // Always check against the correct_answer field for new question structure
-                    if ($userAnswer === $question->correct_answer) {
-                        $pointsEarned = $question->points;
+                    if ($userAnswerValue === (string) $question->correct_answer) {
+                        $pointsEarned = (int) ($question->points ?? 0);
                         $isCorrect = true;
                         $correctAnswers++;
                     }
                 } elseif ($question->question_type === 'true_false') {
-                    // For True/False questions, check against the correct_answer field (A or B)
-                    if ($userAnswer === $question->correct_answer) {
-                        $pointsEarned = $question->points;
+                    if ($userAnswerValue === (string) $question->correct_answer) {
+                        $pointsEarned = (int) ($question->points ?? 0);
                         $isCorrect = true;
                         $correctAnswers++;
                     }
                 } elseif ($question->question_type === 'text') {
-                    // For text questions, require manual grading
-                    // Don't award points automatically - they need to be graded manually
                     $pointsEarned = 0;
-                    $isCorrect = false; // Will be updated after manual grading
+                    $isCorrect = false;
                     $hasTextQuestions = true;
                 } elseif ($question->question_type === 'fill_blank') {
-                    // For fill-in-the-blank questions, require manual grading
-                    // Don't award points automatically - they need to be graded manually
                     $pointsEarned = 0;
-                    $isCorrect = false; // Will be updated after manual grading
+                    $isCorrect = false;
                     $hasTextQuestions = true;
+                } else {
+                    $pointsEarned = 0;
+                    $isCorrect = false;
                 }
 
                 QuizAttempt::create([
                     'quiz_id' => $quiz->id,
                     'user_id' => auth()->id(),
-                    'question_id' => $questionId,
-                    'answer_id' => null, // No longer using answer_id for new structure
-                    'user_answer' => $userAnswer, // Store the selected option (A, B, C, D)
+                    'question_id' => $question->id,
+                    'answer_id' => null,
+                    'user_answer' => $userAnswerValue,
                     'is_correct' => $isCorrect,
-                    'points_earned' => $pointsEarned,
+                    'points_earned' => (int) $pointsEarned,
                     'started_at' => now(),
                     'completed_at' => now(),
                 ]);
@@ -438,10 +444,11 @@ class QuizController extends Controller
             $status = $hasTextQuestions ? 'partial' : 'completed';
             $this->saveAttemptToHistory($assignment, $totalPoints, $correctAnswers, $quiz->total_questions, $request->answers, $status);
 
-            // Mark assignment as completed
+            // Mark assignment as completed and clear saved progress
             $assignment->update([
                 'is_completed' => true,
-                'status' => 'completed'
+                'status' => 'completed',
+                'progress_answers' => null,
             ]);
 
             DB::commit();
@@ -467,7 +474,6 @@ class QuizController extends Controller
         } catch (\Exception $e) {
             DB::rollback();
 
-            // Log the actual error for debugging
             \Log::error('Quiz submission error: ' . $e->getMessage(), [
                 'quiz_id' => $quiz->id,
                 'user_id' => auth()->id(),
@@ -475,10 +481,15 @@ class QuizController extends Controller
                 'trace' => $e->getTraceAsString()
             ]);
 
+            $message = 'An error occurred while submitting the quiz. Please try again.';
+            if (config('app.debug')) {
+                $message .= ' ' . $e->getMessage();
+            }
+
             if ($request->ajax()) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'An error occurred while submitting the quiz. Please try again.',
+                    'message' => $message,
                     'type' => 'error'
                 ], 500);
             }
@@ -599,9 +610,10 @@ class QuizController extends Controller
     private function saveAttemptToHistory($assignment, $totalScore, $correctAnswers, $totalQuestions, $userAnswers = [], $status = 'completed')
     {
         // Ensure we have a started_at time - use assignment started_at or current time
-        $startedAt = $assignment->started_at ?? now();
-        $timeTaken = $assignment->started_at ?
-            now()->timestamp - \Carbon\Carbon::parse($assignment->started_at)->timestamp : null;
+        $startedAt = $assignment->started_at ? \Carbon\Carbon::parse($assignment->started_at) : now();
+        $timeTaken = $assignment->started_at
+            ? (int) (now()->timestamp - $startedAt->timestamp)
+            : null;
 
         // Get the current attempt's answers from QuizAttempt table
         $currentAttemptAnswers = QuizAttempt::where('quiz_id', $assignment->quiz_id)
@@ -629,8 +641,8 @@ class QuizController extends Controller
             })->values()->toArray();
         }
 
-        // Save to history
-        QuizAttemptHistory::create([
+        // Save to history (set answers after create so array→json cast is applied for SQLite)
+        $history = new QuizAttemptHistory([
             'quiz_id' => $assignment->quiz_id,
             'user_id' => $assignment->user_id,
             'attempt_number' => $assignment->attempt_count + 1,
@@ -641,8 +653,9 @@ class QuizController extends Controller
             'started_at' => $startedAt,
             'completed_at' => now(),
             'status' => $status,
-            'answers' => $currentAttemptAnswers,
         ]);
+        $history->answers = $currentAttemptAnswers;
+        $history->save();
 
         // Update assignment statistics
         $assignment->update([

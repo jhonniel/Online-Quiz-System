@@ -34,6 +34,14 @@ class QuizAttemptHistory extends Model
         ];
     }
 
+    /**
+     * Ensure answers is always stored as JSON string (avoids "Array to string conversion" on SQLite).
+     */
+    public function setAnswersAttribute($value): void
+    {
+        $this->attributes['answers'] = is_array($value) ? json_encode($value) : $value;
+    }
+
     // Relationships
     public function quiz()
     {

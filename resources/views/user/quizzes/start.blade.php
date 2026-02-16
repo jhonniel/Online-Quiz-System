@@ -86,7 +86,7 @@
 
             <!-- Action Buttons -->
             <div class="flex flex-col sm:flex-row justify-center gap-4 sm:gap-6">
-                <a href="{{ route('user.quizzes.index') }}"
+                <a href="{{ url('/quizzes') }}"
                    class="inline-flex items-center justify-center px-6 py-3 border border-gray-300 text-base font-medium rounded-md shadow-sm text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors duration-200">
                     <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
@@ -129,7 +129,7 @@ document.addEventListener('DOMContentLoaded', function() {
             const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
 
             // Start the quiz via AJAX
-            fetch('{{ route("user.quizzes.start", $quiz) }}', {
+            fetch('{{ url("/quizzes/" . $quiz->id . "/start") }}', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',

@@ -168,6 +168,9 @@ document.addEventListener('DOMContentLoaded', function() {
                 questions = data.questions;
                 totalQuestions = questions.length;
                 remainingTime = data.remaining_time;
+                if (data.saved_progress && typeof data.saved_progress === 'object') {
+                    Object.assign(userAnswers, data.saved_progress);
+                }
 
                 // Hide start button section
                 startQuizSection.classList.add('hidden');
@@ -179,12 +182,10 @@ document.addEventListener('DOMContentLoaded', function() {
                 // Update progress text with actual question count
                 document.getElementById('progress-text').textContent = `Question 1 of ${totalQuestions}`;
 
-                // Show and initialize timer if time limit exists
+                // Show and run live countdown timer when time limit exists
                 if (remainingTime !== null && remainingTime !== undefined) {
                     const timerDisplay = document.getElementById('timer-display');
-                    if (timerDisplay) {
-                        timerDisplay.classList.remove('hidden');
-                    }
+                    if (timerDisplay) timerDisplay.classList.remove('hidden');
                     initializeTimer(remainingTime);
                 }
 
@@ -361,6 +362,22 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
+    // Persist progress to server (called when moving to next/previous question)
+    function saveProgressToServer() {
+        const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+        if (!csrfToken) return;
+        const formData = new FormData();
+        formData.append('_token', csrfToken);
+        Object.keys(userAnswers).forEach(questionId => {
+            formData.append(`answers[${questionId}]`, userAnswers[questionId]);
+        });
+        fetch('{{ url("/quizzes/" . $quiz->id . "/save-progress") }}', {
+            method: 'POST',
+            headers: { 'X-Requested-With': 'XMLHttpRequest', 'X-CSRF-TOKEN': csrfToken },
+            body: formData
+        }).catch(() => {});
+    }
+
     // Restore previous answer
     function restoreAnswer(questionId) {
         if (userAnswers[questionId]) {
@@ -413,6 +430,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // Navigation event listeners
     document.getElementById('next-btn').addEventListener('click', function() {
         saveAnswer();
+        saveProgressToServer();
         if (currentQuestionIndex < totalQuestions - 1) {
             currentQuestionIndex++;
             showQuestion(currentQuestionIndex);
@@ -423,6 +441,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     document.getElementById('prev-btn').addEventListener('click', function() {
         saveAnswer();
+        saveProgressToServer();
         if (currentQuestionIndex > 0) {
             currentQuestionIndex--;
             showQuestion(currentQuestionIndex);
@@ -603,67 +622,44 @@ document.addEventListener('DOMContentLoaded', function() {
             }
     });
 
-    // Timer functionality
+    function formatTime(seconds) {
+        const m = Math.floor(seconds / 60);
+        const s = seconds % 60;
+        return m + ':' + String(s).padStart(2, '0');
+    }
+
+    // Timer: live countdown in header + auto-submit when time expires
     function initializeTimer(timeLeft) {
-        // Update header timer if it exists
         const headerTimer = document.getElementById('header-timer');
-        if (headerTimer) {
-            headerTimer.textContent = formatTime(timeLeft);
+        function updateDisplay() {
+            if (headerTimer) headerTimer.textContent = formatTime(timeLeft);
         }
 
-        const timerElement = document.createElement('div');
-        timerElement.className = 'fixed top-2 right-2 sm:top-4 sm:right-4 bg-red-600 text-white px-2 py-1.5 sm:px-4 sm:py-2 rounded-lg shadow-lg z-50 text-xs sm:text-sm';
-        timerElement.innerHTML = `<span class="font-bold hidden sm:inline">Time Left: </span><span class="font-bold sm:hidden">Time: </span><span id="timer">${formatTime(timeLeft)}</span>`;
-        document.body.appendChild(timerElement);
-
-        // Check if time has already expired
         if (timeLeft <= 0) {
             ToastNotification.warning('Time is up! Your quiz will be submitted automatically.');
-            // Set auto-submit flag and trigger form submission programmatically
             isAutoSubmit = true;
             document.getElementById('quiz-form').dispatchEvent(new Event('submit'));
             return;
         }
 
+        updateDisplay();
+
         const timer = setInterval(function() {
             timeLeft--;
-            const formattedTime = formatTime(timeLeft);
-            document.getElementById('timer').textContent = formattedTime;
-
-            // Update header timer if it exists
-            if (headerTimer) {
-                headerTimer.textContent = formattedTime;
+            updateDisplay();
+            if (timeLeft <= 60 && headerTimer) {
+                headerTimer.closest('#timer-display').classList.add('animate-pulse');
+                headerTimer.closest('#timer-display').classList.remove('bg-blue-50', 'border-blue-200');
+                headerTimer.closest('#timer-display').classList.add('bg-red-50', 'border-red-200');
+                headerTimer.classList.add('text-red-900');
             }
-
-            // Change color when time is running low
-            if (timeLeft <= 60) { // Last minute
-                timerElement.className = 'fixed top-2 right-2 sm:top-4 sm:right-4 bg-red-800 text-white px-2 py-1.5 sm:px-4 sm:py-2 rounded-lg shadow-lg z-50 text-xs sm:text-sm animate-pulse';
-                if (headerTimer) {
-                    headerTimer.parentElement.parentElement.className = 'bg-red-50 border border-red-200 rounded-lg p-3 sm:p-4 animate-pulse';
-                    headerTimer.className = 'text-xl sm:text-2xl font-bold text-red-900';
-                }
-            } else if (timeLeft <= 300) { // Last 5 minutes
-                timerElement.className = 'fixed top-2 right-2 sm:top-4 sm:right-4 bg-orange-600 text-white px-2 py-1.5 sm:px-4 sm:py-2 rounded-lg shadow-lg z-50 text-xs sm:text-sm';
-                if (headerTimer) {
-                    headerTimer.parentElement.parentElement.className = 'bg-orange-50 border border-orange-200 rounded-lg p-3 sm:p-4';
-                    headerTimer.className = 'text-xl sm:text-2xl font-bold text-orange-900';
-                }
-            }
-
             if (timeLeft <= 0) {
                 clearInterval(timer);
                 ToastNotification.warning('Time is up! Your quiz will be submitted automatically.');
-                // Set auto-submit flag and trigger form submission programmatically
                 isAutoSubmit = true;
                 document.getElementById('quiz-form').dispatchEvent(new Event('submit'));
             }
         }, 1000);
-
-        function formatTime(seconds) {
-            const minutes = Math.floor(seconds / 60);
-            const remainingSeconds = seconds % 60;
-            return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
-        }
     }
 });
 </script>

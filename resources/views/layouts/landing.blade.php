@@ -219,7 +219,7 @@
                                     Dashboard
                                 </a>
                             @else
-                                <a href="{{ $getRoute('user.dashboard', '/user/dashboard') }}" class="ml-4 px-6 py-2 bg-primary text-white rounded-lg font-semibold hover:opacity-90 transition-opacity shadow-md hover:shadow-lg">
+                                <a href="{{ $getRoute('user.dashboard', '/dashboard') }}" class="ml-4 px-6 py-2 bg-primary text-white rounded-lg font-semibold hover:opacity-90 transition-opacity shadow-md hover:shadow-lg">
                                     Dashboard
                                 </a>
                             @endif
@@ -257,7 +257,7 @@
                                 Go to Dashboard
                             </a>
                         @else
-                            <a href="{{ $getRoute('user.dashboard', '/user/dashboard') }}" class="block px-4 py-3 bg-primary text-white rounded-lg font-semibold text-center mt-4">
+                            <a href="{{ $getRoute('user.dashboard', '/dashboard') }}" class="block px-4 py-3 bg-primary text-white rounded-lg font-semibold text-center mt-4">
                                 Go to Dashboard
                             </a>
                         @endif
@@ -351,7 +351,7 @@
                                 @if(auth()->user()->isAdmin() || (auth()->user()->isEmployee() && auth()->user()->hasAnyAdminPermission()))
                                     <li><a href="{{ $getRoute('admin.dashboard', '/admin/dashboard') }}" class="text-gray-400 hover:text-white transition-colors">Admin Dashboard</a></li>
                                 @else
-                                    <li><a href="{{ $getRoute('user.dashboard', '/user/dashboard') }}" class="text-gray-400 hover:text-white transition-colors">User Dashboard</a></li>
+                                    <li><a href="{{ $getRoute('user.dashboard', '/dashboard') }}" class="text-gray-400 hover:text-white transition-colors">User Dashboard</a></li>
                                 @endif
                             @else
                                 <li><a href="{{ $getRoute('login', '/login') }}" class="text-gray-400 hover:text-white transition-colors">Login</a></li>

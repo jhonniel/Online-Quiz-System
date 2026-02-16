@@ -23,6 +23,7 @@ class QuizAssignment extends Model
         'best_score',
         'last_attempt_at',
         'can_retake',
+        'progress_answers',
     ];
 
     protected function casts(): array
@@ -34,6 +35,7 @@ class QuizAssignment extends Model
             'is_completed' => 'boolean',
             'last_attempt_at' => 'datetime',
             'can_retake' => 'boolean',
+            'progress_answers' => 'array',
         ];
     }
 

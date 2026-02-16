@@ -433,6 +433,7 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/quizzes/{quiz}/take', [UserQuizController::class, 'take'])->name('user.quizzes.take');
     Route::get('/quizzes/{quiz}/questions', [UserQuizController::class, 'getQuestions'])->name('user.quizzes.questions');
     Route::post('/quizzes/{quiz}/start', [UserQuizController::class, 'start'])->name('user.quizzes.start');
+    Route::post('/quizzes/{quiz}/save-progress', [UserQuizController::class, 'saveProgress'])->name('user.quizzes.save-progress');
     Route::post('/quizzes/{quiz}/submit', [UserQuizController::class, 'submit'])->name('user.quizzes.submit');
     Route::post('/quizzes/{quiz}/cancel', [UserQuizController::class, 'cancel'])->name('user.quizzes.cancel');
     Route::get('/quizzes/{quiz}/result', [UserQuizController::class, 'result'])->name('user.quizzes.result');
