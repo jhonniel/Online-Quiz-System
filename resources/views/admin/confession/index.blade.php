@@ -4,6 +4,9 @@
 
 @section('content')
 <div class="px-4 sm:px-6 lg:px-8">
+    @if(session('success'))
+        <div class="mb-4 rounded-md bg-green-50 p-4 text-sm text-green-800">{{ session('success') }}</div>
+    @endif
     <div class="sm:flex sm:items-center sm:justify-between mb-6">
         <div>
             <h1 class="text-2xl font-bold text-gray-900">Confession – Contents</h1>
@@ -37,7 +40,14 @@
                                 · {{ $post->all_comments_count ?? 0 }} comments
                             </div>
                         </div>
-                        <a href="{{ url('/Say-it/' . $post->id) }}" target="_blank" class="text-indigo-600 hover:underline text-sm whitespace-nowrap">View</a>
+                        <div class="flex items-center gap-2 whitespace-nowrap">
+                            <a href="{{ url('/Say-it/' . $post->id) }}" target="_blank" class="text-indigo-600 hover:underline text-sm">View</a>
+                            <form method="POST" action="{{ url('admin/confession/posts/' . $post->id) }}" class="inline" onsubmit="return confirm('Delete this post and all its comments?');">
+                                @csrf
+                                @method('DELETE')
+                                <button type="submit" class="text-red-600 hover:underline text-sm">Delete</button>
+                            </form>
+                        </div>
                     </div>
                 </li>
             @empty

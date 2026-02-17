@@ -951,78 +951,129 @@
                                     <p class="mt-2 text-xs text-gray-500">Select the mail driver. Use "Log" for testing</p>
                                 </div>
 
-                                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                    <div>
-                                        <label for="mail_host" class="block text-sm font-medium text-gray-700 mb-2">SMTP Host</label>
-                                        @php
-                                            $mailHostValue = isset($settings['mail_host']) ? $settings['mail_host'] : '';
-                                            if (old('mail_host') !== null) {
-                                                $mailHostValue = old('mail_host');
-                                            }
-                                        @endphp
-                                        <input type="text" name="mail_host" id="mail_host"
-                                               value="{{ $mailHostValue }}"
-                                               placeholder="smtp.gmail.com"
-                                               class="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+
+                                <!-- Mailgun Configuration (shown when mailgun is selected) -->
+                                <div id="mailgun-config" class="hidden space-y-6 border-t border-gray-200 pt-6 mt-6">
+                                    <h4 class="text-sm font-semibold text-gray-900">Mailgun Configuration</h4>
+                                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                        <div>
+                                            <label for="mailgun_domain" class="block text-sm font-medium text-gray-700 mb-2">Mailgun Domain</label>
+                                            @php
+                                                $mailgunDomainValue = isset($settings['mailgun_domain']) ? $settings['mailgun_domain'] : '';
+                                                if (old('mailgun_domain') !== null) {
+                                                    $mailgunDomainValue = old('mailgun_domain');
+                                                }
+                                            @endphp
+                                            <input type="text" name="mailgun_domain" id="mailgun_domain"
+                                                   value="{{ $mailgunDomainValue }}"
+                                                   placeholder="mg.example.com"
+                                                   class="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                                            <p class="mt-1 text-xs text-gray-500">Your Mailgun domain (e.g., mg.example.com)</p>
+                                        </div>
+
+                                        <div>
+                                            <label for="mailgun_secret" class="block text-sm font-medium text-gray-700 mb-2">Mailgun Secret Key</label>
+                                            <input type="password" name="mailgun_secret" id="mailgun_secret"
+                                                   value=""
+                                                   placeholder="{{ !empty($settings['mailgun_secret']) ? 'Leave blank to keep current key' : 'Enter Mailgun API secret key' }}"
+                                                   class="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                                            @if(!empty($settings['mailgun_secret']))
+                                            <p class="mt-1 text-xs text-gray-500">Leave blank to keep the current key. Enter a new key to update it.</p>
+                                            @endif
+                                        </div>
                                     </div>
 
                                     <div>
-                                        <label for="mail_port" class="block text-sm font-medium text-gray-700 mb-2">SMTP Port</label>
+                                        <label for="mailgun_endpoint" class="block text-sm font-medium text-gray-700 mb-2">Mailgun Endpoint (Optional)</label>
                                         @php
-                                            $mailPortValue = isset($settings['mail_port']) ? $settings['mail_port'] : '587';
-                                            if (old('mail_port') !== null) {
-                                                $mailPortValue = old('mail_port');
+                                            $mailgunEndpointValue = isset($settings['mailgun_endpoint']) ? $settings['mailgun_endpoint'] : 'api.mailgun.net';
+                                            if (old('mailgun_endpoint') !== null) {
+                                                $mailgunEndpointValue = old('mailgun_endpoint');
                                             }
                                         @endphp
-                                        <input type="number" name="mail_port" id="mail_port"
-                                               value="{{ $mailPortValue }}"
-                                               placeholder="587"
-                                               min="1" max="65535"
+                                        <input type="text" name="mailgun_endpoint" id="mailgun_endpoint"
+                                               value="{{ $mailgunEndpointValue }}"
+                                               placeholder="api.mailgun.net"
                                                class="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                                        <p class="mt-1 text-xs text-gray-500">Default: api.mailgun.net (use api.eu.mailgun.net for EU region)</p>
                                     </div>
                                 </div>
 
-                                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <!-- SMTP Configuration (shown when smtp is selected) -->
+                                <div id="smtp-config">
+                                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                        <div>
+                                            <label for="mail_host" class="block text-sm font-medium text-gray-700 mb-2">SMTP Host</label>
+                                            @php
+                                                $mailHostValue = isset($settings['mail_host']) ? $settings['mail_host'] : '';
+                                                if (old('mail_host') !== null) {
+                                                    $mailHostValue = old('mail_host');
+                                                }
+                                            @endphp
+                                            <input type="text" name="mail_host" id="mail_host"
+                                                   value="{{ $mailHostValue }}"
+                                                   placeholder="smtp.gmail.com"
+                                                   class="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                                        </div>
+
+                                        <div>
+                                            <label for="mail_port" class="block text-sm font-medium text-gray-700 mb-2">SMTP Port</label>
+                                            @php
+                                                $mailPortValue = isset($settings['mail_port']) ? $settings['mail_port'] : '587';
+                                                if (old('mail_port') !== null) {
+                                                    $mailPortValue = old('mail_port');
+                                                }
+                                            @endphp
+                                            <input type="number" name="mail_port" id="mail_port"
+                                                   value="{{ $mailPortValue }}"
+                                                   placeholder="587"
+                                                   min="1" max="65535"
+                                                   class="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                                        </div>
+                                    </div>
+
+                                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                        <div>
+                                            <label for="mail_username" class="block text-sm font-medium text-gray-700 mb-2">SMTP Username</label>
+                                            @php
+                                                $mailUsernameValue = isset($settings['mail_username']) ? $settings['mail_username'] : '';
+                                                if (old('mail_username') !== null) {
+                                                    $mailUsernameValue = old('mail_username');
+                                                }
+                                            @endphp
+                                            <input type="text" name="mail_username" id="mail_username"
+                                                   value="{{ $mailUsernameValue }}"
+                                                   placeholder="your-email@gmail.com"
+                                                   class="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                                        </div>
+
+                                        <div>
+                                            <label for="mail_password" class="block text-sm font-medium text-gray-700 mb-2">SMTP Password</label>
+                                            <input type="password" name="mail_password" id="mail_password"
+                                                   value=""
+                                                   placeholder="{{ !empty($settings['mail_password']) ? 'Leave blank to keep current password' : 'Enter SMTP password' }}"
+                                                   class="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                                            @if(!empty($settings['mail_password']))
+                                            <p class="mt-1 text-xs text-gray-500">Leave blank to keep the current password. Enter a new password to update it.</p>
+                                            @endif
+                                        </div>
+                                    </div>
+
                                     <div>
-                                        <label for="mail_username" class="block text-sm font-medium text-gray-700 mb-2">SMTP Username</label>
+                                        <label for="mail_encryption" class="block text-sm font-medium text-gray-700 mb-2">Encryption</label>
                                         @php
-                                            $mailUsernameValue = isset($settings['mail_username']) ? $settings['mail_username'] : '';
-                                            if (old('mail_username') !== null) {
-                                                $mailUsernameValue = old('mail_username');
+                                            $mailEncryptionValue = isset($settings['mail_encryption']) ? $settings['mail_encryption'] : 'tls';
+                                            if (old('mail_encryption') !== null) {
+                                                $mailEncryptionValue = old('mail_encryption');
                                             }
                                         @endphp
-                                        <input type="text" name="mail_username" id="mail_username"
-                                               value="{{ $mailUsernameValue }}"
-                                               placeholder="your-email@gmail.com"
-                                               class="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                                        <select name="mail_encryption" id="mail_encryption"
+                                                class="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                                            <option value="tls" {{ $mailEncryptionValue == 'tls' ? 'selected' : '' }}>TLS</option>
+                                            <option value="ssl" {{ $mailEncryptionValue == 'ssl' ? 'selected' : '' }}>SSL</option>
+                                            <option value="null" {{ $mailEncryptionValue == 'null' ? 'selected' : '' }}>None</option>
+                                        </select>
                                     </div>
-
-                                    <div>
-                                        <label for="mail_password" class="block text-sm font-medium text-gray-700 mb-2">SMTP Password</label>
-                                        <input type="password" name="mail_password" id="mail_password"
-                                               value=""
-                                               placeholder="{{ !empty($settings['mail_password']) ? 'Leave blank to keep current password' : 'Enter SMTP password' }}"
-                                               class="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
-                                        @if(!empty($settings['mail_password']))
-                                        <p class="mt-1 text-xs text-gray-500">Leave blank to keep the current password. Enter a new password to update it.</p>
-                                        @endif
-                                    </div>
-                                </div>
-
-                                <div>
-                                    <label for="mail_encryption" class="block text-sm font-medium text-gray-700 mb-2">Encryption</label>
-                                    @php
-                                        $mailEncryptionValue = isset($settings['mail_encryption']) ? $settings['mail_encryption'] : 'tls';
-                                        if (old('mail_encryption') !== null) {
-                                            $mailEncryptionValue = old('mail_encryption');
-                                        }
-                                    @endphp
-                                    <select name="mail_encryption" id="mail_encryption"
-                                            class="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
-                                        <option value="tls" {{ $mailEncryptionValue == 'tls' ? 'selected' : '' }}>TLS</option>
-                                        <option value="ssl" {{ $mailEncryptionValue == 'ssl' ? 'selected' : '' }}>SSL</option>
-                                        <option value="null" {{ $mailEncryptionValue == 'null' ? 'selected' : '' }}>None</option>
-                                    </select>
                                 </div>
 
                                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -1066,8 +1117,9 @@
                                             <h3 class="text-sm font-medium text-blue-800">Email Configuration Tips</h3>
                                             <div class="mt-2 text-sm text-blue-700">
                                                 <ul class="list-disc list-inside space-y-1">
-                                                    <li>For Gmail: Use port 587 with TLS, enable "Less secure app access" or use an App Password</li>
-                                                    <li>For testing: Use "Log" driver to write emails to log files instead of sending</li>
+                                                    <li><strong>SMTP:</strong> For Gmail use port 587 with TLS, enable "Less secure app access" or use an App Password</li>
+                                                    <li><strong>Mailgun:</strong> Better deliverability, requires Mailgun account. Get domain and secret from Mailgun dashboard</li>
+                                                    <li><strong>Testing:</strong> Use "Log" driver to write emails to log files instead of sending</li>
                                                     <li>After changing settings, test by sending a test email</li>
                                                 </ul>
                                             </div>
@@ -1747,6 +1799,37 @@
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     console.log('DOMContentLoaded fired');
+
+    // Mail configuration toggle based on mailer selection
+    const mailMailerSelect = document.getElementById('mail_mailer');
+    const smtpConfig = document.getElementById('smtp-config');
+    const mailgunConfig = document.getElementById('mailgun-config');
+
+    function toggleMailConfig() {
+        const selectedMailer = mailMailerSelect ? mailMailerSelect.value : 'log';
+        
+        if (smtpConfig) {
+            if (selectedMailer === 'smtp') {
+                smtpConfig.classList.remove('hidden');
+            } else {
+                smtpConfig.classList.add('hidden');
+            }
+        }
+        
+        if (mailgunConfig) {
+            if (selectedMailer === 'mailgun') {
+                mailgunConfig.classList.remove('hidden');
+            } else {
+                mailgunConfig.classList.add('hidden');
+            }
+        }
+    }
+
+    if (mailMailerSelect) {
+        mailMailerSelect.addEventListener('change', toggleMailConfig);
+        // Run on page load to set initial state
+        toggleMailConfig();
+    }
 
 
     // Update preview when form fields change

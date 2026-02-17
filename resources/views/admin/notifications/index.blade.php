@@ -312,7 +312,7 @@ function bulkDelete() {
     if (confirm(`Are you sure you want to delete ${selectedIds.length} notification(s)?`)) {
         const form = document.createElement('form');
         form.method = 'POST';
-        form.action = '{{ route("admin.notifications.bulk-delete") }}';
+        form.action = '{{ url("admin/notifications/bulk-delete") }}';
 
         const csrfToken = document.createElement('input');
         csrfToken.type = 'hidden';
@@ -338,7 +338,7 @@ function markAllAsRead() {
     if (confirm('Are you sure you want to mark all notifications as read?')) {
         const form = document.createElement('form');
         form.method = 'POST';
-        form.action = '{{ route("admin.notifications.mark-all-read") }}';
+        form.action = '{{ url("admin/notifications/mark-all-read") }}';
 
         const csrfToken = document.createElement('input');
         csrfToken.type = 'hidden';
@@ -361,7 +361,7 @@ function sendMaintenanceAlert() {
 
     const form = document.createElement('form');
     form.method = 'POST';
-    form.action = '{{ route("admin.notifications.send-to-all") }}';
+    form.action = '{{ url("admin/notifications/send-to-all") }}';
 
     const csrfToken = document.createElement('input');
     csrfToken.type = 'hidden';
@@ -397,7 +397,7 @@ function sendSystemUpdate() {
 
     const form = document.createElement('form');
     form.method = 'POST';
-    form.action = '{{ route("admin.notifications.send-to-all") }}';
+    form.action = '{{ url("admin/notifications/send-to-all") }}';
 
     const csrfToken = document.createElement('input');
     csrfToken.type = 'hidden';
@@ -433,7 +433,7 @@ function sendBugAlert() {
 
     const form = document.createElement('form');
     form.method = 'POST';
-    form.action = '{{ route("admin.notifications.send-to-all") }}';
+    form.action = '{{ url("admin/notifications/send-to-all") }}';
 
     const csrfToken = document.createElement('input');
     csrfToken.type = 'hidden';

@@ -1,0 +1,19 @@
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Model;
+
+class TicketProblemType extends Model
+{
+    protected $fillable = ['slug', 'label', 'sort_order'];
+
+    protected $casts = [
+        'sort_order' => 'integer',
+    ];
+
+    public function scopeOrdered($query)
+    {
+        return $query->orderBy('sort_order')->orderBy('label');
+    }
+}

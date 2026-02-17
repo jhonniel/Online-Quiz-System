@@ -168,11 +168,11 @@
         </style>
     </head>
     @php
-        // Helper function to safely get route URLs
+        // Helper: get route URL or fallback (avoids RouteNotFoundException when route not yet registered)
         $getRoute = function($name, $default = '/') {
             try {
                 return route($name);
-            } catch (Exception $e) {
+            } catch (\Throwable $e) {
                 return $default;
             }
         };

@@ -174,6 +174,9 @@ class SettingsController extends Controller
         $mailEncryptionSetting = Setting::where('key', 'mail_encryption')->first();
         $mailFromAddressSetting = Setting::where('key', 'mail_from_address')->first();
         $mailFromNameSetting = Setting::where('key', 'mail_from_name')->first();
+        $mailgunDomainSetting = Setting::where('key', 'mailgun_domain')->first();
+        $mailgunSecretSetting = Setting::where('key', 'mailgun_secret')->first();
+        $mailgunEndpointSetting = Setting::where('key', 'mailgun_endpoint')->first();
 
         if ($mailMailerSetting && $mailMailerSetting->value !== null && $mailMailerSetting->value !== '' && trim($mailMailerSetting->value) !== '') {
             $settings['mail_mailer'] = $mailMailerSetting->value;
@@ -222,6 +225,24 @@ class SettingsController extends Controller
             $settings['mail_from_name'] = $mailFromNameSetting->value;
         } else {
             $settings['mail_from_name'] = '';
+        }
+
+        if ($mailgunDomainSetting && $mailgunDomainSetting->value !== null && $mailgunDomainSetting->value !== '' && trim($mailgunDomainSetting->value) !== '') {
+            $settings['mailgun_domain'] = $mailgunDomainSetting->value;
+        } else {
+            $settings['mailgun_domain'] = '';
+        }
+
+        if ($mailgunSecretSetting && $mailgunSecretSetting->value !== null && $mailgunSecretSetting->value !== '' && trim($mailgunSecretSetting->value) !== '') {
+            $settings['mailgun_secret'] = $mailgunSecretSetting->value;
+        } else {
+            $settings['mailgun_secret'] = '';
+        }
+
+        if ($mailgunEndpointSetting && $mailgunEndpointSetting->value !== null && $mailgunEndpointSetting->value !== '' && trim($mailgunEndpointSetting->value) !== '') {
+            $settings['mailgun_endpoint'] = $mailgunEndpointSetting->value;
+        } else {
+            $settings['mailgun_endpoint'] = 'api.mailgun.net';
         }
 
         // Hiring Process Configuration Settings - reload directly from database
@@ -478,6 +499,9 @@ class SettingsController extends Controller
             'mail_encryption' => 'nullable|string|in:tls,ssl,null',
             'mail_from_address' => 'nullable|email|max:255',
             'mail_from_name' => 'nullable|string|max:255',
+            'mailgun_domain' => 'nullable|string|max:255',
+            'mailgun_secret' => 'nullable|string|max:255',
+            'mailgun_endpoint' => 'nullable|string|max:255',
             'qr_code_prefix' => 'nullable|string|max:20',
             'app_timezone' => 'nullable|string|max:50',
         ]);
@@ -715,6 +739,18 @@ class SettingsController extends Controller
         $mailFromName = $request->mail_from_name ?? '';
         Setting::set('mail_from_name', $mailFromName, 'text', 'Default "From" name');
 
+        // Mailgun Configuration
+        $mailgunDomain = $request->mailgun_domain ?? '';
+        Setting::set('mailgun_domain', $mailgunDomain, 'text', 'Mailgun domain');
+
+        if ($request->filled('mailgun_secret')) {
+            $mailgunSecret = $request->mailgun_secret;
+            Setting::set('mailgun_secret', $mailgunSecret, 'text', 'Mailgun API secret key');
+        }
+
+        $mailgunEndpoint = $request->mailgun_endpoint ?? 'api.mailgun.net';
+        Setting::set('mailgun_endpoint', $mailgunEndpoint, 'text', 'Mailgun API endpoint');
+
         // Contact Information Settings - save directly from request
         $contactEmail = $request->contact_email ?? '';
         Setting::set('contact_email', $contactEmail, 'text', 'Contact email address');
@@ -884,25 +920,62 @@ class SettingsController extends Controller
 
             $testEmail = $request->input('test_email');
 
-            // Ensure mail configuration is up to date from settings
+            // Ensure mail configuration is up to date from settings and purge cached mailer so new config is used
             MailConfigService::configure();
+            $mailer = config('mail.default');
+            if (! is_string($mailer) || $mailer === '') {
+                $mailer = 'log';
+            }
+            try {
+                app('mail.manager')->purge($mailer);
+            } catch (\Throwable $e) {
+                // Purge can fail if driver not resolved yet; continue
+            }
 
-            // Basic config validation for SMTP mailer
-            $mailer = Setting::get('mail_mailer', 'log');
+            // With "log" driver no real email is sent — require SMTP (or another real mailer) for test
+            if ($mailer === 'log' || $mailer === 'array') {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Test email cannot send with the "log" or "array" driver. Save Mail settings with Mailer set to "smtp" or "mailgun", configure the required fields, and try again.'
+                ], 422);
+            }
+
             if ($mailer === 'smtp') {
-                $host = Setting::get('mail_host');
-                $port = Setting::get('mail_port');
-                $username = Setting::get('mail_username');
-                $password = Setting::get('mail_password');
-                $fromAddress = Setting::get('mail_from_address');
+                $host = config('mail.mailers.smtp.host');
+                $port = config('mail.mailers.smtp.port');
+                $username = config('mail.mailers.smtp.username');
+                $password = config('mail.mailers.smtp.password');
+                $fromAddress = config('mail.from.address');
 
                 if (empty($host) || empty($port) || empty($username) || empty($password) || empty($fromAddress)) {
                     return response()->json([
                         'success' => false,
-                        'message' => 'SMTP configuration is incomplete. Please make sure Host, Port, Username, Password and From Address are all set before sending a test email.'
+                        'message' => 'SMTP configuration is incomplete. Please set Mailer to "smtp", then fill Host, Port, Username, Password, and From Address, save, and try again.'
                     ], 422);
                 }
             }
+
+            if ($mailer === 'mailgun') {
+                $mailgunDomain = config('services.mailgun.domain');
+                $mailgunSecret = config('services.mailgun.secret');
+                $fromAddress = config('mail.from.address');
+
+                if (empty($mailgunDomain) || empty($mailgunSecret) || empty($fromAddress)) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Mailgun configuration is incomplete. Please set Mailer to "mailgun", then fill Mailgun Domain, Mailgun Secret Key, and From Address, save, and try again.'
+                    ], 422);
+                }
+            }
+
+            // Log config for debugging
+            Log::info('Test email attempt', [
+                'mailer' => $mailer,
+                'to' => $testEmail,
+                'from' => config('mail.from.address'),
+                'smtp_host' => $mailer === 'smtp' ? config('mail.mailers.smtp.host') : null,
+                'mailgun_domain' => $mailer === 'mailgun' ? config('services.mailgun.domain') : null,
+            ]);
 
             // Attempt to send the email synchronously
             Mail::to($testEmail)->send(new \App\Mail\TestEmail());
@@ -912,28 +985,38 @@ class SettingsController extends Controller
                 $mailerInstance = Mail::getFacadeRoot();
                 if (is_object($mailerInstance) && method_exists($mailerInstance, 'failures')) {
                     $failures = $mailerInstance->failures();
-                    if (!empty($failures)) {
+                    if (! empty($failures)) {
                         Log::error('Test email reported transport failures', ['failures' => $failures]);
                         return response()->json([
                             'success' => false,
-                            'message' => 'The mailer reported a delivery problem for: ' . implode(', ', $failures) . '. Please verify your email configuration.'
+                            'message' => 'The mailer reported a delivery problem for: ' . implode(', ', $failures) . '. Check credentials and try again.'
                         ], 500);
                     }
                 }
             } catch (\Throwable $t) {
-                // If the method is not available (newer mailer), ignore and rely on exceptions from send()
+                // If the method is not available (newer mailer), ignore
             }
+
+            Log::info('Test email sent successfully', ['to' => $testEmail, 'mailer' => $mailer]);
 
             return response()->json([
                 'success' => true,
-                'message' => 'Test email was sent successfully to ' . $testEmail . '. Please check that it arrives in the inbox (and spam folder).'
+                'message' => 'Test email was sent successfully to ' . $testEmail . '. Check your inbox and spam folder.'
             ]);
-        } catch (\Exception $e) {
-            Log::error('Test email failed: ' . $e->getMessage());
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            throw $e;
+        } catch (\Throwable $e) {
+            Log::error('Test email failed', [
+                'message' => $e->getMessage(),
+                'exception' => get_class($e),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+                'trace' => $e->getTraceAsString(),
+            ]);
 
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to send test email: ' . $e->getMessage()
+                'message' => 'Failed to send test email: ' . $e->getMessage() . ' (Check logs for details)'
             ], 500);
         }
     }

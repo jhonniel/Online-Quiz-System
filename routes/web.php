@@ -30,6 +30,9 @@ Route::get('/news', [LandingController::class, 'news'])->name('landing.news');
 Route::get('/about', [LandingController::class, 'about'])->name('landing.about');
 Route::get('/contact', [LandingController::class, 'contact'])->name('landing.contact');
 Route::post('/contact', [LandingController::class, 'storeContact'])->name('landing.contact.store');
+// Report a Problem – public (no login required); anyone can submit a ticket
+Route::get('/report-problem', [App\Http\Controllers\ReportProblemController::class, 'show'])->name('report-problem');
+Route::post('/report-problem', [App\Http\Controllers\ReportProblemController::class, 'store'])->name('report-problem.store');
 Route::get('/image-proxy/{path}', [LandingController::class, 'imageProxy'])->where('path', '.*')->name('landing.image-proxy');
 Route::get('/privacy-policy', [LandingController::class, 'privacyPolicy'])->name('landing.privacy-policy');
 Route::get('/tor-pdf', [LandingController::class, 'torPdf'])->name('landing.tor-pdf');
@@ -348,6 +351,7 @@ Route::prefix('admin')->middleware(['auth', 'admin'])->group(function () {
     // Confession (Say-it) – full access only, checked in controller
     Route::get('confession', [App\Http\Controllers\Admin\ConfessionController::class, 'index']);
     Route::get('confession/dashboard', [App\Http\Controllers\Admin\ConfessionController::class, 'dashboard']);
+    Route::delete('confession/posts/{confession_post}', [App\Http\Controllers\Admin\ConfessionController::class, 'destroy']);
     Route::get('confession/banned-words', [App\Http\Controllers\Admin\ConfessionBannedWordController::class, 'index'])->name('admin.confession.banned-words');
     Route::post('confession/banned-words', [App\Http\Controllers\Admin\ConfessionBannedWordController::class, 'store']);
     Route::delete('confession/banned-words/{banned_word}', [App\Http\Controllers\Admin\ConfessionBannedWordController::class, 'destroy'])->name('admin.confession.banned-words.destroy');
@@ -370,6 +374,18 @@ Route::prefix('admin')->middleware(['auth', 'admin'])->group(function () {
         Route::resource('contact-messages', AdminContactMessageController::class)->only(['index', 'show', 'destroy']);
         Route::post('contact-messages/{contactMessage}/reply', [AdminContactMessageController::class, 'reply'])->name('contact-messages.reply');
         Route::patch('contact-messages/{contactMessage}/close', [AdminContactMessageController::class, 'close'])->name('contact-messages.close');
+
+        // Ticket Reports (problem reports from /report-problem)
+        Route::get('tickets', [App\Http\Controllers\Admin\TicketReportController::class, 'dashboard'])->name('admin.tickets.dashboard');
+        Route::get('tickets/open', [App\Http\Controllers\Admin\TicketReportController::class, 'open'])->name('admin.tickets.open');
+        Route::get('tickets/closed', [App\Http\Controllers\Admin\TicketReportController::class, 'closed'])->name('admin.tickets.closed');
+        Route::get('tickets/problem-types', [App\Http\Controllers\Admin\TicketProblemTypeController::class, 'index'])->name('admin.tickets.problem-types.index');
+        Route::post('tickets/problem-types', [App\Http\Controllers\Admin\TicketProblemTypeController::class, 'store'])->name('admin.tickets.problem-types.store');
+        Route::get('tickets/problem-types/{ticket_problem_type}/edit', [App\Http\Controllers\Admin\TicketProblemTypeController::class, 'edit'])->name('admin.tickets.problem-types.edit');
+        Route::put('tickets/problem-types/{ticket_problem_type}', [App\Http\Controllers\Admin\TicketProblemTypeController::class, 'update'])->name('admin.tickets.problem-types.update');
+        Route::delete('tickets/problem-types/{ticket_problem_type}', [App\Http\Controllers\Admin\TicketProblemTypeController::class, 'destroy'])->name('admin.tickets.problem-types.destroy');
+        Route::get('tickets/{ticket_report}', [App\Http\Controllers\Admin\TicketReportController::class, 'show'])->name('admin.tickets.show');
+        Route::patch('tickets/{ticket_report}', [App\Http\Controllers\Admin\TicketReportController::class, 'update'])->name('admin.tickets.update');
 
         // Live Chat Management
         Route::get('live-chat', [AdminLiveChatController::class, 'index'])->name('live-chat.index');

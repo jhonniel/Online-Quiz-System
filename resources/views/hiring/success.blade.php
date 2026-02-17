@@ -87,7 +87,7 @@
 
                 <!-- Back to Home Button -->
                 <div class="mt-6">
-                    <a href="{{ route('landing.index') }}" 
+                    <a href="{{ url('/') }}" 
                        class="inline-flex items-center px-6 py-3 border border-transparent text-base font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
                         Return to Home
                     </a>

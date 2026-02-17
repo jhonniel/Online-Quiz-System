@@ -68,4 +68,13 @@ class ConfessionController extends Controller
 
         return view('admin.confession.dashboard', compact('ipLogs', 'trending', 'stats'));
     }
+
+    public function destroy(ConfessionPost $confession_post)
+    {
+        $this->ensureFullAccess();
+
+        $confession_post->delete();
+
+        return redirect()->back()->with('success', 'Post deleted.');
+    }
 }

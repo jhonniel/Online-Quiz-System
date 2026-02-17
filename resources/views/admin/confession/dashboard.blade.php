@@ -87,7 +87,14 @@
                             </div>
                             <span class="text-sm font-semibold text-indigo-600">{{ $post->engagement }} engagement</span>
                         </div>
-                        <a href="{{ url('/Say-it/' . $post->id) }}" target="_blank" class="inline-block mt-2 text-xs text-indigo-600 hover:underline">View</a>
+                        <span class="inline-flex items-center gap-2 mt-2">
+                            <a href="{{ url('/Say-it/' . $post->id) }}" target="_blank" class="text-xs text-indigo-600 hover:underline">View</a>
+                            <form method="POST" action="{{ url('admin/confession/posts/' . $post->id) }}" class="inline" onsubmit="return confirm('Delete this post and all its comments?');">
+                                @csrf
+                                @method('DELETE')
+                                <button type="submit" class="text-xs text-red-600 hover:underline">Delete</button>
+                            </form>
+                        </span>
                     </div>
                 @endforeach
             </div>
