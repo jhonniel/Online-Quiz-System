@@ -28,7 +28,7 @@
                 </button>
                 <a href="{{ url('/Say-it') }}" class="flex items-center gap-2 text-gray-900 no-underline min-w-0">
                     <span class="flex items-center justify-center w-8 h-8 sm:w-9 sm:h-9 rounded-lg bg-violet-600 text-white flex-shrink-0">
-                        <i class="fas fa-robot text-sm sm:text-base"></i>
+                        <i class="fas fa-circle-question text-sm sm:text-base"></i>
                     </span>
                     <span class="text-lg sm:text-xl font-bold tracking-tight truncate">Say it</span>
                 </a>
@@ -180,11 +180,18 @@
             @if(session('error'))
                 <div class="mb-4 py-3 px-4 rounded-xl bg-red-50 text-red-800 text-sm font-medium border border-red-200">{{ session('error') }}</div>
             @endif
-            @if($errors->any())
+            @php
+                $errorBag = $errors->getBag('default');
+                $topicKeys = ['topic', 'topic_id', 'topic_name'];
+                $errorsExceptTopic = array_diff_key($errorBag->getMessages(), array_flip($topicKeys));
+            @endphp
+            @if(!empty($errorsExceptTopic))
                 <div class="mb-4 py-3 px-4 rounded-xl bg-red-50 text-red-800 text-sm border border-red-200">
                     <ul class="list-disc list-inside space-y-0.5">
-                        @foreach($errors->all() as $err)
-                            <li>{{ $err }}</li>
+                        @foreach($errorsExceptTopic as $msgs)
+                            @foreach((array) $msgs as $err)
+                                <li>{{ $err }}</li>
+                            @endforeach
                         @endforeach
                     </ul>
                 </div>

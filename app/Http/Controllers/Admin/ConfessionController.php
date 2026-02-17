@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\ConfessionComment;
 use App\Models\ConfessionPost;
+use App\Models\ConfessionTopic;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -67,6 +68,13 @@ class ConfessionController extends Controller
         ];
 
         return view('admin.confession.dashboard', compact('ipLogs', 'trending', 'stats'));
+    }
+
+    public function topics()
+    {
+        $this->ensureFullAccess();
+        $topics = ConfessionTopic::orderByDesc('posts_count')->orderBy('name')->get();
+        return view('admin.confession.topics', compact('topics'));
     }
 
     public function destroy(ConfessionPost $confession_post)

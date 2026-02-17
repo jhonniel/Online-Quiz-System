@@ -6,7 +6,7 @@
 <div class="max-w-2xl mx-auto lg:max-w-none">
     {{-- Composer: Create post --}}
     <section id="create" class="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden mb-6 scroll-mt-24">
-        <form action="{{ url('/Say-it') }}" method="POST" enctype="multipart/form-data" class="p-4 sm:p-5">
+        <form id="say-it-form" action="{{ url('/Say-it') }}" method="POST" enctype="multipart/form-data" class="p-4 sm:p-5">
             @csrf
             <div class="flex gap-3">
                 <div class="w-10 h-10 rounded-full flex-shrink-0 flex items-center justify-center {{ \App\Helpers\SayItHelper::avatarColorClassesForCodename('anon') }}" aria-hidden="true">
@@ -51,6 +51,7 @@
                                 <label for="text_size_large" class="text-size-segmented-label px-3 py-1.5 text-xs font-medium text-gray-600 rounded-md cursor-pointer transition-colors hover:text-gray-900 select-none">Large</label>
                             </div>
                         </div>
+                        @error('topic')<p class="w-full text-xs text-red-600 mt-0.5">{{ $message }}</p>@enderror
                         @error('topic_id')<p class="w-full text-xs text-red-600 mt-0.5">{{ $message }}</p>@enderror
                         @error('topic_name')<p class="w-full text-xs text-red-600 mt-0.5">{{ $message }}</p>@enderror
                         <button type="submit" class="ml-auto px-5 py-2.5 bg-violet-600 text-white rounded-full font-semibold text-sm hover:bg-violet-700 active:scale-[0.98] transition shadow-sm shrink-0 touch-manipulation">
@@ -107,6 +108,18 @@
 
 @push('scripts')
 <script>
+(function() {
+    var form = document.getElementById('say-it-form');
+    var content = document.getElementById('content');
+    if (form && content) {
+        content.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                form.submit();
+            }
+        });
+    }
+})();
 (function() {
     var topicId = document.getElementById('topic_id');
     var topicName = document.getElementById('topic_name');

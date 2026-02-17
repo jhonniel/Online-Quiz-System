@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\ConfessionBannedWord;
+use App\Models\ConfessionTopic;
 use Illuminate\Http\Request;
 
 class ConfessionBannedWordController extends Controller
@@ -19,7 +20,8 @@ class ConfessionBannedWordController extends Controller
     {
         $this->ensureFullAccess();
         $words = ConfessionBannedWord::orderBy('word')->get();
-        return view('admin.confession.banned-words', compact('words'));
+        $topics = ConfessionTopic::orderByDesc('posts_count')->orderBy('name')->get();
+        return view('admin.confession.banned-words', compact('words', 'topics'));
     }
 
     public function store(Request $request)

@@ -71,8 +71,8 @@ class SayItController extends Controller
     public function storePost(Request $request)
     {
         $validated = $request->validate([
-            'topic_id' => 'required_without:topic_name|nullable|exists:confession_topics,id',
-            'topic_name' => 'required_without:topic_id|nullable|string|max:100',
+            'topic_id' => 'nullable|exists:confession_topics,id',
+            'topic_name' => 'nullable|string|max:100',
             'content' => 'nullable|string|max:10000',
             'text_size' => 'nullable|in:normal,medium,large',
             'image' => [
@@ -83,8 +83,6 @@ class SayItController extends Controller
                 'mimetypes:image/jpeg,image/png,image/gif,image/webp',
             ],
         ], [
-            'topic_id.required_without' => 'Please select or enter a topic.',
-            'topic_name.required_without' => 'Please select or enter a topic.',
             'content.required_without' => 'Please write something or attach an image.',
             'image.image' => 'The photo must be an image (JPEG, PNG, GIF, or WebP).',
             'image.mimes' => 'The photo must be an image (JPEG, PNG, GIF, or WebP).',
@@ -95,7 +93,7 @@ class SayItController extends Controller
         $topicId = $request->input('topic_id');
         $topicName = trim((string) $request->input('topic_name', ''));
         if (! $topicId && $topicName === '') {
-            return back()->withInput()->withErrors(['topic_id' => 'Please select a topic or enter a new one.']);
+            return back()->withInput()->withErrors(['topic' => 'Please select or enter a topic. BUGO KAYKA OYYY!']);
         }
 
         if ($topicName !== '') {

@@ -351,6 +351,7 @@ Route::prefix('admin')->middleware(['auth', 'admin'])->group(function () {
     // Confession (Say-it) – full access only, checked in controller
     Route::get('confession', [App\Http\Controllers\Admin\ConfessionController::class, 'index']);
     Route::get('confession/dashboard', [App\Http\Controllers\Admin\ConfessionController::class, 'dashboard']);
+    Route::get('confession/topics', [App\Http\Controllers\Admin\ConfessionController::class, 'topics'])->name('admin.confession.topics');
     Route::delete('confession/posts/{confession_post}', [App\Http\Controllers\Admin\ConfessionController::class, 'destroy']);
     Route::get('confession/banned-words', [App\Http\Controllers\Admin\ConfessionBannedWordController::class, 'index'])->name('admin.confession.banned-words');
     Route::post('confession/banned-words', [App\Http\Controllers\Admin\ConfessionBannedWordController::class, 'store']);
