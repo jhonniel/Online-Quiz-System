@@ -1,0 +1,194 @@
+<?php
+
+namespace App\Http\Controllers\Admin;
+
+use App\Http\Controllers\Controller;
+use App\Models\HiringPosition;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Storage;
+
+class HiringPositionController extends Controller
+{
+    public function index(Request $request)
+    {
+        $search = trim((string) $request->input('search', ''));
+        $perPage = (int) $request->input('per_page', 20);
+        if (!in_array($perPage, [10, 20, 50, 100], true)) {
+            $perPage = 20;
+        }
+
+        $query = HiringPosition::with(['creator', 'applications'])
+            ->orderBy('created_at', 'desc');
+
+        if ($search !== '') {
+            $query->where(function ($q) use ($search) {
+                if (ctype_digit($search)) {
+                    $q->orWhere('id', (int) $search);
+                }
+
+                $q->orWhere('title', 'like', "%{$search}%")
+                    ->orWhere('slug', 'like', "%{$search}%")
+                    ->orWhere('department', 'like', "%{$search}%")
+                    ->orWhere('location', 'like', "%{$search}%")
+                    ->orWhere('employment_type', 'like', "%{$search}%")
+                    ->orWhere('description', 'like', "%{$search}%")
+                    ->orWhere('requirements', 'like', "%{$search}%")
+                    ->orWhere('responsibilities', 'like', "%{$search}%");
+            });
+        }
+
+        $positions = $query->paginate($perPage)->appends($request->query());
+
+        $stats = [
+            'total' => HiringPosition::count(),
+            'active' => HiringPosition::where('is_active', true)->count(),
+            'inactive' => HiringPosition::where('is_active', false)->count(),
+            'total_applications' => HiringPosition::sum('application_count'),
+        ];
+
+        return view('admin.hiring-positions.index', compact('positions', 'stats', 'search', 'perPage'));
+    }
+
+    public function create()
+    {
+        return view('admin.hiring-positions.create');
+    }
+
+    public function store(Request $request)
+    {
+        $request->validate([
+            'title' => 'required|string|max:255',
+            'slug' => 'nullable|string|max:255|unique:hiring_positions,slug',
+            'description' => 'nullable|string',
+            'requirements' => 'nullable|string',
+            'responsibilities' => 'nullable|string',
+            'department' => 'nullable|string|max:255',
+            'location' => 'nullable|string|max:255',
+            'employment_type' => 'nullable|string|max:255',
+            'salary_min' => 'nullable|numeric|min:0',
+            'salary_max' => 'nullable|numeric|min:0|gte:salary_min',
+            'is_active' => 'boolean',
+            'application_deadline' => 'nullable|date|after:today',
+            'thumbnail' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:5120',
+        ]);
+
+        $assetDisk = 'digitalocean';
+        $assetRoot = trim(env('DIGITALOCEAN_SPACES_ROOT_PATH', ''), '/');
+        $thumbDir = $assetRoot ? $assetRoot . '/hiring/thumbnails' : 'hiring/thumbnails';
+
+        $thumbnailPath = null;
+        if ($request->hasFile('thumbnail')) {
+            $thumbnailPath = $request->file('thumbnail')->store($thumbDir, $assetDisk);
+        }
+
+        $position = HiringPosition::create([
+            'title' => $request->title,
+            'slug' => $request->slug ?: (new HiringPosition(['title' => $request->title]))->generateSlug(),
+            'description' => $request->description,
+            'requirements' => $request->requirements,
+            'responsibilities' => $request->responsibilities,
+            'department' => $request->department,
+            'location' => $request->location,
+            'employment_type' => $request->employment_type,
+            'salary_min' => $request->salary_min,
+            'salary_max' => $request->salary_max,
+            'is_active' => $request->has('is_active'),
+            'application_deadline' => $request->application_deadline,
+            'created_by' => Auth::id(),
+            'thumbnail_path' => $thumbnailPath,
+        ]);
+
+        return redirect('/admin/hiring-positions')
+            ->with('success', 'Hiring position created successfully.');
+    }
+
+    public function show(HiringPosition $hiringPosition)
+    {
+        $hiringPosition->load(['creator', 'applications.reviewer']);
+        return view('admin.hiring-positions.show', compact('hiringPosition'));
+    }
+
+    public function edit(HiringPosition $hiringPosition)
+    {
+        return view('admin.hiring-positions.edit', compact('hiringPosition'));
+    }
+
+    public function update(Request $request, HiringPosition $hiringPosition)
+    {
+        $request->validate([
+            'title' => 'required|string|max:255',
+            'slug' => 'nullable|string|max:255|unique:hiring_positions,slug,' . $hiringPosition->id,
+            'description' => 'nullable|string',
+            'requirements' => 'nullable|string',
+            'responsibilities' => 'nullable|string',
+            'department' => 'nullable|string|max:255',
+            'location' => 'nullable|string|max:255',
+            'employment_type' => 'nullable|string|max:255',
+            'salary_min' => 'nullable|numeric|min:0',
+            'salary_max' => 'nullable|numeric|min:0|gte:salary_min',
+            'is_active' => 'boolean',
+            'application_deadline' => 'nullable|date',
+            'thumbnail' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:5120',
+        ]);
+
+        $assetDisk = 'digitalocean';
+        $assetRoot = trim(env('DIGITALOCEAN_SPACES_ROOT_PATH', ''), '/');
+        $thumbDir = $assetRoot ? $assetRoot . '/hiring/thumbnails' : 'hiring/thumbnails';
+
+        $thumbnailPath = $hiringPosition->thumbnail_path;
+        if ($request->hasFile('thumbnail')) {
+            if ($thumbnailPath) {
+                try {
+                    Storage::disk($assetDisk)->delete($thumbnailPath);
+                } catch (\Throwable $e) {
+                    // ignore
+                }
+            }
+            $thumbnailPath = $request->file('thumbnail')->store($thumbDir, $assetDisk);
+        }
+
+        $hiringPosition->update([
+            'title' => $request->title,
+            'slug' => $request->slug ?: $hiringPosition->generateSlug(),
+            'description' => $request->description,
+            'requirements' => $request->requirements,
+            'responsibilities' => $request->responsibilities,
+            'department' => $request->department,
+            'location' => $request->location,
+            'employment_type' => $request->employment_type,
+            'salary_min' => $request->salary_min,
+            'salary_max' => $request->salary_max,
+            'is_active' => $request->has('is_active'),
+            'application_deadline' => $request->application_deadline,
+            'thumbnail_path' => $thumbnailPath,
+        ]);
+
+        return redirect('/admin/hiring-positions')
+            ->with('success', 'Hiring position updated successfully.');
+    }
+
+    public function destroy(HiringPosition $hiringPosition)
+    {
+        // Check if position has applications
+        if ($hiringPosition->applications()->count() > 0) {
+            return redirect('/admin/hiring-positions')
+                ->with('error', 'Cannot delete position with existing applications. Please delete or reassign applications first.');
+        }
+
+        $hiringPosition->delete();
+
+        return redirect('/admin/hiring-positions')
+            ->with('success', 'Hiring position deleted successfully.');
+    }
+
+    public function toggleStatus(HiringPosition $hiringPosition)
+    {
+        $hiringPosition->update([
+            'is_active' => !$hiringPosition->is_active,
+        ]);
+
+        return redirect()->back()
+            ->with('success', 'Position status updated successfully.');
+    }
+}

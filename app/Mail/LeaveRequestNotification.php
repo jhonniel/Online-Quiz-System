@@ -1,0 +1,58 @@
+<?php
+
+namespace App\Mail;
+
+use App\Models\LeaveRequest;
+use Illuminate\Bus\Queueable;
+use Illuminate\Contracts\Queue\ShouldQueue;
+use Illuminate\Mail\Mailable;
+use Illuminate\Mail\Mailables\Content;
+use Illuminate\Mail\Mailables\Envelope;
+use Illuminate\Queue\SerializesModels;
+
+class LeaveRequestNotification extends Mailable
+{
+    use Queueable, SerializesModels;
+
+    public $leaveRequest;
+
+    /**
+     * Create a new message instance.
+     */
+    public function __construct(LeaveRequest $leaveRequest)
+    {
+        $this->leaveRequest = $leaveRequest;
+    }
+
+    /**
+     * Get the message envelope.
+     */
+    public function envelope(): Envelope
+    {
+        return new Envelope(
+            subject: 'New Request Submitted - ' . config('app.name'),
+        );
+    }
+
+    /**
+     * Get the message content definition.
+     */
+    public function content(): Content
+    {
+        return new Content(
+            // Use a plain Blade view instead of markdown to avoid markdown mail dependencies
+            view: 'emails.leave-request-notification',
+        );
+    }
+
+    /**
+     * Get the attachments for the message.
+     *
+     * @return array<int, \Illuminate\Mail\Mailables\Attachment>
+     */
+    public function attachments(): array
+    {
+        return [];
+    }
+}
+

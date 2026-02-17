@@ -1,0 +1,25 @@
+---
+description: New Laravel migrations must run on PostgreSQL (pgsql) as well as the default connection.
+globs: database/migrations/**/*.php
+---
+
+# PostgreSQL-compatible migrations
+
+When creating or editing Laravel migrations in this project, ensure they are **doable on PostgreSQL** (pgsql).
+
+## Do
+
+- Use **Schema builder** methods only when possible: `$table->id()`, `$table->string()`, `$table->integer()`, `$table->foreignId()`, `$table->text()`, `$table->json()`, `$table->boolean()`, `$table->timestamps()`, etc. These are translated correctly for pgsql.
+- Use `$table->enum('col', ['a','b'])` if needed; Laravel generates a CHECK constraint on PostgreSQL.
+- Use `unsignedInteger()` / `unsignedBigInteger()` as needed; Laravel maps these to appropriate integer types on pgsql.
+- For raw SQL, branch by driver: `Schema::getConnection()->getDriverName() === 'pgsql'` and use PostgreSQL syntax there (e.g. `ALTER TABLE ... ALTER COLUMN ... TYPE ...`, `ADD CONSTRAINT ... CHECK (...)`, `jsonb_build_array` / `to_jsonb()` instead of `json_array`).
+
+## Avoid
+
+- **No MySQL-only raw SQL** in migrations: no `MODIFY COLUMN`, `ENUM(...)` in ALTER, `json_array()`, or `RENAME COLUMN` in MySQL-specific form without a pgsql branch.
+- Prefer **omitting `->after('column')`** in new migrations so column order is consistent across databases; on pgsql `after()` is ignored and the column is appended. If column order is required, document that it may differ on pgsql.
+- Do not rely on MySQL-specific types or options (e.g. `->charset()`, `->collation()`) unless wrapped in a driver check.
+
+## Down migrations
+
+- Implement reversible `down()` using Schema builder or driver-checked raw SQL so `migrate:rollback` works on pgsql as well.
