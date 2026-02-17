@@ -9,7 +9,7 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('ticket_reports', function (Blueprint $table) {
-            $table->text('admin_notes')->nullable()->after('status');
+            $table->text('admin_notes')->nullable();
         });
     }
 
