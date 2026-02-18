@@ -899,17 +899,22 @@ class User extends Authenticatable
         try {
             // Get or generate a token for this user (reuses existing unused token)
             $token = \App\Models\QrCodeToken::getOrGenerateForUser($this);
-            // Generate QR code with hashed token URL (static until token is used)
-            $qrCodeUrl = route('qr.scan', ['token' => $token]);
-            // Use the QrCode generator directly
-            if (class_exists(\SimpleSoftwareIO\QrCode\Generator::class)) {
-                $qrCode = new \SimpleSoftwareIO\QrCode\Generator();
-                return $qrCode->size($size)->generate($qrCodeUrl);
+            
+            // Generate QR code URL - use url() helper as fallback if route() fails
+            try {
+                $qrCodeUrl = route('qr.scan', ['token' => $token]);
+            } catch (\Exception $routeException) {
+                // Fallback to url() if route helper fails
+                $qrCodeUrl = url('/qr/' . $token);
             }
+            
+            // Use the QrCode facade with full namespace
+            return \SimpleSoftwareIO\QrCode\Facades\QrCode::size($size)->generate($qrCodeUrl);
         } catch (\Exception $e) {
-            // Fallback if QR code package is not available
+            // Log error for debugging
+            \Log::error('QR Code image generation failed: ' . $e->getMessage() . ' | Trace: ' . $e->getTraceAsString());
+            return '';
         }
-        return '';
     }
 
     /**
@@ -921,17 +926,22 @@ class User extends Authenticatable
         try {
             // Get or generate a token for this user (reuses existing unused token)
             $token = \App\Models\QrCodeToken::getOrGenerateForUser($this);
-            // Generate QR code with hashed token URL (static until token is used)
-            $qrCodeUrl = route('qr.scan', ['token' => $token]);
-            // Use the QrCode generator directly (SVG format, doesn't require imagick)
-            if (class_exists(\SimpleSoftwareIO\QrCode\Generator::class)) {
-                $qrCode = new \SimpleSoftwareIO\QrCode\Generator();
-                return $qrCode->size($size)->format('svg')->generate($qrCodeUrl);
+            
+            // Generate QR code URL - use url() helper as fallback if route() fails
+            try {
+                $qrCodeUrl = route('qr.scan', ['token' => $token]);
+            } catch (\Exception $routeException) {
+                // Fallback to url() if route helper fails
+                $qrCodeUrl = url('/qr/' . $token);
             }
+            
+            // Use the QrCode facade (SVG format, doesn't require imagick)
+            return \SimpleSoftwareIO\QrCode\Facades\QrCode::size($size)->format('svg')->generate($qrCodeUrl);
         } catch (\Exception $e) {
-            // Fallback if QR code package is not available
+            // Log error for debugging but don't expose it to user
+            \Log::error('QR Code generation failed: ' . $e->getMessage() . ' | Trace: ' . $e->getTraceAsString());
+            return '<svg width="' . $size . '" height="' . $size . '"><text x="50%" y="50%" text-anchor="middle" dy=".3em">QR Code Unavailable</text></svg>';
         }
-        return '<svg width="' . $size . '" height="' . $size . '"><text x="50%" y="50%" text-anchor="middle" dy=".3em">QR Code Unavailable</text></svg>';
     }
 
     /**
