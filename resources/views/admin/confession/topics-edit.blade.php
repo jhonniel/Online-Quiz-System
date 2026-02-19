@@ -17,7 +17,7 @@
             <svg class="w-4 h-4 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
                 <path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd"></path>
             </svg>
-            <a href="{{ route('admin.confession.topics') }}" class="ml-2 text-sm font-medium text-gray-500 hover:text-gray-700">Topics</a>
+            <a href="{{ url('/admin/confession/topics') }}" class="ml-2 text-sm font-medium text-gray-500 hover:text-gray-700">Topics</a>
         </div>
     </li>
     <li>
@@ -59,7 +59,7 @@
             <h2 class="text-base font-semibold text-gray-900">Edit topic</h2>
             <p class="text-sm text-gray-500 mt-0.5">Slug will update automatically from the name. {{ number_format($confession_topic->posts_count) }} post(s) use this topic.</p>
         </div>
-        <form action="{{ route('admin.confession.topics.update', $confession_topic) }}" method="POST" class="p-6 space-y-6">
+        <form action="{{ url('/admin/confession/topics/' . $confession_topic->id) }}" method="POST" class="p-6 space-y-6">
             @csrf
             @method('PUT')
             <div>
@@ -69,7 +69,7 @@
             </div>
             <div class="flex flex-wrap items-center gap-3 pt-2">
                 <button type="submit" class="inline-flex items-center px-4 py-2 border border-transparent rounded-lg text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 shadow-sm">Save changes</button>
-                <a href="{{ route('admin.confession.topics') }}" class="inline-flex items-center px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 bg-white hover:bg-gray-50">Cancel</a>
+                <a href="{{ url('/admin/confession/topics') }}" class="inline-flex items-center px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 bg-white hover:bg-gray-50">Cancel</a>
             </div>
         </form>
     </div>

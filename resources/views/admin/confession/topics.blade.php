@@ -62,8 +62,8 @@
                             <td class="px-6 py-3 text-right text-sm text-gray-600">{{ number_format($t->posts_count) }}</td>
                             <td class="px-6 py-3 text-right">
                                 <span class="inline-flex items-center gap-2">
-                                    <a href="{{ route('admin.confession.topics.edit', $t) }}" class="inline-flex items-center px-3 py-1.5 border border-gray-300 rounded-lg text-xs font-medium text-gray-700 bg-white hover:bg-gray-50">Edit</a>
-                                    <form action="{{ route('admin.confession.topics.destroy', $t) }}" method="POST" class="inline" onsubmit="return confirm('Delete this topic? Posts under it will become uncategorized.');">
+                                    <a href="{{ url('/admin/confession/topics/' . $t->id . '/edit') }}" class="inline-flex items-center px-3 py-1.5 border border-gray-300 rounded-lg text-xs font-medium text-gray-700 bg-white hover:bg-gray-50">Edit</a>
+                                    <form action="{{ url('/admin/confession/topics/' . $t->id) }}" method="POST" class="inline" onsubmit="return confirm('Delete this topic? Posts under it will become uncategorized.');">
                                         @csrf
                                         @method('DELETE')
                                         <button type="submit" class="inline-flex items-center px-3 py-1.5 border border-red-200 rounded-lg text-xs font-medium text-red-700 bg-red-50 hover:bg-red-100">Delete</button>

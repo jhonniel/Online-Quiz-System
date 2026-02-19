@@ -113,7 +113,7 @@ class ConfessionController extends Controller
 
         $confession_topic->update(['name' => $name, 'slug' => $slug]);
 
-        return redirect()->route('admin.confession.topics')->with('success', 'Topic updated.');
+        return redirect()->to('/admin/confession/topics')->with('success', 'Topic updated.');
     }
 
     public function destroyTopic(ConfessionTopic $confession_topic)
@@ -122,7 +122,7 @@ class ConfessionController extends Controller
 
         $confession_topic->delete();
 
-        return redirect()->route('admin.confession.topics')->with('success', 'Topic deleted. Posts under this topic are now uncategorized.');
+        return redirect()->to('/admin/confession/topics')->with('success', 'Topic deleted. Posts under this topic are now uncategorized.');
     }
 
     public function destroy(ConfessionPost $confession_post)
