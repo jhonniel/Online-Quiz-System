@@ -262,7 +262,7 @@ class DashboardController extends Controller
             // Recent Quizzes and Users - with error handling
             try {
                 $recentQuizzes = Quiz::with('creator')->latest()->take(5)->get();
-                $recentUsers = User::where('role', 'user')->latest()->take(5)->get();
+                $recentUsers = User::latest()->take(5)->get();
             } catch (\Exception $e) {
                 \Log::warning('Recent items error: ' . $e->getMessage());
                 $recentQuizzes = collect();
@@ -340,7 +340,6 @@ class DashboardController extends Controller
             try {
                 $mostActiveUsers = UserActivity::selectRaw('user_id, COUNT(*) as action_count')
                     ->with('user')
-                    ->whereHas('user', fn($q) => $q->where('role', 'user'))
                     ->groupBy('user_id')
                     ->orderBy('action_count', 'desc')
                     ->limit(10)

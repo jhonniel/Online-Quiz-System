@@ -695,7 +695,7 @@
                                 @endif
                             </div>
                             <div class="flex-1 min-w-0">
-                                <p class="text-sm font-medium text-gray-900">{{ $activity->user->name }}</p>
+                                <p class="text-sm font-medium text-gray-900">{{ optional($activity->user)->name ?? 'Unknown' }}</p>
                                 <p class="text-sm text-gray-500">
                                     {{ ucfirst(str_replace('_', ' ', $activity->activity_type)) }}
                                     @if($activity->action)
@@ -749,6 +749,7 @@
                             <div>
                                 <p class="text-sm font-medium text-gray-900">{{ $user->name }}</p>
                                 <p class="text-sm text-gray-500">{{ $user->email }}</p>
+                                <span class="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-700 mt-0.5">{{ $user->getRoleLabel() }}</span>
                             </div>
                             <div class="flex items-center">
                                 <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium {{ $user->is_active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800' }}">
@@ -757,7 +758,7 @@
                             </div>
                         </div>
                     @empty
-                        <p class="text-sm text-gray-500">No users registered yet.</p>
+                        <p class="text-sm text-gray-500">No users yet.</p>
                     @endforelse
                 </div>
             </div>
@@ -1189,7 +1190,7 @@
                         <h3 class="text-base sm:text-lg leading-6 font-medium text-gray-900">⚡ Most Active Users</h3>
                         <a href="{{ url('/admin/user-activity') }}" class="text-sm font-medium text-indigo-600 hover:text-indigo-500 self-start sm:self-auto">View all →</a>
                     </div>
-                    <p class="text-xs text-gray-500 mb-3">Ranked by total actions from Activity Logs (all time)</p>
+                    <p class="text-xs text-gray-500 mb-3">All roles · Ranked by total actions from Activity Logs (all time)</p>
                     @if($mostActiveUsers->count() > 0)
                         <div class="max-h-96 overflow-y-auto border border-gray-200 rounded-lg scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
                             <div class="space-y-2 p-3">
