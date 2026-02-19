@@ -1,29 +1,41 @@
-@extends('layouts.app')
+@extends('layouts.admin')
+
+@section('title', 'Chat - ' . $ticket->ticket_number)
+@section('page-title', 'Live Chat - ' . $ticket->user->name)
+
+@section('breadcrumb')
+    <li>
+        <div class="flex items-center">
+            <svg class="w-4 h-4 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
+                <path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd"></path>
+            </svg>
+            <a href="{{ url('/admin/live-chat') }}" class="ml-2 text-sm font-medium text-gray-500 hover:text-gray-700">Live Chat</a>
+        </div>
+    </li>
+    <li>
+        <div class="flex items-center">
+            <svg class="w-4 h-4 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
+                <path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd"></path>
+            </svg>
+            <span class="ml-2 text-sm font-medium text-gray-700">{{ $ticket->ticket_number }}</span>
+        </div>
+    </li>
+@endsection
 
 @section('content')
-<div class="max-w-4xl mx-auto">
-    @if(session('success'))
-        <div class="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded mb-4">
-            {{ session('success') }}
-        </div>
-    @endif
-
-    @if(session('error'))
-        <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
-            {{ session('error') }}
-        </div>
-    @endif
-    <div class="bg-white shadow rounded-lg">
+<div class="max-w-4xl mx-auto py-2">
+    <div class="bg-white shadow-lg rounded-xl border border-gray-200 overflow-hidden">
         <div class="px-4 py-5 sm:p-6">
-            <div class="flex justify-between items-center mb-6">
+            <div class="flex flex-wrap justify-between items-start sm:items-center gap-4 mb-6">
                 <div class="flex items-center space-x-4">
                     <a href="{{ url('/admin/live-chat') }}"
-                       class="text-gray-400 hover:text-gray-600">
-                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                       class="flex-shrink-0 p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+                       title="Back to Live Chat">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
                         </svg>
                     </a>
-                    <div class="flex items-center space-x-3">
+                    <div class="flex items-center space-x-3 min-w-0">
                         <div class="relative">
                             <div class="w-10 h-10 bg-indigo-100 rounded-full flex items-center justify-center">
                                 <span class="text-indigo-600 font-semibold text-sm">
