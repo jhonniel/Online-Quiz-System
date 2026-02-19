@@ -168,16 +168,9 @@
         </style>
     </head>
     @php
-        // Helper: get route URL or fallback (avoids RouteNotFoundException when route not yet registered)
+        // Use URL paths only to avoid RouteNotFoundException on server (e.g. when route cache is used)
         $getRoute = function($name, $default = '/') {
-            if ($name === 'login') {
-                return url('/login');
-            }
-            try {
-                return route($name);
-            } catch (\Throwable $e) {
-                return $default;
-            }
+            return url($default);
         };
     @endphp
     <body class="font-sans antialiased bg-white">
