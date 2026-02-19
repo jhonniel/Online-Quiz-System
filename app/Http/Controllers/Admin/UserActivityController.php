@@ -44,9 +44,11 @@ class UserActivityController extends Controller
 
         $activities = $query->orderBy('created_at', 'desc')->paginate(50);
 
-        // Get filter options
+        // Get filter options - all users who have activity logs (any role)
         $activityTypes = UserActivity::distinct()->pluck('activity_type')->sort();
-        $users = User::where('role', 'user')->orderBy('name')->get();
+        $users = User::whereIn('id', UserActivity::select('user_id')->distinct()->pluck('user_id'))
+            ->orderBy('name')
+            ->get();
         $ipAddresses = UserActivity::distinct()->pluck('ip_address')->filter()->sort();
 
         return view('admin.user-activity.index', compact(

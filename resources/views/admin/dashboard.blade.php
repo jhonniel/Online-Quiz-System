@@ -512,7 +512,7 @@
         <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
             <div class="px-6 py-4 border-b border-gray-200 bg-gray-50/80">
                 <h2 class="text-base font-semibold text-gray-900">Ongoing Leave</h2>
-                <p class="text-sm text-gray-500 mt-0.5">Employees currently on leave</p>
+                <p class="text-sm text-gray-500 mt-0.5">Employees – approved leave (today or future)</p>
             </div>
             <div class="p-4 max-h-64 overflow-y-auto">
                 @forelse($ongoingLeaveEmployees as $leave)
@@ -524,7 +524,7 @@
                         <span class="text-xs font-medium text-amber-600 bg-amber-50 px-2 py-1 rounded">{{ $leave->type_label }}</span>
                     </a>
                 @empty
-                    <p class="text-sm text-gray-500 text-center py-6">No employees on leave today</p>
+                    <p class="text-sm text-gray-500 text-center py-6">No approved leave (today or future)</p>
                 @endforelse
             </div>
             @if($ongoingLeaveEmployees->isNotEmpty())
@@ -538,7 +538,7 @@
         <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
             <div class="px-6 py-4 border-b border-gray-200 bg-gray-50/80">
                 <h2 class="text-base font-semibold text-gray-900">Ongoing Leave</h2>
-                <p class="text-sm text-gray-500 mt-0.5">Students currently on leave</p>
+                <p class="text-sm text-gray-500 mt-0.5">Students – approved leave (today or future)</p>
             </div>
             <div class="p-4 max-h-64 overflow-y-auto">
                 @forelse($ongoingLeaveStudents as $leave)
@@ -550,7 +550,7 @@
                         <span class="text-xs font-medium text-amber-600 bg-amber-50 px-2 py-1 rounded">{{ $leave->type_label }}</span>
                     </a>
                 @empty
-                    <p class="text-sm text-gray-500 text-center py-6">No students on leave today</p>
+                    <p class="text-sm text-gray-500 text-center py-6">No approved leave (today or future)</p>
                 @endforelse
             </div>
             @if($ongoingLeaveStudents->isNotEmpty())

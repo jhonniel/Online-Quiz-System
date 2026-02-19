@@ -204,21 +204,19 @@ class DashboardController extends Controller
                     ->take(5)
                     ->get();
 
-                // Ongoing leave (approved, today between start_date and end_date)
+                // Ongoing and upcoming leave (approved, end_date >= today - all leave that extends into today or future)
                 $today = now()->toDateString();
                 $ongoingLeaveEmployees = LeaveRequest::with('user')
                     ->where('status', 'approved')
-                    ->where('start_date', '<=', $today)
                     ->where('end_date', '>=', $today)
                     ->whereHas('user', fn($q) => $q->where('role', 'employee'))
-                    ->orderBy('end_date')
+                    ->orderBy('start_date')
                     ->get();
                 $ongoingLeaveStudents = LeaveRequest::with('user')
                     ->where('status', 'approved')
-                    ->where('start_date', '<=', $today)
                     ->where('end_date', '>=', $today)
                     ->whereHas('user', fn($q) => $q->where('role', 'student'))
-                    ->orderBy('end_date')
+                    ->orderBy('start_date')
                     ->get();
             } catch (\Exception $e) {
                 \Log::warning('Leave request statistics error: ' . $e->getMessage());
