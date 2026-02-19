@@ -82,6 +82,49 @@ class ConfessionController extends Controller
         return view('admin.confession.topics', compact('topics'));
     }
 
+    public function editTopic(ConfessionTopic $confession_topic)
+    {
+        $this->ensureFullAccess();
+        return view('admin.confession.topics-edit', compact('confession_topic'));
+    }
+
+    public function updateTopic(Request $request, ConfessionTopic $confession_topic)
+    {
+        $this->ensureFullAccess();
+
+        $request->validate([
+            'name' => 'required|string|max:255',
+        ]);
+
+        $name = trim($request->name);
+        if ($name === '') {
+            return redirect()->back()->withInput()->with('error', 'Topic name cannot be empty.');
+        }
+
+        $slug = \Illuminate\Support\Str::slug($name);
+        if (empty($slug)) {
+            $slug = 'topic-' . \Illuminate\Support\Str::random(6);
+        }
+
+        // If slug changed, ensure it's unique
+        if ($slug !== $confession_topic->slug && ConfessionTopic::where('slug', $slug)->exists()) {
+            return redirect()->back()->withInput()->with('error', 'A topic with that name already exists.');
+        }
+
+        $confession_topic->update(['name' => $name, 'slug' => $slug]);
+
+        return redirect()->route('admin.confession.topics')->with('success', 'Topic updated.');
+    }
+
+    public function destroyTopic(ConfessionTopic $confession_topic)
+    {
+        $this->ensureFullAccess();
+
+        $confession_topic->delete();
+
+        return redirect()->route('admin.confession.topics')->with('success', 'Topic deleted. Posts under this topic are now uncategorized.');
+    }
+
     public function destroy(ConfessionPost $confession_post)
     {
         $this->ensureFullAccess();
