@@ -170,6 +170,9 @@
     @php
         // Helper: get route URL or fallback (avoids RouteNotFoundException when route not yet registered)
         $getRoute = function($name, $default = '/') {
+            if ($name === 'login') {
+                return url('/login');
+            }
             try {
                 return route($name);
             } catch (\Throwable $e) {
