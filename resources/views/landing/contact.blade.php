@@ -10,6 +10,7 @@
         <div class="text-center">
             <h1 class="text-4xl md:text-5xl font-bold mb-6">Contact Us</h1>
             <p class="text-xl text-gray-100">We're here to help and answer any questions you might have</p>
+            <a href="{{ url('/login') }}" class="inline-block mt-6 bg-white text-primary px-8 py-3 rounded-lg font-semibold hover:bg-gray-100 transition-colors">Log in</a>
         </div>
     </div>
 </section>
@@ -221,7 +222,7 @@
         </div>
 
         <div class="mt-12 text-center">
-            <a href="{{ url('/login') }}" class="inline-block bg-white text-primary px-8 py-3 rounded-lg font-semibold hover:bg-gray-100 transition-colors border border-primary">
+            <a href="{{ url('/login') }}" class="bg-white text-primary px-8 py-3 rounded-lg font-semibold hover:bg-gray-100 transition-colors">
                 Log in to your account
             </a>
         </div>
