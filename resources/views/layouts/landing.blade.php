@@ -355,7 +355,7 @@
                                     <li><a href="{{ $getRoute('user.dashboard', '/dashboard') }}" class="text-gray-400 hover:text-white transition-colors">User Dashboard</a></li>
                                 @endif
                             @else
-                                <li><a href="{{ $getRoute('login', '/login') }}" class="text-gray-400 hover:text-white transition-colors">Login</a></li>
+                                <li><a href="{{ url('/login') }}" class="text-gray-400 hover:text-white transition-colors">Login</a></li>
                             @endauth
                         </ul>
                     </div>

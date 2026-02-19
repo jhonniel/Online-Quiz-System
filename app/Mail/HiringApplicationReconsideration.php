@@ -33,7 +33,7 @@ class HiringApplicationReconsideration extends Mailable
         $this->email = $email;
         $this->password = $password;
         $this->interviewDate = $interviewDate;
-        $this->loginUrl = route('login');
+        $this->loginUrl = url('/login');
     }
 
     /**

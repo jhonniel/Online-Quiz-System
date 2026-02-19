@@ -26,7 +26,7 @@ class UserCredentials extends Mailable
         $this->user = $user;
         $this->email = $email;
         $this->password = $password;
-        $this->loginUrl = route('login');
+        $this->loginUrl = url('/login');
     }
 
     /**
