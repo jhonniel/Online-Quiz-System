@@ -52,13 +52,19 @@ class UserActivity extends Model
 
     /**
      * Get recent activities
+     *
+     * @param int $limit
+     * @param bool $excludeAdmins Exclude activities from admin users
      */
-    public static function getRecentActivities(int $limit = 50)
+    public static function getRecentActivities(int $limit = 50, bool $excludeAdmins = false)
     {
-        return self::with('user')
+        $query = self::with('user')
             ->orderBy('created_at', 'desc')
-            ->limit($limit)
-            ->get();
+            ->limit($limit);
+        if ($excludeAdmins) {
+            $query->whereHas('user', fn($q) => $q->where('role', '!=', 'admin'));
+        }
+        return $query->get();
     }
 
     /**

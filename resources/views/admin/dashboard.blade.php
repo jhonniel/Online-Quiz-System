@@ -1190,7 +1190,7 @@
                         <h3 class="text-base sm:text-lg leading-6 font-medium text-gray-900">⚡ Most Active Users</h3>
                         <a href="{{ url('/admin/user-activity') }}" class="text-sm font-medium text-indigo-600 hover:text-indigo-500 self-start sm:self-auto">View all →</a>
                     </div>
-                    <p class="text-xs text-gray-500 mb-3">All roles · Ranked by total actions from Activity Logs (all time)</p>
+                    <p class="text-xs text-gray-500 mb-3">Excluding admins · Ranked by total actions from Activity Logs (all time)</p>
                     @if($mostActiveUsers->count() > 0)
                         <div class="max-h-96 overflow-y-auto border border-gray-200 rounded-lg scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
                             <div class="space-y-2 p-3">

@@ -262,7 +262,7 @@ class DashboardController extends Controller
             // Recent Quizzes and Users - with error handling
             try {
                 $recentQuizzes = Quiz::with('creator')->latest()->take(5)->get();
-                $recentUsers = User::latest()->take(5)->get();
+                $recentUsers = User::where('role', '!=', 'admin')->latest()->take(5)->get();
             } catch (\Exception $e) {
                 \Log::warning('Recent items error: ' . $e->getMessage());
                 $recentQuizzes = collect();
@@ -340,6 +340,7 @@ class DashboardController extends Controller
             try {
                 $mostActiveUsers = UserActivity::selectRaw('user_id, COUNT(*) as action_count')
                     ->with('user')
+                    ->whereHas('user', fn($q) => $q->where('role', '!=', 'admin'))
                     ->groupBy('user_id')
                     ->orderBy('action_count', 'desc')
                     ->limit(10)
@@ -353,7 +354,7 @@ class DashboardController extends Controller
             try {
                 $activityStats = UserSession::getSessionStats();
                 $onlineUsers = UserSession::getOnlineUsers();
-                $recentActivities = UserActivity::getRecentActivities(20);
+                $recentActivities = UserActivity::getRecentActivities(20, true);
                 $todayLogins = UserActivity::getTodayLoginCount();
                 $todayLogouts = UserActivity::getTodayLogoutCount();
             } catch (\Exception $e) {
@@ -749,7 +750,7 @@ class DashboardController extends Controller
         try {
             $activityStats = UserSession::getSessionStats();
             $onlineUsers = UserSession::getOnlineUsers();
-            $recentActivities = UserActivity::getRecentActivities(10);
+            $recentActivities = UserActivity::getRecentActivities(10, true);
 
             return response()->json([
                 'activityStats' => $activityStats,
