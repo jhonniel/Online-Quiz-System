@@ -234,21 +234,14 @@
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
         <h2 class="text-3xl md:text-4xl font-bold mb-4">Ready to Get Started?</h2>
         <p class="text-xl mb-8 text-gray-100">Join thousands of users who trust our platform</p>
-
         @auth
             @if(auth()->user()->isAdmin())
-                <a href="{{ url('/admin/dashboard') }}" class="bg-white text-primary px-8 py-3 rounded-lg font-semibold hover:bg-gray-100 transition-colors">
-                    Access Admin Panel
-                </a>
+                <a href="{{ url('/admin/dashboard') }}" class="bg-white text-primary px-8 py-3 rounded-lg font-semibold hover:bg-gray-100 transition-colors">Access Admin Panel</a>
             @else
-                <a href="{{ url('/dashboard') }}" class="bg-white text-primary px-8 py-3 rounded-lg font-semibold hover:bg-gray-100 transition-colors">
-                    Access Student Portal
-                </a>
+                <a href="{{ url('/dashboard') }}" class="bg-white text-primary px-8 py-3 rounded-lg font-semibold hover:bg-gray-100 transition-colors">Access Student Portal</a>
             @endif
         @else
-            <a href="{{ url('/login') }}" class="bg-white text-primary px-8 py-3 rounded-lg font-semibold hover:bg-gray-100 transition-colors">
-                Login Now
-            </a>
+            <a href="{{ url('/login') }}" class="bg-white text-primary px-8 py-3 rounded-lg font-semibold hover:bg-gray-100 transition-colors">Login Now</a>
         @endauth
     </div>
 </section>
