@@ -219,6 +219,12 @@
                 <p class="text-sm text-gray-500">{{ $settings['contact_live_chat_time'] ?? '10:00 AM - 5:00 PM EST' }}</p>
             </div>
         </div>
+
+        <div class="mt-12 text-center">
+            <a href="{{ url('/login') }}" class="inline-block bg-white text-primary px-8 py-3 rounded-lg font-semibold hover:bg-gray-100 transition-colors border border-primary">
+                Log in to your account
+            </a>
+        </div>
     </div>
 </section>
 @endsection
