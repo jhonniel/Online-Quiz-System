@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Services\ConfessionCensorService;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
@@ -78,6 +79,33 @@ class ConfessionPost extends Model
     public function getTotalEngagementAttribute(): int
     {
         return $this->allComments()->count() + $this->upvotes_count + $this->downvotes_count;
+    }
+
+    /**
+     * Posts with no likes and no comments (scheduled for auto-delete after 1 week from post day).
+     */
+    public function scopeScheduledForDeletion(Builder $query): Builder
+    {
+        return $query->where('upvotes_count', 0)
+            ->where('downvotes_count', 0)
+            ->whereDoesntHave('allComments');
+    }
+
+    /**
+     * Posts eligible to be auto-deleted now (no engagement and at least 7 days old).
+     */
+    public function scopeEligibleForAutoDelete(Builder $query): Builder
+    {
+        return $query->scheduledForDeletion()
+            ->where('created_at', '<=', now()->subDays(7));
+    }
+
+    /**
+     * Date when this post will be (or was) auto-deleted: 7 days after creation.
+     */
+    public function getAutoDeleteAtAttribute(): \Carbon\Carbon
+    {
+        return $this->created_at->copy()->addDays(7);
     }
 
     /**

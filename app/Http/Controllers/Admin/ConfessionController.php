@@ -61,13 +61,18 @@ class ConfessionController extends Controller
             ->take(20)
             ->values();
 
+        // Posts with no likes and no comments – will be auto-deleted 7 days after post date (ranking: oldest first)
+        $scheduledForDeletion = ConfessionPost::scheduledForDeletion()
+            ->orderBy('created_at')
+            ->get();
+
         $stats = [
             'total_posts' => ConfessionPost::count(),
             'total_comments' => ConfessionComment::count(),
             'unique_ips' => $allIps->count(),
         ];
 
-        return view('admin.confession.dashboard', compact('ipLogs', 'trending', 'stats'));
+        return view('admin.confession.dashboard', compact('ipLogs', 'trending', 'stats', 'scheduledForDeletion'));
     }
 
     public function topics()
