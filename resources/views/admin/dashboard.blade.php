@@ -44,12 +44,26 @@
 @endsection
 
 @section('content')
-<div class="space-y-4 sm:space-y-6 px-2 sm:px-0">
+<div class="mx-2 sm:mx-3 lg:mx-4 xl:mx-6 space-y-6 sm:space-y-8">
+    @if(session('error'))
+        <div class="rounded-lg bg-amber-50 border border-amber-200 p-4 text-sm text-amber-800 flex items-center">
+            <svg class="w-5 h-5 mr-2 text-amber-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z"></path></svg>
+            {{ session('error') }}
+        </div>
+    @endif
+
+    <!-- Page header -->
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+            <h1 class="text-2xl font-bold text-gray-900 tracking-tight">Admin Dashboard</h1>
+            <p class="mt-1 text-sm text-gray-500">System overview, analytics, and quick actions. Full access only.</p>
+        </div>
+    </div>
 
     <!-- Stats Cards -->
-    <div class="grid grid-cols-1 gap-3 sm:gap-4 md:gap-5 sm:grid-cols-2 lg:grid-cols-4">
+    <div class="grid grid-cols-1 gap-4 sm:gap-5 sm:grid-cols-2 lg:grid-cols-4">
         <!-- Total Users -->
-        <div class="bg-white overflow-hidden shadow rounded-lg">
+        <div class="bg-white overflow-hidden shadow-sm rounded-xl border border-gray-200">
             <div class="p-4 sm:p-5">
                 <div class="flex items-center">
                     <div class="flex-shrink-0">
@@ -266,6 +280,344 @@
                     </div>
                 </div>
             </div>
+        </div>
+    </div>
+
+    <!-- System Overview (Say-it, Contact, Notifications, Tickets, Hiring) -->
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+        <div class="px-6 py-4 border-b border-gray-200 bg-gray-50/80">
+            <h2 class="text-base font-semibold text-gray-900">System Overview</h2>
+            <p class="text-sm text-gray-500 mt-0.5">Key metrics across the platform</p>
+        </div>
+        <div class="p-6 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
+            <a href="{{ url('/admin/confession/dashboard') }}" class="flex items-center p-4 rounded-lg border border-gray-200 hover:bg-gray-50 hover:border-indigo-200 transition-colors">
+                <div class="flex-shrink-0 w-10 h-10 rounded-lg bg-indigo-50 flex items-center justify-center">
+                    <svg class="w-5 h-5 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z"></path></svg>
+                </div>
+                <div class="ml-3 min-w-0">
+                    <p class="text-xs font-medium text-gray-500">Say-it Posts</p>
+                    <p class="text-lg font-semibold text-gray-900">{{ number_format($confessionPostsCount ?? 0) }}</p>
+                </div>
+            </a>
+            <a href="{{ url('/admin/contact-messages') }}" class="flex items-center p-4 rounded-lg border border-gray-200 hover:bg-gray-50 hover:border-indigo-200 transition-colors">
+                <div class="flex-shrink-0 w-10 h-10 rounded-lg bg-blue-50 flex items-center justify-center">
+                    <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 4.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path></svg>
+                </div>
+                <div class="ml-3 min-w-0">
+                    <p class="text-xs font-medium text-gray-500">Contact Messages</p>
+                    <p class="text-lg font-semibold text-gray-900">{{ number_format($contactMessagesCount ?? 0) }}</p>
+                </div>
+            </a>
+            <a href="{{ url('/admin/notifications') }}" class="flex items-center p-4 rounded-lg border border-gray-200 hover:bg-gray-50 hover:border-indigo-200 transition-colors">
+                <div class="flex-shrink-0 w-10 h-10 rounded-lg bg-purple-50 flex items-center justify-center">
+                    <svg class="w-5 h-5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"></path></svg>
+                </div>
+                <div class="ml-3 min-w-0">
+                    <p class="text-xs font-medium text-gray-500">Notifications</p>
+                    <p class="text-lg font-semibold text-gray-900">{{ number_format($notificationsCount ?? 0) }}</p>
+                </div>
+            </a>
+            <a href="{{ url('/admin/tickets') }}" class="flex items-center p-4 rounded-lg border border-gray-200 hover:bg-gray-50 hover:border-indigo-200 transition-colors">
+                <div class="flex-shrink-0 w-10 h-10 rounded-lg bg-amber-50 flex items-center justify-center">
+                    <svg class="w-5 h-5 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                </div>
+                <div class="ml-3 min-w-0">
+                    <p class="text-xs font-medium text-gray-500">Open Tickets</p>
+                    <p class="text-lg font-semibold text-gray-900">{{ number_format($openTicketsCount ?? 0) }}</p>
+                </div>
+            </a>
+            <a href="{{ url('/admin/hiring-applications') }}" class="flex items-center p-4 rounded-lg border border-gray-200 hover:bg-gray-50 hover:border-indigo-200 transition-colors">
+                <div class="flex-shrink-0 w-10 h-10 rounded-lg bg-green-50 flex items-center justify-center">
+                    <svg class="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path></svg>
+                </div>
+                <div class="ml-3 min-w-0">
+                    <p class="text-xs font-medium text-gray-500">Pending Hiring</p>
+                    <p class="text-lg font-semibold text-gray-900">{{ number_format($pendingHiringCount ?? 0) }}</p>
+                </div>
+            </a>
+            <div class="flex items-center p-4 rounded-lg border border-gray-200 bg-gray-50/50">
+                <div class="flex-shrink-0 w-10 h-10 rounded-lg bg-gray-100 flex items-center justify-center">
+                    <svg class="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path></svg>
+                </div>
+                <div class="ml-3 min-w-0">
+                    <p class="text-xs font-medium text-gray-500">Say-it Comments</p>
+                    <p class="text-lg font-semibold text-gray-900">{{ number_format($confessionCommentsCount ?? 0) }}</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Charts Section -->
+    <div class="mb-4 p-4 bg-white rounded-xl border border-gray-200">
+        <div class="flex flex-wrap items-end gap-4">
+            <div class="flex flex-wrap items-center gap-2">
+                <span class="text-sm font-medium text-gray-700">Chart period:</span>
+                <div class="flex flex-wrap gap-1">
+                    <a href="{{ url()->current() }}?chart_period=day" class="inline-flex items-center px-3 py-1.5 rounded-lg text-sm font-medium transition-colors {{ ($chartPeriod ?? 'week') === 'day' ? 'bg-indigo-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200' }}">Day</a>
+                    <a href="{{ url()->current() }}?chart_period=week" class="inline-flex items-center px-3 py-1.5 rounded-lg text-sm font-medium transition-colors {{ ($chartPeriod ?? 'week') === 'week' ? 'bg-indigo-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200' }}">Week</a>
+                    <a href="{{ url()->current() }}?chart_period=month" class="inline-flex items-center px-3 py-1.5 rounded-lg text-sm font-medium transition-colors {{ ($chartPeriod ?? 'week') === 'month' ? 'bg-indigo-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200' }}">Month</a>
+                    <a href="{{ url()->current() }}?chart_period=year" class="inline-flex items-center px-3 py-1.5 rounded-lg text-sm font-medium transition-colors {{ ($chartPeriod ?? 'week') === 'year' ? 'bg-indigo-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200' }}">Year</a>
+                </div>
+            </div>
+            <div class="flex flex-wrap items-center gap-2 border-l border-gray-200 pl-4">
+                <span class="text-sm font-medium text-gray-700">Custom range:</span>
+                <form method="GET" action="{{ url()->current() }}" class="flex flex-wrap items-center gap-2">
+                    <input type="hidden" name="chart_period" value="custom">
+                    <label class="flex items-center gap-1.5">
+                        <span class="text-xs text-gray-500">From</span>
+                        <input type="date" name="chart_from" value="{{ $chartFrom ?? now()->subDays(6)->format('Y-m-d') }}" class="rounded-lg border-gray-300 text-sm focus:ring-indigo-500 focus:border-indigo-500">
+                    </label>
+                    <label class="flex items-center gap-1.5">
+                        <span class="text-xs text-gray-500">To</span>
+                        <input type="date" name="chart_to" value="{{ $chartTo ?? now()->format('Y-m-d') }}" class="rounded-lg border-gray-300 text-sm focus:ring-indigo-500 focus:border-indigo-500">
+                    </label>
+                    <button type="submit" class="inline-flex items-center px-3 py-1.5 rounded-lg text-sm font-medium bg-indigo-600 text-white hover:bg-indigo-700 transition-colors">
+                        Apply
+                    </button>
+                </form>
+            </div>
+            <span class="text-xs text-gray-500 ml-1">
+                @if(($chartPeriod ?? 'week') === 'day')
+                    Last 24 hours (hourly)
+                @elseif(($chartPeriod ?? 'week') === 'week')
+                    Last 7 days
+                @elseif(($chartPeriod ?? 'week') === 'month')
+                    Last 30 days
+                @elseif(($chartPeriod ?? 'week') === 'year')
+                    Last 12 months
+                @else
+                    {{ $chartFrom ?? '' }} to {{ $chartTo ?? '' }}
+                @endif
+            </span>
+        </div>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden lg:col-span-2">
+            <div class="px-6 py-4 border-b border-gray-200 bg-gray-50/80">
+                <h2 class="text-base font-semibold text-gray-900">Activity Trends</h2>
+                <p class="text-sm text-gray-500 mt-0.5">Logins and quiz attempts</p>
+            </div>
+            <div class="p-6">
+                <canvas id="activityChart" height="220"></canvas>
+            </div>
+        </div>
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+            <div class="px-6 py-4 border-b border-gray-200 bg-gray-50/80">
+                <h2 class="text-base font-semibold text-gray-900">User Registrations</h2>
+                <p class="text-sm text-gray-500 mt-0.5">New users</p>
+            </div>
+            <div class="p-6">
+                <canvas id="userRegChart" height="220"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- Login Time Trend -->
+    <div class="mt-6">
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+            <div class="px-6 py-4 border-b border-gray-200 bg-gray-50/80">
+                <h2 class="text-base font-semibold text-gray-900">Login Time Trend</h2>
+                <p class="text-sm text-gray-500 mt-0.5">Login count per period</p>
+            </div>
+            <div class="p-6">
+                <canvas id="loginTimeChart" height="220"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- User Activity Logs Analytics -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+            <div class="px-6 py-4 border-b border-gray-200 bg-gray-50/80">
+                <h2 class="text-base font-semibold text-gray-900">User Activity Logs Trend</h2>
+                <p class="text-sm text-gray-500 mt-0.5">Total activities per period</p>
+            </div>
+            <div class="p-6">
+                <canvas id="activityLogTrendChart" height="220"></canvas>
+            </div>
+        </div>
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+            <div class="px-6 py-4 border-b border-gray-200 bg-gray-50/80">
+                <h2 class="text-base font-semibold text-gray-900">Activity Logs by Type</h2>
+                <p class="text-sm text-gray-500 mt-0.5">Login, logout, page views per period</p>
+            </div>
+            <div class="p-6">
+                <canvas id="activityLogByTypeChart" height="220"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- Additional Charts: Logs, Activity, Students vs Employees, DTR, Leave -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6 mt-6">
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+            <div class="px-6 py-4 border-b border-gray-200 bg-gray-50/80">
+                <h2 class="text-base font-semibold text-gray-900">Error Logs</h2>
+                <p class="text-sm text-gray-500 mt-0.5">Errors per period</p>
+            </div>
+            <div class="p-6">
+                <canvas id="errorLogChart" height="200"></canvas>
+            </div>
+        </div>
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+            <div class="px-6 py-4 border-b border-gray-200 bg-gray-50/80">
+                <h2 class="text-base font-semibold text-gray-900">Students vs Employees</h2>
+                <p class="text-sm text-gray-500 mt-0.5">Registrations per period</p>
+            </div>
+            <div class="p-6">
+                <canvas id="studentEmployeeChart" height="200"></canvas>
+            </div>
+        </div>
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+            <div class="px-6 py-4 border-b border-gray-200 bg-gray-50/80">
+                <h2 class="text-base font-semibold text-gray-900">DTR Records</h2>
+                <p class="text-sm text-gray-500 mt-0.5">Time records per period</p>
+            </div>
+            <div class="p-6">
+                <canvas id="dtrChart" height="200"></canvas>
+            </div>
+        </div>
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+            <div class="px-6 py-4 border-b border-gray-200 bg-gray-50/80">
+                <h2 class="text-base font-semibold text-gray-900">Employee Leave Requests</h2>
+                <p class="text-sm text-gray-500 mt-0.5">By status</p>
+            </div>
+            <div class="p-6">
+                <canvas id="leaveRequestEmployeeChart" height="200"></canvas>
+            </div>
+        </div>
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+            <div class="px-6 py-4 border-b border-gray-200 bg-gray-50/80">
+                <h2 class="text-base font-semibold text-gray-900">Student Leave Requests</h2>
+                <p class="text-sm text-gray-500 mt-0.5">By status</p>
+            </div>
+            <div class="p-6">
+                <canvas id="leaveRequestStudentChart" height="200"></canvas>
+            </div>
+        </div>
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+            <div class="px-6 py-4 border-b border-gray-200 bg-gray-50/80">
+                <h2 class="text-base font-semibold text-gray-900">Activity Types</h2>
+                <p class="text-sm text-gray-500 mt-0.5">Breakdown by selected period</p>
+            </div>
+            <div class="p-6">
+                <canvas id="activityTypeChart" height="200"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- Ongoing Leave & Time Remaining -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-4 gap-6 mt-6">
+        <!-- Ongoing Leave - Employees -->
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+            <div class="px-6 py-4 border-b border-gray-200 bg-gray-50/80">
+                <h2 class="text-base font-semibold text-gray-900">Ongoing Leave</h2>
+                <p class="text-sm text-gray-500 mt-0.5">Employees currently on leave</p>
+            </div>
+            <div class="p-4 max-h-64 overflow-y-auto">
+                @forelse($ongoingLeaveEmployees as $leave)
+                    <a href="{{ url('/admin/leave-requests/' . $leave->id) }}" class="flex items-center justify-between p-3 rounded-lg hover:bg-gray-50 border border-transparent hover:border-amber-200 transition-colors">
+                        <div class="min-w-0 flex-1">
+                            <p class="text-sm font-medium text-gray-900 truncate">{{ $leave->user->name ?? 'Unknown' }}</p>
+                            <p class="text-xs text-gray-500">{{ $leave->start_date->format('M j') }} – {{ $leave->end_date->format('M j, Y') }}</p>
+                        </div>
+                        <span class="text-xs font-medium text-amber-600 bg-amber-50 px-2 py-1 rounded">{{ $leave->type_label }}</span>
+                    </a>
+                @empty
+                    <p class="text-sm text-gray-500 text-center py-6">No employees on leave today</p>
+                @endforelse
+            </div>
+            @if($ongoingLeaveEmployees->isNotEmpty())
+                <div class="px-6 py-3 border-t border-gray-100 bg-gray-50/50">
+                    <a href="{{ url('/admin/leave-requests') }}" class="text-sm font-medium text-indigo-600 hover:text-indigo-500">View all leave requests →</a>
+                </div>
+            @endif
+        </div>
+
+        <!-- Ongoing Leave - Students -->
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+            <div class="px-6 py-4 border-b border-gray-200 bg-gray-50/80">
+                <h2 class="text-base font-semibold text-gray-900">Ongoing Leave</h2>
+                <p class="text-sm text-gray-500 mt-0.5">Students currently on leave</p>
+            </div>
+            <div class="p-4 max-h-64 overflow-y-auto">
+                @forelse($ongoingLeaveStudents as $leave)
+                    <a href="{{ url('/admin/student-leave-requests') }}" class="flex items-center justify-between p-3 rounded-lg hover:bg-gray-50 border border-transparent hover:border-amber-200 transition-colors">
+                        <div class="min-w-0 flex-1">
+                            <p class="text-sm font-medium text-gray-900 truncate">{{ $leave->user->name ?? 'Unknown' }}</p>
+                            <p class="text-xs text-gray-500">{{ $leave->start_date->format('M j') }} – {{ $leave->end_date->format('M j, Y') }}</p>
+                        </div>
+                        <span class="text-xs font-medium text-amber-600 bg-amber-50 px-2 py-1 rounded">{{ $leave->type_label }}</span>
+                    </a>
+                @empty
+                    <p class="text-sm text-gray-500 text-center py-6">No students on leave today</p>
+                @endforelse
+            </div>
+            @if($ongoingLeaveStudents->isNotEmpty())
+                <div class="px-6 py-3 border-t border-gray-100 bg-gray-50/50">
+                    <a href="{{ url('/admin/student-leave-requests') }}" class="text-sm font-medium text-indigo-600 hover:text-indigo-500">View all student leave →</a>
+                </div>
+            @endif
+        </div>
+
+        <!-- Students with Time Remaining (DTR Deficit) -->
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+            <div class="px-6 py-4 border-b border-gray-200 bg-gray-50/80">
+                <h2 class="text-base font-semibold text-gray-900">Time Remaining</h2>
+                <p class="text-sm text-gray-500 mt-0.5">Students with DTR deficit (hours to render)</p>
+            </div>
+            <div class="p-4 max-h-64 overflow-y-auto">
+                @forelse($studentsWithDeficit as $user)
+                    <a href="{{ url('/admin/student-dtr') }}?user={{ $user->id }}" class="flex items-center justify-between p-3 rounded-lg hover:bg-gray-50 border border-transparent hover:border-red-200 transition-colors">
+                        <div class="min-w-0 flex-1">
+                            <p class="text-sm font-medium text-gray-900 truncate">{{ $user->name }}</p>
+                            <p class="text-xs text-gray-500 truncate">{{ $user->email }}</p>
+                        </div>
+                        @php
+                            $defH = (int) floor($user->total_deficit_hours ?? 0);
+                            $defM = (int) round((($user->total_deficit_hours ?? 0) - $defH) * 60);
+                        @endphp
+                        <span class="text-xs font-semibold text-red-600 bg-red-50 px-2 py-1 rounded whitespace-nowrap">{{ sprintf('%02d:%02d', $defH, $defM) }}</span>
+                    </a>
+                @empty
+                    <p class="text-sm text-gray-500 text-center py-6">No students with deficit</p>
+                @endforelse
+            </div>
+            @if($studentsWithDeficit->isNotEmpty())
+                <div class="px-6 py-3 border-t border-gray-100 bg-gray-50/50">
+                    <a href="{{ url('/admin/student-dtr') }}" class="text-sm font-medium text-indigo-600 hover:text-indigo-500">View student DTR →</a>
+                </div>
+            @endif
+        </div>
+
+        <!-- Employees with Time Remaining (DTR Deficit) -->
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+            <div class="px-6 py-4 border-b border-gray-200 bg-gray-50/80">
+                <h2 class="text-base font-semibold text-gray-900">Time Remaining</h2>
+                <p class="text-sm text-gray-500 mt-0.5">Employees with DTR deficit (hours to render)</p>
+            </div>
+            <div class="p-4 max-h-64 overflow-y-auto">
+                @forelse($employeesWithDeficit as $user)
+                    <a href="{{ url('/admin/dtr') }}?user={{ $user->id }}" class="flex items-center justify-between p-3 rounded-lg hover:bg-gray-50 border border-transparent hover:border-red-200 transition-colors">
+                        <div class="min-w-0 flex-1">
+                            <p class="text-sm font-medium text-gray-900 truncate">{{ $user->name }}</p>
+                            <p class="text-xs text-gray-500 truncate">{{ $user->email }}</p>
+                        </div>
+                        @php
+                            $defH = (int) floor($user->total_deficit_hours ?? 0);
+                            $defM = (int) round((($user->total_deficit_hours ?? 0) - $defH) * 60);
+                        @endphp
+                        <span class="text-xs font-semibold text-red-600 bg-red-50 px-2 py-1 rounded whitespace-nowrap">{{ sprintf('%02d:%02d', $defH, $defM) }}</span>
+                    </a>
+                @empty
+                    <p class="text-sm text-gray-500 text-center py-6">No employees with deficit</p>
+                @endforelse
+            </div>
+            @if($employeesWithDeficit->isNotEmpty())
+                <div class="px-6 py-3 border-t border-gray-100 bg-gray-50/50">
+                    <a href="{{ url('/admin/dtr') }}" class="text-sm font-medium text-indigo-600 hover:text-indigo-500">View employee DTR →</a>
+                </div>
+            @endif
         </div>
     </div>
 
@@ -576,7 +928,7 @@
         </div>
 
         <!-- Ranking Summary Cards -->
-        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4 mb-4 sm:mb-6">
+        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-3 sm:gap-4 mb-4 sm:mb-6">
             <div class="bg-gradient-to-r from-yellow-400 to-yellow-500 rounded-lg p-3 sm:p-4 text-white">
                 <div class="flex items-center">
                     <div class="flex-shrink-0">
@@ -648,9 +1000,27 @@
                     </div>
                 </div>
             </div>
+
+            <div class="bg-gradient-to-r from-indigo-400 to-indigo-500 rounded-lg p-3 sm:p-4 text-white">
+                <div class="flex items-center">
+                    <div class="flex-shrink-0">
+                        <span class="text-xl sm:text-2xl">⚡</span>
+                    </div>
+                    <div class="ml-2 sm:ml-3 min-w-0 flex-1">
+                        <p class="text-xs sm:text-sm font-medium truncate">Most Active User</p>
+                        <p class="text-base sm:text-lg font-bold truncate">
+                            @if($mostActiveUsers->count() > 0)
+                                {{ optional($mostActiveUsers->first()->user)->name ?? 'N/A' }}
+                            @else
+                                N/A
+                            @endif
+                        </p>
+                    </div>
+                </div>
+            </div>
         </div>
 
-        <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
             <!-- Top Students by Score -->
             <div class="bg-white shadow rounded-lg">
                 <div class="px-3 py-4 sm:px-4 sm:py-5 lg:p-6">
@@ -811,6 +1181,44 @@
                     @endif
                 </div>
             </div>
+
+            <!-- Most Active Users -->
+            <div class="bg-white shadow rounded-lg">
+                <div class="px-3 py-4 sm:px-4 sm:py-5 lg:p-6">
+                    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4 gap-2">
+                        <h3 class="text-base sm:text-lg leading-6 font-medium text-gray-900">⚡ Most Active Users</h3>
+                        <a href="{{ url('/admin/user-activity') }}" class="text-sm font-medium text-indigo-600 hover:text-indigo-500 self-start sm:self-auto">View all →</a>
+                    </div>
+                    <p class="text-xs text-gray-500 mb-3">Ranked by total actions from Activity Logs (all time)</p>
+                    @if($mostActiveUsers->count() > 0)
+                        <div class="max-h-96 overflow-y-auto border border-gray-200 rounded-lg scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
+                            <div class="space-y-2 p-3">
+                                @foreach($mostActiveUsers as $index => $item)
+                                    <a href="{{ url('/admin/user-activity') }}?user_id={{ $item->user_id }}" class="flex items-center justify-between p-3 rounded-lg hover:bg-gray-50 border border-transparent hover:border-indigo-200 transition-colors">
+                                        <div class="flex items-center space-x-3 min-w-0 flex-1">
+                                            <div class="flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold
+                                                {{ $index === 0 ? 'bg-amber-100 text-amber-700' : ($index === 1 ? 'bg-gray-200 text-gray-700' : ($index === 2 ? 'bg-amber-50 text-amber-600' : 'bg-gray-100 text-gray-600')) }}">
+                                                {{ $index + 1 }}
+                                            </div>
+                                            <div class="min-w-0 flex-1">
+                                                <p class="text-sm font-medium text-gray-900 truncate">{{ optional($item->user)->name ?? 'Unknown' }}</p>
+                                                <p class="text-xs text-gray-500 truncate">{{ optional($item->user)->email ?? '-' }}</p>
+                                            </div>
+                                        </div>
+                                        <div class="flex-shrink-0 ml-3">
+                                            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-indigo-100 text-indigo-800">
+                                                {{ number_format($item->action_count ?? $item->activity_count ?? 0) }} actions
+                                            </span>
+                                        </div>
+                                    </a>
+                                @endforeach
+                            </div>
+                        </div>
+                    @else
+                        <p class="text-sm text-gray-500 text-center py-8">No activity data yet</p>
+                    @endif
+                </div>
+            </div>
         </div>
 
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 mt-4 sm:mt-6">
@@ -894,8 +1302,366 @@
 @endsection
 
 @section('scripts')
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
+    // Chart data from server
+    const loginLabels = @json($loginChartLabels ?? []);
+    const loginData = @json($loginChartData ?? []);
+    const quizAttemptLabels = @json($quizAttemptChartLabels ?? []);
+    const quizAttemptData = @json($quizAttemptChartData ?? []);
+    const userRegLabels = @json($userRegChartLabels ?? []);
+    const userRegData = @json($userRegChartData ?? []);
+    const errorLogLabels = @json($errorLogChartLabels ?? []);
+    const errorLogData = @json($errorLogChartData ?? []);
+    const studentRegLabels = @json($studentRegChartLabels ?? []);
+    const studentRegData = @json($studentRegChartData ?? []);
+    const employeeRegData = @json($employeeRegChartData ?? []);
+    const dtrLabels = @json($dtrChartLabels ?? []);
+    const dtrEmployeeData = @json($dtrEmployeeChartData ?? []);
+    const dtrStudentData = @json($dtrStudentChartData ?? []);
+    const leaveEmployeeLabels = @json($leaveRequestEmployeeLabels ?? []);
+    const leaveEmployeeData = @json($leaveRequestEmployeeData ?? []);
+    const leaveStudentLabels = @json($leaveRequestStudentLabels ?? []);
+    const leaveStudentData = @json($leaveRequestStudentData ?? []);
+    const activityTypeLabels = @json($activityTypeLabels ?? []);
+    const activityTypeData = @json($activityTypeData ?? []);
+    const loginTimeLabels = @json($loginTimeLabels ?? []);
+    const loginTimeData = @json($loginTimeData ?? []);
+    const activityLogLabels = @json($activityLogLabels ?? []);
+    const activityLogTotalData = @json($activityLogTotalData ?? []);
+    const activityLogByTypeLabels = @json($activityLogByTypeLabels ?? []);
+    const activityLogLoginData = @json($activityLogLoginData ?? []);
+    const activityLogLogoutData = @json($activityLogLogoutData ?? []);
+    const activityLogPageViewData = @json($activityLogPageViewData ?? []);
+
+    // Activity Trends Chart (Logins + Quiz Attempts)
+    if (document.getElementById('activityChart') && typeof Chart !== 'undefined') {
+        new Chart(document.getElementById('activityChart'), {
+            type: 'line',
+            data: {
+                labels: loginLabels,
+                datasets: [
+                    {
+                        label: 'Logins',
+                        data: loginData,
+                        borderColor: 'rgb(99, 102, 241)',
+                        backgroundColor: 'rgba(99, 102, 241, 0.1)',
+                        fill: true,
+                        tension: 0.3
+                    },
+                    {
+                        label: 'Quiz Attempts',
+                        data: quizAttemptData,
+                        borderColor: 'rgb(34, 197, 94)',
+                        backgroundColor: 'rgba(34, 197, 94, 0.1)',
+                        fill: true,
+                        tension: 0.3
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { position: 'top' }
+                },
+                scales: {
+                    y: { beginAtZero: true }
+                }
+            }
+        });
+    }
+
+    // User Activity Logs Trend Chart (line graph)
+    if (document.getElementById('activityLogTrendChart') && typeof Chart !== 'undefined') {
+        new Chart(document.getElementById('activityLogTrendChart'), {
+            type: 'line',
+            data: {
+                labels: activityLogLabels,
+                datasets: [{
+                    label: 'Total Activities',
+                    data: activityLogTotalData,
+                    borderColor: 'rgb(99, 102, 241)',
+                    backgroundColor: 'rgba(99, 102, 241, 0.1)',
+                    fill: true,
+                    tension: 0.3
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { display: false } },
+                scales: {
+                    y: { beginAtZero: true }
+                }
+            }
+        });
+    }
+
+    // User Activity Logs by Type Chart (multi-line graph)
+    if (document.getElementById('activityLogByTypeChart') && typeof Chart !== 'undefined') {
+        new Chart(document.getElementById('activityLogByTypeChart'), {
+            type: 'line',
+            data: {
+                labels: activityLogByTypeLabels,
+                datasets: [
+                    {
+                        label: 'Login',
+                        data: activityLogLoginData,
+                        borderColor: 'rgb(34, 197, 94)',
+                        backgroundColor: 'rgba(34, 197, 94, 0.1)',
+                        fill: true,
+                        tension: 0.3
+                    },
+                    {
+                        label: 'Logout',
+                        data: activityLogLogoutData,
+                        borderColor: 'rgb(239, 68, 68)',
+                        backgroundColor: 'rgba(239, 68, 68, 0.1)',
+                        fill: true,
+                        tension: 0.3
+                    },
+                    {
+                        label: 'Page View',
+                        data: activityLogPageViewData,
+                        borderColor: 'rgb(59, 130, 246)',
+                        backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                        fill: true,
+                        tension: 0.3
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { position: 'top' } },
+                scales: {
+                    y: { beginAtZero: true }
+                }
+            }
+        });
+    }
+
+    // Login Time Trend Chart (line graph - when users usually login)
+    if (document.getElementById('loginTimeChart') && typeof Chart !== 'undefined') {
+        new Chart(document.getElementById('loginTimeChart'), {
+            type: 'line',
+            data: {
+                labels: loginTimeLabels,
+                datasets: [{
+                    label: 'Logins',
+                    data: loginTimeData,
+                    borderColor: 'rgb(99, 102, 241)',
+                    backgroundColor: 'rgba(99, 102, 241, 0.1)',
+                    fill: true,
+                    tension: 0.3
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false }
+                },
+                scales: {
+                    x: {
+                        title: { display: true, text: 'Hour of day' }
+                    },
+                    y: {
+                        beginAtZero: true,
+                        title: { display: true, text: 'Login count' }
+                    }
+                }
+            }
+        });
+    }
+
+    // User Registrations Chart
+    if (document.getElementById('userRegChart') && typeof Chart !== 'undefined') {
+        new Chart(document.getElementById('userRegChart'), {
+            type: 'bar',
+            data: {
+                labels: userRegLabels,
+                datasets: [{
+                    label: 'New Users',
+                    data: userRegData,
+                    backgroundColor: 'rgba(139, 92, 246, 0.7)',
+                    borderColor: 'rgb(139, 92, 246)',
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false }
+                },
+                scales: {
+                    y: { beginAtZero: true }
+                }
+            }
+        });
+    }
+
+    // Error Logs Chart
+    if (document.getElementById('errorLogChart') && typeof Chart !== 'undefined') {
+        new Chart(document.getElementById('errorLogChart'), {
+            type: 'bar',
+            data: {
+                labels: errorLogLabels,
+                datasets: [{
+                    label: 'Errors',
+                    data: errorLogData,
+                    backgroundColor: 'rgba(239, 68, 68, 0.7)',
+                    borderColor: 'rgb(239, 68, 68)',
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { display: false } },
+                scales: { y: { beginAtZero: true } }
+            }
+        });
+    }
+
+    // Students vs Employees Chart
+    if (document.getElementById('studentEmployeeChart') && typeof Chart !== 'undefined') {
+        new Chart(document.getElementById('studentEmployeeChart'), {
+            type: 'bar',
+            data: {
+                labels: studentRegLabels,
+                datasets: [
+                    {
+                        label: 'Students',
+                        data: studentRegData,
+                        backgroundColor: 'rgba(59, 130, 246, 0.7)',
+                        borderColor: 'rgb(59, 130, 246)',
+                        borderWidth: 1
+                    },
+                    {
+                        label: 'Employees',
+                        data: employeeRegData,
+                        backgroundColor: 'rgba(245, 158, 11, 0.7)',
+                        borderColor: 'rgb(245, 158, 11)',
+                        borderWidth: 1
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { position: 'top' } },
+                scales: { y: { beginAtZero: true } }
+            }
+        });
+    }
+
+    // DTR Records Chart
+    if (document.getElementById('dtrChart') && typeof Chart !== 'undefined') {
+        new Chart(document.getElementById('dtrChart'), {
+            type: 'line',
+            data: {
+                labels: dtrLabels,
+                datasets: [
+                    {
+                        label: 'Employees',
+                        data: dtrEmployeeData,
+                        borderColor: 'rgb(16, 185, 129)',
+                        backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                        fill: true,
+                        tension: 0.3
+                    },
+                    {
+                        label: 'Students',
+                        data: dtrStudentData,
+                        borderColor: 'rgb(99, 102, 241)',
+                        backgroundColor: 'rgba(99, 102, 241, 0.1)',
+                        fill: true,
+                        tension: 0.3
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { position: 'top' } },
+                scales: { y: { beginAtZero: true } }
+            }
+        });
+    }
+
+    // Employee Leave Requests Doughnut Chart
+    if (document.getElementById('leaveRequestEmployeeChart') && typeof Chart !== 'undefined') {
+        new Chart(document.getElementById('leaveRequestEmployeeChart'), {
+            type: 'doughnut',
+            data: {
+                labels: leaveEmployeeLabels,
+                datasets: [{
+                    data: leaveEmployeeData,
+                    backgroundColor: ['rgba(245, 158, 11, 0.8)', 'rgba(34, 197, 94, 0.8)', 'rgba(239, 68, 68, 0.8)'],
+                    borderColor: ['rgb(245, 158, 11)', 'rgb(34, 197, 94)', 'rgb(239, 68, 68)'],
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { position: 'right' } }
+            }
+        });
+    }
+
+    // Student Leave Requests Doughnut Chart
+    if (document.getElementById('leaveRequestStudentChart') && typeof Chart !== 'undefined') {
+        new Chart(document.getElementById('leaveRequestStudentChart'), {
+            type: 'doughnut',
+            data: {
+                labels: leaveStudentLabels,
+                datasets: [{
+                    data: leaveStudentData,
+                    backgroundColor: ['rgba(245, 158, 11, 0.8)', 'rgba(34, 197, 94, 0.8)', 'rgba(239, 68, 68, 0.8)'],
+                    borderColor: ['rgb(245, 158, 11)', 'rgb(34, 197, 94)', 'rgb(239, 68, 68)'],
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { position: 'right' } }
+            }
+        });
+    }
+
+    // Activity Types Pie Chart
+    if (document.getElementById('activityTypeChart') && typeof Chart !== 'undefined') {
+        new Chart(document.getElementById('activityTypeChart'), {
+            type: 'doughnut',
+            data: {
+                labels: activityTypeLabels,
+                datasets: [{
+                    data: activityTypeData,
+                    backgroundColor: [
+                        'rgba(99, 102, 241, 0.8)',
+                        'rgba(239, 68, 68, 0.8)',
+                        'rgba(34, 197, 94, 0.8)',
+                        'rgba(245, 158, 11, 0.8)',
+                        'rgba(139, 92, 246, 0.8)',
+                        'rgba(6, 182, 212, 0.8)'
+                    ],
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { position: 'right' } }
+            }
+        });
+    }
+
     // Real-time user activity updates
     function updateActivityData() {
         fetch('{{ url('/admin/activity-data') }}')

@@ -144,6 +144,11 @@ class User extends Authenticatable
         return $this->hasMany(Dtr::class);
     }
 
+    public function dtrDeficits()
+    {
+        return $this->hasMany(DtrDeficit::class);
+    }
+
     // Helper methods
     public function isAdmin()
     {

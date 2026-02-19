@@ -106,7 +106,8 @@
 
     <!-- Navigation -->
     <nav class="mt-6 px-3 flex-1 overflow-y-auto sidebar-scroll">
-        <!-- Dashboard -->
+        <!-- Dashboard (full access only) -->
+        @if(auth()->user()->isSuperAdmin())
         <div class="mb-6">
             <a href="{{ url('/admin/dashboard') }}"
                class="flex items-center px-2 py-2 text-sm font-medium rounded-md transition-colors duration-200 {{ request()->routeIs('admin.dashboard') ? 'bg-indigo-700 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white' }}"
@@ -125,6 +126,7 @@
                 </span>
             </a>
         </div>
+        @endif
 
         <!-- Content Management -->
         @if(auth()->user()->canAccessContentManagement())
