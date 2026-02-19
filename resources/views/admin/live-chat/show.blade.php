@@ -478,7 +478,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // Polling disabled to reduce server load
     // Poll for new messages every 5 seconds
     // setInterval(function() {
-    //     fetch(`{{ route('live-chat.messages', $ticket->ticket_number) }}`)
+    //     fetch(`{{ url('/admin/live-chat/' . $ticket->ticket_number . '/messages') }}`)
     //         .then(response => response.json())
     //         .then(messages => {
     //             // This is a simple implementation - in a real app you'd want to track the last message ID
