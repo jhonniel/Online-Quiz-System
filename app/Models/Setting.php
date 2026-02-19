@@ -18,14 +18,49 @@ class Setting extends Model
     public static function get($key, $default = null)
     {
         $setting = self::where('key', $key)->first();
-        return $setting ? $setting->value : $default;
+        if (!$setting) {
+            return $default;
+        }
+        
+        // Get raw value from database to avoid array casting issues
+        $rawValue = $setting->getAttributes()['value'] ?? null;
+        
+        if ($rawValue === null) {
+            return $default;
+        }
+        
+        // If value is JSON string (starts with { or [), decode it
+        if (is_string($rawValue) && (str_starts_with(trim($rawValue), '{') || str_starts_with(trim($rawValue), '['))) {
+            $decoded = json_decode($rawValue, true);
+            return $decoded !== null ? $decoded : $rawValue;
+        }
+        
+        // If value is a JSON-encoded string (starts with "), decode it
+        if (is_string($rawValue) && str_starts_with(trim($rawValue), '"') && str_ends_with(trim($rawValue), '"')) {
+            $decoded = json_decode($rawValue, true);
+            return $decoded !== null ? $decoded : trim($rawValue, '"');
+        }
+        
+        return $rawValue;
     }
 
-    public static function set($key, $value)
+    public static function set($key, $value, $type = 'text', $description = null)
     {
+        // For string values (like seasonal_effects), store as plain string, not JSON
+        // For array values, store as JSON
+        $valueToStore = is_array($value) ? json_encode($value) : $value;
+        
+        $data = ['value' => $valueToStore];
+        if ($type) {
+            $data['type'] = $type;
+        }
+        if ($description) {
+            $data['description'] = $description;
+        }
+        
         return self::updateOrCreate(
             ['key' => $key],
-            ['value' => $value]
+            $data
         );
     }
 

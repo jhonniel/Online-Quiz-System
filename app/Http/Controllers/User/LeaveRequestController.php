@@ -14,6 +14,7 @@ use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\Rule;
 use Carbon\Carbon;
+use Carbon\CarbonPeriod;
 
 class LeaveRequestController extends Controller
 {
@@ -203,24 +204,31 @@ class LeaveRequestController extends Controller
             abort(403, 'Only employees and students can create leave requests.');
         }
 
-        // Define allowed types based on role
+        // Define allowed types based on role (only employees can file travel)
         $allowedTypes = $user->role === 'student'
             ? ['additional_time', 'absent', 'other']
             : ['vacation_leave', 'sick_leave', 'work_from_home', 'absent', 'overtime', 'offset'];
+        if ($user->role === 'employee') {
+            $allowedTypes[] = 'travel';
+        }
 
         $startDateRules = ['required', 'date'];
+        $endDateRules = ['nullable', 'date', 'after_or_equal:start_date'];
         $typeInput = $request->input('type');
-        // Allow past dates for sick leave, overtime, and student additional_time; otherwise enforce today-or-future
-        if (!($typeInput === 'sick_leave' || $typeInput === 'overtime' || ($user->role === 'student' && $typeInput === 'additional_time'))) {
+        // Travel (employee): only today or past dates; full-access admin can file travel for any date via admin panel
+        if ($typeInput === 'travel') {
+            $startDateRules[] = 'before_or_equal:today';
+            $endDateRules[] = 'before_or_equal:today';
+        } elseif (!($typeInput === 'sick_leave' || $typeInput === 'overtime' || ($user->role === 'student' && $typeInput === 'additional_time'))) {
             $startDateRules[] = 'after_or_equal:today';
         }
 
         $validated = $request->validate([
             'type' => ['required', 'in:' . implode(',', $allowedTypes)],
             'start_date' => $startDateRules,
-            'end_date' => 'nullable|date|after_or_equal:start_date',
+            'end_date' => $endDateRules,
             // Reason is REQUIRED for overtime (used as the clear explanation of extra hours)
-            'reason' => 'nullable|string|max:1000',
+            'reason' => 'required_if:type,travel|nullable|string|max:1000',
             'supporting_document' => 'nullable|file|mimes:pdf,jpg,jpeg,png|max:5120',
             'overtime_hours' => 'required_if:type,overtime|nullable|regex:/^\\d{2}:\\d{2}$/',
             'overtime_dates' => 'required_if:type,overtime|nullable|string|max:255',
@@ -229,7 +237,15 @@ class LeaveRequestController extends Controller
             'wfh_address' => 'required_if:type,work_from_home|nullable|string|max:255',
             'wfh_tasks' => 'required_if:type,work_from_home|nullable|string|max:2000',
             'offset_hours' => 'nullable|regex:/^\\d{2}:\\d{2}$/',
+            'travel_hours' => ['nullable', 'numeric', 'min:0', 'max:24'],
         ]);
+
+        // Only employees can file travel; reject if someone bypasses the form
+        if ($validated['type'] === 'travel' && $user->role !== 'employee') {
+            return redirect()->back()
+                ->withErrors(['type' => 'Only employees can file travel leave requests.'])
+                ->withInput();
+        }
 
         // Build reason – include structured details when type is overtime or WFH
         $reasonToStore = $validated['reason'] ?? '';
@@ -282,6 +298,8 @@ class LeaveRequestController extends Controller
             }
 
             $reasonToStore = $details;
+        } elseif ($validated['type'] === 'travel') {
+            $reasonToStore = 'Location of travel: ' . trim($validated['reason'] ?? '');
         }
 
         // Validate balance for vacation_leave and sick_leave (employees only)
@@ -360,14 +378,18 @@ class LeaveRequestController extends Controller
             $supportingPath = $request->file('supporting_document')->store($supportDir, $assetDisk);
         }
 
+        $travelHours = $validated['type'] === 'travel' ? (float) ($validated['travel_hours'] ?? 8.0) : null;
         $leaveRequest = LeaveRequest::create([
             'user_id' => Auth::id(),
             'type' => $validated['type'],
             'start_date' => $validated['start_date'],
             'end_date' => $validated['end_date'] ?? $validated['start_date'],
             'reason' => $reasonToStore,
+            'travel_hours' => $travelHours,
             'supporting_document_path' => $supportingPath,
             'status' => 'pending',
+            'reviewed_by' => null,
+            'reviewed_at' => null,
         ]);
 
         // Send email notification to admin(s) if setting is configured (for any requester role)
@@ -634,23 +656,30 @@ class LeaveRequestController extends Controller
                 ->withErrors(['error' => 'You can only update leave requests that have been requested for resubmission.']);
         }
 
-        // Define allowed types based on role
+        // Define allowed types based on role (only employees can file travel)
         $allowedTypes = $user->role === 'student'
             ? ['additional_time', 'absent', 'other']
             : ['vacation_leave', 'sick_leave', 'work_from_home', 'absent', 'overtime', 'offset'];
+        if ($user->role === 'employee') {
+            $allowedTypes[] = 'travel';
+        }
 
         $startDateRules = ['required', 'date'];
+        $endDateRules = ['nullable', 'date', 'after_or_equal:start_date'];
         $typeInput = $request->input('type');
-        // Allow past dates for sick leave, overtime, and student additional_time; otherwise enforce today-or-future
-        if (!($typeInput === 'sick_leave' || $typeInput === 'overtime' || ($user->role === 'student' && $typeInput === 'additional_time'))) {
+        // Travel (employee): only today or past dates
+        if ($typeInput === 'travel') {
+            $startDateRules[] = 'before_or_equal:today';
+            $endDateRules[] = 'before_or_equal:today';
+        } elseif (!($typeInput === 'sick_leave' || $typeInput === 'overtime' || ($user->role === 'student' && $typeInput === 'additional_time'))) {
             $startDateRules[] = 'after_or_equal:today';
         }
 
         $validated = $request->validate([
             'type' => ['required', 'in:' . implode(',', $allowedTypes)],
             'start_date' => $startDateRules,
-            'end_date' => 'nullable|date|after_or_equal:start_date',
-            'reason' => 'nullable|string|max:1000',
+            'end_date' => $endDateRules,
+            'reason' => 'required_if:type,travel|nullable|string|max:1000',
             'supporting_document' => 'nullable|file|mimes:pdf,jpg,jpeg,png|max:5120',
             'overtime_hours' => 'required_if:type,overtime|nullable|regex:/^\\d{2}:\\d{2}$/',
             'overtime_dates' => 'required_if:type,overtime|nullable|string|max:255',
@@ -659,7 +688,14 @@ class LeaveRequestController extends Controller
             'wfh_address' => 'required_if:type,work_from_home|nullable|string|max:255',
             'wfh_tasks' => 'required_if:type,work_from_home|nullable|string|max:2000',
             'offset_hours' => 'nullable|regex:/^\\d{2}:\\d{2}$/',
+            'travel_hours' => ['nullable', 'numeric', 'min:0', 'max:24'],
         ]);
+
+        if ($validated['type'] === 'travel' && $user->role !== 'employee') {
+            return redirect()->back()
+                ->withErrors(['type' => 'Only employees can file travel leave requests.'])
+                ->withInput();
+        }
 
         // Build reason – include structured details when type is overtime or WFH
         $reasonToStore = $validated['reason'] ?? '';
@@ -712,6 +748,8 @@ class LeaveRequestController extends Controller
             }
 
             $reasonToStore = $details;
+        } elseif ($validated['type'] === 'travel') {
+            $reasonToStore = 'Location of travel: ' . trim($validated['reason'] ?? '');
         }
 
         // Handle supporting document (replace if new one provided)
@@ -732,17 +770,19 @@ class LeaveRequestController extends Controller
             $supportingPath = $request->file('supporting_document')->store($supportDir, $assetDisk);
         }
 
+        $travelHours = $validated['type'] === 'travel' ? (float) ($validated['travel_hours'] ?? 8.0) : null;
         // Clear review information when resubmitting
         $leaveRequest->update([
             'type' => $validated['type'],
             'start_date' => $validated['start_date'],
             'end_date' => $validated['end_date'] ?? $validated['start_date'],
             'reason' => $reasonToStore,
+            'travel_hours' => $travelHours,
             'supporting_document_path' => $supportingPath,
             'status' => 'pending',
             'reviewed_by' => null,
             'reviewed_at' => null,
-            'admin_notes' => null, // Clear admin notes on resubmission
+            'admin_notes' => null,
         ]);
 
         return redirect('/leave-requests/' . $leaveRequest->id)
@@ -775,5 +815,47 @@ class LeaveRequestController extends Controller
 
         return redirect('/leave-requests')
             ->with('success', 'Leave request deleted successfully.');
+    }
+
+    /**
+     * Apply travel leave time to DTR records.
+     * Each day gets custom hours (default 8.0) added to DTR with travel status.
+     */
+    private function applyTravelTimeToDtr(LeaveRequest $leaveRequest, float $hoursPerDay = 8.0): void
+    {
+        $start = Carbon::parse($leaveRequest->start_date);
+        $end = $leaveRequest->end_date ? Carbon::parse($leaveRequest->end_date) : $start;
+        $period = CarbonPeriod::create($start, $end);
+
+        foreach ($period as $date) {
+            $dtr = Dtr::firstOrNew([
+                'user_id' => $leaveRequest->user_id,
+                'date' => $date->toDateString(),
+            ]);
+
+            if ($dtr->exists) {
+                $existingTotal = (float) ($dtr->total_hours ?? 0);
+                $newTotal = $existingTotal + $hoursPerDay;
+                $dtr->total_hours = $newTotal;
+                $dtr->overtime_hours = max($newTotal - 8.0, 0);
+                $existingRemarks = $dtr->remarks ?? '';
+                $travelRemark = "Travel Leave ({$hoursPerDay}h)";
+                if (!empty($existingRemarks) && strpos($existingRemarks, $travelRemark) === false) {
+                    $dtr->remarks = $existingRemarks . '; ' . $travelRemark;
+                } elseif (empty($existingRemarks)) {
+                    $dtr->remarks = $travelRemark;
+                }
+                if ($dtr->status !== 'travel') {
+                    $dtr->status = 'travel';
+                }
+            } else {
+                $dtr->total_hours = $hoursPerDay;
+                $dtr->overtime_hours = max($hoursPerDay - 8.0, 0);
+                $dtr->status = 'travel';
+                $dtr->remarks = "Travel Leave ({$hoursPerDay}h)";
+            }
+
+            $dtr->save();
+        }
     }
 }

@@ -13,6 +13,7 @@ class LeaveRequest extends Model
         'start_date',
         'end_date',
         'reason',
+        'travel_hours',
         'supporting_document_path',
         'status',
         'admin_notes',
@@ -24,6 +25,7 @@ class LeaveRequest extends Model
         'start_date' => 'date',
         'end_date' => 'date',
         'reviewed_at' => 'datetime',
+        'travel_hours' => 'float',
     ];
 
     /**

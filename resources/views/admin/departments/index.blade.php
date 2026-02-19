@@ -164,7 +164,7 @@
                                     <a href="{{ route('admin.departments.edit', $department) }}" class="text-indigo-600 hover:text-indigo-900">
                                         Edit
                                     </a>
-                                    <form action="{{ route('admin.departments.toggle-status', $department) }}" method="POST" class="inline">
+                                    <form action="{{ url('admin/departments/' . $department->id . '/toggle-status') }}" method="POST" class="inline">
                                         @csrf
                                         @method('PATCH')
                                         <button type="submit" class="text-yellow-600 hover:text-yellow-900">

@@ -99,7 +99,7 @@
                         <option value="late" {{ request('status') == 'late' ? 'selected' : '' }}>Late</option>
                         <option value="half_day" {{ request('status') == 'half_day' ? 'selected' : '' }}>Half Day</option>
                         <option value="on_leave" {{ request('status') == 'on_leave' ? 'selected' : '' }}>On Leave</option>
-                        <option value="travel" {{ request('status') == 'travel' ? 'selected' : '' }}>Travel</option>
+                        <option value="travel" {{ request('status') == 'travel' ? 'selected' : '' }}>TRAVEL</option>
                     </select>
                 </div>
             </div>
@@ -245,7 +245,7 @@
                                                         $statusClass = 'bg-purple-100 text-purple-800';
                                                         $isCompleted = true; // Show checkmark for leave entries
                                                     } elseif ($dtr->status === 'travel') {
-                                                        $statusLabel = 'Travel';
+                                                        $statusLabel = 'TRAVEL';
                                                         $statusClass = 'bg-blue-100 text-blue-800';
                                                         $isCompleted = true; // Show checkmark for travel entries
                                                     } else {

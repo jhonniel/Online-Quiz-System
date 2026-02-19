@@ -68,6 +68,9 @@
                                 <option value="vacation_leave" {{ old('type', $editData['type']) == 'vacation_leave' ? 'selected' : '' }}>Vacation Leave</option>
                                 <option value="sick_leave" {{ old('type', $editData['type']) == 'sick_leave' ? 'selected' : '' }}>Sick Leave</option>
                                 <option value="work_from_home" {{ old('type', $editData['type']) == 'work_from_home' ? 'selected' : '' }}>Work From Home</option>
+                                @if(auth()->user()->role === 'employee')
+                                    <option value="travel" {{ old('type', $editData['type']) == 'travel' ? 'selected' : '' }}>Travel</option>
+                                @endif
                                 <option value="absent" {{ old('type', $editData['type']) == 'absent' ? 'selected' : '' }}>Absent</option>
                                 <option value="overtime" {{ old('type', $editData['type']) == 'overtime' ? 'selected' : '' }}>Overtime</option>
                                 <option value="offset" {{ old('type', $editData['type']) == 'offset' ? 'selected' : '' }}>Offset</option>
@@ -107,16 +110,19 @@
                         </div>
                     </div>
 
-                    <!-- Reason -->
-                    <div>
+                    <!-- Reason (label/required change to "Location of travel" when type = Travel) -->
+                    <div id="reason-field">
                         <label for="reason" class="block text-sm font-medium text-gray-700 mb-2">
-                            Reason <span class="text-gray-400">(Optional)</span>
+                            <span id="reason-label-text">Reason</span> <span id="reason-required-span" class="text-gray-400">(Optional)</span>
                         </label>
                         <textarea name="reason" id="reason" rows="4"
                                   placeholder="Please provide a reason for this request..."
                                   class="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">{{ old('reason', $editData['reason']) }}</textarea>
-                        <p class="mt-1 text-xs text-gray-500">
+                        <p class="mt-1 text-xs text-gray-500" id="reason-help">
                             Provide additional details about your request. For <strong>Overtime</strong>, if provided, this will appear as the explanation for extra hours. If not provided, it will be left blank.
+                        </p>
+                        <p class="mt-1 text-xs text-gray-500 hidden" id="reason-travel-help">
+                            Enter the location or destination of your travel.
                         </p>
                         @error('reason')
                             <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
@@ -183,6 +189,35 @@
                             @enderror
                         </div>
                     </div>
+
+                    <!-- Travel Details (visible only when Request Type = Travel, employees only) -->
+                    @if(auth()->user()->role === 'employee')
+                    <div id="travel-section" class="space-y-4 {{ old('type', $editData['type']) == 'travel' ? '' : 'hidden' }}">
+                        <div class="border-t border-gray-200 pt-4 mt-4">
+                            <h2 class="text-sm font-semibold text-gray-900 mb-2">Travel Details</h2>
+                            <p class="text-xs text-gray-500 mb-3">
+                                Travel requests are subject to approval. Upon approval, hours are added to your DTR. Past dates are allowed.
+                            </p>
+                            <p class="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-md px-3 py-2 mb-3">
+                                <strong>Note:</strong> Only travel <strong>outside Davao</strong> will be approved for this request.
+                            </p>
+                            <p class="text-xs text-gray-600 mb-3">
+                                You can only file TRAVEL for <strong>today or past dates</strong>. Travel for future dates can only be filed by an admin with full access.
+                            </p>
+                        </div>
+                        <div>
+                            <label for="travel_hours" class="block text-sm font-medium text-gray-700 mb-2">
+                                Hours per Day <span class="text-gray-400">(Default 8:00)</span>
+                            </label>
+                            <input type="number" name="travel_hours" id="travel_hours" min="0" max="24" step="0.5" value="{{ old('travel_hours', '8') }}"
+                                   class="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500" placeholder="8">
+                            <p class="mt-1 text-xs text-gray-500">Default is 8 hours per day if left blank.</p>
+                            @error('travel_hours')
+                                <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                            @enderror
+                        </div>
+                    </div>
+                    @endif
 
                     <!-- Offset Details (visible only when Request Type = Offset) -->
                     <div id="offset-section" class="space-y-4 {{ old('type', $editData['type']) == 'offset' ? '' : 'hidden' }}">
@@ -312,11 +347,23 @@
 
     // Toggle overtime section based on request type
     const typeSelect = document.getElementById('type');
+    const startDateInput = document.getElementById('start_date');
+    const endDateInput = document.getElementById('end_date');
+    const today = new Date().toISOString().split('T')[0];
     const overtimeSection = document.getElementById('overtime-section');
     const wfhSection = document.getElementById('wfh-section');
     const offsetSection = document.getElementById('offset-section');
+    const travelSection = document.getElementById('travel-section');
 
     function updateRequestTypeSections() {
+        // Travel: only today or past dates (no future for employees)
+        if (typeSelect.value === 'travel') {
+            if (startDateInput) { startDateInput.removeAttribute('min'); startDateInput.setAttribute('max', today); }
+            if (endDateInput) endDateInput.setAttribute('max', today);
+        } else {
+            if (startDateInput) startDateInput.removeAttribute('max');
+            if (endDateInput) endDateInput.removeAttribute('max');
+        }
         if (typeSelect.value === 'overtime') {
             overtimeSection.classList.remove('hidden');
         } else {
@@ -333,6 +380,36 @@
             offsetSection.classList.remove('hidden');
         } else {
             offsetSection.classList.add('hidden');
+        }
+
+        if (travelSection) {
+            if (typeSelect.value === 'travel') {
+                travelSection.classList.remove('hidden');
+            } else {
+                travelSection.classList.add('hidden');
+            }
+        }
+
+        // For Travel: "Location of travel" required
+        const reasonLabelText = document.getElementById('reason-label-text');
+        const reasonRequiredSpan = document.getElementById('reason-required-span');
+        const reasonInput = document.getElementById('reason');
+        const reasonHelp = document.getElementById('reason-help');
+        const reasonTravelHelp = document.getElementById('reason-travel-help');
+        if (typeSelect.value === 'travel') {
+            if (reasonLabelText) reasonLabelText.textContent = 'Location of travel ';
+            if (reasonRequiredSpan) { reasonRequiredSpan.classList.remove('text-gray-400'); reasonRequiredSpan.classList.add('text-red-500'); reasonRequiredSpan.textContent = '*'; }
+            if (reasonInput) reasonInput.required = true;
+            if (reasonHelp) reasonHelp.classList.add('hidden');
+            if (reasonTravelHelp) reasonTravelHelp.classList.remove('hidden');
+            if (reasonInput) reasonInput.placeholder = 'Enter location or destination of travel...';
+        } else {
+            if (reasonLabelText) reasonLabelText.textContent = 'Reason ';
+            if (reasonRequiredSpan) { reasonRequiredSpan.classList.add('text-gray-400'); reasonRequiredSpan.classList.remove('text-red-500'); reasonRequiredSpan.textContent = '(Optional)'; }
+            if (reasonInput) reasonInput.required = false;
+            if (reasonHelp) reasonHelp.classList.remove('hidden');
+            if (reasonTravelHelp) reasonTravelHelp.classList.add('hidden');
+            if (reasonInput) reasonInput.placeholder = 'Please provide a reason for this request...';
         }
     }
 

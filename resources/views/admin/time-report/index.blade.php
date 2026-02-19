@@ -328,9 +328,9 @@
                                                         {{ $day['leave_type_label'] ?? 'Leave' }}
                                                     @elseif($day['status_label'] === 'travel')
                                                         @if($day['has_leave_request'] ?? false)
-                                                            Travel ({{ $day['leave_type_label'] ?? 'Leave' }})
+                                                            TRAVEL ({{ $day['leave_type_label'] ?? 'Leave' }})
                                                         @else
-                                                            Travel
+                                                            TRAVEL
                                                         @endif
                                                     @elseif($day['status_label'] === 'no_records')
                                                         No Records
@@ -344,9 +344,9 @@
                                                         Not Recorded
                                                     @elseif(isset($day['dtr']) && $day['dtr']->status === 'travel')
                                                         @if($day['has_leave_request'] ?? false)
-                                                            Travel ({{ $day['leave_type_label'] ?? 'Leave' }})
+                                                            TRAVEL ({{ $day['leave_type_label'] ?? 'Leave' }})
                                                         @else
-                                                            Travel
+                                                            TRAVEL
                                                         @endif
                                                     @elseif($day['total_hours'] >= 8.0)
                                                         @if($day['has_leave_request'] ?? false)

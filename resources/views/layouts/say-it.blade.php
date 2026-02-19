@@ -269,5 +269,6 @@
     })();
     </script>
     @stack('scripts')
+    @include('components.seasonal-effects')
 </body>
 </html>

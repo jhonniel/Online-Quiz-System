@@ -57,7 +57,8 @@ class SayItController extends Controller
         $topHashtags = ConfessionHashtag::orderByDesc('posts_count')->limit(10)->get(['id', 'name', 'slug', 'posts_count']);
 
         if ($request->get('lazy') || $request->ajax()) {
-            $html = view('say-it.partials.post-cards', ['posts' => $posts])->render();
+            $sessionCodename = self::codenameForSession($request);
+            $html = view('say-it.partials.post-cards', ['posts' => $posts, 'sessionCodename' => $sessionCodename])->render();
             return response()->json([
                 'html' => $html,
                 'next_page_url' => $posts->hasMorePages() ? $posts->nextPageUrl() : null,
@@ -65,7 +66,8 @@ class SayItController extends Controller
             ]);
         }
 
-        return view('say-it.index', compact('posts', 'recentPosts', 'sort', 'topics', 'topTopics', 'topHashtags', 'topicSlug', 'hashtagSlug'));
+        $sessionCodename = self::codenameForSession($request);
+        return view('say-it.index', compact('posts', 'recentPosts', 'sort', 'topics', 'topTopics', 'topHashtags', 'topicSlug', 'hashtagSlug', 'sessionCodename'));
     }
 
     public function storePost(Request $request)
@@ -238,6 +240,58 @@ class SayItController extends Controller
      * Get the codename for the current session. Same session keeps the same codename;
      * when the session is no longer active, a new unique codename is generated.
      */
+    public function destroyPost(Request $request, ConfessionPost $post)
+    {
+        // Check if post was created within 50 seconds
+        $secondsSinceCreation = now()->diffInSeconds($post->created_at);
+        if ($secondsSinceCreation > 50) {
+            return response()->json([
+                'success' => false,
+                'message' => 'You can only delete your post within 50 seconds of posting.'
+            ], 403);
+        }
+
+        // Verify ownership: check codename and IP address
+        $sessionCodename = $request->session()->get('sayit_codename');
+        $requestIp = $request->ip();
+
+        if ($post->codename !== $sessionCodename || $post->ip_address !== $requestIp) {
+            return response()->json([
+                'success' => false,
+                'message' => 'You can only delete your own posts.'
+            ], 403);
+        }
+
+        // Delete associated image if exists
+        if ($post->image_path) {
+            try {
+                Storage::disk('digitalocean')->delete($post->image_path);
+            } catch (\Exception $e) {
+                // Log but don't fail deletion
+                \Log::warning('Failed to delete confession post image: ' . $e->getMessage());
+            }
+        }
+
+        // Decrement topic count
+        if ($post->confession_topic_id) {
+            $post->topic()->decrement('posts_count');
+        }
+
+        // Decrement hashtag counts
+        $post->load('hashtags');
+        foreach ($post->hashtags as $hashtag) {
+            $hashtag->decrement('posts_count');
+        }
+
+        // Delete the post (cascade will handle related votes and comments)
+        $post->delete();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Post deleted successfully.'
+        ]);
+    }
+
     protected static function codenameForSession(Request $request): string
     {
         if ($request->session()->has('sayit_codename')) {

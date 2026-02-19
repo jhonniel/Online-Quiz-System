@@ -159,5 +159,6 @@
     </head>
     <body class="font-sans text-gray-900 antialiased">
         {{ $slot }}
+        @include('components.seasonal-effects')
     </body>
 </html>

@@ -43,6 +43,7 @@ Route::post('/Say-it', [App\Http\Controllers\SayItController::class, 'storePost'
 Route::get('/Say-it/{post}', [App\Http\Controllers\SayItController::class, 'show'])->where('post', '[0-9]+');
 Route::post('/Say-it/comment', [App\Http\Controllers\SayItController::class, 'storeComment']);
 Route::post('/Say-it/vote', [App\Http\Controllers\SayItController::class, 'vote']);
+Route::delete('/Say-it/post/{post}', [App\Http\Controllers\SayItController::class, 'destroyPost'])->where('post', '[0-9]+')->name('say-it.post.delete');
 
 // QR Code Scanning Route (Public) - Uses hashed token for one-time access
 Route::get('/qr/{token}', [App\Http\Controllers\QrCodeController::class, 'scan'])->name('qr.scan');

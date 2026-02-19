@@ -80,7 +80,7 @@
                     @php
                         // Determine status first
                         if ($dtr->status === 'travel') {
-                            $statusLabel = 'Travel';
+                            $statusLabel = 'TRAVEL';
                             $isCompleted = false;
                         } elseif ($dtr->status === 'on_leave') {
                             $statusLabel = 'On Leave';

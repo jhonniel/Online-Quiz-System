@@ -45,5 +45,25 @@
             <i class="far fa-comment text-sm text-gray-600"></i>
             <span class="font-semibold text-xs tabular-nums">{{ \App\Helpers\SayItHelper::formatCount($post->all_comments_count ?? 0) }}</span>
         </a>
+        @php
+            $sessionCodename = $sessionCodename ?? session('sayit_codename');
+            $canDelete = $sessionCodename && $post->codename === $sessionCodename;
+            $createdAt = $post->created_at;
+            $secondsSinceCreation = now()->diffInSeconds($createdAt);
+            $canDeleteWithinTime = $secondsSinceCreation <= 50;
+            $timeRemaining = max(0, 50 - $secondsSinceCreation);
+        @endphp
+        @if($canDelete && $canDeleteWithinTime)
+            <button type="button" 
+                    class="delete-post-btn inline-flex items-center rounded-full border border-red-200 bg-red-50 pl-2 pr-2 py-1 gap-1.5 text-red-600 hover:bg-red-100 hover:border-red-300 transition touch-manipulation" 
+                    data-post-id="{{ $post->id }}"
+                    data-created-at="{{ $createdAt->timestamp }}"
+                    data-time-remaining="{{ $timeRemaining }}"
+                    title="Delete post ({{ $timeRemaining }}s remaining)"
+                    aria-label="Delete post">
+                <i class="fas fa-trash text-sm"></i>
+                <span class="delete-timer font-semibold text-xs tabular-nums">{{ $timeRemaining }}s</span>
+            </button>
+        @endif
     </div>
 </article>

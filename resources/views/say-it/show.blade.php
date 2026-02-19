@@ -48,6 +48,26 @@
                 <i class="far fa-comment text-sm text-gray-600"></i>
                 <span class="font-semibold text-xs tabular-nums">{{ \App\Helpers\SayItHelper::formatCount($post->all_comments_count ?? 0) }}</span>
             </div>
+            @php
+                $sessionCodename = $sessionCodename ?? session('sayit_codename');
+                $canDelete = $sessionCodename && $post->codename === $sessionCodename;
+                $createdAt = $post->created_at;
+                $secondsSinceCreation = now()->diffInSeconds($createdAt);
+                $canDeleteWithinTime = $secondsSinceCreation <= 50;
+                $timeRemaining = max(0, 50 - $secondsSinceCreation);
+            @endphp
+            @if($canDelete && $canDeleteWithinTime)
+                <button type="button" 
+                        class="delete-post-btn inline-flex items-center rounded-full border border-red-200 bg-red-50 pl-2 pr-2 py-1 gap-1.5 text-red-600 hover:bg-red-100 hover:border-red-300 transition touch-manipulation" 
+                        data-post-id="{{ $post->id }}"
+                        data-created-at="{{ $createdAt->timestamp }}"
+                        data-time-remaining="{{ $timeRemaining }}"
+                        title="Delete post ({{ $timeRemaining }}s remaining)"
+                        aria-label="Delete post">
+                    <i class="fas fa-trash text-sm"></i>
+                    <span class="delete-timer font-semibold text-xs tabular-nums">{{ $timeRemaining }}s</span>
+                </button>
+            @endif
         </div>
     </article>
 
@@ -113,6 +133,68 @@ function vote(type, id, direction, scoreEl) {
         }
     });
 }
+
+// Delete post functionality with 50-second timer
+(function() {
+    var deleteBtn = document.querySelector('.delete-post-btn');
+    if (!deleteBtn) return;
+    
+    var postId = deleteBtn.dataset.postId;
+    var createdAt = parseInt(deleteBtn.dataset.createdAt);
+    var timerEl = deleteBtn.querySelector('.delete-timer');
+    var postCreatedAt = createdAt;
+    
+    // Update timer every second
+    var timerInterval = setInterval(function() {
+        var remaining = Math.max(0, 50 - (Math.floor(Date.now() / 1000) - postCreatedAt));
+        
+        if (timerEl) {
+            timerEl.textContent = remaining + 's';
+        }
+        
+        if (remaining <= 0) {
+            clearInterval(timerInterval);
+            deleteBtn.style.display = 'none';
+        }
+    }, 1000);
+    
+    // Delete button click handler
+    deleteBtn.addEventListener('click', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        
+        if (!confirm('Are you sure you want to delete this post? This action cannot be undone.')) {
+            return;
+        }
+        
+        deleteBtn.disabled = true;
+        deleteBtn.style.opacity = '0.5';
+        
+        fetch('{{ url("/Say-it/post") }}/' + postId, {
+            method: 'DELETE',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+                'Accept': 'application/json',
+            }
+        })
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+            if (data.success) {
+                window.location.href = '{{ url("/Say-it") }}';
+            } else {
+                alert(data.message || 'Failed to delete post.');
+                deleteBtn.disabled = false;
+                deleteBtn.style.opacity = '1';
+            }
+        })
+        .catch(function() {
+            alert('An error occurred while deleting the post.');
+            deleteBtn.disabled = false;
+            deleteBtn.style.opacity = '1';
+        });
+    });
+})();
 </script>
 @endpush
 @endsection

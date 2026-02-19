@@ -614,37 +614,28 @@ class LeaveRequestController extends Controller
                 }
             }
 
-            // Determine status - travel requests are auto-approved
-            $status = ($validated['type'] === 'travel') ? 'approved' : 'pending';
-            $reviewedBy = ($validated['type'] === 'travel') ? Auth::id() : null;
-            $reviewedAt = ($validated['type'] === 'travel') ? now() : null;
-
-            // Create leave request for this employee
+            // All requests (including travel) are pending until explicitly approved
+            $travelHours = $validated['type'] === 'travel' ? (float) ($validated['travel_hours'] ?? 8.0) : null;
             $leaveRequest = LeaveRequest::create([
                 'user_id' => $employee->id,
                 'type' => $validated['type'],
                 'start_date' => $validated['start_date'],
                 'end_date' => $validated['end_date'] ?? $validated['start_date'],
                 'reason' => $validated['reason'] ?? '',
-                'status' => $status,
-                'reviewed_by' => $reviewedBy,
-                'reviewed_at' => $reviewedAt,
+                'travel_hours' => $travelHours,
+                'status' => 'pending',
+                'reviewed_by' => null,
+                'reviewed_at' => null,
             ]);
 
-            // Log that an admin filed this request on behalf of the employee
             LeaveRequestLog::create([
                 'leave_request_id' => $leaveRequest->id,
-                'action' => $status === 'approved' ? 'approved' : 'filed_by_admin',
+                'action' => 'filed_by_admin',
                 'status_before' => null,
-                'status_after' => $status,
-                'notes' => $status === 'approved' ? 'Travel leave auto-approved and filed by admin' : 'Filed by admin on behalf of employee',
+                'status_after' => 'pending',
+                'notes' => 'Filed by admin on behalf of employee',
                 'performed_by' => Auth::id(),
             ]);
-
-            // If travel type, automatically add hours to DTR
-            if ($validated['type'] === 'travel') {
-                $this->applyTravelTimeToDtr($leaveRequest, $validated['travel_hours'] ?? 8.0);
-            }
 
             Log::info('Admin filed leave request for employee', [
                 'leave_request_id' => $leaveRequest->id,
@@ -660,11 +651,7 @@ class LeaveRequestController extends Controller
         // Prepare success/error messages
         $message = '';
         if ($createdCount > 0) {
-            if ($validated['type'] === 'travel') {
-                $message = "Travel leave approved and filed for {$createdCount} employee(s). Hours have been added to DTR.";
-            } else {
-                $message = "Leave request filed for {$createdCount} employee(s).";
-            }
+            $message = "Leave request filed for {$createdCount} employee(s)." . ($validated['type'] === 'travel' ? ' Travel requests are subject to approval.' : '');
         }
         if (count($failedEmployees) > 0) {
             $failedNames = collect($failedEmployees)->pluck('name')->join(', ');
@@ -719,6 +706,11 @@ class LeaveRequestController extends Controller
         // If Vacation Leave or Sick Leave, automatically add 8 hours per day to DTR
         if (in_array($leaveRequest->type, ['vacation_leave', 'sick_leave'])) {
             $this->applyLeaveTimeToDtr($leaveRequest);
+        }
+
+        // If Travel, add requested hours per day to DTR (uses employee's travel_hours or default 8.0)
+        if ($leaveRequest->type === 'travel') {
+            $this->applyTravelTimeToDtr($leaveRequest, (float) ($leaveRequest->travel_hours ?? 8.0));
         }
 
         // Send email notification to employee

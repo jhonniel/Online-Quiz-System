@@ -44,10 +44,10 @@
 
         @if(isset($breadcrumbs) && count($breadcrumbs) > 0)
             <div class="mb-4 flex items-center space-x-2 text-sm">
-                <a href="{{ route('user.files.index') }}" class="text-indigo-600 hover:text-indigo-800">Home</a>
+                <a href="{{ url('/files') }}" class="text-indigo-600 hover:text-indigo-800">Home</a>
                 @foreach($breadcrumbs as $breadcrumb)
                     <span class="text-gray-400">/</span>
-                    <a href="{{ route('user.files.index', ['folder_id' => $breadcrumb->id]) }}" class="text-indigo-600 hover:text-indigo-800">{{ $breadcrumb->name }}</a>
+                    <a href="{{ url('/files?folder_id=' . $breadcrumb->id) }}" class="text-indigo-600 hover:text-indigo-800">{{ $breadcrumb->name }}</a>
                 @endforeach
             </div>
         @endif
@@ -58,7 +58,7 @@
                     @foreach($files as $item)
                         <div class="group relative bg-gray-50 rounded-lg border border-gray-200 hover:border-indigo-300 hover:shadow-md transition-all duration-200 p-3">
                             @if($item->isFolder())
-                                <a href="{{ route('user.files.index', ['folder_id' => $item->id]) }}" class="block text-center">
+                                <a href="{{ url('/files?folder_id=' . $item->id) }}" class="block text-center">
                                     <div class="flex justify-center mb-2">
                                         <svg class="w-12 h-12 text-yellow-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-4l-2-2H5a2 2 0 00-2 2z" />
@@ -75,7 +75,7 @@
                                         $thumbnailUrl = null;
 
                                         if ($isImage) {
-                                            $thumbnailUrl = route('user.files.view', $item);
+                                            $thumbnailUrl = url('/files/' . $item->id . '/view');
                                         }
                                     @endphp
 
@@ -83,7 +83,7 @@
                                         @if($thumbnailUrl)
                                             <img src="{{ $thumbnailUrl }}" alt="{{ $item->name }}"
                                                  class="w-full h-full object-cover cursor-pointer hover:opacity-90 transition-opacity"
-                                                 onclick="openUserPreviewModal('{{ $item->id }}', '{{ addslashes($item->name) }}', '{{ $item->mime_type }}', '{{ route('user.files.view', $item) }}')">
+                                                 onclick="openUserPreviewModal('{{ $item->id }}', '{{ addslashes($item->name) }}', '{{ $item->mime_type }}', '{{ url('/files/' . $item->id . '/view') }}')">
                                         @else
                                             <div class="w-full h-full flex items-center justify-center">
                                                 @if($isVideo)
@@ -119,11 +119,11 @@
                                          class="absolute right-0 mt-2 w-44 bg-white rounded-md shadow-lg z-10 border border-gray-200">
                                         <div class="py-1">
                                             @if($item->isFile())
-                                                <button onclick="openUserPreviewModal('{{ $item->id }}', '{{ addslashes($item->name) }}', '{{ $item->mime_type }}', '{{ route('user.files.view', $item) }}')"
+                                                <button onclick="openUserPreviewModal('{{ $item->id }}', '{{ addslashes($item->name) }}', '{{ $item->mime_type }}', '{{ url('/files/' . $item->id . '/view') }}')"
                                                         class="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Preview</button>
-                                                <a href="{{ route('user.files.download', $item) }}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Download</a>
+                                                <a href="{{ url('/files/' . $item->id . '/download') }}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Download</a>
                                             @elseif($item->isFolder())
-                                                <a href="{{ route('user.files.index', ['folder_id' => $item->id]) }}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Open</a>
+                                                <a href="{{ url('/files?folder_id=' . $item->id) }}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Open</a>
                                             @endif
                                         </div>
                                     </div>
@@ -172,7 +172,7 @@
                     <p id="user-upload-status" class="text-xs text-gray-500 mt-2">Preparing upload...</p>
                 </div>
 
-                <form id="user-upload-file-form" action="{{ route('user.files.store') }}" method="POST" enctype="multipart/form-data">
+                <form id="user-upload-file-form" action="{{ url('/files') }}" method="POST" enctype="multipart/form-data">
                     @csrf
                     <input type="hidden" name="folder_id" value="{{ $currentFolder->id ?? null }}">
                     <div class="mb-4">
@@ -209,7 +209,7 @@
                         </svg>
                     </button>
                 </div>
-                <form action="{{ route('user.files.store') }}" method="POST">
+                <form action="{{ url('/files') }}" method="POST">
                     @csrf
                     <input type="hidden" name="folder_id" value="{{ $currentFolder->id ?? null }}">
                     <div class="mb-4">
@@ -262,13 +262,13 @@
     </div>
 
     <script>
-        const USER_FILES_DOWNLOAD_URL = @json(route('user.files.download', ['file' => '__FILE__']));
-        const USER_FILES_PRESIGN_URL = @json(route('user.files.presign'));
-        const USER_FILES_CONFIRM_URL = @json(route('user.files.confirm'));
-        const USER_FILES_MULTIPART_INITIATE_URL = @json(route('user.files.multipart.initiate'));
-        const USER_FILES_MULTIPART_PRESIGN_CHUNK_URL = @json(route('user.files.multipart.presign-chunk'));
-        const USER_FILES_MULTIPART_COMPLETE_URL = @json(route('user.files.multipart.complete'));
-        const USER_FILES_MULTIPART_ABORT_URL = @json(route('user.files.multipart.abort'));
+        const USER_FILES_DOWNLOAD_URL = @json(url('/files/__FILE__/download'));
+        const USER_FILES_PRESIGN_URL = @json(url('/files/presign'));
+        const USER_FILES_CONFIRM_URL = @json(url('/files/confirm'));
+        const USER_FILES_MULTIPART_INITIATE_URL = @json(url('/files/multipart/initiate'));
+        const USER_FILES_MULTIPART_PRESIGN_CHUNK_URL = @json(url('/files/multipart/presign-chunk'));
+        const USER_FILES_MULTIPART_COMPLETE_URL = @json(url('/files/multipart/complete'));
+        const USER_FILES_MULTIPART_ABORT_URL = @json(url('/files/multipart/abort'));
 
         function openUserPreviewModal(id, name, mimeType, url) {
             document.getElementById('user-preview-file-name').textContent = name;

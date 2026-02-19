@@ -252,6 +252,94 @@ attachVoteHandlers();
     }, { root: root, rootMargin: '200px', threshold: 0 });
     obs.observe(sentinel);
 })();
+
+// Delete post functionality with 50-second timer
+(function() {
+    function initDeleteButtons(container) {
+        container = container || document;
+        var deleteButtons = container.querySelectorAll('.delete-post-btn');
+        deleteButtons.forEach(function(btn) {
+            if (btn._deleteInitialized) return;
+            btn._deleteInitialized = true;
+            
+            var postId = btn.dataset.postId;
+            var createdAt = parseInt(btn.dataset.createdAt);
+            var timeRemaining = parseInt(btn.dataset.timeRemaining);
+            var timerEl = btn.querySelector('.delete-timer');
+            var startTime = Date.now() / 1000;
+            var postCreatedAt = createdAt;
+            
+            // Update timer every second
+            var timerInterval = setInterval(function() {
+                var elapsed = Math.floor((Date.now() / 1000) - startTime);
+                var remaining = Math.max(0, 50 - (Math.floor(Date.now() / 1000) - postCreatedAt));
+                
+                if (timerEl) {
+                    timerEl.textContent = remaining + 's';
+                }
+                
+                if (remaining <= 0) {
+                    clearInterval(timerInterval);
+                    btn.style.display = 'none';
+                }
+            }, 1000);
+            
+            // Delete button click handler
+            btn.addEventListener('click', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                
+                if (!confirm('Are you sure you want to delete this post? This action cannot be undone.')) {
+                    return;
+                }
+                
+                btn.disabled = true;
+                btn.style.opacity = '0.5';
+                
+                fetch('{{ url("/Say-it/post") }}/' + postId, {
+                    method: 'DELETE',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+                        'Accept': 'application/json',
+                    }
+                })
+                .then(function(r) { return r.json(); })
+                .then(function(data) {
+                    if (data.success) {
+                        var article = btn.closest('article');
+                        if (article) {
+                            article.style.transition = 'opacity 0.3s';
+                            article.style.opacity = '0';
+                            setTimeout(function() {
+                                article.remove();
+                            }, 300);
+                        }
+                    } else {
+                        alert(data.message || 'Failed to delete post.');
+                        btn.disabled = false;
+                        btn.style.opacity = '1';
+                    }
+                })
+                .catch(function() {
+                    alert('An error occurred while deleting the post.');
+                    btn.disabled = false;
+                    btn.style.opacity = '1';
+                });
+            });
+        });
+    }
+    
+    // Initialize on page load
+    initDeleteButtons();
+    
+    // Re-initialize after lazy load
+    var originalAttachVoteHandlers = window.attachVoteHandlers;
+    window.attachVoteHandlers = function(container) {
+        if (originalAttachVoteHandlers) originalAttachVoteHandlers(container);
+        initDeleteButtons(container);
+    };
+})();
 </script>
 @endpush
 @endsection

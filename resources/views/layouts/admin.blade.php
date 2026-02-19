@@ -521,5 +521,6 @@
             }
         }
     </script>
+    @include('components.seasonal-effects')
 </body>
 </html>
