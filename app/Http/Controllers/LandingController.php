@@ -31,12 +31,11 @@ class LandingController extends Controller
                     $user->load('adminPermission');
                 }
 
-                // Redirect to admin dashboard if user is admin or has admin permissions
-                if ($user->isAdmin() || $user->hasAnyAdminPermission()) {
+                // Only super admins go to admin dashboard; everyone else goes to user dashboard
+                if ($user->isSuperAdmin()) {
                     return redirect('/admin/dashboard');
-                } else {
-                    return redirect('/dashboard');
                 }
+                return redirect('/dashboard');
             }
         }
 

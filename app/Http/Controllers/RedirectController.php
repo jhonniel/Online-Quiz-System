@@ -16,15 +16,11 @@ class RedirectController extends Controller
                 $user->load('adminPermission');
             }
 
-            // Redirect to admin dashboard if user is admin or has admin permissions
-            // Full access (super admin) goes to main dashboard; partial admins go to users (or first available)
-            if ($user->isAdmin() || $user->hasAnyAdminPermission()) {
-                return $user->isSuperAdmin()
-                    ? redirect('/admin/dashboard')
-                    : redirect('/admin/users');
-            } else {
-                return redirect('/dashboard');
+            // Only super admins go to admin dashboard; everyone else (including users with admin permissions) goes to user dashboard
+            if ($user->isSuperAdmin()) {
+                return redirect('/admin/dashboard');
             }
+            return redirect('/dashboard');
         }
 
         return redirect('/login');
