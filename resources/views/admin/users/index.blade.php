@@ -14,10 +14,10 @@
 @endsection
 
 @section('content')
-<div class="h-full flex flex-col space-y-3">
+<div class="h-full flex flex-col space-y-4 min-w-0">
     <!-- Success/Error Messages -->
     @if(session('success'))
-        <div class="bg-green-50 border border-green-200 text-green-800 px-4 py-3 rounded-lg mx-2 sm:mx-3 lg:mx-4 xl:mx-6" role="alert">
+        <div class="bg-green-50 border border-green-200 text-green-800 px-4 py-3 rounded-lg" role="alert">
             <div class="flex items-center">
                 <svg class="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20">
                     <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
@@ -28,7 +28,7 @@
     @endif
 
     @if(session('error'))
-        <div class="bg-red-50 border border-red-200 text-red-800 px-4 py-3 rounded-lg mx-2 sm:mx-3 lg:mx-4 xl:mx-6" role="alert">
+        <div class="bg-red-50 border border-red-200 text-red-800 px-4 py-3 rounded-lg" role="alert">
             <div class="flex items-center">
                 <svg class="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20">
                     <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"/>
@@ -39,7 +39,7 @@
     @endif
 
     @if($errors->any())
-        <div class="bg-red-50 border border-red-200 text-red-800 px-4 py-3 rounded-lg mx-2 sm:mx-3 lg:mx-4 xl:mx-6" role="alert">
+        <div class="bg-red-50 border border-red-200 text-red-800 px-4 py-3 rounded-lg" role="alert">
             <div class="flex items-start">
                 <svg class="w-5 h-5 mr-2 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
                     <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"/>
@@ -57,13 +57,16 @@
     @endif
 
     <!-- Search and Filter Bar -->
-    <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-3 flex-shrink-0 mx-2 sm:mx-3 lg:mx-4 xl:mx-6">
-        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-            <!-- Search -->
-            <div class="flex-1 max-w-md">
-                <form id="users-search-form" method="GET" action="{{ url('/admin/users') }}">
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-4 flex-shrink-0">
+        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <!-- Search and School Filter -->
+            <div class="flex-1 flex flex-wrap items-center gap-4 min-w-0">
+                <form id="users-search-form" method="GET" action="{{ url('/admin/users') }}" class="flex-1 min-w-[200px] max-w-md">
                     @if(request()->has('per_page'))
                         <input type="hidden" name="per_page" value="{{ request('per_page') }}">
+                    @endif
+                    @if(isset($schoolId) && $schoolId !== '' && $schoolId !== null)
+                        <input type="hidden" name="school" value="{{ $schoolId }}">
                     @endif
                     <div class="relative">
                         <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -77,7 +80,7 @@
                                value="{{ request('search', $search ?? '') }}"
                                placeholder="Search users (name, email, role, dept, university, ID)..."
                                autocomplete="off"
-                               class="block w-full pl-9 pr-10 py-2 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 text-sm">
+                               class="block w-full pl-9 pr-10 py-2 border border-gray-300 rounded-lg leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm">
                         @if(request('search'))
                             <button type="button"
                                     id="clear-search-btn"
@@ -90,25 +93,36 @@
                         @endif
                     </div>
                 </form>
+                @if(isset($schools) && $schools->isNotEmpty())
+                <form method="GET" action="{{ url('/admin/users') }}" class="flex items-center gap-2" id="school-filter-form">
+                    @if(request()->has('per_page'))
+                        <input type="hidden" name="per_page" value="{{ request('per_page') }}">
+                    @endif
+                    @if(request('search'))
+                        <input type="hidden" name="search" value="{{ request('search') }}">
+                    @endif
+                    <label for="school-filter" class="text-sm font-medium text-gray-700 whitespace-nowrap">School</label>
+                    <select name="school" id="school-filter" class="text-sm border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 py-2 pl-3 pr-8 bg-white">
+                        <option value="">All schools</option>
+                        @foreach($schools as $s)
+                            <option value="{{ $s->id }}" {{ (isset($schoolId) && (string)$schoolId === (string)$s->id) ? 'selected' : '' }}>{{ $s->name }}</option>
+                        @endforeach
+                    </select>
+                </form>
+                @endif
             </div>
 
             <!-- Action Buttons -->
-            <div class="flex items-center space-x-2">
-                <button class="inline-flex items-center px-3 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
-                    <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"></path>
-                    </svg>
-                    <span class="hidden sm:inline">Filter</span>
-                </button>
+            <div class="flex items-center gap-2 flex-shrink-0">
                 <button id="send-credentials-btn" type="button" disabled
-                        class="inline-flex items-center px-3 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 disabled:opacity-50 disabled:cursor-not-allowed">
-                    <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        class="inline-flex items-center px-3 py-2 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-emerald-600 hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
+                    <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path>
                     </svg>
                     <span class="hidden sm:inline">Send Credentials</span>
                 </button>
-                <a href="{{ url('/admin/users/create') }}" class="inline-flex items-center px-3 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
-                    <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <a href="{{ url('/admin/users/create') }}" class="inline-flex items-center px-4 py-2 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors">
+                    <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
                     </svg>
                     <span class="hidden sm:inline">Add User</span>
@@ -118,22 +132,22 @@
     </div>
 
     <!-- Page Header -->
-    <div class="bg-gradient-to-r from-indigo-500 to-indigo-600 rounded-lg shadow-sm p-4 flex-shrink-0 mx-2 sm:mx-3 lg:mx-4 xl:mx-6">
+    <div class="bg-gradient-to-r from-indigo-600 to-indigo-700 rounded-xl shadow-sm p-5 flex-shrink-0">
         <div class="flex items-center">
-            <div class="flex-shrink-0">
-                <svg class="h-6 w-6 sm:h-8 sm:w-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <div class="flex-shrink-0 w-12 h-12 rounded-xl bg-white/20 flex items-center justify-center">
+                <svg class="h-6 w-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z"></path>
                 </svg>
             </div>
-            <div class="ml-3">
-                <h1 class="text-lg sm:text-xl lg:text-2xl font-bold text-white">Users</h1>
-                <p class="text-indigo-100 text-sm">Manage system users and their permissions</p>
+            <div class="ml-4">
+                <h1 class="text-xl font-bold text-white tracking-tight">User Management</h1>
+                <p class="text-indigo-100 text-sm mt-0.5">Manage system users, roles, and permissions</p>
             </div>
         </div>
     </div>
 
     <!-- Bulk Action Bar (Hidden by default) -->
-    <div id="bulk-action-bar" class="hidden bg-indigo-50 border border-indigo-200 rounded-lg shadow-sm p-4 flex-shrink-0 mx-2 sm:mx-3 lg:mx-4 xl:mx-6">
+    <div id="bulk-action-bar" class="hidden bg-indigo-50 border border-indigo-200 rounded-xl shadow-sm p-4 flex-shrink-0">
         <div class="flex items-center justify-between">
             <div class="flex items-center space-x-4 flex-wrap gap-2">
                 <span id="selected-count" class="text-sm font-medium text-indigo-900">0 users selected</span>
@@ -164,51 +178,61 @@
     </div>
 
     <!-- Users Table -->
-    <div class="bg-white shadow-sm border-t border-b border-gray-200 overflow-hidden flex-1 flex flex-col">
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden flex-1 flex flex-col min-h-0">
         @if($users->count() > 0)
             <form id="bulk-role-form" method="POST" action="{{ url('/admin/users/bulk-assign-role') }}">
                 @csrf
                 <input type="hidden" name="role" id="role-input" value="">
             </form>
-            <div class="overflow-x-auto flex-1">
-                <table class="min-w-full divide-y divide-gray-200">
-                    <thead class="bg-gray-50 sticky top-0 z-10">
+            <div class="overflow-x-auto flex-1 min-h-0">
+                <table class="w-full table-fixed border-collapse" style="table-layout: fixed;">
+                    <colgroup>
+                        <col style="width: 2.5rem">
+                        <col style="width: 5%">
+                        <col style="width: 18%">
+                        <col style="width: 18%">
+                        <col style="width: 16%">
+                        <col style="width: 12%">
+                        <col style="width: 8%">
+                        <col style="width: 9%">
+                        <col style="width: 8%">
+                        <col style="width: 3.5rem">
+                    </colgroup>
+                    <thead class="bg-gray-50 border-b border-gray-200 sticky top-0 z-10">
                         <tr>
-                            <th scope="col" class="px-3 sm:px-4 lg:px-6 py-3 text-left">
+                            <th scope="col" class="px-3 py-3.5 text-left w-10">
                                 <input type="checkbox" id="select-all"
                                        class="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded">
                             </th>
-                            <th scope="col" class="px-3 sm:px-4 lg:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            <th scope="col" class="px-4 py-3.5 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
                                 <span class="hidden sm:inline">User ID</span>
                                 <span class="sm:hidden">ID</span>
                             </th>
-                            <th scope="col" class="px-3 sm:px-4 lg:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                Name
-                            </th>
-                            <th scope="col" class="px-3 sm:px-4 lg:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            <th scope="col" class="px-4 py-3.5 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Name</th>
+                            <th scope="col" class="px-4 py-3.5 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
                                 <span class="hidden md:inline">Email</span>
                             </th>
-                            <th scope="col" class="px-3 sm:px-4 lg:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            <th scope="col" class="px-4 py-3.5 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
                                 <span class="hidden lg:inline">University</span>
                             </th>
-                            <th scope="col" class="px-3 sm:px-4 lg:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            <th scope="col" class="px-4 py-3.5 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
                                 <span class="hidden lg:inline">Department</span>
                             </th>
-                            <th scope="col" class="px-3 sm:px-4 lg:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            <th scope="col" class="px-4 py-3.5 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
                                 <span class="hidden md:inline">Status</span>
                             </th>
-                            <th scope="col" class="px-3 sm:px-4 lg:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            <th scope="col" class="px-4 py-3.5 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
                                 <span class="hidden lg:inline">Approval</span>
                             </th>
-                            <th scope="col" class="px-3 sm:px-4 lg:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            <th scope="col" class="px-4 py-3.5 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
                                 <span class="hidden lg:inline">Created</span>
                             </th>
-                            <th scope="col" class="relative px-3 sm:px-4 lg:px-6 py-3">
+                            <th scope="col" class="relative px-4 py-3.5 w-14">
                                 <span class="sr-only">Actions</span>
                             </th>
                         </tr>
                     </thead>
-                    <tbody class="bg-white divide-y divide-gray-200">
+                    <tbody class="bg-white divide-y divide-gray-100">
                         @foreach($users as $index => $user)
                             <tr class="hover:bg-gray-50 transition-colors duration-150">
                                 <td class="px-3 sm:px-4 lg:px-6 py-4 whitespace-nowrap">
@@ -263,21 +287,21 @@
                                         {{ $user->is_active ? 'Active' : 'Disabled' }}
                                     </span>
                                 </td>
-                                <td class="px-6 py-4 whitespace-nowrap">
+                                <td class="px-4 py-3.5 whitespace-nowrap">
                                     @if($user->is_approved)
                                         <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
                                             Approved
                                         </span>
                                     @else
-                                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+                                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-800">
                                             Pending
                                         </span>
                                     @endif
                                 </td>
-                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                <td class="px-4 py-3.5 whitespace-nowrap text-sm text-gray-500">
                                     {{ $user->created_at->format('M d, Y') }}
                                 </td>
-                                <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                                <td class="px-4 py-3.5 whitespace-nowrap text-right text-sm font-medium">
                                     <div class="relative" x-data="{ open: false }">
                                         <button @click="open = !open"
                                                 class="text-gray-400 hover:text-gray-600 focus:outline-none focus:text-gray-600">
@@ -390,33 +414,29 @@
             </div>
 
             <!-- Pagination -->
-            <div class="bg-white px-4 py-3 flex items-center justify-between border-t border-gray-200 sm:px-6 mx-2 sm:mx-3 lg:mx-4 xl:mx-6">
+            <div class="bg-gray-50/80 px-4 py-3 flex items-center justify-between border-t border-gray-200 sm:px-6">
                 <div class="flex-1 flex justify-between sm:hidden">
                     {{ $users->links() }}
                 </div>
-                <div class="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
-                    <div class="flex items-center">
-                        <p class="text-sm text-gray-700">
-                            Showing
-                            <span class="font-medium">{{ $users->firstItem() }}</span>
-                            to
-                            <span class="font-medium">{{ $users->lastItem() }}</span>
-                            of
-                            <span class="font-medium">{{ $users->total() }}</span>
-                            results
-                        </p>
-                    </div>
-                    <div class="flex items-center space-x-2">
-                        <span class="text-sm text-gray-700">Rows per page:</span>
-                        <select id="per-page-select" class="text-sm border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500">
-                            <option value="10" {{ request('per_page', 10) == 10 ? 'selected' : '' }}>10</option>
-                            <option value="25" {{ request('per_page', 10) == 25 ? 'selected' : '' }}>25</option>
-                            <option value="50" {{ request('per_page', 10) == 50 ? 'selected' : '' }}>50</option>
-                            <option value="100" {{ request('per_page', 10) == 100 ? 'selected' : '' }}>100</option>
-                        </select>
-                    </div>
-                    <div>
-                        {{ $users->appends(request()->query())->links() }}
+                <div class="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between gap-4">
+                    <p class="text-sm text-gray-600">
+                        Showing <span class="font-medium text-gray-900">{{ $users->firstItem() }}</span>
+                        to <span class="font-medium text-gray-900">{{ $users->lastItem() }}</span>
+                        of <span class="font-medium text-gray-900">{{ $users->total() }}</span> results
+                    </p>
+                    <div class="flex items-center gap-3">
+                        <div class="flex items-center gap-2">
+                            <label for="per-page-select" class="text-sm text-gray-600">Rows per page</label>
+                            <select id="per-page-select" class="text-sm border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 py-1.5 pl-2 pr-8">
+                                <option value="10" {{ request('per_page', 10) == 10 ? 'selected' : '' }}>10</option>
+                                <option value="25" {{ request('per_page', 10) == 25 ? 'selected' : '' }}>25</option>
+                                <option value="50" {{ request('per_page', 10) == 50 ? 'selected' : '' }}>50</option>
+                                <option value="100" {{ request('per_page', 10) == 100 ? 'selected' : '' }}>100</option>
+                            </select>
+                        </div>
+                        <div class="border-l border-gray-200 pl-3">
+                            {{ $users->appends(request()->query())->links() }}
+                        </div>
                     </div>
                 </div>
             </div>
@@ -428,7 +448,7 @@
                 <h3 class="mt-2 text-sm font-medium text-gray-900">No users found</h3>
                 <p class="mt-1 text-sm text-gray-500">Get started by creating a new user.</p>
                 <div class="mt-6">
-                    <a href="{{ url('/admin/users/create') }}" class="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                    <a href="{{ url('/admin/users/create') }}" class="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-lg text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
                         <svg class="-ml-1 mr-2 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
                         </svg>
@@ -487,6 +507,15 @@
             clearSearchBtn.addEventListener('click', function() {
                 searchInput.value = '';
                 searchForm.submit();
+            });
+        }
+
+        // School filter: auto-submit on change
+        const schoolFilter = document.getElementById('school-filter');
+        const schoolFilterForm = document.getElementById('school-filter-form');
+        if (schoolFilter && schoolFilterForm) {
+            schoolFilter.addEventListener('change', function() {
+                schoolFilterForm.submit();
             });
         }
 

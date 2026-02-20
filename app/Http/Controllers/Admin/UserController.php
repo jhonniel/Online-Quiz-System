@@ -26,9 +26,16 @@ class UserController extends Controller
             $perPage = 10;
         }
 
+        $schoolId = $request->input('school');
+        $schools = University::active()->orderBy('name')->get();
+
         $query = User::with(['university', 'department'])
             ->orderBy('is_approved', 'asc') // Show pending users first
             ->orderBy('created_at', 'desc');
+
+        if ($schoolId !== null && $schoolId !== '') {
+            $query->where('university_id', (int) $schoolId);
+        }
 
         if ($search !== '') {
             $query->where(function ($q) use ($search) {
@@ -53,7 +60,7 @@ class UserController extends Controller
 
         $users = $query->paginate($perPage)->appends($request->query());
 
-        return view('admin.users.index', compact('users', 'search', 'perPage'));
+        return view('admin.users.index', compact('users', 'search', 'perPage', 'schools', 'schoolId'));
     }
 
     public function api(Request $request)
