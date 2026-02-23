@@ -9,16 +9,11 @@ use Illuminate\Http\Request;
 
 class ConfessionBannedWordController extends Controller
 {
-    private function ensureFullAccess(): void
-    {
-        if (! auth()->user()->isSuperAdmin()) {
-            abort(403, 'Full admin access required for Confession settings.');
-        }
-    }
-
+    /**
+     * Access controlled by admin.permission:confession middleware.
+     */
     public function index()
     {
-        $this->ensureFullAccess();
         $words = ConfessionBannedWord::orderBy('word')->get();
         $topics = ConfessionTopic::orderByDesc('posts_count')->orderBy('name')->get();
         return view('admin.confession.banned-words', compact('words', 'topics'));
@@ -26,7 +21,6 @@ class ConfessionBannedWordController extends Controller
 
     public function store(Request $request)
     {
-        $this->ensureFullAccess();
         $validated = $request->validate([
             'word' => 'required|string|max:100',
             'display_style' => 'required|in:full,first_last,end_only',
@@ -47,7 +41,6 @@ class ConfessionBannedWordController extends Controller
 
     public function destroy(ConfessionBannedWord $banned_word)
     {
-        $this->ensureFullAccess();
         $banned_word->delete();
         return redirect()->to(url('admin/confession/banned-words'))->with('success', 'Banned word removed.');
     }

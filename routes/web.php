@@ -73,12 +73,14 @@ Route::prefix('admin')->middleware(['auth', 'admin'])->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('admin.dashboard');
     Route::get('/activity-data', [DashboardController::class, 'getActivityData'])->name('admin.activity-data');
 
-    // Billing (full admin only – enforced in BillingController)
-    Route::get('billing', [App\Http\Controllers\Admin\BillingController::class, 'index'])->name('admin.billing.index');
-    Route::post('billing/mark-paid', [App\Http\Controllers\Admin\BillingController::class, 'markAsPaid'])->name('admin.billing.mark-paid');
-    Route::post('billing/advance-payment', [App\Http\Controllers\Admin\BillingController::class, 'markAdvancePayment'])->name('admin.billing.advance-payment');
-    Route::get('billing/statement/{billingStatement}', [App\Http\Controllers\Admin\BillingController::class, 'showStatement'])->name('admin.billing.statement');
-    Route::get('billing/statement/{billingStatement}/pdf', [App\Http\Controllers\Admin\BillingController::class, 'downloadPdf'])->name('admin.billing.statement.pdf');
+    // Billing (requires billing permission or super admin)
+    Route::middleware(['admin.permission:billing'])->group(function () {
+        Route::get('billing', [App\Http\Controllers\Admin\BillingController::class, 'index'])->name('admin.billing.index');
+        Route::post('billing/mark-paid', [App\Http\Controllers\Admin\BillingController::class, 'markAsPaid'])->name('admin.billing.mark-paid');
+        Route::post('billing/advance-payment', [App\Http\Controllers\Admin\BillingController::class, 'markAdvancePayment'])->name('admin.billing.advance-payment');
+        Route::get('billing/statement/{billingStatement}', [App\Http\Controllers\Admin\BillingController::class, 'showStatement'])->name('admin.billing.statement');
+        Route::get('billing/statement/{billingStatement}/pdf', [App\Http\Controllers\Admin\BillingController::class, 'downloadPdf'])->name('admin.billing.statement.pdf');
+    });
 
     // Admin Permissions Management (System access required)
     Route::middleware(['admin.permission:system'])->group(function () {
@@ -338,7 +340,8 @@ Route::prefix('admin')->middleware(['auth', 'admin'])->group(function () {
         Route::delete('/hiring-applications/{application}', [App\Http\Controllers\Admin\HiringApplicationController::class, 'destroy'])->name('admin.hiring-applications.destroy');
     });
 
-    // File Storage (Admin)
+    // File Storage (Admin) – requires files permission
+    Route::middleware(['admin.permission:files'])->group(function () {
     Route::get('files', [App\Http\Controllers\Admin\FileController::class, 'index'])->name('admin.files.index');
     Route::post('files', [App\Http\Controllers\Admin\FileController::class, 'store'])->name('admin.files.store');
     Route::post('files/presign', [App\Http\Controllers\Admin\FileController::class, 'presignUpload'])->name('admin.files.presign');
@@ -355,8 +358,10 @@ Route::prefix('admin')->middleware(['auth', 'admin'])->group(function () {
     Route::post('files/{file}/share', [App\Http\Controllers\Admin\FileController::class, 'share'])->name('admin.files.share');
     Route::post('files/{file}/unshare', [App\Http\Controllers\Admin\FileController::class, 'unshare'])->name('admin.files.unshare');
     Route::get('files/{file}/shared-users', [App\Http\Controllers\Admin\FileController::class, 'getSharedUsers'])->name('admin.files.shared-users');
+    });
 
-    // Confession (Say-it) – full access only, checked in controller
+    // Confession (Say-it) – requires confession permission
+    Route::middleware(['admin.permission:confession'])->group(function () {
     Route::get('confession', [App\Http\Controllers\Admin\ConfessionController::class, 'index']);
     Route::get('confession/dashboard', [App\Http\Controllers\Admin\ConfessionController::class, 'dashboard']);
     Route::get('confession/topics', [App\Http\Controllers\Admin\ConfessionController::class, 'topics'])->name('admin.confession.topics');
@@ -367,6 +372,7 @@ Route::prefix('admin')->middleware(['auth', 'admin'])->group(function () {
     Route::get('confession/banned-words', [App\Http\Controllers\Admin\ConfessionBannedWordController::class, 'index'])->name('admin.confession.banned-words');
     Route::post('confession/banned-words', [App\Http\Controllers\Admin\ConfessionBannedWordController::class, 'store']);
     Route::delete('confession/banned-words/{banned_word}', [App\Http\Controllers\Admin\ConfessionBannedWordController::class, 'destroy'])->name('admin.confession.banned-words.destroy');
+    });
 
     // Communication
     Route::middleware(['admin.permission:communication'])->group(function () {
@@ -455,11 +461,13 @@ Route::prefix('admin')->middleware(['auth', 'admin'])->group(function () {
         Route::get('status/all-users', [StatusController::class, 'getAllUserStatuses'])->name('status.all-users');
     });
 
-    // Feedback Management (available to all admins)
+    // Feedback Management – requires feedback permission
+    Route::middleware(['admin.permission:feedback'])->group(function () {
     Route::resource('feedback', App\Http\Controllers\Admin\FeedbackController::class)->names('admin.feedback');
     Route::post('feedback/{feedback}/assign', [App\Http\Controllers\Admin\FeedbackController::class, 'assign'])->name('admin.feedback.assign');
     Route::get('feedback-stats', [App\Http\Controllers\Admin\FeedbackController::class, 'getStats'])->name('admin.feedback.stats');
     Route::get('feedback-admins', [App\Http\Controllers\Admin\FeedbackController::class, 'getAdmins'])->name('admin.feedback.admins');
+    });
     });
 
 // User Routes

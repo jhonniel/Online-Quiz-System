@@ -769,6 +769,38 @@ class User extends Authenticatable
     }
 
     /**
+     * Check if user has access to Billing.
+     */
+    public function canAccessBilling(): bool
+    {
+        return $this->hasAdminPermission('billing');
+    }
+
+    /**
+     * Check if user has access to File Storage.
+     */
+    public function canAccessFiles(): bool
+    {
+        return $this->hasAdminPermission('files');
+    }
+
+    /**
+     * Check if user has access to Confession (Say-it).
+     */
+    public function canAccessConfession(): bool
+    {
+        return $this->hasAdminPermission('confession');
+    }
+
+    /**
+     * Check if user has access to Feedback Management.
+     */
+    public function canAccessFeedback(): bool
+    {
+        return $this->hasAdminPermission('feedback');
+    }
+
+    /**
      * Check if user has access to User Management.
      */
     public function canAccessUserManagement(): bool
@@ -820,6 +852,10 @@ class User extends Authenticatable
                    $adminPermission->student_management ||
                    $adminPermission->hiring_process ||
                    $adminPermission->communication ||
+                   $adminPermission->billing ||
+                   $adminPermission->files ||
+                   $adminPermission->confession ||
+                   $adminPermission->feedback ||
                    $adminPermission->user_management ||
                    $adminPermission->system;
         }

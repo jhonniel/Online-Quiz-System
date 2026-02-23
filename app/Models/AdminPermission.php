@@ -17,6 +17,10 @@ class AdminPermission extends Model
         'hiring_process',
         'allowed_positions',
         'communication',
+        'billing',
+        'files',
+        'confession',
+        'feedback',
         'user_management',
         'system',
     ];
@@ -30,6 +34,10 @@ class AdminPermission extends Model
         'hiring_process' => 'boolean',
         'allowed_positions' => 'array',
         'communication' => 'boolean',
+        'billing' => 'boolean',
+        'files' => 'boolean',
+        'confession' => 'boolean',
+        'feedback' => 'boolean',
         'user_management' => 'boolean',
         'system' => 'boolean',
     ];

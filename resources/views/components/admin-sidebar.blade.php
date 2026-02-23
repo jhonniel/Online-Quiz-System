@@ -194,8 +194,8 @@
         </div>
         @endif
 
-        <!-- CONFESSION (full access only) -->
-        @if(auth()->user()->isSuperAdmin())
+        <!-- CONFESSION (Say-it) -->
+        @if(auth()->user()->canAccessConfession())
         <div class="mb-6" x-data="{
             open: (localStorage.getItem('nav-confession') || 'true') === 'true',
             toggle() {
@@ -575,7 +575,7 @@
         @endif
 
         <!-- Communication -->
-        @if(auth()->user()->canAccessCommunication())
+        @if(auth()->user()->canAccessCommunication() || auth()->user()->canAccessFeedback())
         <div class="mb-6" x-data="{
             open: (localStorage.getItem('nav-communication') || 'true') === 'true',
             toggle() {
@@ -592,6 +592,7 @@
                 </svg>
             </button>
             <div class="space-y-1" x-show="sidebarCollapsed ? true : open" x-transition:enter="transition ease-out duration-100" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100" x-transition:leave="transition ease-in duration-75" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0">
+                @if(auth()->user()->canAccessCommunication())
                 <a href="{{ url('/admin/contact-messages') }}"
                    class="flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors duration-200 {{ request()->routeIs('contact-messages.*') ? 'bg-indigo-700 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white' }}"
                    :class="sidebarCollapsed ? 'justify-center' : ''"
@@ -603,6 +604,8 @@
                         Messages
                     </span>
                 </a>
+                @endif
+                @if(auth()->user()->canAccessCommunication())
                 <a href="{{ url('/admin/live-chat') }}"
                    class="flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors duration-200 {{ request()->routeIs('live-chat.*') ? 'bg-indigo-700 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white' }}"
                    :class="sidebarCollapsed ? 'justify-center' : ''"
@@ -614,6 +617,8 @@
                         Live Chat
                     </span>
                 </a>
+                @endif
+                @if(auth()->user()->canAccessFeedback())
                 <a href="{{ url('/admin/feedback') }}"
                    class="flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors duration-200 {{ request()->routeIs('admin.feedback.*') ? 'bg-indigo-700 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white' }}"
                    :class="sidebarCollapsed ? 'justify-center' : ''"
@@ -625,6 +630,7 @@
                         Feedback
                     </span>
                 </a>
+                @endif
             </div>
         </div>
         @endif
@@ -705,6 +711,7 @@
                 </svg>
             </button>
             <div class="space-y-1" x-show="sidebarCollapsed ? true : open" x-transition:enter="transition ease-out duration-100" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100" x-transition:leave="transition ease-in duration-75" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0">
+                @if(auth()->user()->canAccessCommunication())
                 <a href="{{ url('/admin/linked-accounts') }}"
                    class="flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors duration-200 {{ request()->is('admin/linked-accounts') && !request()->is('admin/linked-accounts/*') ? 'bg-indigo-700 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white' }}"
                    :class="sidebarCollapsed ? 'justify-center' : ''"
@@ -714,6 +721,8 @@
                     </svg>
                     <span class="transition-opacity duration-300" :class="sidebarCollapsed ? 'opacity-0 w-0 overflow-hidden' : 'opacity-100'">Dashboard</span>
                 </a>
+                @endif
+                @if(auth()->user()->canAccessCommunication())
                 <a href="{{ url('/admin/starlinks') }}"
                    class="flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors duration-200 {{ request()->is('admin/starlinks*') ? 'bg-indigo-700 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white' }}"
                    :class="sidebarCollapsed ? 'justify-center' : ''"
@@ -723,6 +732,8 @@
                     </svg>
                     <span class="transition-opacity duration-300" :class="sidebarCollapsed ? 'opacity-0 w-0 overflow-hidden' : 'opacity-100'">Starlinks</span>
                 </a>
+                @endif
+                @if(auth()->user()->canAccessCommunication())
                 <a href="{{ url('/admin/omadas') }}"
                    class="flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors duration-200 {{ request()->is('admin/omadas*') ? 'bg-indigo-700 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white' }}"
                    :class="sidebarCollapsed ? 'justify-center' : ''"
@@ -732,6 +743,8 @@
                     </svg>
                     <span class="transition-opacity duration-300" :class="sidebarCollapsed ? 'opacity-0 w-0 overflow-hidden' : 'opacity-100'">Omada</span>
                 </a>
+                @endif
+                @if(auth()->user()->canAccessBilling())
                 <a href="{{ url('/admin/billing') }}"
                    class="flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors duration-200 {{ request()->is('admin/billing') ? 'bg-indigo-700 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white' }}"
                    :class="sidebarCollapsed ? 'justify-center' : ''"
@@ -741,6 +754,8 @@
                     </svg>
                     <span class="transition-opacity duration-300" :class="sidebarCollapsed ? 'opacity-0 w-0 overflow-hidden' : 'opacity-100'">Billing</span>
                 </a>
+                @endif
+                @if(auth()->user()->canAccessCommunication())
                 <a href="{{ url('/admin/subscription-plan-types') }}"
                    class="flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors duration-200 {{ request()->is('admin/subscription-plan-types*') ? 'bg-indigo-700 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white' }}"
                    :class="sidebarCollapsed ? 'justify-center' : ''"
@@ -750,6 +765,7 @@
                     </svg>
                     <span class="transition-opacity duration-300" :class="sidebarCollapsed ? 'opacity-0 w-0 overflow-hidden' : 'opacity-100'">Plan Types</span>
                 </a>
+                @endif
             </div>
         </div>
         @endif
@@ -810,6 +826,7 @@
         @endif
 
         <!-- File Storage -->
+        @if(auth()->user()->canAccessFiles())
         <div class="mb-6">
             <a href="{{ url('/admin/files') }}"
                class="flex items-center px-2 py-2 text-sm font-medium rounded-md transition-colors duration-200 {{ request()->routeIs('admin.files.*') ? 'bg-indigo-700 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white' }}"
@@ -828,6 +845,7 @@
                 </span>
             </a>
         </div>
+        @endif
 
         <!-- TASK TO DO -->
         <div class="mb-6" x-data="{

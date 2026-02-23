@@ -11,17 +11,11 @@ use Illuminate\Support\Facades\DB;
 
 class ConfessionController extends Controller
 {
-    private function ensureFullAccess(): void
-    {
-        if (!auth()->user()->isSuperAdmin()) {
-            abort(403, 'Full admin access required to view Confession.');
-        }
-    }
-
+    /**
+     * Access controlled by admin.permission:confession middleware.
+     */
     public function index(Request $request)
     {
-        $this->ensureFullAccess();
-
         $posts = ConfessionPost::withCount('allComments')
             ->orderByDesc('created_at')
             ->paginate(20);
@@ -31,8 +25,6 @@ class ConfessionController extends Controller
 
     public function dashboard()
     {
-        $this->ensureFullAccess();
-
         // Unique IPs that posted or commented
         $postIps = ConfessionPost::whereNotNull('ip_address')->distinct('ip_address')->pluck('ip_address');
         $commentIps = ConfessionComment::whereNotNull('ip_address')->distinct('ip_address')->pluck('ip_address');
@@ -77,21 +69,17 @@ class ConfessionController extends Controller
 
     public function topics()
     {
-        $this->ensureFullAccess();
         $topics = ConfessionTopic::orderByDesc('posts_count')->orderBy('name')->get();
         return view('admin.confession.topics', compact('topics'));
     }
 
     public function editTopic(ConfessionTopic $confession_topic)
     {
-        $this->ensureFullAccess();
         return view('admin.confession.topics-edit', compact('confession_topic'));
     }
 
     public function updateTopic(Request $request, ConfessionTopic $confession_topic)
     {
-        $this->ensureFullAccess();
-
         $request->validate([
             'name' => 'required|string|max:255',
         ]);
@@ -118,8 +106,6 @@ class ConfessionController extends Controller
 
     public function destroyTopic(ConfessionTopic $confession_topic)
     {
-        $this->ensureFullAccess();
-
         $confession_topic->delete();
 
         return redirect()->to('/admin/confession/topics')->with('success', 'Topic deleted. Posts under this topic are now uncategorized.');
@@ -127,8 +113,6 @@ class ConfessionController extends Controller
 
     public function destroy(ConfessionPost $confession_post)
     {
-        $this->ensureFullAccess();
-
         $confession_post->delete();
 
         return redirect()->back()->with('success', 'Post deleted.');

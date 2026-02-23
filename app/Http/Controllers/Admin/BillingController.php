@@ -12,19 +12,12 @@ use Illuminate\Http\Request;
 
 class BillingController extends Controller
 {
-    private function ensureFullAccess(): void
-    {
-        if (! auth()->user()->isSuperAdmin()) {
-            abort(403, 'Full admin access required to view Billing.');
-        }
-    }
-
     /**
      * Billing page: ongoing billing and overdue devices (Starlink + Omada).
+     * Access controlled by admin.permission:billing middleware.
      */
     public function index()
     {
-        $this->ensureFullAccess();
 
         $today = now()->startOfDay();
         $nextMonthStart = $today->copy()->addMonth()->startOfMonth();
@@ -187,8 +180,6 @@ class BillingController extends Controller
      */
     public function markAdvancePayment(Request $request)
     {
-        $this->ensureFullAccess();
-
         $validated = $request->validate([
             'ids' => 'required|array',
             'ids.*' => 'integer|exists:starlinks,id',
@@ -246,8 +237,6 @@ class BillingController extends Controller
      */
     public function showStatement(BillingStatement $billingStatement)
     {
-        $this->ensureFullAccess();
-
         $billingStatement->load('markedByUser');
         $starlinks = $billingStatement->starlinks;
 
@@ -259,8 +248,6 @@ class BillingController extends Controller
      */
     public function downloadPdf(BillingStatement $billingStatement)
     {
-        $this->ensureFullAccess();
-
         $billingStatement->load('markedByUser');
         $starlinks = $billingStatement->starlinks;
 

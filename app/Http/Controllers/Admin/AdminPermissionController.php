@@ -111,6 +111,10 @@ class AdminPermissionController extends Controller
             'student_management' => false,
             'hiring_process' => false,
             'communication' => false,
+            'billing' => false,
+            'files' => false,
+            'confession' => false,
+            'feedback' => false,
             'user_management' => false,
             'system' => false,
         ]);
@@ -174,6 +178,10 @@ class AdminPermissionController extends Controller
             'allowed_positions' => 'nullable|array',
             'allowed_positions.*' => 'exists:hiring_positions,id',
             'communication' => 'boolean',
+            'billing' => 'boolean',
+            'files' => 'boolean',
+            'confession' => 'boolean',
+            'feedback' => 'boolean',
             'user_management' => 'boolean',
             'system' => 'boolean',
         ]);
@@ -186,6 +194,10 @@ class AdminPermissionController extends Controller
             'student_management' => $request->has('student_management'),
             'hiring_process' => $request->has('hiring_process'),
             'communication' => $request->has('communication'),
+            'billing' => $request->has('billing'),
+            'files' => $request->has('files'),
+            'confession' => $request->has('confession'),
+            'feedback' => $request->has('feedback'),
             'user_management' => $request->has('user_management'),
             'system' => $request->has('system'),
         ];

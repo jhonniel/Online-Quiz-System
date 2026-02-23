@@ -1,0 +1,31 @@
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    /**
+     * Run the migrations.
+     */
+    public function up(): void
+    {
+        Schema::table('admin_permissions', function (Blueprint $table) {
+            $table->boolean('billing')->default(false);
+            $table->boolean('files')->default(false);
+            $table->boolean('confession')->default(false);
+            $table->boolean('feedback')->default(false);
+        });
+    }
+
+    /**
+     * Reverse the migrations.
+     */
+    public function down(): void
+    {
+        Schema::table('admin_permissions', function (Blueprint $table) {
+            $table->dropColumn(['billing', 'files', 'confession', 'feedback']);
+        });
+    }
+};

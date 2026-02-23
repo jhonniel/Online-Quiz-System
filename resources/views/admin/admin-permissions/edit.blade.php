@@ -230,6 +230,70 @@
                         </div>
                     </div>
 
+                    <!-- Billing -->
+                    <div class="flex items-start space-x-3 p-4 border border-gray-200 rounded-lg hover:bg-gray-50">
+                        <input type="checkbox"
+                               name="billing"
+                               id="billing"
+                               value="1"
+                               {{ ($permission && $permission->billing) ? 'checked' : '' }}
+                               class="mt-1 h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded">
+                        <div class="flex-1">
+                            <label for="billing" class="block text-sm font-medium text-gray-900 cursor-pointer">
+                                Billing
+                            </label>
+                            <p class="mt-1 text-sm text-gray-500">Access to Starlink/Omada billing, mark as paid, advance payment, and statements</p>
+                        </div>
+                    </div>
+
+                    <!-- File Storage -->
+                    <div class="flex items-start space-x-3 p-4 border border-gray-200 rounded-lg hover:bg-gray-50">
+                        <input type="checkbox"
+                               name="files"
+                               id="files"
+                               value="1"
+                               {{ ($permission && $permission->files) ? 'checked' : '' }}
+                               class="mt-1 h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded">
+                        <div class="flex-1">
+                            <label for="files" class="block text-sm font-medium text-gray-900 cursor-pointer">
+                                File Storage
+                            </label>
+                            <p class="mt-1 text-sm text-gray-500">Access to admin file storage and shared files</p>
+                        </div>
+                    </div>
+
+                    <!-- Confession (Say-it) -->
+                    <div class="flex items-start space-x-3 p-4 border border-gray-200 rounded-lg hover:bg-gray-50">
+                        <input type="checkbox"
+                               name="confession"
+                               id="confession"
+                               value="1"
+                               {{ ($permission && $permission->confession) ? 'checked' : '' }}
+                               class="mt-1 h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded">
+                        <div class="flex-1">
+                            <label for="confession" class="block text-sm font-medium text-gray-900 cursor-pointer">
+                                Confession (Say-it)
+                            </label>
+                            <p class="mt-1 text-sm text-gray-500">Access to confession board management, topics, and banned words</p>
+                        </div>
+                    </div>
+
+                    <!-- Feedback -->
+                    <div class="flex items-start space-x-3 p-4 border border-gray-200 rounded-lg hover:bg-gray-50">
+                        <input type="checkbox"
+                               name="feedback"
+                               id="feedback"
+                               value="1"
+                               {{ ($permission && $permission->feedback) ? 'checked' : '' }}
+                               class="mt-1 h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded">
+                        <div class="flex-1">
+                            <label for="feedback" class="block text-sm font-medium text-gray-900 cursor-pointer">
+                                Feedback
+                            </label>
+                            <p class="mt-1 text-sm text-gray-500">Access to feedback management and assignment</p>
+                        </div>
+                    </div>
+
                     <!-- User Management -->
                     <div class="flex items-start space-x-3 p-4 border border-gray-200 rounded-lg hover:bg-gray-50">
                         <input type="checkbox"
