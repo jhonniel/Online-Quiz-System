@@ -1,6 +1,8 @@
 @php
     $omada = $omada ?? null;
+    $subscriptionPlanTypes = $subscriptionPlanTypes ?? collect();
     $inputClass = 'mt-1 block w-full rounded-lg border border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm px-3 py-2';
+    $selectClass = 'mt-1 block w-full rounded-lg border border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm px-3 py-2';
 @endphp
 <div class="mb-8">
     <h3 class="text-sm font-semibold text-gray-900 uppercase tracking-wider mb-4 pb-2 border-b border-gray-100">Omada device details</h3>
@@ -45,6 +47,18 @@
             <input type="date" name="license_expiration" id="license_expiration" value="{{ old('license_expiration', $omada?->license_expiration?->format('Y-m-d') ?? '') }}" class="{{ $inputClass }}" />
             @error('license_expiration')<p class="mt-1.5 text-sm text-red-600">{{ $message }}</p>@enderror
             <p class="mt-1 text-xs text-gray-500">Status (Active/Expired) is automatically set from this date.</p>
+        </div>
+        <div>
+            <label for="subscription_plan_type_id" class="block text-sm font-medium text-gray-700">Plan</label>
+            <select name="subscription_plan_type_id" id="subscription_plan_type_id" class="{{ $selectClass }}">
+                <option value="">— None —</option>
+                @foreach($subscriptionPlanTypes as $planType)
+                    <option value="{{ $planType->id }}" {{ old('subscription_plan_type_id', $omada?->subscription_plan_type_id ?? '') == $planType->id ? 'selected' : '' }}>
+                        {{ $planType->name }}{{ $planType->billing_type_label ? ' (' . $planType->billing_type_label . ')' : '' }}
+                    </option>
+                @endforeach
+            </select>
+            @error('subscription_plan_type_id')<p class="mt-1.5 text-sm text-red-600">{{ $message }}</p>@enderror
         </div>
     </div>
 </div>

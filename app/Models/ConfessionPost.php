@@ -132,4 +132,15 @@ class ConfessionPost extends Model
     {
         return ConfessionCensorService::censor($this->content);
     }
+
+    /**
+     * Compatibility: some Laravel versions call hasAnyGetMutator(); delegate to hasGetMutator when a key is given.
+     */
+    public function hasAnyGetMutator($key = null): bool
+    {
+        if ($key !== null && $key !== '') {
+            return $this->hasGetMutator($key);
+        }
+        return false;
+    }
 }

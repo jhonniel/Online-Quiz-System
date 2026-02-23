@@ -89,7 +89,13 @@
                                     @endif
                                 </div>
                             </td>
-                            <td class="px-4 sm:px-6 py-4 whitespace-nowrap text-sm text-gray-600 hidden sm:table-cell font-mono">{{ $starlink->starlink_id ?: '—' }}</td>
+                            <td class="px-4 sm:px-6 py-4 hidden sm:table-cell">
+                                <div class="flex items-center gap-2">
+                                    <span class="text-sm text-gray-600 font-mono">{{ $starlink->starlink_id ?: '—' }}</span>
+                                    @php $overdueCount = $overdueCounts[$starlink->id] ?? 0; @endphp
+                                    <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium {{ $overdueCount > 0 ? 'bg-amber-100 text-amber-800' : 'bg-gray-100 text-gray-500' }}" title="{{ $overdueCount > 0 ? $overdueCount . ' billing cycle(s) overdue (unpaid)' : 'No overdue cycles' }}">{{ $overdueCount }}</span>
+                                </div>
+                            </td>
                             <td class="px-4 sm:px-6 py-4 text-sm text-gray-600 hidden md:table-cell max-w-[140px] truncate" title="{{ $starlink->office_location ?? '' }}">{{ $starlink->office_location ? Str::limit($starlink->office_location, 22) : '—' }}</td>
                             <td class="px-4 sm:px-6 py-4 whitespace-nowrap hidden lg:table-cell">
                                 @if($starlink->plan)
@@ -177,7 +183,7 @@
                     <p x-show="errorMessage" x-text="errorMessage" class="text-base text-red-600 py-4"></p>
                     <dl x-show="!loading && !errorMessage && device" class="grid grid-cols-1 sm:grid-cols-2 gap-5">
                         <div><dt class="text-sm font-medium text-gray-500 uppercase tracking-wider">Account / Email</dt><dd class="mt-1.5 text-base text-gray-900" x-text="device.account_display || '—'"></dd></div>
-                        <div><dt class="text-sm font-medium text-gray-500 uppercase tracking-wider">Starlink ID</dt><dd class="mt-1.5 text-base text-gray-900 font-mono" x-text="device.starlink_id || '—'"></dd></div>
+                        <div><dt class="text-sm font-medium text-gray-500 uppercase tracking-wider">Starlink ID</dt><dd class="mt-1.5 text-base text-gray-900 font-mono flex items-center gap-2"><span x-text="device.starlink_id || '—'"></span><span x-show="device.overdue_billing_count > 0" class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-amber-100 text-amber-800" x-text="'×' + (device.overdue_billing_count || 0) + ' overdue'"></span></dd></div>
                         <div><dt class="text-sm font-medium text-gray-500 uppercase tracking-wider">Serial number</dt><dd class="mt-1.5 text-base text-gray-900" x-text="device.serial_number || '—'"></dd></div>
                         <div><dt class="text-sm font-medium text-gray-500 uppercase tracking-wider">Kit number</dt><dd class="mt-1.5 text-base text-gray-900" x-text="device.kit_number || '—'"></dd></div>
                         <div><dt class="text-sm font-medium text-gray-500 uppercase tracking-wider">Router ID</dt><dd class="mt-1.5 text-base text-gray-900" x-text="device.router_id || '—'"></dd></div>

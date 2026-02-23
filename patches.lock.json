@@ -1,0 +1,17 @@
+{
+    "_hash": "0b6b0cca8c8f31329c6ed24d45fe2163800a9490a4d36c1a75fe82f96517aac4",
+    "patches": {
+        "dompdf/dompdf": [
+            {
+                "package": "dompdf/dompdf",
+                "description": "Add isPdfAEnabled method",
+                "url": "patches/dompdf-add-isPdfAEnabled.patch",
+                "sha256": "14c6bda7521e3611b16726743112fc780fe753344c6120d8d9ec7d711029ce1c",
+                "depth": 1,
+                "extra": {
+                    "provenance": "root"
+                }
+            }
+        ]
+    }
+}

@@ -85,4 +85,15 @@ class TaskList extends Model
             ->where('status', 'accepted')
             ->exists();
     }
+
+    /**
+     * Compatibility: some Laravel versions call hasAnyGetMutator(); this model has no get mutators.
+     */
+    public function hasAnyGetMutator($key = null): bool
+    {
+        if ($key !== null && $key !== '') {
+            return $this->hasGetMutator($key);
+        }
+        return false;
+    }
 }

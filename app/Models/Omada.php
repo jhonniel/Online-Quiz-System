@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Omada extends Model
 {
@@ -15,6 +16,7 @@ class Omada extends Model
         'mac_address',
         'license',
         'license_expiration',
+        'subscription_plan_type_id',
     ];
 
     protected $casts = [
@@ -40,6 +42,11 @@ class Omada extends Model
             return false;
         }
         return ! $this->license_expiration->isPast();
+    }
+
+    public function subscriptionPlanType(): BelongsTo
+    {
+        return $this->belongsTo(SubscriptionPlanType::class);
     }
 
     /**

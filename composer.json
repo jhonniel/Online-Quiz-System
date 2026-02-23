@@ -2,7 +2,11 @@
     "name": "online-quiz/app",
     "type": "project",
     "description": "Online Quiz Management System",
-    "keywords": ["laravel", "quiz", "education"],
+    "keywords": [
+        "laravel",
+        "quiz",
+        "education"
+    ],
     "license": "MIT",
     "require": {
         "php": "^8.1",
@@ -19,6 +23,7 @@
         "symfony/mailgun-mailer": "^7.1"
     },
     "require-dev": {
+        "cweagans/composer-patches": "^2.0",
         "fakerphp/faker": "^1.9.1",
         "laravel/pint": "^1.0",
         "laravel/sail": "^1.18",
@@ -32,7 +37,7 @@
             "App\\": "app/",
             "Database\\Factories\\": "database/factories/",
             "Database\\Seeders\\": "database/seeders/",
-"Symfony\\Component\\CssSelector\\": "app/Support/Symfony/CssSelector/"
+            "Symfony\\Component\\CssSelector\\": "app/Support/Symfony/CssSelector/"
         },
         "files": [
             "bootstrap/array_helpers.php",
@@ -62,6 +67,11 @@
     "extra": {
         "laravel": {
             "dont-discover": []
+        },
+        "patches": {
+            "dompdf/dompdf": {
+                "Add isPdfAEnabled method": "patches/dompdf-add-isPdfAEnabled.patch"
+            }
         }
     },
     "config": {
@@ -70,7 +80,8 @@
         "sort-packages": true,
         "allow-plugins": {
             "pestphp/pest-plugin": true,
-            "php-http/discovery": true
+            "php-http/discovery": true,
+            "cweagans/composer-patches": true
         }
     },
     "minimum-stability": "stable",

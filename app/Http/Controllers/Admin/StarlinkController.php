@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\LinkedAccount;
 use App\Models\Starlink;
+use App\Models\SubscriptionPlanType;
 use Illuminate\Http\Request;
 use Illuminate\Validation\ValidationException;
 use Symfony\Component\HttpFoundation\StreamedResponse;
@@ -48,7 +49,25 @@ class StarlinkController extends Controller
 
         $starlinks = $query->paginate(15)->withQueryString();
 
-        return view('admin.starlinks.index', compact('starlinks', 'search'));
+        // Which starlinks are currently overdue (past billing date, not yet paid)
+        $today = now()->startOfDay();
+        $overdueStarlinks = Starlink::with('linkedAccount')
+            ->whereNotNull('start_date')
+            ->where(function ($q) use ($today) {
+                $q->whereNull('advance_payment_until')
+                    ->orWhere('advance_payment_until', '<', $today);
+            })
+            ->get()
+            ->filter(function ($s) use ($today) {
+                $billingDate = $this->getCurrentPeriodBillingDate($s);
+                return $billingDate && $billingDate->lt($today) && (! $s->last_paid_date || $s->last_paid_date->lt($billingDate));
+            });
+        $overdueCounts = [];
+        foreach ($overdueStarlinks as $s) {
+            $overdueCounts[$s->id] = 1; // Currently overdue
+        }
+
+        return view('admin.starlinks.index', compact('starlinks', 'search', 'overdueCounts'));
     }
 
     public function show(Starlink $starlink)
@@ -62,6 +81,7 @@ class StarlinkController extends Controller
                 'linked_account_id' => $starlink->linked_account_id,
                 'account_linked_email' => $starlink->account_linked_email,
                 'starlink_id' => $starlink->starlink_id,
+                'overdue_billing_count' => $this->getOverdueCycleCount($starlink),
                 'serial_number' => $starlink->serial_number,
                 'kit_number' => $starlink->kit_number,
                 'router_id' => $starlink->router_id,
@@ -91,9 +111,10 @@ class StarlinkController extends Controller
         $this->ensureFullAccess();
 
         $linkedAccounts = LinkedAccount::orderBy('email')->get();
+        $subscriptionPlanTypes = SubscriptionPlanType::where('subscription_type', 'starlink')->orderBy('name')->get();
         $currentLinkedAccountId = null;
 
-        return view('admin.starlinks.create', compact('linkedAccounts', 'currentLinkedAccountId'));
+        return view('admin.starlinks.create', compact('linkedAccounts', 'subscriptionPlanTypes', 'currentLinkedAccountId'));
     }
 
     public function store(Request $request)
@@ -111,9 +132,13 @@ class StarlinkController extends Controller
             'wifi_password' => 'nullable|string|max:255',
             'office_location' => 'nullable|string|max:255',
             'start_date' => 'nullable|date',
+            'advance_payment_until' => 'nullable|date',
+            'last_paid_date' => 'nullable|date',
+            'billing_interval' => 'nullable|string|in:monthly,yearly',
             'po_no' => 'nullable|string|max:255',
             'contact_email' => 'nullable|email|max:255',
             'plan' => 'nullable|string|max:255',
+            'subscription_plan_type_id' => 'nullable|exists:subscription_plan_types,id',
             'status' => 'nullable|string|max:50',
             'end_user_email' => 'nullable|email|max:255',
         ]);
@@ -163,7 +188,9 @@ class StarlinkController extends Controller
             $currentLinkedAccountId = LinkedAccount::where('email', $starlink->account_linked_email)->value('id');
         }
 
-        return view('admin.starlinks.edit', compact('starlink', 'linkedAccounts', 'currentLinkedAccountId'));
+        $subscriptionPlanTypes = SubscriptionPlanType::where('subscription_type', 'starlink')->orderBy('name')->get();
+
+        return view('admin.starlinks.edit', compact('starlink', 'linkedAccounts', 'subscriptionPlanTypes', 'currentLinkedAccountId'));
     }
 
     public function update(Request $request, Starlink $starlink)
@@ -181,12 +208,18 @@ class StarlinkController extends Controller
             'wifi_password' => 'nullable|string|max:255',
             'office_location' => 'nullable|string|max:255',
             'start_date' => 'nullable|date',
+            'advance_payment_until' => 'nullable|date',
+            'last_paid_date' => 'nullable|date',
+            'billing_interval' => 'nullable|string|in:monthly,yearly',
             'po_no' => 'nullable|string|max:255',
             'contact_email' => 'nullable|email|max:255',
             'plan' => 'nullable|string|max:255',
+            'subscription_plan_type_id' => 'nullable|exists:subscription_plan_types,id',
             'status' => 'nullable|string|max:50',
             'end_user_email' => 'nullable|email|max:255',
         ]);
+
+        $validated['subscription_plan_type_id'] = ! empty($validated['subscription_plan_type_id']) ? $validated['subscription_plan_type_id'] : null;
 
         // Ensure a linked account exists for the email so the dashboard shows data
         if (! empty($validated['account_linked_email'])) {
@@ -300,6 +333,7 @@ class StarlinkController extends Controller
         }
 
         $created = 0;
+        $skipped = 0;
         $errors = [];
         $rowNum = 1;
         while (($row = fgetcsv($handle)) !== false) {
@@ -317,6 +351,21 @@ class StarlinkController extends Controller
             foreach ($expected as $key) {
                 $data[$key] = $assoc[$key] ?? null;
             }
+
+            // Skip row if a device with same Starlink ID, Serial number, Kit number, or Router ID already exists
+            $alreadyExists = false;
+            foreach (['starlink_id', 'serial_number', 'kit_number', 'router_id'] as $field) {
+                $value = isset($data[$field]) ? trim((string) $data[$field]) : '';
+                if ($value !== '' && Starlink::where($field, $value)->exists()) {
+                    $alreadyExists = true;
+                    break;
+                }
+            }
+            if ($alreadyExists) {
+                $skipped++;
+                continue;
+            }
+
             if (! empty($data['account_linked_email'])) {
                 $account = LinkedAccount::firstOrCreate(
                     ['email' => $data['account_linked_email']],
@@ -338,6 +387,9 @@ class StarlinkController extends Controller
         $message = $created > 0
             ? "Imported {$created} Starlink device(s) successfully."
             : 'No devices were imported.';
+        if ($skipped > 0) {
+            $message .= " {$skipped} row(s) skipped (device already exists).";
+        }
         if (! empty($errors)) {
             $message .= ' ' . count($errors) . ' row(s) had errors: ' . implode('; ', array_slice($errors, 0, 5));
             if (count($errors) > 5) {
@@ -347,5 +399,90 @@ class StarlinkController extends Controller
 
         return redirect()->to('/admin/starlinks')
             ->with($created > 0 ? 'success' : 'warning', $message);
+    }
+
+    /**
+     * First unpaid billing date (from last_paid_date + 1 period, or start_date if never paid).
+     */
+    private function getCurrentPeriodBillingDate(Starlink $s): ?\DateTimeInterface
+    {
+        if (! $s->start_date) {
+            return null;
+        }
+        $interval = $s->billing_interval ?? 'monthly';
+        $billingDay = $s->start_date->day;
+
+        if ($s->last_paid_date) {
+            $next = $interval === 'yearly'
+                ? $s->last_paid_date->copy()->addYear()
+                : $s->last_paid_date->copy()->addMonth();
+            if ($interval === 'monthly') {
+                $day = min($billingDay, $next->copy()->endOfMonth()->day);
+                $next->day($day);
+            }
+            return $next;
+        }
+
+        return $s->start_date->copy()->startOfDay();
+    }
+
+    /**
+     * Count how many billing cycles have passed but not been paid.
+     * Based on last_paid_date (or advance_payment_until if it extends further) — counts cycles not marked as paid.
+     */
+    private function getOverdueCycleCount(Starlink $s): int
+    {
+        $today = now()->startOfDay();
+        if (! $s->start_date) {
+            return 0;
+        }
+        if ($s->advance_payment_until && $s->advance_payment_until->gte($today)) {
+            return 0;
+        }
+
+        $interval = $s->billing_interval ?? 'monthly';
+        $billingDay = $s->start_date->day;
+
+        // Anchor = most recent date covered (last_paid_date or advance_payment_until, whichever is later)
+        $anchor = null;
+        if ($s->last_paid_date) {
+            $anchor = $s->last_paid_date->copy()->startOfDay();
+        }
+        if ($s->advance_payment_until && $s->advance_payment_until->lt($today)) {
+            $adv = $s->advance_payment_until->copy()->startOfDay();
+            if (! $anchor || $adv->gt($anchor)) {
+                $anchor = $adv;
+            }
+        }
+
+        $count = 0;
+        if ($anchor) {
+            $check = $anchor->copy();
+            if ($interval === 'monthly') {
+                $check->addMonth();
+                $day = min($billingDay, $check->copy()->endOfMonth()->day);
+                $check->day($day);
+            } else {
+                $check->addYear();
+            }
+        } else {
+            $check = $s->start_date->copy()->startOfDay();
+        }
+
+        if ($interval === 'monthly') {
+            while ($check->lte($today)) {
+                $count++;
+                $check->addMonth();
+                $day = min($billingDay, $check->copy()->endOfMonth()->day);
+                $check->day($day);
+            }
+        } else {
+            while ($check->lte($today)) {
+                $count++;
+                $check->addYear();
+            }
+        }
+
+        return $count;
     }
 }

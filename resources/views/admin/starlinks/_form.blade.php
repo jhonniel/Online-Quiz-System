@@ -1,6 +1,7 @@
 @php
     $starlink = $starlink ?? null;
     $currentLinkedAccountId = $currentLinkedAccountId ?? $starlink?->linked_account_id ?? null;
+    $subscriptionPlanTypes = $subscriptionPlanTypes ?? collect();
     $inputClass = 'mt-1 block w-full rounded-lg border border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm px-3 py-2';
     $selectClass = 'mt-1 block w-full rounded-lg border border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm px-3 py-2';
     $gridClass = 'grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-6';
@@ -65,7 +66,7 @@
         </div>
         <div>
             <label for="wifi_password" class="block text-sm font-medium text-gray-700">WiFi password</label>
-            <input type="text" name="wifi_password" id="wifi_password" value="{{ old('wifi_password', $starlink->wifi_password ?? '') }}" class="{{ $inputClass }}" autocomplete="off" />
+            <input type="text" name="wifi_password" id="wifi_password" value="{{ old('wifi_password', $starlink?->wifi_password ?? '') }}" class="{{ $inputClass }}" autocomplete="off" />
             @error('wifi_password')<p class="mt-1.5 text-sm text-red-600">{{ $message }}</p>@enderror
         </div>
     </div>
@@ -84,6 +85,28 @@
             <label for="start_date" class="block text-sm font-medium text-gray-700">Start date</label>
             <input type="date" name="start_date" id="start_date" value="{{ old('start_date', $starlink?->start_date?->format('Y-m-d') ?? '') }}" class="{{ $inputClass }}" />
             @error('start_date')<p class="mt-1.5 text-sm text-red-600">{{ $message }}</p>@enderror
+            <p class="mt-1 text-xs text-gray-500">Billing runs on this day (per interval below) unless advance payment is set.</p>
+        </div>
+        <div>
+            <label for="billing_interval" class="block text-sm font-medium text-gray-700">Billing interval</label>
+            <select name="billing_interval" id="billing_interval" class="{{ $selectClass }}">
+                <option value="monthly" {{ old('billing_interval', $starlink?->billing_interval ?? 'monthly') === 'monthly' ? 'selected' : '' }}>Monthly</option>
+                <option value="yearly" {{ old('billing_interval', $starlink?->billing_interval ?? 'monthly') === 'yearly' ? 'selected' : '' }}>Yearly</option>
+            </select>
+            @error('billing_interval')<p class="mt-1.5 text-sm text-red-600">{{ $message }}</p>@enderror
+            <p class="mt-1 text-xs text-gray-500">When this device is billed: every month or every year on the start date.</p>
+        </div>
+        <div>
+            <label for="advance_payment_until" class="block text-sm font-medium text-gray-700">Advance payment until</label>
+            <input type="date" name="advance_payment_until" id="advance_payment_until" value="{{ old('advance_payment_until', $starlink?->advance_payment_until?->format('Y-m-d') ?? '') }}" class="{{ $inputClass }}" placeholder="Leave blank to bill monthly" />
+            @error('advance_payment_until')<p class="mt-1.5 text-sm text-red-600">{{ $message }}</p>@enderror
+            <p class="mt-1 text-xs text-gray-500">If set, device is excluded from “to be billed” until this date.</p>
+        </div>
+        <div>
+            <label for="last_paid_date" class="block text-sm font-medium text-gray-700">Last paid date</label>
+            <input type="date" name="last_paid_date" id="last_paid_date" value="{{ old('last_paid_date', $starlink?->last_paid_date?->format('Y-m-d') ?? '') }}" class="{{ $inputClass }}" placeholder="Leave blank if unpaid" />
+            @error('last_paid_date')<p class="mt-1.5 text-sm text-red-600">{{ $message }}</p>@enderror
+            <p class="mt-1 text-xs text-gray-500">Billing period marked as paid. Used for overdue/ongoing lists. Or use bulk “Mark as paid” on Billing page.</p>
         </div>
         <div>
             <label for="po_no" class="block text-sm font-medium text-gray-700">PO No.</label>
@@ -98,9 +121,16 @@
     <h3 class="text-sm font-semibold text-gray-900 uppercase tracking-wider mb-4 pb-2 border-b border-gray-100">Plan, status & contact</h3>
     <div class="{{ $gridClass }}">
         <div>
-            <label for="plan" class="block text-sm font-medium text-gray-700">Plan</label>
-            <input type="text" name="plan" id="plan" value="{{ old('plan', $starlink?->plan ?? '') }}" placeholder="e.g. Standard, Priority" class="{{ $inputClass }}" />
-            @error('plan')<p class="mt-1.5 text-sm text-red-600">{{ $message }}</p>@enderror
+            <label for="subscription_plan_type_id" class="block text-sm font-medium text-gray-700">Plan</label>
+            <select name="subscription_plan_type_id" id="subscription_plan_type_id" class="{{ $selectClass }}">
+                <option value="">— None —</option>
+                @foreach($subscriptionPlanTypes as $planType)
+                    <option value="{{ $planType->id }}" {{ old('subscription_plan_type_id', $starlink?->subscription_plan_type_id ?? '') == $planType->id ? 'selected' : '' }}>
+                        {{ $planType->name }}{{ $planType->billing_type_label ? ' (' . $planType->billing_type_label . ')' : '' }}
+                    </option>
+                @endforeach
+            </select>
+            @error('subscription_plan_type_id')<p class="mt-1.5 text-sm text-red-600">{{ $message }}</p>@enderror
         </div>
         <div>
             <label for="status" class="block text-sm font-medium text-gray-700">Status</label>

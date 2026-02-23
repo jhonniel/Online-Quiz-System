@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\LinkedAccount;
 use App\Models\Omada;
 use App\Models\Starlink;
+use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 
 class LinkedAccountController extends Controller
@@ -58,12 +59,87 @@ class LinkedAccountController extends Controller
             $account->omadas_count = $omadaCountsByEmail[$account->email] ?? 0;
         });
 
+        // Ongoing and overdue billing counts per account (Starlink + Omada)
+        $today = now()->startOfDay();
+        $nextMonthStart = $today->copy()->addMonth()->startOfMonth();
+        $nextMonthEnd = $nextMonthStart->copy()->endOfMonth();
+
+        $starlinksOngoing = Starlink::with('linkedAccount')
+            ->whereNotNull('start_date')
+            ->where(function ($q) use ($nextMonthStart) {
+                $q->whereNull('advance_payment_until')
+                    ->orWhere('advance_payment_until', '<', $nextMonthStart);
+            })
+            ->get()
+            ->filter(function ($s) use ($nextMonthStart, $nextMonthEnd) {
+                if (! $s->next_billing_date || ! $s->next_billing_date->between($nextMonthStart, $nextMonthEnd)) {
+                    return false;
+                }
+                return ! $s->last_paid_date || $s->last_paid_date->lt($s->next_billing_date);
+            });
+
+        $starlinksOverdue = Starlink::with('linkedAccount')
+            ->whereNotNull('start_date')
+            ->where(function ($q) use ($today) {
+                $q->whereNull('advance_payment_until')
+                    ->orWhere('advance_payment_until', '<', $today);
+            })
+            ->get()
+            ->filter(function ($s) use ($today) {
+                $billingDate = $this->getCurrentPeriodBillingDate($s);
+                return $billingDate && $billingDate->lt($today) && (! $s->last_paid_date || $s->last_paid_date->lt($billingDate));
+            });
+
+        $omadaOngoing = Omada::whereNotNull('license_expiration')
+            ->where('license_expiration', '>=', $today)
+            ->get();
+        $omadaOverdue = Omada::whereNotNull('license_expiration')
+            ->where('license_expiration', '<', $today)
+            ->get();
+
+        $ongoingCountByEmail = [];
+        $overdueCountByEmail = [];
+        $getAccount = fn ($s) => $s->account_linked_email ?? $s->linkedAccount?->email ?? null;
+        foreach ($starlinksOngoing as $s) {
+            $email = $getAccount($s);
+            if ($email) {
+                $ongoingCountByEmail[$email] = ($ongoingCountByEmail[$email] ?? 0) + 1;
+            }
+        }
+        foreach ($starlinksOverdue as $s) {
+            $email = $getAccount($s);
+            if ($email) {
+                $overdueCountByEmail[$email] = ($overdueCountByEmail[$email] ?? 0) + 1;
+            }
+        }
+        foreach ($omadaOngoing as $o) {
+            $email = $o->account_linked_email ?? null;
+            if ($email) {
+                $ongoingCountByEmail[$email] = ($ongoingCountByEmail[$email] ?? 0) + 1;
+            }
+        }
+        foreach ($omadaOverdue as $o) {
+            $email = $o->account_linked_email ?? null;
+            if ($email) {
+                $overdueCountByEmail[$email] = ($overdueCountByEmail[$email] ?? 0) + 1;
+            }
+        }
+
+        $linkedAccounts->each(function ($account) use ($ongoingCountByEmail, $overdueCountByEmail) {
+            $account->ongoing_billing_count = $ongoingCountByEmail[$account->email] ?? 0;
+            $account->overdue_billing_count = $overdueCountByEmail[$account->email] ?? 0;
+        });
+
         $total = LinkedAccount::count();
         $totalStarlinks = Starlink::count();
         $totalOmadas = Omada::count();
         $omadaActiveCount = Omada::whereNotNull('license_expiration')->where('license_expiration', '>=', now()->startOfDay())->count();
         $omadaExpiredCount = Omada::whereNotNull('license_expiration')->where('license_expiration', '<', now()->startOfDay())->count();
         $recentLinkedAccounts = LinkedAccount::withCount('starlinks')->with('user')->latest('created_at')->take(5)->get();
+        $recentLinkedAccounts->each(function ($account) use ($ongoingCountByEmail, $overdueCountByEmail) {
+            $account->ongoing_billing_count = $ongoingCountByEmail[$account->email] ?? 0;
+            $account->overdue_billing_count = $overdueCountByEmail[$account->email] ?? 0;
+        });
 
         // Chart: Linked accounts created per week (last 12 weeks) – DB-agnostic
         $twelveWeeksAgo = now()->subWeeks(12)->startOfWeek();
@@ -93,6 +169,37 @@ class LinkedAccountController extends Controller
         $planTypeLabels = $planCountsRaw->keys()->values()->all();
         $planTypeData = $planCountsRaw->values()->all();
 
+        // Starlinks to be billed next month: have start_date, respect billing_interval (monthly/yearly) and advance_payment_until
+        $nextMonthStart = now()->addMonth()->startOfMonth();
+        $nextMonthEnd = $nextMonthStart->copy()->endOfMonth();
+        $starlinksToBillNextMonth = Starlink::with('linkedAccount')
+            ->whereNotNull('start_date')
+            ->where(function ($q) use ($nextMonthStart) {
+                $q->whereNull('advance_payment_until')
+                    ->orWhere('advance_payment_until', '<', $nextMonthStart);
+            })
+            ->get()
+            ->filter(function ($s) use ($nextMonthStart, $nextMonthEnd) {
+                if (! $s->next_billing_date || ! $s->next_billing_date->between($nextMonthStart, $nextMonthEnd)) {
+                    return false;
+                }
+                if ($s->last_paid_date && $s->last_paid_date->gte($s->next_billing_date)) {
+                    return false;
+                }
+                if ($s->last_paid_date && $s->last_paid_date->gte($nextMonthStart)) {
+                    return false;
+                }
+                return true;
+            })
+            ->sortBy(fn ($s) => $s->next_billing_date?->format('Y-m-d'))
+            ->values();
+
+        // Omada devices with active licenses (ongoing billing)
+        $omadaOngoingBilling = Omada::whereNotNull('license_expiration')
+            ->where('license_expiration', '>=', now()->startOfDay())
+            ->orderBy('license_expiration')
+            ->get();
+
         return view('admin.linked-accounts.index', compact(
             'linkedAccounts',
             'total',
@@ -108,7 +215,35 @@ class LinkedAccountController extends Controller
             'omadaStatusLabels',
             'omadaStatusData',
             'planTypeLabels',
-            'planTypeData'
+            'planTypeData',
+            'starlinksToBillNextMonth',
+            'nextMonthStart',
+            'omadaOngoingBilling'
         ));
+    }
+
+    /**
+     * First unpaid billing date (from last_paid_date + 1 period, or start_date if never paid).
+     */
+    private function getCurrentPeriodBillingDate(Starlink $s): ?Carbon
+    {
+        if (! $s->start_date) {
+            return null;
+        }
+        $interval = $s->billing_interval ?? 'monthly';
+        $billingDay = $s->start_date->day;
+
+        if ($s->last_paid_date) {
+            $next = $interval === 'yearly'
+                ? $s->last_paid_date->copy()->addYear()
+                : $s->last_paid_date->copy()->addMonth();
+            if ($interval === 'monthly') {
+                $day = min($billingDay, $next->copy()->endOfMonth()->day);
+                $next->day($day);
+            }
+            return $next;
+        }
+
+        return $s->start_date->copy()->startOfDay();
     }
 }

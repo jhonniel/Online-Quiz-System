@@ -73,6 +73,13 @@ Route::prefix('admin')->middleware(['auth', 'admin'])->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('admin.dashboard');
     Route::get('/activity-data', [DashboardController::class, 'getActivityData'])->name('admin.activity-data');
 
+    // Billing (full admin only – enforced in BillingController)
+    Route::get('billing', [App\Http\Controllers\Admin\BillingController::class, 'index'])->name('admin.billing.index');
+    Route::post('billing/mark-paid', [App\Http\Controllers\Admin\BillingController::class, 'markAsPaid'])->name('admin.billing.mark-paid');
+    Route::post('billing/advance-payment', [App\Http\Controllers\Admin\BillingController::class, 'markAdvancePayment'])->name('admin.billing.advance-payment');
+    Route::get('billing/statement/{billingStatement}', [App\Http\Controllers\Admin\BillingController::class, 'showStatement'])->name('admin.billing.statement');
+    Route::get('billing/statement/{billingStatement}/pdf', [App\Http\Controllers\Admin\BillingController::class, 'downloadPdf'])->name('admin.billing.statement.pdf');
+
     // Admin Permissions Management (System access required)
     Route::middleware(['admin.permission:system'])->group(function () {
         Route::get('admin-permissions', [AdminPermissionController::class, 'index'])->name('admin.admin-permissions.index');
@@ -402,6 +409,7 @@ Route::prefix('admin')->middleware(['auth', 'admin'])->group(function () {
         Route::get('omadas/import/template', [App\Http\Controllers\Admin\OmadaController::class, 'importTemplate'])->name('admin.omadas.import.template');
         Route::post('omadas/import', [App\Http\Controllers\Admin\OmadaController::class, 'processImport'])->name('admin.omadas.import.process');
         Route::resource('omadas', App\Http\Controllers\Admin\OmadaController::class)->names('admin.omadas');
+        Route::resource('subscription-plan-types', App\Http\Controllers\Admin\SubscriptionPlanTypeController::class)->names('admin.subscription-plan-types');
 
         // Live Chat Management
         Route::get('live-chat', [AdminLiveChatController::class, 'index'])->name('live-chat.index');

@@ -1,0 +1,19 @@
+--- a/src/Options.php
++++ b/src/Options.php
+@@ -524,6 +524,16 @@
+         return $this->pdflibLicense;
+     }
+ 
++    /**
++     * Whether PDF/A compliance mode is enabled.
++     *
++     * @return bool
++     */
++    public function isPdfAEnabled()
++    {
++        return false;
++    }
++
+     /**
+      * @param array|string $chroot
+      * @return $this

@@ -22,7 +22,9 @@ class OmadaController extends Controller
     {
         $this->ensureFullAccess();
 
-        $query = Omada::orderByDesc('created_at');
+        $today = now()->startOfDay()->format('Y-m-d');
+        $query = Omada::orderByRaw("CASE WHEN license_expiration IS NOT NULL AND license_expiration >= ? THEN 0 ELSE 1 END", [$today])
+            ->orderByDesc('created_at');
 
         $search = $request->input('search');
         if ($search && trim($search) !== '') {
@@ -72,7 +74,9 @@ class OmadaController extends Controller
     {
         $this->ensureFullAccess();
 
-        return view('admin.omadas.create');
+        $subscriptionPlanTypes = SubscriptionPlanType::where('subscription_type', 'omada')->orderBy('name')->get();
+
+        return view('admin.omadas.create', compact('subscriptionPlanTypes'));
     }
 
     public function store(Request $request)
@@ -88,6 +92,7 @@ class OmadaController extends Controller
             'mac_address' => 'nullable|string|max:255',
             'license' => 'nullable|string|max:255',
             'license_expiration' => 'nullable|date',
+            'subscription_plan_type_id' => 'nullable|exists:subscription_plan_types,id',
         ]);
 
         // Check if a device with the same Serial number or License already exists
@@ -105,6 +110,8 @@ class OmadaController extends Controller
         if (! empty($duplicateErrors)) {
             throw ValidationException::withMessages($duplicateErrors);
         }
+
+        $validated['subscription_plan_type_id'] = ! empty($validated['subscription_plan_type_id']) ? $validated['subscription_plan_type_id'] : null;
 
         // Ensure a linked account exists for the email so the dashboard shows data
         if (! empty($validated['account_linked_email'])) {
@@ -124,7 +131,9 @@ class OmadaController extends Controller
     {
         $this->ensureFullAccess();
 
-        return view('admin.omadas.edit', compact('omada'));
+        $subscriptionPlanTypes = SubscriptionPlanType::where('subscription_type', 'omada')->orderBy('name')->get();
+
+        return view('admin.omadas.edit', compact('omada', 'subscriptionPlanTypes'));
     }
 
     public function update(Request $request, Omada $omada)
@@ -140,7 +149,10 @@ class OmadaController extends Controller
             'mac_address' => 'nullable|string|max:255',
             'license' => 'nullable|string|max:255',
             'license_expiration' => 'nullable|date',
+            'subscription_plan_type_id' => 'nullable|exists:subscription_plan_types,id',
         ]);
+
+        $validated['subscription_plan_type_id'] = ! empty($validated['subscription_plan_type_id']) ? $validated['subscription_plan_type_id'] : null;
 
         // Ensure a linked account exists for the email so the dashboard shows data
         if (! empty($validated['account_linked_email'])) {
@@ -240,6 +252,7 @@ class OmadaController extends Controller
         }
 
         $created = 0;
+        $skipped = 0;
         $errors = [];
         $rowNum = 1;
         while (($row = fgetcsv($handle)) !== false) {
@@ -257,6 +270,21 @@ class OmadaController extends Controller
             foreach ($expected as $key) {
                 $data[$key] = $assoc[$key] ?? null;
             }
+
+            // Skip row if a device with same Serial number or License already exists
+            $alreadyExists = false;
+            foreach (['serial_number', 'license'] as $field) {
+                $value = isset($data[$field]) ? trim((string) $data[$field]) : '';
+                if ($value !== '' && Omada::where($field, $value)->exists()) {
+                    $alreadyExists = true;
+                    break;
+                }
+            }
+            if ($alreadyExists) {
+                $skipped++;
+                continue;
+            }
+
             if (! empty($data['account_linked_email'])) {
                 LinkedAccount::firstOrCreate(
                     ['email' => $data['account_linked_email']],
@@ -277,6 +305,9 @@ class OmadaController extends Controller
         $message = $created > 0
             ? "Imported {$created} Omada device(s) successfully."
             : 'No devices were imported.';
+        if ($skipped > 0) {
+            $message .= " {$skipped} row(s) skipped (device already exists).";
+        }
         if (! empty($errors)) {
             $message .= ' ' . count($errors) . ' row(s) had errors: ' . implode('; ', array_slice($errors, 0, 5));
             if (count($errors) > 5) {

@@ -153,6 +153,12 @@
                             @if($acc->starlinks_count > 0)
                                 <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-indigo-100 text-indigo-800">{{ $acc->starlinks_count }} Starlink</span>
                             @endif
+                            @if(($acc->ongoing_billing_count ?? 0) > 0)
+                                <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800">↑ {{ $acc->ongoing_billing_count }}</span>
+                            @endif
+                            @if(($acc->overdue_billing_count ?? 0) > 0)
+                                <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-red-100 text-red-800">↓ {{ $acc->overdue_billing_count }}</span>
+                            @endif
                             <span class="text-xs text-gray-400">{{ $acc->created_at->diffForHumans() }}</span>
                         </div>
                     </li>
@@ -234,6 +240,104 @@
         </div>
     </div>
 
+    {{-- Ongoing billing devices (Starlink + Omada) – below Omada license status --}}
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden mb-5 sm:mb-6">
+        <div class="px-4 sm:px-5 py-3 border-b border-gray-200 bg-amber-50/80 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+                <h2 class="text-sm font-semibold text-gray-900">Ongoing billing devices</h2>
+                <p class="text-xs text-gray-500 mt-0.5">Starlink devices to be billed next month and Omada devices with active licenses.</p>
+            </div>
+            <p class="text-sm text-gray-600">{{ count($starlinksToBillNextMonth ?? []) + count($omadaOngoingBilling ?? []) }} device(s)</p>
+        </div>
+        <div class="divide-y divide-gray-200">
+            {{-- Starlink: to be billed next month --}}
+            <div class="p-4 sm:px-5">
+                <h3 class="text-xs font-semibold text-gray-700 uppercase tracking-wider mb-3 flex items-center gap-2">
+                    <span class="inline-flex items-center justify-center w-6 h-6 rounded bg-amber-100 text-amber-700">S</span>
+                    Starlink — to be billed next month
+                </h3>
+                <div class="overflow-x-auto">
+                    @if(!empty($starlinksToBillNextMonth) && count($starlinksToBillNextMonth) > 0)
+                        <table class="min-w-full divide-y divide-gray-200">
+                            <thead class="bg-gray-50">
+                                <tr>
+                                    <th scope="col" class="px-4 sm:px-5 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Device / Account</th>
+                                    <th scope="col" class="px-4 sm:px-5 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden sm:table-cell">Plan</th>
+                                    <th scope="col" class="px-4 sm:px-5 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Billing</th>
+                                    <th scope="col" class="px-4 sm:px-5 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Next billing</th>
+                                    <th scope="col" class="px-4 sm:px-5 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody class="bg-white divide-y divide-gray-200">
+                                @foreach($starlinksToBillNextMonth as $starlink)
+                                    <tr class="hover:bg-gray-50/50 transition-colors">
+                                        <td class="px-4 sm:px-5 py-3">
+                                            <div>
+                                                <p class="font-medium text-gray-900 truncate max-w-[200px] sm:max-w-none">{{ $starlink->starlink_id ?: $starlink->serial_number ?: '—' }}</p>
+                                                <p class="text-sm text-gray-500 truncate max-w-[200px] sm:max-w-none">{{ $starlink->account_linked_email ?? ($starlink->linkedAccount?->email ?? '—') }}</p>
+                                            </div>
+                                        </td>
+                                        <td class="px-4 sm:px-5 py-3 text-sm text-gray-600 hidden sm:table-cell">{{ $starlink->plan ?? '—' }}</td>
+                                        <td class="px-4 sm:px-5 py-3 whitespace-nowrap">
+                                            @php $interval = $starlink->billing_interval ?? 'monthly'; @endphp
+                                            <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium {{ $interval === 'yearly' ? 'bg-amber-100 text-amber-800' : 'bg-slate-100 text-slate-700' }}">{{ $interval === 'yearly' ? 'Yearly' : 'Monthly' }}</span>
+                                        </td>
+                                        <td class="px-4 sm:px-5 py-3 whitespace-nowrap text-sm text-gray-700">{{ $starlink->next_billing_date?->format('M j, Y') ?? '—' }}</td>
+                                        <td class="px-4 sm:px-5 py-3 text-right whitespace-nowrap">
+                                            <a href="{{ route('admin.starlinks.edit', $starlink) }}" class="inline-flex items-center px-2.5 py-1.5 rounded-lg text-xs font-medium text-indigo-700 bg-indigo-50 hover:bg-indigo-100 transition-colors">Edit / set advance payment</a>
+                                        </td>
+                                    </tr>
+                                @endforeach
+                            </tbody>
+                        </table>
+                    @else
+                        <p class="text-sm text-gray-500 py-4">No Starlinks due for billing next month, or all have advance payment set.</p>
+                    @endif
+                </div>
+            </div>
+            {{-- Omada: active licenses (ongoing billing) --}}
+            <div class="p-4 sm:px-5">
+                <h3 class="text-xs font-semibold text-gray-700 uppercase tracking-wider mb-3 flex items-center gap-2">
+                    <span class="inline-flex items-center justify-center w-6 h-6 rounded bg-violet-100 text-violet-700">O</span>
+                    Omada — active licenses
+                </h3>
+                <div class="overflow-x-auto">
+                    @if(!empty($omadaOngoingBilling) && count($omadaOngoingBilling) > 0)
+                        <table class="min-w-full divide-y divide-gray-200">
+                            <thead class="bg-gray-50">
+                                <tr>
+                                    <th scope="col" class="px-4 sm:px-5 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Device / Account</th>
+                                    <th scope="col" class="px-4 sm:px-5 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden sm:table-cell">License</th>
+                                    <th scope="col" class="px-4 sm:px-5 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">License expires</th>
+                                    <th scope="col" class="px-4 sm:px-5 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody class="bg-white divide-y divide-gray-200">
+                                @foreach($omadaOngoingBilling as $omada)
+                                    <tr class="hover:bg-gray-50/50 transition-colors">
+                                        <td class="px-4 sm:px-5 py-3">
+                                            <div>
+                                                <p class="font-medium text-gray-900 truncate max-w-[200px] sm:max-w-none">{{ $omada->serial_number ?: $omada->license ?: '—' }}</p>
+                                                <p class="text-sm text-gray-500 truncate max-w-[200px] sm:max-w-none">{{ $omada->account_linked_email ?? '—' }}</p>
+                                            </div>
+                                        </td>
+                                        <td class="px-4 sm:px-5 py-3 text-sm text-gray-600 hidden sm:table-cell">{{ $omada->license ?? '—' }}</td>
+                                        <td class="px-4 sm:px-5 py-3 whitespace-nowrap text-sm text-gray-700">{{ $omada->license_expiration?->format('M j, Y') ?? '—' }}</td>
+                                        <td class="px-4 sm:px-5 py-3 text-right whitespace-nowrap">
+                                            <a href="{{ route('admin.omadas.edit', $omada) }}" class="inline-flex items-center px-2.5 py-1.5 rounded-lg text-xs font-medium text-violet-700 bg-violet-50 hover:bg-violet-100 transition-colors">Edit</a>
+                                        </td>
+                                    </tr>
+                                @endforeach
+                            </tbody>
+                        </table>
+                    @else
+                        <p class="text-sm text-gray-500 py-4">No Omada devices with active licenses.</p>
+                    @endif
+                </div>
+            </div>
+        </div>
+    </div>
+
     {{-- All linked accounts table --}}
     <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
         <div class="px-4 sm:px-5 py-3 border-b border-gray-200 bg-gray-50/50 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
@@ -281,6 +385,12 @@
                                     @endif
                                     @if(($account->starlinks_count ?? 0) === 0 && ($account->omadas_count ?? 0) === 0)
                                         <span class="text-gray-400 text-xs">—</span>
+                                    @endif
+                                    @if(($account->ongoing_billing_count ?? 0) > 0)
+                                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800" title="Ongoing billing">↑ {{ $account->ongoing_billing_count }} ongoing</span>
+                                    @endif
+                                    @if(($account->overdue_billing_count ?? 0) > 0)
+                                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800" title="Overdue billing">↓ {{ $account->overdue_billing_count }} overdue</span>
                                     @endif
                                 </div>
                             </td>
