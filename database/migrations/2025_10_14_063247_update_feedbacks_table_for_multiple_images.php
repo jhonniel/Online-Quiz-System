@@ -56,8 +56,8 @@ return new class extends Migration
         $driver = Schema::getConnection()->getDriverName();
 
         if ($driver === 'pgsql') {
-            // PostgreSQL: Change type back and rename
-            DB::statement('ALTER TABLE feedbacks ALTER COLUMN images TYPE VARCHAR(255) USING images::text');
+            // PostgreSQL: Change type back (extract first array element) and rename
+            DB::statement("ALTER TABLE feedbacks ALTER COLUMN images TYPE VARCHAR(255) USING (images->>0)");
             DB::statement('ALTER TABLE feedbacks RENAME COLUMN images TO image');
         } elseif ($driver === 'sqlite') {
             // SQLite: Add back single image column

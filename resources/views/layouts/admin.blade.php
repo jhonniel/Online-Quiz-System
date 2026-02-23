@@ -42,6 +42,9 @@
 
     <!-- Custom Scrollbar Styles -->
     <style>
+        /* Hide Alpine components until they are initialized (prevents modal flash) */
+        [x-cloak] { display: none !important; }
+
         /* CRITICAL FIX: Ensure main content has proper left padding to not appear behind sidebar */
         html body .main-content-wrapper {
             margin-left: 16rem !important;
@@ -437,6 +440,7 @@
     </div>
 
     @yield('scripts')
+    @stack('scripts')
 
     <!-- Notification Bell Component -->
     <script>

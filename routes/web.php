@@ -392,6 +392,17 @@ Route::prefix('admin')->middleware(['auth', 'admin'])->group(function () {
         Route::get('tickets/{ticket_report}', [App\Http\Controllers\Admin\TicketReportController::class, 'show'])->name('admin.tickets.show');
         Route::patch('tickets/{ticket_report}', [App\Http\Controllers\Admin\TicketReportController::class, 'update'])->name('admin.tickets.update');
 
+        // Linked Accounts & Starlinks (full admin only – enforced in controllers)
+        Route::get('linked-accounts', [App\Http\Controllers\Admin\LinkedAccountController::class, 'index'])->name('admin.linked-accounts.index');
+        Route::get('starlinks/import', [App\Http\Controllers\Admin\StarlinkController::class, 'importForm'])->name('admin.starlinks.import');
+        Route::get('starlinks/import/template', [App\Http\Controllers\Admin\StarlinkController::class, 'importTemplate'])->name('admin.starlinks.import.template');
+        Route::post('starlinks/import', [App\Http\Controllers\Admin\StarlinkController::class, 'processImport'])->name('admin.starlinks.import.process');
+        Route::resource('starlinks', App\Http\Controllers\Admin\StarlinkController::class)->names('admin.starlinks');
+        Route::get('omadas/import', [App\Http\Controllers\Admin\OmadaController::class, 'importForm'])->name('admin.omadas.import');
+        Route::get('omadas/import/template', [App\Http\Controllers\Admin\OmadaController::class, 'importTemplate'])->name('admin.omadas.import.template');
+        Route::post('omadas/import', [App\Http\Controllers\Admin\OmadaController::class, 'processImport'])->name('admin.omadas.import.process');
+        Route::resource('omadas', App\Http\Controllers\Admin\OmadaController::class)->names('admin.omadas');
+
         // Live Chat Management
         Route::get('live-chat', [AdminLiveChatController::class, 'index'])->name('live-chat.index');
         Route::get('live-chat/{ticketNumber}', [AdminLiveChatController::class, 'show'])->name('live-chat.show');

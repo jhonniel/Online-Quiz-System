@@ -687,6 +687,55 @@
         </div>
         @endif
 
+        <!-- Linked Accounts (full admin only) -->
+        @if(auth()->user()->isSuperAdmin())
+        <div class="mb-6" x-data="{
+            open: (localStorage.getItem('nav-linked-accounts') || 'true') === 'true',
+            toggle() {
+                this.open = !this.open;
+                localStorage.setItem('nav-linked-accounts', this.open);
+            }
+        }">
+            <button @click="toggle()"
+                    class="w-full flex items-center justify-between px-3 py-2 text-xs font-semibold text-gray-400 uppercase tracking-wider hover:text-gray-300 transition-opacity duration-300"
+                    :class="sidebarCollapsed ? 'opacity-0 h-0 overflow-hidden pointer-events-none' : 'opacity-100'">
+                <span>Linked Accounts</span>
+                <svg class="w-4 h-4 transition-transform duration-200" :class="{ 'rotate-180': open }" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                </svg>
+            </button>
+            <div class="space-y-1" x-show="sidebarCollapsed ? true : open" x-transition:enter="transition ease-out duration-100" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100" x-transition:leave="transition ease-in duration-75" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0">
+                <a href="{{ url('/admin/linked-accounts') }}"
+                   class="flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors duration-200 {{ request()->is('admin/linked-accounts') && !request()->is('admin/linked-accounts/*') ? 'bg-indigo-700 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white' }}"
+                   :class="sidebarCollapsed ? 'justify-center' : ''"
+                   :title="sidebarCollapsed ? 'Dashboard' : ''">
+                    <svg class="h-5 w-5 flex-shrink-0" :class="sidebarCollapsed ? '' : 'mr-3'" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
+                    </svg>
+                    <span class="transition-opacity duration-300" :class="sidebarCollapsed ? 'opacity-0 w-0 overflow-hidden' : 'opacity-100'">Dashboard</span>
+                </a>
+                <a href="{{ url('/admin/starlinks') }}"
+                   class="flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors duration-200 {{ request()->is('admin/starlinks*') ? 'bg-indigo-700 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white' }}"
+                   :class="sidebarCollapsed ? 'justify-center' : ''"
+                   :title="sidebarCollapsed ? 'Starlinks' : ''">
+                    <svg class="h-5 w-5 flex-shrink-0" :class="sidebarCollapsed ? '' : 'mr-3'" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.111 16.404a5.5 5.5 0 017.778 0M12 20h.01m-7.08-7.071c3.904-3.905 10.236-3.905 14.141 0M1.394 9.393c5.857-5.857 15.355-5.857 21.213 0"></path>
+                    </svg>
+                    <span class="transition-opacity duration-300" :class="sidebarCollapsed ? 'opacity-0 w-0 overflow-hidden' : 'opacity-100'">Starlinks</span>
+                </a>
+                <a href="{{ url('/admin/omadas') }}"
+                   class="flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors duration-200 {{ request()->is('admin/omadas*') ? 'bg-indigo-700 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white' }}"
+                   :class="sidebarCollapsed ? 'justify-center' : ''"
+                   :title="sidebarCollapsed ? 'Omada' : ''">
+                    <svg class="h-5 w-5 flex-shrink-0" :class="sidebarCollapsed ? '' : 'mr-3'" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 12h14M5 12a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v4a2 2 0 01-2 2M5 12a2 2 0 00-2 2v4a2 2 0 002 2m14-8V6a2 2 0 00-2-2m-4 0a2 2 0 00-2 2v4a2 2 0 002 2m4 0h2"></path>
+                    </svg>
+                    <span class="transition-opacity duration-300" :class="sidebarCollapsed ? 'opacity-0 w-0 overflow-hidden' : 'opacity-100'">Omada</span>
+                </a>
+            </div>
+        </div>
+        @endif
+
         <!-- User Management -->
         @if(auth()->user()->canAccessUserManagement())
         <div class="mb-6" x-data="{

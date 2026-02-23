@@ -32,8 +32,12 @@
             "App\\": "app/",
             "Database\\Factories\\": "database/factories/",
             "Database\\Seeders\\": "database/seeders/",
-            "Symfony\\Component\\CssSelector\\": "app/Support/Symfony/CssSelector/"
-        }
+"Symfony\\Component\\CssSelector\\": "app/Support/Symfony/CssSelector/"
+        },
+        "files": [
+            "bootstrap/array_helpers.php",
+            "bootstrap/laravel_support_functions.php"
+        ]
     },
     "autoload-dev": {
         "psr-4": {
