@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\LinkedAccount;
 use App\Models\Starlink;
 use Illuminate\Http\Request;
+use Illuminate\Validation\ValidationException;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class StarlinkController extends Controller
@@ -116,6 +117,24 @@ class StarlinkController extends Controller
             'status' => 'nullable|string|max:50',
             'end_user_email' => 'nullable|email|max:255',
         ]);
+
+        // Check if a device with the same Starlink ID, Serial number, Kit number, or Router ID already exists
+        $deviceFields = [
+            'starlink_id' => 'Starlink ID',
+            'serial_number' => 'Serial number',
+            'kit_number' => 'Kit number',
+            'router_id' => 'Router ID',
+        ];
+        $duplicateErrors = [];
+        foreach ($deviceFields as $field => $label) {
+            $value = isset($validated[$field]) ? trim((string) $validated[$field]) : '';
+            if ($value !== '' && Starlink::where($field, $value)->exists()) {
+                $duplicateErrors[$field] = "A device with this {$label} already exists.";
+            }
+        }
+        if (! empty($duplicateErrors)) {
+            throw ValidationException::withMessages($duplicateErrors);
+        }
 
         // Ensure a linked account exists for the email so the dashboard shows data
         if (! empty($validated['account_linked_email'])) {

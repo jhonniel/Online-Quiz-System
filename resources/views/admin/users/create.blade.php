@@ -22,43 +22,43 @@
 @endsection
 
 @section('content')
-<div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
+<div class="max-w-5xl mx-auto px-3 sm:px-6 lg:px-8">
     <!-- Header Section with Gradient -->
-    <div class="mb-8">
-        <div class="bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 rounded-2xl shadow-xl p-8 text-white relative overflow-hidden">
+    <div class="mb-6 sm:mb-8">
+        <div class="bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 rounded-xl sm:rounded-2xl shadow-xl p-5 sm:p-8 text-white relative overflow-hidden">
             <!-- Decorative background elements -->
             <div class="absolute top-0 right-0 w-64 h-64 bg-white opacity-10 rounded-full -mr-32 -mt-32"></div>
             <div class="absolute bottom-0 left-0 w-48 h-48 bg-white opacity-10 rounded-full -ml-24 -mb-24"></div>
 
-            <div class="relative z-10 flex items-center justify-between flex-wrap gap-4">
-                <div class="flex items-center space-x-4">
-                    <div class="bg-white/20 backdrop-blur-sm p-4 rounded-xl">
-                        <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <div class="relative z-10 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                <div class="flex items-center gap-3 sm:gap-4">
+                    <div class="bg-white/20 backdrop-blur-sm p-3 sm:p-4 rounded-xl flex-shrink-0">
+                        <svg class="w-6 h-6 sm:w-8 sm:h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z"></path>
                         </svg>
                     </div>
-            <div>
-                        <h1 class="text-3xl font-bold mb-2">Create New User</h1>
-                        <p class="text-indigo-100 text-lg">Add a new user account with proper permissions and settings</p>
+                    <div class="min-w-0">
+                        <h1 class="text-xl sm:text-3xl font-bold mb-1">Create New User</h1>
+                        <p class="text-indigo-100 text-sm sm:text-lg">Add a new user account with proper permissions and settings</p>
                     </div>
-            </div>
-                <a href="{{ url('/admin/users') }}" class="bg-white/20 hover:bg-white/30 backdrop-blur-sm px-6 py-3 rounded-xl font-semibold transition-all duration-200 flex items-center space-x-2 group">
-                    <svg class="w-5 h-5 group-hover:-translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                </div>
+                <a href="{{ url('/admin/users') }}" class="inline-flex items-center justify-center bg-white/20 hover:bg-white/30 backdrop-blur-sm px-5 py-2.5 sm:px-6 sm:py-3 rounded-xl font-semibold transition-all duration-200 w-full sm:w-auto touch-manipulation min-h-[44px] sm:min-h-0">
+                    <svg class="w-5 h-5 mr-2 group-hover:-translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
                     </svg>
                     <span>Back to Users</span>
-            </a>
+                </a>
             </div>
         </div>
     </div>
 
     <!-- Main Form Card -->
-    <div class="bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden">
+    <div class="bg-white rounded-xl sm:rounded-2xl shadow-xl border border-gray-100 overflow-hidden">
         <form action="{{ url('/admin/users') }}" method="POST" id="createUserForm" class="divide-y divide-gray-100">
             @csrf
 
             <!-- Basic Information Section -->
-            <div class="p-8">
+            <div class="p-4 sm:p-6 lg:p-8">
                 <div class="flex items-center space-x-3 mb-6">
                     <div class="bg-indigo-100 p-2 rounded-lg">
                         <svg class="w-6 h-6 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -373,7 +373,7 @@
             </div>
 
             <!-- Security Section -->
-            <div class="p-8 bg-gradient-to-br from-gray-50 to-white">
+            <div class="p-4 sm:p-6 lg:p-8 bg-gradient-to-br from-gray-50 to-white">
                 <div class="flex items-center space-x-3 mb-6">
                     <div class="bg-purple-100 p-2 rounded-lg">
                         <svg class="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -479,7 +479,7 @@
             </div>
 
             <!-- Account Status Section -->
-            <div class="p-8">
+            <div class="p-4 sm:p-6 lg:p-8">
                 <div class="flex items-center space-x-3 mb-6">
                     <div class="bg-green-100 p-2 rounded-lg">
                         <svg class="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -516,21 +516,21 @@
             </div>
 
             <!-- Action Buttons -->
-            <div class="p-8 bg-gray-50 border-t border-gray-200">
-                <div class="flex flex-col sm:flex-row justify-end space-y-3 sm:space-y-0 sm:space-x-4">
+            <div class="p-4 sm:p-6 lg:p-8 bg-gray-50 border-t border-gray-200">
+                <div class="flex flex-col-reverse sm:flex-row justify-end gap-3 sm:gap-4">
                     <a href="{{ url('/admin/users') }}"
-                       class="inline-flex items-center justify-center px-6 py-3 border-2 border-gray-300 rounded-xl font-semibold text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 transition-all duration-200">
+                       class="inline-flex items-center justify-center px-6 py-3 border-2 border-gray-300 rounded-xl font-semibold text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 transition-all duration-200 w-full sm:w-auto min-h-[48px] sm:min-h-0 touch-manipulation">
                         <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
                         </svg>
                         Cancel
                     </a>
                     <button type="submit"
-                            class="inline-flex items-center justify-center px-8 py-3 border border-transparent rounded-xl font-semibold text-white bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200">
+                            class="inline-flex items-center justify-center px-8 py-3 border border-transparent rounded-xl font-semibold text-white bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 shadow-lg hover:shadow-xl transition-all duration-200 w-full sm:w-auto min-h-[48px] sm:min-h-0 touch-manipulation">
                         <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
-                    </svg>
-                    Create User
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+                        </svg>
+                        Create User
                     </button>
                 </div>
             </div>

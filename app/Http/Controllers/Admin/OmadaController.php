@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\LinkedAccount;
 use App\Models\Omada;
 use Illuminate\Http\Request;
+use Illuminate\Validation\ValidationException;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class OmadaController extends Controller
@@ -88,6 +89,22 @@ class OmadaController extends Controller
             'license' => 'nullable|string|max:255',
             'license_expiration' => 'nullable|date',
         ]);
+
+        // Check if a device with the same Serial number or License already exists
+        $deviceFields = [
+            'serial_number' => 'Serial number',
+            'license' => 'License',
+        ];
+        $duplicateErrors = [];
+        foreach ($deviceFields as $field => $label) {
+            $value = isset($validated[$field]) ? trim((string) $validated[$field]) : '';
+            if ($value !== '' && Omada::where($field, $value)->exists()) {
+                $duplicateErrors[$field] = "A device with this {$label} already exists.";
+            }
+        }
+        if (! empty($duplicateErrors)) {
+            throw ValidationException::withMessages($duplicateErrors);
+        }
 
         // Ensure a linked account exists for the email so the dashboard shows data
         if (! empty($validated['account_linked_email'])) {

@@ -3,26 +3,61 @@
 @section('title', 'Add Starlink')
 @section('page-title', 'Add Starlink')
 
+@section('breadcrumb')
+    <li>
+        <div class="flex items-center">
+            <svg class="w-4 h-4 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
+                <path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd"></path>
+            </svg>
+            <a href="{{ url('/admin/starlinks') }}" class="ml-2 text-sm font-medium text-gray-500 hover:text-gray-700">Starlinks</a>
+        </div>
+    </li>
+    <li>
+        <div class="flex items-center">
+            <svg class="w-4 h-4 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
+                <path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd"></path>
+            </svg>
+            <span class="ml-2 text-sm font-medium text-gray-500">Add</span>
+        </div>
+    </li>
+@endsection
+
 @section('content')
-<div class="px-3 sm:px-4 lg:px-6 py-4 max-w-4xl mx-auto">
-    <div class="mb-6">
-        <a href="{{ url('/admin/starlinks') }}" class="inline-flex items-center text-sm font-medium text-gray-500 hover:text-gray-700 transition-colors">
-            <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>
-            Back to Starlinks
-        </a>
+<div class="w-full min-w-0 px-3 sm:px-4 lg:px-6 py-4">
+    <!-- Header -->
+    <div class="mb-6 sm:mb-8">
+        <div class="bg-gradient-to-r from-indigo-600 to-indigo-700 rounded-xl sm:rounded-2xl shadow-lg p-4 sm:p-6 text-white">
+            <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                <div class="flex items-center gap-3">
+                    <div class="bg-white/20 backdrop-blur-sm p-3 rounded-xl flex-shrink-0">
+                        <svg class="w-6 h-6 sm:w-7 sm:h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 9l3 3-3 3m5 0h3M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                        </svg>
+                    </div>
+                    <div class="min-w-0">
+                        <h1 class="text-xl sm:text-2xl font-bold">Add Starlink</h1>
+                        <p class="text-indigo-100 text-sm mt-0.5">Register a new Starlink device and link it to an account.</p>
+                    </div>
+                </div>
+                <a href="{{ url('/admin/starlinks') }}" class="inline-flex items-center justify-center px-4 py-2.5 bg-white/20 hover:bg-white/30 rounded-lg font-medium transition w-full sm:w-auto min-h-[44px] sm:min-h-0 touch-manipulation">
+                    <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
+                    </svg>
+                    Back to Starlinks
+                </a>
+            </div>
+        </div>
     </div>
 
-    <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-        <div class="px-4 sm:px-6 py-5 border-b border-gray-200 bg-gray-50/50">
-            <h2 class="text-lg font-semibold text-gray-900">Starlink device details</h2>
-            <p class="text-sm text-gray-500 mt-0.5">Enter the device and account information.</p>
-        </div>
-        <form action="{{ url('/admin/starlinks') }}" method="POST" class="p-4 sm:p-6">
+    <div class="bg-white rounded-xl sm:rounded-2xl shadow-lg border border-gray-200 overflow-hidden">
+        <form action="{{ url('/admin/starlinks') }}" method="POST">
             @csrf
-            @include('admin.starlinks._form', ['starlink' => null])
-            <div class="flex flex-col-reverse sm:flex-row justify-end gap-3 pt-6 mt-6 border-t border-gray-200">
-                <a href="{{ url('/admin/starlinks') }}" class="inline-flex justify-center items-center px-4 py-2.5 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 transition-colors">Cancel</a>
-                <button type="submit" class="inline-flex justify-center items-center px-4 py-2.5 border border-transparent rounded-lg text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 transition-colors shadow-sm">
+            <div class="p-4 sm:p-6 lg:p-8">
+                @include('admin.starlinks._form', ['starlink' => null])
+            </div>
+            <div class="flex flex-col-reverse sm:flex-row justify-end gap-3 p-4 sm:p-6 lg:p-8 bg-gray-50/50">
+                <a href="{{ url('/admin/starlinks') }}" class="inline-flex justify-center items-center px-5 py-2.5 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 transition-colors w-full sm:w-auto min-h-[48px] sm:min-h-0 touch-manipulation">Cancel</a>
+                <button type="submit" class="inline-flex justify-center items-center px-6 py-2.5 border border-transparent rounded-lg text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 transition-colors shadow-sm w-full sm:w-auto min-h-[48px] sm:min-h-0 touch-manipulation">
                     <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
                     Add Starlink
                 </button>

@@ -15,7 +15,7 @@ use Symfony\Component\Mailer\Transport\Smtp\SmtpTransport;
 
 class TestMailCommand extends Command
 {
-    protected $signature = 'mail:test {to : Email address to send test to} {--verbose : Show SMTP debug output}';
+    protected $signature = 'mail:test {to : Email address to send test to} {--debug : Show SMTP debug output}';
 
     protected $description = 'Send a test email and show any error (uses DB mail settings)';
 
@@ -24,7 +24,7 @@ class TestMailCommand extends Command
     public function handle(): int
     {
         $to = $this->argument('to');
-        $verbose = $this->option('verbose');
+        $verbose = $this->option('debug');
 
         if (! filter_var($to, FILTER_VALIDATE_EMAIL)) {
             $this->error("Invalid email: {$to}");

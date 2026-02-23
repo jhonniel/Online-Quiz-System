@@ -124,13 +124,13 @@
                                         <p class="text-sm font-medium text-gray-900">{{ $application->full_name }}</p>
                                         <p class="text-sm text-gray-500">{{ $application->email }}</p>
                                     </div>
-                                    <a href="{{ route('admin.hiring-applications.show', $application) }}" class="text-indigo-600 hover:text-indigo-900 text-sm">
+                                    <a href="{{ url('/admin/hiring-applications/' . $application->id) }}" class="text-indigo-600 hover:text-indigo-900 text-sm">
                                         View
                                     </a>
                                 </div>
                             @endforeach
                             @if($hiringPosition->applications->count() > 5)
-                                <a href="{{ route('admin.hiring-applications.index', ['position' => $hiringPosition->id]) }}" class="block text-center text-sm text-indigo-600 hover:text-indigo-900">
+                                <a href="{{ url('/admin/hiring-applications?position=' . $hiringPosition->id) }}" class="block text-center text-sm text-indigo-600 hover:text-indigo-900">
                                     View all {{ $hiringPosition->applications->count() }} applications
                                 </a>
                             @endif

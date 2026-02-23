@@ -1131,7 +1131,8 @@
                                 <div class="bg-gradient-to-r from-indigo-50 to-purple-50 border border-indigo-200 rounded-lg p-6">
                                     <div>
                                         <h4 class="text-sm font-semibold text-gray-900 mb-1">Test Email Configuration</h4>
-                                        <p class="text-xs text-gray-600 mb-4">Send a test email to verify your email settings are working correctly</p>
+                                        <p class="text-xs text-gray-600 mb-1">Send a test email to verify your email settings are working correctly.</p>
+                                        <p class="text-xs text-amber-700 mb-4">If the recipient does not receive it: check Spam/Junk, confirm the address is correct, and ensure your From domain has SPF and DKIM records in DNS.</p>
 
                                         <div class="flex items-end space-x-3">
                                             <div class="flex-1">

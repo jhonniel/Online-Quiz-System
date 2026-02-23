@@ -977,8 +977,14 @@ class SettingsController extends Controller
                 'mailgun_domain' => $mailer === 'mailgun' ? config('services.mailgun.domain') : null,
             ]);
 
-            // Attempt to send the email synchronously
-            Mail::to($testEmail)->send(new \App\Mail\TestEmail());
+            // Attempt to send the email synchronously (use configured from for envelope)
+            $fromAddress = config('mail.from.address');
+            $fromName = config('mail.from.name');
+            if (! $fromAddress) {
+                $fromAddress = 'noreply@' . (parse_url(config('app.url', 'http://localhost'), PHP_URL_HOST) ?: 'localhost');
+                $fromName = $fromName ?: config('app.name', 'Laravel');
+            }
+            Mail::to($testEmail)->send((new \App\Mail\TestEmail())->from($fromAddress, $fromName));
 
             // If the underlying mailer exposes failures, check them as an extra safety net
             try {
@@ -997,11 +1003,15 @@ class SettingsController extends Controller
                 // If the method is not available (newer mailer), ignore
             }
 
-            Log::info('Test email sent successfully', ['to' => $testEmail, 'mailer' => $mailer]);
+            Log::info('Test email sent successfully', [
+                'to' => $testEmail,
+                'mailer' => $mailer,
+                'from' => config('mail.from.address'),
+            ]);
 
             return response()->json([
                 'success' => true,
-                'message' => 'Test email was sent successfully to ' . $testEmail . '. Check your inbox and spam folder.'
+                'message' => 'Test email was sent successfully to ' . $testEmail . '. If the recipient does not see it: check the Spam/Junk folder, confirm the address is correct, and ensure your sending domain (From address) has SPF and DKIM set up in DNS.'
             ]);
         } catch (\Illuminate\Validation\ValidationException $e) {
             throw $e;
