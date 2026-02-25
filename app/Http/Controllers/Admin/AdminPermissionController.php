@@ -111,6 +111,7 @@ class AdminPermissionController extends Controller
             'student_management' => false,
             'hiring_process' => false,
             'communication' => false,
+            'linked_accounts' => false,
             'billing' => false,
             'files' => false,
             'confession' => false,
@@ -125,7 +126,7 @@ class AdminPermissionController extends Controller
 
         $roleLabel = $user->isEmployee() ? 'Employee' : ucfirst($user->role);
         return redirect('/admin/admin-permissions/' . $user->id . '/edit')
-            ->with('success', "{$roleLabel} added to permissions management. Please configure their access. The user may need to refresh their browser or log out and log back in to see the changes.");
+            ->with('success', "{$roleLabel} added to permissions management. Please configure their access. The user may need to refresh their browser or log out and log back in to see the new items in their sidebar.");
     }
 
     /**
@@ -178,6 +179,7 @@ class AdminPermissionController extends Controller
             'allowed_positions' => 'nullable|array',
             'allowed_positions.*' => 'exists:hiring_positions,id',
             'communication' => 'boolean',
+            'linked_accounts' => 'boolean',
             'billing' => 'boolean',
             'files' => 'boolean',
             'confession' => 'boolean',
@@ -194,6 +196,7 @@ class AdminPermissionController extends Controller
             'student_management' => $request->has('student_management'),
             'hiring_process' => $request->has('hiring_process'),
             'communication' => $request->has('communication'),
+            'linked_accounts' => $request->has('linked_accounts'),
             'billing' => $request->has('billing'),
             'files' => $request->has('files'),
             'confession' => $request->has('confession'),
@@ -230,7 +233,7 @@ class AdminPermissionController extends Controller
 
         $roleLabel = ucfirst($user->role);
         return redirect('/admin/admin-permissions')
-            ->with('success', "{$roleLabel} permissions updated successfully. The user may need to refresh their browser to see the changes.");
+            ->with('success', "{$roleLabel} permissions updated successfully. The user may need to refresh their browser to see the new items in their sidebar.");
     }
 
     /**
@@ -254,5 +257,22 @@ class AdminPermissionController extends Controller
         $roleLabel = $user->isAdmin() ? 'admin' : strtolower($user->role);
         return redirect('/admin/admin-permissions')
             ->with('success', "Permissions removed. User now has full {$roleLabel} access.");
+    }
+
+    /**
+     * Show the current user's assigned permissions (read-only).
+     * Visible to any user who has admin access so they can see what they are allowed to do.
+     */
+    public function myPermissions()
+    {
+        $user = auth()->user();
+        $user->load('adminPermission');
+        $permission = $user->adminPermission;
+        $isSuperAdmin = $user->isSuperAdmin();
+
+        $departments = $isSuperAdmin ? collect() : Department::orderBy('name')->get();
+        $hiringPositions = $isSuperAdmin ? collect() : HiringPosition::orderBy('title')->get();
+
+        return view('admin.admin-permissions.my-permissions', compact('user', 'permission', 'isSuperAdmin', 'departments', 'hiringPositions'));
     }
 }

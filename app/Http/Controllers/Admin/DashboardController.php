@@ -26,11 +26,16 @@ use Carbon\Carbon;
 
 class DashboardController extends Controller
 {
-    private function ensureFullAccess(): void
+    /**
+     * Allow access for super admins or any user with at least one admin permission.
+     */
+    private function ensureCanAccessDashboard(): void
     {
-        if (!auth()->user()->isSuperAdmin()) {
-            abort(403, 'Full admin access required to view the Admin Dashboard.');
+        $user = auth()->user();
+        if ($user->isSuperAdmin() || $user->hasAnyAdminPermission()) {
+            return;
         }
+        abort(403, 'You do not have permission to view the Admin Dashboard.');
     }
 
     /**
@@ -153,7 +158,7 @@ class DashboardController extends Controller
 
     public function index()
     {
-        $this->ensureFullAccess();
+        $this->ensureCanAccessDashboard();
 
         try {
             $totalUsers = User::where('role', 'user')->count();
@@ -745,7 +750,7 @@ class DashboardController extends Controller
      */
     public function getActivityData()
     {
-        $this->ensureFullAccess();
+        $this->ensureCanAccessDashboard();
 
         try {
             $activityStats = UserSession::getSessionStats();

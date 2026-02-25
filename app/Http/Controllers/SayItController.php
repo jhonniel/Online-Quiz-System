@@ -35,6 +35,16 @@ class SayItController extends Controller
             $sort = 'popular';
         }
 
+        // Single most popular post for featured slot at top (score = net votes + comment count)
+        $mostPopularPost = ConfessionPost::withCount('allComments')
+            ->with(['latestComment', 'topic'])
+            ->orderByRaw(
+                '(confession_posts.upvotes_count - confession_posts.downvotes_count) + ' .
+                '(SELECT COUNT(*) FROM confession_comments WHERE confession_comments.confession_post_id = confession_posts.id) DESC'
+            )
+            ->orderByDesc('created_at')
+            ->first();
+
         if ($sort === 'popular') {
             $query->orderByRaw(
                 '(confession_posts.upvotes_count - confession_posts.downvotes_count) + ' .
@@ -42,6 +52,9 @@ class SayItController extends Controller
             )->orderByDesc('created_at');
         } else {
             $query->orderByDesc('created_at');
+            if ($mostPopularPost) {
+                $query->where('confession_posts.id', '!=', $mostPopularPost->id);
+            }
         }
 
         $posts = $query->paginate(15)->withQueryString();
@@ -67,7 +80,7 @@ class SayItController extends Controller
         }
 
         $sessionCodename = self::codenameForSession($request);
-        return view('say-it.index', compact('posts', 'recentPosts', 'sort', 'topics', 'topTopics', 'topHashtags', 'topicSlug', 'hashtagSlug', 'sessionCodename'));
+        return view('say-it.index', compact('posts', 'recentPosts', 'sort', 'topics', 'topTopics', 'topHashtags', 'topicSlug', 'hashtagSlug', 'sessionCodename', 'mostPopularPost'));
     }
 
     public function storePost(Request $request)

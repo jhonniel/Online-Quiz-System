@@ -73,6 +73,9 @@ Route::prefix('admin')->middleware(['auth', 'admin'])->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('admin.dashboard');
     Route::get('/activity-data', [DashboardController::class, 'getActivityData'])->name('admin.activity-data');
 
+    // My Permissions (read-only view of current user's assigned access; any admin can view)
+    Route::get('my-permissions', [AdminPermissionController::class, 'myPermissions'])->name('admin.my-permissions');
+
     // Billing (requires billing permission or super admin)
     Route::middleware(['admin.permission:billing'])->group(function () {
         Route::get('billing', [App\Http\Controllers\Admin\BillingController::class, 'index'])->name('admin.billing.index');
@@ -405,18 +408,6 @@ Route::prefix('admin')->middleware(['auth', 'admin'])->group(function () {
         Route::get('tickets/{ticket_report}', [App\Http\Controllers\Admin\TicketReportController::class, 'show'])->name('admin.tickets.show');
         Route::patch('tickets/{ticket_report}', [App\Http\Controllers\Admin\TicketReportController::class, 'update'])->name('admin.tickets.update');
 
-        // Linked Accounts & Starlinks (full admin only – enforced in controllers)
-        Route::get('linked-accounts', [App\Http\Controllers\Admin\LinkedAccountController::class, 'index'])->name('admin.linked-accounts.index');
-        Route::get('starlinks/import', [App\Http\Controllers\Admin\StarlinkController::class, 'importForm'])->name('admin.starlinks.import');
-        Route::get('starlinks/import/template', [App\Http\Controllers\Admin\StarlinkController::class, 'importTemplate'])->name('admin.starlinks.import.template');
-        Route::post('starlinks/import', [App\Http\Controllers\Admin\StarlinkController::class, 'processImport'])->name('admin.starlinks.import.process');
-        Route::resource('starlinks', App\Http\Controllers\Admin\StarlinkController::class)->names('admin.starlinks');
-        Route::get('omadas/import', [App\Http\Controllers\Admin\OmadaController::class, 'importForm'])->name('admin.omadas.import');
-        Route::get('omadas/import/template', [App\Http\Controllers\Admin\OmadaController::class, 'importTemplate'])->name('admin.omadas.import.template');
-        Route::post('omadas/import', [App\Http\Controllers\Admin\OmadaController::class, 'processImport'])->name('admin.omadas.import.process');
-        Route::resource('omadas', App\Http\Controllers\Admin\OmadaController::class)->names('admin.omadas');
-        Route::resource('subscription-plan-types', App\Http\Controllers\Admin\SubscriptionPlanTypeController::class)->names('admin.subscription-plan-types');
-
         // Live Chat Management
         Route::get('live-chat', [AdminLiveChatController::class, 'index'])->name('live-chat.index');
         Route::get('live-chat/{ticketNumber}', [AdminLiveChatController::class, 'show'])->name('live-chat.show');
@@ -431,6 +422,20 @@ Route::prefix('admin')->middleware(['auth', 'admin'])->group(function () {
         Route::post('live-chat/{ticketNumber}/typing/start', [AdminLiveChatController::class, 'startTyping'])->name('live-chat.typing.start');
         Route::post('live-chat/{ticketNumber}/typing/stop', [AdminLiveChatController::class, 'stopTyping'])->name('live-chat.typing.stop');
         Route::get('live-chat/{ticketNumber}/typing', [AdminLiveChatController::class, 'getTypingIndicators'])->name('live-chat.typing');
+    });
+
+    // Linked Accounts (dashboard, Starlinks, Omada, Plan Types)
+    Route::middleware(['admin.permission:linked_accounts'])->group(function () {
+        Route::get('linked-accounts', [App\Http\Controllers\Admin\LinkedAccountController::class, 'index'])->name('admin.linked-accounts.index');
+        Route::get('starlinks/import', [App\Http\Controllers\Admin\StarlinkController::class, 'importForm'])->name('admin.starlinks.import');
+        Route::get('starlinks/import/template', [App\Http\Controllers\Admin\StarlinkController::class, 'importTemplate'])->name('admin.starlinks.import.template');
+        Route::post('starlinks/import', [App\Http\Controllers\Admin\StarlinkController::class, 'processImport'])->name('admin.starlinks.import.process');
+        Route::resource('starlinks', App\Http\Controllers\Admin\StarlinkController::class)->names('admin.starlinks');
+        Route::get('omadas/import', [App\Http\Controllers\Admin\OmadaController::class, 'importForm'])->name('admin.omadas.import');
+        Route::get('omadas/import/template', [App\Http\Controllers\Admin\OmadaController::class, 'importTemplate'])->name('admin.omadas.import.template');
+        Route::post('omadas/import', [App\Http\Controllers\Admin\OmadaController::class, 'processImport'])->name('admin.omadas.import.process');
+        Route::resource('omadas', App\Http\Controllers\Admin\OmadaController::class)->names('admin.omadas');
+        Route::resource('subscription-plan-types', App\Http\Controllers\Admin\SubscriptionPlanTypeController::class)->names('admin.subscription-plan-types');
     });
 
     // System Management

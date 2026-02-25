@@ -777,6 +777,14 @@ class User extends Authenticatable
     }
 
     /**
+     * Check if user has access to Linked Accounts (dashboard, Starlinks, Omada, Plan Types).
+     */
+    public function canAccessLinkedAccounts(): bool
+    {
+        return $this->hasAdminPermission('linked_accounts');
+    }
+
+    /**
      * Check if user has access to File Storage.
      */
     public function canAccessFiles(): bool
@@ -852,6 +860,7 @@ class User extends Authenticatable
                    $adminPermission->student_management ||
                    $adminPermission->hiring_process ||
                    $adminPermission->communication ||
+                   $adminPermission->linked_accounts ||
                    $adminPermission->billing ||
                    $adminPermission->files ||
                    $adminPermission->confession ||

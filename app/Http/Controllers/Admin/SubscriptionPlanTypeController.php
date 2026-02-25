@@ -8,16 +8,20 @@ use Illuminate\Http\Request;
 
 class SubscriptionPlanTypeController extends Controller
 {
-    private function ensureFullAccess(): void
+    /**
+     * Allow access for users with Linked Accounts permission (route uses admin.permission:linked_accounts).
+     */
+    private function ensureCanAccess(): void
     {
-        if (! auth()->user()->isSuperAdmin()) {
-            abort(403, 'Full admin access required to manage Subscription Plan Types.');
+        if (auth()->user()->canAccessLinkedAccounts()) {
+            return;
         }
+        abort(403, 'You do not have permission to manage Subscription Plan Types.');
     }
 
     public function index()
     {
-        $this->ensureFullAccess();
+        $this->ensureCanAccess();
 
         $planTypes = SubscriptionPlanType::orderBy('subscription_type')->orderBy('name')->paginate(15);
 
@@ -26,14 +30,14 @@ class SubscriptionPlanTypeController extends Controller
 
     public function create()
     {
-        $this->ensureFullAccess();
+        $this->ensureCanAccess();
 
         return view('admin.subscription-plan-types.create');
     }
 
     public function store(Request $request)
     {
-        $this->ensureFullAccess();
+        $this->ensureCanAccess();
 
         $validated = $request->validate([
             'name' => 'required|string|max:255',
@@ -56,14 +60,14 @@ class SubscriptionPlanTypeController extends Controller
 
     public function edit(SubscriptionPlanType $subscriptionPlanType)
     {
-        $this->ensureFullAccess();
+        $this->ensureCanAccess();
 
         return view('admin.subscription-plan-types.edit', compact('subscriptionPlanType'));
     }
 
     public function update(Request $request, SubscriptionPlanType $subscriptionPlanType)
     {
-        $this->ensureFullAccess();
+        $this->ensureCanAccess();
 
         $validated = $request->validate([
             'name' => 'required|string|max:255',
@@ -86,7 +90,7 @@ class SubscriptionPlanTypeController extends Controller
 
     public function destroy(SubscriptionPlanType $subscriptionPlanType)
     {
-        $this->ensureFullAccess();
+        $this->ensureCanAccess();
 
         $subscriptionPlanType->delete();
 

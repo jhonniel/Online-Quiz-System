@@ -12,16 +12,20 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class StarlinkController extends Controller
 {
-    private function ensureFullAccess(): void
+    /**
+     * Allow access for users with Linked Accounts permission (route uses admin.permission:linked_accounts).
+     */
+    private function ensureCanAccess(): void
     {
-        if (! auth()->user()->isSuperAdmin()) {
-            abort(403, 'Full admin access required to manage Starlinks.');
+        if (auth()->user()->canAccessLinkedAccounts()) {
+            return;
         }
+        abort(403, 'You do not have permission to manage Starlinks.');
     }
 
     public function index(Request $request)
     {
-        $this->ensureFullAccess();
+        $this->ensureCanAccess();
 
         $query = Starlink::with('linkedAccount')->orderByDesc('created_at');
 
@@ -72,7 +76,7 @@ class StarlinkController extends Controller
 
     public function show(Starlink $starlink)
     {
-        $this->ensureFullAccess();
+        $this->ensureCanAccess();
 
         if (request()->wantsJson() || request()->ajax()) {
             $starlink->load('linkedAccount');
@@ -108,7 +112,7 @@ class StarlinkController extends Controller
 
     public function create()
     {
-        $this->ensureFullAccess();
+        $this->ensureCanAccess();
 
         $linkedAccounts = LinkedAccount::orderBy('email')->get();
         $subscriptionPlanTypes = SubscriptionPlanType::where('subscription_type', 'starlink')->orderBy('name')->get();
@@ -119,7 +123,7 @@ class StarlinkController extends Controller
 
     public function store(Request $request)
     {
-        $this->ensureFullAccess();
+        $this->ensureCanAccess();
 
         $validated = $request->validate([
             'linked_account_id' => 'nullable|exists:linked_accounts,id',
@@ -178,7 +182,7 @@ class StarlinkController extends Controller
 
     public function edit(Starlink $starlink)
     {
-        $this->ensureFullAccess();
+        $this->ensureCanAccess();
 
         $linkedAccounts = LinkedAccount::orderBy('email')->get();
 
@@ -195,7 +199,7 @@ class StarlinkController extends Controller
 
     public function update(Request $request, Starlink $starlink)
     {
-        $this->ensureFullAccess();
+        $this->ensureCanAccess();
 
         $validated = $request->validate([
             'linked_account_id' => 'nullable|exists:linked_accounts,id',
@@ -238,7 +242,7 @@ class StarlinkController extends Controller
 
     public function destroy(Starlink $starlink)
     {
-        $this->ensureFullAccess();
+        $this->ensureCanAccess();
 
         $starlink->delete();
 
@@ -248,14 +252,14 @@ class StarlinkController extends Controller
 
     public function importForm()
     {
-        $this->ensureFullAccess();
+        $this->ensureCanAccess();
 
         return view('admin.starlinks.import');
     }
 
     public function importTemplate(): StreamedResponse
     {
-        $this->ensureFullAccess();
+        $this->ensureCanAccess();
 
         $headers = [
             'account_linked_email',
@@ -303,7 +307,7 @@ class StarlinkController extends Controller
 
     public function processImport(Request $request)
     {
-        $this->ensureFullAccess();
+        $this->ensureCanAccess();
 
         $request->validate([
             'file' => 'required|file|mimes:csv,txt|max:2048',

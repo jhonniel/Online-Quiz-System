@@ -123,6 +123,21 @@
                             Communication
                         </th>
                         <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Linked Accounts
+                        </th>
+                        <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Billing
+                        </th>
+                        <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            File Storage
+                        </th>
+                        <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Confession
+                        </th>
+                        <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Feedback
+                        </th>
+                        <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                             User Management
                         </th>
                         <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -233,6 +248,61 @@
                                         ✓
                                     </span>
                                 @else
+                                    <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium {{ $permission->linked_accounts ?? false ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-600' }}">
+                                        {{ $permission->linked_accounts ?? false ? '✓' : '✗' }}
+                                    </span>
+                                @endif
+                            </td>
+                            <td class="px-4 py-4 whitespace-nowrap text-center">
+                                @if($isSuperAdmin)
+                                    <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                        ✓
+                                    </span>
+                                @else
+                                    <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium {{ $permission->billing ?? false ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-600' }}">
+                                        {{ $permission->billing ?? false ? '✓' : '✗' }}
+                                    </span>
+                                @endif
+                            </td>
+                            <td class="px-4 py-4 whitespace-nowrap text-center">
+                                @if($isSuperAdmin)
+                                    <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                        ✓
+                                    </span>
+                                @else
+                                    <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium {{ $permission->files ?? false ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-600' }}">
+                                        {{ $permission->files ?? false ? '✓' : '✗' }}
+                                    </span>
+                                @endif
+                            </td>
+                            <td class="px-4 py-4 whitespace-nowrap text-center">
+                                @if($isSuperAdmin)
+                                    <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                        ✓
+                                    </span>
+                                @else
+                                    <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium {{ $permission->confession ?? false ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-600' }}">
+                                        {{ $permission->confession ?? false ? '✓' : '✗' }}
+                                    </span>
+                                @endif
+                            </td>
+                            <td class="px-4 py-4 whitespace-nowrap text-center">
+                                @if($isSuperAdmin)
+                                    <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                        ✓
+                                    </span>
+                                @else
+                                    <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium {{ $permission->feedback ?? false ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-600' }}">
+                                        {{ $permission->feedback ?? false ? '✓' : '✗' }}
+                                    </span>
+                                @endif
+                            </td>
+                            <td class="px-4 py-4 whitespace-nowrap text-center">
+                                @if($isSuperAdmin)
+                                    <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                        ✓
+                                    </span>
+                                @else
                                     <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium {{ $permission->user_management ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-600' }}">
                                         {{ $permission->user_management ? '✓' : '✗' }}
                                     </span>
@@ -269,7 +339,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="12" class="px-4 py-8 text-center text-sm text-gray-500">
+                            <td colspan="17" class="px-4 py-8 text-center text-sm text-gray-500">
                                 <div class="flex flex-col items-center">
                                     <svg class="mx-auto h-12 w-12 text-gray-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path>

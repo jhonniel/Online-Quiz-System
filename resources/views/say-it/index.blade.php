@@ -2,6 +2,56 @@
 
 @section('title', 'Say it – Anonymous confessions')
 
+@push('styles')
+<style>
+/* Featured post: fire only on the rounded border of the card */
+.say-it-featured-fire-wrapper {
+    position: relative;
+}
+
+.say-it-featured-fire-inner {
+}
+
+/* Wrapper that draws the fire as a thin rounded border around the post */
+.say-it-fire-border-wrap {
+    position: relative;
+    padding: 4px;
+    border-radius: 1rem;
+    background: linear-gradient(135deg, #ffaa00 0%, #ff6600 25%, #cc3300 50%, #ff6600 75%, #ffaa00 100%);
+    background-size: 300% 300%;
+    animation: say-it-border-glow 3s ease-in-out infinite;
+    box-shadow:
+        0 0 20px rgba(255, 102, 0, 0.7),
+        0 0 40px rgba(255, 136, 0, 0.5),
+        0 0 60px rgba(255, 80, 0, 0.3),
+        inset 0 0 12px rgba(255, 150, 0, 0.2);
+}
+
+.say-it-featured-card-inner {
+    border-radius: calc(1rem - 4px) !important;
+}
+
+@keyframes say-it-border-glow {
+    0%, 100% {
+        background-position: 0% 50%;
+        box-shadow:
+            0 0 20px rgba(255, 102, 0, 0.7),
+            0 0 40px rgba(255, 136, 0, 0.5),
+            0 0 60px rgba(255, 80, 0, 0.3),
+            inset 0 0 12px rgba(255, 150, 0, 0.2);
+    }
+    50% {
+        background-position: 100% 50%;
+        box-shadow:
+            0 0 32px rgba(255, 136, 0, 0.9),
+            0 0 64px rgba(255, 100, 0, 0.6),
+            0 0 96px rgba(255, 60, 0, 0.4),
+            inset 0 0 16px rgba(255, 180, 0, 0.35);
+    }
+}
+</style>
+@endpush
+
 @section('content')
 <div class="max-w-2xl mx-auto lg:max-w-none">
     {{-- Composer: Create post --}}
@@ -62,6 +112,11 @@
             </div>
         </form>
     </section>
+
+    {{-- Most popular post (one only, above recent) with fire border --}}
+    @if(!empty($mostPopularPost) && empty($topicSlug) && empty($hashtagSlug))
+        @include('say-it.partials.post-card-featured', ['post' => $mostPopularPost, 'sessionCodename' => $sessionCodename])
+    @endif
 
     {{-- Feed header --}}
     <div class="flex items-center justify-between mb-4 flex-wrap gap-2">

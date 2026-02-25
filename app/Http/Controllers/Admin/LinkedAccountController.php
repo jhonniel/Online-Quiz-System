@@ -11,11 +11,15 @@ use Illuminate\Support\Facades\DB;
 
 class LinkedAccountController extends Controller
 {
-    private function ensureFullAccess(): void
+    /**
+     * Allow access for users with Linked Accounts permission (route uses admin.permission:linked_accounts).
+     */
+    private function ensureCanAccess(): void
     {
-        if (! auth()->user()->isSuperAdmin()) {
-            abort(403, 'Full admin access required to view Linked Accounts.');
+        if (auth()->user()->canAccessLinkedAccounts()) {
+            return;
         }
+        abort(403, 'You do not have permission to view Linked Accounts.');
     }
 
     /**
@@ -23,7 +27,7 @@ class LinkedAccountController extends Controller
      */
     public function index()
     {
-        $this->ensureFullAccess();
+        $this->ensureCanAccess();
 
         // Backfill linked_accounts from existing Starlink/Omada emails so dashboard shows data
         $emailsFromStarlinks = collect(DB::table('starlinks')->whereNotNull('account_linked_email')->where('account_linked_email', '!=', '')->distinct()->pluck('account_linked_email'))->filter();
