@@ -4,12 +4,35 @@
 
 @push('styles')
 <style>
-/* Featured post: fire only on the rounded border of the card */
+/* Featured post (Most popular only): fire on the rounded border of the card */
 .say-it-featured-fire-wrapper {
     position: relative;
+    overflow: hidden;
+    border-radius: 1.25rem;
 }
 
 .say-it-featured-fire-inner {
+}
+
+/* WebGL fire in front of the Most popular card */
+.say-it-mostpopular-fire-bg {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    border-radius: 1.25rem;
+    pointer-events: none;
+}
+.say-it-mostpopular-fire-front {
+    z-index: 10;
+}
+.say-it-mostpopular-fire-bg canvas {
+    display: block;
+    width: 100% !important;
+    height: 100% !important;
+    border-radius: inherit;
+    object-fit: cover;
 }
 
 /* Wrapper that draws the fire as a thin rounded border around the post */
@@ -53,6 +76,79 @@
 @endpush
 
 @section('content')
+{{-- Shaders for Most popular post WebGL fire (used only when featured post exists) --}}
+<script type="x-shader/x-fragment" id="say-it-mostpopular-fragmentShader">
+    varying vec2 vUv;
+    uniform float u_ratio;
+    uniform float u_time;
+    uniform float u_speed;
+    uniform float u_shape_offset;
+    uniform float u_power;
+    uniform float u_addition;
+    vec3 permute(vec3 x) { return mod(((x*34.0)+1.0)*x, 289.0); }
+    float snoise(vec2 v){
+        const vec4 C = vec4(0.211324865405187, 0.366025403784439, -0.577350269189626, 0.024390243902439);
+        vec2 i = floor(v + dot(v, C.yy));
+        vec2 x0 = v - i + dot(i, C.xx);
+        vec2 i1 = (x0.x > x0.y) ? vec2(1.0, 0.0) : vec2(0.0, 1.0);
+        vec4 x12 = x0.xyxy + C.xxzz;
+        x12.xy -= i1;
+        i = mod(i, 289.0);
+        vec3 p = permute(permute(i.y + vec3(0.0, i1.y, 1.0)) + i.x + vec3(0.0, i1.x, 1.0));
+        vec3 m = max(0.5 - vec3(dot(x0, x0), dot(x12.xy, x12.xy), dot(x12.zw, x12.zw)), 0.0);
+        m = m*m; m = m*m;
+        vec3 x = 2.0 * fract(p * C.www) - 1.0;
+        vec3 h = abs(x) - 0.5;
+        vec3 ox = floor(x + 0.5);
+        vec3 a0 = x - ox;
+        m *= 1.79284291400159 - 0.85373472095314 * (a0*a0 + h*h);
+        vec3 g;
+        g.x = a0.x * x0.x + h.x * x0.y;
+        g.yz = a0.yz * x12.xz + h.yz * x12.yw;
+        return 130.0 * dot(m, g);
+    }
+    vec3 hsv2rgb(vec3 c) {
+        vec4 K = vec4(1.0, 2.0 / 3.0, 1.0 / 3.0, 3.0);
+        vec3 p = abs(fract(c.xxx + K.xyz) * 6.0 - K.www);
+        return c.z * mix(K.xxx, clamp(p - K.xxx, 0.0, 1.0), c.y);
+    }
+    const float STEPS = 4.;
+    float get_noise(vec2 uv, float t){
+        float SCALE = 8.;
+        float noise = snoise(vec2(uv.x * SCALE, uv.y * .25 * SCALE - t));
+        SCALE = 10.;
+        noise += .2 * snoise(vec2(uv.x * SCALE + 1.5 * t, uv.y * .3 * SCALE));
+        noise = min(1., .5 * noise + u_addition);
+        return noise;
+    }
+    void main () {
+        vec2 uv = vUv;
+        uv.y /= u_ratio;
+        float t = u_time * u_speed;
+        float noise = get_noise(uv, t);
+        float shape = pow(.8 * uv.y * u_ratio, .5);
+        shape += 3. * pow(abs(uv.x - .5), 2.);
+        shape *= u_shape_offset;
+        float stepped_noise = floor(get_noise(uv, t) * STEPS) / STEPS;
+        float d = pow(stepped_noise, u_power);
+        d *= (1.2 - shape);
+        vec3 hsv = vec3(d * .15, .8 - .2 * d, max(0.5, d + .5 + .1 * uv.y));
+        vec3 col = hsv2rgb(hsv);
+        col *= smoothstep(shape, shape + .2, noise);
+        vec3 minWarm = vec3(0.1, 0.05, 0.0);
+        col = max(col, minWarm);
+        float alpha = step(shape, noise) - .5;
+        gl_FragColor = vec4(col, alpha);
+    }
+</script>
+<script type="x-shader/x-vertex" id="say-it-mostpopular-vertexShader">
+    varying vec2 vUv;
+    void main() {
+        vUv = uv;
+        gl_Position = vec4(position, 1.);
+    }
+</script>
+
 <div class="max-w-2xl mx-auto lg:max-w-none">
     {{-- Composer: Create post --}}
     <section id="create" class="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden mb-6 scroll-mt-24">
@@ -162,6 +258,72 @@
 </div>
 
 @push('scripts')
+<script type="module">
+(function() {
+    var container = document.getElementById('say-it-mostpopular-fire-wrap');
+    var canvasEl = document.getElementById('say-it-mostpopular-fire-canvas');
+    var fragmentEl = document.getElementById('say-it-mostpopular-fragmentShader');
+    var vertexEl = document.getElementById('say-it-mostpopular-vertexShader');
+    if (!container || !canvasEl || !fragmentEl || !vertexEl) return;
+
+    import('https://cdn.skypack.dev/three@0.133.1/build/three.module').then(function(THREEModule) {
+        var THREE = THREEModule.default || THREEModule;
+        var params = { speed: 2, shape: 0.6, power: 0.6, addition: 0.6 };
+        var renderer, scene, camera, clock, material;
+
+        function initScene() {
+            var w = container.clientWidth;
+            var h = container.clientHeight;
+            if (w < 20 || h < 20) return;
+
+            renderer = new THREE.WebGLRenderer({ alpha: true, canvas: canvasEl });
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+            renderer.setSize(w, h);
+            scene = new THREE.Scene();
+            camera = new THREE.OrthographicCamera(-0.5, 0.5, 0.5, -0.5, 0.1, 10);
+            clock = new THREE.Clock();
+
+            material = new THREE.ShaderMaterial({
+                uniforms: {
+                    u_time: { value: 0 },
+                    u_ratio: { value: w / h },
+                    u_speed: { value: params.speed },
+                    u_shape_offset: { value: params.shape },
+                    u_power: { value: params.power },
+                    u_addition: { value: params.addition },
+                },
+                vertexShader: vertexEl.textContent,
+                fragmentShader: fragmentEl.textContent,
+                transparent: true
+            });
+            var plane = new THREE.PlaneGeometry(2, 2);
+            scene.add(new THREE.Mesh(plane, material));
+            requestAnimationFrame(render);
+        }
+
+        function render() {
+            if (!material || !renderer) return;
+            material.uniforms.u_time.value = clock.getElapsedTime();
+            renderer.render(scene, camera);
+            requestAnimationFrame(render);
+        }
+
+        function updateSize() {
+            if (!material || !renderer) return;
+            var w = container.clientWidth;
+            var h = container.clientHeight;
+            if (w < 1 || h < 1) return;
+            material.uniforms.u_ratio.value = w / h;
+            renderer.setSize(w, h);
+        }
+
+        initScene();
+        window.addEventListener('resize', updateSize);
+        var ro = new ResizeObserver(updateSize);
+        ro.observe(container);
+    }).catch(function(err) { console.warn('Say-it Most popular fire:', err); });
+})();
+</script>
 <script>
 (function() {
     var form = document.getElementById('say-it-form');

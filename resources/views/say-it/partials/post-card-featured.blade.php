@@ -3,7 +3,7 @@
     $sessionCodename = $sessionCodename ?? session('sayit_codename');
 @endphp
 <div class="say-it-featured-fire-wrapper mb-6">
-    <div class="say-it-featured-fire-inner">
+    <div class="say-it-featured-fire-inner relative z-0">
         <div class="flex items-center gap-2 mb-3">
             <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-gradient-to-r from-amber-500/20 to-orange-600/20 text-amber-800 text-xs font-bold uppercase tracking-wide border border-amber-400/50">
                 <i class="fas fa-fire text-amber-500"></i>
@@ -81,5 +81,9 @@
                 </div>
             </article>
         </div>
+    </div>
+    {{-- WebGL fire in front of the post (only for Most popular) --}}
+    <div class="say-it-mostpopular-fire-bg say-it-mostpopular-fire-front" id="say-it-mostpopular-fire-wrap" aria-hidden="true">
+        <canvas id="say-it-mostpopular-fire-canvas"></canvas>
     </div>
 </div>
