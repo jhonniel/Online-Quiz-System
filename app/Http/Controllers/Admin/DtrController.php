@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Helpers\TimeExtraction;
 use App\Models\Dtr;
 use App\Models\DtrDeficit;
 use App\Models\User;
@@ -830,6 +831,11 @@ class DtrController extends Controller
 
                     $workedHoursValue = $toDecimal($workedHours);
                     $addedTimeFromNoteValue = $toDecimal($addedTimeFromNote);
+
+                    // Add any time mentioned in remarks to Added Time From Note
+                    if ($remarks !== '') {
+                        $addedTimeFromNoteValue += TimeExtraction::fromText($remarks);
+                    }
 
                     // Total hours = Worked + Added
                     $totalHoursValue = $workedHoursValue + $addedTimeFromNoteValue;
