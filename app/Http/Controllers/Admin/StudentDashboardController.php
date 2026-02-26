@@ -9,6 +9,7 @@ use App\Models\QuizAttemptHistory;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
+use Carbon\Carbon;
 
 class StudentDashboardController extends Controller
 {
@@ -98,6 +99,18 @@ class StudentDashboardController extends Controller
                 $total = (float) ($totalsByStudent[$student->id] ?? 0);
                 $remaining = $required - $total; // can be negative
 
+                // Estimate internship end date based on remaining hours (8 hours per weekday)
+                $estimatedEndDate = null;
+                $estimatedEndDateFormatted = null;
+                if ($remaining > 0) {
+                    $daysNeeded = (int) ceil($remaining / 8.0);
+                    // If at least one day of work is needed, assume they can start today
+                    $daysOffset = max($daysNeeded - 1, 0);
+                    $endDate = Carbon::today()->addWeekdays($daysOffset);
+                    $estimatedEndDate = $endDate->toDateString();
+                    $estimatedEndDateFormatted = $endDate->format('M d, Y');
+                }
+
                 return [
                     'student' => $student,
                     'required_hours' => $required,
@@ -106,6 +119,8 @@ class StudentDashboardController extends Controller
                     'required_hours_formatted' => $this->formatHours($required),
                     'total_hours_formatted' => $this->formatHours($total),
                     'remaining_hours_formatted' => $this->formatHours($remaining),
+                    'estimated_end_date' => $estimatedEndDate,
+                    'estimated_end_date_formatted' => $estimatedEndDateFormatted,
                 ];
             })->sortByDesc('remaining_hours')->values();
 
@@ -200,11 +215,27 @@ class StudentDashboardController extends Controller
             $studentsWithRemainingTime = $ranked->filter(function ($row) {
                 return $row['remaining_hours'] > 0;
             })->count();
+
+            // Count students who are estimated to finish within the current month
+            $today = Carbon::today();
+            $endOfMonth = $today->copy()->endOfMonth();
+            $studentsEndingThisMonth = $ranked->filter(function ($row) use ($today, $endOfMonth) {
+                if (($row['remaining_hours'] ?? 0) <= 0 || empty($row['estimated_end_date'])) {
+                    return false;
+                }
+                try {
+                    $endDate = Carbon::parse($row['estimated_end_date']);
+                } catch (\Exception $e) {
+                    return false;
+                }
+                return $endDate->between($today, $endOfMonth);
+            })->count();
         }
 
         return view('admin.student-management.dashboard', [
             'students' => $ranked,
             'studentsWithRemainingTime' => $studentsWithRemainingTime,
+            'studentsEndingThisMonth' => $studentsEndingThisMonth ?? 0,
         ]);
     }
 

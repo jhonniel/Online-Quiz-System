@@ -27,6 +27,7 @@
                 $totalRequired = $students->sum('required_hours');
                 $totalDtr = $students->sum('total_hours');
                 $avgCompletion = $totalRequired > 0 ? ($totalDtr / max($totalRequired, 0.01)) * 100 : 0;
+                $endingThisMonth = $studentsEndingThisMonth ?? 0;
             @endphp
 
             <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 w-full md:w-auto">
@@ -35,9 +36,16 @@
                     <div class="mt-1 text-xl sm:text-2xl font-bold">{{ $totalStudents }}</div>
                 </div>
                 <div class="bg-white/10 backdrop-blur-sm border border-white/20 rounded-xl px-4 py-3 sm:px-5 sm:py-4 text-indigo-50">
-                    <div class="text-[11px] sm:text-xs uppercase tracking-wide text-indigo-100/80">With Remaining Time</div>
-                    <div class="mt-1 text-xl sm:text-2xl font-bold text-rose-200">{{ $studentsWithRemainingTime ?? 0 }}</div>
-                    <div class="mt-1 text-[10px] text-indigo-100/70">Students still need to complete hours</div>
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <div class="text-[11px] sm:text-xs uppercase tracking-wide text-indigo-100/80">With Remaining Time</div>
+                            <div class="mt-1 text-xl sm:text-2xl font-bold text-rose-200">{{ $studentsWithRemainingTime ?? 0 }}</div>
+                        </div>
+                    </div>
+                    <div class="mt-2 text-[10px] text-indigo-100/70">
+                        <span class="font-semibold">{{ $endingThisMonth }}</span>
+                        may be able to finish by the end of this month.
+                    </div>
                 </div>
                 <div class="bg-white/10 backdrop-blur-sm border border-white/20 rounded-xl px-4 py-3 sm:px-5 sm:py-4 text-indigo-50">
                     <div class="text-[11px] sm:text-xs uppercase tracking-wide text-indigo-100/80">Total Required Time</div>
@@ -86,6 +94,7 @@
                             <th class="px-3 sm:px-6 py-3 text-right text-[11px] sm:text-xs font-semibold text-gray-500 uppercase tracking-wider">Time Needed (Required)</th>
                             <th class="px-3 sm:px-6 py-3 text-right text-[11px] sm:text-xs font-semibold text-gray-500 uppercase tracking-wider">Total Time from DTR</th>
                             <th class="px-3 sm:px-6 py-3 text-right text-[11px] sm:text-xs font-semibold text-gray-500 uppercase tracking-wider">Remaining Time Needed</th>
+                            <th class="px-3 sm:px-6 py-3 text-left text-[11px] sm:text-xs font-semibold text-gray-500 uppercase tracking-wider">Estimated End Date</th>
                         </tr>
                     </thead>
                     <tbody class="bg-white divide-y divide-gray-100">
@@ -138,6 +147,13 @@
                                             {{ $row['remaining_hours_formatted'] }} hrs
                                         </span>
                                     </span>
+                                </td>
+                                <td class="px-3 sm:px-6 py-3 whitespace-nowrap text-xs sm:text-sm text-gray-700">
+                                    @if(($row['remaining_hours'] ?? 0) > 0 && !empty($row['estimated_end_date_formatted']))
+                                        {{ $row['estimated_end_date_formatted'] }}
+                                    @else
+                                        —
+                                    @endif
                                 </td>
                             </tr>
                         @empty

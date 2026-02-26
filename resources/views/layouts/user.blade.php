@@ -324,8 +324,8 @@
                         </div>
                         @endif
 
-                        <!-- Admin Permission (last in nav, separated from user permissions) -->
-                        @if(auth()->user()->adminPermission || auth()->user()->isSuperAdmin())
+                        <!-- Admin Permission (last in nav, separated from user permissions; hide for full-access super admins) -->
+                        @if(auth()->user()->adminPermission)
                         <div class="pt-4 mt-4 border-t border-gray-700 space-y-1">
                             <a href="{{ url('/admin/my-permissions') }}"
                                class="group flex items-center px-2 py-2 text-sm font-medium rounded-md transition-colors duration-200 {{ request()->routeIs('admin.my-permissions') ? 'bg-indigo-700 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white' }}"
