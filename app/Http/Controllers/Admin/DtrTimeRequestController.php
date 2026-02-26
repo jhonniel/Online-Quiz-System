@@ -65,13 +65,26 @@ class DtrTimeRequestController extends Controller
 
             $timeRequests = $query->paginate(20)->appends($request->query());
 
+            // Global counts (all students) by status
+            $baseStatusQuery = DtrTimeRequest::whereHas('user', function ($q) {
+                $q->where('role', 'student');
+            });
+
+            $pendingCount = (clone $baseStatusQuery)->where('status', 'pending')->count();
+            $rejectedCount = (clone $baseStatusQuery)->where('status', 'rejected')->count();
+
             // Get all students for filter dropdown
             $students = \App\Models\User::where('role', 'student')
                 ->where('is_active', true)
                 ->orderBy('name')
                 ->get();
 
-            return view('admin.student-management.time-requests', compact('timeRequests', 'students'));
+            return view('admin.student-management.time-requests', compact(
+                'timeRequests',
+                'students',
+                'pendingCount',
+                'rejectedCount'
+            ));
         } catch (\Exception $e) {
             \Log::error('Error in DtrTimeRequestController@index: ' . $e->getMessage(), [
                 'exception' => $e,

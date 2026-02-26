@@ -16,6 +16,18 @@
                     <p class="text-sm sm:text-base text-indigo-100 mt-1">Review and approve student attendance time requests</p>
                 </div>
             </div>
+            @isset($pendingCount)
+                <div class="mt-2 md:mt-0 flex space-x-3 md:ml-auto">
+                    <div class="bg-white/10 rounded-xl px-3 py-2 text-center">
+                        <p class="text-xs text-indigo-100 uppercase tracking-wide">Pending</p>
+                        <p class="mt-1 text-lg font-semibold">{{ $pendingCount }}</p>
+                    </div>
+                    <div class="bg-white/10 rounded-xl px-3 py-2 text-center">
+                        <p class="text-xs text-indigo-100 uppercase tracking-wide">Rejected</p>
+                        <p class="mt-1 text-lg font-semibold">{{ $rejectedCount }}</p>
+                    </div>
+                </div>
+            @endisset
         </div>
     </div>
 
