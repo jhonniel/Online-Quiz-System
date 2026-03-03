@@ -343,8 +343,7 @@
 @php
     $showNoBalanceModalOnLoad = $errors->has('type') && str_contains($errors->first('type'), 'No balance');
 @endphp
-@if(isset($balances) && $balances || $showNoBalanceModalOnLoad)
-{{-- No balance modal: when employee selects a type with zero balance, or when server returns that error --}}
+@if((isset($balances) && $balances) || $showNoBalanceModalOnLoad)
 <div id="no-balance-modal" class="hidden fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50" aria-modal="true" role="dialog" onclick="if (event.target === this) closeNoBalanceModal();">
     <div class="flex min-h-full items-center justify-center p-4">
         <div class="relative bg-white rounded-xl shadow-xl max-w-md w-full p-6 mx-auto" onclick="event.stopPropagation();">
@@ -354,7 +353,7 @@
                 </svg>
             </div>
             <h3 class="mt-4 text-lg font-semibold text-gray-900 text-center">No balance to file for that type of request</h3>
-            <p class="mt-2 text-sm text-gray-600 text-center">You have no remaining balance for the selected request type. Choose another request type or contact HR if you believe your balance should be updated.</p>
+            <p class="mt-2 text-sm text-gray-600 text-center">You have no remaining balance for the selected request type (Vacation Leave, Sick Leave, or Offset). Choose another request type or contact HR if you believe your balance should be updated.</p>
             <div class="mt-6">
                 <button type="button" onclick="closeNoBalanceModal()"
                         class="w-full inline-flex justify-center items-center px-4 py-3 border border-transparent text-sm font-medium rounded-lg shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
@@ -377,13 +376,14 @@
     const wfhSection = document.getElementById('wfh-section');
     const offsetSection = document.getElementById('offset-section');
     const travelSection = document.getElementById('travel-section');
-    const noBalanceModal = document.getElementById('no-balance-modal');
     const submitBtn = document.getElementById('submit-btn');
+    const noBalanceModal = document.getElementById('no-balance-modal');
     const today = new Date().toISOString().split('T')[0];
 
     const balances = @json($balances ?? null);
+    const balanceCheckTypes = ['vacation_leave', 'sick_leave', 'offset'];
     function hasNoBalanceForType(type) {
-        if (!balances) return false;
+        if (!balances || !balanceCheckTypes.includes(type)) return false;
         if (type === 'vacation_leave') return (balances.vacation_remaining || 0) <= 0;
         if (type === 'sick_leave') return (balances.sick_remaining || 0) <= 0;
         if (type === 'offset') return (balances.overtime_hours || 0) <= 0;
@@ -510,7 +510,6 @@
     }
     updateRequestTypeSections();
 
-    // Show no-balance modal when server returned that validation error
     if (window.showNoBalanceModalOnLoad && noBalanceModal) {
         noBalanceModal.classList.remove('hidden');
     }
@@ -531,7 +530,6 @@
 
     // Form submission with loading animation
     const form = document.getElementById('leave-request-form');
-    const submitBtn = document.getElementById('submit-btn');
     const submitIcon = document.getElementById('submit-icon');
     const submitText = document.getElementById('submit-text');
 

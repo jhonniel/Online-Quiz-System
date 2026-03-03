@@ -307,93 +307,56 @@ class LeaveRequestController extends Controller
             $reasonToStore = 'Location of travel: ' . trim($validated['reason'] ?? '');
         }
 
-        // Validate balance for vacation_leave and sick_leave (employees only)
-        if (in_array($validated['type'], ['vacation_leave', 'sick_leave']) && $user->role === 'employee') {
-            // Calculate number of days requested (1 day = 1 leave credit)
-            $startDate = \Carbon\Carbon::parse($validated['start_date']);
-            $endDate = $validated['end_date']
-                ? \Carbon\Carbon::parse($validated['end_date'])
-                : $startDate;
-            $daysRequested = $startDate->diffInDays($endDate) + 1; // +1 to include both start and end dates
-
-            // Get current year and leave balance
-            $currentYear = now()->year;
-            $defaultVacation = (float) \App\Models\Setting::get('default_vacation_balance', 15);
-            $defaultSick = (float) \App\Models\Setting::get('default_sick_leave_balance', 10);
-
-            $leaveBalance = LeaveBalance::firstOrCreate(
-                ['user_id' => $user->id, 'year' => $currentYear],
-                [
-                    'vacation_allowance' => $defaultVacation,
-                    'sick_allowance' => $defaultSick,
-                ]
-            );
-
-            // Calculate used leave days for the current year (approved only)
-            $usedVacation = LeaveRequest::where('user_id', $user->id)
-                ->where('type', 'vacation_leave')
-                ->where('status', 'approved')
-                ->whereYear('start_date', $currentYear)
-                ->get()
-                ->sum->days;
-
-            $usedSick = LeaveRequest::where('user_id', $user->id)
-                ->where('type', 'sick_leave')
-                ->where('status', 'approved')
-                ->whereYear('start_date', $currentYear)
-                ->get()
-                ->sum->days;
-
-            // Calculate remaining balance
-            $remainingVacation = max((float) $leaveBalance->vacation_allowance - $usedVacation, 0);
-            $remainingSick = max((float) $leaveBalance->sick_allowance - $usedSick, 0);
-
-            // Check if balance is sufficient
-            if ($validated['type'] === 'vacation_leave') {
-                if ($remainingVacation <= 0) {
-                    return redirect()->back()
-                        ->withErrors(['type' => 'No balance to file for that type of request.'])
-                        ->withInput();
-                }
-                if ($daysRequested > $remainingVacation) {
-                    return redirect()->back()
-                        ->withErrors(['end_date' => "You only have {$remainingVacation} day(s) of Vacation Leave remaining. You cannot request {$daysRequested} day(s)."])
-                        ->withInput();
-                }
-            } elseif ($validated['type'] === 'sick_leave') {
-                if ($remainingSick <= 0) {
-                    return redirect()->back()
-                        ->withErrors(['type' => 'No balance to file for that type of request.'])
-                        ->withInput();
-                }
-                if ($daysRequested > $remainingSick) {
-                    return redirect()->back()
-                        ->withErrors(['end_date' => "You only have {$remainingSick} day(s) of Sick Leave remaining. You cannot request {$daysRequested} day(s)."])
-                        ->withInput();
-                }
-            }
-        }
-
-        // Validate offset balance (employees only): must have overtime balance
-        if ($validated['type'] === 'offset' && $user->role === 'employee') {
+        // Balance check: Vacation Leave, Sick Leave, Offset only (employees)
+        if (in_array($validated['type'], ['vacation_leave', 'sick_leave', 'offset']) && $user->role === 'employee') {
             $startDate = \Carbon\Carbon::parse($validated['start_date']);
             $endDate = $validated['end_date']
                 ? \Carbon\Carbon::parse($validated['end_date'])
                 : $startDate;
             $daysRequested = $startDate->diffInDays($endDate) + 1;
-            $offsetHoursNeeded = $daysRequested * 8;
 
-            $overtimeHours = $this->getEmployeeOvertimeBalanceHours($user);
-            if ($overtimeHours <= 0) {
-                return redirect()->back()
-                    ->withErrors(['type' => 'No balance to file for that type of request.'])
-                    ->withInput();
-            }
-            if ($offsetHoursNeeded > $overtimeHours) {
-                $hoursFormatted = sprintf('%02d:%02d', (int) $overtimeHours, (int) (($overtimeHours - (int) $overtimeHours) * 60));
-                return redirect()->back()
-                    ->withErrors(['end_date' => "You only have {$hoursFormatted} hours of overtime balance. You cannot request {$daysRequested} day(s) (" . ($daysRequested * 8) . " hours)."])
-                    ->withInput();
+            if ($validated['type'] === 'vacation_leave' || $validated['type'] === 'sick_leave') {
+                $bal = $this->getEmployeeLeaveBalances($user);
+                if ($validated['type'] === 'vacation_leave') {
+                    if ($bal['vacation_remaining'] <= 0) {
+                        return redirect()->back()
+                            ->withErrors(['type' => 'No balance to file for that type of request.'])
+                            ->withInput();
+                    }
+                    if ($daysRequested > $bal['vacation_remaining']) {
+                        return redirect()->back()
+                            ->withErrors(['end_date' => "You only have {$bal['vacation_remaining']} day(s) of Vacation Leave remaining. You cannot request {$daysRequested} day(s)."])
+                            ->withInput();
+                    }
+                } else {
+                    if ($bal['sick_remaining'] <= 0) {
+                        return redirect()->back()
+                            ->withErrors(['type' => 'No balance to file for that type of request.'])
+                            ->withInput();
+                    }
+                    if ($daysRequested > $bal['sick_remaining']) {
+                        return redirect()->back()
+                            ->withErrors(['end_date' => "You only have {$bal['sick_remaining']} day(s) of Sick Leave remaining. You cannot request {$daysRequested} day(s)."])
+                            ->withInput();
+                    }
+                }
+            } else {
+                // Offset: check overtime balance
+                $offsetHoursNeeded = $daysRequested * 8;
+                $overtimeHours = $this->getEmployeeOvertimeBalanceHours($user);
+                if ($overtimeHours <= 0) {
+                    return redirect()->back()
+                        ->withErrors(['type' => 'No balance to file for that type of request.'])
+                        ->withInput();
+                }
+                if ($offsetHoursNeeded > $overtimeHours) {
+                    $h = (int) $overtimeHours;
+                    $m = (int) (($overtimeHours - $h) * 60);
+                    $hoursFormatted = sprintf('%02d:%02d', $h, $m);
+                    return redirect()->back()
+                        ->withErrors(['end_date' => "You only have {$hoursFormatted} hours of overtime balance. You cannot request {$daysRequested} day(s) (" . ($daysRequested * 8) . " hours)."])
+                        ->withInput();
+                }
             }
         }
 
@@ -929,7 +892,7 @@ class LeaveRequestController extends Controller
     }
 
     /**
-     * Get employee leave balances for vacation, sick, and overtime (for create form and validation).
+     * Get employee leave balances for vacation, sick, and overtime (create form and balance validation).
      */
     private function getEmployeeLeaveBalances($user): array
     {
