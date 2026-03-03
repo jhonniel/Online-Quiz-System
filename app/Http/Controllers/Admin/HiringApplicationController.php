@@ -126,19 +126,10 @@ class HiringApplicationController extends Controller
         $perPage = $request->get('per_page', 20);
         $perPage = in_array($perPage, [10, 20, 50, 100]) ? $perPage : 20;
 
-        // Custom sorting: pending, accepted, interview_scheduled, done_interview, hired, rejected
-        $statusOrder = [
-            'pending' => 1,
-            'accepted' => 2,
-            'interview_scheduled' => 3,
-            'done_interview' => 4,
-            'hired' => 5,
-            'rejected' => 6,
-        ];
-        
-        $applications = $query->get()->sortBy(function ($application) use ($statusOrder) {
-            return $statusOrder[$application->status] ?? 999;
-        })->values();
+        // Sort by Applied Date (created_at) latest first
+        $query->orderBy('created_at', 'desc');
+
+        $applications = $query->get();
         
         // Paginate manually
         $currentPage = \Illuminate\Pagination\LengthAwarePaginator::resolveCurrentPage();

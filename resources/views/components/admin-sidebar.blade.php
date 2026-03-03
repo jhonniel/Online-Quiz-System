@@ -128,8 +128,8 @@
         </div>
         @endif
 
-        <!-- My Permissions (visible when user has assigned restricted admin access; hide for full-access super admins) -->
-        @if(auth()->user()->adminPermission)
+        <!-- My Permissions (full-access admins only) -->
+        @if(auth()->user()->isSuperAdmin())
         <div class="mb-6">
             <a href="{{ url('/admin/my-permissions') }}"
                class="flex items-center px-2 py-2 text-sm font-medium rounded-md transition-colors duration-200 {{ request()->routeIs('admin.my-permissions') ? 'bg-indigo-700 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white' }}"

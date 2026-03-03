@@ -189,7 +189,12 @@ class LeaveRequestController extends Controller
             abort(403, 'Only employees and students can create leave requests.');
         }
 
-        return view('user.leave-requests.create');
+        $balances = null;
+        if ($user->role === 'employee') {
+            $balances = $this->getEmployeeLeaveBalances($user);
+        }
+
+        return view('user.leave-requests.create', compact('balances'));
     }
 
     /**
@@ -347,7 +352,7 @@ class LeaveRequestController extends Controller
             if ($validated['type'] === 'vacation_leave') {
                 if ($remainingVacation <= 0) {
                     return redirect()->back()
-                        ->withErrors(['type' => 'You cannot request Vacation Leave because your balance is 0.'])
+                        ->withErrors(['type' => 'No balance to file for that type of request.'])
                         ->withInput();
                 }
                 if ($daysRequested > $remainingVacation) {
@@ -358,7 +363,7 @@ class LeaveRequestController extends Controller
             } elseif ($validated['type'] === 'sick_leave') {
                 if ($remainingSick <= 0) {
                     return redirect()->back()
-                        ->withErrors(['type' => 'You cannot request Sick Leave because your balance is 0.'])
+                        ->withErrors(['type' => 'No balance to file for that type of request.'])
                         ->withInput();
                 }
                 if ($daysRequested > $remainingSick) {
@@ -369,13 +374,53 @@ class LeaveRequestController extends Controller
             }
         }
 
+        // Validate offset balance (employees only): must have overtime balance
+        if ($validated['type'] === 'offset' && $user->role === 'employee') {
+            $startDate = \Carbon\Carbon::parse($validated['start_date']);
+            $endDate = $validated['end_date']
+                ? \Carbon\Carbon::parse($validated['end_date'])
+                : $startDate;
+            $daysRequested = $startDate->diffInDays($endDate) + 1;
+            $offsetHoursNeeded = $daysRequested * 8;
+
+            $overtimeHours = $this->getEmployeeOvertimeBalanceHours($user);
+            if ($overtimeHours <= 0) {
+                return redirect()->back()
+                    ->withErrors(['type' => 'No balance to file for that type of request.'])
+                    ->withInput();
+            }
+            if ($offsetHoursNeeded > $overtimeHours) {
+                $hoursFormatted = sprintf('%02d:%02d', (int) $overtimeHours, (int) (($overtimeHours - (int) $overtimeHours) * 60));
+                return redirect()->back()
+                    ->withErrors(['end_date' => "You only have {$hoursFormatted} hours of overtime balance. You cannot request {$daysRequested} day(s) (" . ($daysRequested * 8) . " hours)."])
+                    ->withInput();
+            }
+        }
+
         // Handle supporting document (only stored if provided)
         $supportingPath = null;
         if ($request->hasFile('supporting_document')) {
+            $supportDir = 'leave-supporting-docs';
             $assetDisk = 'digitalocean';
-            $assetRoot = trim(env('DIGITALOCEAN_SPACES_ROOT_PATH', ''), '/');
-            $supportDir = $assetRoot ? $assetRoot . '/leave-supporting-docs' : 'leave-supporting-docs';
-            $supportingPath = $request->file('supporting_document')->store($supportDir, $assetDisk);
+            $doConfigured = !empty(env('DIGITALOCEAN_SPACES_KEY') ?: env('DO_SPACES_KEY'))
+                && !empty(env('DIGITALOCEAN_SPACES_SECRET') ?: env('DO_SPACES_SECRET'))
+                && !empty(env('DIGITALOCEAN_SPACES_BUCKET') ?: env('DO_SPACES_BUCKET'));
+            if ($doConfigured) {
+                $assetRoot = trim(env('DIGITALOCEAN_SPACES_ROOT_PATH', ''), '/');
+                $supportDir = $assetRoot ? $assetRoot . '/' . $supportDir : $supportDir;
+            }
+            try {
+                $supportingPath = $request->file('supporting_document')->store(
+                    $supportDir,
+                    $doConfigured ? $assetDisk : config('filesystems.default', 'local')
+                );
+            } catch (\Throwable $e) {
+                Log::warning('Leave request supporting document store failed, saving request without file', [
+                    'error' => $e->getMessage(),
+                    'disk' => $doConfigured ? $assetDisk : 'local',
+                ]);
+                $supportingPath = null;
+            }
         }
 
         $travelHours = $validated['type'] === 'travel' ? (float) ($validated['travel_hours'] ?? 8.0) : null;
@@ -857,5 +902,67 @@ class LeaveRequestController extends Controller
 
             $dtr->save();
         }
+    }
+
+    /**
+     * Get employee overtime balance in hours (from approved overtime leave requests only).
+     */
+    private function getEmployeeOvertimeBalanceHours($user): float
+    {
+        $today = Carbon::today();
+        $approvedOvertimeRequests = LeaveRequest::where('user_id', $user->id)
+            ->where('type', 'overtime')
+            ->where('status', 'approved')
+            ->whereDate('start_date', '<=', $today)
+            ->get();
+
+        $overtimeFromLeavesMinutes = 0;
+        foreach ($approvedOvertimeRequests as $otRequest) {
+            $raw = $otRequest->reason ?? '';
+            if (preg_match('/Total Overtime Hours:\s*([0-9]{2}:[0-9]{2})/', $raw, $m)) {
+                [$h, $mPart] = array_map('intval', explode(':', $m[1]));
+                $overtimeFromLeavesMinutes += $h * 60 + $mPart;
+            }
+        }
+
+        return $overtimeFromLeavesMinutes / 60;
+    }
+
+    /**
+     * Get employee leave balances for vacation, sick, and overtime (for create form and validation).
+     */
+    private function getEmployeeLeaveBalances($user): array
+    {
+        $currentYear = now()->year;
+        $defaultVacation = (float) \App\Models\Setting::get('default_vacation_balance', 15);
+        $defaultSick = (float) \App\Models\Setting::get('default_sick_leave_balance', 10);
+
+        $leaveBalance = LeaveBalance::firstOrCreate(
+            ['user_id' => $user->id, 'year' => $currentYear],
+            [
+                'vacation_allowance' => $defaultVacation,
+                'sick_allowance' => $defaultSick,
+            ]
+        );
+
+        $usedVacation = LeaveRequest::where('user_id', $user->id)
+            ->where('type', 'vacation_leave')
+            ->where('status', 'approved')
+            ->whereYear('start_date', $currentYear)
+            ->get()
+            ->sum->days;
+
+        $usedSick = LeaveRequest::where('user_id', $user->id)
+            ->where('type', 'sick_leave')
+            ->where('status', 'approved')
+            ->whereYear('start_date', $currentYear)
+            ->get()
+            ->sum->days;
+
+        return [
+            'vacation_remaining' => max((float) $leaveBalance->vacation_allowance - $usedVacation, 0),
+            'sick_remaining' => max((float) $leaveBalance->sick_allowance - $usedSick, 0),
+            'overtime_hours' => $this->getEmployeeOvertimeBalanceHours($user),
+        ];
     }
 }

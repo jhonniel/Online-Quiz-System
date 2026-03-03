@@ -25,15 +25,9 @@
                     </p>
                     <div class="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center items-center animate-fade-in-up animate-delay-200 px-4 pb-4 sm:pb-0">
                         @auth
-                            @if(auth()->user()->isSuperAdmin())
-                                <a href="{{ url('/admin/dashboard') }}" class="w-full sm:w-auto bg-white text-primary px-6 py-3 sm:px-8 sm:py-4 rounded-xl font-semibold hover:bg-gray-50 transition-all shadow-xl hover:shadow-2xl transform hover:-translate-y-1 text-sm sm:text-base text-center">
-                                    Go to Dashboard
-                                </a>
-                            @else
-                                <a href="{{ url('/dashboard') }}" class="w-full sm:w-auto bg-white text-primary px-6 py-3 sm:px-8 sm:py-4 rounded-xl font-semibold hover:bg-gray-50 transition-all shadow-xl hover:shadow-2xl transform hover:-translate-y-1 text-sm sm:text-base text-center">
-                                    Go to Dashboard
-                                </a>
-                            @endif
+                            <a href="{{ url('/dashboard') }}" class="w-full sm:w-auto bg-white text-primary px-6 py-3 sm:px-8 sm:py-4 rounded-xl font-semibold hover:bg-gray-50 transition-all shadow-xl hover:shadow-2xl transform hover:-translate-y-1 text-sm sm:text-base text-center">
+                                Go to Dashboard
+                            </a>
                         @else
                             <a href="{{ $heroPrimaryButtonUrl ?? url('/login') }}" class="w-full sm:w-auto bg-white text-primary px-6 py-3 sm:px-8 sm:py-4 rounded-xl font-semibold hover:bg-gray-50 transition-all shadow-xl hover:shadow-2xl transform hover:-translate-y-1 text-sm sm:text-base text-center whitespace-nowrap">
                                 {{ $heroPrimaryButtonText }}
@@ -67,15 +61,9 @@
             </p>
             <div class="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center items-center animate-fade-in-up animate-delay-200 px-4 pb-4 sm:pb-0">
                 @auth
-                    @if(auth()->user()->isSuperAdmin())
-                        <a href="{{ url('/admin/dashboard') }}" class="w-full sm:w-auto bg-white text-primary px-6 py-3 sm:px-8 sm:py-4 rounded-xl font-semibold hover:bg-gray-50 transition-all shadow-xl hover:shadow-2xl transform hover:-translate-y-1 text-sm sm:text-base text-center">
-                            Go to Dashboard
-                        </a>
-                    @else
-                        <a href="{{ url('/dashboard') }}" class="w-full sm:w-auto bg-white text-primary px-6 py-3 sm:px-8 sm:py-4 rounded-xl font-semibold hover:bg-gray-50 transition-all shadow-xl hover:shadow-2xl transform hover:-translate-y-1 text-sm sm:text-base text-center">
-                            Go to Dashboard
-                        </a>
-                    @endif
+                    <a href="{{ url('/dashboard') }}" class="w-full sm:w-auto bg-white text-primary px-6 py-3 sm:px-8 sm:py-4 rounded-xl font-semibold hover:bg-gray-50 transition-all shadow-xl hover:shadow-2xl transform hover:-translate-y-1 text-sm sm:text-base text-center">
+                        Go to Dashboard
+                    </a>
                 @else
                     <a href="{{ $heroPrimaryButtonUrl ?? url('/login') }}" class="w-full sm:w-auto bg-white text-primary px-6 py-3 sm:px-8 sm:py-4 rounded-xl font-semibold hover:bg-gray-50 transition-all shadow-xl hover:shadow-2xl transform hover:-translate-y-1 text-sm sm:text-base text-center whitespace-nowrap">
                         {{ $heroPrimaryButtonText }}

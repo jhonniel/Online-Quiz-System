@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\User;
 use App\Models\Setting;
 use App\Models\QrCodeToken;
+use App\Models\LeaveRequest;
 use Illuminate\Http\Request;
 
 class QrCodeController extends Controller
@@ -54,6 +55,27 @@ class QrCodeController extends Controller
         // Don't mark token as used - keep it reusable so QR code stays static
         // Token is permanent and can be scanned multiple times
 
-        return view('qr.scan', compact('user', 'settings'));
+        // Approved leaves to show on ID only when today is the same or within the leave duration
+        // Only types: Vacation, Sick, Work from home, Travel
+        $today = now()->startOfDay();
+        $approvedLeaves = LeaveRequest::where('user_id', $user->id)
+            ->where('status', 'approved')
+            ->whereIn('type', ['vacation_leave', 'sick_leave', 'work_from_home', 'travel'])
+            ->where(function ($q) use ($today) {
+                // Single-day leave (no end_date or end_date = start_date): show only if start_date is today
+                $q->where(function ($q2) use ($today) {
+                    $q2->whereNull('end_date')->whereDate('start_date', $today);
+                })
+                ->orWhere(function ($q2) use ($today) {
+                    // Multi-day: today must be between start_date and end_date (inclusive)
+                    $q2->whereNotNull('end_date')
+                        ->whereDate('start_date', '<=', $today)
+                        ->whereDate('end_date', '>=', $today);
+                });
+            })
+            ->orderBy('start_date', 'desc')
+            ->get();
+
+        return view('qr.scan', compact('user', 'settings', 'approvedLeaves'));
     }
 }

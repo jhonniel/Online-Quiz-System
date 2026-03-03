@@ -33,6 +33,23 @@
                 <form id="leave-request-form" action="{{ url('/leave-requests') }}" method="POST" enctype="multipart/form-data" class="space-y-6">
                     @csrf
 
+                    @if($errors->any())
+                    @php
+                        $noBalanceMsg = 'No balance to file for that type of request.';
+                        $otherErrors = array_filter($errors->all(), fn($err) => $err !== $noBalanceMsg && !str_contains((string)$err, 'No balance'));
+                    @endphp
+                    @if(count($otherErrors) > 0)
+                    <div class="rounded-lg bg-red-50 border border-red-200 p-4">
+                        <p class="text-sm font-medium text-red-800">The request could not be saved. Please fix the errors below and try again.</p>
+                        <ul class="mt-2 list-disc list-inside text-sm text-red-700 space-y-1">
+                            @foreach($otherErrors as $err)
+                                <li>{{ $err }}</li>
+                            @endforeach
+                        </ul>
+                    </div>
+                    @endif
+                    @endif
+
                     <!-- Request Type -->
                     <div>
                         <label for="type" class="block text-sm font-medium text-gray-700 mb-2">
@@ -323,6 +340,35 @@
     </div>
 </div>
 
+@php
+    $showNoBalanceModalOnLoad = $errors->has('type') && str_contains($errors->first('type'), 'No balance');
+@endphp
+@if(isset($balances) && $balances || $showNoBalanceModalOnLoad)
+{{-- No balance modal: when employee selects a type with zero balance, or when server returns that error --}}
+<div id="no-balance-modal" class="hidden fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50" aria-modal="true" role="dialog" onclick="if (event.target === this) closeNoBalanceModal();">
+    <div class="flex min-h-full items-center justify-center p-4">
+        <div class="relative bg-white rounded-xl shadow-xl max-w-md w-full p-6 mx-auto" onclick="event.stopPropagation();">
+            <div class="flex items-center justify-center w-12 h-12 mx-auto rounded-full bg-amber-100 flex-shrink-0">
+                <svg class="w-6 h-6 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
+                </svg>
+            </div>
+            <h3 class="mt-4 text-lg font-semibold text-gray-900 text-center">No balance to file for that type of request</h3>
+            <p class="mt-2 text-sm text-gray-600 text-center">You have no remaining balance for the selected request type. Choose another request type or contact HR if you believe your balance should be updated.</p>
+            <div class="mt-6">
+                <button type="button" onclick="closeNoBalanceModal()"
+                        class="w-full inline-flex justify-center items-center px-4 py-3 border border-transparent text-sm font-medium rounded-lg shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                    OK
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+@endif
+
+<script>
+    window.showNoBalanceModalOnLoad = @json($showNoBalanceModalOnLoad ?? false);
+</script>
 <script>
     const startDateInput = document.getElementById('start_date');
     const endDateInput = document.getElementById('end_date');
@@ -331,7 +377,30 @@
     const wfhSection = document.getElementById('wfh-section');
     const offsetSection = document.getElementById('offset-section');
     const travelSection = document.getElementById('travel-section');
+    const noBalanceModal = document.getElementById('no-balance-modal');
+    const submitBtn = document.getElementById('submit-btn');
     const today = new Date().toISOString().split('T')[0];
+
+    const balances = @json($balances ?? null);
+    function hasNoBalanceForType(type) {
+        if (!balances) return false;
+        if (type === 'vacation_leave') return (balances.vacation_remaining || 0) <= 0;
+        if (type === 'sick_leave') return (balances.sick_remaining || 0) <= 0;
+        if (type === 'offset') return (balances.overtime_hours || 0) <= 0;
+        return false;
+    }
+    function closeNoBalanceModal() {
+        if (noBalanceModal) noBalanceModal.classList.add('hidden');
+    }
+    function updateNoBalancePrompt() {
+        const type = typeSelect.value;
+        const noBalance = type && hasNoBalanceForType(type);
+        if (noBalanceModal) {
+            if (noBalance) noBalanceModal.classList.remove('hidden');
+            else noBalanceModal.classList.add('hidden');
+        }
+        if (submitBtn) submitBtn.disabled = !!noBalance;
+    }
 
     // Auto-set end_date min/max when relevant
     function syncEndDateMin() {
@@ -402,6 +471,8 @@
             }
         }
 
+        updateNoBalancePrompt();
+
         // For Travel: "Location of travel" required; hide Supporting Document
         const reasonLabelText = document.getElementById('reason-label-text');
         const reasonRequiredSpan = document.getElementById('reason-required-span');
@@ -438,6 +509,11 @@
         startDateInput.setAttribute('min', today);
     }
     updateRequestTypeSections();
+
+    // Show no-balance modal when server returned that validation error
+    if (window.showNoBalanceModalOnLoad && noBalanceModal) {
+        noBalanceModal.classList.remove('hidden');
+    }
 
     // Simple time input formatter (HH:MM), max 4 digits, no AM/PM
     document.querySelectorAll('.time-input').forEach(function (input) {

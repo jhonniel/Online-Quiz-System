@@ -177,7 +177,7 @@
                                 </div>
                                 <h3 class="text-sm font-medium text-gray-900 mb-1">No friends yet</h3>
                                 <p class="text-xs text-gray-500 mb-4">Start building your network by visiting your profile page to send friend requests.</p>
-                                <a href="{{ route('profile.show') }}"
+                                <a href="{{ url('/profile') }}"
                                    class="bg-indigo-500 text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-indigo-600 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-colors duration-200">
                                     Go to Profile
                                 </a>

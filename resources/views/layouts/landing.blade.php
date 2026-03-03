@@ -210,15 +210,9 @@
                         @endif
 
                         @auth
-                            @if(auth()->user()->isSuperAdmin())
-                                <a href="{{ $getRoute('admin.dashboard', '/admin/dashboard') }}" class="ml-4 px-6 py-2 bg-primary text-white rounded-lg font-semibold hover:opacity-90 transition-opacity shadow-md hover:shadow-lg">
-                                    Dashboard
-                                </a>
-                            @else
-                                <a href="{{ $getRoute('user.dashboard', '/dashboard') }}" class="ml-4 px-6 py-2 bg-primary text-white rounded-lg font-semibold hover:opacity-90 transition-opacity shadow-md hover:shadow-lg">
-                                    Dashboard
-                                </a>
-                            @endif
+                            <a href="{{ $getRoute('user.dashboard', '/dashboard') }}" class="ml-4 px-6 py-2 bg-primary text-white rounded-lg font-semibold hover:opacity-90 transition-opacity shadow-md hover:shadow-lg">
+                                Dashboard
+                            </a>
                         @endauth
                     </div>
 
@@ -248,15 +242,9 @@
                     @endif
 
                     @auth
-                        @if(auth()->user()->isSuperAdmin())
-                            <a href="{{ $getRoute('admin.dashboard', '/admin/dashboard') }}" class="block px-4 py-3 bg-primary text-white rounded-lg font-semibold text-center mt-4">
-                                Go to Dashboard
-                            </a>
-                        @else
-                            <a href="{{ $getRoute('user.dashboard', '/dashboard') }}" class="block px-4 py-3 bg-primary text-white rounded-lg font-semibold text-center mt-4">
-                                Go to Dashboard
-                            </a>
-                        @endif
+                        <a href="{{ $getRoute('user.dashboard', '/dashboard') }}" class="block px-4 py-3 bg-primary text-white rounded-lg font-semibold text-center mt-4">
+                            Go to Dashboard
+                        </a>
                     @endauth
                 </div>
             </div>
@@ -345,11 +333,7 @@
                         <h3 class="text-lg font-semibold mb-4">Access</h3>
                         <ul class="space-y-2">
                             @auth
-                                @if(auth()->user()->isSuperAdmin())
-                                    <li><a href="{{ $getRoute('admin.dashboard', '/admin/dashboard') }}" class="text-gray-400 hover:text-white transition-colors">Admin Dashboard</a></li>
-                                @else
-                                    <li><a href="{{ $getRoute('user.dashboard', '/dashboard') }}" class="text-gray-400 hover:text-white transition-colors">User Dashboard</a></li>
-                                @endif
+                                <li><a href="{{ $getRoute('user.dashboard', '/dashboard') }}" class="text-gray-400 hover:text-white transition-colors">Dashboard</a></li>
                             @else
                                 <li><a href="{{ url('/login') }}" class="text-gray-400 hover:text-white transition-colors">Login</a></li>
                             @endauth

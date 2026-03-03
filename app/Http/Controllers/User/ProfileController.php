@@ -56,20 +56,28 @@ class ProfileController extends Controller
                 'bio' => $request->bio,
             ];
 
-            // Cloud disk + root path
-            $assetDisk = 'digitalocean';
-            $assetRoot = trim(env('DIGITALOCEAN_SPACES_ROOT_PATH', ''), '/');
+            // Store profile picture and cover on DigitalOcean Spaces when configured, else public disk
+            $spacesConfigured = !empty(env('DIGITALOCEAN_SPACES_KEY') ?: env('DO_SPACES_KEY'))
+                && !empty(env('DIGITALOCEAN_SPACES_SECRET') ?: env('DO_SPACES_SECRET'))
+                && !empty(env('DIGITALOCEAN_SPACES_BUCKET') ?: env('DO_SPACES_BUCKET'));
+            $assetDisk = $spacesConfigured ? 'digitalocean' : 'public';
+            $assetRoot = $spacesConfigured ? trim(env('DIGITALOCEAN_SPACES_ROOT_PATH', ''), '/') : '';
             $profileDir = $assetRoot ? $assetRoot . '/profile-pictures' : 'profile-pictures';
             $coverDir = $assetRoot ? $assetRoot . '/cover-photos' : 'cover-photos';
 
-            // Handle profile picture upload
+            // Handle profile picture upload (stored on Spaces when configured)
             if ($request->hasFile('profile_picture')) {
-                // Delete old profile picture if exists
+                // Delete old profile picture if exists (try both disks for legacy files)
                 if ($user->profile_picture) {
-                    try {
-                        Storage::disk($assetDisk)->delete($user->profile_picture);
-                    } catch (\Throwable $e) {
-                        // ignore
+                    foreach (['digitalocean', 'public'] as $disk) {
+                        try {
+                            if (Storage::disk($disk)->exists($user->profile_picture)) {
+                                Storage::disk($disk)->delete($user->profile_picture);
+                                break;
+                            }
+                        } catch (\Throwable $e) {
+                            // ignore
+                        }
                     }
                 }
 
@@ -79,14 +87,19 @@ class ProfileController extends Controller
                 $data['profile_picture'] = $profilePicturePath;
             }
 
-            // Handle cover photo upload
+            // Handle cover photo upload (stored on Spaces when configured)
             if ($request->hasFile('cover_photo')) {
-                // Delete old cover photo if exists
+                // Delete old cover photo if exists (try both disks for legacy files)
                 if ($user->cover_photo) {
-                    try {
-                        Storage::disk($assetDisk)->delete($user->cover_photo);
-                    } catch (\Throwable $e) {
-                        // ignore
+                    foreach (['digitalocean', 'public'] as $disk) {
+                        try {
+                            if (Storage::disk($disk)->exists($user->cover_photo)) {
+                                Storage::disk($disk)->delete($user->cover_photo);
+                                break;
+                            }
+                        } catch (\Throwable $e) {
+                            // ignore
+                        }
                     }
                 }
 
@@ -138,10 +151,15 @@ class ProfileController extends Controller
         $user = auth()->user();
 
         if ($user->profile_picture) {
-            try {
-                Storage::disk('digitalocean')->delete($user->profile_picture);
-            } catch (\Throwable $e) {
-                // ignore
+            foreach (['digitalocean', 'public'] as $disk) {
+                try {
+                    if (Storage::disk($disk)->exists($user->profile_picture)) {
+                        Storage::disk($disk)->delete($user->profile_picture);
+                        break;
+                    }
+                } catch (\Throwable $e) {
+                    // ignore
+                }
             }
             $user->update(['profile_picture' => null]);
         }
@@ -158,10 +176,15 @@ class ProfileController extends Controller
         $user = auth()->user();
 
         if ($user->cover_photo) {
-            try {
-                Storage::disk('digitalocean')->delete($user->cover_photo);
-            } catch (\Throwable $e) {
-                // ignore
+            foreach (['digitalocean', 'public'] as $disk) {
+                try {
+                    if (Storage::disk($disk)->exists($user->cover_photo)) {
+                        Storage::disk($disk)->delete($user->cover_photo);
+                        break;
+                    }
+                } catch (\Throwable $e) {
+                    // ignore
+                }
             }
             $user->update(['cover_photo' => null]);
         }

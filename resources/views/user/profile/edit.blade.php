@@ -17,7 +17,7 @@
                 </div>
             </div>
             <div class="flex items-center space-x-2">
-                <a href="{{ route('profile.show') }}"
+                <a href="{{ url('/profile') }}"
                    class="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-all duration-200">
                     <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
@@ -31,7 +31,7 @@
 
     <!-- Edit Form -->
     <div class="bg-white shadow-sm rounded-lg border border-gray-200 mx-2 sm:mx-3 lg:mx-4 xl:mx-6 flex-1 overflow-hidden">
-        <form id="profile-form" action="{{ route('profile.update') }}" method="POST" enctype="multipart/form-data" class="h-full flex flex-col">
+        <form id="profile-form" action="{{ url('/profile') }}" method="POST" enctype="multipart/form-data" class="h-full flex flex-col">
             @csrf
             @method('PUT')
 
@@ -167,7 +167,7 @@
             <!-- Form Actions - Sticky at bottom -->
             <div class="border-t border-gray-200 px-6 py-4 bg-gray-50 flex-shrink-0 sticky bottom-0 z-10">
                 <div class="flex flex-col sm:flex-row gap-3 sm:justify-end">
-                    <a href="{{ route('profile.show') }}"
+                    <a href="{{ url('/profile') }}"
                        class="inline-flex items-center justify-center px-6 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors duration-200">
                         Cancel
                     </a>
@@ -188,7 +188,7 @@
     <div class="bg-white shadow-sm rounded-lg border border-gray-200 mx-2 sm:mx-3 lg:mx-4 xl:mx-6 mt-4">
         <div class="p-6">
             <h3 class="text-lg font-medium text-gray-900 mb-4">Change Password</h3>
-            <form id="password-form" action="{{ route('profile.password.change') }}" method="POST" class="space-y-6">
+            <form id="password-form" action="{{ url('/profile/password/change') }}" method="POST" class="space-y-6">
                 @csrf
                 <div>
                     <label for="current_password" class="block text-sm font-medium text-gray-700 mb-2">Current Password</label>
@@ -283,7 +283,7 @@ function previewCoverPhoto(input) {
 // Remove Profile Picture
 function removeProfilePicture() {
     if (confirm('Are you sure you want to remove your profile picture?')) {
-        fetch('{{ route("profile.picture.remove") }}', {
+        fetch('{{ url("/profile/picture") }}', {
             method: 'DELETE',
             headers: {
                 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
@@ -315,7 +315,7 @@ function removeProfilePicture() {
 // Remove Cover Photo
 function removeCoverPhoto() {
     if (confirm('Are you sure you want to remove your cover photo?')) {
-        fetch('{{ route("profile.cover.remove") }}', {
+        fetch('{{ url("/profile/cover") }}', {
             method: 'DELETE',
             headers: {
                 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
