@@ -831,14 +831,34 @@ class DtrController extends Controller
                     };
 
                     $workedHoursValue = $toDecimal($workedHours);
-                    $addedTimeFromNoteValue = $toDecimal($addedTimeFromNote);
 
-                    // Add any time mentioned in remarks to Added Time From Note using SmartTimeParser
+                    // Parse Added Time From Note using SmartTimeParser
                     // Supports: 1h, 1hr, 1h30m, 2h 15m, 45m, 1:30, 1.5 hours, half hour,
                     // one hr three mins, about 30 mins, around 2 hrs, 90 minutes, etc.
+                    $parsedFromAddedColumn = SmartTimeParser::parse($addedTimeFromNote);
+                    $parsedFromRemarks = 0.0;
+
+                    // Also add any time mentioned in remarks to Added Time From Note
                     if ($remarks !== '') {
-                        $addedTimeFromNoteValue += SmartTimeParser::parse($remarks);
+                        $parsedFromRemarks = SmartTimeParser::parse($remarks);
                     }
+
+                    $addedTimeFromNoteValue = $parsedFromAddedColumn + $parsedFromRemarks;
+
+                    // Build remarks - include the original Added Time From Note value for visibility
+                    $remarksParts = [];
+
+                    // Add original Added Time From Note value if provided
+                    if ($addedTimeFromNote !== '' && $addedTimeFromNote !== '00:00' && $addedTimeFromNote !== '0') {
+                        $remarksParts[] = $addedTimeFromNote;
+                    }
+
+                    // Add original remarks if provided
+                    if ($remarks !== '') {
+                        $remarksParts[] = $remarks;
+                    }
+
+                    $finalRemarks = implode(' | ', $remarksParts);
 
                     // Total hours = Worked + Added
                     $totalHoursValue = $workedHoursValue + $addedTimeFromNoteValue;
@@ -887,7 +907,7 @@ class DtrController extends Controller
                         'total_hours' => $totalHoursValue,
                         'overtime_hours' => $overtimeHoursValue,
                         'status' => $status,
-                        'remarks' => $remarks,
+                        'remarks' => $finalRemarks,
                     ]);
 
                     // Calculate and store weekly deficit - same as manual creation

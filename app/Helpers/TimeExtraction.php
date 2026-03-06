@@ -84,12 +84,37 @@ class TimeExtraction
         $totalMinutes = 0.0;
         $matched = [];
 
+        // Build word pattern for reuse
+        $wordPattern = implode('|', array_keys(self::$wordNumbers));
+
+        // 0. "one and a half hr", "two and half hours", "one and half hr" (word number + and + half/quarter + hour)
+        if (preg_match_all('/\b(' . $wordPattern . ')\s+and\s+(?:a\s+)?(half|quarter)\s*(?:h(?:(?:ou)?r)?s?)\b/i', $text, $matches, PREG_SET_ORDER)) {
+            foreach ($matches as $m) {
+                $wholeNum = self::$wordNumbers[strtolower($m[1])] ?? 0;
+                $frac = self::$fractionWords[$m[2]] ?? 0;
+                $totalMinutes += ($wholeNum + $frac) * 60;
+                $matched[] = $m[0];
+            }
+        }
+
+        // 0b. Numeric "1 and a half hr", "2 and half hours"
+        if (preg_match_all('/\b(\d+)\s+and\s+(?:a\s+)?(half|quarter)\s*(?:h(?:(?:ou)?r)?s?)\b/i', $text, $matches, PREG_SET_ORDER)) {
+            foreach ($matches as $m) {
+                $wholeNum = (int) $m[1];
+                $frac = self::$fractionWords[$m[2]] ?? 0;
+                $totalMinutes += ($wholeNum + $frac) * 60;
+                $matched[] = $m[0];
+            }
+        }
+
         // 1. "half hour", "quarter hour", "half an hour"
         if (preg_match_all('/\b(half|quarter)(?:\s+an?)?\s+hour/i', $text, $matches, PREG_SET_ORDER)) {
             foreach ($matches as $m) {
-                $frac = self::$fractionWords[$m[1]] ?? 0;
-                $totalMinutes += $frac * 60;
-                $matched[] = $m[0];
+                if (!self::alreadyMatched($m[0], $matched)) {
+                    $frac = self::$fractionWords[$m[1]] ?? 0;
+                    $totalMinutes += $frac * 60;
+                    $matched[] = $m[0];
+                }
             }
         }
 
@@ -133,7 +158,6 @@ class TimeExtraction
         }
 
         // 6. Word-based hours: "one hour", "two hrs", "three hours"
-        $wordPattern = implode('|', array_keys(self::$wordNumbers));
         if (preg_match_all('/\b(' . $wordPattern . ')\s*(?:h(?:(?:ou)?r)?s?)\b/i', $text, $matches, PREG_SET_ORDER)) {
             foreach ($matches as $m) {
                 $num = self::$wordNumbers[strtolower($m[1])] ?? 0;
