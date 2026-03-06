@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Helpers\TimeExtraction;
+use App\Helpers\SmartTimeParser;
 use App\Models\Dtr;
 use App\Models\DtrDeficit;
 use App\Models\User;
@@ -832,9 +833,11 @@ class DtrController extends Controller
                     $workedHoursValue = $toDecimal($workedHours);
                     $addedTimeFromNoteValue = $toDecimal($addedTimeFromNote);
 
-                    // Add any time mentioned in remarks to Added Time From Note
+                    // Add any time mentioned in remarks to Added Time From Note using SmartTimeParser
+                    // Supports: 1h, 1hr, 1h30m, 2h 15m, 45m, 1:30, 1.5 hours, half hour,
+                    // one hr three mins, about 30 mins, around 2 hrs, 90 minutes, etc.
                     if ($remarks !== '') {
-                        $addedTimeFromNoteValue += TimeExtraction::fromText($remarks);
+                        $addedTimeFromNoteValue += SmartTimeParser::parse($remarks);
                     }
 
                     // Total hours = Worked + Added
