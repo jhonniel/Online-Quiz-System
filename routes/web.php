@@ -507,6 +507,7 @@ Route::middleware(['auth'])->group(function () {
     Route::post('/files/{file}/share', [UserFileController::class, 'share'])->name('user.files.share');
     Route::post('/files/{file}/unshare', [UserFileController::class, 'unshare'])->name('user.files.unshare');
     Route::get('/files/{file}/shared-users', [UserFileController::class, 'getSharedUsers'])->name('user.files.shared-users');
+    Route::delete('/files/{file}', [UserFileController::class, 'destroy'])->name('user.files.destroy');
 
     // Chat Routes
     Route::get('/chat/messages', [ChatController::class, 'index'])->name('chat.messages');

@@ -28,6 +28,7 @@ class FileController extends Controller
 
     /**
      * Get S3 client + bucket for DigitalOcean Spaces.
+     * For browser uploads to work, the Space must have CORS configured (see docs/SPACES_CORS_SETUP.md).
      */
     private function getSpacesClientAndBucket(): array
     {
@@ -42,6 +43,7 @@ class FileController extends Controller
             throw new \RuntimeException('DigitalOcean Spaces disk is not configured correctly.');
         }
 
+        $endpoint = preg_match('#^https?://#i', $endpoint) ? $endpoint : 'https://' . $endpoint;
         $host = parse_url($endpoint, PHP_URL_HOST) ?: '';
         $usePathStyle = true;
         if ($host && str_contains($host, $bucket . '.')) {
@@ -755,17 +757,77 @@ class FileController extends Controller
     }
 
     /**
-     * Get users this file/folder is shared with (owner only).
+     * Get users this file/folder is shared with. Owner and any user with access can view.
      */
     public function getSharedUsers(File $file)
     {
-        if ($file->uploaded_by != auth()->id()) {
-            abort(403, 'Only the owner can view shared users.');
+        $userId = auth()->id();
+        if ($file->uploaded_by != $userId && !$file->canUserView($userId)) {
+            abort(403, 'You do not have permission to view who this is shared with.');
         }
 
         $sharedUsers = $file->sharedWith()->get();
 
         return response()->json($sharedUsers);
+    }
+
+    /**
+     * Delete a file or folder. Only the owner can delete; folders are recursively deleted.
+     */
+    public function destroy(File $file)
+    {
+        if ($file->uploaded_by != auth()->id()) {
+            abort(403, 'Only the owner can delete this ' . $file->type . '.');
+        }
+
+        $this->deleteFileOrFolderRecursive($file);
+
+        return redirect()->back()->with('success', ucfirst($file->type) . ' deleted successfully.');
+    }
+
+    /**
+     * Recursively delete a file or folder and its contents (storage + DB). No redirect.
+     */
+    private function deleteFileOrFolderRecursive(File $file): void
+    {
+        if ($file->isFolder()) {
+            foreach ($file->children()->get() as $child) {
+                $this->deleteFileOrFolderRecursive($child);
+            }
+        } else {
+            try {
+                if ($file->path && Storage::disk('digitalocean')->exists($file->path)) {
+                    Storage::disk('digitalocean')->delete($file->path);
+                }
+            } catch (\Exception $e) {
+                try {
+                    if ($file->path && Storage::disk('public')->exists($file->path)) {
+                        Storage::disk('public')->delete($file->path);
+                    }
+                } catch (\Exception $e2) {
+                    // Ignore
+                }
+            }
+            if (!empty($file->thumbnail_path)) {
+                try {
+                    if (Storage::disk('digitalocean')->exists($file->thumbnail_path)) {
+                        Storage::disk('digitalocean')->delete($file->thumbnail_path);
+                    }
+                } catch (\Exception $e) {
+                    // Ignore
+                }
+                try {
+                    if (Storage::disk('public')->exists($file->thumbnail_path)) {
+                        Storage::disk('public')->delete($file->thumbnail_path);
+                    }
+                } catch (\Exception $e) {
+                    // Ignore
+                }
+            }
+        }
+
+        DB::table('file_user_permissions')->where('file_id', $file->id)->delete();
+        $file->delete();
     }
 
     /**

@@ -125,9 +125,20 @@
                                             @elseif($item->isFolder())
                                                 <a href="{{ url('/files?folder_id=' . $item->id) }}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Open</a>
                                             @endif
-                                            @if($item->uploaded_by === auth()->id())
-                                                <button type="button" onclick="openUserShareModal({{ $item->id }}, '{{ $item->type }}')"
-                                                        class="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Share</button>
+                                            @php
+                                                $userIsOwner = $item->uploaded_by === auth()->id();
+                                                $userCanViewShared = $userIsOwner || $item->canUserView(auth()->id());
+                                            @endphp
+                                            @if($userCanViewShared)
+                                                <button type="button" onclick="openUserShareModal({{ $item->id }}, '{{ $item->type }}', {{ $userIsOwner ? 'true' : 'false' }})"
+                                                        class="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">{{ $userIsOwner ? 'Share' : 'View shared' }}</button>
+                                            @endif
+                                            @if($userIsOwner)
+                                                <form action="{{ url('/files/' . $item->id) }}" method="POST" class="block" onsubmit="return confirm('Are you sure you want to delete this {{ $item->type }}?{{ $item->isFolder() ? ' This will delete all contents inside.' : '' }}');">
+                                                    @csrf
+                                                    @method('DELETE')
+                                                    <button type="submit" class="block w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50">Delete</button>
+                                                </form>
                                             @endif
                                         </div>
                                     </div>
@@ -251,37 +262,43 @@
                 </div>
                 <form id="user-share-form" method="POST" action="">
                     @csrf
-                    <div class="mb-4">
-                        <label for="user-share_user_id" class="block text-sm font-medium text-gray-700 mb-2">Add user to folder (students &amp; employees)</label>
-                        <select name="user_id" id="user-share_user_id" required
-                                class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500">
-                            <option value="">Choose a user...</option>
-                            @foreach($users ?? [] as $u)
-                                <option value="{{ $u->id }}">{{ $u->name }} ({{ $u->email }}) — {{ ucfirst($u->role ?? '') }}</option>
-                            @endforeach
-                        </select>
-                        <p class="mt-1 text-xs text-gray-500">You can share this folder with other students and employees.</p>
+                    <div id="user-share-add-section" class="mb-4">
+                        <div class="mb-4">
+                            <label for="user-share-search-input" class="block text-sm font-medium text-gray-700 mb-2">Add user to folder (students &amp; employees)</label>
+                            <div id="user-share-search-wrap" class="relative">
+                                <input type="text" id="user-share-search-input" autocomplete="off" placeholder="Search by name or email..."
+                                       class="w-full px-3 py-2 pr-9 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500">
+                                <input type="hidden" name="user_id" id="user-share_user_id" value="">
+                                <span class="absolute inset-y-0 right-0 flex items-center pr-2 pointer-events-none text-gray-400">
+                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+                                </span>
+                                <ul id="user-share-search-results" class="hidden absolute z-10 mt-1 w-full max-h-48 overflow-auto rounded-md border border-gray-200 bg-white shadow-lg text-sm"></ul>
+                            </div>
+                            <p class="mt-1 text-xs text-gray-500">You can share this folder with other students and employees.</p>
+                        </div>
+                        <div class="mb-4 space-y-2">
+                            <label class="flex items-center">
+                                <input type="checkbox" name="can_view" value="1" checked
+                                       class="rounded border-gray-300 text-indigo-600 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50">
+                                <span class="ml-2 text-sm text-gray-700">Can view</span>
+                            </label>
+                            <label class="flex items-center" id="user-can-upload-container">
+                                <input type="checkbox" name="can_upload" value="1"
+                                       class="rounded border-gray-300 text-indigo-600 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50">
+                                <span class="ml-2 text-sm text-gray-700">Can upload (folders only)</span>
+                            </label>
+                        </div>
+                        <div class="flex justify-end space-x-3 mb-4">
+                            <button type="submit" id="user-share-submit-btn"
+                                    class="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700">
+                                Share
+                            </button>
+                        </div>
                     </div>
-                    <div class="mb-4 space-y-2">
-                        <label class="flex items-center">
-                            <input type="checkbox" name="can_view" value="1" checked
-                                   class="rounded border-gray-300 text-indigo-600 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50">
-                            <span class="ml-2 text-sm text-gray-700">Can view</span>
-                        </label>
-                        <label class="flex items-center" id="user-can-upload-container">
-                            <input type="checkbox" name="can_upload" value="1"
-                                   class="rounded border-gray-300 text-indigo-600 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50">
-                            <span class="ml-2 text-sm text-gray-700">Can upload (folders only)</span>
-                        </label>
-                    </div>
-                    <div class="flex justify-end space-x-3">
+                    <div class="flex justify-end">
                         <button type="button" onclick="document.getElementById('user-share-modal').classList.add('hidden')"
                                 class="px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50">
-                            Cancel
-                        </button>
-                        <button type="submit"
-                                class="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700">
-                            Share
+                            Close
                         </button>
                     </div>
                 </form>
@@ -359,8 +376,81 @@
         const USER_FILES_SHARE_URL = @json(url('/files/__FILE__/share'));
         const USER_FILES_UNSHARE_URL = @json(url('/files/__FILE__/unshare'));
         const USER_FILES_SHARED_USERS_URL = @json(url('/files/__FILE__/shared-users'));
+        const USER_SHARE_USERS = @json($users ?? []);
 
         let currentUserShareItemId = null;
+        let currentUserShareIsOwner = true;
+
+        // Searchable user picker for share modal
+        (function initUserShareSearch() {
+            const searchInput = document.getElementById('user-share-search-input');
+            const hiddenInput = document.getElementById('user-share_user_id');
+            const resultsList = document.getElementById('user-share-search-results');
+            if (!searchInput || !hiddenInput || !resultsList) return;
+
+            function escapeHtml(s) {
+                return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+            }
+            function showResults(items) {
+                resultsList.innerHTML = '';
+                if (!items.length) {
+                    resultsList.classList.remove('hidden');
+                    const li = document.createElement('li');
+                    li.className = 'px-3 py-2 text-gray-500';
+                    li.textContent = 'No users match your search.';
+                    resultsList.appendChild(li);
+                    return;
+                }
+                items.forEach(u => {
+                    const li = document.createElement('li');
+                    li.className = 'px-3 py-2 cursor-pointer hover:bg-indigo-50 border-b border-gray-100 last:border-0';
+                    li.dataset.userId = u.id;
+                    li.dataset.userName = u.name || '';
+                    li.dataset.userEmail = u.email || '';
+                    li.innerHTML = '<span class="font-medium text-gray-900">' + escapeHtml(u.name) + '</span> <span class="text-gray-500">' + escapeHtml(u.email) + '</span> <span class="text-gray-400 text-xs">— ' + escapeHtml((u.role && u.role.charAt(0).toUpperCase() + u.role.slice(1)) || '') + '</span>';
+                    li.addEventListener('click', function () {
+                        hiddenInput.value = this.dataset.userId || '';
+                        searchInput.value = (this.dataset.userName || '') + ' (' + (this.dataset.userEmail || '') + ')';
+                        resultsList.classList.add('hidden');
+                        searchInput.blur();
+                    });
+                    resultsList.appendChild(li);
+                });
+                resultsList.classList.remove('hidden');
+            }
+            function filterUsers(q) {
+                const term = (q || '').toLowerCase().trim();
+                if (!term) return USER_SHARE_USERS;
+                return USER_SHARE_USERS.filter(u => {
+                    const name = (u.name || '').toLowerCase();
+                    const email = (u.email || '').toLowerCase();
+                    const role = (u.role || '').toLowerCase();
+                    return name.includes(term) || email.includes(term) || role.includes(term);
+                });
+            }
+
+            searchInput.addEventListener('input', function () {
+                hiddenInput.value = '';
+                showResults(filterUsers(this.value));
+            });
+            searchInput.addEventListener('focus', function () {
+                showResults(this.value ? filterUsers(this.value) : USER_SHARE_USERS);
+            });
+            searchInput.addEventListener('blur', function () {
+                setTimeout(() => resultsList.classList.add('hidden'), 200);
+            });
+        })();
+
+        document.getElementById('user-share-form')?.addEventListener('submit', function (e) {
+            if (!currentUserShareIsOwner) {
+                e.preventDefault();
+                return;
+            }
+            if (!document.getElementById('user-share_user_id')?.value) {
+                e.preventDefault();
+                alert('Please search and select a user to add.');
+            }
+        });
 
         function setUserSharedUsersState(state) {
             const loading = document.getElementById('user-shared-users-loading');
@@ -380,13 +470,15 @@
         function renderUserSharedUsers(users) {
             const list = document.getElementById('user-shared-users-list');
             list.innerHTML = '';
+            const isOwner = currentUserShareIsOwner;
             users.forEach(u => {
                 const canView = !!(u.pivot && u.pivot.can_view);
                 const canUpload = !!(u.pivot && u.pivot.can_upload);
-                const li = document.createElement('li');
-                li.className = 'py-2 flex items-center justify-between';
                 const name = String(u.name ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
                 const email = String(u.email ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+                const removeBtn = isOwner ? '<button type="button" class="text-xs text-red-600 hover:text-red-800 underline user-unshare-btn" data-user-id="' + u.id + '">Remove</button>' : '';
+                const li = document.createElement('li');
+                li.className = 'py-2 flex items-center justify-between';
                 li.innerHTML = `
                     <div class="min-w-0">
                         <div class="text-sm font-medium text-gray-900 truncate">${name}</div>
@@ -396,9 +488,7 @@
                             ${canUpload ? '<span class="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] bg-indigo-100 text-indigo-800">Upload</span>' : ''}
                         </div>
                     </div>
-                    <div class="flex-shrink-0 pl-2">
-                        <button type="button" class="text-xs text-red-600 hover:text-red-800 underline user-unshare-btn" data-user-id="${u.id}">Remove</button>
-                    </div>
+                    <div class="flex-shrink-0 pl-2">${removeBtn}</div>
                 `;
                 list.appendChild(li);
             });
@@ -453,14 +543,25 @@
             .catch(() => alert('Failed to remove sharing.'));
         }
 
-        function openUserShareModal(id, type) {
+        function openUserShareModal(id, type, isOwner) {
+            currentUserShareIsOwner = isOwner !== false;
             document.getElementById('user-share-item-type').textContent = type === 'folder' ? 'Folder' : 'File';
             document.getElementById('user-share-form').action = USER_FILES_SHARE_URL.replace('__FILE__', id);
+            const addSection = document.getElementById('user-share-add-section');
+            if (addSection) addSection.style.display = currentUserShareIsOwner ? 'block' : 'none';
             const canUploadContainer = document.getElementById('user-can-upload-container');
-            canUploadContainer.style.display = type === 'folder' ? 'flex' : 'none';
-            if (type !== 'folder') document.querySelector('#user-share-form input[name="can_upload"]').checked = false;
+            if (canUploadContainer) canUploadContainer.style.display = type === 'folder' ? 'flex' : 'none';
+            if (type !== 'folder') {
+                const canUploadInput = document.querySelector('#user-share-form input[name="can_upload"]');
+                if (canUploadInput) canUploadInput.checked = false;
+            }
             document.getElementById('user-share_user_id').value = '';
-            document.querySelector('#user-share-form input[name="can_view"]').checked = true;
+            const searchInput = document.getElementById('user-share-search-input');
+            if (searchInput) searchInput.value = '';
+            const resultsList = document.getElementById('user-share-search-results');
+            if (resultsList) resultsList.classList.add('hidden');
+            const canViewInput = document.querySelector('#user-share-form input[name="can_view"]');
+            if (canViewInput) canViewInput.checked = true;
             document.getElementById('user-share-modal').classList.remove('hidden');
             loadUserSharedUsers(id);
         }
@@ -878,7 +979,8 @@
                                 });
                             } else {
                                 hideFloatingIndicator();
-                                document.getElementById('user-upload-status').textContent = 'Error: Upload to Spaces failed (HTTP ' + xhr.status + ').';
+                                var statusMsg = xhr.status ? ('HTTP ' + xhr.status) : 'request blocked or failed';
+                                document.getElementById('user-upload-status').textContent = 'Error: Upload to Spaces failed (' + statusMsg + '). Check CORS on your Space if you use direct upload.';
                                 document.getElementById('user-upload-progress-bar').classList.remove('bg-indigo-600');
                                 document.getElementById('user-upload-progress-bar').classList.add('bg-red-600');
                                 document.getElementById('user-upload-form-buttons').style.display = 'flex';
@@ -887,7 +989,7 @@
 
                         xhr.addEventListener('error', function () {
                             hideFloatingIndicator();
-                            document.getElementById('user-upload-status').textContent = 'Error: Upload to Spaces failed. Please try again.';
+                            document.getElementById('user-upload-status').textContent = 'Error: Upload to Spaces failed (often CORS). Configure CORS on your Space: allow your site origin, PUT method, and Content-Type header. See browser console for details.';
                             document.getElementById('user-upload-progress-bar').classList.remove('bg-indigo-600');
                             document.getElementById('user-upload-progress-bar').classList.add('bg-red-600');
                             document.getElementById('user-upload-form-buttons').style.display = 'flex';
