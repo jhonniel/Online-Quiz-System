@@ -494,6 +494,7 @@ Route::middleware(['auth'])->group(function () {
 
     // File Storage (User)
     Route::get('/files', [UserFileController::class, 'index'])->name('user.files.index');
+    Route::post('/files/create-folder', [UserFileController::class, 'createFolder'])->name('user.files.create-folder');
     Route::post('/files', [UserFileController::class, 'store'])->name('user.files.store');
     Route::post('/files/presign', [UserFileController::class, 'presignUpload'])->name('user.files.presign');
     Route::post('/files/confirm', [UserFileController::class, 'confirmUpload'])->name('user.files.confirm');
@@ -503,6 +504,9 @@ Route::middleware(['auth'])->group(function () {
     Route::post('/files/multipart/abort', [UserFileController::class, 'abortMultipartUpload'])->name('user.files.multipart.abort');
     Route::get('/files/{file}/download', [UserFileController::class, 'download'])->name('user.files.download');
     Route::get('/files/{file}/view', [UserFileController::class, 'view'])->name('user.files.view');
+    Route::post('/files/{file}/share', [UserFileController::class, 'share'])->name('user.files.share');
+    Route::post('/files/{file}/unshare', [UserFileController::class, 'unshare'])->name('user.files.unshare');
+    Route::get('/files/{file}/shared-users', [UserFileController::class, 'getSharedUsers'])->name('user.files.shared-users');
 
     // Chat Routes
     Route::get('/chat/messages', [ChatController::class, 'index'])->name('chat.messages');

@@ -94,16 +94,11 @@
                     <div class="group relative bg-gray-50 rounded-lg border border-gray-200 hover:border-indigo-300 hover:shadow-md transition-all duration-200 p-4">
                         @if($item->isFolder())
                             @php
-                                $sharedCount = 0;
-                                $sharedUsers = collect();
-                                if ($item->uploaded_by == auth()->id()) {
-                                    $sharedUsers = $item->sharedWith ?? collect();
-                                    $sharedCount = $sharedUsers->count();
-                                }
+                                $sharedUsers = $item->sharedWith ?? collect();
+                                $sharedCount = $sharedUsers->count();
                             @endphp
 
                             @if($sharedCount > 0)
-                                <!-- Shared indicator (owner only) -->
                                 <div class="absolute top-2 left-2 inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800"
                                      title="Shared with {{ $sharedCount }} user{{ $sharedCount !== 1 ? 's' : '' }}">
                                     <svg class="w-3.5 h-3.5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -121,31 +116,18 @@
                                 </div>
                                 <h3 class="text-sm font-medium text-gray-900 truncate" title="{{ $item->name }}">{{ $item->name }}</h3>
                                 <p class="text-xs text-gray-500 mt-1">Folder</p>
+                                <p class="text-xs text-gray-600 mt-0.5" title="Owner">Owner: {{ $item->uploader->name ?? 'N/A' }}</p>
                             </a>
 
-                            @if($sharedCount > 0)
-                                <!-- Shared users quick view (owner only) -->
-                                <div class="mt-2 flex justify-center">
-                                    <button type="button"
-                                            onclick="openShareModal({{ $item->id }}, 'folder')"
-                                            class="inline-flex items-center px-2 py-1 rounded-full bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-xs"
-                                            title="Shared with {{ $sharedCount }} user{{ $sharedCount !== 1 ? 's' : '' }} (click to view list)">
-                                        <div class="flex -space-x-2 mr-2">
-                                            @foreach($sharedUsers->take(3) as $su)
-                                                <div class="w-6 h-6 rounded-full bg-indigo-600 text-white flex items-center justify-center text-[10px] font-semibold border-2 border-white">
-                                                    {{ strtoupper(substr($su->name ?? 'U', 0, 1)) }}
-                                                </div>
-                                            @endforeach
-                                            @if($sharedCount > 3)
-                                                <div class="w-6 h-6 rounded-full bg-indigo-200 text-indigo-800 flex items-center justify-center text-[10px] font-semibold border-2 border-white">
-                                                    +{{ $sharedCount - 3 }}
-                                                </div>
-                                            @endif
-                                        </div>
-                                        Shared: {{ $sharedCount }}
-                                    </button>
-                                </div>
-                            @endif
+                            <div class="mt-2 flex justify-center">
+                                <button type="button"
+                                        onclick="openShareModal({{ $item->id }}, 'folder')"
+                                        class="inline-flex items-center px-2 py-1 rounded-full bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-xs"
+                                        title="View shared with ({{ $sharedCount }})">
+                                    <svg class="w-3.5 h-3.5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
+                                    Shared: {{ $sharedCount }}
+                                </button>
+                            </div>
                         @else
                             <div class="text-center">
                                 @php
@@ -186,10 +168,11 @@
                                 </div>
                                 <h3 class="text-sm font-medium text-gray-900 truncate" title="{{ $item->name }}">{{ $item->name }}</h3>
                                 <p class="text-xs text-gray-500 mt-1">{{ $item->formatted_size }}</p>
+                                <p class="text-xs text-gray-600 mt-0.5" title="Owner">Owner: {{ $item->uploader->name ?? 'N/A' }}</p>
                             </div>
                         @endif
 
-                        <!-- Actions Menu -->
+                        <!-- Actions Menu (Admin: Share, Rename, Delete for all items) -->
                         <div class="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
                             <div class="relative" x-data="{ open: false }">
                                 <button @click="open = !open" class="p-1 rounded-md hover:bg-gray-200 text-gray-600">
@@ -205,19 +188,15 @@
                                                     class="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Preview</button>
                                             <a href="{{ url('/admin/files/' . $item->id . '/download') }}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Download</a>
                                         @endif
-                                        @if($item->uploaded_by == auth()->id())
-                                            <button onclick="openShareModal({{ $item->id }}, '{{ $item->type }}')"
-                                                    class="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Share</button>
-                                        @endif
+                                        <button onclick="openShareModal({{ $item->id }}, '{{ $item->type }}')"
+                                                class="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Share / View shared with</button>
                                         <button onclick="openEditModal({{ $item->id }}, '{{ addslashes($item->name) }}', '{{ addslashes($item->description ?? '') }}', '{{ $item->type }}')"
                                                 class="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Rename</button>
-                                        @if($item->uploaded_by == auth()->id())
-                                            <form action="{{ url('/admin/files/' . $item->id) }}" method="POST" class="inline" onsubmit="return confirm('Are you sure you want to delete this {{ $item->type }}?');">
-                                                @csrf
-                                                @method('DELETE')
-                                                <button type="submit" class="block w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-gray-100">Delete</button>
-                                            </form>
-                                        @endif
+                                        <form action="{{ url('/admin/files/' . $item->id) }}" method="POST" class="inline" onsubmit="return confirm('Are you sure you want to delete this {{ $item->type }}?{{ $item->isFolder() ? ' This will delete all contents inside.' : '' }}');">
+                                            @csrf
+                                            @method('DELETE')
+                                            <button type="submit" class="block w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-gray-100">Delete</button>
+                                        </form>
                                     </div>
                                 </div>
                             </div>

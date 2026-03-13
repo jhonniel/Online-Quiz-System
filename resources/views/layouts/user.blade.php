@@ -152,17 +152,8 @@
                         </a>
                         @endif
 
-                        <!-- File Storage (Employee & Student if enabled) -->
-                        @php
-                            $showFileStorage = false;
-                            if (auth()->user()->role === 'employee') {
-                                $showFileStorage = true;
-                            } elseif (auth()->user()->role === 'student') {
-                                $fileStorageStudentAccess = \App\Models\Setting::get('file_storage_student_access', 'disabled');
-                                $showFileStorage = $fileStorageStudentAccess === 'enabled';
-                            }
-                        @endphp
-                        @if($showFileStorage)
+                        <!-- File Storage (Employee & Student) -->
+                        @if(in_array(auth()->user()->role, ['employee', 'student']))
                         <a href="{{ url('/files') }}"
                            class="group flex items-center px-2 py-2 text-sm font-medium rounded-md transition-colors duration-200 {{ request()->routeIs('user.files.*') ? 'bg-indigo-700 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white' }}"
                            :class="sidebarCollapsed ? 'justify-center' : ''"
@@ -473,16 +464,7 @@
                         </a>
                         @endif
 
-                        @php
-                            $showFileStorageMobile = false;
-                            if (auth()->user()->role === 'employee') {
-                                $showFileStorageMobile = true;
-                            } elseif (auth()->user()->role === 'student') {
-                                $fileStorageStudentAccess = \App\Models\Setting::get('file_storage_student_access', 'disabled');
-                                $showFileStorageMobile = $fileStorageStudentAccess === 'enabled';
-                            }
-                        @endphp
-                        @if($showFileStorageMobile)
+                        @if(in_array(auth()->user()->role, ['employee', 'student']))
                         <a href="{{ url('/files') }}"
                            @click="sidebarOpen = false"
                            class="group flex items-center px-2 py-2 text-sm font-medium rounded-md transition-colors duration-200 {{ request()->routeIs('user.files.*') ? 'bg-indigo-700 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white' }}">

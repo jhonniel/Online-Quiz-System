@@ -84,35 +84,21 @@ class FileController extends Controller
         $currentFolder = null;
         $userId = auth()->id();
 
+        // Admin: can access any folder and see all root-level items (with owner labels)
         if ($folderId) {
             $currentFolder = File::where('id', $folderId)
                 ->where('type', 'folder')
                 ->firstOrFail();
-
-            // Check if user has access to this folder
-            if (!$currentFolder->canUserView($userId) && $currentFolder->uploaded_by != $userId) {
-                abort(403, 'You do not have permission to access this folder.');
-            }
         }
 
-        // Get files and folders in current folder
-        // IMPORTANT: if user can open the folder, they can see EVERYTHING inside it.
-        // (Sharing a folder should automatically share its contents.)
         if ($folderId) {
             $query = File::where('folder_id', $folderId)
                 ->with(['uploader', 'sharedWith'])
                 ->orderBy('type', 'desc')
                 ->orderBy('name', 'asc');
         } else {
-            // Root: show items user owns or items directly shared with them
+            // Root: admin sees all folders and files (with owner)
             $query = File::whereNull('folder_id')
-                ->where(function ($q) use ($userId) {
-                    $q->where('uploaded_by', $userId)
-                        ->orWhereHas('sharedWith', function ($sq) use ($userId) {
-                            $sq->where('user_id', $userId)
-                                ->where('can_view', true);
-                        });
-                })
                 ->with(['uploader', 'sharedWith'])
                 ->orderBy('type', 'desc')
                 ->orderBy('name', 'asc');
@@ -158,15 +144,11 @@ class FileController extends Controller
 
         $userId = auth()->id();
 
-        // Check upload permission if uploading to a folder
+        // Admin can upload to any folder (no permission check)
         if ($request->folder_id) {
-            $folder = File::where('id', $request->folder_id)
+            File::where('id', $request->folder_id)
                 ->where('type', 'folder')
                 ->firstOrFail();
-
-            if (!$folder->canUserUpload($userId)) {
-                return redirect()->back()->withErrors(['error' => 'You do not have permission to upload to this folder.']);
-            }
         }
 
         $file = $request->file('file');
@@ -248,17 +230,11 @@ class FileController extends Controller
             'folder_id' => 'nullable|exists:files,id',
         ]);
 
-        $userId = auth()->id();
-
-        // Check upload permission if uploading to a folder
+        // Admin can upload to any folder
         if (!empty($validated['folder_id'])) {
-            $folder = File::where('id', $validated['folder_id'])
+            File::where('id', $validated['folder_id'])
                 ->where('type', 'folder')
                 ->firstOrFail();
-
-            if (!$folder->canUserUpload($userId)) {
-                return response()->json(['message' => 'You do not have permission to upload to this folder.'], 403);
-            }
         }
 
         // Determine extension from original name
@@ -314,13 +290,9 @@ class FileController extends Controller
         $userId = auth()->id();
 
         if (!empty($validated['folder_id'])) {
-            $folder = File::where('id', $validated['folder_id'])
+            File::where('id', $validated['folder_id'])
                 ->where('type', 'folder')
                 ->firstOrFail();
-
-            if (!$folder->canUserUpload($userId)) {
-                return response()->json(['message' => 'You do not have permission to upload to this folder.'], 403);
-            }
         }
 
         $assetDisk = 'digitalocean';
@@ -385,17 +357,11 @@ class FileController extends Controller
             'folder_id' => 'nullable|exists:files,id',
         ]);
 
-        $userId = auth()->id();
-
-        // Check upload permission if uploading to a folder
+        // Admin can upload to any folder
         if (!empty($validated['folder_id'])) {
-            $folder = File::where('id', $validated['folder_id'])
+            File::where('id', $validated['folder_id'])
                 ->where('type', 'folder')
                 ->firstOrFail();
-
-            if (!$folder->canUserUpload($userId)) {
-                return response()->json(['message' => 'You do not have permission to upload to this folder.'], 403);
-            }
         }
 
         // Determine extension from original name
@@ -481,13 +447,9 @@ class FileController extends Controller
         $userId = auth()->id();
 
         if (!empty($validated['folder_id'])) {
-            $folder = File::where('id', $validated['folder_id'])
+            File::where('id', $validated['folder_id'])
                 ->where('type', 'folder')
                 ->firstOrFail();
-
-            if (!$folder->canUserUpload($userId)) {
-                return response()->json(['message' => 'You do not have permission to upload to this folder.'], 403);
-            }
         }
 
         [$client, $bucket] = $this->getSpacesClientAndBucket();
@@ -706,37 +668,51 @@ class FileController extends Controller
     }
 
     /**
-     * Remove the specified file or folder.
+     * Remove the specified file or folder. Admin can delete any item; folders are recursively deleted.
      */
     public function destroy(File $file)
     {
+        $this->deleteFileOrFolderRecursive($file);
+
+        return redirect()->back()->with('success', ucfirst($file->type) . ' deleted successfully.');
+    }
+
+    /**
+     * Recursively delete a file or folder and its contents (storage + DB). No redirect.
+     */
+    private function deleteFileOrFolderRecursive(File $file): void
+    {
         if ($file->isFolder()) {
-            // Check if folder has children
-            if ($file->children()->count() > 0) {
-                return redirect()->back()->withErrors(['error' => 'Cannot delete folder. Please delete all files and folders inside first.']);
+            foreach ($file->children()->get() as $child) {
+                $this->deleteFileOrFolderRecursive($child);
             }
         } else {
-            // Delete physical file
             try {
-                $assetDisk = 'digitalocean';
-                if (Storage::disk($assetDisk)->exists($file->path)) {
-                    Storage::disk($assetDisk)->delete($file->path);
+                if ($file->path && Storage::disk('digitalocean')->exists($file->path)) {
+                    Storage::disk('digitalocean')->delete($file->path);
                 }
             } catch (\Exception $e) {
-                // Try public disk as fallback
                 try {
-                    if (Storage::disk('public')->exists($file->path)) {
+                    if ($file->path && Storage::disk('public')->exists($file->path)) {
                         Storage::disk('public')->delete($file->path);
                     }
                 } catch (\Exception $e2) {
-                    // Ignore deletion errors
+                    // Ignore
+                }
+            }
+            if (!empty($file->thumbnail_path)) {
+                try {
+                    if (Storage::disk('digitalocean')->exists($file->thumbnail_path)) {
+                        Storage::disk('digitalocean')->delete($file->thumbnail_path);
+                    }
+                } catch (\Exception $e) {
+                    // Ignore
                 }
             }
         }
 
+        DB::table('file_user_permissions')->where('file_id', $file->id)->delete();
         $file->delete();
-
-        return redirect()->back()->with('success', ucfirst($file->type) . ' deleted successfully.');
     }
 
     /**
@@ -895,11 +871,6 @@ class FileController extends Controller
             'can_upload' => 'boolean',
         ]);
 
-        // Only owner can share
-        if ($file->uploaded_by != auth()->id()) {
-            return redirect()->back()->withErrors(['error' => 'Only the owner can share this ' . $file->type . '.']);
-        }
-
         // Can't share with yourself
         if ($request->user_id == auth()->id()) {
             return redirect()->back()->withErrors(['error' => 'You cannot share with yourself.']);
@@ -936,11 +907,6 @@ class FileController extends Controller
             'user_id' => 'required|exists:users,id',
         ]);
 
-        // Only owner can unshare
-        if ($file->uploaded_by != auth()->id()) {
-            return redirect()->back()->withErrors(['error' => 'Only the owner can remove sharing permissions.']);
-        }
-
         DB::table('file_user_permissions')
             ->where('file_id', $file->id)
             ->where('user_id', $request->user_id)
@@ -957,15 +923,10 @@ class FileController extends Controller
     }
 
     /**
-     * Get users with permissions for a file/folder.
+     * Get users with permissions for a file/folder. Admin can view for any item.
      */
     public function getSharedUsers(File $file)
     {
-        // Only owner can view shared users
-        if ($file->uploaded_by != auth()->id()) {
-            abort(403, 'Only the owner can view shared users.');
-        }
-
         $sharedUsers = $file->sharedWith()->get();
 
         return response()->json($sharedUsers);

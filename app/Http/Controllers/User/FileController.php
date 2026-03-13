@@ -4,12 +4,28 @@ namespace App\Http\Controllers\User;
 
 use App\Http\Controllers\Controller;
 use App\Models\File;
+use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
 class FileController extends Controller
 {
+    /**
+     * Check if DigitalOcean Spaces is configured.
+     */
+    private function isSpacesConfigured(): bool
+    {
+        $cfg = config('filesystems.disks.digitalocean', []);
+        $bucket = $cfg['bucket'] ?? null;
+        $endpoint = $cfg['endpoint'] ?? null;
+        $key = $cfg['key'] ?? null;
+        $secret = $cfg['secret'] ?? null;
+
+        return !empty($bucket) && !empty($endpoint) && !empty($key) && !empty($secret);
+    }
+
     /**
      * Get S3 client + bucket for DigitalOcean Spaces.
      */
@@ -125,14 +141,75 @@ class FileController extends Controller
             }
         }
 
-        return view('user.files.index', compact('files', 'currentFolder', 'breadcrumbs'));
+        // Users who can access Files (employees and students) – folders can be shared with them
+        $users = User::where('id', '!=', auth()->id())
+            ->whereIn('role', ['employee', 'student'])
+            ->orderBy('role')
+            ->orderBy('name')
+            ->get(['id', 'name', 'email', 'role']);
+
+        return view('user.files.index', compact('files', 'currentFolder', 'breadcrumbs', 'users'));
+    }
+
+    /**
+     * Create a new folder (user files).
+     */
+    public function createFolder(Request $request)
+    {
+        $request->validate([
+            'name' => 'required|string|max:255',
+            'folder_id' => 'nullable|exists:files,id',
+            'description' => 'nullable|string|max:1000',
+        ]);
+
+        $userId = auth()->id();
+        $folderId = $request->filled('folder_id') ? $request->folder_id : null;
+
+        if ($folderId) {
+            $parentFolder = File::where('id', $folderId)
+                ->where('type', 'folder')
+                ->firstOrFail();
+
+            if (!$parentFolder->canUserUpload($userId)) {
+                return redirect()->back()->withErrors(['error' => 'You do not have permission to create folders here.']);
+            }
+        }
+
+        $existingFolder = File::where('folder_id', $folderId)
+            ->where('type', 'folder')
+            ->where('name', $request->name)
+            ->where('uploaded_by', $userId)
+            ->first();
+
+        if ($existingFolder) {
+            return redirect()->back()->withErrors(['name' => 'A folder with this name already exists in this location.']);
+        }
+
+        File::create([
+            'name' => $request->name,
+            'original_name' => null,
+            'path' => '',
+            'type' => 'folder',
+            'mime_type' => null,
+            'size' => null,
+            'folder_id' => $folderId,
+            'uploaded_by' => $userId,
+            'description' => $request->description,
+        ]);
+
+        return redirect()->back()->with('success', 'Folder created successfully.');
     }
 
     /**
      * Store a newly uploaded file for the user.
+     * Files are uploaded to DigitalOcean Spaces when configured.
      */
     public function store(Request $request)
     {
+        $request->merge([
+            'folder_id' => $request->filled('folder_id') ? $request->folder_id : null,
+        ]);
+
         $request->validate([
             'file' => 'required|file|max:5242880', // 5GB max
             'folder_id' => 'nullable|exists:files,id',
@@ -140,6 +217,14 @@ class FileController extends Controller
         ], [
             'file.max' => 'The file size must not exceed 5GB.',
         ]);
+
+        if (!$this->isSpacesConfigured()) {
+            $message = 'File upload requires DigitalOcean Spaces to be configured. Please set DIGITALOCEAN_SPACES_* in .env.';
+            if ($request->ajax() || $request->wantsJson()) {
+                return response()->json(['message' => $message], 503);
+            }
+            return redirect()->back()->withErrors(['error' => $message]);
+        }
 
         $userId = auth()->id();
 
@@ -163,25 +248,17 @@ class FileController extends Controller
         $extension = $file->getClientOriginalExtension();
         $filename = Str::random(40) . '.' . $extension;
 
-        // Store file in DigitalOcean Spaces with folder structure
         $assetDisk = 'digitalocean';
         $assetRoot = trim(env('DIGITALOCEAN_SPACES_ROOT_PATH', ''), '/');
-        $fileDir = $assetRoot ? $assetRoot . '/file-storage' : 'file-storage';
-
-        // Build full folder path from root to current folder
+        $fileDirSpaces = $assetRoot ? $assetRoot . '/file-storage' : 'file-storage';
         if ($request->folder_id) {
-            $folder = File::where('id', $request->folder_id)
-                ->where('type', 'folder')
-                ->with('folder')
-                ->firstOrFail();
-
+            $folder = File::where('id', $request->folder_id)->where('type', 'folder')->with('folder')->firstOrFail();
             $folderPath = $this->getFolderPath($folder);
             if ($folderPath) {
-                $fileDir = $fileDir . '/' . $folderPath;
+                $fileDirSpaces = $fileDirSpaces . '/' . $folderPath;
             }
         }
-
-        $path = $file->storeAs($fileDir, $filename, $assetDisk);
+        $path = $file->storeAs($fileDirSpaces, $filename, $assetDisk);
 
         // Create file record (no thumbnails here, admin side already handles images if needed)
         File::create([
@@ -211,6 +288,10 @@ class FileController extends Controller
      */
     public function presignUpload(Request $request)
     {
+        if (!$this->isSpacesConfigured()) {
+            return response()->json(['message' => 'File upload requires DigitalOcean Spaces to be configured. Please set DIGITALOCEAN_SPACES_* in .env.'], 503);
+        }
+
         $validated = $request->validate([
             'original_name' => 'required|string|max:255',
             'mime_type' => 'nullable|string|max:255',
@@ -319,10 +400,14 @@ class FileController extends Controller
     }
 
     /**
-     * Initiate a multipart upload (chunked upload).
+     * Initiate a multipart upload (chunked upload) to Spaces.
      */
     public function initiateMultipartUpload(Request $request)
     {
+        if (!$this->isSpacesConfigured()) {
+            return response()->json(['message' => 'File upload requires DigitalOcean Spaces to be configured. Please set DIGITALOCEAN_SPACES_* in .env.'], 503);
+        }
+
         $validated = $request->validate([
             'original_name' => 'required|string|max:255',
             'mime_type' => 'nullable|string|max:255',
@@ -555,7 +640,7 @@ class FileController extends Controller
     }
 
     /**
-     * View a file (redirect to cloud URL when possible).
+     * View a file (stream with inline disposition so it can be played in-browser, e.g. video/audio).
      */
     public function view(File $file)
     {
@@ -569,23 +654,118 @@ class FileController extends Controller
             return redirect('/files?folder_id=' . $file->id);
         }
 
+        $mimeType = $file->mime_type ?: 'application/octet-stream';
+        $disposition = 'inline; filename="' . addslashes($file->original_name ?: $file->name) . '"';
+
         try {
-            $assetDisk = 'digitalocean';
-            if (Storage::disk($assetDisk)->exists($file->path)) {
-                if (method_exists(Storage::disk($assetDisk), 'temporaryUrl')) {
-                    $url = Storage::disk($assetDisk)->temporaryUrl($file->path, now()->addMinutes(60));
-                } else {
-                    $url = Storage::disk($assetDisk)->url($file->path);
+            if ($this->isSpacesConfigured() && Storage::disk('digitalocean')->exists($file->path)) {
+                $stream = Storage::disk('digitalocean')->readStream($file->path);
+                if ($stream) {
+                    return response()->stream(function () use ($stream) {
+                        fpassthru($stream);
+                        if (is_resource($stream)) {
+                            fclose($stream);
+                        }
+                    }, 200, [
+                        'Content-Type' => $mimeType,
+                        'Content-Disposition' => $disposition,
+                        'Accept-Ranges' => 'bytes',
+                    ]);
                 }
-                return redirect($url);
             }
         } catch (\Exception $e) {
-            if (Storage::disk('public')->exists($file->path)) {
-                return Storage::disk('public')->response($file->path, $file->original_name);
-            }
+            // Fall through to public disk
+        }
+
+        if (Storage::disk('public')->exists($file->path)) {
+            return response()->file(Storage::disk('public')->path($file->path), [
+                'Content-Type' => $mimeType,
+                'Content-Disposition' => $disposition,
+                'Accept-Ranges' => 'bytes',
+            ]);
         }
 
         abort(404, 'File not found.');
+    }
+
+    /**
+     * Share a file or folder with another user (add to folder / grant access).
+     */
+    public function share(Request $request, File $file)
+    {
+        $request->validate([
+            'user_id' => 'required|exists:users,id',
+            'can_view' => 'boolean',
+            'can_upload' => 'boolean',
+        ]);
+
+        if ($file->uploaded_by != auth()->id()) {
+            return redirect()->back()->withErrors(['error' => 'Only the owner can share this ' . $file->type . '.']);
+        }
+
+        if ((int) $request->user_id === auth()->id()) {
+            return redirect()->back()->withErrors(['error' => 'You cannot share with yourself.']);
+        }
+
+        $canUpload = $file->isFolder() ? ($request->boolean('can_upload')) : false;
+
+        DB::table('file_user_permissions')->updateOrInsert(
+            [
+                'file_id' => $file->id,
+                'user_id' => $request->user_id,
+            ],
+            [
+                'can_view' => $request->boolean('can_view', true),
+                'can_upload' => $canUpload,
+                'granted_by' => auth()->id(),
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]
+        );
+
+        return redirect()->back()->with('success', ucfirst($file->type) . ' shared successfully.');
+    }
+
+    /**
+     * Remove sharing permission for a user.
+     */
+    public function unshare(Request $request, File $file)
+    {
+        $request->validate([
+            'user_id' => 'required|exists:users,id',
+        ]);
+
+        if ($file->uploaded_by != auth()->id()) {
+            if ($request->ajax() || $request->wantsJson()) {
+                return response()->json(['message' => 'Only the owner can remove sharing.'], 403);
+            }
+            return redirect()->back()->withErrors(['error' => 'Only the owner can remove sharing.']);
+        }
+
+        DB::table('file_user_permissions')
+            ->where('file_id', $file->id)
+            ->where('user_id', $request->user_id)
+            ->delete();
+
+        if ($request->ajax() || $request->wantsJson()) {
+            return response()->json(['success' => true, 'message' => 'Sharing removed.']);
+        }
+
+        return redirect()->back()->with('success', 'Sharing removed.');
+    }
+
+    /**
+     * Get users this file/folder is shared with (owner only).
+     */
+    public function getSharedUsers(File $file)
+    {
+        if ($file->uploaded_by != auth()->id()) {
+            abort(403, 'Only the owner can view shared users.');
+        }
+
+        $sharedUsers = $file->sharedWith()->get();
+
+        return response()->json($sharedUsers);
     }
 
     /**
