@@ -825,7 +825,12 @@
                                     if (chunkXhr.status >= 200 && chunkXhr.status < 300) {
                                         const etag = chunkXhr.getResponseHeader('ETag') || chunkXhr.getResponseHeader('etag');
                                         if (!etag) {
-                                            throw new Error('Missing ETag in chunk response.');
+                                            // Missing ETag is commonly caused by Spaces CORS not exposing ETag.
+                                            // Fall back to server-side upload (no CORS).
+                                            document.getElementById('user-upload-status').textContent =
+                                                'Spaces did not expose ETag (CORS). Falling back to server upload...';
+                                            fallbackToDirectUpload();
+                                            return;
                                         }
 
                                         uploadedParts.push({
@@ -854,7 +859,11 @@
                                 });
 
                                 chunkXhr.addEventListener('error', function () {
-                                    throw new Error('Chunk upload failed.');
+                                    // Browser-to-Spaces chunk upload failed (often CORS). Fall back to server upload.
+                                    document.getElementById('user-upload-status').textContent =
+                                        'Chunk upload to Spaces failed (often CORS). Falling back to server upload...';
+                                    fallbackToDirectUpload();
+                                    return;
                                 });
 
                                 chunkXhr.open('PUT', presign.upload_url);
@@ -980,7 +989,11 @@
                             } else {
                                 hideFloatingIndicator();
                                 var statusMsg = xhr.status ? ('HTTP ' + xhr.status) : 'request blocked or failed';
-                                document.getElementById('user-upload-status').textContent = 'Error: Upload to Spaces failed (' + statusMsg + '). Check CORS on your Space if you use direct upload.';
+                                var body = '';
+                                try { body = (xhr.responseText || '').trim(); } catch (e) { body = ''; }
+                                if (body && body.length > 300) body = body.slice(0, 300) + '...';
+                                document.getElementById('user-upload-status').textContent =
+                                    'Error: Upload to Spaces failed (' + statusMsg + '). ' + (body ? ('Response: ' + body) : 'Check CORS/credentials/permissions.');
                                 document.getElementById('user-upload-progress-bar').classList.remove('bg-indigo-600');
                                 document.getElementById('user-upload-progress-bar').classList.add('bg-red-600');
                                 document.getElementById('user-upload-form-buttons').style.display = 'flex';
@@ -989,10 +1002,11 @@
 
                         xhr.addEventListener('error', function () {
                             hideFloatingIndicator();
-                            document.getElementById('user-upload-status').textContent = 'Error: Upload to Spaces failed (often CORS). Configure CORS on your Space: allow your site origin, PUT method, and Content-Type header. See browser console for details.';
-                            document.getElementById('user-upload-progress-bar').classList.remove('bg-indigo-600');
-                            document.getElementById('user-upload-progress-bar').classList.add('bg-red-600');
-                            document.getElementById('user-upload-form-buttons').style.display = 'flex';
+                            try { console.error('Spaces upload XHR error', xhr); } catch (e) {}
+                            // If direct browser PUT is blocked by CORS, fall back to server-side upload (no CORS).
+                            document.getElementById('user-upload-status').textContent =
+                                'Direct upload to Spaces was blocked (often CORS). Falling back to server upload...';
+                            fallbackToDirectUpload();
                         });
 
                         xhr.open('PUT', presign.upload_url);

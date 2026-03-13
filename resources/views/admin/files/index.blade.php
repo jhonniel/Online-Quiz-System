@@ -943,7 +943,8 @@
                     });
 
                     uploadXhr.addEventListener('error', function() {
-                        document.getElementById('upload-status').textContent = 'Error: Upload to Spaces failed. Please try again.';
+                        try { console.error('Spaces upload XHR error', uploadXhr); } catch (e) {}
+                        document.getElementById('upload-status').textContent = 'Error: Upload to Spaces failed (often CORS). Configure Space CORS to allow your origin + PUT + Content-Type.';
                         document.getElementById('upload-progress-bar').classList.remove('bg-indigo-600');
                         document.getElementById('upload-progress-bar').classList.add('bg-red-600');
                         document.getElementById('upload-form-buttons').style.display = 'flex';
