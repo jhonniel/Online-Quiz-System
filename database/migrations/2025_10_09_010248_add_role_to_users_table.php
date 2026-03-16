@@ -11,8 +11,16 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('users', function (Blueprint $table) {
-            $table->enum('role', ['admin', 'user'])->default('user')->after('email');
+        $driver = Schema::getConnection()->getDriverName();
+
+        Schema::table('users', function (Blueprint $table) use ($driver) {
+            if ($driver === 'sqlite') {
+                // Use string for SQLite to avoid enum CHECK constraint issues
+                $table->string('role', 50)->default('user')->after('email');
+            } else {
+                $table->enum('role', ['admin', 'user'])->default('user')->after('email');
+            }
+
             $table->boolean('is_active')->default(true)->after('role');
         });
     }

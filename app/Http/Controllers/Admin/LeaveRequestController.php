@@ -244,8 +244,8 @@ class LeaveRequestController extends Controller
             // Establish current date for completed-week checks
             $today = Carbon::today();
 
-            // Overtime balance is ONLY based on approved overtime leave requests (DTR overtime is ignored)
-            // Overtime Credited Window is ONLY used for expiration logic, NOT for counting
+            // Overtime balance is based on approved overtime requests
+            // minus approved offset requests (using "Hours to Deduct" from the reason field).
             $totalOvertimeHours = 0;
 
             // Get approved overtime leave requests for completed weeks only (count all, window only for expiration)
@@ -264,7 +264,26 @@ class LeaveRequestController extends Controller
                 }
             }
 
-            $totalOvertimeHours = $overtimeFromLeavesMinutes / 60;
+            // Get approved offset leave requests that should deduct from overtime balance
+            $approvedOffsetRequests = LeaveRequest::where('user_id', $user->id)
+                ->where('type', 'offset')
+                ->where('status', 'approved')
+                ->get();
+
+            $offsetMinutes = 0;
+            foreach ($approvedOffsetRequests as $offsetRequest) {
+                $raw = $offsetRequest->reason ?? '';
+                // Parse "Hours to Deduct: HH:MM" from reason (same pattern used in DTR controller)
+                if (preg_match('/Hours to Deduct:\s*([0-9]{2}):([0-9]{2})/', $raw, $m)) {
+                    $offsetMinutes += (int)$m[1] * 60 + (int)$m[2];
+                } else {
+                    // Fallback: use days * 8 hours if no explicit HH:MM pattern is present
+                    $offsetMinutes += (int) round(($offsetRequest->days * 8) * 60);
+                }
+            }
+
+            // Net overtime hours = earned overtime - approved offsets (can be negative)
+            $totalOvertimeHours = ($overtimeFromLeavesMinutes - $offsetMinutes) / 60;
 
             // Build set of weeks where overtime was earned (only from approved overtime leave requests)
             $overtimeWeekKeys = [];
@@ -273,8 +292,7 @@ class LeaveRequestController extends Controller
                 $overtimeWeekKeys[$weekStart] = true;
             }
 
-            // Overtime balance is ONLY the total of approved overtime requests (no deductions)
-            // Format overtime balance
+            // Format overtime balance (can be negative)
             $absOvertimeMinutes = (int) round(abs($totalOvertimeHours) * 60);
             $overtimeHoursPart = intdiv($absOvertimeMinutes, 60);
             $overtimeMinutesPart = $absOvertimeMinutes % 60;

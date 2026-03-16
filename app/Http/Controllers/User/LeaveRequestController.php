@@ -92,7 +92,8 @@ class LeaveRequestController extends Controller
         $approvedAbsentCount = 0;
 
         if ($user->role === 'employee') {
-            // Overtime balance is ONLY based on approved overtime leave requests (DTR overtime is ignored)
+            // Overtime balance is based on approved overtime leave requests (DTR overtime is ignored)
+            // minus approved offset leave requests ("Hours to Deduct" in the reason field).
             // Overtime Credited Window is ONLY used for expiration logic, NOT for counting
             $months = $user->overtime_months_credited ?? 12;
             $today = Carbon::today();
@@ -115,7 +116,23 @@ class LeaveRequestController extends Controller
                 }
             }
 
-            $totalOvertimeHours = $overtimeFromLeavesMinutes / 60;
+            // Subtract approved offset requests
+            $approvedOffsetRequests = LeaveRequest::where('user_id', $userId)
+                ->where('type', 'offset')
+                ->where('status', 'approved')
+                ->get();
+
+            $offsetMinutes = 0;
+            foreach ($approvedOffsetRequests as $offsetRequest) {
+                $raw = $offsetRequest->reason ?? '';
+                if (preg_match('/Hours to Deduct:\s*([0-9]{2}):([0-9]{2})/', $raw, $m)) {
+                    $offsetMinutes += (int)$m[1] * 60 + (int)$m[2];
+                } else {
+                    $offsetMinutes += (int) round(($offsetRequest->days * 8) * 60);
+                }
+            }
+
+            $totalOvertimeHours = ($overtimeFromLeavesMinutes - $offsetMinutes) / 60;
 
             // Approved absent count (for display only)
             $approvedAbsentCount = LeaveRequest::where('user_id', $userId)
@@ -130,12 +147,12 @@ class LeaveRequestController extends Controller
                 $overtimeWeekKeys[$weekStart] = true;
             }
 
-            // Overtime balance is ONLY the total of approved overtime requests (no deductions)
-            // Format overtime balance
+            // Format overtime balance (can be negative)
+            $sign = $totalOvertimeHours < 0 ? '-' : '';
             $absOvertimeMinutes = (int) round(abs($totalOvertimeHours) * 60);
             $overtimeHoursPart = intdiv($absOvertimeMinutes, 60);
             $overtimeMinutesPart = $absOvertimeMinutes % 60;
-            $overtimeFormatted = sprintf('%02d:%02d', $overtimeHoursPart, $overtimeMinutesPart);
+            $overtimeFormatted = $sign . sprintf('%02d:%02d', $overtimeHoursPart, $overtimeMinutesPart);
 
             // Build label for the overtime window
             if ($months === 12) {
@@ -868,7 +885,11 @@ class LeaveRequestController extends Controller
     }
 
     /**
-     * Get employee overtime balance in hours (from approved overtime leave requests only).
+     * Get employee overtime balance in hours.
+     *
+     * Calculated as:
+     *  - Sum of "Total Overtime Hours: HH:MM" from approved overtime requests
+     *  - Minus "Hours to Deduct: HH:MM" (or days * 8) from approved offset requests.
      */
     private function getEmployeeOvertimeBalanceHours($user): float
     {
@@ -888,7 +909,24 @@ class LeaveRequestController extends Controller
             }
         }
 
-        return $overtimeFromLeavesMinutes / 60;
+        // Subtract approved offset requests
+        $approvedOffsetRequests = LeaveRequest::where('user_id', $user->id)
+            ->where('type', 'offset')
+            ->where('status', 'approved')
+            ->get();
+
+        $offsetMinutes = 0;
+        foreach ($approvedOffsetRequests as $offsetRequest) {
+            $raw = $offsetRequest->reason ?? '';
+            if (preg_match('/Hours to Deduct:\s*([0-9]{2}):([0-9]{2})/', $raw, $m)) {
+                $offsetMinutes += (int)$m[1] * 60 + (int)$m[2];
+            } else {
+                // Fallback: use days * 8 hours when no explicit HH:MM is present
+                $offsetMinutes += (int) round(($offsetRequest->days * 8) * 60);
+            }
+        }
+
+        return ($overtimeFromLeavesMinutes - $offsetMinutes) / 60;
     }
 
     /**

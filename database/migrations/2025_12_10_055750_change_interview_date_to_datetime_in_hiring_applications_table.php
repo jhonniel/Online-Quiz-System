@@ -11,6 +11,10 @@ return new class extends Migration
      */
     public function up(): void
     {
+        if (! Schema::getConnection()->isDoctrineAvailable()) {
+            return;
+        }
+
         Schema::table('hiring_applications', function (Blueprint $table) {
             $table->datetime('interview_date')->nullable()->change();
         });
@@ -21,6 +25,10 @@ return new class extends Migration
      */
     public function down(): void
     {
+        if (! Schema::getConnection()->isDoctrineAvailable()) {
+            return;
+        }
+
         Schema::table('hiring_applications', function (Blueprint $table) {
             $table->date('interview_date')->nullable()->change();
         });

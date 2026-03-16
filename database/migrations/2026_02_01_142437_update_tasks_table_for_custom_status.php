@@ -20,7 +20,7 @@ return new class extends Migration
             DB::statement('ALTER TABLE tasks DROP CONSTRAINT IF EXISTS tasks_status_check');
             // Change status to varchar to allow custom values
             DB::statement("ALTER TABLE tasks ALTER COLUMN status TYPE VARCHAR(50)");
-        } else {
+        } elseif (Schema::getConnection()->isDoctrineAvailable()) {
             // For MySQL/SQLite, we need to modify the column
             Schema::table('tasks', function (Blueprint $table) {
                 $table->string('status', 50)->default('todo')->change();
@@ -39,7 +39,7 @@ return new class extends Migration
             // Restore enum constraint
             DB::statement("ALTER TABLE tasks ALTER COLUMN status TYPE VARCHAR(20)");
             DB::statement("ALTER TABLE tasks ADD CONSTRAINT tasks_status_check CHECK (status IN ('todo', 'in_progress', 'done'))");
-        } else {
+        } elseif (Schema::getConnection()->isDoctrineAvailable()) {
             Schema::table('tasks', function (Blueprint $table) {
                 $table->enum('status', ['todo', 'in_progress', 'done'])->default('todo')->change();
             });

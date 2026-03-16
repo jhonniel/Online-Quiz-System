@@ -15,8 +15,8 @@ return new class extends Migration
         $driver = Schema::getConnection()->getDriverName();
         
         if ($driver === 'sqlite') {
-            // SQLite doesn't support ALTER COLUMN for enum, so we'll use string
-            // SQLite will handle this as text - validation handled in model/controller
+            // On SQLite we already use a plain string column for role; nothing to change here.
+            return;
         } elseif ($driver === 'pgsql') {
             // For PostgreSQL, we need to alter the column type or use a check constraint
             // First, change the column to varchar and add a check constraint

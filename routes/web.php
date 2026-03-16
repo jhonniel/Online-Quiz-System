@@ -73,9 +73,6 @@ Route::prefix('admin')->middleware(['auth', 'admin'])->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('admin.dashboard');
     Route::get('/activity-data', [DashboardController::class, 'getActivityData'])->name('admin.activity-data');
 
-    // My Permissions (read-only view of current user's assigned access; any admin can view)
-    Route::get('my-permissions', [AdminPermissionController::class, 'myPermissions'])->name('admin.my-permissions');
-
     // Billing (requires billing permission or super admin)
     Route::middleware(['admin.permission:billing'])->group(function () {
         Route::get('billing', [App\Http\Controllers\Admin\BillingController::class, 'index'])->name('admin.billing.index');
