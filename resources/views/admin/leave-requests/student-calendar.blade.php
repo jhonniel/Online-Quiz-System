@@ -30,12 +30,12 @@
     <div class="grid grid-cols-1 lg:grid-cols-4 gap-3 sm:gap-4 items-start">
         <!-- Student Filter Sidebar -->
         <div class="lg:col-span-1 space-y-3 sm:space-y-4">
-            <div class="bg-white rounded-2xl shadow border border-gray-200 p-3 sm:p-4">
-                <h2 class="text-xs sm:text-sm font-bold text-gray-900 mb-2">Students</h2>
-                <p class="text-xs text-gray-500 mb-2 sm:mb-3">
-                    Tap a name to focus on that student's leave, or choose "All Students" to view everyone.
+            <div class="bg-white rounded-2xl shadow border border-gray-200 p-2.5 sm:p-3">
+                <h2 class="text-xs sm:text-sm font-bold text-gray-900 mb-1.5">Students</h2>
+                <p class="text-[11px] text-gray-500 mb-1.5 sm:mb-2">
+                    Tap a name to focus, or choose All Students.
                 </p>
-                <div class="space-y-1 max-h-[calc(100vh-20rem)] sm:max-h-[calc(100vh-24rem)] overflow-y-auto text-xs sm:text-sm -mx-1">
+                <div class="space-y-1 max-h-44 sm:max-h-52 overflow-y-auto text-xs sm:text-sm -mx-1">
                     <a href="{{ url('/admin/student-leave-calendar?month=' . $currentMonth->format('Y-m')) }}"
                        class="flex items-center justify-between px-3 py-1.5 rounded-md mx-1 transition-colors duration-150 {{ !$selectedStudent ? 'bg-indigo-50 text-indigo-700 font-semibold' : 'text-gray-700 hover:bg-gray-50' }}">
                         <span>All Students</span>
