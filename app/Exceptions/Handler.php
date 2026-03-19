@@ -2,8 +2,12 @@
 
 namespace App\Exceptions;
 
+use App\Models\ErrorLog;
 use Illuminate\Foundation\Exceptions\Handler as ExceptionHandler;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Session\TokenMismatchException;
+use Symfony\Component\HttpKernel\Exception\HttpExceptionInterface;
 use Throwable;
 
 class Handler extends ExceptionHandler
@@ -42,6 +46,36 @@ class Handler extends ExceptionHandler
                     ->with('error', 'Your session has expired. Please try again.')
                     ->withInput($request->except('password', 'password_confirmation', '_token'));
             }
+        }
+
+        // Record 404/500 errors to DB for analytics page.
+        // Keep this extremely defensive to avoid cascading failures if DB is unavailable.
+        try {
+            $statusCode = null;
+            if ($e instanceof HttpExceptionInterface) {
+                $statusCode = $e->getStatusCode();
+            } else {
+                $statusCode = 500;
+            }
+
+            if (in_array($statusCode, [404, 500], true)) {
+                $path = '/' . ltrim((string) $request->path(), '/');
+
+                ErrorLog::create([
+                    'status_code' => $statusCode,
+                    'exception_class' => get_class($e),
+                    'message' => substr((string) $e->getMessage(), 0, 1000),
+                    'method' => substr((string) $request->method(), 0, 10),
+                    'path' => substr($path, 0, 2048),
+                    'user_id' => Auth::id(),
+                    'ip_address' => substr((string) $request->ip(), 0, 45),
+                    'user_agent' => substr((string) $request->userAgent(), 0, 1024),
+                ]);
+            }
+        } catch (\Throwable $t) {
+            Log::warning('Failed to record error log', [
+                'error' => $t->getMessage(),
+            ]);
         }
 
         return parent::render($request, $e);
