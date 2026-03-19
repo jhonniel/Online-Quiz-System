@@ -490,6 +490,51 @@ class FileController extends Controller
     }
 
     /**
+     * Upload a chunk to Spaces via the server (avoids Spaces CORS).
+     */
+    public function uploadChunk(Request $request)
+    {
+        if (!$this->isSpacesConfigured()) {
+            return response()->json(['message' => 'File upload requires DigitalOcean Spaces to be configured. Please set DIGITALOCEAN_SPACES_* in .env.'], 503);
+        }
+
+        $validated = $request->validate([
+            'upload_id' => 'required|string|max:255',
+            'path' => 'required|string|max:2048',
+            'part_number' => 'required|integer|min:1|max:10000',
+            'chunk' => 'required|file|max:20480', // 20MB (chunk size is 10MB by default)
+        ]);
+
+        [$client, $bucket] = $this->getSpacesClientAndBucket();
+
+        $chunkFile = $request->file('chunk');
+        $stream = fopen($chunkFile->getRealPath(), 'rb');
+
+        try {
+            $result = $client->uploadPart([
+                'Bucket' => $bucket,
+                'Key' => $validated['path'],
+                'UploadId' => $validated['upload_id'],
+                'PartNumber' => (int) $validated['part_number'],
+                'Body' => $stream,
+            ]);
+        } catch (\Throwable $e) {
+            return response()->json(['message' => 'Chunk upload failed: ' . $e->getMessage()], 500);
+        } finally {
+            if (is_resource($stream)) {
+                fclose($stream);
+            }
+        }
+
+        $etag = isset($result['ETag']) ? trim((string) $result['ETag'], '"') : null;
+
+        return response()->json([
+            'success' => true,
+            'etag' => $etag,
+        ]);
+    }
+
+    /**
      * Complete multipart upload and create DB record.
      */
     public function completeMultipartUpload(Request $request)

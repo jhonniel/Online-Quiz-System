@@ -432,6 +432,7 @@
         const ADMIN_FILES_CONFIRM_URL = @json(url('/admin/files/confirm'));
         const ADMIN_FILES_MULTIPART_INITIATE_URL = @json(url('/admin/files/multipart/initiate'));
         const ADMIN_FILES_MULTIPART_PRESIGN_CHUNK_URL = @json(url('/admin/files/multipart/presign-chunk'));
+        const ADMIN_FILES_MULTIPART_UPLOAD_CHUNK_URL = @json(url('/admin/files/multipart/upload-chunk'));
         const ADMIN_FILES_MULTIPART_COMPLETE_URL = @json(url('/admin/files/multipart/complete'));
         const ADMIN_FILES_MULTIPART_ABORT_URL = @json(url('/admin/files/multipart/abort'));
 
@@ -764,36 +765,31 @@
                         const chunk = file.slice(start, end);
                         const partNumber = chunkIndex + 1;
 
-                        // Get presigned URL for this chunk
-                        fetch(ADMIN_FILES_MULTIPART_PRESIGN_CHUNK_URL, {
+                        // Upload chunk via app server to avoid Spaces CORS
+                        const fd = new FormData();
+                        fd.append('upload_id', uploadId);
+                        fd.append('path', path);
+                        fd.append('part_number', String(partNumber));
+                        fd.append('chunk', new File([chunk], file.name, { type: file.type || 'application/octet-stream' }));
+
+                        fetch(ADMIN_FILES_MULTIPART_UPLOAD_CHUNK_URL, {
                             method: 'POST',
                             headers: {
-                                'Content-Type': 'application/json',
                                 'X-Requested-With': 'XMLHttpRequest',
                                 'X-CSRF-TOKEN': csrfToken,
                             },
-                            body: JSON.stringify({
-                                upload_id: uploadId,
-                                path: path,
-                                part_number: partNumber,
-                            }),
+                            body: fd,
                         })
                         .then(async (res) => {
                             const data = await res.json().catch(() => ({}));
-                            if (!res.ok) {
-                                throw new Error(data.message || 'Failed to get presigned URL for chunk.');
-                            }
+                            if (!res.ok) throw new Error(data.message || 'Chunk upload failed.');
                             return data;
                         })
-                        .then((presign) => {
-                            // Upload chunk
-                            const chunkXhr = new XMLHttpRequest();
-
-                            chunkXhr.addEventListener('load', function() {
-                                if (chunkXhr.status >= 200 && chunkXhr.status < 300) {
-                                    uploadedParts.push({
-                                        part_number: partNumber,
-                                    });
+                        .then((data) => {
+                            uploadedParts.push({
+                                part_number: partNumber,
+                                etag: (data && data.etag) ? String(data.etag) : null,
+                            });
 
                                     // Update progress
                                     const overallProgress = ((chunkIndex + 1) / totalChunks) * 100;
@@ -805,31 +801,8 @@
                                     document.getElementById('upload-status').textContent =
                                         `Uploading chunk ${partNumber}/${totalChunks}: ${uploadedMB} MB / ${totalMB} MB`;
 
-                                    // Upload next chunk
-                                    uploadChunk(chunkIndex + 1);
-                                } else {
-                                    throw new Error('Chunk upload failed (HTTP ' + chunkXhr.status + ').');
-                                }
-                            });
-
-                            chunkXhr.addEventListener('error', function() {
-                                throw new Error('Chunk upload failed.');
-                            });
-
-                            chunkXhr.open('PUT', presign.upload_url);
-                            if (presign.headers) {
-                                Object.keys(presign.headers).forEach((key) => {
-                                    const lower = String(key).toLowerCase();
-                                    if (lower === 'host' || lower === 'content-length') return;
-                                    try {
-                                        chunkXhr.setRequestHeader(key, presign.headers[key]);
-                                    } catch (e) {
-                                        // ignore headers the browser disallows
-                                    }
-                                });
-                            }
-
-                            chunkXhr.send(chunk);
+                            // Upload next chunk
+                            uploadChunk(chunkIndex + 1);
                         })
                         .catch((err) => {
                             document.getElementById('upload-status').textContent = 'Error: ' + (err?.message || 'Chunk upload failed.');

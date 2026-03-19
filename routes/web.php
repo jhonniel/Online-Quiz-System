@@ -348,6 +348,7 @@ Route::prefix('admin')->middleware(['auth', 'admin'])->group(function () {
     Route::post('files/confirm', [App\Http\Controllers\Admin\FileController::class, 'confirmUpload'])->name('admin.files.confirm');
     Route::post('files/multipart/initiate', [App\Http\Controllers\Admin\FileController::class, 'initiateMultipartUpload'])->name('admin.files.multipart.initiate');
     Route::post('files/multipart/presign-chunk', [App\Http\Controllers\Admin\FileController::class, 'presignChunk'])->name('admin.files.multipart.presign-chunk');
+    Route::post('files/multipart/upload-chunk', [App\Http\Controllers\Admin\FileController::class, 'uploadChunk'])->name('admin.files.multipart.upload-chunk');
     Route::post('files/multipart/complete', [App\Http\Controllers\Admin\FileController::class, 'completeMultipartUpload'])->name('admin.files.multipart.complete');
     Route::post('files/multipart/abort', [App\Http\Controllers\Admin\FileController::class, 'abortMultipartUpload'])->name('admin.files.multipart.abort');
     Route::post('files/create-folder', [App\Http\Controllers\Admin\FileController::class, 'createFolder'])->name('admin.files.create-folder');
@@ -497,6 +498,7 @@ Route::middleware(['auth'])->group(function () {
     Route::post('/files/confirm', [UserFileController::class, 'confirmUpload'])->name('user.files.confirm');
     Route::post('/files/multipart/initiate', [UserFileController::class, 'initiateMultipartUpload'])->name('user.files.multipart.initiate');
     Route::post('/files/multipart/presign-chunk', [UserFileController::class, 'presignChunk'])->name('user.files.multipart.presign-chunk');
+    Route::post('/files/multipart/upload-chunk', [UserFileController::class, 'uploadChunk'])->name('user.files.multipart.upload-chunk');
     Route::post('/files/multipart/complete', [UserFileController::class, 'completeMultipartUpload'])->name('user.files.multipart.complete');
     Route::post('/files/multipart/abort', [UserFileController::class, 'abortMultipartUpload'])->name('user.files.multipart.abort');
     Route::get('/files/{file}/download', [UserFileController::class, 'download'])->name('user.files.download');
