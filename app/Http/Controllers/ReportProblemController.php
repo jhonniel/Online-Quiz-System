@@ -6,16 +6,37 @@ use App\Mail\TicketReportReceived;
 use App\Models\TicketProblemType;
 use App\Models\TicketReport;
 use Illuminate\Http\Request;
+use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Storage;
 
 class ReportProblemController extends Controller
 {
-    public function show()
+    public function show(Request $request)
     {
         $problemTypes = TicketReport::problemTypes();
-        return view('report-problem.form', compact('problemTypes'));
+
+        $ticket = null;
+        $ticketLookupNumber = null;
+        $ticketLookupError = null;
+
+        $rawTicketNumber = trim((string) $request->query('ticket_number', ''));
+        if ($rawTicketNumber !== '') {
+            $ticketLookupNumber = Str::upper($rawTicketNumber);
+            $ticket = TicketReport::where('ticket_number', $ticketLookupNumber)->first();
+
+            if (! $ticket) {
+                $ticketLookupError = 'Ticket number not found. Please check and try again.';
+            }
+        }
+
+        return view('report-problem.form', compact(
+            'problemTypes',
+            'ticket',
+            'ticketLookupNumber',
+            'ticketLookupError'
+        ));
     }
 
     public function store(Request $request)

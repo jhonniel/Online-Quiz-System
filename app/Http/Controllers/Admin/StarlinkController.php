@@ -31,24 +31,47 @@ class StarlinkController extends Controller
 
         $search = $request->input('search');
         if ($search && trim($search) !== '') {
-            $term = '%' . trim($search) . '%';
-            $query->where(function ($q) use ($term) {
-                $q->where('account_linked_email', 'like', $term)
-                    ->orWhere('starlink_id', 'like', $term)
-                    ->orWhere('serial_number', 'like', $term)
-                    ->orWhere('kit_number', 'like', $term)
-                    ->orWhere('router_id', 'like', $term)
-                    ->orWhere('ssid', 'like', $term)
-                    ->orWhere('office_location', 'like', $term)
-                    ->orWhere('plan', 'like', $term)
-                    ->orWhere('status', 'like', $term)
-                    ->orWhere('po_no', 'like', $term)
-                    ->orWhere('contact_email', 'like', $term)
-                    ->orWhere('end_user_email', 'like', $term)
-                    ->orWhereHas('linkedAccount', function ($q2) use ($term) {
-                        $q2->where('email', 'like', $term)->orWhere('name', 'like', $term);
-                    });
-            });
+            // Split by spaces so users can type natural multi-word queries.
+            // Each term must match at least one searchable field.
+            $tokens = preg_split('/\s+/', trim($search)) ?: [];
+            foreach ($tokens as $token) {
+                $token = trim($token);
+                if ($token === '') {
+                    continue;
+                }
+
+                $term = '%' . $token . '%';
+                $query->where(function ($q) use ($term, $token) {
+                    $q->where('account_linked_email', 'like', $term)
+                        ->orWhere('starlink_id', 'like', $term)
+                        ->orWhere('serial_number', 'like', $term)
+                        ->orWhere('kit_number', 'like', $term)
+                        ->orWhere('router_id', 'like', $term)
+                        ->orWhere('ssid', 'like', $term)
+                        ->orWhere('wifi_password', 'like', $term)
+                        ->orWhere('office_location', 'like', $term)
+                        ->orWhere('plan', 'like', $term)
+                        ->orWhere('status', 'like', $term)
+                        ->orWhere('po_no', 'like', $term)
+                        ->orWhere('contact_email', 'like', $term)
+                        ->orWhere('end_user_email', 'like', $term)
+                        ->orWhere('billing_interval', 'like', $term)
+                        ->orWhereHas('linkedAccount', function ($q2) use ($term) {
+                            $q2->where('email', 'like', $term)
+                                ->orWhere('name', 'like', $term);
+                        });
+
+                    // Exact ID / date matching (database-agnostic helpers)
+                    if (ctype_digit($token)) {
+                        $q->orWhere('id', (int) $token);
+                    }
+                    if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $token)) {
+                        $q->orWhereDate('start_date', $token)
+                            ->orWhereDate('last_paid_date', $token)
+                            ->orWhereDate('advance_payment_until', $token);
+                    }
+                });
+            }
         }
 
         $starlinks = $query->paginate(15)->withQueryString();

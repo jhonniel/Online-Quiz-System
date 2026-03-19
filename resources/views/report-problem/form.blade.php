@@ -18,6 +18,60 @@
 
 <section class="py-8 sm:py-12 md:py-16 bg-gray-50/80">
     <div class="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8 min-w-0">
+        <div class="mb-6 sm:mb-8 bg-white rounded-xl sm:rounded-2xl shadow-lg shadow-gray-200/50 border border-gray-100 overflow-hidden">
+            <div class="p-4 sm:p-6 md:p-8 space-y-4">
+                <div class="flex items-center gap-3">
+                    <span class="flex items-center justify-center w-9 h-9 rounded-lg bg-primary/10 text-primary flex-shrink-0">
+                        <i class="fas fa-ticket-alt text-sm"></i>
+                    </span>
+                    <h2 class="text-base sm:text-lg font-semibold text-gray-900">Check ticket status</h2>
+                </div>
+
+                <form action="{{ url('/report-problem') }}" method="GET" class="grid grid-cols-1 sm:grid-cols-[1fr_auto] gap-3">
+                    <input
+                        type="text"
+                        name="ticket_number"
+                        value="{{ old('ticket_number', $ticketLookupNumber ?? '') }}"
+                        class="block w-full rounded-xl border border-gray-200 bg-gray-50/50 py-3 px-4 text-base sm:text-sm text-gray-900 placeholder-gray-400 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 focus:bg-white transition-colors min-h-[48px] touch-manipulation"
+                        placeholder="Enter ticket number (e.g. TR-20260316-0001)"
+                    >
+                    <button type="submit" class="inline-flex items-center justify-center gap-2 py-3 px-6 rounded-xl text-white font-semibold bg-primary hover:opacity-95 active:opacity-90 focus:ring-2 focus:ring-offset-2 focus:ring-primary transition-all min-h-[48px] touch-manipulation text-base sm:text-sm">
+                        <i class="fas fa-search text-sm"></i>
+                        Check status
+                    </button>
+                </form>
+
+                @if(!empty($ticketLookupError))
+                    <div class="rounded-xl bg-red-50 border border-red-200/80 p-4 text-sm text-red-700">
+                        {{ $ticketLookupError }}
+                    </div>
+                @endif
+
+                @if(!empty($ticket))
+                    <div class="rounded-xl border border-gray-200 bg-gray-50/70 p-4 sm:p-5 space-y-2">
+                        <p class="text-sm text-gray-600">
+                            <span class="font-semibold text-gray-900">Ticket Number:</span>
+                            {{ $ticket->ticket_number }}
+                        </p>
+                        <p class="text-sm text-gray-600">
+                            <span class="font-semibold text-gray-900">Status:</span>
+                            <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold {{ $ticket->status === 'closed' ? 'bg-gray-200 text-gray-800' : 'bg-emerald-100 text-emerald-700' }}">
+                                {{ strtoupper($ticket->status) }}
+                            </span>
+                        </p>
+                        <p class="text-sm text-gray-600">
+                            <span class="font-semibold text-gray-900">Type:</span>
+                            {{ $ticket->type_label }}
+                        </p>
+                        <p class="text-sm text-gray-600">
+                            <span class="font-semibold text-gray-900">Submitted:</span>
+                            {{ optional($ticket->created_at)->format('M d, Y h:i A') }}
+                        </p>
+                    </div>
+                @endif
+            </div>
+        </div>
+
         @if(session('success'))
             <div class="mb-6 sm:mb-8 rounded-xl bg-emerald-50 border border-emerald-200/80 p-4 sm:p-5 shadow-sm flex items-start gap-3 sm:gap-4">
                 <div class="flex-shrink-0 w-10 h-10 rounded-full bg-emerald-100 flex items-center justify-center">
