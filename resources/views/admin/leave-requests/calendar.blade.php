@@ -27,9 +27,9 @@
         </div>
     </div>
 
-    <div class="grid grid-cols-1 lg:grid-cols-4 gap-3 sm:gap-4 items-start">
+    <div class="grid grid-cols-1 lg:grid-cols-5 gap-3 sm:gap-4 items-start">
         <!-- Employee Filter Sidebar -->
-        <div class="lg:col-span-1 space-y-2.5 sm:space-y-3 lg:h-[calc(100vh-10.5rem)] lg:overflow-hidden">
+        <div class="lg:col-span-2 space-y-2.5 sm:space-y-3 lg:h-[calc(100vh-10.5rem)] lg:overflow-hidden">
             <div class="bg-white rounded-2xl shadow border border-gray-200 p-2 sm:p-2.5 lg:h-[38%] flex flex-col">
                 <h2 class="text-xs sm:text-sm font-bold text-gray-900 mb-1.5">Employees</h2>
 
@@ -71,7 +71,7 @@
                         @endphp
                         <a href="{{ url('/admin/leave-calendar?' . http_build_query($employeeParams)) }}"
                            class="flex items-center justify-between px-3 py-1.5 rounded-md mx-1 transition-colors duration-150 {{ $selectedEmployeeId == $employee->id ? 'bg-indigo-50 text-indigo-700 font-semibold' : 'text-gray-700 hover:bg-gray-50' }}">
-                            <span class="truncate">{{ $employee->name }}</span>
+                            <span class="whitespace-normal break-words leading-tight">{{ $employee->name }}</span>
                         </a>
                     @endforeach
                 </div>
