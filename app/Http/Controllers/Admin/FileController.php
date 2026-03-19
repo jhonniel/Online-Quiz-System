@@ -1024,10 +1024,6 @@ class FileController extends Controller
      */
     public function view(File $file)
     {
-        if (!$file->canUserView(auth()->id()) && $file->uploaded_by != auth()->id()) {
-            abort(403, 'You do not have permission to view this file.');
-        }
-
         if ($file->isFolder()) {
             return redirect('/admin/files?folder_id=' . $file->id);
         }
