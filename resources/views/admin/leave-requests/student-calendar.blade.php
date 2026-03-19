@@ -29,20 +29,20 @@
 
     <div class="grid grid-cols-1 lg:grid-cols-4 gap-3 sm:gap-4 items-start">
         <!-- Student Filter Sidebar -->
-        <div class="lg:col-span-1 space-y-3 sm:space-y-4">
-            <div class="bg-white rounded-2xl shadow border border-gray-200 p-2.5 sm:p-3">
+        <div class="lg:col-span-1 space-y-2.5 sm:space-y-3">
+            <div class="bg-white rounded-2xl shadow border border-gray-200 p-2 sm:p-2.5">
                 <h2 class="text-xs sm:text-sm font-bold text-gray-900 mb-1.5">Students</h2>
                 <p class="text-[11px] text-gray-500 mb-1.5 sm:mb-2">
                     Tap a name to focus, or choose All Students.
                 </p>
-                <div class="space-y-1 max-h-44 sm:max-h-52 overflow-y-auto text-xs sm:text-sm -mx-1">
+                <div class="space-y-0.5 max-h-36 sm:max-h-40 overflow-y-auto text-xs sm:text-sm -mx-1">
                     <a href="{{ url('/admin/student-leave-calendar?month=' . $currentMonth->format('Y-m')) }}"
-                       class="flex items-center justify-between px-3 py-1.5 rounded-md mx-1 transition-colors duration-150 {{ !$selectedStudent ? 'bg-indigo-50 text-indigo-700 font-semibold' : 'text-gray-700 hover:bg-gray-50' }}">
+                       class="flex items-center justify-between px-2.5 py-1 rounded-md mx-1 transition-colors duration-150 {{ !$selectedStudent ? 'bg-indigo-50 text-indigo-700 font-semibold' : 'text-gray-700 hover:bg-gray-50' }}">
                         <span>All Students</span>
                     </a>
                     @foreach($students as $student)
                         <a href="{{ url('/admin/student-leave-calendar?month=' . $currentMonth->format('Y-m') . '&student=' . $student->id) }}"
-                           class="flex items-center justify-between px-3 py-1.5 rounded-md mx-1 transition-colors duration-150 {{ $selectedStudent == $student->id ? 'bg-indigo-50 text-indigo-700 font-semibold' : 'text-gray-700 hover:bg-gray-50' }}">
+                           class="flex items-center justify-between px-2.5 py-1 rounded-md mx-1 transition-colors duration-150 {{ $selectedStudent == $student->id ? 'bg-indigo-50 text-indigo-700 font-semibold' : 'text-gray-700 hover:bg-gray-50' }}">
                             <span class="truncate">{{ $student->name }}</span>
                         </a>
                     @endforeach
@@ -50,15 +50,15 @@
             </div>
 
             <!-- Quick Create Leave for Student(s) -->
-            <div class="bg-white rounded-2xl shadow border border-gray-200 p-3 sm:p-4">
-                <h2 class="text-xs sm:text-sm font-bold text-gray-900 mb-2">File Leave for Student(s)</h2>
-                <form action="{{ url('/admin/student-leave-requests/create-for-student') }}" method="POST" class="space-y-3">
+            <div class="bg-white rounded-2xl shadow border border-gray-200 p-2.5 sm:p-3">
+                <h2 class="text-xs sm:text-sm font-bold text-gray-900 mb-1.5">File Leave for Student(s)</h2>
+                <form action="{{ url('/admin/student-leave-requests/create-for-student') }}" method="POST" class="space-y-2">
                     @csrf
 
                     <div class="space-y-1">
                         <label class="block text-xs font-medium text-gray-700">Select Student(s)</label>
-                        <div class="max-h-32 overflow-y-auto border border-gray-300 rounded-md p-2 space-y-1">
-                            <div class="flex items-center mb-1">
+                        <div class="max-h-24 overflow-y-auto border border-gray-300 rounded-md p-1.5 space-y-0.5">
+                            <div class="flex items-center mb-0.5">
                                 <input type="checkbox" id="select-all-students" class="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500" onchange="toggleAllStudents(this)">
                                 <label for="select-all-students" class="ml-2 text-xs font-semibold text-gray-700 cursor-pointer">Select All</label>
                             </div>
@@ -69,7 +69,7 @@
                                 </div>
                             @endforeach
                         </div>
-                        <p class="text-[10px] text-gray-500 mt-1">Select one or more students to file leave for</p>
+                        <p class="text-[10px] text-gray-500 mt-0.5">Select one or more students to file leave for</p>
                     </div>
 
                     <div class="space-y-1">
@@ -95,13 +95,13 @@
 
                     <div class="space-y-1">
                         <label for="student_create_reason" class="block text-xs font-medium text-gray-700">Reason (optional)</label>
-                        <textarea name="reason" id="student_create_reason" rows="3" class="w-full px-2.5 py-1.5 text-xs border border-gray-300 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500" placeholder="Add brief notes"></textarea>
+                        <textarea name="reason" id="student_create_reason" rows="2" class="w-full px-2.5 py-1.5 text-xs border border-gray-300 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500" placeholder="Add brief notes"></textarea>
                     </div>
 
-                    <button type="submit" id="file-student-leave-btn" class="w-full inline-flex items-center justify-center px-3 py-1.5 text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded-md shadow focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed">
+                    <button type="submit" id="file-student-leave-btn" class="w-full inline-flex items-center justify-center px-3 py-1 text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded-md shadow focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed">
                         File Leave
                     </button>
-                    <p class="text-[11px] text-gray-500">Creates a pending request that appears on the student calendar.</p>
+                    <p class="text-[10px] text-gray-500">Creates a pending request that appears on the student calendar.</p>
                 </form>
             </div>
         </div>
