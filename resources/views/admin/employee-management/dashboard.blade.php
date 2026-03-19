@@ -95,10 +95,28 @@
         </div>
     </div>
 
-    <div class="bg-white border border-gray-200 rounded-2xl shadow-sm overflow-hidden">
+    <div class="bg-white border border-gray-200 rounded-2xl shadow-sm overflow-hidden" x-data="{ employeeViewMode: 'summary' }">
         <div class="px-6 py-4 border-b border-gray-100 bg-gray-50/70">
-            <h2 class="text-base font-semibold text-gray-900">All Employees Data</h2>
-            <p class="text-sm text-gray-500">Complete employee list with status and leave request totals.</p>
+            <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                <div>
+                    <h2 class="text-base font-semibold text-gray-900">All Employees Data</h2>
+                    <p class="text-sm text-gray-500">Complete employee list with status and leave request totals.</p>
+                </div>
+                <div class="inline-flex rounded-lg border border-gray-200 bg-white p-1 w-full sm:w-auto">
+                    <button type="button"
+                            @click="employeeViewMode = 'summary'"
+                            :class="employeeViewMode === 'summary' ? 'bg-indigo-600 text-white shadow-sm' : 'text-gray-700 hover:bg-gray-50'"
+                            class="px-3 py-1.5 text-xs font-semibold rounded-md transition-colors w-full sm:w-auto">
+                        Summary
+                    </button>
+                    <button type="button"
+                            @click="employeeViewMode = 'detailed'"
+                            :class="employeeViewMode === 'detailed' ? 'bg-indigo-600 text-white shadow-sm' : 'text-gray-700 hover:bg-gray-50'"
+                            class="px-3 py-1.5 text-xs font-semibold rounded-md transition-colors w-full sm:w-auto">
+                        Detailed per-type
+                    </button>
+                </div>
+            </div>
         </div>
         <div class="overflow-x-auto">
             <table class="min-w-full divide-y divide-gray-200">
@@ -113,7 +131,7 @@
                         <th class="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wide text-gray-500">Pending</th>
                         <th class="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wide text-gray-500">Approved</th>
                         <th class="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wide text-gray-500">Rejected</th>
-                        <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">Per Type</th>
+                        <th x-show="employeeViewMode === 'detailed'" x-cloak class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">Per Type</th>
                         <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">Joined</th>
                     </tr>
                 </thead>
@@ -143,7 +161,7 @@
                             <td class="px-4 py-3 text-center text-sm font-medium text-amber-700">{{ $pending }}</td>
                             <td class="px-4 py-3 text-center text-sm font-medium text-emerald-700">{{ $approved }}</td>
                             <td class="px-4 py-3 text-center text-sm font-medium text-rose-700">{{ $rejected }}</td>
-                            <td class="px-4 py-3 text-xs text-gray-700 min-w-[360px]">
+                            <td x-show="employeeViewMode === 'detailed'" x-cloak class="px-4 py-3 text-xs text-gray-700 min-w-[360px]">
                                 <div class="grid grid-cols-2 xl:grid-cols-3 gap-1.5">
                                     @foreach($typeLabels as $typeKey => $typeLabel)
                                         <span class="inline-flex items-center justify-between rounded-md border border-gray-200 bg-gray-50 px-2 py-1">
@@ -157,7 +175,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="11" class="px-4 py-10 text-center text-sm text-gray-500">No employees found.</td>
+                            <td :colspan="employeeViewMode === 'detailed' ? 11 : 10" class="px-4 py-10 text-center text-sm text-gray-500">No employees found.</td>
                         </tr>
                     @endforelse
                 </tbody>
