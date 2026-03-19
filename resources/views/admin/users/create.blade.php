@@ -150,6 +150,7 @@
                                 <option value="admin" {{ old('role') == 'admin' ? 'selected' : '' }}>Administrator</option>
                                 <option value="student" {{ old('role') == 'student' ? 'selected' : '' }}>Student</option>
                                 <option value="employee" {{ old('role') == 'employee' ? 'selected' : '' }}>Employee</option>
+                                <option value="technician" {{ old('role') == 'technician' ? 'selected' : '' }}>Technician</option>
                                 <option value="applicant" {{ old('role') == 'applicant' ? 'selected' : '' }}>Applicant</option>
                                 <option value="user" {{ old('role') == 'user' ? 'selected' : '' }}>User (Legacy)</option>
                             </select>

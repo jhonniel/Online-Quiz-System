@@ -8,6 +8,7 @@ use App\Models\ConfessionPost;
 use App\Models\ConfessionTopic;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 
 class ConfessionController extends Controller
 {
@@ -25,6 +26,21 @@ class ConfessionController extends Controller
 
     public function dashboard()
     {
+        // Auto-delete posts that are already due (0 likes, 0 comments, older than 7 days)
+        $duePosts = ConfessionPost::eligibleForAutoDelete()->get();
+        $autoDeletedCount = 0;
+        foreach ($duePosts as $post) {
+            if (!empty($post->image_path)) {
+                try {
+                    Storage::disk('digitalocean')->delete($post->image_path);
+                } catch (\Throwable $e) {
+                    // Ignore image cleanup issues; post record deletion should still proceed
+                }
+            }
+            $post->delete();
+            $autoDeletedCount++;
+        }
+
         // Unique IPs that posted or commented
         $postIps = ConfessionPost::whereNotNull('ip_address')->distinct('ip_address')->pluck('ip_address');
         $commentIps = ConfessionComment::whereNotNull('ip_address')->distinct('ip_address')->pluck('ip_address');
@@ -59,12 +75,13 @@ class ConfessionController extends Controller
             ->get();
 
         $stats = [
-            'total_posts' => ConfessionPost::count(),
+            'total_posts_all_time' => ConfessionPost::withTrashed()->count(),
+            'active_posts' => ConfessionPost::count(),
             'total_comments' => ConfessionComment::count(),
             'unique_ips' => $allIps->count(),
         ];
 
-        return view('admin.confession.dashboard', compact('ipLogs', 'trending', 'stats', 'scheduledForDeletion'));
+        return view('admin.confession.dashboard', compact('ipLogs', 'trending', 'stats', 'scheduledForDeletion', 'autoDeletedCount'));
     }
 
     public function topics()

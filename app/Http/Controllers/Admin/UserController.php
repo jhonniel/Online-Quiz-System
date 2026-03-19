@@ -100,7 +100,7 @@ class UserController extends Controller
             'name' => 'required|string|max:255',
             'email' => 'required|string|email|max:255|unique:users',
             'password' => 'required|string|min:8|confirmed',
-            'role' => 'required|string|in:admin,user,student,employee,applicant',
+            'role' => 'required|string|in:admin,user,student,employee,applicant,technician',
             'university_id' => 'nullable',
             'new_university_name' => 'nullable|string|max:255',
             'department_id' => [
@@ -344,7 +344,7 @@ class UserController extends Controller
             'name' => 'required|string|max:255',
             'email' => ['required', 'string', 'email', 'max:255', Rule::unique('users')->ignore($user->id)],
             'password' => 'nullable|string|min:8|confirmed',
-            'role' => 'required|string|in:admin,user,student,employee,applicant',
+            'role' => 'required|string|in:admin,user,student,employee,applicant,technician',
             'university_id' => 'nullable',
             'new_university_name' => 'nullable|string|max:255',
             'department_id' => [
@@ -476,7 +476,7 @@ class UserController extends Controller
         $request->validate([
             'user_ids' => 'required|array',
             'user_ids.*' => 'exists:users,id',
-            'role' => 'required|string|in:admin,user,student,employee,applicant',
+            'role' => 'required|string|in:admin,user,student,employee,applicant,technician',
         ], [
             'user_ids.required' => 'Please select at least one user.',
             'user_ids.array' => 'Invalid user selection format.',
@@ -516,6 +516,7 @@ class UserController extends Controller
                 'student' => 'Student',
                 'employee' => 'Employee',
                 'applicant' => 'Applicant',
+                'technician' => 'Technician',
                 'user' => 'User',
                 default => ucfirst($role),
             };

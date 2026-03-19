@@ -13,7 +13,9 @@ class Kernel extends ConsoleKernel
     protected function schedule(Schedule $schedule): void
     {
         // Say-it: delete posts with no likes and no comments after 7 days from post date
-        $schedule->command('sayit:delete-unengaged')->daily();
+        $schedule->command('sayit:delete-unengaged')
+            ->hourly()
+            ->withoutOverlapping();
     }
 
     /**

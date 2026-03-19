@@ -9,10 +9,13 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Facades\Storage;
 
 class ConfessionPost extends Model
 {
+    use SoftDeletes;
+
     protected $fillable = [
         'confession_topic_id',
         'content',
@@ -38,6 +41,7 @@ class ConfessionPost extends Model
     protected $casts = [
         'upvotes_count' => 'integer',
         'downvotes_count' => 'integer',
+        'deleted_at' => 'datetime',
     ];
 
     public function topic(): BelongsTo

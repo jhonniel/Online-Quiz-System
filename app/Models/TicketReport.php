@@ -19,11 +19,28 @@ class TicketReport extends Model
         'address',
         'image_path',
         'status',
+        'assigned_to_user_id',
         'admin_notes',
     ];
 
     public const STATUS_OPEN = 'open';
+    public const STATUS_PROCESSING = 'processing';
+    public const STATUS_NEEDS_INVESTIGATION = 'needs_investigation';
+    public const STATUS_RESOLVED = 'resolved';
+
+    // Legacy value kept for backward compatibility
     public const STATUS_CLOSED = 'closed';
+
+    public static function adminStatuses(): array
+    {
+        return [
+            self::STATUS_OPEN,
+            self::STATUS_PROCESSING,
+            self::STATUS_NEEDS_INVESTIGATION,
+            self::STATUS_RESOLVED,
+            self::STATUS_CLOSED,
+        ];
+    }
 
     public static function generateTicketNumber(): string
     {
@@ -34,12 +51,32 @@ class TicketReport extends Model
 
     public function isOpen(): bool
     {
-        return $this->status === self::STATUS_OPEN;
+        return in_array($this->status, [self::STATUS_OPEN, self::STATUS_PROCESSING, self::STATUS_NEEDS_INVESTIGATION], true);
     }
 
     public function isClosed(): bool
     {
-        return $this->status === self::STATUS_CLOSED;
+        return in_array($this->status, [self::STATUS_RESOLVED, self::STATUS_CLOSED], true);
+    }
+
+    public function notes()
+    {
+        return $this->hasMany(TicketReportNote::class, 'ticket_report_id')->orderBy('created_at');
+    }
+
+    public function logs()
+    {
+        return $this->hasMany(TicketReportLog::class, 'ticket_report_id')->orderByDesc('created_at');
+    }
+
+    public function latestLog()
+    {
+        return $this->hasOne(TicketReportLog::class, 'ticket_report_id')->latestOfMany();
+    }
+
+    public function assignedTo()
+    {
+        return $this->belongsTo(User::class, 'assigned_to_user_id');
     }
 
     public function getImageUrlAttribute(): ?string

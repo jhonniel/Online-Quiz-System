@@ -31,6 +31,13 @@
         </div>
     @endif
 
+    @if(!empty($autoDeletedCount))
+        <div class="mb-6 rounded-lg bg-indigo-50 border border-indigo-200 p-4 text-sm text-indigo-800 flex items-center">
+            <svg class="w-5 h-5 mr-2 text-indigo-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+            Auto-cleanup deleted {{ number_format($autoDeletedCount) }} post(s) with no likes and no comments.
+        </div>
+    @endif
+
     {{-- Page header --}}
     <div class="mb-8">
         <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
@@ -52,7 +59,7 @@
     </div>
 
     {{-- Stats --}}
-    <div class="grid grid-cols-1 sm:grid-cols-3 gap-6 mb-8">
+    <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-6 mb-8">
         <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
             <div class="p-6">
                 <div class="flex items-center">
@@ -60,8 +67,21 @@
                         <svg class="w-6 h-6 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z"></path></svg>
                     </div>
                     <div class="ml-4">
-                        <p class="text-sm font-medium text-gray-500">Total posts</p>
-                        <p class="text-2xl font-semibold text-gray-900">{{ number_format($stats['total_posts']) }}</p>
+                        <p class="text-sm font-medium text-gray-500">Total posts (all-time)</p>
+                        <p class="text-2xl font-semibold text-gray-900">{{ number_format($stats['total_posts_all_time']) }}</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="bg-white rounded-xl shadow-sm border border-emerald-200 overflow-hidden">
+            <div class="p-6">
+                <div class="flex items-center">
+                    <div class="flex-shrink-0 w-12 h-12 rounded-lg bg-emerald-50 flex items-center justify-center">
+                        <svg class="w-6 h-6 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+                    </div>
+                    <div class="ml-4">
+                        <p class="text-sm font-medium text-gray-500">Active posts</p>
+                        <p class="text-2xl font-semibold text-gray-900">{{ number_format($stats['active_posts']) }}</p>
                     </div>
                 </div>
             </div>
@@ -199,7 +219,7 @@
                 </div>
                 <div>
                     <h2 class="text-base font-semibold text-gray-900">Posts scheduled for auto-delete</h2>
-                    <p class="text-sm text-gray-500">No likes and no comments — deleted 7 days after post. Oldest first. You can force delete any post below.</p>
+                    <p class="text-sm text-gray-500">No likes and no comments — deleted automatically 7 days after post. Oldest first. You may still force delete any post below.</p>
                 </div>
             </div>
         </div>

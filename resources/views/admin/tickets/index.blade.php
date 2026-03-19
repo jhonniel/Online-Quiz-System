@@ -35,13 +35,36 @@
                             <div class="flex-1 min-w-0">
                                 <div class="flex items-center gap-2 flex-wrap">
                                     <span class="font-mono text-sm font-semibold text-indigo-600">{{ $ticket->ticket_number }}</span>
-                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium {{ $ticket->isOpen() ? 'bg-amber-100 text-amber-800' : 'bg-green-100 text-green-800' }}">
-                                        {{ $ticket->status }}
+                                    @php
+                                        $status = $ticket->status;
+                                        $statusLabel = strtoupper(str_replace('_', ' ', (string) $status));
+                                        $badge = match($status) {
+                                            'open' => 'bg-amber-100 text-amber-800',
+                                            'processing' => 'bg-blue-100 text-blue-800',
+                                            'needs_investigation' => 'bg-purple-100 text-purple-800',
+                                            'resolved', 'closed' => 'bg-green-100 text-green-800',
+                                            default => 'bg-gray-100 text-gray-800',
+                                        };
+                                    @endphp
+                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium {{ $badge }}">
+                                        {{ $statusLabel }}
                                     </span>
                                     <span class="text-xs text-gray-400">{{ $ticket->type_label }}</span>
                                 </div>
                                 <p class="mt-2 text-sm text-gray-600 line-clamp-2">{{ Str::limit($ticket->description, 120) }}</p>
-                                <p class="mt-2 text-xs text-gray-500">{{ $ticket->full_name }} · {{ $ticket->email }} · {{ $ticket->created_at->format('M j, Y g:i A') }}</p>
+                                <p class="mt-2 text-xs text-gray-500">
+                                    {{ $ticket->full_name }} · {{ $ticket->email }} · {{ $ticket->created_at->format('M j, Y g:i A') }}
+                                    @if($ticket->assignedTo)
+                                        · Assigned to {{ $ticket->assignedTo->name }}
+                                    @endif
+                                    @if($ticket->latestLog)
+                                        · Last action: {{ str_replace('_', ' ', $ticket->latestLog->action) }}
+                                        @if($ticket->latestLog->user)
+                                            by {{ $ticket->latestLog->user->name }}
+                                        @endif
+                                        ({{ $ticket->latestLog->created_at->diffForHumans() }})
+                                    @endif
+                                </p>
                             </div>
                             <span class="flex-shrink-0 text-indigo-600 text-sm font-medium">View →</span>
                         </div>

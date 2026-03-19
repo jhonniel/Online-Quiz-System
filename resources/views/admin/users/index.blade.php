@@ -164,6 +164,7 @@
                             <option value="admin">Administrator</option>
                             <option value="student">Student</option>
                             <option value="employee">Employee</option>
+                            <option value="technician">Technician</option>
                             <option value="applicant">Applicant</option>
                             <option value="user">User (Legacy)</option>
                         </select>

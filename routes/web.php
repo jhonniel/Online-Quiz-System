@@ -254,6 +254,8 @@ Route::prefix('admin')->middleware(['auth', 'admin'])->group(function () {
 
     // Employee Management
     Route::middleware(['admin.permission:employee_management'])->group(function () {
+        Route::get('/employee-dashboard', [App\Http\Controllers\Admin\EmployeeDashboardController::class, 'index'])->name('admin.employee-dashboard.index');
+
         // DTR Management (Employees)
         Route::get('/dtr', [App\Http\Controllers\Admin\DtrController::class, 'index'])->name('admin.dtr.index');
         Route::get('/dtr/create', [App\Http\Controllers\Admin\DtrController::class, 'create'])->name('admin.dtr.create');
@@ -405,6 +407,8 @@ Route::prefix('admin')->middleware(['auth', 'admin'])->group(function () {
         Route::delete('tickets/problem-types/{ticket_problem_type}', [App\Http\Controllers\Admin\TicketProblemTypeController::class, 'destroy'])->name('admin.tickets.problem-types.destroy');
         Route::get('tickets/{ticket_report}', [App\Http\Controllers\Admin\TicketReportController::class, 'show'])->name('admin.tickets.show');
         Route::patch('tickets/{ticket_report}', [App\Http\Controllers\Admin\TicketReportController::class, 'update'])->name('admin.tickets.update');
+        Route::post('tickets/{ticket_report}/notes', [App\Http\Controllers\Admin\TicketReportController::class, 'storeNote'])->name('admin.tickets.notes.store');
+        Route::delete('tickets/{ticket_report}/notes/{note}', [App\Http\Controllers\Admin\TicketReportController::class, 'destroyNote'])->name('admin.tickets.notes.destroy');
 
         // Live Chat Management
         Route::get('live-chat', [AdminLiveChatController::class, 'index'])->name('live-chat.index');

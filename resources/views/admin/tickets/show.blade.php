@@ -3,10 +3,10 @@
 @section('title', 'Ticket ' . $ticket->ticket_number)
 
 @section('content')
-<div class="px-4 sm:px-6 lg:px-8">
+<div class="px-3 sm:px-4 lg:px-6 xl:px-8 w-full">
     <div class="flex flex-col lg:flex-row lg:gap-8">
         {{-- Main content --}}
-        <div class="flex-1 min-w-0 max-w-4xl">
+        <div class="flex-1 min-w-0 max-w-none">
             {{-- Breadcrumb & header --}}
             <div class="mb-6">
                 <a href="{{ url('admin/tickets') }}" class="text-sm text-gray-500 hover:text-gray-700 flex items-center gap-1">
@@ -38,21 +38,35 @@
                 </div>
             </div>
             <div class="p-6 space-y-8">
-                {{-- Type --}}
-                <div>
-                    <p class="text-xs font-medium text-gray-500 uppercase tracking-wider mb-2">Category</p>
-                    <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium bg-indigo-50 text-indigo-800 border border-indigo-100">
-                        <svg class="w-4 h-4 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"></path></svg>
-                        {{ $ticket->type_label }}
-                    </span>
+                {{-- Header metrics --}}
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div class="rounded-xl border border-indigo-100 bg-indigo-50/60 p-4">
+                        <p class="text-xs font-semibold text-indigo-700 uppercase tracking-wide">Category</p>
+                        <p class="mt-1.5 text-sm font-semibold text-indigo-900">{{ $ticket->type_label }}</p>
+                    </div>
+                    <div class="rounded-xl border border-gray-200 bg-gray-50 p-4">
+                        <p class="text-xs font-semibold text-gray-600 uppercase tracking-wide">Submitted</p>
+                        <p class="mt-1.5 text-sm font-semibold text-gray-900">{{ $ticket->created_at->format('M j, Y') }}</p>
+                        <p class="text-xs text-gray-500">{{ $ticket->created_at->format('g:i A') }}</p>
+                    </div>
+                    <div class="rounded-xl border border-gray-200 bg-gray-50 p-4">
+                        <p class="text-xs font-semibold text-gray-600 uppercase tracking-wide">Assigned To</p>
+                        <p class="mt-1.5 text-sm font-semibold text-gray-900">{{ $ticket->assignedTo?->name ?? 'Unassigned' }}</p>
+                        @if($ticket->assignedTo)
+                            <p class="text-xs text-gray-500">{{ $ticket->assignedTo->email }}</p>
+                        @endif
+                    </div>
                 </div>
 
                 {{-- Description --}}
                 <div>
-                    <p class="text-xs font-medium text-gray-500 uppercase tracking-wider mb-2">Description</p>
-                    <div class="relative rounded-xl border border-gray-200 bg-gray-50/50 overflow-hidden">
+                    <div class="flex items-center justify-between gap-3 mb-2">
+                        <p class="text-xs font-medium text-gray-500 uppercase tracking-wider">Description</p>
+                        <span class="text-xs text-gray-400">Ticket #{{ $ticket->ticket_number }}</span>
+                    </div>
+                    <div class="relative rounded-xl border border-gray-200 bg-gradient-to-br from-gray-50 to-white overflow-hidden">
                         <div class="absolute left-0 top-0 bottom-0 w-1 bg-indigo-500"></div>
-                        <div class="py-4 px-5 pl-5 text-gray-800 whitespace-pre-wrap text-sm leading-relaxed">{{ $ticket->description }}</div>
+                        <div class="py-5 px-5 pl-6 text-gray-800 whitespace-pre-wrap text-sm leading-relaxed min-h-[120px]">{{ $ticket->description }}</div>
                     </div>
                 </div>
 
@@ -74,7 +88,7 @@
                 {{-- Contact information --}}
                 <div class="pt-2">
                     <p class="text-xs font-medium text-gray-500 uppercase tracking-wider mb-4">Contact information</p>
-                    <dl class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <dl class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
                         <div class="flex gap-3 p-4 rounded-lg bg-gray-50/80 border border-gray-100">
                             <div class="flex-shrink-0 w-9 h-9 rounded-lg bg-white border border-gray-200 flex items-center justify-center">
                                 <svg class="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg>
@@ -116,7 +130,7 @@
                             </div>
                         @endif
                         @if($ticket->address)
-                            <div class="flex gap-3 p-4 rounded-lg bg-gray-50/80 border border-gray-100 sm:col-span-2">
+                            <div class="flex gap-3 p-4 rounded-lg bg-gray-50/80 border border-gray-100 sm:col-span-2 xl:col-span-3">
                                 <div class="flex-shrink-0 w-9 h-9 rounded-lg bg-white border border-gray-200 flex items-center justify-center">
                                     <svg class="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
                                 </div>
@@ -148,28 +162,57 @@
         {{-- Admin notes --}}
         <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
             <div class="px-6 py-4 border-b border-gray-200 bg-gray-50/80">
-                <h2 class="text-base font-semibold text-gray-900">Admin notes</h2>
-                <p class="text-sm text-gray-500 mt-0.5">Record what happened, resolution steps, or follow-up. Only visible to admins.</p>
+                <h2 class="text-base font-semibold text-gray-900">Admin comments</h2>
+                <p class="text-sm text-gray-500 mt-0.5">Internal comments. Only visible to admins. Only the author can delete their own comment.</p>
             </div>
             <div class="p-6">
-                <form action="{{ url('admin/tickets/' . $ticket->id) }}" method="POST">
-                    @csrf
-                    @method('PATCH')
-                    <input type="hidden" name="status" value="{{ $ticket->status }}">
-                    <textarea name="admin_notes" id="admin_notes" rows="5" class="block w-full rounded-lg border border-gray-300 shadow-sm py-3 px-4 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm placeholder-gray-400" placeholder="e.g. Reproduced the issue. Fixed by updating the cache config. Notified the user.">{{ old('admin_notes', $ticket->admin_notes) }}</textarea>
-                    <div class="mt-4 flex justify-end">
-                        <button type="submit" class="inline-flex items-center px-4 py-2.5 border border-transparent rounded-lg text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 transition-colors shadow-sm">
-                            Save notes
-                        </button>
-                    </div>
-                </form>
+                <div class="space-y-4">
+                    @if($ticket->notes->count() === 0)
+                        <p class="text-sm text-gray-500">No comments yet.</p>
+                    @else
+                        <ul class="space-y-3">
+                            @foreach($ticket->notes as $note)
+                                <li class="rounded-xl border border-gray-200 bg-gray-50/60 p-4">
+                                    <div class="flex items-start justify-between gap-4">
+                                        <div class="min-w-0">
+                                            <p class="text-sm text-gray-800 whitespace-pre-wrap">{{ $note->body }}</p>
+                                            <p class="mt-2 text-xs text-gray-500">
+                                                {{ $note->user?->name ?? 'Unknown' }} · {{ $note->created_at->format('M j, Y g:i A') }}
+                                            </p>
+                                        </div>
+                                        @if(auth()->id() === $note->user_id)
+                                            <form method="POST" action="{{ url('admin/tickets/' . $ticket->id . '/notes/' . $note->id) }}" onsubmit="return confirm('Delete your comment?');">
+                                                @csrf
+                                                @method('DELETE')
+                                                <button type="submit" class="inline-flex items-center px-3 py-2 rounded-lg text-xs font-semibold border border-red-200 bg-red-50 text-red-700 hover:bg-red-100 transition-colors">
+                                                    Delete
+                                                </button>
+                                            </form>
+                                        @endif
+                                    </div>
+                                </li>
+                            @endforeach
+                        </ul>
+                    @endif
+
+                    <form method="POST" action="{{ url('admin/tickets/' . $ticket->id . '/notes') }}" class="pt-2">
+                        @csrf
+                        <label for="note_body" class="block text-sm font-semibold text-gray-700 mb-1.5">Add comment</label>
+                        <textarea name="body" id="note_body" rows="4" class="block w-full rounded-lg border border-gray-300 shadow-sm py-3 px-4 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm placeholder-gray-400" placeholder="Write an internal comment…">{{ old('body') }}</textarea>
+                        <div class="mt-3 flex justify-end">
+                            <button type="submit" class="inline-flex items-center px-4 py-2.5 border border-transparent rounded-lg text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 transition-colors shadow-sm">
+                                Post comment
+                            </button>
+                        </div>
+                    </form>
+                </div>
             </div>
         </div>
             </div>
         </div>
 
         {{-- Right sidebar --}}
-        <aside class="lg:w-80 flex-shrink-0 mt-8 lg:mt-0">
+        <aside class="lg:w-96 xl:w-[28rem] flex-shrink-0 mt-8 lg:mt-0">
             <div class="lg:sticky lg:top-6 space-y-6">
                 {{-- Status & summary --}}
                 <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
@@ -198,6 +241,36 @@
                                 <p class="mt-1 text-sm text-gray-700">{{ $ticket->updated_at->format('M j, Y g:i A') }}</p>
                             </div>
                         @endif
+                        <div>
+                            <p class="text-xs font-medium text-gray-500 uppercase tracking-wider">Assigned to</p>
+                            <p class="mt-1 text-sm text-gray-700">{{ $ticket->assignedTo?->name ?? 'Unassigned' }}</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                    <div class="px-4 py-3 border-b border-gray-200 bg-gray-50">
+                        <h3 class="text-sm font-semibold text-gray-900">Assign Ticket</h3>
+                    </div>
+                    <div class="p-4">
+                        <form method="POST" action="{{ url('admin/tickets/' . $ticket->id) }}" class="space-y-3">
+                            @csrf
+                            @method('PATCH')
+                            <input type="hidden" name="status" value="{{ $ticket->status }}">
+                            <label for="assigned_to_user_id" class="block text-xs font-medium text-gray-600">Assign to technician</label>
+                            <select name="assigned_to_user_id" id="assigned_to_user_id" class="block w-full rounded-lg border border-gray-300 py-2.5 px-3 text-sm focus:ring-indigo-500 focus:border-indigo-500">
+                                <option value="">Unassigned</option>
+                                @foreach($assignees as $assignee)
+                                    <option value="{{ $assignee->id }}" {{ (int) ($ticket->assigned_to_user_id ?? 0) === (int) $assignee->id ? 'selected' : '' }}>
+                                        {{ $assignee->name }} ({{ $assignee->email }})
+                                    </option>
+                                @endforeach
+                            </select>
+                            <p class="text-xs text-gray-500">Only users with role <span class="font-semibold">technician</span> are shown.</p>
+                            <button type="submit" class="w-full inline-flex items-center justify-center px-4 py-2.5 border border-transparent rounded-lg text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 transition-colors shadow-sm">
+                                Save assignee
+                            </button>
+                        </form>
                     </div>
                 </div>
 
@@ -207,25 +280,77 @@
                         <h3 class="text-sm font-semibold text-gray-900">Actions</h3>
                     </div>
                     <div class="p-4">
-                        @if($ticket->isOpen())
-                            <form method="POST" action="{{ url('admin/tickets/' . $ticket->id) }}">
-                                @csrf
-                                @method('PATCH')
-                                <input type="hidden" name="status" value="closed">
-                                <button type="submit" class="w-full inline-flex items-center justify-center px-4 py-2.5 border border-transparent rounded-lg text-sm font-medium text-white bg-green-600 hover:bg-green-700 transition-colors shadow-sm">
-                                    <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-                                    Mark closed
-                                </button>
-                            </form>
+                        <div class="space-y-2">
+                            @if($ticket->status === \App\Models\TicketReport::STATUS_OPEN)
+                                <form method="POST" action="{{ url('admin/tickets/' . $ticket->id) }}">
+                                    @csrf
+                                    @method('PATCH')
+                                    <input type="hidden" name="status" value="{{ \App\Models\TicketReport::STATUS_PROCESSING }}">
+                                    <button type="submit" class="w-full inline-flex items-center justify-center px-4 py-2.5 border border-transparent rounded-lg text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 transition-colors shadow-sm">
+                                        Click to process
+                                    </button>
+                                </form>
+                            @elseif($ticket->status === \App\Models\TicketReport::STATUS_PROCESSING)
+                                <form method="POST" action="{{ url('admin/tickets/' . $ticket->id) }}">
+                                    @csrf
+                                    @method('PATCH')
+                                    <input type="hidden" name="status" value="{{ \App\Models\TicketReport::STATUS_RESOLVED }}">
+                                    <button type="submit" class="w-full inline-flex items-center justify-center px-4 py-2.5 border border-transparent rounded-lg text-sm font-medium text-white bg-green-600 hover:bg-green-700 transition-colors shadow-sm">
+                                        Mark as resolved
+                                    </button>
+                                </form>
+                                <form method="POST" action="{{ url('admin/tickets/' . $ticket->id) }}">
+                                    @csrf
+                                    @method('PATCH')
+                                    <input type="hidden" name="status" value="{{ \App\Models\TicketReport::STATUS_NEEDS_INVESTIGATION }}">
+                                    <button type="submit" class="w-full inline-flex items-center justify-center px-4 py-2.5 border border-purple-200 rounded-lg text-sm font-medium text-purple-800 bg-purple-50 hover:bg-purple-100 transition-colors">
+                                        Need further investigation
+                                    </button>
+                                </form>
+                            @elseif($ticket->status === \App\Models\TicketReport::STATUS_NEEDS_INVESTIGATION)
+                                <form method="POST" action="{{ url('admin/tickets/' . $ticket->id) }}">
+                                    @csrf
+                                    @method('PATCH')
+                                    <input type="hidden" name="status" value="{{ \App\Models\TicketReport::STATUS_RESOLVED }}">
+                                    <button type="submit" class="w-full inline-flex items-center justify-center px-4 py-2.5 border border-transparent rounded-lg text-sm font-medium text-white bg-green-600 hover:bg-green-700 transition-colors shadow-sm">
+                                        Mark as resolved
+                                    </button>
+                                </form>
+                            @else
+                                <form method="POST" action="{{ url('admin/tickets/' . $ticket->id) }}">
+                                    @csrf
+                                    @method('PATCH')
+                                    <input type="hidden" name="status" value="{{ \App\Models\TicketReport::STATUS_OPEN }}">
+                                    <button type="submit" class="w-full inline-flex items-center justify-center px-4 py-2.5 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 transition-colors">
+                                        Reopen ticket
+                                    </button>
+                                </form>
+                            @endif
+                        </div>
+                    </div>
+                </div>
+
+                {{-- Logs --}}
+                <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                    <div class="px-4 py-3 border-b border-gray-200 bg-gray-50">
+                        <h3 class="text-sm font-semibold text-gray-900">Logs</h3>
+                    </div>
+                    <div class="p-4">
+                        @if($ticket->logs->count() === 0)
+                            <p class="text-sm text-gray-500">No activity yet.</p>
                         @else
-                            <form method="POST" action="{{ url('admin/tickets/' . $ticket->id) }}">
-                                @csrf
-                                @method('PATCH')
-                                <input type="hidden" name="status" value="open">
-                                <button type="submit" class="w-full inline-flex items-center justify-center px-4 py-2.5 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 transition-colors">
-                                    Reopen ticket
-                                </button>
-                            </form>
+                            <ul class="space-y-2">
+                                @foreach($ticket->logs as $log)
+                                    <li class="text-xs text-gray-600">
+                                        <span class="font-semibold text-gray-900">{{ $log->user?->name ?? 'Unknown' }}</span>
+                                        {{ str_replace('_', ' ', $log->action) }}
+                                        @if($log->from_status !== null && $log->to_status !== null && $log->from_status !== $log->to_status)
+                                            ({{ $log->from_status }} → {{ $log->to_status }})
+                                        @endif
+                                        · {{ $log->created_at->diffForHumans() }}
+                                    </li>
+                                @endforeach
+                            </ul>
                         @endif
                     </div>
                 </div>
