@@ -29,8 +29,8 @@
 
     <div class="grid grid-cols-1 lg:grid-cols-4 gap-3 sm:gap-4 items-start">
         <!-- Employee Filter Sidebar -->
-        <div class="lg:col-span-1 space-y-3 sm:space-y-4">
-            <div class="bg-white rounded-2xl shadow border border-gray-200 p-2.5 sm:p-3">
+        <div class="lg:col-span-1 space-y-2.5 sm:space-y-3 lg:h-[calc(100vh-10.5rem)] lg:overflow-hidden">
+            <div class="bg-white rounded-2xl shadow border border-gray-200 p-2 sm:p-2.5 lg:h-[38%] flex flex-col">
                 <h2 class="text-xs sm:text-sm font-bold text-gray-900 mb-1.5">Employees</h2>
 
                 <!-- Department Filter -->
@@ -51,7 +51,7 @@
                 <p class="text-[11px] text-gray-500 mb-1.5 sm:mb-2">
                     Tap a name to focus, or choose All Employees.
                 </p>
-                <div class="space-y-1 max-h-44 sm:max-h-52 overflow-y-auto text-xs sm:text-sm -mx-1">
+                <div class="space-y-1 max-h-44 sm:max-h-52 lg:max-h-none lg:flex-1 overflow-y-auto text-xs sm:text-sm -mx-1">
                     @php
                         $allEmployeesParams = ['month' => $currentMonth->format('Y-m')];
                         if ($selectedDepartmentId) {
@@ -78,14 +78,14 @@
             </div>
 
             <!-- Quick Create Leave for Employee -->
-            <div class="bg-white rounded-2xl shadow border border-gray-200 p-3 sm:p-4">
-                <h2 class="text-xs sm:text-sm font-bold text-gray-900 mb-2">File Leave for Employee(s)</h2>
-                <form action="{{ url('/admin/leave-requests/create-for-employee') }}" method="POST" class="space-y-3">
+            <div class="bg-white rounded-2xl shadow border border-gray-200 p-2.5 sm:p-3 lg:h-[62%] flex flex-col">
+                <h2 class="text-xs sm:text-sm font-bold text-gray-900 mb-1.5">File Leave for Employee(s)</h2>
+                <form action="{{ url('/admin/leave-requests/create-for-employee') }}" method="POST" class="space-y-2 lg:flex-1 lg:overflow-y-auto lg:pr-1">
                     @csrf
                     <div class="space-y-1">
                         <label for="create_user_ids" class="block text-xs font-medium text-gray-700">Select Employee(s)</label>
-                        <div class="max-h-32 overflow-y-auto border border-gray-300 rounded-md p-2 space-y-1">
-                            <div class="flex items-center mb-1">
+                        <div class="max-h-24 overflow-y-auto border border-gray-300 rounded-md p-1.5 space-y-0.5">
+                            <div class="flex items-center mb-0.5">
                                 <input type="checkbox" id="select-all-employees" class="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500" onchange="toggleAllEmployees(this)">
                                 <label for="select-all-employees" class="ml-2 text-xs font-semibold text-gray-700 cursor-pointer">Select All</label>
                             </div>
@@ -96,7 +96,7 @@
                                 </div>
                             @endforeach
                         </div>
-                        <p class="text-[10px] text-gray-500 mt-1">Select one or more employees to file leave for</p>
+                        <p class="text-[10px] text-gray-500 mt-0.5">Select one or more employees to file leave for</p>
                     </div>
                     <div class="space-y-1">
                         <label for="create_type" class="block text-xs font-medium text-gray-700">Type</label>
@@ -131,13 +131,13 @@
                     </div>
                     <div class="space-y-1">
                         <label for="create_reason" class="block text-xs font-medium text-gray-700">Reason (optional)</label>
-                        <textarea name="reason" id="create_reason" rows="3" class="w-full px-2.5 py-1.5 text-xs border border-gray-300 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500" placeholder="Add brief notes"></textarea>
+                        <textarea name="reason" id="create_reason" rows="2" class="w-full px-2.5 py-1.5 text-xs border border-gray-300 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500" placeholder="Add brief notes"></textarea>
                     </div>
-                    <button type="submit" id="file-leave-btn" class="w-full inline-flex items-center justify-center px-3 py-1.5 text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded-md shadow focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed">
+                    <button type="submit" id="file-leave-btn" class="w-full inline-flex items-center justify-center px-3 py-1 text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded-md shadow focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed">
                         File Leave
                     </button>
-                    <p class="text-[11px] text-gray-500" id="form-help-text">Creates a pending request that appears on the employee account and calendar. Admins can file any leave type for any date, including past dates.</p>
-                    <p class="text-[11px] text-purple-600 font-medium hidden" id="travel-help-text">Travel requests are filed as pending and can use custom hours per day when approved.</p>
+                    <p class="text-[10px] text-gray-500" id="form-help-text">Creates a pending request that appears on the employee account and calendar. Admins can file any leave type for any date, including past dates.</p>
+                    <p class="text-[10px] text-purple-600 font-medium hidden" id="travel-help-text">Travel requests are filed as pending and can use custom hours per day when approved.</p>
                 </form>
             </div>
         </div>

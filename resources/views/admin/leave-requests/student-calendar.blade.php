@@ -29,13 +29,13 @@
 
     <div class="grid grid-cols-1 lg:grid-cols-4 gap-3 sm:gap-4 items-start">
         <!-- Student Filter Sidebar -->
-        <div class="lg:col-span-1 space-y-2.5 sm:space-y-3">
-            <div class="bg-white rounded-2xl shadow border border-gray-200 p-2 sm:p-2.5">
+        <div class="lg:col-span-1 space-y-2.5 sm:space-y-3 lg:h-[calc(100vh-10.5rem)] lg:overflow-hidden">
+            <div class="bg-white rounded-2xl shadow border border-gray-200 p-2 sm:p-2.5 lg:h-[38%] flex flex-col">
                 <h2 class="text-xs sm:text-sm font-bold text-gray-900 mb-1.5">Students</h2>
                 <p class="text-[11px] text-gray-500 mb-1.5 sm:mb-2">
                     Tap a name to focus, or choose All Students.
                 </p>
-                <div class="space-y-0.5 max-h-36 sm:max-h-40 overflow-y-auto text-xs sm:text-sm -mx-1">
+                <div class="space-y-0.5 max-h-36 sm:max-h-40 lg:max-h-none lg:flex-1 overflow-y-auto text-xs sm:text-sm -mx-1">
                     <a href="{{ url('/admin/student-leave-calendar?month=' . $currentMonth->format('Y-m')) }}"
                        class="flex items-center justify-between px-2.5 py-1 rounded-md mx-1 transition-colors duration-150 {{ !$selectedStudent ? 'bg-indigo-50 text-indigo-700 font-semibold' : 'text-gray-700 hover:bg-gray-50' }}">
                         <span>All Students</span>
@@ -50,9 +50,9 @@
             </div>
 
             <!-- Quick Create Leave for Student(s) -->
-            <div class="bg-white rounded-2xl shadow border border-gray-200 p-2.5 sm:p-3">
+            <div class="bg-white rounded-2xl shadow border border-gray-200 p-2.5 sm:p-3 lg:h-[62%] flex flex-col">
                 <h2 class="text-xs sm:text-sm font-bold text-gray-900 mb-1.5">File Leave for Student(s)</h2>
-                <form action="{{ url('/admin/student-leave-requests/create-for-student') }}" method="POST" class="space-y-2">
+                <form action="{{ url('/admin/student-leave-requests/create-for-student') }}" method="POST" class="space-y-2 lg:flex-1 lg:overflow-y-auto lg:pr-1">
                     @csrf
 
                     <div class="space-y-1">
