@@ -956,6 +956,10 @@
                 <div class="flex items-center justify-between mb-4">
                     <h3 id="preview-file-name" class="text-lg font-medium text-gray-900"></h3>
                     <div class="flex items-center space-x-2">
+                        <a id="preview-file-url" href="#" target="_blank" rel="noopener"
+                           class="inline-flex items-center px-3 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50">
+                            Open
+                        </a>
                         <a id="preview-download-url" href="#" download
                            class="inline-flex items-center px-3 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50">
                             <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
