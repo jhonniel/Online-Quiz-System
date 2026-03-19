@@ -113,6 +113,7 @@
                         <th class="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wide text-gray-500">Pending</th>
                         <th class="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wide text-gray-500">Approved</th>
                         <th class="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wide text-gray-500">Rejected</th>
+                        <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">Per Type</th>
                         <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">Joined</th>
                     </tr>
                 </thead>
@@ -142,11 +143,21 @@
                             <td class="px-4 py-3 text-center text-sm font-medium text-amber-700">{{ $pending }}</td>
                             <td class="px-4 py-3 text-center text-sm font-medium text-emerald-700">{{ $approved }}</td>
                             <td class="px-4 py-3 text-center text-sm font-medium text-rose-700">{{ $rejected }}</td>
+                            <td class="px-4 py-3 text-xs text-gray-700 min-w-[360px]">
+                                <div class="grid grid-cols-2 xl:grid-cols-3 gap-1.5">
+                                    @foreach($typeLabels as $typeKey => $typeLabel)
+                                        <span class="inline-flex items-center justify-between rounded-md border border-gray-200 bg-gray-50 px-2 py-1">
+                                            <span class="truncate mr-2">{{ $typeLabel }}</span>
+                                            <span class="font-semibold text-indigo-700">{{ (int) ($employeeTypeCounts[$employee->id][$typeKey] ?? 0) }}</span>
+                                        </span>
+                                    @endforeach
+                                </div>
+                            </td>
                             <td class="px-4 py-3 text-sm text-gray-600">{{ optional($employee->created_at)->format('M d, Y') }}</td>
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="10" class="px-4 py-10 text-center text-sm text-gray-500">No employees found.</td>
+                            <td colspan="11" class="px-4 py-10 text-center text-sm text-gray-500">No employees found.</td>
                         </tr>
                     @endforelse
                 </tbody>

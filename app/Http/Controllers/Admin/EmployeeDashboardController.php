@@ -36,7 +36,7 @@ class EmployeeDashboardController extends Controller
         $leaveBaseQuery = LeaveRequest::query()
             ->whereIn('user_id', $employeeIds);
 
-        $typeCounts = (clone $leaveBaseQuery)
+        $rawTypeCounts = (clone $leaveBaseQuery)
             ->select(
                 'type',
                 DB::raw('COUNT(*) as total'),
@@ -95,6 +95,12 @@ class EmployeeDashboardController extends Controller
             ->get()
             ->keyBy('user_id');
 
+        $employeeTypeRaw = (clone $leaveBaseQuery)
+            ->select('user_id', 'type', DB::raw('COUNT(*) as total'))
+            ->groupBy('user_id', 'type')
+            ->get()
+            ->groupBy('user_id');
+
         $typeLabels = [
             'vacation_leave' => 'Vacation Leave',
             'sick_leave' => 'Sick Leave',
@@ -107,6 +113,28 @@ class EmployeeDashboardController extends Controller
             'other' => 'Other',
         ];
 
+        // Ensure dashboard always shows all leave types, even when counts are zero.
+        $typeCountsByKey = $rawTypeCounts->keyBy('type');
+        $typeCounts = collect(array_keys($typeLabels))->map(function ($type) use ($typeCountsByKey) {
+            $row = $typeCountsByKey->get($type);
+            return (object) [
+                'type' => $type,
+                'total' => (int) ($row->total ?? 0),
+                'pending' => (int) ($row->pending ?? 0),
+                'approved' => (int) ($row->approved ?? 0),
+                'rejected' => (int) ($row->rejected ?? 0),
+            ];
+        });
+
+        // Per employee, include all leave types with zero defaults.
+        $employeeTypeCounts = [];
+        foreach ($employees as $employee) {
+            $rows = collect($employeeTypeRaw->get($employee->id, []))->keyBy('type');
+            $employeeTypeCounts[$employee->id] = collect(array_keys($typeLabels))->mapWithKeys(function ($type) use ($rows) {
+                return [$type => (int) (($rows->get($type)->total ?? 0))];
+            })->all();
+        }
+
         return view('admin.employee-management.dashboard', [
             'stats' => $stats,
             'typeCounts' => $typeCounts,
@@ -114,6 +142,7 @@ class EmployeeDashboardController extends Controller
             'recentLeaveRequests' => $recentLeaveRequests,
             'employees' => $employees,
             'employeeLeaveStats' => $employeeLeaveStats,
+            'employeeTypeCounts' => $employeeTypeCounts,
         ]);
     }
 }
