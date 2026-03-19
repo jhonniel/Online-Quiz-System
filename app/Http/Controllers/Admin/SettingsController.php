@@ -909,6 +909,103 @@ class SettingsController extends Controller
     }
 
     /**
+     * Get lightweight live traffic + suspicious activity metrics via AJAX.
+     *
+     * These are heuristics intended for monitoring, not definitive intrusion detection.
+     */
+    public function getHealthMetrics()
+    {
+        $buckets = Cache::get('syshealth:recent_buckets', []);
+        if (!is_array($buckets)) {
+            $buckets = [];
+        }
+
+        // Keep last 10 minutes
+        $buckets = array_slice($buckets, -10);
+
+        $sum = [
+            'requests' => 0,
+            'reads' => 0,
+            'writes' => 0,
+            'errors_5xx' => 0,
+            'not_found' => 0,
+            'rate_limited' => 0,
+            'auth_denied' => 0,
+        ];
+
+        $perMinute = [];
+        $ip404 = [];
+        $ipDenied = [];
+        $ipRateLimited = [];
+        $path404 = [];
+
+        foreach ($buckets as $bucket) {
+            $reads = (int) (Cache::get("syshealth:bucket:$bucket:reads", 0) ?? 0);
+            $writes = (int) (Cache::get("syshealth:bucket:$bucket:writes", 0) ?? 0);
+            $requests = (int) (Cache::get("syshealth:bucket:$bucket:requests", 0) ?? 0);
+            $errors5xx = (int) (Cache::get("syshealth:bucket:$bucket:errors_5xx", 0) ?? 0);
+            $notFound = (int) (Cache::get("syshealth:bucket:$bucket:not_found", 0) ?? 0);
+            $rateLimited = (int) (Cache::get("syshealth:bucket:$bucket:rate_limited", 0) ?? 0);
+            $authDenied = (int) (Cache::get("syshealth:bucket:$bucket:auth_denied", 0) ?? 0);
+
+            $sum['requests'] += $requests;
+            $sum['reads'] += $reads;
+            $sum['writes'] += $writes;
+            $sum['errors_5xx'] += $errors5xx;
+            $sum['not_found'] += $notFound;
+            $sum['rate_limited'] += $rateLimited;
+            $sum['auth_denied'] += $authDenied;
+
+            $perMinute[] = [
+                'bucket' => $bucket,
+                'reads' => $reads,
+                'writes' => $writes,
+                'requests' => $requests,
+                'errors_5xx' => $errors5xx,
+                'not_found' => $notFound,
+                'rate_limited' => $rateLimited,
+                'auth_denied' => $authDenied,
+            ];
+
+            $ip404 = $this->mergeCountMaps($ip404, Cache::get("syshealth:bucket:$bucket:ip_404", []));
+            $ipDenied = $this->mergeCountMaps($ipDenied, Cache::get("syshealth:bucket:$bucket:ip_auth_denied", []));
+            $ipRateLimited = $this->mergeCountMaps($ipRateLimited, Cache::get("syshealth:bucket:$bucket:ip_rate_limited", []));
+            $path404 = $this->mergeCountMaps($path404, Cache::get("syshealth:bucket:$bucket:path_404", []));
+        }
+
+        arsort($ip404);
+        arsort($ipDenied);
+        arsort($ipRateLimited);
+        arsort($path404);
+
+        return response()->json([
+            'window_minutes' => count($buckets),
+            'totals' => $sum,
+            'per_minute' => $perMinute,
+            'top' => [
+                'ip_404' => array_slice($ip404, 0, 10, true),
+                'ip_auth_denied' => array_slice($ipDenied, 0, 10, true),
+                'ip_rate_limited' => array_slice($ipRateLimited, 0, 10, true),
+                'path_404' => array_slice($path404, 0, 10, true),
+            ],
+            'generated_at' => now()->toIso8601String(),
+        ]);
+    }
+
+    private function mergeCountMaps(array $base, $incoming): array
+    {
+        if (!is_array($incoming)) {
+            return $base;
+        }
+
+        foreach ($incoming as $k => $v) {
+            $base[(string) $k] = (int) (($base[(string) $k] ?? 0) + (int) $v);
+        }
+
+        return $base;
+    }
+
+    /**
      * Send a test email
      */
     public function testEmail(Request $request)

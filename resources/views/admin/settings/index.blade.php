@@ -1567,6 +1567,96 @@
                             </div>
                         </div>
 
+                        <!-- Live Traffic + Security Signals -->
+                        <div class="form-section">
+                            <div class="flex items-center justify-between mb-6">
+                                <div class="flex items-center space-x-3">
+                                    <div class="flex-shrink-0 bg-indigo-100 rounded-lg p-2">
+                                        <svg class="h-6 w-6 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6m6 0h6m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0v-10a2 2 0 00-2-2h-2a2 2 0 00-2 2v10m6 0h6m-6 0a2 2 0 002 2h2a2 2 0 002-2v-4a2 2 0 00-2-2h-2a2 2 0 00-2 2v4z"></path>
+                                        </svg>
+                                    </div>
+                                    <div>
+                                        <h3 class="text-lg font-semibold text-gray-900">Live Activity & Alerts</h3>
+                                        <p class="text-sm text-gray-500">Last <span id="health-metrics-window">10</span> minutes (auto-refresh)</p>
+                                    </div>
+                                </div>
+                                <div class="text-right">
+                                    <p class="text-xs text-gray-500">Updated</p>
+                                    <p class="text-sm font-semibold text-gray-700" id="health-metrics-updated">—</p>
+                                </div>
+                            </div>
+
+                            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                                <div class="bg-gray-50 rounded-lg p-4 border border-gray-200">
+                                    <p class="text-xs font-medium text-gray-500 uppercase mb-1">Requests</p>
+                                    <p class="text-2xl font-bold text-gray-900" id="hm-requests">0</p>
+                                    <p class="text-xs text-gray-500 mt-1">Total in window</p>
+                                </div>
+                                <div class="bg-gray-50 rounded-lg p-4 border border-gray-200">
+                                    <p class="text-xs font-medium text-gray-500 uppercase mb-1">Reads</p>
+                                    <p class="text-2xl font-bold text-emerald-700" id="hm-reads">0</p>
+                                    <p class="text-xs text-gray-500 mt-1">GET / HEAD</p>
+                                </div>
+                                <div class="bg-gray-50 rounded-lg p-4 border border-gray-200">
+                                    <p class="text-xs font-medium text-gray-500 uppercase mb-1">Writes</p>
+                                    <p class="text-2xl font-bold text-indigo-700" id="hm-writes">0</p>
+                                    <p class="text-xs text-gray-500 mt-1">POST / PUT / PATCH / DELETE</p>
+                                </div>
+                                <div class="bg-gray-50 rounded-lg p-4 border border-gray-200">
+                                    <p class="text-xs font-medium text-gray-500 uppercase mb-1">Server Errors</p>
+                                    <p class="text-2xl font-bold text-rose-700" id="hm-5xx">0</p>
+                                    <p class="text-xs text-gray-500 mt-1">HTTP 5xx</p>
+                                </div>
+                            </div>
+
+                            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
+                                <div class="bg-white rounded-lg border border-gray-200 overflow-hidden">
+                                    <div class="px-4 py-3 border-b border-gray-200 flex items-center justify-between">
+                                        <p class="text-sm font-semibold text-gray-900">Top 404 IPs</p>
+                                        <span class="text-xs text-gray-500" id="hm-404-total">0</span>
+                                    </div>
+                                    <div class="max-h-56 overflow-y-auto">
+                                        <table class="w-full text-sm">
+                                            <tbody id="hm-top-404-ips" class="divide-y divide-gray-100">
+                                                <tr><td class="px-4 py-3 text-gray-500">No data yet.</td></tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                                <div class="bg-white rounded-lg border border-gray-200 overflow-hidden">
+                                    <div class="px-4 py-3 border-b border-gray-200 flex items-center justify-between">
+                                        <p class="text-sm font-semibold text-gray-900">Top Auth Denied IPs</p>
+                                        <span class="text-xs text-gray-500" id="hm-auth-total">0</span>
+                                    </div>
+                                    <div class="max-h-56 overflow-y-auto">
+                                        <table class="w-full text-sm">
+                                            <tbody id="hm-top-auth-ips" class="divide-y divide-gray-100">
+                                                <tr><td class="px-4 py-3 text-gray-500">No data yet.</td></tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                                <div class="bg-white rounded-lg border border-gray-200 overflow-hidden">
+                                    <div class="px-4 py-3 border-b border-gray-200 flex items-center justify-between">
+                                        <p class="text-sm font-semibold text-gray-900">Top 404 Paths</p>
+                                        <span class="text-xs text-gray-500" id="hm-path-total">0</span>
+                                    </div>
+                                    <div class="max-h-56 overflow-y-auto">
+                                        <table class="w-full text-sm">
+                                            <tbody id="hm-top-404-paths" class="divide-y divide-gray-100">
+                                                <tr><td class="px-4 py-3 text-gray-500">No data yet.</td></tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="mt-4 text-xs text-gray-500">
+                                <p><strong>Note:</strong> These are monitoring signals (traffic patterns, error codes, and rate limits). They can indicate scanning or abuse, but they do not prove a successful penetration.</p>
+                            </div>
+                        </div>
+
                         <!-- Server Information -->
                         <div class="form-section">
                             <div class="flex items-center space-x-3 mb-6">
@@ -1925,7 +2015,9 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Live Statistics Auto-Refresh
     let healthRefreshInterval;
+    let healthMetricsInterval;
     let isRefreshing = false;
+    let isMetricsRefreshing = false;
 
     function startLiveStats() {
         // Refresh every 30 seconds
@@ -1934,6 +2026,13 @@ document.addEventListener('DOMContentLoaded', function() {
                 refreshHealth();
             }
         }, 30000); // 30 seconds
+
+        // Refresh live traffic metrics more frequently (every 5 seconds)
+        healthMetricsInterval = setInterval(function() {
+            if (!isMetricsRefreshing && document.getElementById('content-health') && !document.getElementById('content-health').classList.contains('hidden')) {
+                refreshHealthMetrics();
+            }
+        }, 5000);
     }
 
     function refreshHealth() {
@@ -2061,6 +2160,85 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
             }
         }
+    }
+
+    function refreshHealthMetrics() {
+        if (isMetricsRefreshing) return;
+        isMetricsRefreshing = true;
+
+        fetch('{{ url('/admin/settings/health-metrics') }}', {
+            method: 'GET',
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest',
+                'Accept': 'application/json',
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || document.querySelector('input[name="_token"]')?.value || ''
+            }
+        })
+        .then(r => r.json())
+        .then(data => {
+            updateHealthMetricsDisplay(data);
+            isMetricsRefreshing = false;
+        })
+        .catch(() => {
+            isMetricsRefreshing = false;
+        });
+    }
+
+    function renderTopList(tbodyId, items, formatKey) {
+        const tbody = document.getElementById(tbodyId);
+        if (!tbody) return;
+
+        const entries = items ? Object.entries(items) : [];
+        if (!entries.length) {
+            tbody.innerHTML = '<tr><td class="px-4 py-3 text-gray-500">No data yet.</td></tr>';
+            return;
+        }
+
+        tbody.innerHTML = entries.map(([k, v]) => {
+            const displayKey = typeof formatKey === 'function' ? formatKey(k) : k;
+            return `
+                <tr>
+                    <td class="px-4 py-2.5 text-gray-700 font-medium truncate max-w-[220px]" title="${displayKey}">${displayKey}</td>
+                    <td class="px-4 py-2.5 text-right text-gray-900 font-semibold">${v}</td>
+                </tr>
+            `;
+        }).join('');
+    }
+
+    function updateHealthMetricsDisplay(data) {
+        if (!data) return;
+
+        const windowEl = document.getElementById('health-metrics-window');
+        if (windowEl && data.window_minutes) windowEl.textContent = data.window_minutes;
+
+        const updatedEl = document.getElementById('health-metrics-updated');
+        if (updatedEl) {
+            try {
+                updatedEl.textContent = data.generated_at ? new Date(data.generated_at).toLocaleTimeString() : new Date().toLocaleTimeString();
+            } catch (e) {
+                updatedEl.textContent = new Date().toLocaleTimeString();
+            }
+        }
+
+        const totals = data.totals || {};
+        const setText = (id, val) => {
+            const el = document.getElementById(id);
+            if (el) el.textContent = (val ?? 0).toString();
+        };
+
+        setText('hm-requests', totals.requests);
+        setText('hm-reads', totals.reads);
+        setText('hm-writes', totals.writes);
+        setText('hm-5xx', totals.errors_5xx);
+
+        setText('hm-404-total', totals.not_found);
+        setText('hm-auth-total', totals.auth_denied);
+        setText('hm-path-total', totals.not_found);
+
+        const top = data.top || {};
+        renderTopList('hm-top-404-ips', top.ip_404);
+        renderTopList('hm-top-auth-ips', top.ip_auth_denied);
+        renderTopList('hm-top-404-paths', top.path_404, (p) => p);
     }
 
     function updateServiceCard(serviceName, isHealthy, status, driver) {
