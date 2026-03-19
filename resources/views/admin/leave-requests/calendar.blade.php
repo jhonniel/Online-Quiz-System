@@ -30,11 +30,11 @@
     <div class="grid grid-cols-1 lg:grid-cols-4 gap-3 sm:gap-4 items-start">
         <!-- Employee Filter Sidebar -->
         <div class="lg:col-span-1 space-y-3 sm:space-y-4">
-            <div class="bg-white rounded-2xl shadow border border-gray-200 p-3 sm:p-4">
-                <h2 class="text-xs sm:text-sm font-bold text-gray-900 mb-2">Employees</h2>
+            <div class="bg-white rounded-2xl shadow border border-gray-200 p-2.5 sm:p-3">
+                <h2 class="text-xs sm:text-sm font-bold text-gray-900 mb-1.5">Employees</h2>
 
                 <!-- Department Filter -->
-                <div class="mb-3">
+                <div class="mb-2">
                     <label for="department_id" class="block text-xs font-medium text-gray-700 mb-1.5">Filter by Department</label>
                     <select name="department_id" id="department_id"
                             onchange="filterByDepartment(this.value)"
@@ -48,10 +48,10 @@
                     </select>
                 </div>
 
-                <p class="text-xs text-gray-500 mb-2 sm:mb-3">
-                    Tap a name to focus on that employee's leave, or choose "All Employees" to view everyone.
+                <p class="text-[11px] text-gray-500 mb-1.5 sm:mb-2">
+                    Tap a name to focus, or choose All Employees.
                 </p>
-                <div class="space-y-1 max-h-[calc(100vh-20rem)] sm:max-h-[calc(100vh-24rem)] overflow-y-auto text-xs sm:text-sm -mx-1">
+                <div class="space-y-1 max-h-44 sm:max-h-52 overflow-y-auto text-xs sm:text-sm -mx-1">
                     @php
                         $allEmployeesParams = ['month' => $currentMonth->format('Y-m')];
                         if ($selectedDepartmentId) {
@@ -108,9 +108,9 @@
                             <option value="absent">Absent</option>
                             <option value="overtime">Overtime</option>
                             <option value="offset">Offset</option>
-                            @if(auth()->check() && auth()->user()->isSuperAdmin())
-                                <option value="travel">Travel (Full Access Only)</option>
-                            @endif
+                            <option value="additional_time">Additional Time</option>
+                            <option value="travel">Travel</option>
+                            <option value="other">Other</option>
                         </select>
                     </div>
                     <!-- Travel Hours Field (only shown for travel type) -->
@@ -136,8 +136,8 @@
                     <button type="submit" id="file-leave-btn" class="w-full inline-flex items-center justify-center px-3 py-1.5 text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded-md shadow focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed">
                         File Leave
                     </button>
-                    <p class="text-[11px] text-gray-500" id="form-help-text">Creates a pending request that appears on the employee account and calendar. Admins can file leave for any date, including past dates.</p>
-                    <p class="text-[11px] text-purple-600 font-medium hidden" id="travel-help-text">Travel requests are auto-approved and hours are automatically added to DTR. Past dates are allowed.</p>
+                    <p class="text-[11px] text-gray-500" id="form-help-text">Creates a pending request that appears on the employee account and calendar. Admins can file any leave type for any date, including past dates.</p>
+                    <p class="text-[11px] text-purple-600 font-medium hidden" id="travel-help-text">Travel requests are filed as pending and can use custom hours per day when approved.</p>
                 </form>
             </div>
         </div>
@@ -454,7 +454,7 @@ document.addEventListener('DOMContentLoaded', function() {
     updateFileLeaveButton();
 
     // Form submission validation
-    const form = document.querySelector('form[action="{{ url('/admin/leave-requests/create-for-employee') }}"]');
+    const form = document.querySelector("form[action='{{ url('/admin/leave-requests/create-for-employee') }}']");
     if (form) {
         form.addEventListener('submit', function(e) {
             const selectedEmployees = document.querySelectorAll('.employee-checkbox:checked');

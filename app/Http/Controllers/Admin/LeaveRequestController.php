@@ -521,14 +521,19 @@ class LeaveRequestController extends Controller
     public function storeForEmployee(Request $request)
     {
         $user = auth()->user();
-        
-        // Determine allowed leave types based on user permissions
-        $allowedTypes = ['vacation_leave', 'sick_leave', 'work_from_home', 'absent', 'overtime', 'offset'];
-        
-        // Only super admins (full access) can file travel leave
-        if ($user->isSuperAdmin()) {
-            $allowedTypes[] = 'travel';
-        }
+
+        // Admin-side filing for employees: allow any leave type and any date (including past dates).
+        $allowedTypes = [
+            'vacation_leave',
+            'sick_leave',
+            'work_from_home',
+            'absent',
+            'overtime',
+            'offset',
+            'additional_time',
+            'travel',
+            'other',
+        ];
         
         $validated = $request->validate([
             'user_ids' => [
@@ -548,13 +553,6 @@ class LeaveRequestController extends Controller
             'reason' => ['nullable', 'string', 'max:1000'],
             'travel_hours' => ['nullable', 'numeric', 'min:0', 'max:24'], // Custom hours for travel (per day)
         ]);
-
-        // Check if user is trying to file travel but is not a super admin
-        if ($validated['type'] === 'travel' && !$user->isSuperAdmin()) {
-            return redirect()->back()
-                ->withErrors(['type' => 'Only full-access admins can file travel leave requests.'])
-                ->withInput();
-        }
 
         $employeeIds = $validated['user_ids'];
 
@@ -660,7 +658,7 @@ class LeaveRequestController extends Controller
                 'employee_id' => $employee->id,
                 'admin_id' => Auth::id(),
                 'type' => $validated['type'],
-                'status' => $status,
+                'status' => 'pending',
             ]);
 
             $createdCount++;
