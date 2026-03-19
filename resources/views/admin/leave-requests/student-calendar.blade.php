@@ -27,9 +27,9 @@
         </div>
     </div>
 
-    <div class="grid grid-cols-1 lg:grid-cols-5 gap-3 sm:gap-4 items-start">
+    <div class="grid grid-cols-1 lg:grid-cols-4 gap-3 sm:gap-4 items-start">
         <!-- Student Filter Sidebar -->
-        <div class="lg:col-span-2 space-y-2.5 sm:space-y-3 lg:h-[calc(100vh-10.5rem)] lg:overflow-hidden">
+        <div class="lg:col-span-1 space-y-2.5 sm:space-y-3 lg:h-[calc(100vh-10.5rem)] lg:overflow-hidden">
             <div class="bg-white rounded-2xl shadow border border-gray-200 p-2 sm:p-2.5 lg:h-[38%] flex flex-col">
                 <h2 class="text-xs sm:text-sm font-bold text-gray-900 mb-1.5">Students</h2>
                 <p class="text-[11px] text-gray-500 mb-1.5 sm:mb-2">
@@ -43,7 +43,7 @@
                     @foreach($students as $student)
                         <a href="{{ url('/admin/student-leave-calendar?month=' . $currentMonth->format('Y-m') . '&student=' . $student->id) }}"
                            class="flex items-center justify-between px-2.5 py-1 rounded-md mx-1 transition-colors duration-150 {{ $selectedStudent == $student->id ? 'bg-indigo-50 text-indigo-700 font-semibold' : 'text-gray-700 hover:bg-gray-50' }}">
-                            <span class="whitespace-normal break-words leading-tight">{{ $student->name }}</span>
+                            <span class="truncate">{{ $student->name }}</span>
                         </a>
                     @endforeach
                 </div>
