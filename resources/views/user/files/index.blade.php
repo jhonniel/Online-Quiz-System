@@ -823,19 +823,8 @@
 
                                 chunkXhr.addEventListener('load', function () {
                                     if (chunkXhr.status >= 200 && chunkXhr.status < 300) {
-                                        const etag = chunkXhr.getResponseHeader('ETag') || chunkXhr.getResponseHeader('etag');
-                                        if (!etag) {
-                                            // Missing ETag is commonly caused by Spaces CORS not exposing ETag.
-                                            // Fall back to server-side upload (no CORS).
-                                            document.getElementById('user-upload-status').textContent =
-                                                'Spaces did not expose ETag (CORS). Falling back to server upload...';
-                                            fallbackToDirectUpload();
-                                            return;
-                                        }
-
                                         uploadedParts.push({
                                             part_number: partNumber,
-                                            etag: etag.replace(/"/g, ''), // Remove quotes from ETag
                                         });
 
                                         // Update progress (modal + floating indicator)

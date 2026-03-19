@@ -436,7 +436,7 @@ class FileController extends Controller
             'path' => 'required|string|max:2048',
             'parts' => 'required|array|min:1',
             'parts.*.part_number' => 'required|integer|min:1',
-            'parts.*.etag' => 'required|string|max:255',
+            'parts.*.etag' => 'nullable|string|max:255',
             'original_name' => 'required|string|max:255',
             'mime_type' => 'nullable|string|max:255',
             'size' => 'required|integer|min:1|max:5368709120',
@@ -454,13 +454,59 @@ class FileController extends Controller
 
         [$client, $bucket] = $this->getSpacesClientAndBucket();
 
-        // Prepare parts array for CompleteMultipartUpload
+        // Prepare parts array for CompleteMultipartUpload.
+        // If ETags are not provided (common when Spaces CORS doesn't expose ETag), fetch them via ListParts.
         $parts = [];
+        $missingEtags = false;
         foreach ($validated['parts'] as $part) {
+            if (empty($part['etag'])) {
+                $missingEtags = true;
+                continue;
+            }
             $parts[] = [
-                'PartNumber' => $part['part_number'],
-                'ETag' => $part['etag'],
+                'PartNumber' => (int) $part['part_number'],
+                'ETag' => (string) $part['etag'],
             ];
+        }
+
+        if ($missingEtags) {
+            $listedParts = [];
+            $marker = null;
+            do {
+                $resp = $client->listParts([
+                    'Bucket' => $bucket,
+                    'Key' => $validated['path'],
+                    'UploadId' => $validated['upload_id'],
+                    'PartNumberMarker' => $marker,
+                    'MaxParts' => 1000,
+                ]);
+
+                foreach (($resp['Parts'] ?? []) as $p) {
+                    $pn = (int) ($p['PartNumber'] ?? 0);
+                    $etag = (string) ($p['ETag'] ?? '');
+                    if ($pn > 0 && $etag !== '') {
+                        $listedParts[$pn] = $etag;
+                    }
+                }
+
+                $marker = isset($resp['NextPartNumberMarker']) ? (int) $resp['NextPartNumberMarker'] : null;
+                $isTruncated = (bool) ($resp['IsTruncated'] ?? false);
+            } while ($isTruncated && $marker);
+
+            $parts = [];
+            foreach ($validated['parts'] as $part) {
+                $pn = (int) $part['part_number'];
+                $etag = $part['etag'] ?? ($listedParts[$pn] ?? null);
+                if (!$etag) {
+                    return response()->json([
+                        'message' => "Missing ETag for part {$pn}. Ensure all chunks uploaded successfully and try again."
+                    ], 422);
+                }
+                $parts[] = [
+                    'PartNumber' => $pn,
+                    'ETag' => (string) $etag,
+                ];
+            }
         }
 
         // Sort parts by part number

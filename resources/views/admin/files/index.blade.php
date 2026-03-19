@@ -791,14 +791,8 @@
 
                             chunkXhr.addEventListener('load', function() {
                                 if (chunkXhr.status >= 200 && chunkXhr.status < 300) {
-                                    const etag = chunkXhr.getResponseHeader('ETag') || chunkXhr.getResponseHeader('etag');
-                                    if (!etag) {
-                                        throw new Error('Missing ETag in chunk response.');
-                                    }
-
                                     uploadedParts.push({
                                         part_number: partNumber,
-                                        etag: etag.replace(/"/g, ''), // Remove quotes from ETag
                                     });
 
                                     // Update progress
