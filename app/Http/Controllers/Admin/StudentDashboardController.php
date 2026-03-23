@@ -261,6 +261,9 @@ class StudentDashboardController extends Controller
             ->whereIn('type', ['additional_time', 'vacation_leave', 'sick_leave', 'travel'])
             ->where('status', 'pending')
             ->whereHas('logs', function ($q) {
+                $q->where('action', 'approved');
+            })
+            ->whereHas('logs', function ($q) {
                 $q->where('action', 'resubmission_requested');
             })
             ->whereDoesntHave('logs', function ($q) {

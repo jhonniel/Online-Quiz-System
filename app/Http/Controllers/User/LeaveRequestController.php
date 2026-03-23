@@ -660,6 +660,8 @@ class LeaveRequestController extends Controller
             'start_date' => $leaveRequest->start_date->format('Y-m-d'),
             'end_date' => $leaveRequest->end_date ? $leaveRequest->end_date->format('Y-m-d') : null,
             'reason' => '',
+            'additional_time_mode' => 'fixed_date',
+            'additional_time_total_hours' => '',
             'overtime_hours' => '',
             'overtime_dates' => '',
             'overtime_tasks' => '',
@@ -702,6 +704,20 @@ class LeaveRequestController extends Controller
             if (preg_match('/Hours to Deduct:\s*([0-9]{2}:[0-9]{2})/', $raw, $m)) {
                 $editData['offset_hours'] = trim($m[1]);
             }
+            if (preg_match('/Reason:\s*(.+)\z/s', $raw, $m)) {
+                $editData['reason'] = trim($m[1]);
+            }
+        } elseif ($leaveRequest->type === 'additional_time') {
+            if (preg_match('/Additional Time Input Mode:\s*Total Hours/i', $raw)) {
+                $editData['additional_time_mode'] = 'total_hours';
+            } else {
+                $editData['additional_time_mode'] = 'fixed_date';
+            }
+
+            if (preg_match('/Additional Time Hours:\s*([0-9]{1,3}:[0-9]{2})/i', $raw, $m)) {
+                $editData['additional_time_total_hours'] = trim($m[1]);
+            }
+
             if (preg_match('/Reason:\s*(.+)\z/s', $raw, $m)) {
                 $editData['reason'] = trim($m[1]);
             }
@@ -1195,6 +1211,9 @@ class LeaveRequestController extends Controller
         $requests = LeaveRequest::where('user_id', $userId)
             ->whereIn('type', ['additional_time', 'vacation_leave', 'sick_leave', 'travel'])
             ->where('status', 'pending')
+            ->whereHas('logs', function ($q) {
+                $q->where('action', 'approved');
+            })
             ->whereHas('logs', function ($q) {
                 $q->where('action', 'resubmission_requested');
             })
