@@ -48,7 +48,7 @@
             @endif
 
             <div class="bg-white rounded-lg shadow border border-gray-200 p-6">
-                <form action="{{ url('/leave-requests/' . $leaveRequest->id) }}" method="POST" class="space-y-6">
+                <form action="{{ url('/leave-requests/' . $leaveRequest->id) }}" method="POST" enctype="multipart/form-data" class="space-y-6">
                     @csrf
                     @method('PUT')
 
@@ -181,6 +181,47 @@
                             Enter the location or destination of your travel.
                         </p>
                         @error('reason')
+                            <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                        @enderror
+                    </div>
+
+                    <!-- Supporting Document (Optional; hidden for Travel) -->
+                    <div id="supporting-section">
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            Supporting Document (e.g., Medical Certificate, Proof, Attachments)
+                        </label>
+
+                        @if($leaveRequest->supporting_document_path)
+                            @php
+                                $docUrl = null;
+                                try {
+                                    $docUrl = \Illuminate\Support\Facades\Storage::disk('digitalocean')
+                                        ->temporaryUrl(
+                                            $leaveRequest->supporting_document_path,
+                                            now()->addMinutes(30),
+                                            ['ResponseContentDisposition' => 'inline']
+                                        );
+                                } catch (\Throwable $e) {
+                                    try {
+                                        $docUrl = \Illuminate\Support\Facades\Storage::url($leaveRequest->supporting_document_path);
+                                    } catch (\Throwable $e) {
+                                        $docUrl = null;
+                                    }
+                                }
+                            @endphp
+                            @if($docUrl)
+                                <div class="mb-3 p-3 bg-indigo-50 border border-indigo-100 rounded-lg">
+                                    <p class="text-xs font-medium text-gray-700 mb-1">Current attachment</p>
+                                    <a href="{{ $docUrl }}" target="_blank" rel="noopener"
+                                       class="text-sm text-indigo-700 underline break-words">View / Download current file</a>
+                                </div>
+                            @endif
+                        @endif
+
+                        <input type="file" name="supporting_document" accept=".pdf,.jpg,.jpeg,.png"
+                               class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100">
+                        <p class="mt-1 text-xs text-gray-500">Optional, PDF/JPG/PNG up to 5MB. Uploading a new file replaces the current attachment.</p>
+                        @error('supporting_document')
                             <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
                         @enderror
                     </div>
@@ -410,6 +451,7 @@
     const wfhSection = document.getElementById('wfh-section');
     const offsetSection = document.getElementById('offset-section');
     const travelSection = document.getElementById('travel-section');
+    const supportingSection = document.getElementById('supporting-section');
     const additionalTimeSection = document.getElementById('additional-time-section');
     const additionalTimeHoursWrap = document.getElementById('additional-time-hours-wrap');
     const additionalTimeHoursInput = document.getElementById('additional_time_total_hours');
@@ -494,6 +536,7 @@
             if (reasonHelp) reasonHelp.classList.add('hidden');
             if (reasonTravelHelp) reasonTravelHelp.classList.remove('hidden');
             if (reasonInput) reasonInput.placeholder = 'Enter location or destination of travel...';
+            if (supportingSection) supportingSection.classList.add('hidden');
         } else {
             if (reasonLabelText) reasonLabelText.textContent = 'Reason ';
             if (reasonRequiredSpan) { reasonRequiredSpan.classList.add('text-gray-400'); reasonRequiredSpan.classList.remove('text-red-500'); reasonRequiredSpan.textContent = '(Optional)'; }
@@ -501,6 +544,7 @@
             if (reasonHelp) reasonHelp.classList.remove('hidden');
             if (reasonTravelHelp) reasonTravelHelp.classList.add('hidden');
             if (reasonInput) reasonInput.placeholder = 'Please provide a reason for this request...';
+            if (supportingSection) supportingSection.classList.remove('hidden');
         }
     }
 
