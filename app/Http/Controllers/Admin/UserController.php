@@ -112,6 +112,7 @@ class UserController extends Controller
             ],
             'is_active' => 'boolean',
             'required_training_hours' => 'nullable|numeric|min:0',
+            'leave_allowance' => 'nullable|numeric|min:0|max:365',
             'vacation_allowance' => 'nullable|numeric|min:0|max:365',
             'sick_allowance' => 'nullable|numeric|min:0|max:365',
         ]);
@@ -148,16 +149,18 @@ class UserController extends Controller
         ]);
 
         // Handle leave balances for employees
-        if ($request->role === 'employee' && ($request->filled('vacation_allowance') || $request->filled('sick_allowance'))) {
+        if ($request->role === 'employee' && ($request->filled('leave_allowance') || $request->filled('vacation_allowance') || $request->filled('sick_allowance'))) {
             $currentYear = now()->year;
             $defaultVacation = (float) \App\Models\Setting::get('default_vacation_balance', 0);
             $defaultSick = (float) \App\Models\Setting::get('default_sick_leave_balance', 0);
+            $combinedDefault = $defaultVacation + $defaultSick;
+            $combined = $request->filled('leave_allowance') ? (float) $request->leave_allowance : null;
 
             LeaveBalance::create([
                 'user_id' => $user->id,
                 'year' => $currentYear,
-                'vacation_allowance' => $request->filled('vacation_allowance') ? (float) $request->vacation_allowance : $defaultVacation,
-                'sick_allowance' => $request->filled('sick_allowance') ? (float) $request->sick_allowance : $defaultSick,
+                'vacation_allowance' => $combined !== null ? $combined : ($request->filled('vacation_allowance') ? (float) $request->vacation_allowance : $defaultVacation),
+                'sick_allowance' => $combined !== null ? 0 : ($request->filled('sick_allowance') ? (float) $request->sick_allowance : $defaultSick),
             ]);
         }
 
@@ -216,6 +219,15 @@ class UserController extends Controller
                 ->get()
                 ->sum->days;
 
+            $usedLeave = \App\Models\LeaveRequest::where('user_id', $user->id)
+                ->whereIn('type', ['leave', 'vacation_leave', 'sick_leave'])
+                ->where('status', 'approved')
+                ->whereYear('start_date', $currentYear)
+                ->get()
+                ->sum->days;
+
+            $combinedAllowance = (float) $leaveBalance->vacation_allowance + (float) $leaveBalance->sick_allowance;
+
             $balances = [
                 'vacation' => [
                     'allowance' => (float) $leaveBalance->vacation_allowance,
@@ -226,6 +238,11 @@ class UserController extends Controller
                     'allowance' => (float) $leaveBalance->sick_allowance,
                     'used' => $usedSick,
                     'remaining' => max((float) $leaveBalance->sick_allowance - $usedSick, 0),
+                ],
+                'leave' => [
+                    'allowance' => $combinedAllowance,
+                    'used' => $usedLeave,
+                    'remaining' => max($combinedAllowance - $usedLeave, 0),
                 ],
             ];
 
@@ -307,8 +324,9 @@ class UserController extends Controller
     public function updateLeaveBalance(Request $request, User $user)
     {
         $request->validate([
-            'vacation_allowance' => 'required|numeric|min:0|max:365',
-            'sick_allowance' => 'required|numeric|min:0|max:365',
+            'leave_allowance' => 'required_without_all:vacation_allowance,sick_allowance|nullable|numeric|min:0|max:365',
+            'vacation_allowance' => 'required_without:leave_allowance|nullable|numeric|min:0|max:365',
+            'sick_allowance' => 'required_without:leave_allowance|nullable|numeric|min:0|max:365',
             'year' => 'required|integer|min:2000|max:2100',
         ]);
 
@@ -322,10 +340,17 @@ class UserController extends Controller
             ]
         );
 
-        $leaveBalance->update([
-            'vacation_allowance' => $request->vacation_allowance,
-            'sick_allowance' => $request->sick_allowance,
-        ]);
+        if ($request->filled('leave_allowance')) {
+            $leaveBalance->update([
+                'vacation_allowance' => (float) $request->leave_allowance,
+                'sick_allowance' => 0,
+            ]);
+        } else {
+            $leaveBalance->update([
+                'vacation_allowance' => $request->vacation_allowance,
+                'sick_allowance' => $request->sick_allowance,
+            ]);
+        }
 
         return redirect('/admin/users/' . $user->id)
             ->with('success', "Leave balances updated for {$year}.");
@@ -356,6 +381,7 @@ class UserController extends Controller
             ],
             'is_active' => 'boolean',
             'required_training_hours' => 'nullable|numeric|min:0',
+            'leave_allowance' => 'nullable|numeric|min:0|max:365',
             'vacation_allowance' => 'nullable|numeric|min:0|max:365',
             'sick_allowance' => 'nullable|numeric|min:0|max:365',
         ]);
@@ -402,7 +428,7 @@ class UserController extends Controller
         $user->update($data);
 
         // Handle leave balances for employees
-        if ($request->role === 'employee' && ($request->has('vacation_allowance') || $request->has('sick_allowance'))) {
+        if ($request->role === 'employee' && ($request->has('leave_allowance') || $request->has('vacation_allowance') || $request->has('sick_allowance'))) {
             $currentYear = now()->year;
             $defaultVacation = (float) \App\Models\Setting::get('default_vacation_balance', 0);
             $defaultSick = (float) \App\Models\Setting::get('default_sick_leave_balance', 0);
@@ -417,11 +443,16 @@ class UserController extends Controller
 
             // Update only if values are provided
             $updateData = [];
-            if ($request->has('vacation_allowance')) {
-                $updateData['vacation_allowance'] = $request->filled('vacation_allowance') ? (float) $request->vacation_allowance : $defaultVacation;
-            }
-            if ($request->has('sick_allowance')) {
-                $updateData['sick_allowance'] = $request->filled('sick_allowance') ? (float) $request->sick_allowance : $defaultSick;
+            if ($request->has('leave_allowance') && $request->filled('leave_allowance')) {
+                $updateData['vacation_allowance'] = (float) $request->leave_allowance;
+                $updateData['sick_allowance'] = 0;
+            } else {
+                if ($request->has('vacation_allowance')) {
+                    $updateData['vacation_allowance'] = $request->filled('vacation_allowance') ? (float) $request->vacation_allowance : $defaultVacation;
+                }
+                if ($request->has('sick_allowance')) {
+                    $updateData['sick_allowance'] = $request->filled('sick_allowance') ? (float) $request->sick_allowance : $defaultSick;
+                }
             }
 
             if (!empty($updateData)) {

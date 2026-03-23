@@ -112,9 +112,35 @@
                     @endif
                 </div>
 
+                @if($leaveRequest->type === 'additional_time')
+                    @php
+                        $raw = $leaveRequest->reason ?? '';
+                        $additionalInputMode = 'Fixed Date (1 day = 8 hours)';
+                        $additionalHours = '-';
+
+                        if (preg_match('/Additional Time Input Mode:\s*(.+)/', $raw, $m)) {
+                            $additionalInputMode = trim($m[1]);
+                        }
+                        if (preg_match('/Additional Time Hours:\s*(.+)/', $raw, $m)) {
+                            $additionalHours = trim($m[1]);
+                        }
+                    @endphp
+
+                    <div class="mt-1 grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-500 mb-1">Additional Time Input Mode</label>
+                            <p class="text-sm font-semibold text-gray-900">{{ $additionalInputMode }}</p>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-500 mb-1">Additional Time Hours</label>
+                            <p class="text-sm font-semibold text-gray-900">{{ $additionalHours }}</p>
+                        </div>
+                    </div>
+                @endif
+
 
                 <!-- Vacation / Sick Leave / Offset Letter-style View (matches provided template) -->
-                @if(in_array($leaveRequest->type, ['vacation_leave', 'sick_leave', 'offset']))
+                @if(in_array($leaveRequest->type, ['leave', 'vacation_leave', 'sick_leave', 'offset']))
                     @php
                         $effectiveDate = $leaveRequest->created_at->format('F d, Y');
                         $startDate = $leaveRequest->start_date->format('F d, Y');
@@ -474,7 +500,7 @@
                 @endif
 
                 <!-- Reason (shown only for simple types, not letter-style layouts like WFH/OT/Vacation/Sick) -->
-                @if($leaveRequest->reason && !in_array($leaveRequest->type, ['vacation_leave', 'sick_leave', 'work_from_home', 'overtime']))
+                @if($leaveRequest->reason && !in_array($leaveRequest->type, ['leave', 'vacation_leave', 'sick_leave', 'work_from_home', 'overtime']))
                     <div>
                         <label class="block text-sm font-medium text-gray-500 mb-1">Reason</label>
                         <p class="text-sm text-gray-900 bg-gray-50 p-4 rounded-lg border border-gray-200">

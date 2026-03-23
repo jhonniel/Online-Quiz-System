@@ -258,7 +258,7 @@ class StudentDashboardController extends Controller
     private function getPendingResubmissionRollbackHours(int $userId): float
     {
         $requests = LeaveRequest::where('user_id', $userId)
-            ->whereIn('type', ['additional_time', 'vacation_leave', 'sick_leave', 'travel'])
+            ->whereIn('type', ['additional_time', 'leave', 'vacation_leave', 'sick_leave', 'travel'])
             ->where('status', 'pending')
             ->whereHas('logs', function ($q) {
                 $q->where('action', 'approved');
@@ -277,7 +277,7 @@ class StudentDashboardController extends Controller
                 $total += ((float) ($request->travel_hours ?? 8.0)) * $request->days;
                 continue;
             }
-            if (in_array($request->type, ['vacation_leave', 'sick_leave'], true)) {
+            if (in_array($request->type, ['leave', 'vacation_leave', 'sick_leave'], true)) {
                 $total += 8.0 * $request->days;
                 continue;
             }
@@ -301,6 +301,9 @@ class StudentDashboardController extends Controller
     {
         $requests = LeaveRequest::where('type', 'additional_time')
             ->where('status', 'pending')
+            ->whereHas('logs', function ($q) {
+                $q->where('action', 'approved');
+            })
             ->whereHas('logs', function ($q) {
                 $q->where('action', 'resubmission_requested');
             })

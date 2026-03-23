@@ -153,22 +153,13 @@
 
                     <div class="grid grid-cols-1 gap-3">
                         <div class="border border-gray-100 rounded-lg px-3 py-2 bg-indigo-50/40">
-                            <p class="text-xs font-semibold text-gray-500 uppercase tracking-wide">Vacation Leave</p>
+                            <p class="text-xs font-semibold text-gray-500 uppercase tracking-wide">Leave Credits</p>
                             <p class="text-sm text-gray-900">
                                 Remaining:
-                                <span class="font-bold">{{ $balances['vacation']['remaining'] }}</span>
-                                / {{ $balances['vacation']['allowance'] }} days
+                                <span class="font-bold">{{ $balances['leave']['remaining'] }}</span>
+                                / {{ $balances['leave']['allowance'] }} days
                             </p>
-                            <p class="text-xs text-gray-500">Used: {{ $balances['vacation']['used'] }} days ({{ now()->year }})</p>
-                        </div>
-                        <div class="border border-gray-100 rounded-lg px-3 py-2 bg-blue-50/40">
-                            <p class="text-xs font-semibold text-gray-500 uppercase tracking-wide">Sick Leave</p>
-                            <p class="text-sm text-gray-900">
-                                Remaining:
-                                <span class="font-bold">{{ $balances['sick']['remaining'] }}</span>
-                                / {{ $balances['sick']['allowance'] }} days
-                            </p>
-                            <p class="text-xs text-gray-500">Used: {{ $balances['sick']['used'] }} days ({{ now()->year }})</p>
+                            <p class="text-xs text-gray-500">Used: {{ $balances['leave']['used'] }} days ({{ now()->year }})</p>
                         </div>
                         <div class="border border-gray-100 rounded-lg px-3 py-2 {{ str_starts_with($overtimeFormatted ?? '00:00', '-') ? 'bg-red-50/40 border-red-200' : 'bg-emerald-50/40' }}">
                             <p class="text-xs font-semibold text-gray-500 uppercase tracking-wide">
@@ -196,38 +187,29 @@
 
                     <!-- Manual leave balance adjustment -->
                     <div class="pt-4 border-t border-gray-100">
-                        <h4 class="text-sm font-semibold text-gray-900 mb-2">Adjust Leave Balances ({{ now()->year }})</h4>
+                        <h4 class="text-sm font-semibold text-gray-900 mb-2">Adjust Leave Credits ({{ now()->year }})</h4>
                         <p class="text-xs text-gray-500 mb-3">
-                            Update this employee's yearly leave allowances. Used days are based on approved leave requests.
+                            Update this employee's combined yearly leave credits. Used days are based on approved leave requests.
                         </p>
                         <form action="{{ url('/admin/users/' . $user->id . '/leave-balance') }}" method="POST" class="grid grid-cols-1 gap-3">
                             @csrf
                             @method('PATCH')
                             <input type="hidden" name="year" value="{{ now()->year }}">
-                            <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                            <div class="grid grid-cols-1 gap-3">
                                 <div>
-                                    <label for="vacation_allowance" class="block text-xs font-medium text-gray-700 mb-1">
-                                        Vacation Allowance (days)
+                                    <label for="leave_allowance" class="block text-xs font-medium text-gray-700 mb-1">
+                                        Leave Credits (days)
                                     </label>
                                     <input type="number" min="0" max="365" step="0.5"
-                                           name="vacation_allowance" id="vacation_allowance"
-                                           value="{{ old('vacation_allowance', $balances['vacation']['allowance']) }}"
-                                           class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
-                                </div>
-                                <div>
-                                    <label for="sick_allowance" class="block text-xs font-medium text-gray-700 mb-1">
-                                        Sick Allowance (days)
-                                    </label>
-                                    <input type="number" min="0" max="365" step="0.5"
-                                           name="sick_allowance" id="sick_allowance"
-                                           value="{{ old('sick_allowance', $balances['sick']['allowance']) }}"
+                                           name="leave_allowance" id="leave_allowance"
+                                           value="{{ old('leave_allowance', $balances['leave']['allowance']) }}"
                                            class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
                                 </div>
                             </div>
                             <div class="flex justify-end">
                                 <button type="submit"
                                         class="inline-flex items-center px-4 py-2 border border-transparent text-xs font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
-                                    Save Leave Balances
+                                    Save Leave Credits
                                 </button>
                             </div>
                         </form>

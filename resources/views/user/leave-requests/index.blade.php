@@ -13,7 +13,7 @@
                 </div>
                 <div class="ml-3">
                     <h1 class="text-lg sm:text-xl lg:text-2xl font-bold text-white">Leave Requests</h1>
-                    <p class="text-indigo-100 text-sm">Manage your vacation, sick leave, and other requests</p>
+                    <p class="text-indigo-100 text-sm">Manage your leave and other requests</p>
                 </div>
             </div>
             <a href="{{ route('user.leave-requests.create') }}"
@@ -104,8 +104,8 @@
 
     <!-- Leave Balance & Overtime / Student Time -->
     @if(auth()->user()->role === 'employee')
-        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 px-4 pb-4">
-            <!-- Vacation Leave Balance -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 px-4 pb-4">
+            <!-- Leave Credits Balance -->
             <div class="bg-white rounded-lg shadow p-4 border border-indigo-200">
                 <div class="flex items-center">
                     <div class="flex-shrink-0 bg-indigo-100 rounded-lg p-3">
@@ -114,32 +114,12 @@
                         </svg>
                     </div>
                     <div class="ml-4">
-                        <p class="text-sm font-medium text-gray-500">Vacation Balance</p>
+                        <p class="text-sm font-medium text-gray-500">Leave Credits</p>
                         <p class="text-xl font-bold text-gray-900">
-                            {{ $balances['vacation']['remaining'] }} / {{ $balances['vacation']['allowance'] }} days
+                            {{ $balances['leave']['remaining'] }} / {{ $balances['leave']['allowance'] }} days
                         </p>
                         <p class="text-xs text-gray-500 mt-1">
-                            Used: {{ $balances['vacation']['used'] }} {{ $balances['vacation']['used'] == 1 ? 'day' : 'days' }} this year
-                        </p>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Sick Leave Balance -->
-            <div class="bg-white rounded-lg shadow p-4 border border-blue-200">
-                <div class="flex items-center">
-                    <div class="flex-shrink-0 bg-blue-100 rounded-lg p-3">
-                        <svg class="h-6 w-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-3-3v6m9-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                        </svg>
-                    </div>
-                    <div class="ml-4">
-                        <p class="text-sm font-medium text-gray-500">Sick Leave Balance</p>
-                        <p class="text-xl font-bold text-gray-900">
-                            {{ $balances['sick']['remaining'] }} / {{ $balances['sick']['allowance'] }} days
-                        </p>
-                        <p class="text-xs text-gray-500 mt-1">
-                            Used: {{ $balances['sick']['used'] }} {{ $balances['sick']['used'] == 1 ? 'day' : 'days' }} this year
+                            Used: {{ $balances['leave']['used'] }} {{ $balances['leave']['used'] == 1 ? 'day' : 'days' }} this year
                         </p>
                     </div>
                 </div>

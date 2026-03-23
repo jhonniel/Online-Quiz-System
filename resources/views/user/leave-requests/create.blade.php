@@ -409,7 +409,7 @@
                 </svg>
             </div>
             <h3 class="mt-4 text-lg font-semibold text-gray-900 text-center">No balance to file for that type of request</h3>
-            <p class="mt-2 text-sm text-gray-600 text-center">You have no remaining balance for the selected request type (Vacation Leave, Sick Leave, or Offset). Choose another request type or contact HR if you believe your balance should be updated.</p>
+            <p class="mt-2 text-sm text-gray-600 text-center">You have no remaining balance for the selected request type (Leave or Offset). Choose another request type or contact HR if you believe your balance should be updated.</p>
             <div class="mt-6">
                 <button type="button" onclick="closeNoBalanceModal()"
                         class="w-full inline-flex justify-center items-center px-4 py-3 border border-transparent text-sm font-medium rounded-lg shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
@@ -444,8 +444,7 @@
     const balanceCheckTypes = ['vacation_leave', 'sick_leave', 'offset'];
     function hasNoBalanceForType(type) {
         if (!balances || !balanceCheckTypes.includes(type)) return false;
-        if (type === 'vacation_leave') return (balances.vacation_remaining || 0) <= 0;
-        if (type === 'sick_leave') return (balances.sick_remaining || 0) <= 0;
+        if (type === 'vacation_leave' || type === 'sick_leave') return (balances.leave_remaining || 0) <= 0;
         if (type === 'offset') return (balances.overtime_hours || 0) <= 0;
         return false;
     }
@@ -530,7 +529,7 @@
             startDateInput.removeAttribute('min');
             startDateInput.setAttribute('max', today);
             if (endDateInput) endDateInput.setAttribute('max', today);
-        } else if (typeSelect.value === 'overtime' || typeSelect.value === 'additional_time' || typeSelect.value === 'sick_leave') {
+        } else if (typeSelect.value === 'overtime' || typeSelect.value === 'additional_time') {
             startDateInput.removeAttribute('min');
             startDateInput.removeAttribute('max');
             if (endDateInput) endDateInput.removeAttribute('max');

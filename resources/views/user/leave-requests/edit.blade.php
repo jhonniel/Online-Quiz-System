@@ -52,6 +52,11 @@
                     @csrf
                     @method('PUT')
 
+                    @php
+                        $selectedType = old('type', $editData['type']);
+                        $isVacationLeaveType = in_array($selectedType, ['leave', 'vacation_leave'], true);
+                    @endphp
+
                     <!-- Request Type -->
                     <div>
                         <label for="type" class="block text-sm font-medium text-gray-700 mb-2">
@@ -65,7 +70,7 @@
                                 <option value="absent" {{ old('type', $editData['type']) == 'absent' ? 'selected' : '' }}>Absent</option>
                                 <option value="other" {{ old('type', $editData['type']) == 'other' ? 'selected' : '' }}>Other</option>
                             @else
-                                <option value="vacation_leave" {{ old('type', $editData['type']) == 'vacation_leave' ? 'selected' : '' }}>Vacation Leave</option>
+                                <option value="vacation_leave" {{ $isVacationLeaveType ? 'selected' : '' }}>Vacation Leave</option>
                                 <option value="sick_leave" {{ old('type', $editData['type']) == 'sick_leave' ? 'selected' : '' }}>Sick Leave</option>
                                 <option value="work_from_home" {{ old('type', $editData['type']) == 'work_from_home' ? 'selected' : '' }}>Work From Home</option>
                                 @if(auth()->user()->role === 'employee')

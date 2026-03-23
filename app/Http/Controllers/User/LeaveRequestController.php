@@ -67,31 +67,20 @@ class LeaveRequestController extends Controller
             ]
         );
 
-        // Used leave days for the current year (approved only)
-        $usedVacation = LeaveRequest::where('user_id', $userId)
-            ->where('type', 'vacation_leave')
+        // Unified leave credits (Vacation + Sick + Leave)
+        $usedLeaveCredits = LeaveRequest::where('user_id', $userId)
+            ->whereIn('type', ['leave', 'vacation_leave', 'sick_leave'])
             ->where('status', 'approved')
             ->whereYear('start_date', $currentYear)
             ->get()
             ->sum->days;
 
-        $usedSick = LeaveRequest::where('user_id', $userId)
-            ->where('type', 'sick_leave')
-            ->where('status', 'approved')
-            ->whereYear('start_date', $currentYear)
-            ->get()
-            ->sum->days;
-
+        $totalAllowance = (float) $leaveBalance->vacation_allowance + (float) $leaveBalance->sick_allowance;
         $balances = [
-            'vacation' => [
-                'allowance' => (float) $leaveBalance->vacation_allowance,
-                'used' => $usedVacation,
-                'remaining' => max((float) $leaveBalance->vacation_allowance - $usedVacation, 0),
-            ],
-            'sick' => [
-                'allowance' => (float) $leaveBalance->sick_allowance,
-                'used' => $usedSick,
-                'remaining' => max((float) $leaveBalance->sick_allowance - $usedSick, 0),
+            'leave' => [
+                'allowance' => $totalAllowance,
+                'used' => $usedLeaveCredits,
+                'remaining' => max($totalAllowance - $usedLeaveCredits, 0),
             ],
         ];
 
@@ -252,7 +241,7 @@ class LeaveRequestController extends Controller
         if ($typeInput === 'travel') {
             $startDateRules[] = 'before_or_equal:today';
             $endDateRules[] = 'before_or_equal:today';
-        } elseif (!($typeInput === 'sick_leave' || $typeInput === 'overtime' || ($user->role === 'student' && $typeInput === 'additional_time'))) {
+        } elseif (!($typeInput === 'overtime' || ($user->role === 'student' && $typeInput === 'additional_time'))) {
             $startDateRules[] = 'after_or_equal:today';
         }
 
@@ -377,37 +366,24 @@ class LeaveRequestController extends Controller
         }
 
         // Balance check: Vacation Leave, Sick Leave, Offset only (employees)
-        if (in_array($validated['type'], ['vacation_leave', 'sick_leave', 'offset']) && $user->role === 'employee') {
+        if (in_array($validated['type'], ['leave', 'vacation_leave', 'sick_leave', 'offset']) && $user->role === 'employee') {
             $startDate = \Carbon\Carbon::parse($validated['start_date']);
             $endDate = $validated['end_date']
                 ? \Carbon\Carbon::parse($validated['end_date'])
                 : $startDate;
             $daysRequested = $startDate->diffInDays($endDate) + 1;
 
-            if ($validated['type'] === 'vacation_leave' || $validated['type'] === 'sick_leave') {
+            if (in_array($validated['type'], ['leave', 'vacation_leave', 'sick_leave'], true)) {
                 $bal = $this->getEmployeeLeaveBalances($user);
-                if ($validated['type'] === 'vacation_leave') {
-                    if ($bal['vacation_remaining'] <= 0) {
-                        return redirect()->back()
-                            ->withErrors(['type' => 'No balance to file for that type of request.'])
-                            ->withInput();
-                    }
-                    if ($daysRequested > $bal['vacation_remaining']) {
-                        return redirect()->back()
-                            ->withErrors(['end_date' => "You only have {$bal['vacation_remaining']} day(s) of Vacation Leave remaining. You cannot request {$daysRequested} day(s)."])
-                            ->withInput();
-                    }
-                } else {
-                    if ($bal['sick_remaining'] <= 0) {
-                        return redirect()->back()
-                            ->withErrors(['type' => 'No balance to file for that type of request.'])
-                            ->withInput();
-                    }
-                    if ($daysRequested > $bal['sick_remaining']) {
-                        return redirect()->back()
-                            ->withErrors(['end_date' => "You only have {$bal['sick_remaining']} day(s) of Sick Leave remaining. You cannot request {$daysRequested} day(s)."])
-                            ->withInput();
-                    }
+                if ($bal['leave_remaining'] <= 0) {
+                    return redirect()->back()
+                        ->withErrors(['type' => 'No balance to file for that type of request.'])
+                        ->withInput();
+                }
+                if ($daysRequested > $bal['leave_remaining']) {
+                    return redirect()->back()
+                        ->withErrors(['end_date' => "You only have {$bal['leave_remaining']} day(s) of Leave Credits remaining. You cannot request {$daysRequested} day(s)."])
+                        ->withInput();
                 }
             } else {
                 // Offset: check overtime balance
@@ -766,7 +742,7 @@ class LeaveRequestController extends Controller
         if ($typeInput === 'travel') {
             $startDateRules[] = 'before_or_equal:today';
             $endDateRules[] = 'before_or_equal:today';
-        } elseif (!($typeInput === 'sick_leave' || $typeInput === 'overtime' || ($user->role === 'student' && $typeInput === 'additional_time'))) {
+        } elseif (!($typeInput === 'overtime' || ($user->role === 'student' && $typeInput === 'additional_time'))) {
             $startDateRules[] = 'after_or_equal:today';
         }
 
@@ -1054,23 +1030,18 @@ class LeaveRequestController extends Controller
             ]
         );
 
-        $usedVacation = LeaveRequest::where('user_id', $user->id)
-            ->where('type', 'vacation_leave')
+        $usedLeave = LeaveRequest::where('user_id', $user->id)
+            ->whereIn('type', ['leave', 'vacation_leave', 'sick_leave'])
             ->where('status', 'approved')
             ->whereYear('start_date', $currentYear)
             ->get()
             ->sum->days;
 
-        $usedSick = LeaveRequest::where('user_id', $user->id)
-            ->where('type', 'sick_leave')
-            ->where('status', 'approved')
-            ->whereYear('start_date', $currentYear)
-            ->get()
-            ->sum->days;
+        $totalAllowance = (float) $leaveBalance->vacation_allowance + (float) $leaveBalance->sick_allowance;
 
         return [
-            'vacation_remaining' => max((float) $leaveBalance->vacation_allowance - $usedVacation, 0),
-            'sick_remaining' => max((float) $leaveBalance->sick_allowance - $usedSick, 0),
+            'leave_remaining' => max($totalAllowance - $usedLeave, 0),
+            'leave_allowance' => $totalAllowance,
             'overtime_hours' => $this->getEmployeeOvertimeBalanceHours($user),
         ];
     }
@@ -1083,6 +1054,9 @@ class LeaveRequestController extends Controller
         $requests = LeaveRequest::where('user_id', $userId)
             ->where('type', 'additional_time')
             ->where('status', 'pending')
+            ->whereHas('logs', function ($q) {
+                $q->where('action', 'approved');
+            })
             ->whereHas('logs', function ($q) {
                 $q->where('action', 'resubmission_requested');
             })
@@ -1209,7 +1183,7 @@ class LeaveRequestController extends Controller
     private function getPendingResubmissionRollbackHours(int $userId): float
     {
         $requests = LeaveRequest::where('user_id', $userId)
-            ->whereIn('type', ['additional_time', 'vacation_leave', 'sick_leave', 'travel'])
+            ->whereIn('type', ['additional_time', 'leave', 'vacation_leave', 'sick_leave', 'travel'])
             ->where('status', 'pending')
             ->whereHas('logs', function ($q) {
                 $q->where('action', 'approved');
@@ -1228,7 +1202,7 @@ class LeaveRequestController extends Controller
                 $total += ((float) ($request->travel_hours ?? 8.0)) * $request->days;
                 continue;
             }
-            if (in_array($request->type, ['vacation_leave', 'sick_leave'], true)) {
+            if (in_array($request->type, ['leave', 'vacation_leave', 'sick_leave'], true)) {
                 $total += 8.0 * $request->days;
                 continue;
             }

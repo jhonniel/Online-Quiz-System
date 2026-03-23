@@ -151,30 +151,25 @@
                 @php
                     $currentYear = now()->year;
                     $leaveBalance = \App\Models\LeaveBalance::where('user_id', $user->id)->where('year', $currentYear)->first();
-                    $vacationAllowance = old('vacation_allowance', $leaveBalance ? $leaveBalance->vacation_allowance : '');
-                    $sickAllowance = old('sick_allowance', $leaveBalance ? $leaveBalance->sick_allowance : '');
+                    $combinedLeaveAllowance = old(
+                        'leave_allowance',
+                        $leaveBalance ? ((float) $leaveBalance->vacation_allowance + (float) $leaveBalance->sick_allowance) : ''
+                    );
                 @endphp
                 <div id="leave_balances_wrapper" class="bg-white rounded-xl sm:rounded-2xl shadow-lg border border-gray-200 overflow-hidden {{ old('role', $user->role) === 'employee' ? '' : 'hidden' }}">
                     <div class="px-6 py-4 border-b border-gray-100 bg-gray-50/80">
-                        <h2 class="text-lg font-semibold text-gray-900">Leave Balances ({{ $currentYear }})</h2>
+                        <h2 class="text-lg font-semibold text-gray-900">Leave Credits ({{ $currentYear }})</h2>
                         <p class="text-sm text-gray-500 mt-0.5">Applicable for employee role</p>
                     </div>
-                    <div class="p-5 sm:p-6 grid grid-cols-1 sm:grid-cols-2 gap-5">
+                    <div class="p-5 sm:p-6">
                         <div>
-                            <label for="vacation_allowance" class="block text-sm font-semibold text-gray-700 mb-1.5">Vacation (days)</label>
-                            <input type="number" name="vacation_allowance" id="vacation_allowance" step="0.01" min="0"
-                                   value="{{ $vacationAllowance }}"
+                            <label for="leave_allowance" class="block text-sm font-semibold text-gray-700 mb-1.5">Leave Credits (days)</label>
+                            <input type="number" name="leave_allowance" id="leave_allowance" step="0.01" min="0"
+                                   value="{{ $combinedLeaveAllowance }}"
                                    class="block w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 text-sm"
-                                   placeholder="e.g. 15">
-                            @error('vacation_allowance') <p class="mt-1 text-sm text-red-600">{{ $message }}</p> @enderror
-                        </div>
-                        <div>
-                            <label for="sick_allowance" class="block text-sm font-semibold text-gray-700 mb-1.5">Sick (days)</label>
-                            <input type="number" name="sick_allowance" id="sick_allowance" step="0.01" min="0"
-                                   value="{{ $sickAllowance }}"
-                                   class="block w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 text-sm"
-                                   placeholder="e.g. 10">
-                            @error('sick_allowance') <p class="mt-1 text-sm text-red-600">{{ $message }}</p> @enderror
+                                   placeholder="e.g. 25">
+                            <p class="mt-1 text-xs text-gray-500">Combined leave credits for employee leave requests.</p>
+                            @error('leave_allowance') <p class="mt-1 text-sm text-red-600">{{ $message }}</p> @enderror
                         </div>
                     </div>
                 </div>

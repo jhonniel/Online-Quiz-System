@@ -88,6 +88,7 @@ class LeaveRequest extends Model
     public function getTypeLabelAttribute(): string
     {
         return match($this->type) {
+            'leave' => 'Leave',
             'vacation_leave' => 'Vacation Leave',
             'sick_leave' => 'Sick Leave',
             'work_from_home' => 'Work From Home',

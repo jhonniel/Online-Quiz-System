@@ -723,7 +723,7 @@ class LeaveRequestController extends Controller
         }
 
         // If Vacation Leave or Sick Leave, automatically add 8 hours per day to DTR
-        if (in_array($leaveRequest->type, ['vacation_leave', 'sick_leave'])) {
+        if (in_array($leaveRequest->type, ['leave', 'vacation_leave', 'sick_leave'])) {
             $this->applyLeaveTimeToDtr($leaveRequest);
         }
 
@@ -1450,8 +1450,11 @@ class LeaveRequestController extends Controller
      */
     private function reconcilePendingAdditionalTimeRollbacks(): void
     {
-        $pending = LeaveRequest::whereIn('type', ['additional_time', 'vacation_leave', 'sick_leave', 'travel'])
+        $pending = LeaveRequest::whereIn('type', ['additional_time', 'leave', 'vacation_leave', 'sick_leave', 'travel'])
             ->where('status', 'pending')
+            ->whereHas('logs', function ($q) {
+                $q->where('action', 'approved');
+            })
             ->whereHas('logs', function ($q) {
                 $q->where('action', 'resubmission_requested');
             })
@@ -1472,7 +1475,7 @@ class LeaveRequestController extends Controller
             return;
         }
 
-        if (in_array($leaveRequest->type, ['vacation_leave', 'sick_leave'], true)) {
+        if (in_array($leaveRequest->type, ['leave', 'vacation_leave', 'sick_leave'], true)) {
             $this->revertLeaveTimeFromDtr($leaveRequest, $force);
             return;
         }
@@ -1619,7 +1622,9 @@ class LeaveRequestController extends Controller
         $end = $leaveRequest->end_date ? Carbon::parse($leaveRequest->end_date) : $start;
         $period = CarbonPeriod::create($start, $end);
 
-        $leaveTypeLabel = $leaveRequest->type === 'vacation_leave' ? 'Vacation Leave' : 'Sick Leave';
+        $leaveTypeLabel = $leaveRequest->type === 'vacation_leave'
+            ? 'Vacation Leave'
+            : ($leaveRequest->type === 'sick_leave' ? 'Sick Leave' : 'Leave');
 
         foreach ($period as $date) {
             $dtr = $this->findOrCreateDtrRecord(

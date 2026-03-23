@@ -113,6 +113,32 @@
                     @endif
                 </div>
 
+                @if($leaveRequest->type === 'additional_time')
+                    @php
+                        $raw = $leaveRequest->reason ?? '';
+                        $additionalInputMode = 'Fixed Date (1 day = 8 hours)';
+                        $additionalHours = '-';
+
+                        if (preg_match('/Additional Time Input Mode:\s*(.+)/', $raw, $m)) {
+                            $additionalInputMode = trim($m[1]);
+                        }
+                        if (preg_match('/Additional Time Hours:\s*(.+)/', $raw, $m)) {
+                            $additionalHours = trim($m[1]);
+                        }
+                    @endphp
+
+                    <div class="mt-4 sm:mt-6 grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-500 mb-1">Additional Time Input Mode</label>
+                            <p class="text-sm font-semibold text-gray-900">{{ $additionalInputMode }}</p>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-500 mb-1">Additional Time Hours</label>
+                            <p class="text-sm font-semibold text-gray-900">{{ $additionalHours }}</p>
+                        </div>
+                    </div>
+                @endif
+
                 {{-- Structured details for special types so admin can see the same form info as the employee --}}
                 @if($leaveRequest->type === 'overtime')
                     @php
