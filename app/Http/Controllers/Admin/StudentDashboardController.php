@@ -3,6 +3,8 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\LeaveRequest;
+use App\Models\LeaveRequestLog;
 use App\Models\User;
 use App\Models\Dtr;
 use App\Models\QuizAttemptHistory;
@@ -70,6 +72,8 @@ class StudentDashboardController extends Controller
 
     public function index(Request $request)
     {
+        $this->reconcileStudentAdditionalTimeResubmissions();
+
         // Check if user has student_management permission or is admin
         $user = auth()->user();
         if (!$user->isAdmin() && !$user->canAccessStudentManagement()) {
@@ -96,7 +100,9 @@ class StudentDashboardController extends Controller
 
             $ranked = $students->map(function ($student) use ($totalsByStudent) {
                 $required = (float) ($student->required_training_hours ?? 0);
-                $total = (float) ($totalsByStudent[$student->id] ?? 0);
+                $totalRaw = (float) ($totalsByStudent[$student->id] ?? 0);
+                $rollbackHours = $this->getPendingResubmissionRollbackHours((int) $student->id);
+                $total = max($totalRaw - $rollbackHours, 0);
                 $remaining = $required - $total; // can be negative
 
                 // Estimate internship end date based on remaining hours (8 hours per weekday)
@@ -247,6 +253,108 @@ class StudentDashboardController extends Controller
         $m = $minutes % 60;
 
         return ($isNegative ? '-' : '') . sprintf('%02d:%02d', $h, $m);
+    }
+
+    private function getPendingResubmissionRollbackHours(int $userId): float
+    {
+        $requests = LeaveRequest::where('user_id', $userId)
+            ->whereIn('type', ['additional_time', 'vacation_leave', 'sick_leave', 'travel'])
+            ->where('status', 'pending')
+            ->whereHas('logs', function ($q) {
+                $q->where('action', 'resubmission_requested');
+            })
+            ->whereDoesntHave('logs', function ($q) {
+                $q->whereIn('action', ['additional_time_reverted', 'leave_time_reverted', 'travel_time_reverted']);
+            })
+            ->get();
+
+        $total = 0.0;
+        foreach ($requests as $request) {
+            if ($request->type === 'travel') {
+                $total += ((float) ($request->travel_hours ?? 8.0)) * $request->days;
+                continue;
+            }
+            if (in_array($request->type, ['vacation_leave', 'sick_leave'], true)) {
+                $total += 8.0 * $request->days;
+                continue;
+            }
+
+            $raw = (string) ($request->reason ?? '');
+            if (preg_match('/Additional Time Hours:\s*(\d{1,3}):(\d{2})/', $raw, $m)) {
+                $hours = (int) $m[1];
+                $minutes = (int) $m[2];
+                if ($minutes >= 0 && $minutes <= 59) {
+                    $total += $hours + ($minutes / 60);
+                    continue;
+                }
+            }
+            $total += 8.0 * $request->days;
+        }
+
+        return $total;
+    }
+
+    private function reconcileStudentAdditionalTimeResubmissions(): void
+    {
+        $requests = LeaveRequest::where('type', 'additional_time')
+            ->where('status', 'pending')
+            ->whereHas('logs', function ($q) {
+                $q->where('action', 'resubmission_requested');
+            })
+            ->whereDoesntHave('logs', function ($q) {
+                $q->where('action', 'additional_time_reverted');
+            })
+            ->get();
+
+        foreach ($requests as $leaveRequest) {
+            $didRevert = false;
+            $rawReason = (string) ($leaveRequest->reason ?? '');
+            if (preg_match('/Additional Time Hours:\s*(\d{1,3}):(\d{2})/', $rawReason, $m)) {
+                $hours = (int) $m[1];
+                $minutes = (int) $m[2];
+                if ($minutes >= 0 && $minutes <= 59) {
+                    $hoursToDeduct = $hours + ($minutes / 60);
+                    if ($hoursToDeduct > 0) {
+                        $dtr = Dtr::where('user_id', $leaveRequest->user_id)
+                            ->whereDate('date', Carbon::parse($leaveRequest->start_date)->toDateString())
+                            ->first();
+                        if ($dtr) {
+                            $dtr->total_hours = max(((float) $dtr->total_hours) - $hoursToDeduct, 0);
+                            $dtr->overtime_hours = max(((float) $dtr->total_hours) - 8.0, 0);
+                            $dtr->save();
+                            $didRevert = true;
+                        }
+                    }
+                }
+            } else {
+                $start = Carbon::parse($leaveRequest->start_date);
+                $end = $leaveRequest->end_date ? Carbon::parse($leaveRequest->end_date) : $start;
+                $period = \Carbon\CarbonPeriod::create($start, $end);
+                foreach ($period as $date) {
+                    $dtr = Dtr::where('user_id', $leaveRequest->user_id)
+                        ->whereDate('date', $date->toDateString())
+                        ->first();
+                    if (!$dtr) {
+                        continue;
+                    }
+                    $dtr->total_hours = max(((float) $dtr->total_hours) - 8.0, 0);
+                    $dtr->overtime_hours = max(((float) $dtr->total_hours) - 8.0, 0);
+                    $dtr->save();
+                    $didRevert = true;
+                }
+            }
+
+            if ($didRevert) {
+                LeaveRequestLog::create([
+                    'leave_request_id' => $leaveRequest->id,
+                    'action' => 'additional_time_reverted',
+                    'status_before' => 'approved',
+                    'status_after' => 'pending',
+                    'notes' => 'Reconciled rollback from Student Dashboard for resubmission requested Additional Time.',
+                    'performed_by' => auth()->id(),
+                ]);
+            }
+        }
     }
 }
 

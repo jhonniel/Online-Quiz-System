@@ -4,6 +4,7 @@ namespace App\Http\Controllers\User;
 
 use App\Http\Controllers\Controller;
 use App\Models\LeaveRequest;
+use App\Models\LeaveRequestLog;
 use App\Models\LeaveBalance;
 use App\Models\Dtr;
 use App\Services\MailConfigService;
@@ -27,6 +28,14 @@ class LeaveRequestController extends Controller
         $user = Auth::user();
         if (!in_array($user->role, ['employee', 'student'])) {
             abort(403, 'Only employees and students can access leave requests.');
+        }
+
+        // Safety reconciliation:
+        // If an Additional Time request is already in "Resubmission Requested"
+        // state (pending + reviewed_at), ensure previously credited DTR time
+        // is rolled back. This is idempotent because we key off DTR remarks.
+        if ($user->role === 'student') {
+            $this->reconcileStudentAdditionalTimeResubmissions((int) $user->id);
         }
 
         $user = Auth::user();
@@ -163,7 +172,9 @@ class LeaveRequestController extends Controller
         } elseif ($user->role === 'student') {
             // Student: compute DTR time summary for list page
             $requiredHours = (float) ($user->required_training_hours ?? 0);
-            $totalDtrHours = Dtr::where('user_id', $userId)->sum('total_hours');
+            $totalDtrHoursRaw = (float) Dtr::where('user_id', $userId)->sum('total_hours');
+            $rollbackHours = $this->getPendingResubmissionRollbackHours($userId);
+            $totalDtrHours = max($totalDtrHoursRaw - $rollbackHours, 0);
             $remainingHours = $requiredHours - $totalDtrHours; // can be negative (over-completed)
 
             $formatHours = function ($decimal) {
@@ -249,6 +260,8 @@ class LeaveRequestController extends Controller
             'type' => ['required', 'in:' . implode(',', $allowedTypes)],
             'start_date' => $startDateRules,
             'end_date' => $endDateRules,
+            'additional_time_mode' => 'nullable|in:fixed_date,total_hours',
+            'additional_time_total_hours' => ['nullable', 'regex:/^\d{1,3}:\d{2}$/'],
             // Reason is REQUIRED for overtime (used as the clear explanation of extra hours)
             'reason' => 'required_if:type,travel|nullable|string|max:1000',
             'supporting_document' => 'nullable|file|mimes:pdf,jpg,jpeg,png|max:5120',
@@ -267,6 +280,28 @@ class LeaveRequestController extends Controller
             return redirect()->back()
                 ->withErrors(['type' => 'Only employees can file travel leave requests.'])
                 ->withInput();
+        }
+
+        // Student Additional Time: allow either explicit total hours OR fixed date(s) at 8h/day.
+        if ($validated['type'] === 'additional_time' && $user->role === 'student') {
+            $additionalMode = $validated['additional_time_mode'] ?? 'fixed_date';
+            if (!in_array($additionalMode, ['fixed_date', 'total_hours'], true)) {
+                return redirect()->back()
+                    ->withErrors(['additional_time_mode' => 'Please choose how to submit Additional Time.'])
+                    ->withInput();
+            }
+
+            if ($additionalMode === 'total_hours') {
+                $totalHoursText = (string) ($validated['additional_time_total_hours'] ?? '');
+                if ($this->parseHourMinuteToMinutes($totalHoursText) <= 0) {
+                    return redirect()->back()
+                        ->withErrors(['additional_time_total_hours' => 'Please enter valid total hours in HH:MM format (e.g., 08:30).'])
+                        ->withInput();
+                }
+
+                // For total-hours mode, keep the request on one reference date.
+                $validated['end_date'] = $validated['start_date'];
+            }
         }
 
         // Build reason – include structured details when type is overtime or WFH
@@ -322,6 +357,23 @@ class LeaveRequestController extends Controller
             $reasonToStore = $details;
         } elseif ($validated['type'] === 'travel') {
             $reasonToStore = 'Location of travel: ' . trim($validated['reason'] ?? '');
+        } elseif ($validated['type'] === 'additional_time' && $user->role === 'student') {
+            $additionalMode = $validated['additional_time_mode'] ?? 'fixed_date';
+            if ($additionalMode === 'total_hours') {
+                $totalHoursText = trim((string) ($validated['additional_time_total_hours'] ?? ''));
+                $details = "Additional Time Input Mode: Total Hours\n";
+                $details .= "Additional Time Hours: {$totalHoursText}\n";
+                if (!empty($reasonToStore)) {
+                    $details .= "\nReason:\n" . $reasonToStore;
+                }
+                $reasonToStore = $details;
+            } else {
+                $details = "Additional Time Input Mode: Fixed Date (1 day = 8 hours)\n";
+                if (!empty($reasonToStore)) {
+                    $details .= "\nReason:\n" . $reasonToStore;
+                }
+                $reasonToStore = $details;
+            }
         }
 
         // Balance check: Vacation Leave, Sick Leave, Offset only (employees)
@@ -537,7 +589,9 @@ class LeaveRequestController extends Controller
             $requiredHours = (float) ($user->required_training_hours ?? 0);
 
             // Sum all DTR total_hours for this student
-            $totalDtrHours = \App\Models\Dtr::where('user_id', $user->id)->sum('total_hours');
+            $totalDtrHoursRaw = (float) \App\Models\Dtr::where('user_id', $user->id)->sum('total_hours');
+            $rollbackHours = $this->getPendingResubmissionRollbackHours((int) $user->id);
+            $totalDtrHours = max($totalDtrHoursRaw - $rollbackHours, 0);
 
             $remainingHours = $requiredHours - $totalDtrHours; // can be negative (over-completed)
 
@@ -704,6 +758,8 @@ class LeaveRequestController extends Controller
             'type' => ['required', 'in:' . implode(',', $allowedTypes)],
             'start_date' => $startDateRules,
             'end_date' => $endDateRules,
+            'additional_time_mode' => 'nullable|in:fixed_date,total_hours',
+            'additional_time_total_hours' => ['nullable', 'regex:/^\d{1,3}:\d{2}$/'],
             'reason' => 'required_if:type,travel|nullable|string|max:1000',
             'supporting_document' => 'nullable|file|mimes:pdf,jpg,jpeg,png|max:5120',
             'overtime_hours' => 'required_if:type,overtime|nullable|regex:/^\\d{2}:\\d{2}$/',
@@ -720,6 +776,25 @@ class LeaveRequestController extends Controller
             return redirect()->back()
                 ->withErrors(['type' => 'Only employees can file travel leave requests.'])
                 ->withInput();
+        }
+
+        if ($validated['type'] === 'additional_time' && $user->role === 'student') {
+            $additionalMode = $validated['additional_time_mode'] ?? 'fixed_date';
+            if (!in_array($additionalMode, ['fixed_date', 'total_hours'], true)) {
+                return redirect()->back()
+                    ->withErrors(['additional_time_mode' => 'Please choose how to submit Additional Time.'])
+                    ->withInput();
+            }
+
+            if ($additionalMode === 'total_hours') {
+                $totalHoursText = (string) ($validated['additional_time_total_hours'] ?? '');
+                if ($this->parseHourMinuteToMinutes($totalHoursText) <= 0) {
+                    return redirect()->back()
+                        ->withErrors(['additional_time_total_hours' => 'Please enter valid total hours in HH:MM format (e.g., 08:30).'])
+                        ->withInput();
+                }
+                $validated['end_date'] = $validated['start_date'];
+            }
         }
 
         // Build reason – include structured details when type is overtime or WFH
@@ -775,6 +850,23 @@ class LeaveRequestController extends Controller
             $reasonToStore = $details;
         } elseif ($validated['type'] === 'travel') {
             $reasonToStore = 'Location of travel: ' . trim($validated['reason'] ?? '');
+        } elseif ($validated['type'] === 'additional_time' && $user->role === 'student') {
+            $additionalMode = $validated['additional_time_mode'] ?? 'fixed_date';
+            if ($additionalMode === 'total_hours') {
+                $totalHoursText = trim((string) ($validated['additional_time_total_hours'] ?? ''));
+                $details = "Additional Time Input Mode: Total Hours\n";
+                $details .= "Additional Time Hours: {$totalHoursText}\n";
+                if (!empty($reasonToStore)) {
+                    $details .= "\nReason:\n" . $reasonToStore;
+                }
+                $reasonToStore = $details;
+            } else {
+                $details = "Additional Time Input Mode: Fixed Date (1 day = 8 hours)\n";
+                if (!empty($reasonToStore)) {
+                    $details .= "\nReason:\n" . $reasonToStore;
+                }
+                $reasonToStore = $details;
+            }
         }
 
         // Handle supporting document (replace if new one provided)
@@ -965,5 +1057,175 @@ class LeaveRequestController extends Controller
             'sick_remaining' => max((float) $leaveBalance->sick_allowance - $usedSick, 0),
             'overtime_hours' => $this->getEmployeeOvertimeBalanceHours($user),
         ];
+    }
+
+    /**
+     * Reconcile Additional Time credits that should be removed after resubmission request.
+     */
+    private function reconcileStudentAdditionalTimeResubmissions(int $userId): void
+    {
+        $requests = LeaveRequest::where('user_id', $userId)
+            ->where('type', 'additional_time')
+            ->where('status', 'pending')
+            ->whereHas('logs', function ($q) {
+                $q->where('action', 'resubmission_requested');
+            })
+            ->whereDoesntHave('logs', function ($q) {
+                $q->where('action', 'additional_time_reverted');
+            })
+            ->get();
+
+        foreach ($requests as $leaveRequest) {
+            $this->revertAdditionalTimeCreditForResubmission($leaveRequest);
+        }
+    }
+
+    private function revertAdditionalTimeCreditForResubmission(LeaveRequest $leaveRequest): void
+    {
+        $alreadyReverted = LeaveRequestLog::where('leave_request_id', $leaveRequest->id)
+            ->where('action', 'additional_time_reverted')
+            ->exists();
+        if ($alreadyReverted) {
+            return;
+        }
+
+        $didRevert = false;
+        $rawReason = (string) ($leaveRequest->reason ?? '');
+        if (preg_match('/Additional Time Hours:\s*(\d{1,3}):(\d{2})/', $rawReason, $m)) {
+            $hoursText = sprintf('%d:%02d', (int) $m[1], (int) $m[2]);
+            $minutes = $this->parseHourMinuteToMinutes($hoursText);
+            if ($minutes <= 0) {
+                return;
+            }
+
+            $hoursToDeduct = $minutes / 60;
+            $remarkToken = "Additional Time ({$hoursText})";
+            $date = Carbon::parse($leaveRequest->start_date)->toDateString();
+            $dtr = Dtr::where('user_id', $leaveRequest->user_id)
+                ->whereDate('date', $date)
+                ->first();
+
+            if (!$dtr) {
+                return;
+            }
+
+            $existingRemarks = (string) ($dtr->remarks ?? '');
+            $existingTotal = (float) ($dtr->total_hours ?? 0);
+            $newTotal = max($existingTotal - $hoursToDeduct, 0);
+            $dtr->total_hours = $newTotal;
+            $dtr->overtime_hours = max($newTotal - 8.0, 0);
+            if ($existingRemarks !== '' && strpos($existingRemarks, $remarkToken) !== false) {
+                $dtr->remarks = trim(str_replace([$remarkToken . '; ', '; ' . $remarkToken, $remarkToken], '', $existingRemarks));
+            }
+            $dtr->save();
+            $didRevert = true;
+
+            if ($didRevert) {
+                LeaveRequestLog::create([
+                    'leave_request_id' => $leaveRequest->id,
+                    'action' => 'additional_time_reverted',
+                    'status_before' => 'approved',
+                    'status_after' => 'pending',
+                    'notes' => 'Reconciled and reverted Additional Time credit from DTR.',
+                    'performed_by' => Auth::id(),
+                ]);
+            }
+            return;
+        }
+
+        $start = Carbon::parse($leaveRequest->start_date);
+        $end = $leaveRequest->end_date ? Carbon::parse($leaveRequest->end_date) : $start;
+        $period = CarbonPeriod::create($start, $end);
+
+        foreach ($period as $date) {
+            $dtr = Dtr::where('user_id', $leaveRequest->user_id)
+                ->whereDate('date', $date->toDateString())
+                ->first();
+
+            if (!$dtr) {
+                continue;
+            }
+
+            $existingRemarks = (string) ($dtr->remarks ?? '');
+
+            $existingTotal = (float) ($dtr->total_hours ?? 0);
+            $newTotal = max($existingTotal - 8.0, 0);
+            $dtr->total_hours = $newTotal;
+            $dtr->overtime_hours = max($newTotal - 8.0, 0);
+            if ($existingRemarks !== '' && strpos($existingRemarks, 'Additional Time') !== false) {
+                $dtr->remarks = trim(str_replace(['Additional Time; ', '; Additional Time', 'Additional Time'], '', $existingRemarks));
+            }
+            $dtr->save();
+            $didRevert = true;
+        }
+
+        if ($didRevert) {
+            LeaveRequestLog::create([
+                'leave_request_id' => $leaveRequest->id,
+                'action' => 'additional_time_reverted',
+                'status_before' => 'approved',
+                'status_after' => 'pending',
+                'notes' => 'Reconciled and reverted Additional Time credit from DTR.',
+                'performed_by' => Auth::id(),
+            ]);
+        }
+    }
+
+    /**
+     * Parse HH:MM time text into total minutes.
+     */
+    private function parseHourMinuteToMinutes(string $value): int
+    {
+        $value = trim($value);
+        if (!preg_match('/^(\d{1,3}):(\d{2})$/', $value, $m)) {
+            return 0;
+        }
+
+        $hours = (int) $m[1];
+        $minutes = (int) $m[2];
+        if ($minutes < 0 || $minutes > 59) {
+            return 0;
+        }
+
+        return ($hours * 60) + $minutes;
+    }
+
+    private function getPendingResubmissionRollbackHours(int $userId): float
+    {
+        $requests = LeaveRequest::where('user_id', $userId)
+            ->whereIn('type', ['additional_time', 'vacation_leave', 'sick_leave', 'travel'])
+            ->where('status', 'pending')
+            ->whereHas('logs', function ($q) {
+                $q->where('action', 'resubmission_requested');
+            })
+            ->whereDoesntHave('logs', function ($q) {
+                $q->whereIn('action', ['additional_time_reverted', 'leave_time_reverted', 'travel_time_reverted']);
+            })
+            ->get();
+
+        $total = 0.0;
+        foreach ($requests as $request) {
+            if ($request->type === 'travel') {
+                $total += ((float) ($request->travel_hours ?? 8.0)) * $request->days;
+                continue;
+            }
+            if (in_array($request->type, ['vacation_leave', 'sick_leave'], true)) {
+                $total += 8.0 * $request->days;
+                continue;
+            }
+
+            $raw = (string) ($request->reason ?? '');
+            if (preg_match('/Additional Time Hours:\s*(\d{1,3}):(\d{2})/', $raw, $m)) {
+                $hours = (int) $m[1];
+                $minutes = (int) $m[2];
+                if ($minutes >= 0 && $minutes <= 59) {
+                    $total += $hours + ($minutes / 60);
+                    continue;
+                }
+            }
+            $total += 8.0 * $request->days;
+        }
+
+        return $total;
     }
 }

@@ -17,6 +17,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Database\QueryException;
 use Illuminate\Validation\Rule;
 use Carbon\Carbon;
 use Carbon\CarbonPeriod;
@@ -28,6 +29,8 @@ class LeaveRequestController extends Controller
      */
     public function index(Request $request)
     {
+        $this->reconcilePendingAdditionalTimeRollbacks();
+
         $user = auth()->user();
         $search = trim((string) $request->input('search', ''));
         $perPage = (int) $request->input('per_page', 20);
@@ -914,6 +917,14 @@ class LeaveRequestController extends Controller
 
         $statusBefore = $leaveRequest->status;
 
+        // If request was already approved, revert any previously credited DTR time
+        // when moving it to Resubmission Requested (pending).
+        if ($statusBefore === 'approved') {
+            // Force rollback on the actual approved -> resubmission transition.
+            // Do not skip because of prior reconciliation markers.
+            $this->revertApprovedCreditOnResubmission($leaveRequest, true);
+        }
+
         $adminNotes = $request->admin_notes
             ? ($leaveRequest->admin_notes ? $leaveRequest->admin_notes . "\n\n[Resubmission Request]: " . $request->admin_notes : $request->admin_notes)
             : $leaveRequest->admin_notes;
@@ -972,6 +983,8 @@ class LeaveRequestController extends Controller
      */
     public function studentIndex(Request $request)
     {
+        $this->reconcilePendingAdditionalTimeRollbacks();
+
         $search = trim((string) $request->input('search', ''));
         $perPage = (int) $request->input('per_page', 20);
         if (!in_array($perPage, [10, 20, 50, 100], true)) {
@@ -1280,27 +1293,279 @@ class LeaveRequestController extends Controller
      */
     private function applyAdditionalTimeToDtr(LeaveRequest $leaveRequest): void
     {
+        $rawReason = (string) ($leaveRequest->reason ?? '');
+        if (preg_match('/Additional Time Hours:\s*(\d{1,3}):(\d{2})/', $rawReason, $m)) {
+            $hours = (int) $m[1];
+            $minutes = (int) $m[2];
+            if ($minutes >= 0 && $minutes <= 59) {
+                $hoursToCredit = $hours + ($minutes / 60);
+                if ($hoursToCredit > 0) {
+                    $date = Carbon::parse($leaveRequest->start_date);
+                    $dtr = $this->findOrCreateDtrRecord(
+                        (int) $leaveRequest->user_id,
+                        $date->toDateString(),
+                        'present'
+                    );
+
+                    $existingTotal = (float) ($dtr->total_hours ?? 0);
+                    $newTotal = $existingTotal + $hoursToCredit;
+                    $dtr->total_hours = $newTotal;
+                    $dtr->overtime_hours = max($newTotal - 8.0, 0);
+                    $additionalTimeRemark = "Additional Time ({$m[1]}:{$m[2]})";
+                    $existingRemarks = (string) ($dtr->remarks ?? '');
+                    if ($existingRemarks === '') {
+                        $dtr->remarks = $additionalTimeRemark;
+                    } elseif (strpos($existingRemarks, $additionalTimeRemark) === false) {
+                        $dtr->remarks = $existingRemarks . '; ' . $additionalTimeRemark;
+                    }
+                    $dtr->save();
+
+                    return;
+                }
+            }
+        }
+
         $start = Carbon::parse($leaveRequest->start_date);
         $end = $leaveRequest->end_date ? Carbon::parse($leaveRequest->end_date) : $start;
         $period = CarbonPeriod::create($start, $end);
 
         foreach ($period as $date) {
-            $dtr = Dtr::firstOrNew([
-                'user_id' => $leaveRequest->user_id,
-                'date' => $date->toDateString(),
-            ]);
-
-            // Default status for new records
-            if (!$dtr->exists) {
-                $dtr->status = $dtr->status ?? 'present';
-            }
+            $dtr = $this->findOrCreateDtrRecord(
+                (int) $leaveRequest->user_id,
+                $date->toDateString(),
+                'present'
+            );
 
             $existingTotal = (float) $dtr->total_hours;
             $newTotal = $existingTotal + 8.0; // 1 day = 8 hours
             $dtr->total_hours = $newTotal;
             $dtr->overtime_hours = max($newTotal - 8.0, 0);
+            $existingRemarks = (string) ($dtr->remarks ?? '');
+            $additionalTimeRemark = 'Additional Time';
+            if ($existingRemarks === '') {
+                $dtr->remarks = $additionalTimeRemark;
+            } elseif (strpos($existingRemarks, $additionalTimeRemark) === false) {
+                $dtr->remarks = $existingRemarks . '; ' . $additionalTimeRemark;
+            }
 
             $dtr->save();
+        }
+    }
+
+    /**
+     * Revert Additional Time credits from DTR when moving an approved request
+     * back to resubmission (pending).
+     */
+    private function revertAdditionalTimeFromDtr(LeaveRequest $leaveRequest, bool $force = false): void
+    {
+        $alreadyReverted = LeaveRequestLog::where('leave_request_id', $leaveRequest->id)
+            ->where('action', 'additional_time_reverted')
+            ->exists();
+        if (!$force && $alreadyReverted) {
+            return;
+        }
+
+        $didRevert = false;
+        $rawReason = (string) ($leaveRequest->reason ?? '');
+        if (preg_match('/Additional Time Hours:\s*(\d{1,3}):(\d{2})/', $rawReason, $m)) {
+            $hours = (int) $m[1];
+            $minutes = (int) $m[2];
+            if ($minutes >= 0 && $minutes <= 59) {
+                $hoursToDeduct = $hours + ($minutes / 60);
+                if ($hoursToDeduct > 0) {
+                    $remarkToken = "Additional Time ({$hours}:".str_pad((string) $minutes, 2, '0', STR_PAD_LEFT).")";
+                    $date = Carbon::parse($leaveRequest->start_date);
+                    $dtr = Dtr::where('user_id', $leaveRequest->user_id)
+                        ->whereDate('date', $date->toDateString())
+                        ->first();
+
+                    if ($dtr) {
+                        $existingRemarks = (string) ($dtr->remarks ?? '');
+                        $existingTotal = (float) ($dtr->total_hours ?? 0);
+                        $newTotal = max($existingTotal - $hoursToDeduct, 0);
+                        $dtr->total_hours = $newTotal;
+                        $dtr->overtime_hours = max($newTotal - 8.0, 0);
+                        if ($existingRemarks !== '' && strpos($existingRemarks, $remarkToken) !== false) {
+                            $dtr->remarks = trim(str_replace([$remarkToken . '; ', '; ' . $remarkToken, $remarkToken], '', $existingRemarks));
+                        }
+                        $dtr->save();
+                        $didRevert = true;
+                    }
+
+                    if ($didRevert) {
+                        LeaveRequestLog::create([
+                            'leave_request_id' => $leaveRequest->id,
+                            'action' => 'additional_time_reverted',
+                            'status_before' => 'approved',
+                            'status_after' => 'pending',
+                            'notes' => 'Reverted credited Additional Time from DTR during resubmission request.',
+                            'performed_by' => Auth::id(),
+                        ]);
+                    }
+                    return;
+                }
+            }
+        }
+
+        $start = Carbon::parse($leaveRequest->start_date);
+        $end = $leaveRequest->end_date ? Carbon::parse($leaveRequest->end_date) : $start;
+        $period = CarbonPeriod::create($start, $end);
+
+        foreach ($period as $date) {
+            $dtr = Dtr::where('user_id', $leaveRequest->user_id)
+                ->whereDate('date', $date->toDateString())
+                ->first();
+
+            if (!$dtr) {
+                continue;
+            }
+
+            $existingRemarks = (string) ($dtr->remarks ?? '');
+
+            $existingTotal = (float) ($dtr->total_hours ?? 0);
+            $newTotal = max($existingTotal - 8.0, 0);
+            $dtr->total_hours = $newTotal;
+            $dtr->overtime_hours = max($newTotal - 8.0, 0);
+            if ($existingRemarks !== '' && strpos($existingRemarks, 'Additional Time') !== false) {
+                $dtr->remarks = trim(str_replace(['Additional Time; ', '; Additional Time', 'Additional Time'], '', $existingRemarks));
+            }
+            $dtr->save();
+            $didRevert = true;
+        }
+
+        if ($didRevert) {
+            LeaveRequestLog::create([
+                'leave_request_id' => $leaveRequest->id,
+                'action' => 'additional_time_reverted',
+                'status_before' => 'approved',
+                'status_after' => 'pending',
+                'notes' => 'Reverted credited Additional Time from DTR during resubmission request.',
+                'performed_by' => Auth::id(),
+            ]);
+        }
+    }
+
+    /**
+     * One-pass reconciliation for already pending resubmission Additional Time requests.
+     */
+    private function reconcilePendingAdditionalTimeRollbacks(): void
+    {
+        $pending = LeaveRequest::whereIn('type', ['additional_time', 'vacation_leave', 'sick_leave', 'travel'])
+            ->where('status', 'pending')
+            ->whereHas('logs', function ($q) {
+                $q->where('action', 'resubmission_requested');
+            })
+            ->whereDoesntHave('logs', function ($q) {
+                $q->whereIn('action', ['additional_time_reverted', 'leave_time_reverted', 'travel_time_reverted']);
+            })
+            ->get();
+
+        foreach ($pending as $leaveRequest) {
+            $this->revertApprovedCreditOnResubmission($leaveRequest);
+        }
+    }
+
+    private function revertApprovedCreditOnResubmission(LeaveRequest $leaveRequest, bool $force = false): void
+    {
+        if ($leaveRequest->type === 'additional_time') {
+            $this->revertAdditionalTimeFromDtr($leaveRequest, $force);
+            return;
+        }
+
+        if (in_array($leaveRequest->type, ['vacation_leave', 'sick_leave'], true)) {
+            $this->revertLeaveTimeFromDtr($leaveRequest, $force);
+            return;
+        }
+
+        if ($leaveRequest->type === 'travel') {
+            $this->revertTravelTimeFromDtr($leaveRequest, (float) ($leaveRequest->travel_hours ?? 8.0), $force);
+        }
+    }
+
+    private function revertLeaveTimeFromDtr(LeaveRequest $leaveRequest, bool $force = false): void
+    {
+        $alreadyReverted = LeaveRequestLog::where('leave_request_id', $leaveRequest->id)
+            ->where('action', 'leave_time_reverted')
+            ->exists();
+        if (!$force && $alreadyReverted) {
+            return;
+        }
+
+        $hoursPerDay = 8.0;
+        $start = Carbon::parse($leaveRequest->start_date);
+        $end = $leaveRequest->end_date ? Carbon::parse($leaveRequest->end_date) : $start;
+        $period = CarbonPeriod::create($start, $end);
+
+        $didRevert = false;
+        foreach ($period as $date) {
+            $dtr = Dtr::where('user_id', $leaveRequest->user_id)
+                ->whereDate('date', $date->toDateString())
+                ->first();
+
+            if (!$dtr) {
+                continue;
+            }
+
+            $existingTotal = (float) ($dtr->total_hours ?? 0);
+            $newTotal = max($existingTotal - $hoursPerDay, 0);
+            $dtr->total_hours = $newTotal;
+            $dtr->overtime_hours = max($newTotal - 8.0, 0);
+            $dtr->save();
+            $didRevert = true;
+        }
+
+        if ($didRevert) {
+            LeaveRequestLog::create([
+                'leave_request_id' => $leaveRequest->id,
+                'action' => 'leave_time_reverted',
+                'status_before' => 'approved',
+                'status_after' => 'pending',
+                'notes' => 'Reverted credited leave time from DTR during resubmission request.',
+                'performed_by' => Auth::id(),
+            ]);
+        }
+    }
+
+    private function revertTravelTimeFromDtr(LeaveRequest $leaveRequest, float $hoursPerDay = 8.0, bool $force = false): void
+    {
+        $alreadyReverted = LeaveRequestLog::where('leave_request_id', $leaveRequest->id)
+            ->where('action', 'travel_time_reverted')
+            ->exists();
+        if (!$force && $alreadyReverted) {
+            return;
+        }
+
+        $start = Carbon::parse($leaveRequest->start_date);
+        $end = $leaveRequest->end_date ? Carbon::parse($leaveRequest->end_date) : $start;
+        $period = CarbonPeriod::create($start, $end);
+
+        $didRevert = false;
+        foreach ($period as $date) {
+            $dtr = Dtr::where('user_id', $leaveRequest->user_id)
+                ->whereDate('date', $date->toDateString())
+                ->first();
+
+            if (!$dtr) {
+                continue;
+            }
+
+            $existingTotal = (float) ($dtr->total_hours ?? 0);
+            $newTotal = max($existingTotal - $hoursPerDay, 0);
+            $dtr->total_hours = $newTotal;
+            $dtr->overtime_hours = max($newTotal - 8.0, 0);
+            $dtr->save();
+            $didRevert = true;
+        }
+
+        if ($didRevert) {
+            LeaveRequestLog::create([
+                'leave_request_id' => $leaveRequest->id,
+                'action' => 'travel_time_reverted',
+                'status_before' => 'approved',
+                'status_after' => 'pending',
+                'notes' => 'Reverted credited travel time from DTR during resubmission request.',
+                'performed_by' => Auth::id(),
+            ]);
         }
     }
 
@@ -1315,39 +1580,27 @@ class LeaveRequestController extends Controller
         $period = CarbonPeriod::create($start, $end);
 
         foreach ($period as $date) {
-            $dtr = Dtr::firstOrNew([
-                'user_id' => $leaveRequest->user_id,
-                'date' => $date->toDateString(),
-            ]);
+            $dtr = $this->findOrCreateDtrRecord(
+                (int) $leaveRequest->user_id,
+                $date->toDateString(),
+                'travel'
+            );
 
-            // If DTR record already exists, add hours to existing total
-            // If it doesn't exist, create new record with specified hours
-            if ($dtr->exists) {
-                $existingTotal = (float) ($dtr->total_hours ?? 0);
-                $newTotal = $existingTotal + $hoursPerDay;
-                $dtr->total_hours = $newTotal;
-                $dtr->overtime_hours = max($newTotal - 8.0, 0);
-                
-                // Update remarks to include travel information
-                $existingRemarks = $dtr->remarks ?? '';
-                $travelRemark = "Travel Leave ({$hoursPerDay}h)";
-                if (!empty($existingRemarks) && strpos($existingRemarks, $travelRemark) === false) {
-                    $dtr->remarks = $existingRemarks . '; ' . $travelRemark;
-                } elseif (empty($existingRemarks)) {
-                    $dtr->remarks = $travelRemark;
-                }
-                
-                // Set status to travel if not already set
-                if ($dtr->status !== 'travel') {
-                    $dtr->status = 'travel';
-                }
-            } else {
-                // Create new DTR record with specified hours for travel
-                $dtr->total_hours = $hoursPerDay;
-                $dtr->overtime_hours = max($hoursPerDay - 8.0, 0);
-                $dtr->status = 'travel';
-                $dtr->remarks = "Travel Leave ({$hoursPerDay}h)";
+            $existingTotal = (float) ($dtr->total_hours ?? 0);
+            $newTotal = $existingTotal + $hoursPerDay;
+            $dtr->total_hours = $newTotal;
+            $dtr->overtime_hours = max($newTotal - 8.0, 0);
+
+            // Update remarks to include travel information
+            $existingRemarks = $dtr->remarks ?? '';
+            $travelRemark = "Travel Leave ({$hoursPerDay}h)";
+            if (!empty($existingRemarks) && strpos($existingRemarks, $travelRemark) === false) {
+                $dtr->remarks = $existingRemarks . '; ' . $travelRemark;
+            } elseif (empty($existingRemarks)) {
+                $dtr->remarks = $travelRemark;
             }
+
+            $dtr->status = 'travel';
 
             $dtr->save();
 
@@ -1369,33 +1622,28 @@ class LeaveRequestController extends Controller
         $leaveTypeLabel = $leaveRequest->type === 'vacation_leave' ? 'Vacation Leave' : 'Sick Leave';
 
         foreach ($period as $date) {
-            $dtr = Dtr::firstOrNew([
-                'user_id' => $leaveRequest->user_id,
-                'date' => $date->toDateString(),
-            ]);
+            $dtr = $this->findOrCreateDtrRecord(
+                (int) $leaveRequest->user_id,
+                $date->toDateString(),
+                'on_leave'
+            );
 
-            // If DTR record already exists, add 8 hours to existing total
-            // If it doesn't exist, create new record with 8.0 hours
-            if ($dtr->exists) {
-                $existingTotal = (float) ($dtr->total_hours ?? 0);
-                $newTotal = $existingTotal + 8.0; // Add 8 hours for the leave day
-                $dtr->total_hours = $newTotal;
-                $dtr->overtime_hours = max($newTotal - 8.0, 0);
-                
-                // Update remarks to include leave information
-                $existingRemarks = $dtr->remarks ?? '';
-                $leaveRemark = "Approved {$leaveTypeLabel}";
-                if (!empty($existingRemarks) && strpos($existingRemarks, $leaveRemark) === false) {
-                    $dtr->remarks = $existingRemarks . '; ' . $leaveRemark;
-                } elseif (empty($existingRemarks)) {
-                    $dtr->remarks = $leaveRemark;
-                }
-            } else {
-                // Create new DTR record with 8.0 hours for the leave day
-                $dtr->total_hours = 8.0;
-                $dtr->overtime_hours = 0;
+            $existingTotal = (float) ($dtr->total_hours ?? 0);
+            $newTotal = $existingTotal + 8.0; // Add 8 hours for the leave day
+            $dtr->total_hours = $newTotal;
+            $dtr->overtime_hours = max($newTotal - 8.0, 0);
+
+            // Update remarks to include leave information
+            $existingRemarks = $dtr->remarks ?? '';
+            $leaveRemark = "Approved {$leaveTypeLabel}";
+            if (!empty($existingRemarks) && strpos($existingRemarks, $leaveRemark) === false) {
+                $dtr->remarks = $existingRemarks . '; ' . $leaveRemark;
+            } elseif (empty($existingRemarks)) {
+                $dtr->remarks = $leaveRemark;
+            }
+
+            if (empty($dtr->status)) {
                 $dtr->status = 'on_leave';
-                $dtr->remarks = "Approved {$leaveTypeLabel}";
             }
 
             $dtr->save();
@@ -1465,6 +1713,49 @@ class LeaveRequestController extends Controller
                 'error' => $e->getMessage()
             ]);
         }
+    }
+
+    /**
+     * Find or create a DTR record safely under unique(user_id,date).
+     */
+    private function findOrCreateDtrRecord(int $userId, string $date, string $defaultStatus = 'present'): Dtr
+    {
+        $existing = Dtr::where('user_id', $userId)
+            ->whereDate('date', $date)
+            ->first();
+        if ($existing) {
+            return $existing;
+        }
+
+        try {
+            return Dtr::create([
+                'user_id' => $userId,
+                'date' => $date,
+                'status' => $defaultStatus,
+                'total_hours' => 0,
+                'overtime_hours' => 0,
+            ]);
+        } catch (QueryException $e) {
+            if (!$this->isDtrUniqueConstraintError($e)) {
+                throw $e;
+            }
+
+            $existing = Dtr::where('user_id', $userId)
+                ->whereDate('date', $date)
+                ->first();
+            if ($existing) {
+                return $existing;
+            }
+
+            throw $e;
+        }
+    }
+
+    private function isDtrUniqueConstraintError(QueryException $e): bool
+    {
+        $msg = $e->getMessage();
+        return str_contains($msg, 'dtrs.user_id, dtrs.date')
+            || str_contains($msg, 'UNIQUE constraint failed');
     }
 
     /**

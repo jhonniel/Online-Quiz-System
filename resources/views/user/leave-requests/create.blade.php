@@ -108,6 +108,62 @@
                         </div>
                     </div>
 
+                    <!-- Student Additional Time Input Mode -->
+                    @if(auth()->user()->role === 'student')
+                    <div id="additional-time-section" class="space-y-4 hidden">
+                        <div class="border-t border-gray-200 pt-4 mt-2">
+                            <h2 class="text-sm font-semibold text-gray-900 mb-2">Additional Time Details</h2>
+                            <p class="text-xs text-gray-500 mb-3">
+                                Choose how to submit Additional Time:
+                                <strong>Total Hours</strong>, or <strong>Fixed Date(s)</strong> where each day is counted as <strong>8 hours</strong>.
+                            </p>
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Input Mode <span class="text-red-500">*</span></label>
+                            <div class="space-y-2">
+                                <label class="flex items-start gap-2 rounded-lg border border-gray-200 p-3 cursor-pointer hover:bg-gray-50">
+                                    <input type="radio" name="additional_time_mode" value="fixed_date"
+                                           class="mt-0.5 text-indigo-600 focus:ring-indigo-500"
+                                           {{ old('additional_time_mode', 'fixed_date') === 'fixed_date' ? 'checked' : '' }}>
+                                    <span>
+                                        <span class="block text-sm font-medium text-gray-900">Fixed Date(s)</span>
+                                        <span class="block text-xs text-gray-500">Use Start/End Date. Each day is credited as 8 hours when approved.</span>
+                                    </span>
+                                </label>
+                                <label class="flex items-start gap-2 rounded-lg border border-gray-200 p-3 cursor-pointer hover:bg-gray-50">
+                                    <input type="radio" name="additional_time_mode" value="total_hours"
+                                           class="mt-0.5 text-indigo-600 focus:ring-indigo-500"
+                                           {{ old('additional_time_mode') === 'total_hours' ? 'checked' : '' }}>
+                                    <span>
+                                        <span class="block text-sm font-medium text-gray-900">Total Hours</span>
+                                        <span class="block text-xs text-gray-500">Enter exact hours in HH:MM format. Example: 12:30</span>
+                                    </span>
+                                </label>
+                            </div>
+                            @error('additional_time_mode')
+                                <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                            @enderror
+                        </div>
+
+                        <div id="additional-time-hours-wrap" class="hidden">
+                            <label for="additional_time_total_hours" class="block text-sm font-medium text-gray-700 mb-2">
+                                Total Additional Time Hours (HH:MM) <span class="text-red-500">*</span>
+                            </label>
+                            <input type="text" name="additional_time_total_hours" id="additional_time_total_hours"
+                                   value="{{ old('additional_time_total_hours') }}"
+                                   placeholder="08:00"
+                                   class="time-input w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                            <p class="mt-1 text-xs text-gray-500">
+                                Accepted format: <strong>HH:MM</strong>. Minutes must be 00-59.
+                            </p>
+                            @error('additional_time_total_hours')
+                                <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                            @enderror
+                        </div>
+                    </div>
+                    @endif
+
                     <!-- Reason (label/required change to "Location of travel" when type = Travel) -->
                     <div id="reason-field">
                         <label for="reason" class="block text-sm font-medium text-gray-700 mb-2">
@@ -376,6 +432,10 @@
     const wfhSection = document.getElementById('wfh-section');
     const offsetSection = document.getElementById('offset-section');
     const travelSection = document.getElementById('travel-section');
+    const additionalTimeSection = document.getElementById('additional-time-section');
+    const additionalTimeHoursWrap = document.getElementById('additional-time-hours-wrap');
+    const additionalTimeHoursInput = document.getElementById('additional_time_total_hours');
+    const additionalTimeModeInputs = document.querySelectorAll('input[name="additional_time_mode"]');
     const submitBtn = document.getElementById('submit-btn');
     const noBalanceModal = document.getElementById('no-balance-modal');
     const today = new Date().toISOString().split('T')[0];
@@ -429,6 +489,41 @@
 
     endDateInput.addEventListener('focus', syncEndDateMin);
 
+    function getAdditionalTimeMode() {
+        const selected = document.querySelector('input[name="additional_time_mode"]:checked');
+        return selected ? selected.value : 'fixed_date';
+    }
+
+    function updateAdditionalTimeModeUI() {
+        const isAdditionalTime = typeSelect.value === 'additional_time';
+        if (!additionalTimeSection) return;
+
+        if (isAdditionalTime) {
+            additionalTimeSection.classList.remove('hidden');
+        } else {
+            additionalTimeSection.classList.add('hidden');
+        }
+
+        const mode = getAdditionalTimeMode();
+        const useTotalHours = isAdditionalTime && mode === 'total_hours';
+
+        if (additionalTimeHoursWrap) {
+            additionalTimeHoursWrap.classList.toggle('hidden', !useTotalHours);
+        }
+        if (additionalTimeHoursInput) {
+            additionalTimeHoursInput.required = useTotalHours;
+        }
+
+        if (endDateInput) {
+            if (useTotalHours) {
+                endDateInput.value = '';
+                endDateInput.disabled = true;
+            } else {
+                endDateInput.disabled = false;
+            }
+        }
+    }
+
     function updateRequestTypeSections() {
         if (typeSelect.value === 'travel') {
             // Travel: only today or past (no future dates for employees)
@@ -471,6 +566,8 @@
             }
         }
 
+        updateAdditionalTimeModeUI();
+
         updateNoBalancePrompt();
 
         // For Travel: "Location of travel" required; hide Supporting Document
@@ -502,6 +599,9 @@
     }
 
     typeSelect.addEventListener('change', updateRequestTypeSections);
+    additionalTimeModeInputs.forEach((input) => {
+        input.addEventListener('change', updateAdditionalTimeModeUI);
+    });
 
     // Initialize on page load (for validation errors / old input)
     const oldType = '{{ old("type") }}';
