@@ -154,15 +154,19 @@ class DtrController extends Controller
                     if ($leave->type === 'vacation_leave' || $leave->type === 'sick_leave') {
                         // Vacation/Sick Leave: automatically record 08:00
                         if (!$existingDtr) {
-                            // Create new DTR entry with 08:00 hours
-                            $entry = new Dtr([
-                                'user_id' => $leave->user_id,
-                                'date' => $day->copy(),
-                                'total_hours' => 8.0,
-                                'overtime_hours' => 0, // Will be calculated from total_hours
-                                'status' => 'on_leave',
-                                'remarks' => 'Approved Leave: ' . ($leave->type_label ?? ucfirst(str_replace('_', ' ', $leave->type))),
-                            ]);
+                            // Persist so it consistently appears in DTR listings/exports
+                            $entry = Dtr::firstOrCreate(
+                                [
+                                    'user_id' => $leave->user_id,
+                                    'date' => $day->copy(),
+                                ],
+                                [
+                                    'total_hours' => 8.0,
+                                    'overtime_hours' => 0, // Will be calculated from total_hours
+                                    'status' => 'on_leave',
+                                    'remarks' => 'Approved Leave: ' . ($leave->type_label ?? ucfirst(str_replace('_', ' ', $leave->type))),
+                                ]
+                            );
                             $entry->leave_type_label = $leave->type_label ?? ucfirst(str_replace('_', ' ', $leave->type));
                             $entry->setRelation('user', $leave->user);
                             $leaveEntries->push($entry);
@@ -192,15 +196,19 @@ class DtrController extends Controller
                                 $existingDtr->remarks = $offsetLabel;
                             }
                         } else {
-                            // If no DTR exists, create new entry with 08:00 (1 day = 08:00)
-                            $entry = new Dtr([
-                                'user_id' => $leave->user_id,
-                                'date' => $day->copy(),
-                                'total_hours' => 8.0,
-                                'overtime_hours' => 0, // Will be calculated from total_hours
-                                'status' => 'on_leave',
-                                'remarks' => 'Offset: ' . ($leave->type_label ?? 'Offset'),
-                            ]);
+                            // Persist so it consistently appears in DTR listings/exports
+                            $entry = Dtr::firstOrCreate(
+                                [
+                                    'user_id' => $leave->user_id,
+                                    'date' => $day->copy(),
+                                ],
+                                [
+                                    'total_hours' => $offsetHoursPerDay,
+                                    'overtime_hours' => 0, // Will be calculated from total_hours
+                                    'status' => 'on_leave',
+                                    'remarks' => 'Offset: ' . ($leave->type_label ?? 'Offset'),
+                                ]
+                            );
                             $entry->leave_type_label = $leave->type_label ?? 'Offset';
                             $entry->setRelation('user', $leave->user);
                             $leaveEntries->push($entry);
@@ -210,14 +218,18 @@ class DtrController extends Controller
                         // If DTR doesn't exist (shouldn't happen, but fallback), create it
                         if (!$existingDtr) {
                             // This shouldn't happen since travel creates DTR on approval, but fallback
-                            $entry = new Dtr([
-                                'user_id' => $leave->user_id,
-                                'date' => $day->copy(),
-                                'total_hours' => 8.0, // Default, but should use actual hours from DTR
-                                'overtime_hours' => 0,
-                                'status' => 'travel',
-                                'remarks' => 'Approved Travel Leave',
-                            ]);
+                            $entry = Dtr::firstOrCreate(
+                                [
+                                    'user_id' => $leave->user_id,
+                                    'date' => $day->copy(),
+                                ],
+                                [
+                                    'total_hours' => 8.0, // Default, but should use actual hours from DTR
+                                    'overtime_hours' => 0,
+                                    'status' => 'travel',
+                                    'remarks' => 'Approved Travel Leave',
+                                ]
+                            );
                             $entry->leave_type_label = 'Travel';
                             $entry->setRelation('user', $leave->user);
                             $leaveEntries->push($entry);
@@ -230,14 +242,18 @@ class DtrController extends Controller
                     } else {
                         // Other leave types: create entry with 08:00 hours
                         if (!$existingDtr) {
-                            $entry = new Dtr([
-                                'user_id' => $leave->user_id,
-                                'date' => $day->copy(),
-                                'total_hours' => 8.0,
-                                'overtime_hours' => 0, // Will be calculated from total_hours
-                                'status' => 'on_leave',
-                                'remarks' => 'Approved Leave: ' . ($leave->type_label ?? ucfirst(str_replace('_', ' ', $leave->type))),
-                            ]);
+                            $entry = Dtr::firstOrCreate(
+                                [
+                                    'user_id' => $leave->user_id,
+                                    'date' => $day->copy(),
+                                ],
+                                [
+                                    'total_hours' => 8.0,
+                                    'overtime_hours' => 0, // Will be calculated from total_hours
+                                    'status' => 'on_leave',
+                                    'remarks' => 'Approved Leave: ' . ($leave->type_label ?? ucfirst(str_replace('_', ' ', $leave->type))),
+                                ]
+                            );
                             $entry->leave_type_label = $leave->type_label ?? ucfirst(str_replace('_', ' ', $leave->type));
                             $entry->setRelation('user', $leave->user);
                             $leaveEntries->push($entry);

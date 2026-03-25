@@ -331,9 +331,14 @@ class LeaveRequestController extends Controller
                 : $startDate;
             $days = $startDate->diffInDays($endDate) + 1; // +1 to include both start and end dates
 
-            // Always calculate offset hours from days: 1 day = 8 hours
-            $totalHours = $days * 8;
-            $offsetHours = sprintf('%02d:00', $totalHours);
+            // Offset: allow optional hourly deduction; otherwise 1 day = 8 hours
+            $offsetText = trim((string) ($validated['offset_hours'] ?? ''));
+            if ($offsetText !== '') {
+                $offsetHours = $offsetText;
+            } else {
+                $totalHours = $days * 8;
+                $offsetHours = sprintf('%02d:00', $totalHours);
+            }
 
             $details = "Offset Request Details:\n";
             $details .= "Duration: " . $days . " " . ($days == 1 ? 'day' : 'days') . "\n";
@@ -366,14 +371,14 @@ class LeaveRequestController extends Controller
         }
 
         // Balance check: Vacation Leave, Sick Leave, Offset only (employees)
-        if (in_array($validated['type'], ['leave', 'vacation_leave', 'sick_leave', 'offset']) && $user->role === 'employee') {
+        if (in_array($validated['type'], ['vacation_leave', 'sick_leave', 'offset']) && $user->role === 'employee') {
             $startDate = \Carbon\Carbon::parse($validated['start_date']);
             $endDate = $validated['end_date']
                 ? \Carbon\Carbon::parse($validated['end_date'])
                 : $startDate;
             $daysRequested = $startDate->diffInDays($endDate) + 1;
 
-            if (in_array($validated['type'], ['leave', 'vacation_leave', 'sick_leave'], true)) {
+            if (in_array($validated['type'], ['vacation_leave', 'sick_leave'], true)) {
                 $bal = $this->getEmployeeLeaveBalances($user);
                 if ($bal['leave_remaining'] <= 0) {
                     return redirect()->back()
@@ -387,7 +392,18 @@ class LeaveRequestController extends Controller
                 }
             } else {
                 // Offset: check overtime balance
-                $offsetHoursNeeded = $daysRequested * 8;
+                $offsetText = trim((string) ($validated['offset_hours'] ?? ''));
+                $offsetMinutesNeeded = $offsetText !== ''
+                    ? $this->parseHourMinuteToMinutes($offsetText)
+                    : ($daysRequested * 8 * 60);
+
+                if ($offsetText !== '' && $offsetMinutesNeeded <= 0) {
+                    return redirect()->back()
+                        ->withErrors(['offset_hours' => 'Please enter valid hours to deduct in HH:MM format (e.g., 08:00).'])
+                        ->withInput();
+                }
+
+                $offsetHoursNeeded = $offsetMinutesNeeded / 60;
                 $overtimeHours = $this->getEmployeeOvertimeBalanceHours($user);
                 if ($overtimeHours <= 0) {
                     return redirect()->back()
@@ -398,8 +414,11 @@ class LeaveRequestController extends Controller
                     $h = (int) $overtimeHours;
                     $m = (int) (($overtimeHours - $h) * 60);
                     $hoursFormatted = sprintf('%02d:%02d', $h, $m);
+                    $requestedLabel = $offsetText !== ''
+                        ? "{$offsetText} hour(s)."
+                        : "{$daysRequested} day(s) (" . ($daysRequested * 8) . " hours).";
                     return redirect()->back()
-                        ->withErrors(['end_date' => "You only have {$hoursFormatted} hours of overtime balance. You cannot request {$daysRequested} day(s) (" . ($daysRequested * 8) . " hours)."])
+                        ->withErrors(['end_date' => "You only have {$hoursFormatted} hours of overtime balance. You cannot request {$requestedLabel}"])
                         ->withInput();
                 }
             }
@@ -827,9 +846,14 @@ class LeaveRequestController extends Controller
                 : $startDate;
             $days = $startDate->diffInDays($endDate) + 1; // +1 to include both start and end dates
 
-            // Always calculate offset hours from days: 1 day = 8 hours
-            $totalHours = $days * 8;
-            $offsetHours = sprintf('%02d:00', $totalHours);
+            // Offset: allow optional hourly deduction; otherwise 1 day = 8 hours
+            $offsetText = trim((string) ($validated['offset_hours'] ?? ''));
+            if ($offsetText !== '') {
+                $offsetHours = $offsetText;
+            } else {
+                $totalHours = $days * 8;
+                $offsetHours = sprintf('%02d:00', $totalHours);
+            }
 
             $details = "Offset Request Details:\n";
             $details .= "Duration: " . $days . " " . ($days == 1 ? 'day' : 'days') . "\n";
@@ -978,6 +1002,31 @@ class LeaveRequestController extends Controller
     private function getEmployeeOvertimeBalanceHours($user): float
     {
         $today = Carbon::today();
+        // Overtime earned from uploaded DTRs (hours above 8.0 per day).
+        // This is important because admins can upload DTRs without creating overtime leave requests.
+        $dtrOvertimeMinutes = 0;
+        $dtrs = Dtr::where('user_id', $user->id)
+            ->whereDate('date', '<=', $today)
+            ->get();
+        foreach ($dtrs as $dtr) {
+            $rawTotal = $dtr->total_hours;
+            $total = 0.0;
+            if (is_numeric($rawTotal)) {
+                $total = (float) $rawTotal;
+            } else {
+                $txt = trim((string) $rawTotal);
+                // Some installs store total_hours as "HH:MM"
+                if (preg_match('/^([0-9]{1,3}):([0-9]{2})$/', $txt, $m)) {
+                    $total = ((int) $m[1]) + (((int) $m[2]) / 60);
+                } else {
+                    // Fallback best-effort
+                    $total = (float) $txt;
+                }
+            }
+            $dailyOvertime = max($total - 8.0, 0);
+            $dtrOvertimeMinutes += (int) round($dailyOvertime * 60);
+        }
+
         $approvedOvertimeRequests = LeaveRequest::where('user_id', $user->id)
             ->where('type', 'overtime')
             ->where('status', 'approved')
@@ -1010,7 +1059,7 @@ class LeaveRequestController extends Controller
             }
         }
 
-        return ($overtimeFromLeavesMinutes - $offsetMinutes) / 60;
+        return ($dtrOvertimeMinutes + $overtimeFromLeavesMinutes - $offsetMinutes) / 60;
     }
 
     /**

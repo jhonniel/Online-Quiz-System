@@ -442,10 +442,44 @@
 
     const balances = @json($balances ?? null);
     const balanceCheckTypes = ['vacation_leave', 'sick_leave', 'offset'];
+    const offsetHoursInput = document.getElementById('offset_hours');
+    function parseHoursValue(val) {
+        if (val === null || val === undefined) return 0;
+        if (typeof val === 'number') return Number.isFinite(val) ? val : 0;
+        const txt = String(val).trim();
+        const m = txt.match(/^(\d{1,3}):(\d{2})$/);
+        if (m) return parseInt(m[1], 10) + (parseInt(m[2], 10) / 60);
+        const n = Number(txt);
+        return Number.isFinite(n) ? n : 0;
+    }
     function hasNoBalanceForType(type) {
         if (!balances || !balanceCheckTypes.includes(type)) return false;
         if (type === 'vacation_leave' || type === 'sick_leave') return (balances.leave_remaining || 0) <= 0;
-        if (type === 'offset') return (balances.overtime_hours || 0) <= 0;
+        if (type === 'offset') {
+            const overtimeBal = parseHoursValue(balances.overtime_hours);
+            if (overtimeBal <= 0) return true;
+
+            // Requested offset hours:
+            // - if Hours to Deduct is provided, use that (HH:MM)
+            // - else fall back to duration days * 8 hours
+            let requestedHours = 0;
+            const txt = (offsetHoursInput?.value || '').trim();
+            if (txt) {
+                const m = txt.match(/^(\d{1,3}):(\d{2})$/);
+                if (!m) return false; // incomplete/invalid input: don't show "no balance" modal
+                requestedHours = parseInt(m[1], 10) + (parseInt(m[2], 10) / 60);
+            } else {
+                const s = startDateInput?.value;
+                const e = endDateInput?.value || s;
+                if (!s) return false;
+                const start = new Date(s + 'T00:00:00');
+                const end = new Date(e + 'T00:00:00');
+                const days = Math.floor((end - start) / (24 * 3600 * 1000)) + 1;
+                requestedHours = Math.max(1, days) * 8;
+            }
+
+            return requestedHours > overtimeBal;
+        }
         return false;
     }
     function closeNoBalanceModal() {
@@ -484,6 +518,7 @@
         if (!endDateInput.value) {
             syncEndDateMin();
         }
+        updateNoBalancePrompt();
     });
 
     endDateInput.addEventListener('focus', syncEndDateMin);
@@ -598,6 +633,9 @@
     }
 
     typeSelect.addEventListener('change', updateRequestTypeSections);
+    if (offsetHoursInput) {
+        offsetHoursInput.addEventListener('input', updateNoBalancePrompt);
+    }
     additionalTimeModeInputs.forEach((input) => {
         input.addEventListener('change', updateAdditionalTimeModeUI);
     });
