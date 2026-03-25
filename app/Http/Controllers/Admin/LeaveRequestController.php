@@ -304,8 +304,12 @@ class LeaveRequestController extends Controller
             // Check if this is an offset request and if the duration exceeds overtime balance
             $hasNegativeBalance = false;
             if ($leaveRequest->type === 'offset' && $leaveRequest->isPending()) {
-                // Calculate offset hours needed (days * 8 hours per day)
+                // Calculate offset hours needed from "Hours to Deduct" if present, otherwise days * 8.
                 $offsetHoursNeeded = $leaveRequest->days * 8;
+                $raw = $leaveRequest->reason ?? '';
+                if (preg_match('/Hours to Deduct:\s*([0-9]{2}):([0-9]{2})/', $raw, $m)) {
+                    $offsetHoursNeeded = (int) $m[1] + ((int) $m[2] / 60);
+                }
 
                 // Check if offset hours needed exceeds current overtime balance
                 // If yes, approving will result in negative balance
