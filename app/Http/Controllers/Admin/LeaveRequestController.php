@@ -231,6 +231,15 @@ class LeaveRequestController extends Controller
                 ->get()
                 ->sum->days;
 
+            $usedLeaveCredits = LeaveRequest::where('user_id', $user->id)
+                ->whereIn('type', ['vacation_leave', 'sick_leave'])
+                ->where('status', 'approved')
+                ->whereYear('start_date', $currentYear)
+                ->get()
+                ->sum->days;
+
+            $combinedAllowance = (float) $leaveBalance->vacation_allowance + (float) $leaveBalance->sick_allowance;
+
             $balances = [
                 'vacation' => [
                     'allowance' => (float) $leaveBalance->vacation_allowance,
@@ -241,6 +250,11 @@ class LeaveRequestController extends Controller
                     'allowance' => (float) $leaveBalance->sick_allowance,
                     'used' => $usedSick,
                     'remaining' => max((float) $leaveBalance->sick_allowance - $usedSick, 0),
+                ],
+                'leave' => [
+                    'allowance' => $combinedAllowance,
+                    'used' => $usedLeaveCredits,
+                    'remaining' => max($combinedAllowance - $usedLeaveCredits, 0),
                 ],
             ];
 
@@ -593,8 +607,8 @@ class LeaveRequestController extends Controller
         foreach ($employeeIds as $employeeId) {
             $employee = User::findOrFail($employeeId);
 
-            // Basic balance check for vacation and sick leave
-            if (in_array($validated['type'], ['vacation_leave', 'sick_leave'])) {
+            // Balance check (shared Leave Credits pool) for vacation and sick leave
+            if (in_array($validated['type'], ['vacation_leave', 'sick_leave'], true)) {
                 $leaveBalance = LeaveBalance::firstOrCreate(
                     ['user_id' => $employee->id, 'year' => $currentYear],
                     [
@@ -603,35 +617,20 @@ class LeaveRequestController extends Controller
                     ]
                 );
 
-                $usedVacation = LeaveRequest::where('user_id', $employee->id)
-                    ->where('type', 'vacation_leave')
+                $usedLeaveCredits = LeaveRequest::where('user_id', $employee->id)
+                    ->whereIn('type', ['vacation_leave', 'sick_leave'])
                     ->where('status', 'approved')
                     ->whereYear('start_date', $currentYear)
                     ->get()
                     ->sum->days;
 
-                $usedSick = LeaveRequest::where('user_id', $employee->id)
-                    ->where('type', 'sick_leave')
-                    ->where('status', 'approved')
-                    ->whereYear('start_date', $currentYear)
-                    ->get()
-                    ->sum->days;
+                $combinedAllowance = (float) $leaveBalance->vacation_allowance + (float) $leaveBalance->sick_allowance;
+                $remainingLeaveCredits = max($combinedAllowance - $usedLeaveCredits, 0);
 
-                $remainingVacation = max((float) $leaveBalance->vacation_allowance - $usedVacation, 0);
-                $remainingSick = max((float) $leaveBalance->sick_allowance - $usedSick, 0);
-
-                if ($validated['type'] === 'vacation_leave' && $daysRequested > $remainingVacation) {
+                if ($daysRequested > $remainingLeaveCredits) {
                     $failedEmployees[] = [
                         'name' => $employee->name,
-                        'reason' => "only has {$remainingVacation} day(s) of Vacation Leave remaining. Requested {$daysRequested} day(s)."
-                    ];
-                    continue;
-                }
-
-                if ($validated['type'] === 'sick_leave' && $daysRequested > $remainingSick) {
-                    $failedEmployees[] = [
-                        'name' => $employee->name,
-                        'reason' => "only has {$remainingSick} day(s) of Sick Leave remaining. Requested {$daysRequested} day(s)."
+                        'reason' => "only has {$remainingLeaveCredits} day(s) of Leave Credits remaining. Requested {$daysRequested} day(s)."
                     ];
                     continue;
                 }

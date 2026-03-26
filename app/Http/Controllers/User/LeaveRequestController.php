@@ -885,6 +885,29 @@ class LeaveRequestController extends Controller
             }
         }
 
+        // Balance check for employee resubmissions:
+        // Vacation Leave and Sick Leave share the same Leave Credits pool.
+        if ($user->role === 'employee' && in_array($validated['type'], ['vacation_leave', 'sick_leave'], true)) {
+            $startDate = \Carbon\Carbon::parse($validated['start_date']);
+            $endDate = $validated['end_date']
+                ? \Carbon\Carbon::parse($validated['end_date'])
+                : $startDate;
+            $daysRequested = $startDate->diffInDays($endDate) + 1;
+
+            $bal = $this->getEmployeeLeaveBalances($user);
+            if (($bal['leave_remaining'] ?? 0) <= 0) {
+                return redirect()->back()
+                    ->withErrors(['type' => 'No balance to file for that type of request.'])
+                    ->withInput();
+            }
+            if ($daysRequested > ($bal['leave_remaining'] ?? 0)) {
+                $remaining = $bal['leave_remaining'] ?? 0;
+                return redirect()->back()
+                    ->withErrors(['end_date' => "You only have {$remaining} day(s) of Leave Credits remaining. You cannot request {$daysRequested} day(s)."])
+                    ->withInput();
+            }
+        }
+
         // Handle supporting document (replace if new one provided)
         $supportingPath = $leaveRequest->supporting_document_path;
         if ($request->hasFile('supporting_document')) {

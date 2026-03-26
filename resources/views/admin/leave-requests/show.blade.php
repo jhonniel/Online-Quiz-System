@@ -687,22 +687,13 @@
                     <h3 class="text-base sm:text-lg font-bold text-gray-900 mb-2">Employee Balances ({{ now()->year }})</h3>
                     <div class="grid grid-cols-1 gap-3">
                         <div class="border border-gray-100 rounded-lg px-3 py-2">
-                            <p class="text-xs font-semibold text-gray-500 uppercase tracking-wide">Vacation Leave</p>
+                            <p class="text-xs font-semibold text-gray-500 uppercase tracking-wide">Leave Credits</p>
                             <p class="text-sm text-gray-900">
                                 Remaining:
-                                <span class="font-bold">{{ $balances['vacation']['remaining'] }}</span>
-                                / {{ $balances['vacation']['allowance'] }} days
+                                <span class="font-bold">{{ $balances['leave']['remaining'] ?? 0 }}</span>
+                                / {{ $balances['leave']['allowance'] ?? 0 }} days
                             </p>
-                            <p class="text-xs text-gray-500">Used: {{ $balances['vacation']['used'] }} days</p>
-                        </div>
-                        <div class="border border-gray-100 rounded-lg px-3 py-2">
-                            <p class="text-xs font-semibold text-gray-500 uppercase tracking-wide">Sick Leave</p>
-                            <p class="text-sm text-gray-900">
-                                Remaining:
-                                <span class="font-bold">{{ $balances['sick']['remaining'] }}</span>
-                                / {{ $balances['sick']['allowance'] }} days
-                            </p>
-                            <p class="text-xs text-gray-500">Used: {{ $balances['sick']['used'] }} days</p>
+                            <p class="text-xs text-gray-500">Used: {{ $balances['leave']['used'] ?? 0 }} days</p>
                         </div>
                         <div class="border border-gray-100 rounded-lg px-3 py-2 {{ str_starts_with($overtimeFormatted ?? '00:00', '-') ? 'bg-red-50/40 border-red-200' : '' }}">
                             <p class="text-xs font-semibold text-gray-500 uppercase tracking-wide">Overtime (This Year)</p>
