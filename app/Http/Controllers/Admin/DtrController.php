@@ -434,6 +434,65 @@ class DtrController extends Controller
             $groupedDtrs[$monthKey]['weeks'][$weekKey]['employees'][$employeeId]['records'][] = $dtr;
         }
 
+        // Ensure each employee shows complete weekdays for every displayed week.
+        // Missing days are labeled:
+        // - HOLIDAY if no employee has data on that day
+        // - ABSENT otherwise
+        foreach ($groupedDtrs as &$monthGroup) {
+            foreach ($monthGroup['weeks'] as &$weekGroup) {
+                $weekStart = Carbon::parse($weekGroup['week_start'])->startOfDay();
+                $weekEnd = Carbon::parse($weekGroup['week_end'])->startOfDay();
+                $period = CarbonPeriod::create($weekStart, $weekEnd);
+
+                // Detect dates with at least one record across all employees in this week
+                $hasAnyDataByDate = [];
+                foreach ($weekGroup['employees'] as $empGroup) {
+                    foreach (($empGroup['records'] ?? []) as $rec) {
+                        $hasAnyDataByDate[$rec->date->format('Y-m-d')] = true;
+                    }
+                }
+
+                foreach ($weekGroup['employees'] as &$empGroup) {
+                    $recordMap = [];
+                    foreach (($empGroup['records'] ?? []) as $rec) {
+                        $recordMap[$rec->date->format('Y-m-d')] = $rec;
+                    }
+
+                    foreach ($period as $day) {
+                        if ($day->isWeekend()) {
+                            continue;
+                        }
+
+                        $dateKey = $day->format('Y-m-d');
+                        if (isset($recordMap[$dateKey])) {
+                            continue;
+                        }
+
+                        $isHoliday = !isset($hasAnyDataByDate[$dateKey]);
+                        $synthetic = new Dtr([
+                            'user_id' => $empGroup['employee']->id,
+                            'date' => $day->copy(),
+                            'total_hours' => 0,
+                            'overtime_hours' => 0,
+                            'status' => $isHoliday ? 'holiday' : 'absent',
+                            'remarks' => $isHoliday
+                                ? 'Auto-labeled holiday (no employee has DTR data for this date).'
+                                : 'Auto-labeled absent (no DTR entry for this employee on this date).',
+                        ]);
+                        $synthetic->setRelation('user', $empGroup['employee']);
+                        $empGroup['records'][] = $synthetic;
+                    }
+
+                    usort($empGroup['records'], function ($a, $b) {
+                        return strcmp($a->date->format('Y-m-d'), $b->date->format('Y-m-d'));
+                    });
+                }
+                unset($empGroup);
+            }
+            unset($weekGroup);
+        }
+        unset($monthGroup);
+
         return view('admin.dtr.index', compact('groupedDtrs', 'employees', 'departments', 'totalRecords'));
     }
 
@@ -2556,6 +2615,52 @@ class DtrController extends Controller
 
         // Keep per-employee record list deterministic and date-complete ordering.
         foreach ($groupedByEmployee as &$group) {
+            usort($group['records'], function ($a, $b) {
+                return strcmp($a->date->format('Y-m-d'), $b->date->format('Y-m-d'));
+            });
+        }
+        unset($group);
+
+        // Ensure each employee export section includes all weekdays in range.
+        // Missing weekdays are labeled HOLIDAY/ABSENT based on whether
+        // any employee has data on that date.
+        $hasAnyDataByDate = [];
+        foreach ($dtrs as $rec) {
+            $hasAnyDataByDate[$rec->date->format('Y-m-d')] = true;
+        }
+
+        foreach ($groupedByEmployee as &$group) {
+            $exportPeriod = CarbonPeriod::create($fillDateFrom, $fillDateTo);
+            $recordMap = [];
+            foreach (($group['records'] ?? []) as $rec) {
+                $recordMap[$rec->date->format('Y-m-d')] = $rec;
+            }
+
+            foreach ($exportPeriod as $day) {
+                if ($day->isWeekend()) {
+                    continue;
+                }
+
+                $dateKey = $day->format('Y-m-d');
+                if (isset($recordMap[$dateKey])) {
+                    continue;
+                }
+
+                $isHoliday = !isset($hasAnyDataByDate[$dateKey]);
+                $synthetic = new Dtr([
+                    'user_id' => $group['employee']->id,
+                    'date' => $day->copy(),
+                    'total_hours' => 0,
+                    'overtime_hours' => 0,
+                    'status' => $isHoliday ? 'holiday' : 'absent',
+                    'remarks' => $isHoliday
+                        ? 'Auto-labeled holiday (no employee has DTR data for this date).'
+                        : 'Auto-labeled absent (no DTR entry for this employee on this date).',
+                ]);
+                $synthetic->setRelation('user', $group['employee']);
+                $group['records'][] = $synthetic;
+            }
+
             usort($group['records'], function ($a, $b) {
                 return strcmp($a->date->format('Y-m-d'), $b->date->format('Y-m-d'));
             });
