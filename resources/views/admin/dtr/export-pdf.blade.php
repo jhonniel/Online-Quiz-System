@@ -168,7 +168,7 @@
                     @endphp
                     @php
                         // Force absent display to 00:00 in PDF table.
-                        if (($statusLabel ?? '') === 'Absent') {
+                        if (strtoupper((string) ($statusLabel ?? '')) === 'ABSENT') {
                             $workedFormatted = '00:00';
                             $extraFormatted = '00:00';
                             $totalFormatted = '00:00';
