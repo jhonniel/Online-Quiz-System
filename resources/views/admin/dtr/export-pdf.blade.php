@@ -105,6 +105,10 @@
                         // Status logic: same as DTR list
                         if ($dtr->status === 'travel') {
                             $statusLabel = 'Travel';
+                        } elseif ($dtr->status === 'holiday') {
+                            $statusLabel = 'Holiday';
+                        } elseif ($dtr->status === 'absent') {
+                            $statusLabel = 'Absent';
                         } elseif ($hasApprovedLeave || $dtr->status === 'on_leave') {
                             // On Leave counts as Completed
                             $statusLabel = 'Completed';
