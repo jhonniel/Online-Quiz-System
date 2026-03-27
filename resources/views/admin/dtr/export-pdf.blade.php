@@ -175,6 +175,14 @@
                             $workedMinutes = 0;
                             $extraMinutes = 0;
                             $totalMinutes = 0;
+                        } elseif (strtoupper((string) ($statusLabel ?? '')) === 'HOLIDAY') {
+                            // Holidays count as a full 8-hour day in PDF totals/display.
+                            $workedFormatted = '08:00';
+                            $extraFormatted = '00:00';
+                            $totalFormatted = '08:00';
+                            $workedMinutes = 480;
+                            $extraMinutes = 0;
+                            $totalMinutes = 480;
                         }
                     @endphp
                     <tr>
