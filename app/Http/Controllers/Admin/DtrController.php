@@ -15,6 +15,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
+use Carbon\CarbonPeriod;
 use Barryvdh\DomPDF\Facade\Pdf;
 
 class DtrController extends Controller
@@ -171,6 +172,25 @@ class DtrController extends Controller
                             $entry->setRelation('user', $leave->user);
                             $leaveEntries->push($entry);
                         }
+                    } elseif ($leave->type === 'absent') {
+                        // Absent leave: should not add 8 hours, keep 0 hours and mark as absent.
+                        if (!$existingDtr) {
+                            $entry = Dtr::firstOrCreate(
+                                [
+                                    'user_id' => $leave->user_id,
+                                    'date' => $day->copy(),
+                                ],
+                                [
+                                    'total_hours' => 0,
+                                    'overtime_hours' => 0,
+                                    'status' => 'absent',
+                                    'remarks' => 'Approved Leave: Absent',
+                                ]
+                            );
+                            $entry->leave_type_label = 'Absent';
+                            $entry->setRelation('user', $leave->user);
+                            $leaveEntries->push($entry);
+                        }
                     } elseif ($leave->type === 'offset') {
                         // Offset: parse total hours from reason field and divide by days
                         $raw = $leave->reason ?? '';
@@ -264,6 +284,65 @@ class DtrController extends Controller
 
             if ($leaveEntries->isNotEmpty()) {
                 $dtrs = $dtrs->merge($leaveEntries)->sortBy([
+                    ['date', 'desc'],
+                    ['user_id', 'asc'],
+                ])->values();
+            }
+        }
+
+        // Fill missing weekday entries per employee so each week clearly shows:
+        // - ABSENT if employee has no DTR on a date where at least one employee has DTR data
+        // - HOLIDAY if no employee has DTR data on that date
+        if ($dateFrom && $dateTo && $dtrs->isNotEmpty()) {
+            // Use all employees in current scope (filters/department restrictions),
+            // not only employees who already have DTR rows.
+            $employeeMap = [];
+            foreach ($employees as $employee) {
+                $employeeMap[$employee->id] = $employee;
+            }
+
+            $existingMap = [];
+            $dateHasAnyData = [];
+            foreach ($dtrs as $dtr) {
+                $dateKey = $dtr->date->format('Y-m-d');
+                $existingMap[$dtr->user_id][$dateKey] = true;
+                $dateHasAnyData[$dateKey] = true;
+            }
+
+            $syntheticEntries = collect();
+            $period = CarbonPeriod::create($dateFrom->copy()->startOfDay(), $dateTo->copy()->startOfDay());
+
+            foreach ($period as $day) {
+                // Weekdays only for work-week DTR auto-labeling
+                if ($day->isWeekend()) {
+                    continue;
+                }
+
+                $dateKey = $day->format('Y-m-d');
+                $isHoliday = !isset($dateHasAnyData[$dateKey]);
+
+                foreach ($employeeMap as $employeeId => $employeeModel) {
+                    if (isset($existingMap[$employeeId][$dateKey])) {
+                        continue;
+                    }
+
+                    $entry = new Dtr([
+                        'user_id' => $employeeId,
+                        'date' => $day->copy(),
+                        'total_hours' => 0,
+                        'overtime_hours' => 0,
+                        'status' => $isHoliday ? 'holiday' : 'absent',
+                        'remarks' => $isHoliday
+                            ? 'Auto-labeled holiday (no employee has DTR data for this date).'
+                            : 'Auto-labeled absent (no DTR entry for this employee on this date).',
+                    ]);
+                    $entry->setRelation('user', $employeeModel);
+                    $syntheticEntries->push($entry);
+                }
+            }
+
+            if ($syntheticEntries->isNotEmpty()) {
+                $dtrs = $dtrs->merge($syntheticEntries)->sortBy([
                     ['date', 'desc'],
                     ['user_id', 'asc'],
                 ])->values();

@@ -174,7 +174,7 @@
 
     <!-- Filters -->
     <div class="bg-white rounded-2xl shadow-xl border border-gray-200 p-4 sm:p-6">
-        <form method="GET" action="{{ url('/admin/dtr') }}" class="space-y-4">
+        <form method="GET" action="{{ url('/admin/dtr') }}" class="space-y-4" id="dtr-filter-form">
             <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
                 <!-- Department Filter -->
                 <div>
@@ -231,11 +231,20 @@
             </div>
 
             <div class="flex flex-wrap items-center gap-3">
-                <button type="submit" class="inline-flex items-center px-4 sm:px-6 py-2 border border-transparent text-xs sm:text-sm font-medium rounded-lg shadow-sm text-white bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-700 hover:to-indigo-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
-                    <svg class="h-4 w-4 mr-1 sm:mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
-                    </svg>
-                    Filter
+                <button type="submit" id="dtr-filter-submit" class="inline-flex items-center px-4 sm:px-6 py-2 border border-transparent text-xs sm:text-sm font-medium rounded-lg shadow-sm text-white bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-700 hover:to-indigo-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-70 disabled:cursor-not-allowed">
+                    <span id="dtr-filter-submit-default" class="inline-flex items-center">
+                        <svg class="h-4 w-4 mr-1 sm:mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                        </svg>
+                        Filter
+                    </span>
+                    <span id="dtr-filter-submit-loading" class="hidden inline-flex items-center">
+                        <svg class="animate-spin h-4 w-4 mr-1 sm:mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+                        </svg>
+                        Filtering...
+                    </span>
                 </button>
                 <a href="{{ url('/admin/dtr') }}" class="inline-flex items-center px-4 sm:px-6 py-2 border border-gray-300 text-xs sm:text-sm font-medium rounded-lg text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
                     Reset
@@ -368,6 +377,9 @@
                                                             if ($dtr->status === 'absent') {
                                                                 $statusLabel = 'Absent';
                                                                 $statusClass = 'bg-red-100 text-red-800';
+                                                            } elseif ($dtr->status === 'holiday') {
+                                                                $statusLabel = 'Holiday';
+                                                                $statusClass = 'bg-sky-100 text-sky-800';
                                                             } elseif ($dtr->status === 'on_leave') {
                                                                 $statusLabel = $dtr->leave_type_label ?? 'Leave';
                                                                 $statusClass = 'bg-purple-100 text-purple-800';
@@ -554,6 +566,18 @@
         </div>
 </div>
 
+<div id="dtr-filter-loading-overlay" class="hidden fixed inset-0 z-50 bg-black/20 backdrop-blur-[1px]">
+    <div class="h-full w-full flex items-center justify-center p-4">
+        <div class="bg-white rounded-xl shadow-xl border border-gray-200 px-6 py-4 inline-flex items-center gap-3">
+            <svg class="animate-spin h-5 w-5 text-indigo-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+            </svg>
+            <p class="text-sm font-medium text-gray-700">Applying filters...</p>
+        </div>
+    </div>
+</div>
+
 <script>
     // Toggle Import Section
     function toggleImportSection() {
@@ -577,6 +601,21 @@
     }
 
     document.addEventListener('DOMContentLoaded', function () {
+        const filterForm = document.getElementById('dtr-filter-form');
+        const filterSubmit = document.getElementById('dtr-filter-submit');
+        const filterDefault = document.getElementById('dtr-filter-submit-default');
+        const filterLoading = document.getElementById('dtr-filter-submit-loading');
+        const filterOverlay = document.getElementById('dtr-filter-loading-overlay');
+
+        if (filterForm && filterSubmit) {
+            filterForm.addEventListener('submit', function () {
+                filterSubmit.disabled = true;
+                if (filterDefault) filterDefault.classList.add('hidden');
+                if (filterLoading) filterLoading.classList.remove('hidden');
+                if (filterOverlay) filterOverlay.classList.remove('hidden');
+            });
+        }
+
         const root = document.getElementById('dtr-groups-root');
         if (!root) {
             console.error('DTR groups root not found');

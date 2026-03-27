@@ -59,12 +59,11 @@ class LeaveRequestController extends Controller
         $defaultVacation = (float) \App\Models\Setting::get('default_vacation_balance', 15);
         $defaultSick = (float) \App\Models\Setting::get('default_sick_leave_balance', 10);
 
-        $leaveBalance = LeaveBalance::firstOrCreate(
-            ['user_id' => $userId, 'year' => $currentYear],
-            [
-                'vacation_allowance' => $defaultVacation,
-                'sick_allowance' => $defaultSick,
-            ]
+        $leaveBalance = LeaveBalance::firstOrCreateWithCarryover(
+            (int) $userId,
+            (int) $currentYear,
+            (float) $defaultVacation,
+            (float) $defaultSick
         );
 
         // Unified leave credits (Vacation + Sick + Leave)
@@ -1094,12 +1093,11 @@ class LeaveRequestController extends Controller
         $defaultVacation = (float) \App\Models\Setting::get('default_vacation_balance', 15);
         $defaultSick = (float) \App\Models\Setting::get('default_sick_leave_balance', 10);
 
-        $leaveBalance = LeaveBalance::firstOrCreate(
-            ['user_id' => $user->id, 'year' => $currentYear],
-            [
-                'vacation_allowance' => $defaultVacation,
-                'sick_allowance' => $defaultSick,
-            ]
+        $leaveBalance = LeaveBalance::firstOrCreateWithCarryover(
+            (int) $user->id,
+            (int) $currentYear,
+            (float) $defaultVacation,
+            (float) $defaultSick
         );
 
         $usedLeave = LeaveRequest::where('user_id', $user->id)

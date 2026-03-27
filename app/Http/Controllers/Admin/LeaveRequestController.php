@@ -209,12 +209,11 @@ class LeaveRequestController extends Controller
             $defaultVacation = (float) \App\Models\Setting::get('default_vacation_balance', 15);
             $defaultSick = (float) \App\Models\Setting::get('default_sick_leave_balance', 10);
 
-            $leaveBalance = \App\Models\LeaveBalance::firstOrCreate(
-                ['user_id' => $user->id, 'year' => $currentYear],
-                [
-                    'vacation_allowance' => $defaultVacation,
-                    'sick_allowance' => $defaultSick,
-                ]
+            $leaveBalance = \App\Models\LeaveBalance::firstOrCreateWithCarryover(
+                (int) $user->id,
+                (int) $currentYear,
+                (float) $defaultVacation,
+                (float) $defaultSick
             );
 
             $usedVacation = LeaveRequest::where('user_id', $user->id)
@@ -609,12 +608,11 @@ class LeaveRequestController extends Controller
 
             // Balance check (shared Leave Credits pool) for vacation and sick leave
             if (in_array($validated['type'], ['vacation_leave', 'sick_leave'], true)) {
-                $leaveBalance = LeaveBalance::firstOrCreate(
-                    ['user_id' => $employee->id, 'year' => $currentYear],
-                    [
-                        'vacation_allowance' => $defaultVacation,
-                        'sick_allowance' => $defaultSick,
-                    ]
+                $leaveBalance = LeaveBalance::firstOrCreateWithCarryover(
+                    (int) $employee->id,
+                    (int) $currentYear,
+                    (float) $defaultVacation,
+                    (float) $defaultSick
                 );
 
                 $usedLeaveCredits = LeaveRequest::where('user_id', $employee->id)
