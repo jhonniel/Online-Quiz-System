@@ -2814,39 +2814,16 @@ class DtrController extends Controller
             $employeeOvertimeM = $employeeOvertimeMinutes % 60;
             $group['total_overtime_formatted'] = sprintf('%02d:%02d', $employeeOvertimeH, $employeeOvertimeM);
 
-            // Calculate deficit for this employee based on date range
-            // Calculate deficit directly from DTR records grouped by week
-            $employeeDeficitHours = 0;
-            $employeeOvertimeFromCompletedWeeks = 0; // Only count overtime from approved leave requests
+            // Calculate deficit for export as:
+            // (number of records * 8 hours) - total rendered hours.
+            $recordCount = count($group['records'] ?? []);
+            $expectedHours = $recordCount * 8.0;
+            $employeeDeficitHours = max(0, $expectedHours - ($group['total_hours'] ?? 0));
+
+            // Keep existing overtime balance computation for display context.
+            $employeeOvertimeFromCompletedWeeks = 0;
             if ($dateFrom && $dateTo) {
                 $today = Carbon::today();
-
-                // Group DTR records by week
-                $weeklyGroups = [];
-                foreach ($group['records'] as $dtr) {
-                    $weekStart = $dtr->date->copy()->startOfWeek();
-                    $weekEnd = $dtr->date->copy()->endOfWeek();
-                    $weekKey = $weekStart->toDateString() . '_' . $weekEnd->toDateString();
-
-                    // Only calculate deficit for completed weeks (not current week)
-                    if ($today->gt($weekEnd)) {
-                        if (!isset($weeklyGroups[$weekKey])) {
-                            $weeklyGroups[$weekKey] = [
-                                'week_start' => $weekStart,
-                                'week_end' => $weekEnd,
-                                'total_hours' => 0,
-                            ];
-                        }
-                        $weeklyGroups[$weekKey]['total_hours'] += ($dtr->total_hours ?? 0);
-                    }
-                }
-
-                // Calculate deficit per week: max(0, 40 hours - weekly total)
-                foreach ($weeklyGroups as $weekGroup) {
-                    $weeklyBaseHours = 40.0;
-                    $weeklyDeficit = max(0, $weeklyBaseHours - $weekGroup['total_hours']);
-                    $employeeDeficitHours += $weeklyDeficit;
-                }
 
                 // Get approved overtime leave requests for this employee in the date range
                 $approvedOvertimeRequests = LeaveRequest::where('user_id', $employee->id)
@@ -2887,9 +2864,6 @@ class DtrController extends Controller
 
                 $employeeOvertimeFromCompletedWeeks = $overtimeFromLeavesMinutes / 60;
             }
-
-            // Ensure deficit is not negative (show 00:00 if negative)
-            $employeeDeficitHours = max(0, $employeeDeficitHours);
 
             // Format employee deficit
             $employeeDeficitMinutes = (int) round($employeeDeficitHours * 60);
