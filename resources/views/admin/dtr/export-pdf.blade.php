@@ -278,19 +278,38 @@
                             $leaveTypeLabel = $leave->type_label ?? ucfirst(str_replace('_', ' ', $leave->type));
                             $approvalTime = $leave->reviewed_at ? $leave->reviewed_at->format('M d, Y g:i A') : '';
                             
-                            // Use DTR hours if available, otherwise default to 8 hours
-                            if ($dtrRecord && ($dtrRecord->total_hours ?? 0) > 0) {
+                            $isAbsentLeave = ($leave->type ?? '') === 'absent';
+
+                            // Use DTR hours if available, otherwise default to 8 hours.
+                            // For Absent leave, force 0 hours in PDF.
+                            if ($dtrRecord && ($dtrRecord->total_hours ?? 0) > 0 && !$isAbsentLeave) {
                                 $leaveHours = $dtrRecord->total_hours;
                                 $workedHours = max($leaveHours - ($dtrRecord->added_time_from_note ?? 0), 0);
                                 $addedTime = $dtrRecord->added_time_from_note ?? 0;
                             } else {
-                                // Default to 8 hours for approved leave
-                                $leaveHours = 8.0;
-                                $workedHours = 8.0;
-                                $addedTime = 0;
+                                if ($isAbsentLeave) {
+                                    $leaveHours = 0;
+                                    $workedHours = 0;
+                                    $addedTime = 0;
+                                } else {
+                                    // Default to 8 hours for approved leave
+                                    $leaveHours = 8.0;
+                                    $workedHours = 8.0;
+                                    $addedTime = 0;
+                                }
                             }
                             
-                            // Format worked hours
+                        // For absent status, never show 8-hour defaults in PDF.
+                        if (($dtr->status ?? '') === 'absent') {
+                            $workedHours = 0;
+                            $extraMinutes = 0;
+                            $totalMinutes = 0;
+                            $workedFormatted = '00:00';
+                            $extraFormatted = '00:00';
+                            $totalFormatted = '00:00';
+                        }
+
+                        // Format worked hours
                             $workedMinutes = (int) round($workedHours * 60);
                             $workedH = intdiv($workedMinutes, 60);
                             $workedM = $workedMinutes % 60;
@@ -314,7 +333,7 @@
                             <td class="right">{{ $workedFormatted }}</td>
                             <td class="right">{{ $addedMinutes > 0 ? $addedFormatted : '00:00' }}</td>
                             <td class="right">{{ $totalFormatted }}</td>
-                            <td class="center">Completed</td>
+                            <td class="center">{{ ($leave->type ?? '') === 'absent' ? 'Absent' : 'Completed' }}</td>
                             <td>
                                 Leave: {{ $leaveTypeLabel }}
                                 @if($approvalTime)

@@ -119,7 +119,8 @@ class DtrController extends Controller
 
         // Automatically add DTR records for approved leave requests (excluding overtime)
         if ($dateFrom && $dateTo) {
-            $employeeIds = $dtrs->pluck('user_id')->unique()->values();
+            // Use all employees in current scope (not only those already having DTR rows)
+            $employeeIds = $employees->pluck('id')->unique()->values();
             $approvedLeaves = LeaveRequest::with('user')
                 ->whereIn('user_id', $employeeIds)
                 ->where('status', 'approved')
@@ -293,7 +294,7 @@ class DtrController extends Controller
         // Fill missing weekday entries per employee so each week clearly shows:
         // - ABSENT if employee has no DTR on a date where at least one employee has DTR data
         // - HOLIDAY if no employee has DTR data on that date
-        if ($dateFrom && $dateTo && $dtrs->isNotEmpty()) {
+        if ($dateFrom && $dateTo && !empty($employees) && count($employees) > 0) {
             // Use all employees in current scope (filters/department restrictions),
             // not only employees who already have DTR rows.
             $employeeMap = [];
