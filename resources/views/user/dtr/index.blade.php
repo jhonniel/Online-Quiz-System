@@ -96,6 +96,7 @@
                         <option value="">All Status</option>
                         <option value="present" {{ request('status') == 'present' ? 'selected' : '' }}>Present</option>
                         <option value="absent" {{ request('status') == 'absent' ? 'selected' : '' }}>Absent</option>
+                        <option value="holiday" {{ request('status') == 'holiday' ? 'selected' : '' }}>HOLIDAY</option>
                         <option value="late" {{ request('status') == 'late' ? 'selected' : '' }}>Late</option>
                         <option value="half_day" {{ request('status') == 'half_day' ? 'selected' : '' }}>Half Day</option>
                         <option value="on_leave" {{ request('status') == 'on_leave' ? 'selected' : '' }}>On Leave</option>
@@ -240,6 +241,10 @@
                                                         $statusLabel = 'Absent';
                                                         $statusClass = 'bg-red-100 text-red-800';
                                                         $isCompleted = false;
+                                                    } elseif ($dtr->status === 'holiday') {
+                                                        $statusLabel = 'HOLIDAY';
+                                                        $statusClass = 'bg-sky-100 text-sky-800';
+                                                        $isCompleted = false;
                                                     } elseif ($dtr->status === 'on_leave') {
                                                         $statusLabel = 'Leave';
                                                         $statusClass = 'bg-purple-100 text-purple-800';
@@ -299,6 +304,8 @@
                                                                 <svg class="w-5 h-5 text-green-600" fill="currentColor" viewBox="0 0 20 20">
                                                                     <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
                                                                 </svg>
+                                                            @elseif($dtr->status === 'absent' || $dtr->status === 'holiday')
+                                                                00:00
                                                             @else
                                                                 <span class="text-gray-400">-</span>
                                                             @endif

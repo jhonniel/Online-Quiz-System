@@ -2713,6 +2713,14 @@ class DtrController extends Controller
             $employee = $group['employee'];
             $employeeId = $employee->id;
 
+            // Recompute base totals from final record set (includes late-added synthetic HOLIDAY rows).
+            $group['total_hours'] = 0;
+            $group['total_overtime'] = 0;
+            foreach (($group['records'] ?? []) as $record) {
+                $group['total_hours'] += ($record->total_hours ?? 0);
+                $group['total_overtime'] += ($record->overtime_hours ?? 0);
+            }
+
             // Add hours from approved leave records (without DTR entries or with 0 hours)
             $leaveHoursToAdd = 0;
             $leaveOvertimeToAdd = 0;

@@ -82,6 +82,9 @@
                         if ($dtr->status === 'travel') {
                             $statusLabel = 'TRAVEL';
                             $isCompleted = false;
+                        } elseif ($dtr->status === 'holiday') {
+                            $statusLabel = 'HOLIDAY';
+                            $isCompleted = false;
                         } elseif ($dtr->status === 'on_leave') {
                             $statusLabel = 'On Leave';
                             $isCompleted = false;
@@ -138,6 +141,8 @@
                         <td class="right">
                             @if($isCompleted || $extraMinutes > 0)
                                 ✓
+                            @elseif($dtr->status === 'absent' || $dtr->status === 'holiday')
+                                00:00
                             @else
                                 -
                             @endif
@@ -152,6 +157,8 @@
                         <td class="right">
                             @if($isCompleted || $otMinutes > 0)
                                 ✓
+                            @elseif($dtr->status === 'absent' || $dtr->status === 'holiday')
+                                00:00
                             @else
                                 -
                             @endif

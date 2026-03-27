@@ -36,7 +36,9 @@ class DtrController extends Controller
         }
 
         // Filter by status
+        $selectedStatus = null;
         if ($request->filled('status')) {
+            $selectedStatus = (string) $request->status;
             $query->where('status', $request->status);
         }
 
@@ -47,6 +49,16 @@ class DtrController extends Controller
         $dateTo = $request->filled('date_to') ? Carbon::parse($request->date_to) : ($dtrs->max('date') ? $dtrs->max('date')->copy() : null);
         if ($dateFrom && $dateTo && $dateFrom->gt($dateTo)) {
             [$dateFrom, $dateTo] = [$dateTo, $dateFrom];
+        }
+
+        // Keep a concrete range so Time Records can show complete weekdays.
+        if ($dateFrom && !$dateTo) {
+            $dateTo = $dateFrom->copy();
+        } elseif (!$dateFrom && $dateTo) {
+            $dateFrom = $dateTo->copy();
+        } elseif (!$dateFrom && !$dateTo) {
+            $dateFrom = Carbon::today()->startOfWeek();
+            $dateTo = Carbon::today()->endOfWeek();
         }
 
         if ($dateFrom && $dateTo) {
@@ -87,6 +99,66 @@ class DtrController extends Controller
                 $dtrs = $dtrs->merge($leaveEntries)->sortByDesc(function ($item) {
                     return $item->date;
                 })->values();
+            }
+        }
+
+        // Fill missing weekdays for the current user:
+        // - HOLIDAY if no employee has any DTR data on that date
+        // - ABSENT if at least one employee has DTR data but this user has none
+        if ($dateFrom && $dateTo) {
+            $existingMap = [];
+            foreach ($dtrs as $dtr) {
+                $existingMap[$dtr->date->format('Y-m-d')] = true;
+            }
+
+            $dateHasAnyData = Dtr::whereDate('date', '>=', $dateFrom->toDateString())
+                ->whereDate('date', '<=', $dateTo->toDateString())
+                ->selectRaw('DATE(date) as d')
+                ->distinct()
+                ->pluck('d')
+                ->map(function ($d) {
+                    return Carbon::parse($d)->format('Y-m-d');
+                })
+                ->flip()
+                ->all();
+
+            $syntheticEntries = collect();
+            $period = new \Carbon\CarbonPeriod($dateFrom->copy()->startOfDay(), $dateTo->copy()->startOfDay());
+            foreach ($period as $day) {
+                if ($day->isWeekend()) {
+                    continue;
+                }
+
+                $dateKey = $day->format('Y-m-d');
+                if (isset($existingMap[$dateKey])) {
+                    continue;
+                }
+
+                $isHoliday = !isset($dateHasAnyData[$dateKey]);
+                $syntheticStatus = $isHoliday ? 'holiday' : 'absent';
+                if ($selectedStatus !== null && $selectedStatus !== $syntheticStatus) {
+                    continue;
+                }
+
+                $entry = new Dtr([
+                    'user_id' => $user->id,
+                    'date' => $day->copy(),
+                    'total_hours' => $isHoliday ? 8.0 : 0,
+                    'overtime_hours' => 0,
+                    'status' => $syntheticStatus,
+                    'remarks' => $isHoliday
+                        ? 'Auto-labeled holiday (no employee has DTR data for this date).'
+                        : 'Auto-labeled absent (no DTR entry for this date).',
+                ]);
+                $entry->setRelation('user', $user);
+                $syntheticEntries->push($entry);
+            }
+
+            if ($syntheticEntries->isNotEmpty()) {
+                $dtrs = $dtrs->merge($syntheticEntries)
+                    ->sortByDesc(function ($item) {
+                        return $item->date;
+                    })->values();
             }
         }
 
@@ -307,8 +379,11 @@ class DtrController extends Controller
      */
     public function exportPdf(Request $request)
     {
-        // PDF export is not available for employees/students
-        abort(403, 'PDF export is not available for employees and students.');
+        $user = Auth::user();
+
+        if (!in_array($user->role, ['employee', 'student'])) {
+            abort(403, 'Only employees and students can export DTR records.');
+        }
 
         $query = Dtr::where('user_id', $user->id);
 
@@ -321,7 +396,9 @@ class DtrController extends Controller
         }
 
         // Filter by status
+        $selectedStatus = null;
         if ($request->filled('status')) {
+            $selectedStatus = (string) $request->status;
             $query->where('status', $request->status);
         }
 
@@ -332,6 +409,15 @@ class DtrController extends Controller
         $dateTo = $request->filled('date_to') ? Carbon::parse($request->date_to) : ($dtrs->max('date') ? $dtrs->max('date')->copy() : null);
         if ($dateFrom && $dateTo && $dateFrom->gt($dateTo)) {
             [$dateFrom, $dateTo] = [$dateTo, $dateFrom];
+        }
+
+        if ($dateFrom && !$dateTo) {
+            $dateTo = $dateFrom->copy();
+        } elseif (!$dateFrom && $dateTo) {
+            $dateFrom = $dateTo->copy();
+        } elseif (!$dateFrom && !$dateTo) {
+            $dateFrom = Carbon::today()->startOfWeek();
+            $dateTo = Carbon::today()->endOfWeek();
         }
 
         if ($dateFrom && $dateTo) {
@@ -368,6 +454,62 @@ class DtrController extends Controller
 
             if ($leaveEntries->isNotEmpty()) {
                 $dtrs = $dtrs->merge($leaveEntries)->sortBy(function ($item) {
+                    return $item->date;
+                })->values();
+            }
+        }
+
+        if ($dateFrom && $dateTo) {
+            $existingMap = [];
+            foreach ($dtrs as $dtr) {
+                $existingMap[$dtr->date->format('Y-m-d')] = true;
+            }
+
+            $dateHasAnyData = Dtr::whereDate('date', '>=', $dateFrom->toDateString())
+                ->whereDate('date', '<=', $dateTo->toDateString())
+                ->selectRaw('DATE(date) as d')
+                ->distinct()
+                ->pluck('d')
+                ->map(function ($d) {
+                    return Carbon::parse($d)->format('Y-m-d');
+                })
+                ->flip()
+                ->all();
+
+            $syntheticEntries = collect();
+            $period = new \Carbon\CarbonPeriod($dateFrom->copy()->startOfDay(), $dateTo->copy()->startOfDay());
+            foreach ($period as $day) {
+                if ($day->isWeekend()) {
+                    continue;
+                }
+
+                $dateKey = $day->format('Y-m-d');
+                if (isset($existingMap[$dateKey])) {
+                    continue;
+                }
+
+                $isHoliday = !isset($dateHasAnyData[$dateKey]);
+                $syntheticStatus = $isHoliday ? 'holiday' : 'absent';
+                if ($selectedStatus !== null && $selectedStatus !== $syntheticStatus) {
+                    continue;
+                }
+
+                $entry = new Dtr([
+                    'user_id' => $user->id,
+                    'date' => $day->copy(),
+                    'total_hours' => $isHoliday ? 8.0 : 0,
+                    'overtime_hours' => 0,
+                    'status' => $syntheticStatus,
+                    'remarks' => $isHoliday
+                        ? 'Auto-labeled holiday (no employee has DTR data for this date).'
+                        : 'Auto-labeled absent (no DTR entry for this date).',
+                ]);
+                $entry->setRelation('user', $user);
+                $syntheticEntries->push($entry);
+            }
+
+            if ($syntheticEntries->isNotEmpty()) {
+                $dtrs = $dtrs->merge($syntheticEntries)->sortBy(function ($item) {
                     return $item->date;
                 })->values();
             }
