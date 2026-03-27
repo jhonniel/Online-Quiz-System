@@ -382,6 +382,10 @@ class DtrController extends Controller
 
         // Group DTRs by Month -> ISO Week -> Employee
         $groupedDtrs = [];
+        $employeesById = [];
+        foreach ($employees as $employeeModel) {
+            $employeesById[$employeeModel->id] = $employeeModel;
+        }
 
         foreach ($dtrs as $dtr) {
             $monthKey = $dtr->date->format('Y-m');
@@ -405,11 +409,18 @@ class DtrController extends Controller
             }
 
             if (!isset($groupedDtrs[$monthKey]['weeks'][$weekKey])) {
+                $seedEmployees = [];
+                foreach ($employeesById as $seedEmployeeId => $seedEmployeeModel) {
+                    $seedEmployees[$seedEmployeeId] = [
+                        'employee' => $seedEmployeeModel,
+                        'records' => [],
+                    ];
+                }
                 $groupedDtrs[$monthKey]['weeks'][$weekKey] = [
                     'label' => $weekLabel,
                     'week_start' => $weekStart->toDateString(),
                     'week_end' => $weekEnd->toDateString(),
-                    'employees' => [],
+                    'employees' => $seedEmployees,
                 ];
             }
 
@@ -2511,8 +2522,18 @@ class DtrController extends Controller
             $dtrMapByEmployeeAndDate[$employeeId][$dateKey] = $dtr;
         }
         
-        // Group by employee for better organization
+        // Group by employee for better organization.
+        // Seed with all scoped employees so no employee/weekdays disappear in PDF.
         $groupedByEmployee = [];
+        foreach ($employeesForPdf as $employeeModel) {
+            $groupedByEmployee[$employeeModel->id] = [
+                'employee' => $employeeModel,
+                'records' => [],
+                'total_hours' => 0,
+                'total_overtime' => 0,
+            ];
+        }
+
         foreach ($dtrs as $dtr) {
             $employeeId = $dtr->user_id;
             if (!isset($groupedByEmployee[$employeeId])) {
@@ -2532,6 +2553,14 @@ class DtrController extends Controller
             $groupedByEmployee[$employeeId]['total_hours'] += ($dtr->total_hours ?? 0);
             $groupedByEmployee[$employeeId]['total_overtime'] += ($dtr->overtime_hours ?? 0);
         }
+
+        // Keep per-employee record list deterministic and date-complete ordering.
+        foreach ($groupedByEmployee as &$group) {
+            usort($group['records'], function ($a, $b) {
+                return strcmp($a->date->format('Y-m-d'), $b->date->format('Y-m-d'));
+            });
+        }
+        unset($group);
 
         // Format employee totals and calculate per-employee deficit and balance
         foreach ($groupedByEmployee as &$group) {
