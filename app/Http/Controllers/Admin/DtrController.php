@@ -371,7 +371,7 @@ class DtrController extends Controller
                     $entry = new Dtr([
                         'user_id' => $employeeId,
                         'date' => $day->copy(),
-                        'total_hours' => 0,
+                        'total_hours' => $isHoliday ? 8.0 : 0,
                         'overtime_hours' => 0,
                         'status' => $isHoliday ? 'holiday' : 'absent',
                         'remarks' => $isHoliday
@@ -489,7 +489,7 @@ class DtrController extends Controller
                         $synthetic = new Dtr([
                             'user_id' => $empGroup['employee']->id,
                             'date' => $day->copy(),
-                            'total_hours' => 0,
+                            'total_hours' => $isHoliday ? 8.0 : 0,
                             'overtime_hours' => 0,
                             'status' => $isHoliday ? 'holiday' : 'absent',
                             'remarks' => $isHoliday
@@ -2406,7 +2406,7 @@ class DtrController extends Controller
                     $entry = new Dtr([
                         'user_id' => $employeeId,
                         'date' => $day->copy(),
-                        'total_hours' => 0,
+                        'total_hours' => $isHoliday ? 8.0 : 0,
                         'overtime_hours' => 0,
                         'status' => $syntheticStatus,
                         'remarks' => $isHoliday
@@ -2690,7 +2690,7 @@ class DtrController extends Controller
                 $synthetic = new Dtr([
                     'user_id' => $group['employee']->id,
                     'date' => $day->copy(),
-                    'total_hours' => 0,
+                    'total_hours' => $isHoliday ? 8.0 : 0,
                     'overtime_hours' => 0,
                     'status' => $syntheticStatus,
                     'remarks' => $isHoliday
