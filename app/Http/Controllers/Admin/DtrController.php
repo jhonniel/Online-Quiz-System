@@ -122,6 +122,13 @@ class DtrController extends Controller
             [$dateFrom, $dateTo] = [$dateTo, $dateFrom];
         }
 
+        // Align to full week boundaries so every date in the displayed weeks
+        // can be represented (via real or synthetic rows).
+        if ($dateFrom && $dateTo) {
+            $dateFrom = $dateFrom->copy()->startOfWeek();
+            $dateTo = $dateTo->copy()->endOfWeek();
+        }
+
         // Calculate overtime from Total Hours (hours above 8:00 per day)
         foreach ($dtrs as $dtr) {
             $totalHours = (float) ($dtr->total_hours ?? 0);
@@ -2260,6 +2267,10 @@ class DtrController extends Controller
         if ($fillDateFrom->gt($fillDateTo)) {
             [$fillDateFrom, $fillDateTo] = [$fillDateTo, $fillDateFrom];
         }
+
+        // Align to full week boundaries so PDF includes all dates in the weeks.
+        $fillDateFrom = $fillDateFrom->copy()->startOfWeek();
+        $fillDateTo = $fillDateTo->copy()->endOfWeek();
 
         // Include all weekdays in the concrete range:
         // - HOLIDAY if no employee has any DTR for that day
