@@ -378,6 +378,7 @@ class DtrController extends Controller
                             ? 'Auto-labeled holiday (no employee has DTR data for this date).'
                             : 'Auto-labeled absent (no DTR entry for this employee on this date).',
                     ]);
+                    $entry->is_synthetic = true;
                     $entry->setRelation('user', $employeeModel);
                     $syntheticEntries->push($entry);
                 }
@@ -461,6 +462,9 @@ class DtrController extends Controller
                 $hasAnyDataByDate = [];
                 foreach ($weekGroup['employees'] as $empGroup) {
                     foreach (($empGroup['records'] ?? []) as $rec) {
+                        if (!empty($rec->is_synthetic)) {
+                            continue;
+                        }
                         $hasAnyDataByDate[$rec->date->format('Y-m-d')] = true;
                     }
                 }
@@ -492,6 +496,7 @@ class DtrController extends Controller
                                 ? 'Auto-labeled holiday (no employee has DTR data for this date).'
                                 : 'Auto-labeled absent (no DTR entry for this employee on this date).',
                         ]);
+                        $synthetic->is_synthetic = true;
                         $synthetic->setRelation('user', $empGroup['employee']);
                         $empGroup['records'][] = $synthetic;
                     }
