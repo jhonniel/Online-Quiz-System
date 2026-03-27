@@ -69,7 +69,9 @@ class DtrController extends Controller
         }
 
         // Filter by status
+        $selectedStatus = null;
         if ($request->filled('status')) {
+            $selectedStatus = (string) $request->status;
             $query->where('status', $request->status);
         }
 
@@ -83,6 +85,17 @@ class DtrController extends Controller
             if ($allowedDepartmentIds !== null) {
                 $employeesQuery->whereIn('department_id', $allowedDepartmentIds);
             }
+        }
+
+        // Keep employee seed list in sync with active filters
+        if ($request->filled('department_id')) {
+            $selectedDeptId = $request->department_id;
+            if ($user->canManageDepartment($selectedDeptId)) {
+                $employeesQuery->where('department_id', $selectedDeptId);
+            }
+        }
+        if ($request->filled('employee_id')) {
+            $employeesQuery->where('id', $request->employee_id);
         }
 
         $employees = $employeesQuery->orderBy('name')->get();
@@ -1303,7 +1316,9 @@ class DtrController extends Controller
         }
 
         // Filter by status
+        $selectedStatus = null;
         if ($request->filled('status')) {
+            $selectedStatus = (string) $request->status;
             $query->where('status', $request->status);
         }
 
@@ -2108,7 +2123,9 @@ class DtrController extends Controller
         }
 
         // Filter by status
+        $selectedStatus = null;
         if ($request->filled('status')) {
+            $selectedStatus = (string) $request->status;
             $query->where('status', $request->status);
         }
 
@@ -2234,6 +2251,7 @@ class DtrController extends Controller
     public function exportPdf(Request $request)
     {
         $user = auth()->user();
+        $selectedStatus = null;
 
         $query = Dtr::with('user')
             ->whereHas('user', function($q) {
@@ -2282,6 +2300,7 @@ class DtrController extends Controller
 
         // Filter by status
         if ($request->filled('status')) {
+            $selectedStatus = (string) $request->status;
             $query->where('status', $request->status);
         }
 
@@ -2338,9 +2357,12 @@ class DtrController extends Controller
             [$fillDateFrom, $fillDateTo] = [$fillDateTo, $fillDateFrom];
         }
 
-        // Align to full week boundaries so PDF includes all dates in the weeks.
-        $fillDateFrom = $fillDateFrom->copy()->startOfWeek();
-        $fillDateTo = $fillDateTo->copy()->endOfWeek();
+        // If user explicitly provided a date filter, respect exact boundaries.
+        // Only auto-expand to full week when no date filters are provided.
+        if (!$request->filled('date_from') && !$request->filled('date_to')) {
+            $fillDateFrom = $fillDateFrom->copy()->startOfWeek();
+            $fillDateTo = $fillDateTo->copy()->endOfWeek();
+        }
 
         // Include all weekdays in the concrete range:
         // - HOLIDAY if no employee has any DTR for that day
@@ -2371,12 +2393,17 @@ class DtrController extends Controller
                         continue;
                     }
 
+                    $syntheticStatus = $isHoliday ? 'holiday' : 'absent';
+                    if ($selectedStatus !== null && $selectedStatus !== $syntheticStatus) {
+                        continue;
+                    }
+
                     $entry = new Dtr([
                         'user_id' => $employeeId,
                         'date' => $day->copy(),
                         'total_hours' => 0,
                         'overtime_hours' => 0,
-                        'status' => $isHoliday ? 'holiday' : 'absent',
+                        'status' => $syntheticStatus,
                         'remarks' => $isHoliday
                             ? 'Auto-labeled holiday (no employee has DTR data for this date).'
                             : 'Auto-labeled absent (no DTR entry for this employee on this date).',
@@ -2647,12 +2674,16 @@ class DtrController extends Controller
                 }
 
                 $isHoliday = !isset($hasAnyDataByDate[$dateKey]);
+                $syntheticStatus = $isHoliday ? 'holiday' : 'absent';
+                if ($selectedStatus !== null && $selectedStatus !== $syntheticStatus) {
+                    continue;
+                }
                 $synthetic = new Dtr([
                     'user_id' => $group['employee']->id,
                     'date' => $day->copy(),
                     'total_hours' => 0,
                     'overtime_hours' => 0,
-                    'status' => $isHoliday ? 'holiday' : 'absent',
+                    'status' => $syntheticStatus,
                     'remarks' => $isHoliday
                         ? 'Auto-labeled holiday (no employee has DTR data for this date).'
                         : 'Auto-labeled absent (no DTR entry for this employee on this date).',
