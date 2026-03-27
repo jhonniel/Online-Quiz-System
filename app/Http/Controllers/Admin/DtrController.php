@@ -106,6 +106,18 @@ class DtrController extends Controller
         // Approved overtime from leave requests (only count approved overtime requests)
         $dateFrom = $request->filled('date_from') ? Carbon::parse($request->date_from) : ($dtrs->min('date') ? $dtrs->min('date')->copy() : null);
         $dateTo = $request->filled('date_to') ? Carbon::parse($request->date_to) : ($dtrs->max('date') ? $dtrs->max('date')->copy() : null);
+
+        // Ensure a concrete range exists so Time Records can still show full weeks
+        // (including HOLIDAY/ABSENT rows) even when base DTR data is empty.
+        if ($dateFrom && !$dateTo) {
+            $dateTo = $dateFrom->copy();
+        } elseif (!$dateFrom && $dateTo) {
+            $dateFrom = $dateTo->copy();
+        } elseif (!$dateFrom && !$dateTo) {
+            $dateFrom = Carbon::today()->startOfWeek();
+            $dateTo = Carbon::today()->endOfWeek();
+        }
+
         if ($dateFrom && $dateTo && $dateFrom->gt($dateTo)) {
             [$dateFrom, $dateTo] = [$dateTo, $dateFrom];
         }
@@ -2225,10 +2237,34 @@ class DtrController extends Controller
 
         $employeesForPdf = $employeesQuery->orderBy('name')->get();
 
-        // Include all weekdays in the selected range:
+        // Build a concrete range for PDF row completion.
+        // Priority:
+        // 1) user-provided date_from/date_to
+        // 2) min/max date from current result set
+        // 3) current week (if completely empty)
+        $fillDateFrom = $dateFrom ? Carbon::parse($dateFrom)->startOfDay() : null;
+        $fillDateTo = $dateTo ? Carbon::parse($dateTo)->startOfDay() : null;
+
+        if (!$fillDateFrom || !$fillDateTo) {
+            if ($dtrs->isNotEmpty()) {
+                $minDate = $dtrs->min('date');
+                $maxDate = $dtrs->max('date');
+                $fillDateFrom = $fillDateFrom ?: Carbon::parse($minDate)->startOfDay();
+                $fillDateTo = $fillDateTo ?: Carbon::parse($maxDate)->startOfDay();
+            } else {
+                $fillDateFrom = $fillDateFrom ?: Carbon::today()->startOfWeek();
+                $fillDateTo = $fillDateTo ?: Carbon::today()->endOfWeek();
+            }
+        }
+
+        if ($fillDateFrom->gt($fillDateTo)) {
+            [$fillDateFrom, $fillDateTo] = [$fillDateTo, $fillDateFrom];
+        }
+
+        // Include all weekdays in the concrete range:
         // - HOLIDAY if no employee has any DTR for that day
         // - ABSENT for employees missing an entry when at least one employee has data that day
-        if ($dateFrom && $dateTo && $employeesForPdf->isNotEmpty()) {
+        if ($employeesForPdf->isNotEmpty()) {
             $existingMap = [];
             $dateHasAnyData = [];
 
@@ -2239,7 +2275,7 @@ class DtrController extends Controller
             }
 
             $syntheticEntries = collect();
-            $period = CarbonPeriod::create(Carbon::parse($dateFrom)->startOfDay(), Carbon::parse($dateTo)->startOfDay());
+            $period = CarbonPeriod::create($fillDateFrom, $fillDateTo);
             foreach ($period as $day) {
                 if ($day->isWeekend()) {
                     continue;
