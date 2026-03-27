@@ -191,6 +191,15 @@ class DtrController extends Controller
                             $entry->leave_type_label = 'Absent';
                             $entry->setRelation('user', $leave->user);
                             $leaveEntries->push($entry);
+                        } else {
+                            // Normalize older records that may have been created as 8h on leave.
+                            $existingDtr->total_hours = 0;
+                            $existingDtr->overtime_hours = 0;
+                            $existingDtr->status = 'absent';
+                            if (empty($existingDtr->remarks) || strpos((string) $existingDtr->remarks, 'Absent') === false) {
+                                $existingDtr->remarks = 'Approved Leave: Absent';
+                            }
+                            $existingDtr->save();
                         }
                     } elseif ($leave->type === 'offset') {
                         // Offset: parse total hours from reason field and divide by days
@@ -2190,6 +2199,84 @@ class DtrController extends Controller
         $dtrs = $query->orderBy('date', 'asc')
             ->orderBy('user_id')
             ->get();
+
+        // Employees in current PDF scope (respecting restrictions and filters),
+        // used to ensure all weekdays are present in the export.
+        $employeesQuery = User::where('role', 'employee')
+            ->where('is_active', true);
+
+        if ($user->canAccessEmployeeManagement()) {
+            $allowedDepartmentIds = $user->getAllowedDepartmentIds();
+            if ($allowedDepartmentIds !== null) {
+                $employeesQuery->whereIn('department_id', $allowedDepartmentIds);
+            }
+        }
+
+        if ($request->filled('department_id')) {
+            $selectedDeptId = $request->department_id;
+            if ($user->canManageDepartment($selectedDeptId)) {
+                $employeesQuery->where('department_id', $selectedDeptId);
+            }
+        }
+
+        if ($request->filled('employee_id')) {
+            $employeesQuery->where('id', $request->employee_id);
+        }
+
+        $employeesForPdf = $employeesQuery->orderBy('name')->get();
+
+        // Include all weekdays in the selected range:
+        // - HOLIDAY if no employee has any DTR for that day
+        // - ABSENT for employees missing an entry when at least one employee has data that day
+        if ($dateFrom && $dateTo && $employeesForPdf->isNotEmpty()) {
+            $existingMap = [];
+            $dateHasAnyData = [];
+
+            foreach ($dtrs as $dtr) {
+                $dateKey = $dtr->date->format('Y-m-d');
+                $existingMap[$dtr->user_id][$dateKey] = true;
+                $dateHasAnyData[$dateKey] = true;
+            }
+
+            $syntheticEntries = collect();
+            $period = CarbonPeriod::create(Carbon::parse($dateFrom)->startOfDay(), Carbon::parse($dateTo)->startOfDay());
+            foreach ($period as $day) {
+                if ($day->isWeekend()) {
+                    continue;
+                }
+
+                $dateKey = $day->format('Y-m-d');
+                $isHoliday = !isset($dateHasAnyData[$dateKey]);
+
+                foreach ($employeesForPdf as $employeeModel) {
+                    $employeeId = $employeeModel->id;
+                    if (isset($existingMap[$employeeId][$dateKey])) {
+                        continue;
+                    }
+
+                    $entry = new Dtr([
+                        'user_id' => $employeeId,
+                        'date' => $day->copy(),
+                        'total_hours' => 0,
+                        'overtime_hours' => 0,
+                        'status' => $isHoliday ? 'holiday' : 'absent',
+                        'remarks' => $isHoliday
+                            ? 'Auto-labeled holiday (no employee has DTR data for this date).'
+                            : 'Auto-labeled absent (no DTR entry for this employee on this date).',
+                    ]);
+                    $entry->setRelation('user', $employeeModel);
+                    $syntheticEntries->push($entry);
+                }
+            }
+
+            if ($syntheticEntries->isNotEmpty()) {
+                $dtrs = $dtrs->merge($syntheticEntries)
+                    ->sortBy([
+                        ['date', 'asc'],
+                        ['user_id', 'asc'],
+                    ])->values();
+            }
+        }
 
         // Calculate totals
         $totalHours = 0;

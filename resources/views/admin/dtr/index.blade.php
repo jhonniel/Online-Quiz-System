@@ -375,10 +375,10 @@
                                                         @php
                                                             // Explicitly show Absent / Leave when applicable
                                                             if ($dtr->status === 'absent') {
-                                                                $statusLabel = 'Absent';
+                                                                $statusLabel = 'ABSENT';
                                                                 $statusClass = 'bg-red-100 text-red-800';
                                                             } elseif ($dtr->status === 'holiday') {
-                                                                $statusLabel = 'Holiday';
+                                                                $statusLabel = 'HOLIDAY';
                                                                 $statusClass = 'bg-sky-100 text-sky-800';
                                                             } elseif ($dtr->status === 'on_leave') {
                                                                 $statusLabel = $dtr->leave_type_label ?? 'Leave';

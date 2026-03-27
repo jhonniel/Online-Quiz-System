@@ -95,10 +95,12 @@
                         
                         // Check if this DTR has an approved leave request
                         $hasApprovedLeave = false;
+                        $approvedLeaveType = null;
                         if (isset($leaveRequestMap[$employeeId][$dateKey])) {
                             $leaveReq = $leaveRequestMap[$employeeId][$dateKey];
                             if ($leaveReq->status === 'approved') {
                                 $hasApprovedLeave = true;
+                                $approvedLeaveType = $leaveReq->type ?? null;
                             }
                         }
                         
@@ -106,9 +108,9 @@
                         if ($dtr->status === 'travel') {
                             $statusLabel = 'Travel';
                         } elseif ($dtr->status === 'holiday') {
-                            $statusLabel = 'Holiday';
-                        } elseif ($dtr->status === 'absent') {
-                            $statusLabel = 'Absent';
+                            $statusLabel = 'HOLIDAY';
+                        } elseif ($dtr->status === 'absent' || $approvedLeaveType === 'absent') {
+                            $statusLabel = 'ABSENT';
                         } elseif ($hasApprovedLeave || $dtr->status === 'on_leave') {
                             // On Leave counts as Completed
                             $statusLabel = 'Completed';
@@ -162,6 +164,17 @@
                             } else {
                                 $remarks = 'Travel';
                             }
+                        }
+                    @endphp
+                    @php
+                        // Force absent display to 00:00 in PDF table.
+                        if (($statusLabel ?? '') === 'Absent') {
+                            $workedFormatted = '00:00';
+                            $extraFormatted = '00:00';
+                            $totalFormatted = '00:00';
+                            $workedMinutes = 0;
+                            $extraMinutes = 0;
+                            $totalMinutes = 0;
                         }
                     @endphp
                     <tr>
