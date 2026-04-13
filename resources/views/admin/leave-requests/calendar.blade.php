@@ -82,6 +82,15 @@
                 <h2 class="text-xs sm:text-sm font-bold text-gray-900 mb-1.5">File Leave for Employee(s)</h2>
                 <form action="{{ url('/admin/leave-requests/create-for-employee') }}" method="POST" class="space-y-2 lg:flex-1 lg:overflow-y-auto lg:pr-1">
                     @csrf
+                    @if($errors->any())
+                        <div class="rounded-md bg-red-50 border border-red-200 p-2 text-[10px] text-red-800">
+                            <ul class="list-disc list-inside space-y-0.5">
+                                @foreach($errors->all() as $err)
+                                    <li>{{ $err }}</li>
+                                @endforeach
+                            </ul>
+                        </div>
+                    @endif
                     <div class="space-y-1">
                         <label for="create_user_ids" class="block text-xs font-medium text-gray-700">Select Employee(s)</label>
                         <div class="max-h-24 overflow-y-auto border border-gray-300 rounded-md p-1.5 space-y-0.5">
@@ -102,36 +111,85 @@
                         <label for="create_type" class="block text-xs font-medium text-gray-700">Type</label>
                         <select name="type" id="create_type" required class="w-full px-2.5 py-1.5 text-xs border border-gray-300 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500" onchange="handleLeaveTypeChange(this)">
                             <option value="">Select type</option>
-                            <option value="vacation_leave">Vacation Leave</option>
-                            <option value="sick_leave">Sick Leave</option>
-                            <option value="work_from_home">Work From Home</option>
-                            <option value="absent">Absent</option>
-                            <option value="overtime">Overtime</option>
-                            <option value="offset">Offset</option>
-                            <option value="additional_time">Additional Time</option>
-                            <option value="travel">Travel</option>
-                            <option value="other">Other</option>
+                            <option value="vacation_leave" {{ old('type') == 'vacation_leave' ? 'selected' : '' }}>Vacation Leave</option>
+                            <option value="sick_leave" {{ old('type') == 'sick_leave' ? 'selected' : '' }}>Sick Leave</option>
+                            <option value="work_from_home" {{ old('type') == 'work_from_home' ? 'selected' : '' }}>Work From Home</option>
+                            <option value="absent" {{ old('type') == 'absent' ? 'selected' : '' }}>Absent</option>
+                            <option value="overtime" {{ old('type') == 'overtime' ? 'selected' : '' }}>Overtime</option>
+                            <option value="offset" {{ old('type') == 'offset' ? 'selected' : '' }}>Offset</option>
+                            <option value="additional_time" {{ old('type') == 'additional_time' ? 'selected' : '' }}>Additional Time</option>
+                            <option value="travel" {{ old('type') == 'travel' ? 'selected' : '' }}>Travel</option>
+                            <option value="other" {{ old('type') == 'other' ? 'selected' : '' }}>Other</option>
                         </select>
                     </div>
                     <!-- Travel Hours Field (only shown for travel type) -->
                     <div id="travel_hours_container" class="space-y-1 hidden">
                         <label for="travel_hours" class="block text-xs font-medium text-gray-700">Hours per Day</label>
-                        <input type="number" name="travel_hours" id="travel_hours" min="0" max="24" step="0.5" value="8.0" class="w-full px-2.5 py-1.5 text-xs border border-gray-300 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500" placeholder="8.0">
+                        <input type="number" name="travel_hours" id="travel_hours" min="0" max="24" step="0.5" value="{{ old('travel_hours', '8.0') }}" class="w-full px-2.5 py-1.5 text-xs border border-gray-300 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500" placeholder="8.0">
                         <p class="text-[10px] text-gray-500">Default: 8.0 hours per day. Can be customized.</p>
+                    </div>
+
+                    <!-- Overtime (same structure as employee leave form) -->
+                    <div id="admin_overtime_section" class="space-y-1.5 hidden border-t border-gray-100 pt-2 mt-1">
+                        <p class="text-[10px] font-semibold text-gray-800">Overtime Details</p>
+                        <div>
+                            <label for="admin_overtime_hours" class="block text-xs font-medium text-gray-700">Total Overtime (HH:MM) <span class="text-red-500">*</span></label>
+                            <input type="text" name="overtime_hours" id="admin_overtime_hours" value="{{ old('overtime_hours') }}" placeholder="01:30" class="w-full px-2.5 py-1.5 text-xs border border-gray-300 rounded-md focus:ring-2 focus:ring-indigo-500">
+                        </div>
+                        <div>
+                            <label for="admin_overtime_dates" class="block text-xs font-medium text-gray-700">Overtime Dates <span class="text-red-500">*</span></label>
+                            <input type="text" name="overtime_dates" id="admin_overtime_dates" value="{{ old('overtime_dates') }}" placeholder="e.g. May 10–11, 2025" class="w-full px-2.5 py-1.5 text-xs border border-gray-300 rounded-md focus:ring-2 focus:ring-indigo-500">
+                        </div>
+                        <div>
+                            <label for="admin_overtime_tasks" class="block text-xs font-medium text-gray-700">Tasks / ClickUp <span class="text-red-500">*</span></label>
+                            <textarea name="overtime_tasks" id="admin_overtime_tasks" rows="2" class="w-full px-2.5 py-1.5 text-xs border border-gray-300 rounded-md focus:ring-2 focus:ring-indigo-500" placeholder="Tasks and links">{{ old('overtime_tasks') }}</textarea>
+                        </div>
+                    </div>
+
+                    <!-- Offset: optional Hours to Deduct (HH:MM), same as employee -->
+                    <div id="admin_offset_section" class="space-y-1 hidden border-t border-gray-100 pt-2 mt-1">
+                        <p class="text-[10px] font-semibold text-gray-800">Offset Details</p>
+                        <p class="text-[10px] text-gray-500">Optional custom hours to deduct; if blank, duration × 8h (same as employee form).</p>
+                        <div>
+                            <label for="admin_offset_hours" class="block text-xs font-medium text-gray-700">Hours to Deduct (HH:MM) <span class="text-gray-400">(Optional)</span></label>
+                            <input type="text" name="offset_hours" id="admin_offset_hours" value="{{ old('offset_hours') }}" placeholder="08:00" class="w-full px-2.5 py-1.5 text-xs border border-gray-300 rounded-md focus:ring-2 focus:ring-indigo-500">
+                        </div>
+                    </div>
+
+                    <!-- Work From Home (same fields as employee) -->
+                    <div id="admin_wfh_section" class="space-y-1.5 hidden border-t border-gray-100 pt-2 mt-1">
+                        <p class="text-[10px] font-semibold text-gray-800">Work From Home Details</p>
+                        <div>
+                            <label for="admin_wfh_mode" class="block text-xs font-medium text-gray-700">Work Mode <span class="text-red-500">*</span></label>
+                            <select name="wfh_mode" id="admin_wfh_mode" class="w-full px-2.5 py-1.5 text-xs border border-gray-300 rounded-md focus:ring-2 focus:ring-indigo-500">
+                                <option value="">Select</option>
+                                <option value="working_remotely" {{ old('wfh_mode') == 'working_remotely' ? 'selected' : '' }}>Working remotely</option>
+                                <option value="request_to_be_excused" {{ old('wfh_mode') == 'request_to_be_excused' ? 'selected' : '' }}>Request to be excused</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label for="admin_wfh_address" class="block text-xs font-medium text-gray-700">Remote Address <span class="text-red-500">*</span></label>
+                            <input type="text" name="wfh_address" id="admin_wfh_address" value="{{ old('wfh_address') }}" class="w-full px-2.5 py-1.5 text-xs border border-gray-300 rounded-md focus:ring-2 focus:ring-indigo-500" placeholder="Location">
+                        </div>
+                        <div>
+                            <label for="admin_wfh_tasks" class="block text-xs font-medium text-gray-700">Tasks / ClickUp <span class="text-red-500">*</span></label>
+                            <textarea name="wfh_tasks" id="admin_wfh_tasks" rows="2" class="w-full px-2.5 py-1.5 text-xs border border-gray-300 rounded-md focus:ring-2 focus:ring-indigo-500" placeholder="Tasks and links">{{ old('wfh_tasks') }}</textarea>
+                        </div>
                     </div>
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
                         <div class="space-y-1">
                             <label for="create_start_date" class="block text-xs font-medium text-gray-700">Start Date</label>
-                            <input type="date" name="start_date" id="create_start_date" required class="w-full px-2.5 py-1.5 text-xs border border-gray-300 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                            <input type="date" name="start_date" id="create_start_date" value="{{ old('start_date') }}" required class="w-full px-2.5 py-1.5 text-xs border border-gray-300 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
                         </div>
                         <div class="space-y-1">
                             <label for="create_end_date" class="block text-xs font-medium text-gray-700">End Date</label>
-                            <input type="date" name="end_date" id="create_end_date" class="w-full px-2.5 py-1.5 text-xs border border-gray-300 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                            <input type="date" name="end_date" id="create_end_date" value="{{ old('end_date') }}" class="w-full px-2.5 py-1.5 text-xs border border-gray-300 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
                         </div>
                     </div>
-                    <div class="space-y-1">
-                        <label for="create_reason" class="block text-xs font-medium text-gray-700">Reason (optional)</label>
-                        <textarea name="reason" id="create_reason" rows="2" class="w-full px-2.5 py-1.5 text-xs border border-gray-300 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500" placeholder="Add brief notes"></textarea>
+                    <div class="space-y-1" id="admin_reason_wrap">
+                        <label for="create_reason" class="block text-xs font-medium text-gray-700"><span id="admin_reason_label">Reason</span> <span id="admin_reason_optional" class="text-gray-400">(optional)</span></label>
+                        <textarea name="reason" id="create_reason" rows="2" class="w-full px-2.5 py-1.5 text-xs border border-gray-300 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500" placeholder="Add brief notes">{{ old('reason') }}</textarea>
+                        <p class="text-[10px] text-gray-500 hidden" id="admin_travel_reason_help">For Travel, enter location / destination (required).</p>
                     </div>
                     <button type="submit" id="file-leave-btn" class="w-full inline-flex items-center justify-center px-3 py-1 text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded-md shadow focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed">
                         File Leave
@@ -453,6 +511,11 @@ document.addEventListener('DOMContentLoaded', function() {
     // Check if any employees are selected on page load
     updateFileLeaveButton();
 
+    const createTypeEl = document.getElementById('create_type');
+    if (createTypeEl && createTypeEl.value) {
+        handleLeaveTypeChange(createTypeEl);
+    }
+
     // Form submission validation
     const form = document.querySelector("form[action='{{ url('/admin/leave-requests/create-for-employee') }}']");
     if (form) {
@@ -501,23 +564,66 @@ function filterByDepartment(departmentId) {
     window.location.href = '{{ url("/admin/leave-calendar") }}?' + newParams.toString();
 }
 
-// Handle travel leave type selection - show/hide custom hours field
+// Handle leave type selection — match employee-side sections (travel, overtime, offset, WFH)
 function handleLeaveTypeChange(selectElement) {
+    const v = selectElement.value;
     const travelHoursContainer = document.getElementById('travel_hours_container');
     const travelHoursInput = document.getElementById('travel_hours');
     const formHelpText = document.getElementById('form-help-text');
     const travelHelpText = document.getElementById('travel-help-text');
-    
-    if (selectElement.value === 'travel') {
+    const overtimeSec = document.getElementById('admin_overtime_section');
+    const offsetSec = document.getElementById('admin_offset_section');
+    const wfhSec = document.getElementById('admin_wfh_section');
+    const reasonLabel = document.getElementById('admin_reason_label');
+    const reasonOptional = document.getElementById('admin_reason_optional');
+    const travelReasonHelp = document.getElementById('admin_travel_reason_help');
+    const createReason = document.getElementById('create_reason');
+
+    const otH = document.getElementById('admin_overtime_hours');
+    const otD = document.getElementById('admin_overtime_dates');
+    const otT = document.getElementById('admin_overtime_tasks');
+    const wfhM = document.getElementById('admin_wfh_mode');
+    const wfhA = document.getElementById('admin_wfh_address');
+    const wfhTasks = document.getElementById('admin_wfh_tasks');
+
+    [travelHoursContainer, overtimeSec, offsetSec, wfhSec].forEach(el => el && el.classList.add('hidden'));
+    [otH, otD, otT, wfhM, wfhA, wfhTasks].forEach(el => { if (el) el.required = false; });
+    if (createReason) createReason.required = false;
+    if (reasonLabel) reasonLabel.textContent = 'Reason';
+    if (reasonOptional) reasonOptional.classList.remove('hidden');
+    if (travelReasonHelp) travelReasonHelp.classList.add('hidden');
+
+    if (v === 'travel') {
         travelHoursContainer.classList.remove('hidden');
-        travelHoursInput.required = false; // Not required, defaults to 8.0
+        travelHoursInput.required = false;
         formHelpText.classList.add('hidden');
         travelHelpText.classList.remove('hidden');
+        if (reasonLabel) reasonLabel.textContent = 'Location of travel';
+        if (reasonOptional) reasonOptional.classList.add('hidden');
+        if (travelReasonHelp) travelReasonHelp.classList.remove('hidden');
+        if (createReason) createReason.required = true;
     } else {
-        travelHoursContainer.classList.add('hidden');
         travelHoursInput.required = false;
         formHelpText.classList.remove('hidden');
         travelHelpText.classList.add('hidden');
+    }
+
+    if (v === 'overtime') {
+        overtimeSec.classList.remove('hidden');
+        otH.required = true;
+        otD.required = true;
+        otT.required = true;
+    }
+
+    if (v === 'offset') {
+        offsetSec.classList.remove('hidden');
+    }
+
+    if (v === 'work_from_home') {
+        wfhSec.classList.remove('hidden');
+        wfhM.required = true;
+        wfhA.required = true;
+        wfhTasks.required = true;
     }
 }
 </script>

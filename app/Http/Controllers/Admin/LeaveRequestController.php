@@ -570,9 +570,28 @@ class LeaveRequestController extends Controller
             'type' => ['required', Rule::in($allowedTypes)],
             'start_date' => ['required', 'date'],
             'end_date' => ['nullable', 'date', 'after_or_equal:start_date'],
-            'reason' => ['nullable', 'string', 'max:1000'],
-            'travel_hours' => ['nullable', 'numeric', 'min:0', 'max:24'], // Custom hours for travel (per day)
+            'reason' => ['required_if:type,travel', 'nullable', 'string', 'max:1000'],
+            'travel_hours' => ['nullable', 'numeric', 'min:0', 'max:24'],
+            // Same structured fields as employee leave-requests/create
+            'overtime_hours' => ['required_if:type,overtime', 'nullable', 'regex:/^\d{2}:\d{2}$/'],
+            'overtime_dates' => ['required_if:type,overtime', 'nullable', 'string', 'max:255'],
+            'overtime_tasks' => ['required_if:type,overtime', 'nullable', 'string', 'max:2000'],
+            'wfh_mode' => ['required_if:type,work_from_home', 'nullable', 'in:working_remotely,request_to_be_excused'],
+            'wfh_address' => ['required_if:type,work_from_home', 'nullable', 'string', 'max:255'],
+            'wfh_tasks' => ['required_if:type,work_from_home', 'nullable', 'string', 'max:2000'],
+            'offset_hours' => ['nullable', 'regex:/^\d{2}:\d{2}$/'],
         ]);
+
+        if ($validated['type'] === 'offset') {
+            $offsetText = trim((string) ($validated['offset_hours'] ?? ''));
+            if ($offsetText !== '' && $this->parseHourMinuteToMinutesForAdminFiling($offsetText) <= 0) {
+                return redirect()->back()
+                    ->withErrors(['offset_hours' => 'Please enter valid hours to deduct in HH:MM format (e.g., 08:00).'])
+                    ->withInput();
+            }
+        }
+
+        $reasonToStore = $this->buildReasonStringForAdminFiledEmployeeLeave($validated);
 
         $employeeIds = $validated['user_ids'];
 
@@ -641,7 +660,7 @@ class LeaveRequestController extends Controller
                 'type' => $validated['type'],
                 'start_date' => $validated['start_date'],
                 'end_date' => $validated['end_date'] ?? $validated['start_date'],
-                'reason' => $validated['reason'] ?? '',
+                'reason' => $reasonToStore,
                 'travel_hours' => $travelHours,
                 'status' => 'pending',
                 'reviewed_by' => null,
@@ -1762,6 +1781,93 @@ class LeaveRequestController extends Controller
         $msg = $e->getMessage();
         return str_contains($msg, 'dtrs.user_id, dtrs.date')
             || str_contains($msg, 'UNIQUE constraint failed');
+    }
+
+    /**
+     * Parse HH:MM into total minutes (admin calendar filing — mirrors user leave form).
+     */
+    private function parseHourMinuteToMinutesForAdminFiling(string $text): int
+    {
+        $text = trim($text);
+        if (!preg_match('/^(\d{1,3}):(\d{2})$/', $text, $m)) {
+            return 0;
+        }
+        $h = (int) $m[1];
+        $min = (int) $m[2];
+        if ($min < 0 || $min > 59) {
+            return 0;
+        }
+
+        return $h * 60 + $min;
+    }
+
+    /**
+     * Build stored reason text for admin-filed employee leave (same structure as employee-side forms).
+     */
+    private function buildReasonStringForAdminFiledEmployeeLeave(array $validated): string
+    {
+        $type = $validated['type'];
+        $reasonToStore = trim((string) ($validated['reason'] ?? ''));
+
+        if ($type === 'overtime') {
+            $details = "Overtime Request Details:\n";
+            $details .= 'Total Overtime Hours: ' . ($validated['overtime_hours'] ?? '') . "\n";
+            $details .= 'Overtime Dates: ' . ($validated['overtime_dates'] ?? '') . "\n";
+            $details .= "Tasks / ClickUp Links:\n" . ($validated['overtime_tasks'] ?? '') . "\n";
+            if ($reasonToStore !== '') {
+                $details .= "\nAdditional Explanation:\n" . $reasonToStore;
+            }
+
+            return $details;
+        }
+
+        if ($type === 'work_from_home') {
+            $modeLabel = ($validated['wfh_mode'] ?? '') === 'request_to_be_excused'
+                ? 'Request to be excused'
+                : 'Working remotely';
+
+            $details = "Work From Home Request Details:\n";
+            $details .= 'Mode: ' . $modeLabel . "\n";
+            $details .= 'Remote Address: ' . ($validated['wfh_address'] ?? '') . "\n";
+            $details .= 'Work Dates: ' . ($validated['start_date'] ?? '') . ' to ' . ($validated['end_date'] ?? $validated['start_date']) . "\n";
+            $details .= "Tasks / ClickUp Links:\n" . ($validated['wfh_tasks'] ?? '') . "\n";
+            if ($reasonToStore !== '') {
+                $details .= "\nAdditional Explanation:\n" . $reasonToStore;
+            }
+
+            return $details;
+        }
+
+        if ($type === 'offset') {
+            $startDate = Carbon::parse($validated['start_date']);
+            $endDate = $validated['end_date']
+                ? Carbon::parse($validated['end_date'])
+                : $startDate;
+            $days = $startDate->diffInDays($endDate) + 1;
+
+            $offsetText = trim((string) ($validated['offset_hours'] ?? ''));
+            if ($offsetText !== '') {
+                $offsetHours = $offsetText;
+            } else {
+                $totalHours = $days * 8;
+                $offsetHours = sprintf('%02d:00', $totalHours);
+            }
+
+            $details = "Offset Request Details:\n";
+            $details .= 'Duration: ' . $days . ' ' . ($days === 1 ? 'day' : 'days') . "\n";
+            $details .= 'Hours to Deduct: ' . $offsetHours . "\n";
+            if ($reasonToStore !== '') {
+                $details .= "\nReason:\n" . $reasonToStore;
+            }
+
+            return $details;
+        }
+
+        if ($type === 'travel') {
+            return 'Location of travel: ' . $reasonToStore;
+        }
+
+        return $reasonToStore;
     }
 
     /**
