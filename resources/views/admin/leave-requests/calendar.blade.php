@@ -1,6 +1,14 @@
 @extends('layouts.admin')
 
 @section('content')
+<style>
+    /* Ensure employee checkbox list is never trapped in an inner scroll (overrides any global rules). */
+    #leave-calendar-file-leave-form .leave-calendar-employee-checkboxes {
+        max-height: none !important;
+        overflow: visible !important;
+        overflow-y: visible !important;
+    }
+</style>
 <div class="space-y-6">
     <!-- Page Header -->
     <div class="bg-gradient-to-br from-indigo-600 via-indigo-700 to-purple-700 rounded-2xl shadow-xl px-4 py-6 sm:px-6 sm:py-8 text-white">
@@ -78,9 +86,9 @@
             </div>
 
             <!-- Quick Create Leave for Employee -->
-            <div class="bg-white rounded-2xl shadow border border-gray-200 p-2.5 sm:p-3 flex flex-col">
+            <div class="bg-white rounded-2xl shadow border border-gray-200 p-2.5 sm:p-3">
                 <h2 class="text-xs sm:text-sm font-bold text-gray-900 mb-1.5">File Leave for Employee(s)</h2>
-                <form action="{{ url('/admin/leave-requests/create-for-employee') }}" method="POST" class="space-y-2">
+                <form id="leave-calendar-file-leave-form" action="{{ url('/admin/leave-requests/create-for-employee') }}" method="POST" class="space-y-2">
                     @csrf
                     @if($errors->any())
                         <div class="rounded-md bg-red-50 border border-red-200 p-2 text-[10px] text-red-800">
@@ -92,8 +100,8 @@
                         </div>
                     @endif
                     <div class="space-y-1">
-                        <label for="create_user_ids" class="block text-xs font-medium text-gray-700">Select Employee(s)</label>
-                        <div class="border border-gray-300 rounded-md p-1.5 space-y-0.5">
+                        <span id="create_user_ids_label" class="block text-xs font-medium text-gray-700">Select Employee(s)</span>
+                        <div id="create_user_ids" class="leave-calendar-employee-checkboxes border border-gray-300 rounded-md p-1.5 space-y-0.5 max-h-none overflow-y-visible" role="group" aria-labelledby="create_user_ids_label">
                             <div class="flex items-center mb-0.5">
                                 <input type="checkbox" id="select-all-employees" class="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500" onchange="toggleAllEmployees(this)">
                                 <label for="select-all-employees" class="ml-2 text-xs font-semibold text-gray-700 cursor-pointer">Select All</label>
