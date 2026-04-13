@@ -72,7 +72,7 @@
                     <div>
                         <label class="block text-sm font-medium text-gray-500 mb-1">Duration</label>
                         <p class="text-sm font-semibold text-gray-900">
-                            {{ $leaveRequest->days }} {{ $leaveRequest->days == 1 ? 'day' : 'days' }}
+                            {{ $leaveRequest->duration_display_label }}
                         </p>
                     </div>
 
@@ -145,7 +145,7 @@
                         $effectiveDate = $leaveRequest->created_at->format('F d, Y');
                         $startDate = $leaveRequest->start_date->format('F d, Y');
                         $endDate = ($leaveRequest->end_date ?? $leaveRequest->start_date)->format('F d, Y');
-                        $lengthText = $leaveRequest->days . ' ' . ($leaveRequest->days == 1 ? 'day' : 'days');
+                        $lengthText = $leaveRequest->duration_display_label;
                         $reasonText = $leaveRequest->reason ?: '_______________________________________________';
                         $user = auth()->user();
                     @endphp

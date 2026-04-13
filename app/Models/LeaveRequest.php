@@ -165,4 +165,72 @@ class LeaveRequest extends Model
 
         return $this->start_date->diffInDays($this->end_date) + 1;
     }
+
+    /**
+     * Minutes from "Hours to Deduct: H:MM" in stored reason (offset), or null if missing/invalid.
+     */
+    public function parseOffsetHoursToDeductMinutes(): ?int
+    {
+        $raw = (string) ($this->reason ?? '');
+        if (!preg_match('/Hours to Deduct:\s*(\d{1,4}):(\d{2})/', $raw, $m)) {
+            return null;
+        }
+        $h = (int) $m[1];
+        $min = (int) $m[2];
+        if ($min > 59) {
+            return null;
+        }
+        $total = $h * 60 + $min;
+
+        return $total > 0 ? $total : null;
+    }
+
+    /**
+     * Human-readable duration for details UI.
+     * For offset: if hours to deduct differs from (calendar days × 8h), show that HH:MM; otherwise show day count + date range.
+     */
+    public function getDurationDisplayLabelAttribute(): string
+    {
+        if ($this->type !== 'offset') {
+            $d = $this->days;
+
+            return $d . ' ' . ($d === 1 ? 'day' : 'days');
+        }
+
+        $deductMins = $this->parseOffsetHoursToDeductMinutes();
+        $days = $this->days;
+        $defaultMins = $days * 8 * 60;
+        $end = $this->end_date ?? $this->start_date;
+
+        if ($deductMins !== null && $deductMins !== $defaultMins) {
+            $h = intdiv($deductMins, 60);
+            $m = $deductMins % 60;
+
+            return sprintf('%d:%02d', $h, $m) . ' (hours to deduct)';
+        }
+
+        if ($deductMins === null) {
+            return $days . ' ' . ($days === 1 ? 'day' : 'days')
+                . ' — ' . $this->start_date->format('M j, Y') . ' to ' . $end->format('M j, Y');
+        }
+
+        return $days . ' ' . ($days === 1 ? 'day' : 'days')
+            . ' — ' . $this->start_date->format('M j, Y') . ' to ' . $end->format('M j, Y');
+    }
+
+    /**
+     * Total offset hours to deduct (matches DTR / balance logic): explicit HH:MM from reason, else days × 8.
+     */
+    public function getOffsetHoursNeededAttribute(): float
+    {
+        if ($this->type !== 'offset') {
+            return 0.0;
+        }
+        $mins = $this->parseOffsetHoursToDeductMinutes();
+        if ($mins !== null) {
+            return $mins / 60.0;
+        }
+
+        return (float) ($this->days * 8);
+    }
 }

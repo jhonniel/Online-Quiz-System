@@ -82,7 +82,7 @@
                     <div>
                         <label class="block text-sm font-medium text-gray-500 mb-1">Duration</label>
                         <p class="text-sm font-semibold text-gray-900">
-                            {{ $leaveRequest->days }} {{ $leaveRequest->days == 1 ? 'day' : 'days' }}
+                            {{ $leaveRequest->duration_display_label }}
                         </p>
                     </div>
 
@@ -306,7 +306,7 @@
                         $effectiveDate = $leaveRequest->created_at->format('F d, Y');
                         $startDate = $leaveRequest->start_date->format('F d, Y');
                         $endDate = ($leaveRequest->end_date ?? $leaveRequest->start_date)->format('F d, Y');
-                        $lengthText = $leaveRequest->days . ' ' . ($leaveRequest->days == 1 ? 'day' : 'days');
+                        $lengthText = $leaveRequest->duration_display_label;
                         $reasonText = $leaveRequest->reason ?: '_______________________________________________';
                         $employee = $leaveRequest->user;
                     @endphp
@@ -720,7 +720,7 @@
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
                                 </svg>
                                 <div class="text-xs sm:text-sm text-orange-800">
-                                    <strong>Warning:</strong> The offset duration ({{ $leaveRequest->days }} days = {{ $leaveRequest->days * 8 }} hours) exceeds the employee's current overtime balance. Approving this request will result in a negative overtime balance.
+                                    <strong>Warning:</strong> This offset ({{ $leaveRequest->duration_display_label }}; {{ number_format($leaveRequest->offset_hours_needed, 2) }} h charged against overtime) exceeds the employee's current overtime balance. Approving this request will result in a negative overtime balance.
                                 </div>
                             </div>
                         </div>

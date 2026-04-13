@@ -215,7 +215,7 @@
                                     </div>
                                 </td>
                                 <td class="px-3 sm:px-6 py-4">
-                                    <span class="text-xs sm:text-sm text-gray-900">{{ $request->days }} {{ $request->days == 1 ? 'day' : 'days' }}</span>
+                                    <span class="text-xs sm:text-sm text-gray-900">{{ $request->duration_display_label }}</span>
                                     <div class="text-xs text-gray-500 sm:hidden mt-1">
                                         {{ $request->start_date->format('M d') }}
                                         @if($request->end_date && $request->end_date->ne($request->start_date))

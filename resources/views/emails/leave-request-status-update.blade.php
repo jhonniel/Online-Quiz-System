@@ -33,7 +33,7 @@
                     <strong>Start Date:</strong> {{ $leaveRequest->start_date->format('F d, Y') }}<br>
                     @if($leaveRequest->end_date && $leaveRequest->end_date->format('Y-m-d') !== $leaveRequest->start_date->format('Y-m-d'))
                         <strong>End Date:</strong> {{ $leaveRequest->end_date->format('F d, Y') }}<br>
-                        <strong>Duration:</strong> {{ $leaveRequest->days }} {{ $leaveRequest->days == 1 ? 'day' : 'days' }}<br>
+                        <strong>Duration:</strong> {{ $leaveRequest->duration_display_label }}<br>
                     @else
                         <strong>Date:</strong> {{ $leaveRequest->start_date->format('F d, Y') }}<br>
                     @endif

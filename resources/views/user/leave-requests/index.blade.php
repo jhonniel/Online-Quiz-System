@@ -248,7 +248,7 @@
                                         </div>
                                     </td>
                                     <td class="px-6 py-4 whitespace-nowrap">
-                                        <span class="text-sm text-gray-900">{{ $request->days }} {{ $request->days == 1 ? 'day' : 'days' }}</span>
+                                        <span class="text-sm text-gray-900">{{ $request->duration_display_label }}</span>
                                     </td>
                                     <td class="px-6 py-4 whitespace-nowrap">
                                         <span class="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full {{ $request->status_badge_class }}">
