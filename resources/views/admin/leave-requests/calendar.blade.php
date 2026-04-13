@@ -2,14 +2,30 @@
 
 @section('content')
 <style>
-    /* Ensure employee checkbox list is never trapped in an inner scroll (overrides any global rules). */
-    #leave-calendar-file-leave-form .leave-calendar-employee-checkboxes {
+    /* Select Employee(s): full natural height, no inner scroll (beats Tailwind CDN / parent overflow). */
+    #leave-calendar-page #create_user_ids.leave-calendar-employee-checkboxes {
+        height: auto !important;
+        max-height: none !important;
+        overflow: visible !important;
+        overflow-x: visible !important;
+        overflow-y: visible !important;
+    }
+    #leave-calendar-page .leave-calendar-file-leave-card,
+    #leave-calendar-page .leave-calendar-file-leave-card #leave-calendar-file-leave-form,
+    #leave-calendar-page .leave-calendar-employee-field {
+        max-height: none !important;
+        overflow: visible !important;
+        overflow-y: visible !important;
+    }
+    /* Sidebar "Employees" focus list — same idea: no inner scroll box on the name links. */
+    #leave-calendar-page .leave-calendar-employees-card,
+    #leave-calendar-page .leave-calendar-employees-nav {
         max-height: none !important;
         overflow: visible !important;
         overflow-y: visible !important;
     }
 </style>
-<div class="space-y-6">
+<div id="leave-calendar-page" class="space-y-6">
     <!-- Page Header -->
     <div class="bg-gradient-to-br from-indigo-600 via-indigo-700 to-purple-700 rounded-2xl shadow-xl px-4 py-6 sm:px-6 sm:py-8 text-white">
         <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
@@ -38,7 +54,7 @@
     <div class="grid grid-cols-1 lg:grid-cols-4 gap-3 sm:gap-4 items-start">
         <!-- Employee Filter Sidebar -->
         <div class="lg:col-span-1 space-y-2.5 sm:space-y-3">
-            <div class="bg-white rounded-2xl shadow border border-gray-200 p-2 sm:p-2.5 flex flex-col">
+            <div class="leave-calendar-employees-card bg-white rounded-2xl shadow border border-gray-200 p-2 sm:p-2.5">
                 <h2 class="text-xs sm:text-sm font-bold text-gray-900 mb-1.5">Employees</h2>
 
                 <!-- Department Filter -->
@@ -59,7 +75,7 @@
                 <p class="text-[11px] text-gray-500 mb-1.5 sm:mb-2">
                     Tap a name to focus, or choose All Employees.
                 </p>
-                <div class="space-y-1 text-xs sm:text-sm -mx-1">
+                <div class="leave-calendar-employees-nav space-y-1 text-xs sm:text-sm -mx-1">
                     @php
                         $allEmployeesParams = ['month' => $currentMonth->format('Y-m')];
                         if ($selectedDepartmentId) {
@@ -86,7 +102,7 @@
             </div>
 
             <!-- Quick Create Leave for Employee -->
-            <div class="bg-white rounded-2xl shadow border border-gray-200 p-2.5 sm:p-3">
+            <div class="leave-calendar-file-leave-card bg-white rounded-2xl shadow border border-gray-200 p-2.5 sm:p-3">
                 <h2 class="text-xs sm:text-sm font-bold text-gray-900 mb-1.5">File Leave for Employee(s)</h2>
                 <form id="leave-calendar-file-leave-form" action="{{ url('/admin/leave-requests/create-for-employee') }}" method="POST" class="space-y-2">
                     @csrf
@@ -99,9 +115,9 @@
                             </ul>
                         </div>
                     @endif
-                    <div class="space-y-1">
+                    <div class="leave-calendar-employee-field space-y-1">
                         <span id="create_user_ids_label" class="block text-xs font-medium text-gray-700">Select Employee(s)</span>
-                        <div id="create_user_ids" class="leave-calendar-employee-checkboxes border border-gray-300 rounded-md p-1.5 space-y-0.5 max-h-none overflow-y-visible" role="group" aria-labelledby="create_user_ids_label">
+                        <div id="create_user_ids" class="leave-calendar-employee-checkboxes border border-gray-300 rounded-md p-1.5 space-y-0.5" role="group" aria-labelledby="create_user_ids_label">
                             <div class="flex items-center mb-0.5">
                                 <input type="checkbox" id="select-all-employees" class="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500" onchange="toggleAllEmployees(this)">
                                 <label for="select-all-employees" class="ml-2 text-xs font-semibold text-gray-700 cursor-pointer">Select All</label>
