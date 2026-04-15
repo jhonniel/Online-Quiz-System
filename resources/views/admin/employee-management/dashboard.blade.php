@@ -131,6 +131,8 @@
                         <th class="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wide text-gray-500">Pending</th>
                         <th class="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wide text-gray-500">Approved</th>
                         <th class="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wide text-gray-500">Rejected</th>
+                        <th class="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wide text-gray-500">Leave Balance</th>
+                        <th class="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wide text-gray-500">Overtime Balance</th>
                         <th x-show="employeeViewMode === 'detailed'" x-cloak class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">Per Type</th>
                         <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">Joined</th>
                     </tr>
@@ -143,6 +145,9 @@
                             $pending = (int) ($s->pending ?? 0);
                             $approved = (int) ($s->approved ?? 0);
                             $rejected = (int) ($s->rejected ?? 0);
+                            $b = $employeeBalances[$employee->id] ?? null;
+                            $leaveRemaining = $b['leave_remaining'] ?? 0;
+                            $overtimeFormatted = $b['overtime_formatted'] ?? '00:00';
                         @endphp
                         <tr class="hover:bg-gray-50/70 transition-colors">
                             <td class="px-4 py-3">
@@ -161,6 +166,8 @@
                             <td class="px-4 py-3 text-center text-sm font-medium text-amber-700">{{ $pending }}</td>
                             <td class="px-4 py-3 text-center text-sm font-medium text-emerald-700">{{ $approved }}</td>
                             <td class="px-4 py-3 text-center text-sm font-medium text-rose-700">{{ $rejected }}</td>
+                            <td class="px-4 py-3 text-center text-sm font-semibold text-gray-900">{{ rtrim(rtrim(number_format((float) $leaveRemaining, 2, '.', ''), '0'), '.') }}</td>
+                            <td class="px-4 py-3 text-center text-sm font-semibold {{ str_starts_with($overtimeFormatted, '-') ? 'text-rose-700' : 'text-emerald-700' }}">{{ $overtimeFormatted }}</td>
                             <td x-show="employeeViewMode === 'detailed'" x-cloak class="px-4 py-3 text-xs text-gray-700 min-w-[360px]">
                                 <div class="grid grid-cols-2 xl:grid-cols-3 gap-1.5">
                                     @foreach($typeLabels as $typeKey => $typeLabel)
@@ -175,7 +182,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td :colspan="employeeViewMode === 'detailed' ? 11 : 10" class="px-4 py-10 text-center text-sm text-gray-500">No employees found.</td>
+                            <td :colspan="employeeViewMode === 'detailed' ? 13 : 12" class="px-4 py-10 text-center text-sm text-gray-500">No employees found.</td>
                         </tr>
                     @endforelse
                 </tbody>

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\LeaveBalance;
 use App\Models\LeaveRequest;
 use App\Models\User;
 use Carbon\Carbon;
@@ -32,6 +33,7 @@ class EmployeeDashboardController extends Controller
         }
 
         $employeeIds = $employeeQuery->pluck('id');
+        $currentYear = now()->year;
 
         $leaveBaseQuery = LeaveRequest::query()
             ->whereIn('user_id', $employeeIds);
@@ -83,7 +85,11 @@ class EmployeeDashboardController extends Controller
             ->orderBy('name')
             ->get(['id', 'name', 'email', 'department_id', 'university_id', 'is_active', 'created_at']);
 
-        $employeeLeaveStats = (clone $leaveBaseQuery)
+        // All Employees Data: counts should be for the current year only.
+        $leaveBaseQueryForEmployeesTable = (clone $leaveBaseQuery)
+            ->whereYear('start_date', $currentYear);
+
+        $employeeLeaveStats = (clone $leaveBaseQueryForEmployeesTable)
             ->select(
                 'user_id',
                 DB::raw('COUNT(*) as total'),
@@ -95,7 +101,7 @@ class EmployeeDashboardController extends Controller
             ->get()
             ->keyBy('user_id');
 
-        $employeeTypeRaw = (clone $leaveBaseQuery)
+        $employeeTypeRaw = (clone $leaveBaseQueryForEmployeesTable)
             ->select('user_id', 'type', DB::raw('COUNT(*) as total'))
             ->groupBy('user_id', 'type')
             ->get()
@@ -135,6 +141,103 @@ class EmployeeDashboardController extends Controller
             })->all();
         }
 
+        // Balances for All Employees Data (current year).
+        $defaultVacation = (float) \App\Models\Setting::get('default_vacation_balance', 15);
+        $defaultSick = (float) \App\Models\Setting::get('default_sick_leave_balance', 10);
+        $today = Carbon::today();
+
+        // Used leave credits (days) for the current year.
+        $usedLeaveByUser = [];
+        $approvedLeaveCreditRequests = LeaveRequest::whereIn('user_id', $employeeIds)
+            ->whereIn('type', ['leave', 'vacation_leave', 'sick_leave'])
+            ->where('status', 'approved')
+            ->whereYear('start_date', $currentYear)
+            ->get(['id', 'user_id', 'start_date', 'end_date']);
+        foreach ($approvedLeaveCreditRequests as $lr) {
+            $usedLeaveByUser[$lr->user_id] = ($usedLeaveByUser[$lr->user_id] ?? 0) + (int) $lr->days;
+        }
+
+        // Overtime earned from DTRs (minutes): sum(max(total_hours - 8, 0)) for dates up to today.
+        // Note: some installs store total_hours as "HH:MM", so we parse defensively.
+        $dtrOvertimeMinutesByUser = [];
+        $dtrs = \App\Models\Dtr::whereIn('user_id', $employeeIds)
+            ->whereDate('date', '<=', $today)
+            ->get(['user_id', 'total_hours']);
+        foreach ($dtrs as $dtr) {
+            $rawTotal = $dtr->total_hours;
+            $total = 0.0;
+            if (is_numeric($rawTotal)) {
+                $total = (float) $rawTotal;
+            } else {
+                $txt = trim((string) $rawTotal);
+                if (preg_match('/^([0-9]{1,3}):([0-9]{2})$/', $txt, $m)) {
+                    $total = ((int) $m[1]) + (((int) $m[2]) / 60);
+                } else {
+                    $total = (float) $txt;
+                }
+            }
+            $dailyOvertime = max($total - 8.0, 0);
+            $dtrOvertimeMinutesByUser[$dtr->user_id] = ($dtrOvertimeMinutesByUser[$dtr->user_id] ?? 0) + (int) round($dailyOvertime * 60);
+        }
+
+        // Overtime from approved overtime leave requests (minutes) up to today.
+        $overtimeLeaveMinutesByUser = [];
+        $approvedOvertimeRequests = LeaveRequest::whereIn('user_id', $employeeIds)
+            ->where('type', 'overtime')
+            ->where('status', 'approved')
+            ->whereDate('start_date', '<=', $today)
+            ->get(['user_id', 'reason']);
+        foreach ($approvedOvertimeRequests as $ot) {
+            $raw = (string) ($ot->reason ?? '');
+            if (preg_match('/Total Overtime Hours:\s*([0-9]{2}:[0-9]{2})/', $raw, $m)) {
+                [$h, $mPart] = array_map('intval', explode(':', $m[1]));
+                $overtimeLeaveMinutesByUser[$ot->user_id] = ($overtimeLeaveMinutesByUser[$ot->user_id] ?? 0) + ($h * 60 + $mPart);
+            }
+        }
+
+        // Offsets deduct from overtime (minutes).
+        $offsetMinutesByUser = [];
+        $approvedOffsetRequests = LeaveRequest::whereIn('user_id', $employeeIds)
+            ->where('type', 'offset')
+            ->where('status', 'approved')
+            ->get(['user_id', 'reason', 'start_date', 'end_date']);
+        foreach ($approvedOffsetRequests as $off) {
+            $raw = (string) ($off->reason ?? '');
+            if (preg_match('/Hours to Deduct:\s*([0-9]{2}):([0-9]{2})/', $raw, $m)) {
+                $mins = ((int) $m[1]) * 60 + ((int) $m[2]);
+            } else {
+                $mins = (int) round(((int) $off->days * 8) * 60);
+            }
+            $offsetMinutesByUser[$off->user_id] = ($offsetMinutesByUser[$off->user_id] ?? 0) + $mins;
+        }
+
+        $employeeBalances = [];
+        foreach ($employees as $employee) {
+            $leaveBalance = LeaveBalance::firstOrCreateWithCarryover(
+                (int) $employee->id,
+                (int) $currentYear,
+                (float) $defaultVacation,
+                (float) $defaultSick
+            );
+            $allowance = (float) $leaveBalance->vacation_allowance + (float) $leaveBalance->sick_allowance;
+            $used = (int) ($usedLeaveByUser[$employee->id] ?? 0);
+            $leaveRemaining = max($allowance - $used, 0);
+
+            $otMinutes = (int) ($dtrOvertimeMinutesByUser[$employee->id] ?? 0)
+                + (int) ($overtimeLeaveMinutesByUser[$employee->id] ?? 0)
+                - (int) ($offsetMinutesByUser[$employee->id] ?? 0);
+            $otSign = $otMinutes < 0 ? '-' : '';
+            $otAbs = abs($otMinutes);
+            $otH = intdiv($otAbs, 60);
+            $otM = $otAbs % 60;
+            $overtimeFormatted = $otSign . sprintf('%02d:%02d', $otH, $otM);
+
+            $employeeBalances[$employee->id] = [
+                'leave_remaining' => $leaveRemaining,
+                'overtime_formatted' => $overtimeFormatted,
+            ];
+        }
+
         return view('admin.employee-management.dashboard', [
             'stats' => $stats,
             'typeCounts' => $typeCounts,
@@ -143,6 +246,7 @@ class EmployeeDashboardController extends Controller
             'employees' => $employees,
             'employeeLeaveStats' => $employeeLeaveStats,
             'employeeTypeCounts' => $employeeTypeCounts,
+            'employeeBalances' => $employeeBalances,
         ]);
     }
 }
