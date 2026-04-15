@@ -28,6 +28,15 @@ class UserActivity extends Model
         'created_at' => 'datetime'
     ];
 
+    protected static function booted(): void
+    {
+        static::creating(function (self $activity) {
+            if (!$activity->created_at) {
+                $activity->created_at = now();
+            }
+        });
+    }
+
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
@@ -36,17 +45,16 @@ class UserActivity extends Model
     /**
      * Log user activity
      */
-    public static function logActivity(User $user, string $activityType, ?string $action = null, array $metadata = []): self
+    public static function logActivity(?User $user, string $activityType, ?string $action = null, array $metadata = []): self
     {
         return self::create([
-            'user_id' => $user->id,
+            'user_id' => $user?->id,
             'activity_type' => $activityType,
             'action' => $action,
             'page_url' => request()->fullUrl(),
             'ip_address' => request()->ip(),
             'user_agent' => request()->userAgent(),
             'metadata' => $metadata,
-            'created_at' => now()
         ]);
     }
 
@@ -62,7 +70,10 @@ class UserActivity extends Model
             ->orderBy('created_at', 'desc')
             ->limit($limit);
         if ($excludeAdmins) {
-            $query->whereHas('user', fn($q) => $q->where('role', '!=', 'admin'));
+            $query->where(function ($q) {
+                $q->whereNull('user_id')
+                    ->orWhereHas('user', fn($uq) => $uq->where('role', '!=', 'admin'));
+            });
         }
         return $query->get();
     }

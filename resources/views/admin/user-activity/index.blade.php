@@ -133,12 +133,12 @@
                                     <div class="flex items-center">
                                         <div class="w-8 h-8 bg-indigo-100 rounded-full flex items-center justify-center">
                                             <span class="text-indigo-600 font-semibold text-sm">
-                                                {{ substr($activity->user->name, 0, 1) }}
+                                                {{ substr(optional($activity->user)->name ?? 'Guest', 0, 1) }}
                                             </span>
                                         </div>
                                         <div class="ml-3">
-                                            <div class="text-sm font-medium text-gray-900">{{ $activity->user->name }}</div>
-                                            <div class="text-sm text-gray-500">{{ $activity->user->email }}</div>
+                                            <div class="text-sm font-medium text-gray-900">{{ optional($activity->user)->name ?? 'Guest' }}</div>
+                                            <div class="text-sm text-gray-500">{{ optional($activity->user)->email ?? 'Not logged in' }}</div>
                                         </div>
                                     </div>
                                 </td>

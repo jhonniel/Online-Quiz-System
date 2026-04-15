@@ -521,13 +521,19 @@ class DashboardController extends Controller
             try {
                 $activityLogLabels = [];
                 $activityLogTotalData = [];
+                $activityLogGuestTrafficData = [];
                 foreach ($chartRanges as $r) {
                     $activityLogLabels[] = $r['label'];
                     $activityLogTotalData[] = UserActivity::whereBetween('created_at', [$r['start'], $r['end']])->count();
+                    $activityLogGuestTrafficData[] = UserActivity::where('activity_type', 'page_view')
+                        ->whereNull('user_id')
+                        ->whereBetween('created_at', [$r['start'], $r['end']])
+                        ->count();
                 }
             } catch (\Exception $e) {
                 $activityLogLabels = array_column($chartRanges, 'label');
                 $activityLogTotalData = array_fill(0, count($chartRanges), 0);
+                $activityLogGuestTrafficData = array_fill(0, count($chartRanges), 0);
             }
 
             // Chart data: User Activity Logs by type (filtered by period)
@@ -536,17 +542,23 @@ class DashboardController extends Controller
                 $activityLogLoginData = [];
                 $activityLogLogoutData = [];
                 $activityLogPageViewData = [];
+                $activityLogGuestPageViewData = [];
                 foreach ($chartRanges as $r) {
                     $activityLogByTypeLabels[] = $r['label'];
                     $activityLogLoginData[] = UserActivity::where('activity_type', 'login')->whereBetween('created_at', [$r['start'], $r['end']])->count();
                     $activityLogLogoutData[] = UserActivity::where('activity_type', 'logout')->whereBetween('created_at', [$r['start'], $r['end']])->count();
                     $activityLogPageViewData[] = UserActivity::where('activity_type', 'page_view')->whereBetween('created_at', [$r['start'], $r['end']])->count();
+                    $activityLogGuestPageViewData[] = UserActivity::where('activity_type', 'page_view')
+                        ->whereNull('user_id')
+                        ->whereBetween('created_at', [$r['start'], $r['end']])
+                        ->count();
                 }
             } catch (\Exception $e) {
                 $activityLogByTypeLabels = array_column($chartRanges, 'label');
                 $activityLogLoginData = array_fill(0, count($chartRanges), 0);
                 $activityLogLogoutData = array_fill(0, count($chartRanges), 0);
                 $activityLogPageViewData = array_fill(0, count($chartRanges), 0);
+                $activityLogGuestPageViewData = array_fill(0, count($chartRanges), 0);
             }
 
             // Chart data: Login time trend - logins per bucket (filtered by period)
@@ -654,10 +666,12 @@ class DashboardController extends Controller
                 'loginTimeData',
                 'activityLogLabels',
                 'activityLogTotalData',
+                'activityLogGuestTrafficData',
                 'activityLogByTypeLabels',
                 'activityLogLoginData',
                 'activityLogLogoutData',
                 'activityLogPageViewData',
+                'activityLogGuestPageViewData',
                 'mostActiveUsers'
             ));
         } catch (\Exception $e) {
@@ -736,10 +750,12 @@ class DashboardController extends Controller
                 'loginTimeData' => [],
                 'activityLogLabels' => [],
                 'activityLogTotalData' => [],
+                'activityLogGuestTrafficData' => [],
                 'activityLogByTypeLabels' => [],
                 'activityLogLoginData' => [],
                 'activityLogLogoutData' => [],
                 'activityLogPageViewData' => [],
+                'activityLogGuestPageViewData' => [],
                 'mostActiveUsers' => collect(),
             ])->with('error', 'Some dashboard data could not be loaded. Please refresh the page.');
         }
@@ -773,7 +789,7 @@ class DashboardController extends Controller
                 'recentActivities' => $recentActivities->map(function ($activity) {
                     return [
                         'id' => $activity->id,
-                        'user_name' => $activity->user->name,
+                        'user_name' => optional($activity->user)->name ?? 'Guest',
                         'activity_type' => $activity->activity_type,
                         'action' => $activity->action,
                         'page_url' => $activity->page_url,

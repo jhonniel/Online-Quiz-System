@@ -138,6 +138,7 @@ class UserActivityController extends Controller
         // Top active users
         $topActiveUsers = UserActivity::selectRaw('user_id, COUNT(*) as activity_count')
             ->with('user')
+            ->whereNotNull('user_id')
             ->where('created_at', '>=', now()->subDays(7))
             ->groupBy('user_id')
             ->orderBy('activity_count', 'desc')

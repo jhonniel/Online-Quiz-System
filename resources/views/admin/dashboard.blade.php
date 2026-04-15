@@ -1331,10 +1331,12 @@ document.addEventListener('DOMContentLoaded', function() {
     const loginTimeData = @json($loginTimeData ?? []);
     const activityLogLabels = @json($activityLogLabels ?? []);
     const activityLogTotalData = @json($activityLogTotalData ?? []);
+    const activityLogGuestTrafficData = @json($activityLogGuestTrafficData ?? []);
     const activityLogByTypeLabels = @json($activityLogByTypeLabels ?? []);
     const activityLogLoginData = @json($activityLogLoginData ?? []);
     const activityLogLogoutData = @json($activityLogLogoutData ?? []);
     const activityLogPageViewData = @json($activityLogPageViewData ?? []);
+    const activityLogGuestPageViewData = @json($activityLogGuestPageViewData ?? []);
 
     // Activity Trends Chart (Logins + Quiz Attempts)
     if (document.getElementById('activityChart') && typeof Chart !== 'undefined') {
@@ -1380,19 +1382,29 @@ document.addEventListener('DOMContentLoaded', function() {
             type: 'line',
             data: {
                 labels: activityLogLabels,
-                datasets: [{
-                    label: 'Total Activities',
-                    data: activityLogTotalData,
-                    borderColor: 'rgb(99, 102, 241)',
-                    backgroundColor: 'rgba(99, 102, 241, 0.1)',
-                    fill: true,
-                    tension: 0.3
-                }]
+                datasets: [
+                    {
+                        label: 'Total Activities',
+                        data: activityLogTotalData,
+                        borderColor: 'rgb(99, 102, 241)',
+                        backgroundColor: 'rgba(99, 102, 241, 0.1)',
+                        fill: true,
+                        tension: 0.3
+                    },
+                    {
+                        label: 'Guest Traffic (URLs Visited)',
+                        data: activityLogGuestTrafficData,
+                        borderColor: 'rgb(245, 158, 11)',
+                        backgroundColor: 'rgba(245, 158, 11, 0.12)',
+                        fill: true,
+                        tension: 0.3
+                    }
+                ]
             },
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
-                plugins: { legend: { display: false } },
+                plugins: { legend: { position: 'top' } },
                 scales: {
                     y: { beginAtZero: true }
                 }
@@ -1428,6 +1440,14 @@ document.addEventListener('DOMContentLoaded', function() {
                         data: activityLogPageViewData,
                         borderColor: 'rgb(59, 130, 246)',
                         backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                        fill: true,
+                        tension: 0.3
+                    },
+                    {
+                        label: 'Guest Page View',
+                        data: activityLogGuestPageViewData,
+                        borderColor: 'rgb(245, 158, 11)',
+                        backgroundColor: 'rgba(245, 158, 11, 0.12)',
                         fill: true,
                         tension: 0.3
                     }
