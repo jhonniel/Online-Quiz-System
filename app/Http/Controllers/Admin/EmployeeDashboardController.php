@@ -157,29 +157,8 @@ class EmployeeDashboardController extends Controller
             $usedLeaveByUser[$lr->user_id] = ($usedLeaveByUser[$lr->user_id] ?? 0) + (int) $lr->days;
         }
 
-        // Overtime earned from DTRs (minutes): sum(max(total_hours - 8, 0)) for dates up to today.
-        // Note: some installs store total_hours as "HH:MM", so we parse defensively.
-        $dtrOvertimeMinutesByUser = [];
-        $dtrs = \App\Models\Dtr::whereIn('user_id', $employeeIds)
-            ->whereDate('date', '<=', $today)
-            ->get(['user_id', 'total_hours']);
-        foreach ($dtrs as $dtr) {
-            $rawTotal = $dtr->total_hours;
-            $total = 0.0;
-            if (is_numeric($rawTotal)) {
-                $total = (float) $rawTotal;
-            } else {
-                $txt = trim((string) $rawTotal);
-                if (preg_match('/^([0-9]{1,3}):([0-9]{2})$/', $txt, $m)) {
-                    $total = ((int) $m[1]) + (((int) $m[2]) / 60);
-                } else {
-                    $total = (float) $txt;
-                }
-            }
-            $dailyOvertime = max($total - 8.0, 0);
-            $dtrOvertimeMinutesByUser[$dtr->user_id] = ($dtrOvertimeMinutesByUser[$dtr->user_id] ?? 0) + (int) round($dailyOvertime * 60);
-        }
-
+        // Overtime balance (usable for offset) is ONLY based on approved overtime leave requests
+        // minus approved offset requests (do NOT include DTR overtime here).
         // Overtime from approved overtime leave requests (minutes) up to today.
         $overtimeLeaveMinutesByUser = [];
         $approvedOvertimeRequests = LeaveRequest::whereIn('user_id', $employeeIds)
@@ -223,8 +202,7 @@ class EmployeeDashboardController extends Controller
             $used = (int) ($usedLeaveByUser[$employee->id] ?? 0);
             $leaveRemaining = max($allowance - $used, 0);
 
-            $otMinutes = (int) ($dtrOvertimeMinutesByUser[$employee->id] ?? 0)
-                + (int) ($overtimeLeaveMinutesByUser[$employee->id] ?? 0)
+            $otMinutes = (int) ($overtimeLeaveMinutesByUser[$employee->id] ?? 0)
                 - (int) ($offsetMinutesByUser[$employee->id] ?? 0);
             $otSign = $otMinutes < 0 ? '-' : '';
             $otAbs = abs($otMinutes);
