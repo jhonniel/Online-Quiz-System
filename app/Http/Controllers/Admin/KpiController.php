@@ -56,9 +56,9 @@ class KpiController extends Controller
 
         // DTR deficits overlapping selected range (accuracy upgrade).
         $deficits = DtrDeficit::whereIn('user_id', $users->pluck('id'))
-            ->whereDate('week_end', '>=', $startDate->toDateString())
-            ->whereDate('week_start', '<=', $endDate->toDateString())
-            ->orderBy('week_start')
+            ->whereDate('week_end_date', '>=', $startDate->toDateString())
+            ->whereDate('week_start_date', '<=', $endDate->toDateString())
+            ->orderBy('week_start_date')
             ->get();
         $deficitHoursByUser = $deficits->groupBy('user_id')->map(fn($rows) => (float) $rows->sum('deficit_hours'));
 
@@ -374,7 +374,7 @@ class KpiController extends Controller
 
         $deficitByWeek = [];
         foreach ($deficits as $deficit) {
-            $weekLabel = Carbon::parse($deficit->week_start)->format('M d');
+            $weekLabel = Carbon::parse($deficit->week_start_date)->format('M d');
             if (!isset($deficitByWeek[$weekLabel])) {
                 $deficitByWeek[$weekLabel] = 0.0;
             }
