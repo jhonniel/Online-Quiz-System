@@ -72,6 +72,7 @@
                     <tr>
                         <th scope="col" class="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Account / Email</th>
                         <th scope="col" class="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden sm:table-cell">Starlink ID</th>
+                        <th scope="col" class="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden md:table-cell">Kit No.</th>
                         <th scope="col" class="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden md:table-cell">Office / Location</th>
                         <th scope="col" class="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden lg:table-cell">Plan</th>
                         <th scope="col" class="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
@@ -87,14 +88,24 @@
                                     @if($starlink->linkedAccount && $starlink->linkedAccount->name)
                                         <p class="text-xs text-gray-500 truncate max-w-[200px] sm:max-w-xs">{{ $starlink->linkedAccount->name }}</p>
                                     @endif
+                                    <div class="mt-1 text-xs text-gray-500 sm:hidden">
+                                        <span class="font-medium text-gray-600">Starlink ID:</span>
+                                        <span class="font-mono">{{ $starlink->starlink_id ?: '—' }}</span>
+                                        <span class="mx-1">|</span>
+                                        <span class="font-medium text-gray-600">Kit No.:</span>
+                                        <span class="font-mono">{{ $starlink->kit_number ?: '—' }}</span>
+                                    </div>
                                 </div>
                             </td>
                             <td class="px-4 sm:px-6 py-4 hidden sm:table-cell">
-                                <div class="flex items-center gap-2">
+                                <div class="flex items-center gap-2 flex-wrap">
                                     <span class="text-sm text-gray-600 font-mono">{{ $starlink->starlink_id ?: '—' }}</span>
                                     @php $overdueCount = $overdueCounts[$starlink->id] ?? 0; @endphp
                                     <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium {{ $overdueCount > 0 ? 'bg-amber-100 text-amber-800' : 'bg-gray-100 text-gray-500' }}" title="{{ $overdueCount > 0 ? $overdueCount . ' billing cycle(s) overdue (unpaid)' : 'No overdue cycles' }}">{{ $overdueCount }}</span>
                                 </div>
+                            </td>
+                            <td class="px-4 sm:px-6 py-4 text-sm text-gray-600 font-mono hidden md:table-cell">
+                                {{ $starlink->kit_number ?: '—' }}
                             </td>
                             <td class="px-4 sm:px-6 py-4 text-sm text-gray-600 hidden md:table-cell max-w-[140px] truncate" title="{{ $starlink->office_location ?? '' }}">{{ $starlink->office_location ? Str::limit($starlink->office_location, 22) : '—' }}</td>
                             <td class="px-4 sm:px-6 py-4 whitespace-nowrap hidden lg:table-cell">
@@ -138,7 +149,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="6" class="px-4 sm:px-6 py-16 text-center">
+                            <td colspan="7" class="px-4 sm:px-6 py-16 text-center">
                                 <div class="flex flex-col items-center">
                                     <div class="w-14 h-14 rounded-full bg-gray-100 flex items-center justify-center mb-4">
                                         <svg class="w-7 h-7 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.111 16.404a5.5 5.5 0 017.778 0M12 20h.01m-7.08-7.071c3.904-3.905 10.236-3.905 14.141 0M1.394 9.393c5.857-5.857 15.355-5.857 21.213 0"></path></svg>
