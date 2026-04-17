@@ -152,6 +152,12 @@ class KpiController extends Controller
             $attendanceRate = (($workedDays + $excusedCount) / $consideredAttendanceDays) * 100;
             $punctualityRate = $workedDays > 0 ? (($workedDays - $lateCount) / $workedDays) * 100 : 100;
             $hoursRate = min(($avgHoursPerDay / 8) * 100, 100);
+            $activityValues = $userDtrs
+                ->pluck('activity_percentage')
+                ->filter(fn($value) => $value !== null);
+            $activityRate = $activityValues->count() > 0
+                ? min(max((float) $activityValues->avg(), 0), 100)
+                : $hoursRate;
             $deficitHours = (float) ($deficitHoursByUser->get($user->id, 0));
             $deficitPenaltyRate = min($deficitHours * 2, 100); // 2 points per deficit hour.
 
@@ -160,9 +166,10 @@ class KpiController extends Controller
                 0,
                 min(
                     100,
-                    ($attendanceRate * 0.45)
-                    + ($punctualityRate * 0.25)
-                    + ($hoursRate * 0.30)
+                    ($attendanceRate * 0.35)
+                    + ($punctualityRate * 0.20)
+                    + ($hoursRate * 0.15)
+                    + ($activityRate * 0.30)
                     - ($deficitPenaltyRate * 0.15)
                 )
             );
@@ -185,6 +192,7 @@ class KpiController extends Controller
                 'attendance_rate' => $attendanceRate,
                 'punctuality_rate' => $punctualityRate,
                 'hours_rate' => $hoursRate,
+                'activity_rate' => $activityRate,
                 'deficit_hours' => $deficitHours,
                 'has_perfect_attendance' => $hasPerfectAttendance,
                 'performance_score' => $performanceScore,
@@ -289,7 +297,12 @@ class KpiController extends Controller
             $punctualityRateForDay = $workedForDay > 0 ? (($workedForDay - $lateCount) / $workedForDay) * 100 : 100;
             $avgHours = $usersWithDtr > 0 ? ((float) $dayDtrs->sum('total_hours')) / $usersWithDtr : 0;
             $hoursRateForDay = min(($avgHours / 8) * 100, 100);
-            $dailyScore = max(0, min(100, ($attendanceRateForDay * 0.45) + ($punctualityRateForDay * 0.25) + ($hoursRateForDay * 0.30)));
+            $activityRateForDay = $dayDtrs
+                ->pluck('activity_percentage')
+                ->filter(fn($value) => $value !== null)
+                ->whenEmpty(fn($collection) => $collection->push($hoursRateForDay))
+                ->avg();
+            $dailyScore = max(0, min(100, ($attendanceRateForDay * 0.35) + ($punctualityRateForDay * 0.20) + ($hoursRateForDay * 0.15) + ((float) $activityRateForDay * 0.30)));
 
             $dailyPerformance[$dateStr] = [
                 'date' => $currentDate->format('M d'),
@@ -325,7 +338,7 @@ class KpiController extends Controller
             'Attendance' => collect($performanceData)->avg('attendance_rate'),
             'Punctuality' => collect($performanceData)->avg('punctuality_rate'),
             'Hours Worked' => collect($performanceData)->avg('total_hours'),
-            'Productivity' => collect($performanceData)->avg('hours_rate'),
+            'Productivity' => collect($performanceData)->avg('activity_rate'),
             'Consistency' => collect($performanceData)->avg('working_days') / max(collect($performanceData)->avg('total_days'), 1) * 100,
             'Performance Score' => collect($performanceData)->avg('performance_score')
         ];
@@ -336,7 +349,7 @@ class KpiController extends Controller
                 'Attendance' => $topPerformer['attendance_rate'],
                 'Punctuality' => $topPerformer['punctuality_rate'],
                 'Hours Worked' => $topPerformer['total_hours'],
-                'Productivity' => $topPerformer['hours_rate'],
+                'Productivity' => $topPerformer['activity_rate'],
                 'Consistency' => $topPerformer['total_days'] > 0 ? ($topPerformer['working_days'] / $topPerformer['total_days'] * 100) : 0,
                 'Performance Score' => $topPerformer['performance_score']
             ];

@@ -16,6 +16,7 @@ class Dtr extends Model
         'break_end',
         'total_hours',
         'overtime_hours',
+        'activity_percentage',
         'remarks',
         'added_time_from_note',
         'status',
@@ -25,6 +26,7 @@ class Dtr extends Model
         'date' => 'date',
         'total_hours' => 'decimal:2',
         'overtime_hours' => 'decimal:2',
+        'activity_percentage' => 'decimal:2',
     ];
 
     /**

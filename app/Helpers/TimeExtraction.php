@@ -50,6 +50,8 @@ class TimeExtraction
         'forty' => 40,
         'fifty' => 50,
         'sixty' => 60,
+        'seventy' => 70,
+        'eighty' => 80,
         'ninety' => 90,
     ];
 
@@ -75,8 +77,11 @@ class TimeExtraction
             return 0.0;
         }
 
-        // Normalize: lowercase, remove extra whitespace
-        $text = strtolower(trim(preg_replace('/\s+/', ' ', $text)));
+        // Normalize: lowercase, convert common separators to spaces, remove extra whitespace.
+        // Keep ":" and "." so values like 1:30 and 1.5 remain parseable.
+        $text = strtolower($text);
+        $text = preg_replace('/[-_,;]+/', ' ', $text);
+        $text = trim(preg_replace('/\s+/', ' ', $text));
 
         // Remove filler words: "about", "around", "approximately", "roughly", "nearly"
         $text = preg_replace('/\b(about|around|approximately|roughly|nearly)\s+/i', '', $text);
@@ -85,7 +90,7 @@ class TimeExtraction
         $matched = [];
 
         // Build word pattern for reuse
-        $wordPattern = implode('|', array_keys(self::$wordNumbers));
+        $wordPattern = '(?:' . implode('|', array_keys(self::$wordNumbers)) . ')';
 
         // 0. "one and a half hr", "two and half hours", "one and half hr" (word number + and + half/quarter + hour)
         if (preg_match_all('/\b(' . $wordPattern . ')\s+and\s+(?:a\s+)?(half|quarter)\s*(?:h(?:(?:ou)?r)?s?)\b/i', $text, $matches, PREG_SET_ORDER)) {
@@ -157,31 +162,48 @@ class TimeExtraction
             }
         }
 
-        // 6. Word-based hours: "one hour", "two hrs", "three hours"
-        if (preg_match_all('/\b(' . $wordPattern . ')\s*(?:h(?:(?:ou)?r)?s?)\b/i', $text, $matches, PREG_SET_ORDER)) {
+        // 6. Combined word hours and minutes: "one hr three mins", "two hours fifteen minutes"
+        if (preg_match_all('/\b((' . $wordPattern . ')(?:\s+' . $wordPattern . ')?)\s*(?:h(?:(?:ou)?r)?s?)\s+((' . $wordPattern . ')(?:\s+' . $wordPattern . ')?)\s*(?:m(?:in(?:ute)?s?)?)\b/i', $text, $matches, PREG_SET_ORDER)) {
             foreach ($matches as $m) {
-                $num = self::$wordNumbers[strtolower($m[1])] ?? 0;
-                $totalMinutes += $num * 60;
-                $matched[] = $m[0];
+                if (!self::alreadyMatched($m[0], $matched)) {
+                    $hrs = self::parseWordNumberPhrase($m[1]);
+                    $mins = self::parseWordNumberPhrase($m[3]);
+                    $totalMinutes += $hrs * 60 + $mins;
+                    $matched[] = $m[0];
+                }
             }
         }
 
-        // 7. Word-based minutes: "thirty mins", "fifteen minutes", "three mins"
-        if (preg_match_all('/\b(' . $wordPattern . ')\s*(?:m(?:in(?:ute)?s?)?)\b/i', $text, $matches, PREG_SET_ORDER)) {
+        // 7. Word-based hours: "one hour", "two hrs", "three hours"
+        if (preg_match_all('/\b((' . $wordPattern . ')(?:\s+' . $wordPattern . ')?)\s*(?:h(?:(?:ou)?r)?s?)\b/i', $text, $matches, PREG_SET_ORDER)) {
             foreach ($matches as $m) {
-                $num = self::$wordNumbers[strtolower($m[1])] ?? 0;
-                $totalMinutes += $num;
-                $matched[] = $m[0];
+                if (!self::alreadyMatched($m[0], $matched)) {
+                    $num = self::parseWordNumberPhrase($m[1]);
+                    $totalMinutes += $num * 60;
+                    $matched[] = $m[0];
+                }
             }
         }
 
-        // 8. Combined word hours and minutes: "one hr three mins", "two hours fifteen minutes"
-        if (preg_match_all('/\b(' . $wordPattern . ')\s*(?:h(?:(?:ou)?r)?s?)\s+(' . $wordPattern . ')\s*(?:m(?:in(?:ute)?s?)?)\b/i', $text, $matches, PREG_SET_ORDER)) {
+        // 8. Word-based minutes: "thirty mins", "fifteen minutes", "three mins"
+        if (preg_match_all('/\b((' . $wordPattern . ')(?:\s+' . $wordPattern . ')?)\s*(?:m(?:in(?:ute)?s?)?)\b/i', $text, $matches, PREG_SET_ORDER)) {
             foreach ($matches as $m) {
-                $hrs = self::$wordNumbers[strtolower($m[1])] ?? 0;
-                $mins = self::$wordNumbers[strtolower($m[2])] ?? 0;
-                $totalMinutes += $hrs * 60 + $mins;
-                $matched[] = $m[0];
+                if (!self::alreadyMatched($m[0], $matched)) {
+                    $num = self::parseWordNumberPhrase($m[1]);
+                    $totalMinutes += $num;
+                    $matched[] = $m[0];
+                }
+            }
+        }
+
+        // 9. "an hour", "a minute"
+        if (preg_match_all('/\b(?:an?|one)\s+(hour|hr|minute|min)\b/i', $text, $matches, PREG_SET_ORDER)) {
+            foreach ($matches as $m) {
+                if (!self::alreadyMatched($m[0], $matched)) {
+                    $unit = strtolower($m[1]);
+                    $totalMinutes += str_starts_with($unit, 'h') ? 60 : 1;
+                    $matched[] = $m[0];
+                }
             }
         }
 
@@ -199,6 +221,32 @@ class TimeExtraction
             }
         }
         return false;
+    }
+
+    /**
+     * Parse number phrases like "five", "twenty", "seventy five".
+     */
+    private static function parseWordNumberPhrase(string $phrase): int
+    {
+        $phrase = strtolower(trim(preg_replace('/\s+/', ' ', $phrase)));
+        if ($phrase === '') {
+            return 0;
+        }
+
+        if (isset(self::$wordNumbers[$phrase])) {
+            return self::$wordNumbers[$phrase];
+        }
+
+        $parts = explode(' ', $phrase);
+        if (count($parts) === 2) {
+            $first = self::$wordNumbers[$parts[0]] ?? null;
+            $second = self::$wordNumbers[$parts[1]] ?? null;
+            if ($first !== null && $second !== null) {
+                return $first + $second;
+            }
+        }
+
+        return 0;
     }
 
     /**

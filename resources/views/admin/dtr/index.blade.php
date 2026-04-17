@@ -150,6 +150,7 @@
                                 <li><strong>Date</strong> - Format: YYYY-MM-DD (e.g., 2024-12-01)</li>
                                 <li><strong>Worked Hours</strong> - Base hours worked for that day in <strong>HH:MM</strong> format (e.g., 08:00, 07:30)</li>
                                 <li><strong>Added Time From Note</strong> - Extra hours to add in <strong>HH:MM</strong> format (e.g., 01:15, 00:00)</li>
+                                <li><strong>Activity Percentage</strong> - Performance activity value from <strong>0 to 100</strong> (e.g., 92, 87.5, 100)</li>
                                 <li><strong>Remarks</strong> - Any additional notes (optional)</li>
                             </ul>
                             <div class="mt-3 p-2 bg-blue-100 rounded border border-blue-200">
@@ -315,6 +316,7 @@
                                                 <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Added Time From Note</th>
                                                 <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total Hours</th>
                                                 <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Overtime</th>
+                                                <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Activity %</th>
                                                 <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
                                                 <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Remarks</th>
                                             </tr>
@@ -369,6 +371,11 @@
                                                         @endphp
                                                         <div class="text-sm font-medium text-orange-600">
                                                             {{ $otMinutes > 0 ? $otFormatted : '00:00' }}
+                                                        </div>
+                                                    </td>
+                                                    <td class="px-3 py-2 whitespace-nowrap">
+                                                        <div class="text-sm font-medium text-indigo-700">
+                                                            {{ $dtr->activity_percentage !== null ? number_format((float) $dtr->activity_percentage, 2) . '%' : '-' }}
                                                         </div>
                                                     </td>
                                                     <td class="px-3 py-2 whitespace-nowrap">

@@ -979,8 +979,10 @@ class DtrController extends Controller
             DB::beginTransaction();
 
             while (($row = fgetcsv($handle)) !== false) {
-                // Require at least 4 columns: Email, Date, Worked Hours, Added Time From Note
-                // Remarks is optional (5th column)
+                // Require at least 4 columns: Email, Date, Worked Hours, Added Time From Note.
+                // Supports both formats:
+                // - New: Email, Date, Worked Hours, Added Time, Activity Percentage, Remarks
+                // - Legacy: Email, Date, Worked Hours, Added Time, Remarks
                 if (count($row) < 4) {
                     $skipped++;
                     continue;
@@ -988,13 +990,21 @@ class DtrController extends Controller
 
                 try {
                     // Expected CSV format (same calculation logic as manual creation):
-                    // [Student|Employee] Email, Date (YYYY-MM-DD), Worked Hours (HH:MM), Added Time From Note (HH:MM), Remarks
+                    // [Student|Employee] Email, Date (YYYY-MM-DD), Worked Hours (HH:MM),
+                    // Added Time From Note (HH:MM), Activity Percentage (0-100), Remarks
                     // Total Hours, Overtime Hours, and Status are automatically calculated/determined by the system
                     $email = trim($row[0] ?? '');
                     $date = trim($row[1] ?? '');
                     $workedHours = trim($row[2] ?? '00:00');
                     $addedTimeFromNote = trim($row[3] ?? '00:00');
-                    $remarks = trim($row[4] ?? '');
+                    $activityPercentageRaw = '';
+                    $remarks = '';
+                    if (count($row) >= 6) {
+                        $activityPercentageRaw = trim($row[4] ?? '');
+                        $remarks = trim($row[5] ?? '');
+                    } else {
+                        $remarks = trim($row[4] ?? '');
+                    }
 
                     // Validate required fields
                     if (empty($email) || empty($date)) {
@@ -1043,6 +1053,24 @@ class DtrController extends Controller
                     };
 
                     $workedHoursValue = $toDecimal($workedHours);
+
+                    // Parse optional activity percentage (0-100).
+                    $activityPercentageValue = null;
+                    if ($activityPercentageRaw !== '') {
+                        $normalizedPercentage = str_replace('%', '', $activityPercentageRaw);
+                        if (!is_numeric($normalizedPercentage)) {
+                            $errors[] = "Invalid activity percentage for {$email} on {$date}: {$activityPercentageRaw}";
+                            $skipped++;
+                            continue;
+                        }
+
+                        $activityPercentageValue = round((float) $normalizedPercentage, 2);
+                        if ($activityPercentageValue < 0 || $activityPercentageValue > 100) {
+                            $errors[] = "Activity percentage must be between 0 and 100 for {$email} on {$date}: {$activityPercentageRaw}";
+                            $skipped++;
+                            continue;
+                        }
+                    }
 
                     // Parse Added Time From Note using SmartTimeParser
                     // Supports: 1h, 1hr, 1h30m, 2h 15m, 45m, 1:30, 1.5 hours, half hour,
@@ -1118,6 +1146,7 @@ class DtrController extends Controller
                         'added_time_from_note' => $addedTimeFromNoteValue,
                         'total_hours' => $totalHoursValue,
                         'overtime_hours' => $overtimeHoursValue,
+                        'activity_percentage' => $activityPercentageValue,
                         'status' => $status,
                         'remarks' => $finalRemarks,
                     ]);
@@ -1177,13 +1206,14 @@ class DtrController extends Controller
                 'Date (YYYY-MM-DD)',
                 'Worked Hours (HH:MM)',
                 'Added Time From Note (HH:MM)',
+                'Activity Percentage (0-100)',
                 'Remarks',
             ],
-            ['employee@example.com', '2024-12-01', '08:00', '00:00', 'Regular work day'],
-            ['employee@example.com', '2024-12-02', '08:00', '02:00', 'Overtime work - Total will be 10:00, Overtime will be 02:00'],
-            ['employee@example.com', '2024-12-03', '04:00', '00:00', 'Half day - Status will be automatically determined'],
-            ['employee@example.com', '2024-12-04', '00:00', '00:00', 'Absent - Status will be automatically determined'],
-            ['employee@example.com', '2024-12-05', '08:00', '00:00', 'Full day work'],
+            ['employee@example.com', '2024-12-01', '08:00', '00:00', '96', 'Regular work day'],
+            ['employee@example.com', '2024-12-02', '08:00', '02:00', '88.5', 'Overtime work - Total will be 10:00, Overtime will be 02:00'],
+            ['employee@example.com', '2024-12-03', '04:00', '00:00', '72', 'Half day - Status will be automatically determined'],
+            ['employee@example.com', '2024-12-04', '00:00', '00:00', '0', 'Absent - Status will be automatically determined'],
+            ['employee@example.com', '2024-12-05', '08:00', '00:00', '100', 'Full day work'],
         ];
 
         $filename = 'dtr_import_template_' . date('Y-m-d') . '.csv';
