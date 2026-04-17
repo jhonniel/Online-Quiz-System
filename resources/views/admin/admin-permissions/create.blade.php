@@ -78,6 +78,13 @@
                         @endif
                     </p>
 
+                    <div class="mb-3">
+                        <input type="text"
+                               id="user_search"
+                               placeholder="Search {{ $isFullAccessAdmin ? 'users' : 'employees' }} by name, email, or role..."
+                               class="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm text-sm focus:ring-indigo-500 focus:border-indigo-500">
+                    </div>
+
                     <select name="user_id"
                             id="user_id"
                             required
@@ -92,6 +99,20 @@
                     @error('user_id')
                         <p class="mt-2 text-sm text-red-600">{{ $message }}</p>
                     @enderror
+                </div>
+
+                <!-- Initial permission shortcuts -->
+                <div class="mb-6 p-4 border border-gray-200 rounded-lg bg-gray-50">
+                    <h4 class="text-sm font-semibold text-gray-900 mb-2">Initial Permission (Optional)</h4>
+                    <p class="text-sm text-gray-500 mb-3">Enable Linked Accounts access immediately after adding this {{ $isFullAccessAdmin ? 'user' : 'employee' }}.</p>
+                    <label class="inline-flex items-center">
+                        <input type="checkbox"
+                               name="linked_accounts"
+                               id="linked_accounts"
+                               value="1"
+                               class="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded">
+                        <span class="ml-2 text-sm text-gray-700">Linked Accounts (Starlinks / Omada / Plan Types)</span>
+                    </label>
                 </div>
 
                 <!-- Actions -->
@@ -109,6 +130,49 @@
         @endif
     </div>
 </div>
+@endsection
+
+@section('scripts')
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const searchInput = document.getElementById('user_search');
+    const userSelect = document.getElementById('user_id');
+    if (!searchInput || !userSelect) {
+        return;
+    }
+
+    const options = Array.from(userSelect.options).map(opt => ({
+        value: opt.value,
+        text: opt.text,
+        selected: opt.selected
+    }));
+
+    searchInput.addEventListener('input', function () {
+        const q = this.value.toLowerCase().trim();
+        const selectedValue = userSelect.value;
+
+        userSelect.innerHTML = '';
+        options.forEach((opt, idx) => {
+            if (idx === 0 || q === '' || opt.text.toLowerCase().includes(q)) {
+                const newOpt = document.createElement('option');
+                newOpt.value = opt.value;
+                newOpt.textContent = opt.text;
+                if (opt.value === selectedValue) {
+                    newOpt.selected = true;
+                }
+                userSelect.appendChild(newOpt);
+            }
+        });
+
+        if (userSelect.options.length === 0) {
+            const noneOpt = document.createElement('option');
+            noneOpt.value = '';
+            noneOpt.textContent = '-- No matching results --';
+            userSelect.appendChild(noneOpt);
+        }
+    });
+});
+</script>
 @endsection
 
 

@@ -85,6 +85,7 @@ class AdminPermissionController extends Controller
     {
         $request->validate([
             'user_id' => 'required|exists:users,id',
+            'linked_accounts' => 'nullable|boolean',
         ]);
 
         $currentUser = auth()->user();
@@ -111,7 +112,7 @@ class AdminPermissionController extends Controller
             'student_management' => false,
             'hiring_process' => false,
             'communication' => false,
-            'linked_accounts' => false,
+            'linked_accounts' => $request->has('linked_accounts'),
             'billing' => false,
             'files' => false,
             'confession' => false,
