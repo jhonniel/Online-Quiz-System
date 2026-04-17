@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\User;
 use App\Models\Dtr;
 use App\Models\DtrDeficit;
+use App\Models\LeaveRequest;
 use App\Models\Department;
 use Illuminate\Http\Request;
 use Carbon\Carbon;
@@ -62,6 +63,14 @@ class KpiController extends Controller
             ->get();
         $deficitHoursByUser = $deficits->groupBy('user_id')->map(fn($rows) => (float) $rows->sum('deficit_hours'));
 
+        // Approved absent leave requests overlapping selected range.
+        $approvedAbsentLeaves = LeaveRequest::whereIn('user_id', $users->pluck('id'))
+            ->where('status', 'approved')
+            ->where('type', 'absent')
+            ->whereDate('start_date', '<=', $endDate->toDateString())
+            ->whereDate('end_date', '>=', $startDate->toDateString())
+            ->get(['user_id', 'start_date', 'end_date']);
+
         $weekdays = [];
         foreach (CarbonPeriod::create($startDate->copy()->startOfDay(), $endDate->copy()->startOfDay()) as $dt) {
             if (!$dt->isWeekend()) {
@@ -69,6 +78,28 @@ class KpiController extends Controller
             }
         }
         $expectedWeekdays = count($weekdays);
+
+        $approvedAbsentDatesByUser = [];
+        $approvedAbsentUsersByDate = [];
+        foreach ($approvedAbsentLeaves as $leave) {
+            $leaveStart = Carbon::parse($leave->start_date)->startOfDay();
+            $leaveEnd = Carbon::parse($leave->end_date)->startOfDay();
+            if ($leaveEnd->lt($startDate) || $leaveStart->gt($endDate)) {
+                continue;
+            }
+
+            $periodStart = $leaveStart->copy()->max($startDate->copy()->startOfDay());
+            $periodEnd = $leaveEnd->copy()->min($endDate->copy()->startOfDay());
+            foreach (CarbonPeriod::create($periodStart, $periodEnd) as $dt) {
+                if ($dt->isWeekend()) {
+                    continue;
+                }
+
+                $dateStr = $dt->toDateString();
+                $approvedAbsentDatesByUser[$leave->user_id][$dateStr] = true;
+                $approvedAbsentUsersByDate[$dateStr][$leave->user_id] = true;
+            }
+        }
 
         // Calculate performance metrics for each user.
         $performanceData = [];
@@ -81,15 +112,12 @@ class KpiController extends Controller
             $lateCount = 0;
             $halfDayCount = 0;
             $excusedCount = 0;
-            $recordedAbsentCount = 0;
-            $missingWeekdayAbsences = 0;
             $workedDays = 0;
             $totalHours = 0.0;
 
             foreach ($weekdays as $dateStr) {
                 $row = $byDate->get($dateStr);
                 if (!$row) {
-                    $missingWeekdayAbsences++;
                     continue;
                 }
 
@@ -108,8 +136,6 @@ class KpiController extends Controller
                     $workedDays++;
                 } elseif (in_array($status, self::EXCUSED_STATUSES, true)) {
                     $excusedCount++;
-                } elseif ($status === 'absent') {
-                    $recordedAbsentCount++;
                 } elseif ($hours > 0) {
                     // Fallback: treat rows with hours as worked.
                     $workedDays++;
@@ -117,7 +143,9 @@ class KpiController extends Controller
             }
 
             $totalDays = $startDate->diffInDays($endDate) + 1;
-            $absentCount = $recordedAbsentCount + $missingWeekdayAbsences;
+            $absentCount = isset($approvedAbsentDatesByUser[$user->id])
+                ? count($approvedAbsentDatesByUser[$user->id])
+                : 0;
             $avgHoursPerDay = $workedDays > 0 ? $totalHours / $workedDays : 0;
 
             $consideredAttendanceDays = max($expectedWeekdays, 1);
@@ -249,14 +277,11 @@ class KpiController extends Controller
             $lateCount = $dayDtrs->where('status', 'late')->count();
             $halfDayCount = $dayDtrs->where('status', 'half_day')->count();
             $excusedCount = $dayDtrs->whereIn('status', self::EXCUSED_STATUSES)->count();
-            $recordedAbsentCount = $dayDtrs->where('status', 'absent')->count();
             $usersWithDtr = $dayDtrs->pluck('user_id')->unique()->count();
-
             $isWeekday = !$currentDate->isWeekend();
-            $absentForDay = $recordedAbsentCount;
-            if ($isWeekday) {
-                $absentForDay += max($totalUsers - $usersWithDtr, 0);
-            }
+            $absentForDay = isset($approvedAbsentUsersByDate[$dateStr])
+                ? count($approvedAbsentUsersByDate[$dateStr])
+                : 0;
 
             $workedForDay = $presentCount + $lateCount + $halfDayCount;
             $dayExpected = $isWeekday ? max($totalUsers, 1) : 0;
