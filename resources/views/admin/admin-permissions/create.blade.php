@@ -101,20 +101,6 @@
                     @enderror
                 </div>
 
-                <!-- Initial permission shortcuts -->
-                <div class="mb-6 p-4 border border-gray-200 rounded-lg bg-gray-50">
-                    <h4 class="text-sm font-semibold text-gray-900 mb-2">Initial Permission (Optional)</h4>
-                    <p class="text-sm text-gray-500 mb-3">Enable Linked Accounts access immediately after adding this {{ $isFullAccessAdmin ? 'user' : 'employee' }}.</p>
-                    <label class="inline-flex items-center">
-                        <input type="checkbox"
-                               name="linked_accounts"
-                               id="linked_accounts"
-                               value="1"
-                               class="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded">
-                        <span class="ml-2 text-sm text-gray-700">Linked Accounts (Starlinks / Omada / Plan Types)</span>
-                    </label>
-                </div>
-
                 <!-- Actions -->
                 <div class="flex items-center justify-end space-x-3 pt-6 border-t border-gray-200">
                     <a href="{{ url('/admin/admin-permissions') }}"
