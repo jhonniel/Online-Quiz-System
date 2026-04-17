@@ -9,6 +9,7 @@ use App\Services\MailConfigService;
 use Carbon\Carbon;
 use Carbon\CarbonPeriod;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Mail;
@@ -69,6 +70,8 @@ class HiringApplicationController extends Controller
 
         $search = trim((string) $request->input('search', ''));
         $searchTokens = $search !== '' ? preg_split('/\s+/', $search, -1, PREG_SPLIT_NO_EMPTY) : [];
+        $dbDriver = DB::connection()->getDriverName();
+        $idLikeSql = $dbDriver === 'pgsql' ? 'CAST(id AS TEXT) LIKE ?' : 'CAST(id AS CHAR) LIKE ?';
 
         // Filter by position if provided (but only if user has access to it)
         if ($request->has('position') && $request->position) {
@@ -86,12 +89,9 @@ class HiringApplicationController extends Controller
 
         // Search
         if ($search !== '') {
-            $query->where(function ($q) use ($search, $searchTokens) {
-                if (ctype_digit($search)) {
-                    $q->orWhere('id', (int) $search);
-                }
-
-                $q->orWhere('first_name', 'like', "%{$search}%")
+            $query->where(function ($q) use ($search, $searchTokens, $idLikeSql) {
+                $q->orWhereRaw($idLikeSql, ["%{$search}%"])
+                    ->orWhere('first_name', 'like', "%{$search}%")
                     ->orWhere('last_name', 'like', "%{$search}%")
                     ->orWhere('email', 'like', "%{$search}%")
                     ->orWhere('phone', 'like', "%{$search}%")
@@ -167,12 +167,9 @@ class HiringApplicationController extends Controller
             $baseQuery->where('status', $statusFilter);
         }
         if ($search !== '') {
-            $baseQuery->where(function ($q) use ($search, $searchTokens) {
-                if (ctype_digit($search)) {
-                    $q->orWhere('id', (int) $search);
-                }
-
-                $q->orWhere('first_name', 'like', "%{$search}%")
+            $baseQuery->where(function ($q) use ($search, $searchTokens, $idLikeSql) {
+                $q->orWhereRaw($idLikeSql, ["%{$search}%"])
+                    ->orWhere('first_name', 'like', "%{$search}%")
                     ->orWhere('last_name', 'like', "%{$search}%")
                     ->orWhere('email', 'like', "%{$search}%")
                     ->orWhere('phone', 'like', "%{$search}%")

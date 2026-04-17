@@ -167,6 +167,12 @@
                         @endif
                     </div>
                 </div>
+                <div class="flex items-center">
+                    <button type="submit"
+                            class="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                        Search
+                    </button>
+                </div>
 
                 @if(isset($positions) && $positions->count() > 0)
                     <div class="flex items-center space-x-2">
@@ -331,17 +337,9 @@
 
 <script>
     document.addEventListener('DOMContentLoaded', function () {
-        const form = document.querySelector('form[action="{{ url('/admin/hiring-applications') }}"]');
+        const form = document.querySelector("form[action='{{ url('/admin/hiring-applications') }}']");
         const input = document.getElementById('applications-search-input');
         const clearBtn = document.getElementById('applications-clear-search-btn');
-
-        let t = null;
-        if (form && input) {
-            input.addEventListener('input', function () {
-                if (t) clearTimeout(t);
-                t = setTimeout(() => form.submit(), 350);
-            });
-        }
 
         if (clearBtn && input && form) {
             clearBtn.addEventListener('click', function () {

@@ -10,6 +10,7 @@ use App\Models\LeaveBalance;
 use App\Mail\UserCredentials;
 use App\Services\MailConfigService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Log;
@@ -21,6 +22,8 @@ class UserController extends Controller
     public function index(Request $request)
     {
         $search = trim((string) $request->input('search', ''));
+        $dbDriver = DB::connection()->getDriverName();
+        $idLikeSql = $dbDriver === 'pgsql' ? 'CAST(id AS TEXT) LIKE ?' : 'CAST(id AS CHAR) LIKE ?';
         $perPage = (int) $request->input('per_page', 10);
         if (!in_array($perPage, [10, 25, 50, 100], true)) {
             $perPage = 10;
@@ -38,13 +41,9 @@ class UserController extends Controller
         }
 
         if ($search !== '') {
-            $query->where(function ($q) use ($search) {
-                // ID exact match when numeric
-                if (ctype_digit($search)) {
-                    $q->orWhere('id', (int) $search);
-                }
-
-                $q->orWhere('name', 'like', "%{$search}%")
+            $query->where(function ($q) use ($search, $idLikeSql) {
+                $q->orWhereRaw($idLikeSql, ["%{$search}%"])
+                    ->orWhere('name', 'like', "%{$search}%")
                     ->orWhere('email', 'like', "%{$search}%")
                     ->orWhere('role', 'like', "%{$search}%")
                     ->orWhereHas('department', function ($dq) use ($search) {

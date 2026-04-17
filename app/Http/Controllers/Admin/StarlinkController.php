@@ -7,6 +7,7 @@ use App\Models\LinkedAccount;
 use App\Models\Starlink;
 use App\Models\SubscriptionPlanType;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
@@ -28,6 +29,8 @@ class StarlinkController extends Controller
         $this->ensureCanAccess();
 
         $query = Starlink::with('linkedAccount')->orderByDesc('created_at');
+        $dbDriver = DB::connection()->getDriverName();
+        $idLikeSql = $dbDriver === 'pgsql' ? 'CAST(id AS TEXT) LIKE ?' : 'CAST(id AS CHAR) LIKE ?';
 
         $search = $request->input('search');
         if ($search && trim($search) !== '') {
@@ -41,24 +44,27 @@ class StarlinkController extends Controller
                 }
 
                 $term = '%' . $token . '%';
-                $query->where(function ($q) use ($term, $token) {
-                    $q->where('account_linked_email', 'like', $term)
-                        ->orWhere('starlink_id', 'like', $term)
-                        ->orWhere('serial_number', 'like', $term)
-                        ->orWhere('kit_number', 'like', $term)
-                        ->orWhere('router_id', 'like', $term)
-                        ->orWhere('ssid', 'like', $term)
-                        ->orWhere('wifi_password', 'like', $term)
-                        ->orWhere('office_location', 'like', $term)
-                        ->orWhere('plan', 'like', $term)
-                        ->orWhere('status', 'like', $term)
-                        ->orWhere('po_no', 'like', $term)
-                        ->orWhere('contact_email', 'like', $term)
-                        ->orWhere('end_user_email', 'like', $term)
-                        ->orWhere('billing_interval', 'like', $term)
+                $query->where(function ($q) use ($term, $token, $idLikeSql) {
+                    $q->whereRaw($idLikeSql, [$term])
+                        // Explicit primary fields from the listing table.
+                        ->orWhereRaw('LOWER(COALESCE(account_linked_email, \'\')) LIKE LOWER(?)', [$term]) // Account / Email
+                        ->orWhereRaw('LOWER(COALESCE(starlink_id, \'\')) LIKE LOWER(?)', [$term]) // Starlink ID
+                        ->orWhereRaw('LOWER(COALESCE(serial_number, \'\')) LIKE LOWER(?)', [$term]) // Serial number
+                        ->orWhereRaw('LOWER(COALESCE(kit_number, \'\')) LIKE LOWER(?)', [$term]) // Kit number
+                        ->orWhereRaw('LOWER(COALESCE(router_id, \'\')) LIKE LOWER(?)', [$term]) // Router ID
+                        ->orWhereRaw('LOWER(COALESCE(office_location, \'\')) LIKE LOWER(?)', [$term]) // Office / location
+                        // Additional searchable fields.
+                        ->orWhereRaw('LOWER(COALESCE(ssid, \'\')) LIKE LOWER(?)', [$term])
+                        ->orWhereRaw('LOWER(COALESCE(wifi_password, \'\')) LIKE LOWER(?)', [$term])
+                        ->orWhereRaw('LOWER(COALESCE(plan, \'\')) LIKE LOWER(?)', [$term])
+                        ->orWhereRaw('LOWER(COALESCE(status, \'\')) LIKE LOWER(?)', [$term])
+                        ->orWhereRaw('LOWER(COALESCE(po_no, \'\')) LIKE LOWER(?)', [$term])
+                        ->orWhereRaw('LOWER(COALESCE(contact_email, \'\')) LIKE LOWER(?)', [$term])
+                        ->orWhereRaw('LOWER(COALESCE(end_user_email, \'\')) LIKE LOWER(?)', [$term])
+                        ->orWhereRaw('LOWER(COALESCE(billing_interval, \'\')) LIKE LOWER(?)', [$term])
                         ->orWhereHas('linkedAccount', function ($q2) use ($term) {
-                            $q2->where('email', 'like', $term)
-                                ->orWhere('name', 'like', $term);
+                            $q2->whereRaw('LOWER(COALESCE(email, \'\')) LIKE LOWER(?)', [$term])
+                                ->orWhereRaw('LOWER(COALESCE(name, \'\')) LIKE LOWER(?)', [$term]);
                         });
 
                     // Exact ID / date matching (database-agnostic helpers)

@@ -114,6 +114,12 @@
                     @endif
                 </div>
             </form>
+            <div class="flex-shrink-0">
+                <button type="submit" form="users-search-form"
+                        class="inline-flex items-center justify-center gap-1.5 rounded-lg border border-transparent px-4 py-2 text-sm font-medium text-white shadow-sm bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors">
+                    Search
+                </button>
+            </div>
             @if(isset($schools) && $schools->isNotEmpty())
             <form method="GET" action="{{ url('/admin/users') }}" class="flex-shrink-0" id="school-filter-form">
                 @if(request()->has('per_page'))
@@ -486,20 +492,10 @@
 
     // Bulk Role Assignment
     document.addEventListener('DOMContentLoaded', function() {
-        // Search (debounced)
+        // Search (submit on Enter key or Search button only)
         const searchForm = document.getElementById('users-search-form');
         const searchInput = document.getElementById('search-input');
         const clearSearchBtn = document.getElementById('clear-search-btn');
-
-        let searchTimer = null;
-        if (searchInput && searchForm) {
-            searchInput.addEventListener('input', function() {
-                if (searchTimer) clearTimeout(searchTimer);
-                searchTimer = setTimeout(() => {
-                    searchForm.submit();
-                }, 350);
-            });
-        }
 
         if (clearSearchBtn && searchInput && searchForm) {
             clearSearchBtn.addEventListener('click', function() {

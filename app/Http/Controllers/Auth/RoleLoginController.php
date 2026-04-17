@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
+use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\ValidationException;
@@ -30,7 +31,13 @@ class RoleLoginController extends Controller
 
         if (Auth::attempt($credentials, $remember)) {
             $request->session()->regenerate();
-            
+
+            // Force admin-role users to admin URL after login.
+            $user = Auth::user();
+            if ($user instanceof User && $user->isAdmin()) {
+                return redirect('/admin/dashboard');
+            }
+
             return redirect()->intended('/home');
         }
 

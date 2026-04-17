@@ -14,6 +14,40 @@ return new class extends Migration
     {
         $driver = Schema::getConnection()->getDriverName();
 
+        // SQLite does not support ALTER COLUMN nullability directly; rebuild table.
+        if ($driver === 'sqlite') {
+            DB::statement('PRAGMA foreign_keys = OFF');
+
+            DB::statement('ALTER TABLE user_activities RENAME TO user_activities_old');
+
+            Schema::create('user_activities', function (Blueprint $table) {
+                $table->id();
+                $table->foreignId('user_id')->nullable()->constrained()->onDelete('cascade');
+                $table->string('activity_type');
+                $table->string('action')->nullable();
+                $table->string('page_url')->nullable();
+                $table->string('ip_address')->nullable();
+                $table->string('user_agent')->nullable();
+                $table->json('metadata')->nullable();
+                $table->timestamp('created_at');
+
+                $table->index(['user_id', 'activity_type']);
+                $table->index(['activity_type', 'created_at']);
+                $table->index('created_at');
+            });
+
+            DB::statement("
+                INSERT INTO user_activities (id, user_id, activity_type, action, page_url, ip_address, user_agent, metadata, created_at)
+                SELECT id, user_id, activity_type, action, page_url, ip_address, user_agent, metadata, created_at
+                FROM user_activities_old
+            ");
+
+            DB::statement('DROP TABLE user_activities_old');
+            DB::statement('PRAGMA foreign_keys = ON');
+
+            return;
+        }
+
         // Drop FK first so we can alter nullability without doctrine/dbal.
         if ($driver !== 'sqlite') {
             Schema::table('user_activities', function (Blueprint $table) {
@@ -40,6 +74,41 @@ return new class extends Migration
     public function down(): void
     {
         $driver = Schema::getConnection()->getDriverName();
+
+        if ($driver === 'sqlite') {
+            DB::statement('PRAGMA foreign_keys = OFF');
+
+            DB::statement('ALTER TABLE user_activities RENAME TO user_activities_old');
+
+            Schema::create('user_activities', function (Blueprint $table) {
+                $table->id();
+                $table->foreignId('user_id')->constrained()->onDelete('cascade');
+                $table->string('activity_type');
+                $table->string('action')->nullable();
+                $table->string('page_url')->nullable();
+                $table->string('ip_address')->nullable();
+                $table->string('user_agent')->nullable();
+                $table->json('metadata')->nullable();
+                $table->timestamp('created_at');
+
+                $table->index(['user_id', 'activity_type']);
+                $table->index(['activity_type', 'created_at']);
+                $table->index('created_at');
+            });
+
+            // Keep only rows with user_id to satisfy NOT NULL constraint on rollback.
+            DB::statement("
+                INSERT INTO user_activities (id, user_id, activity_type, action, page_url, ip_address, user_agent, metadata, created_at)
+                SELECT id, user_id, activity_type, action, page_url, ip_address, user_agent, metadata, created_at
+                FROM user_activities_old
+                WHERE user_id IS NOT NULL
+            ");
+
+            DB::statement('DROP TABLE user_activities_old');
+            DB::statement('PRAGMA foreign_keys = ON');
+
+            return;
+        }
 
         if ($driver !== 'sqlite') {
             Schema::table('user_activities', function (Blueprint $table) {
