@@ -17,7 +17,7 @@
                     Key Performance Indicator Dashboard
                 </h1>
                 <p class="mt-1 text-sm sm:text-base text-indigo-100/90 max-w-2xl">
-                    Track employee and student performance metrics including attendance, work hours, and best performers.
+                    Track employee performance from DTR, attendance behavior, work hours, deficits, and trend analytics.
                 </p>
             </div>
         </div>
@@ -71,7 +71,7 @@
     </div>
 
     <!-- Summary Statistics -->
-    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-4">
         <div class="bg-white rounded-xl shadow border border-gray-200 p-4 sm:p-5">
             <div class="flex items-center">
                 <div class="flex-shrink-0 bg-indigo-100 rounded-lg p-3">
@@ -126,6 +126,34 @@
                     <p class="text-2xl font-bold text-gray-900">
                         {{ sprintf('%02d:%02d', intdiv((int) round($totalHoursAll * 60), 60), (int) round($totalHoursAll * 60) % 60) }}
                     </p>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-xl shadow border border-gray-200 p-4 sm:p-5">
+            <div class="flex items-center">
+                <div class="flex-shrink-0 bg-rose-100 rounded-lg p-3">
+                    <svg class="h-6 w-6 text-rose-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 1.567-3 3.5S10.343 15 12 15s3-1.567 3-3.5S13.657 8 12 8zm0 0V5m0 10v4m7-7h-4M5 12H1"></path>
+                    </svg>
+                </div>
+                <div class="ml-4">
+                    <p class="text-sm font-medium text-gray-600">Avg Deficit (hrs)</p>
+                    <p class="text-2xl font-bold text-gray-900">{{ number_format($avgDeficitHours, 2) }}</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-xl shadow border border-gray-200 p-4 sm:p-5">
+            <div class="flex items-center">
+                <div class="flex-shrink-0 bg-teal-100 rounded-lg p-3">
+                    <svg class="h-6 w-6 text-teal-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                    </svg>
+                </div>
+                <div class="ml-4">
+                    <p class="text-sm font-medium text-gray-600">Zero Deficit Users</p>
+                    <p class="text-2xl font-bold text-gray-900">{{ $zeroDeficitCount }}</p>
                 </div>
             </div>
         </div>
@@ -202,6 +230,28 @@
             </div>
         </div>
 
+        <!-- Daily Attendance Rate -->
+        <div class="bg-white rounded-2xl shadow-xl border border-gray-200 p-4 sm:p-6">
+            <div class="mb-4">
+                <h3 class="text-lg font-semibold text-gray-900">Daily Attendance Rate</h3>
+                <p class="text-sm text-gray-600 mt-1">Attendance percentage by day</p>
+            </div>
+            <div class="h-80">
+                <canvas id="dailyAttendanceRateChart"></canvas>
+            </div>
+        </div>
+
+        <!-- Late vs Half-day Trend -->
+        <div class="bg-white rounded-2xl shadow-xl border border-gray-200 p-4 sm:p-6">
+            <div class="mb-4">
+                <h3 class="text-lg font-semibold text-gray-900">Late vs Half-day Trend</h3>
+                <p class="text-sm text-gray-600 mt-1">Daily punctuality signals</p>
+            </div>
+            <div class="h-80">
+                <canvas id="lateHalfDayTrendChart"></canvas>
+            </div>
+        </div>
+
         <!-- Radar Chart - Performance Comparison -->
         <div class="bg-white rounded-2xl shadow-xl border border-gray-200 p-4 sm:p-6">
             <div class="mb-4">
@@ -221,6 +271,50 @@
             </div>
             <div class="h-80 flex items-center justify-center">
                 <canvas id="gaugeChart"></canvas>
+            </div>
+        </div>
+
+        <!-- Department Total Hours -->
+        <div class="bg-white rounded-2xl shadow-xl border border-gray-200 p-4 sm:p-6">
+            <div class="mb-4">
+                <h3 class="text-lg font-semibold text-gray-900">Department Total Hours</h3>
+                <p class="text-sm text-gray-600 mt-1">Total logged DTR hours per department</p>
+            </div>
+            <div class="h-80">
+                <canvas id="departmentHoursChart"></canvas>
+            </div>
+        </div>
+
+        <!-- Working Days Distribution -->
+        <div class="bg-white rounded-2xl shadow-xl border border-gray-200 p-4 sm:p-6">
+            <div class="mb-4">
+                <h3 class="text-lg font-semibold text-gray-900">Working Days Distribution</h3>
+                <p class="text-sm text-gray-600 mt-1">User consistency distribution across the selected period</p>
+            </div>
+            <div class="h-80">
+                <canvas id="workingDaysDistributionChart"></canvas>
+            </div>
+        </div>
+
+        <!-- Top vs Bottom Performers -->
+        <div class="bg-white rounded-2xl shadow-xl border border-gray-200 p-4 sm:p-6">
+            <div class="mb-4">
+                <h3 class="text-lg font-semibold text-gray-900">Top vs Bottom Performers</h3>
+                <p class="text-sm text-gray-600 mt-1">Quick spread of highest and lowest scores</p>
+            </div>
+            <div class="h-80">
+                <canvas id="topBottomChart"></canvas>
+            </div>
+        </div>
+
+        <!-- Deficit Trend -->
+        <div class="bg-white rounded-2xl shadow-xl border border-gray-200 p-4 sm:p-6">
+            <div class="mb-4">
+                <h3 class="text-lg font-semibold text-gray-900">Deficit Trend</h3>
+                <p class="text-sm text-gray-600 mt-1">Weekly deficit hours trend from DTR deficits</p>
+            </div>
+            <div class="h-80">
+                <canvas id="deficitTrendChart"></canvas>
             </div>
         </div>
     </div>
@@ -273,6 +367,7 @@
                                 <div class="text-sm text-gray-900">
                                     <div>Present: <span class="font-semibold text-emerald-600">{{ $data['present_count'] }}</span></div>
                                     <div>Late: <span class="font-semibold text-yellow-600">{{ $data['late_count'] }}</span></div>
+                                    <div>Half-day: <span class="font-semibold text-orange-600">{{ $data['half_day_count'] }}</span></div>
                                     <div>Absent: <span class="font-semibold text-red-600">{{ $data['absent_count'] }}</span></div>
                                 </div>
                             </td>
@@ -289,6 +384,10 @@
                                 @if($data['has_perfect_attendance'])
                                     <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-100 text-emerald-800">
                                         Perfect
+                                    </span>
+                                @elseif($data['deficit_hours'] > 0)
+                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-rose-100 text-rose-800">
+                                        Deficit {{ number_format($data['deficit_hours'], 1) }}h
                                     </span>
                                 @else
                                     <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
@@ -315,6 +414,17 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
+    const dailyPerformance = @json($dailyPerformance);
+    const dailyDates = Object.keys(dailyPerformance).map(key => dailyPerformance[key].date);
+    const dailyAttendanceRates = @json($dailyAttendanceRateData);
+    const dailyLate = @json($dailyLateData);
+    const dailyHalfDay = @json($dailyHalfDayData);
+    const departmentHours = @json($departmentHours);
+    const workingDaysDistribution = @json($workingDaysDistribution);
+    const topBottomPerformers = @json($topBottomPerformers);
+    const deficitTrendLabels = @json($deficitTrendLabels);
+    const deficitTrendData = @json($deficitTrendData);
+
     // Top 10 Performers Chart
     const topPerformersCtx = document.getElementById('topPerformersChart');
     if (topPerformersCtx) {
@@ -511,27 +621,27 @@ document.addEventListener('DOMContentLoaded', function() {
         new Chart(attendanceBreakdownCtx, {
             type: 'doughnut',
             data: {
-                labels: ['Present', 'Completed', 'Late', 'Under Time', 'Absent'],
+                labels: ['Present', 'Late', 'Half-day', 'Excused (Leave/Travel)', 'Absent'],
                 datasets: [{
                     data: [
                         attendanceBreakdown.present,
-                        attendanceBreakdown.completed,
                         attendanceBreakdown.late,
-                        attendanceBreakdown.under_time,
+                        attendanceBreakdown.half_day,
+                        attendanceBreakdown.excused,
                         attendanceBreakdown.absent
                     ],
                     backgroundColor: [
                         'rgba(16, 185, 129, 0.8)',  // emerald for present
-                        'rgba(34, 197, 94, 0.8)',   // green for completed
                         'rgba(234, 179, 8, 0.8)',   // yellow for late
-                        'rgba(251, 146, 60, 0.8)',  // orange for under time
+                        'rgba(251, 146, 60, 0.8)',  // orange for half day
+                        'rgba(59, 130, 246, 0.8)',  // blue for excused
                         'rgba(239, 68, 68, 0.8)'    // red for absent
                     ],
                     borderColor: [
                         'rgb(16, 185, 129)',
-                        'rgb(34, 197, 94)',
                         'rgb(234, 179, 8)',
                         'rgb(251, 146, 60)',
+                        'rgb(59, 130, 246)',
                         'rgb(239, 68, 68)'
                     ],
                     borderWidth: 2
@@ -575,15 +685,13 @@ document.addEventListener('DOMContentLoaded', function() {
     // Line Graph - Performance Trends Over Time
     const performanceTrendsCtx = document.getElementById('performanceTrendsChart');
     if (performanceTrendsCtx) {
-        const dailyPerformance = @json($dailyPerformance);
-        const dates = Object.keys(dailyPerformance).map(key => dailyPerformance[key].date);
         const scores = Object.keys(dailyPerformance).map(key => dailyPerformance[key].performance_score);
         const avgHours = Object.keys(dailyPerformance).map(key => dailyPerformance[key].avg_hours);
 
         new Chart(performanceTrendsCtx, {
             type: 'line',
             data: {
-                labels: dates,
+                labels: dailyDates,
                 datasets: [
                     {
                         label: 'Performance Score (%)',
@@ -680,10 +788,10 @@ document.addEventListener('DOMContentLoaded', function() {
                         fill: true
                     },
                     {
-                        label: 'Completed',
-                        data: stackedAreaData.map(d => d.completed),
-                        borderColor: 'rgb(34, 197, 94)',
-                        backgroundColor: 'rgba(34, 197, 94, 0.6)',
+                        label: 'Excused',
+                        data: stackedAreaData.map(d => d.excused),
+                        borderColor: 'rgb(59, 130, 246)',
+                        backgroundColor: 'rgba(59, 130, 246, 0.6)',
                         tension: 0.4,
                         fill: true
                     },
@@ -696,8 +804,8 @@ document.addEventListener('DOMContentLoaded', function() {
                         fill: true
                     },
                     {
-                        label: 'Under Time',
-                        data: stackedAreaData.map(d => d.under_time),
+                        label: 'Half-day',
+                        data: stackedAreaData.map(d => d.half_day),
                         borderColor: 'rgb(251, 146, 60)',
                         backgroundColor: 'rgba(251, 146, 60, 0.6)',
                         tension: 0.4,
@@ -908,6 +1016,176 @@ document.addEventListener('DOMContentLoaded', function() {
                     ctx.restore();
                 }
             }]
+        });
+    }
+
+    // Daily Attendance Rate line chart
+    const dailyAttendanceRateCtx = document.getElementById('dailyAttendanceRateChart');
+    if (dailyAttendanceRateCtx) {
+        new Chart(dailyAttendanceRateCtx, {
+            type: 'line',
+            data: {
+                labels: dailyDates,
+                datasets: [{
+                    label: 'Attendance Rate (%)',
+                    data: dailyAttendanceRates,
+                    borderColor: 'rgb(16, 185, 129)',
+                    backgroundColor: 'rgba(16, 185, 129, 0.15)',
+                    tension: 0.35,
+                    fill: true
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: { beginAtZero: true, max: 100 }
+                }
+            }
+        });
+    }
+
+    // Late vs Half-day trend chart
+    const lateHalfDayTrendCtx = document.getElementById('lateHalfDayTrendChart');
+    if (lateHalfDayTrendCtx) {
+        new Chart(lateHalfDayTrendCtx, {
+            type: 'line',
+            data: {
+                labels: dailyDates,
+                datasets: [
+                    {
+                        label: 'Late',
+                        data: dailyLate,
+                        borderColor: 'rgb(234, 179, 8)',
+                        backgroundColor: 'rgba(234, 179, 8, 0.12)',
+                        tension: 0.35,
+                        fill: true
+                    },
+                    {
+                        label: 'Half-day',
+                        data: dailyHalfDay,
+                        borderColor: 'rgb(251, 146, 60)',
+                        backgroundColor: 'rgba(251, 146, 60, 0.12)',
+                        tension: 0.35,
+                        fill: true
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: { beginAtZero: true }
+                }
+            }
+        });
+    }
+
+    // Department total hours chart
+    const departmentHoursCtx = document.getElementById('departmentHoursChart');
+    if (departmentHoursCtx) {
+        new Chart(departmentHoursCtx, {
+            type: 'bar',
+            data: {
+                labels: Object.keys(departmentHours).map(name => name.length > 20 ? name.substring(0, 20) + '...' : name),
+                datasets: [{
+                    label: 'Total Hours',
+                    data: Object.values(departmentHours),
+                    backgroundColor: 'rgba(59, 130, 246, 0.8)',
+                    borderColor: 'rgb(59, 130, 246)',
+                    borderWidth: 2,
+                    borderRadius: 6
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: { beginAtZero: true }
+                }
+            }
+        });
+    }
+
+    // Working days distribution chart
+    const workingDaysDistributionCtx = document.getElementById('workingDaysDistributionChart');
+    if (workingDaysDistributionCtx) {
+        new Chart(workingDaysDistributionCtx, {
+            type: 'bar',
+            data: {
+                labels: Object.keys(workingDaysDistribution),
+                datasets: [{
+                    label: 'Users',
+                    data: Object.values(workingDaysDistribution),
+                    backgroundColor: 'rgba(99, 102, 241, 0.8)',
+                    borderColor: 'rgb(99, 102, 241)',
+                    borderWidth: 2,
+                    borderRadius: 6
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: { beginAtZero: true, ticks: { stepSize: 1 } }
+                }
+            }
+        });
+    }
+
+    // Top vs Bottom performers chart
+    const topBottomCtx = document.getElementById('topBottomChart');
+    if (topBottomCtx) {
+        const labels = [...topBottomPerformers.top.map(u => `Top: ${u.name}`), ...topBottomPerformers.bottom.map(u => `Bottom: ${u.name}`)];
+        const values = [...topBottomPerformers.top.map(u => u.score), ...topBottomPerformers.bottom.map(u => u.score)];
+        const colors = [
+            ...topBottomPerformers.top.map(() => 'rgba(16, 185, 129, 0.8)'),
+            ...topBottomPerformers.bottom.map(() => 'rgba(239, 68, 68, 0.8)')
+        ];
+        new Chart(topBottomCtx, {
+            type: 'bar',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'Performance Score (%)',
+                    data: values,
+                    backgroundColor: colors,
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: { beginAtZero: true, max: 100 }
+                }
+            }
+        });
+    }
+
+    // Deficit trend chart
+    const deficitTrendCtx = document.getElementById('deficitTrendChart');
+    if (deficitTrendCtx) {
+        new Chart(deficitTrendCtx, {
+            type: 'line',
+            data: {
+                labels: deficitTrendLabels,
+                datasets: [{
+                    label: 'Deficit Hours',
+                    data: deficitTrendData,
+                    borderColor: 'rgb(239, 68, 68)',
+                    backgroundColor: 'rgba(239, 68, 68, 0.12)',
+                    tension: 0.35,
+                    fill: true
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: { beginAtZero: true }
+                }
+            }
         });
     }
 });

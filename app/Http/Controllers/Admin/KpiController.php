@@ -5,12 +5,17 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\User;
 use App\Models\Dtr;
+use App\Models\DtrDeficit;
 use App\Models\Department;
 use Illuminate\Http\Request;
 use Carbon\Carbon;
+use Carbon\CarbonPeriod;
 
 class KpiController extends Controller
 {
+    private const PRODUCTIVE_STATUSES = ['present', 'late', 'half_day'];
+    private const EXCUSED_STATUSES = ['on_leave', 'travel'];
+
     public function dashboard(Request $request)
     {
         // Only super admins can access
@@ -42,57 +47,117 @@ class KpiController extends Controller
 
         $users = $usersQuery->with('department')->get();
 
-        // Get DTR records for the date range
+        // Get DTR records for the date range.
         $dtrs = Dtr::whereIn('user_id', $users->pluck('id'))
             ->whereDate('date', '>=', $startDate->toDateString())
             ->whereDate('date', '<=', $endDate->toDateString())
             ->orderBy('date')
             ->get();
 
-        // Calculate performance metrics for each user
+        // DTR deficits overlapping selected range (accuracy upgrade).
+        $deficits = DtrDeficit::whereIn('user_id', $users->pluck('id'))
+            ->whereDate('week_end', '>=', $startDate->toDateString())
+            ->whereDate('week_start', '<=', $endDate->toDateString())
+            ->orderBy('week_start')
+            ->get();
+        $deficitHoursByUser = $deficits->groupBy('user_id')->map(fn($rows) => (float) $rows->sum('deficit_hours'));
+
+        $weekdays = [];
+        foreach (CarbonPeriod::create($startDate->copy()->startOfDay(), $endDate->copy()->startOfDay()) as $dt) {
+            if (!$dt->isWeekend()) {
+                $weekdays[] = $dt->toDateString();
+            }
+        }
+        $expectedWeekdays = count($weekdays);
+
+        // Calculate performance metrics for each user.
         $performanceData = [];
-        
+
         foreach ($users as $user) {
             $userDtrs = $dtrs->where('user_id', $user->id);
-            
-            // Calculate metrics
-            $totalDays = $startDate->diffInDays($endDate) + 1;
-            $workingDays = $userDtrs->count();
-            $totalHours = $userDtrs->sum('total_hours');
-            $avgHoursPerDay = $workingDays > 0 ? $totalHours / $workingDays : 0;
-            
-            // Count statuses
-            $presentCount = $userDtrs->where('status', 'present')->count();
-            $lateCount = $userDtrs->where('status', 'late')->count();
-            $absentCount = $totalDays - $workingDays; // Days without DTR entry
-            $completedCount = $userDtrs->where('status', 'completed')->count();
-            $underTimeCount = $userDtrs->where('status', 'under_time')->count();
-            
-            // Calculate perfect attendance (all days present/completed, no late/absent)
-            $perfectDays = $userDtrs->whereIn('status', ['present', 'completed'])->count();
-            $hasPerfectAttendance = ($perfectDays === $totalDays) && ($lateCount === 0) && ($absentCount === 0);
-            
-            // Calculate performance score (0-100)
-            $performanceScore = 0;
-            if ($totalDays > 0) {
-                $attendanceScore = ($presentCount + $completedCount) / $totalDays * 50; // 50% weight
-                $punctualityScore = ($totalDays - $lateCount) / $totalDays * 30; // 30% weight
-                $completionScore = $completedCount / max($workingDays, 1) * 20; // 20% weight
-                $performanceScore = min(100, $attendanceScore + $punctualityScore + $completionScore);
+            $byDate = $userDtrs->sortBy('date')->keyBy(fn($row) => Carbon::parse($row->date)->toDateString());
+
+            $presentCount = 0;
+            $lateCount = 0;
+            $halfDayCount = 0;
+            $excusedCount = 0;
+            $recordedAbsentCount = 0;
+            $missingWeekdayAbsences = 0;
+            $workedDays = 0;
+            $totalHours = 0.0;
+
+            foreach ($weekdays as $dateStr) {
+                $row = $byDate->get($dateStr);
+                if (!$row) {
+                    $missingWeekdayAbsences++;
+                    continue;
+                }
+
+                $status = (string) ($row->status ?? '');
+                $hours = (float) ($row->total_hours ?? 0);
+                $totalHours += $hours;
+
+                if ($status === 'present') {
+                    $presentCount++;
+                    $workedDays++;
+                } elseif ($status === 'late') {
+                    $lateCount++;
+                    $workedDays++;
+                } elseif ($status === 'half_day') {
+                    $halfDayCount++;
+                    $workedDays++;
+                } elseif (in_array($status, self::EXCUSED_STATUSES, true)) {
+                    $excusedCount++;
+                } elseif ($status === 'absent') {
+                    $recordedAbsentCount++;
+                } elseif ($hours > 0) {
+                    // Fallback: treat rows with hours as worked.
+                    $workedDays++;
+                }
             }
+
+            $totalDays = $startDate->diffInDays($endDate) + 1;
+            $absentCount = $recordedAbsentCount + $missingWeekdayAbsences;
+            $avgHoursPerDay = $workedDays > 0 ? $totalHours / $workedDays : 0;
+
+            $consideredAttendanceDays = max($expectedWeekdays, 1);
+            $attendanceRate = (($workedDays + $excusedCount) / $consideredAttendanceDays) * 100;
+            $punctualityRate = $workedDays > 0 ? (($workedDays - $lateCount) / $workedDays) * 100 : 100;
+            $hoursRate = min(($avgHoursPerDay / 8) * 100, 100);
+            $deficitHours = (float) ($deficitHoursByUser->get($user->id, 0));
+            $deficitPenaltyRate = min($deficitHours * 2, 100); // 2 points per deficit hour.
+
+            // 0-100 score; weights tuned for attendance + punctuality + productive hours + deficit penalty.
+            $performanceScore = max(
+                0,
+                min(
+                    100,
+                    ($attendanceRate * 0.45)
+                    + ($punctualityRate * 0.25)
+                    + ($hoursRate * 0.30)
+                    - ($deficitPenaltyRate * 0.15)
+                )
+            );
+
+            // Perfect attendance = all expected weekdays either worked or excused, with no late and no absences.
+            $hasPerfectAttendance = ($workedDays + $excusedCount) >= $expectedWeekdays && $lateCount === 0 && $absentCount === 0;
 
             $performanceData[] = [
                 'user' => $user,
                 'total_days' => $totalDays,
-                'working_days' => $workingDays,
+                'working_days' => $workedDays,
+                'expected_weekdays' => $expectedWeekdays,
                 'total_hours' => $totalHours,
                 'avg_hours_per_day' => $avgHoursPerDay,
                 'present_count' => $presentCount,
                 'late_count' => $lateCount,
+                'half_day_count' => $halfDayCount,
+                'excused_count' => $excusedCount,
                 'absent_count' => $absentCount,
-                'completed_count' => $completedCount,
-                'under_time_count' => $underTimeCount,
-                'perfect_days' => $perfectDays,
+                'attendance_rate' => $attendanceRate,
+                'punctuality_rate' => $punctualityRate,
+                'hours_rate' => $hoursRate,
+                'deficit_hours' => $deficitHours,
                 'has_perfect_attendance' => $hasPerfectAttendance,
                 'performance_score' => $performanceScore,
             ];
@@ -111,6 +176,8 @@ class KpiController extends Controller
         $perfectAttendanceCount = collect($performanceData)->where('has_perfect_attendance', true)->count();
         $avgPerformanceScore = $totalUsers > 0 ? collect($performanceData)->avg('performance_score') : 0;
         $totalHoursAll = collect($performanceData)->sum('total_hours');
+        $avgDeficitHours = $totalUsers > 0 ? collect($performanceData)->avg('deficit_hours') : 0;
+        $zeroDeficitCount = collect($performanceData)->where('deficit_hours', '<=', 0)->count();
 
         // Prepare chart data
         // Top 10 Performers
@@ -168,8 +235,8 @@ class KpiController extends Controller
             'present' => collect($performanceData)->sum('present_count'),
             'late' => collect($performanceData)->sum('late_count'),
             'absent' => collect($performanceData)->sum('absent_count'),
-            'completed' => collect($performanceData)->sum('completed_count'),
-            'under_time' => collect($performanceData)->sum('under_time_count')
+            'half_day' => collect($performanceData)->sum('half_day_count'),
+            'excused' => collect($performanceData)->sum('excused_count'),
         ];
 
         // Line Graph Data - Performance Trends Over Time (Daily)
@@ -178,46 +245,38 @@ class KpiController extends Controller
         while ($currentDate <= $endDate) {
             $dateStr = $currentDate->toDateString();
             $dayDtrs = $dtrs->where('date', $dateStr);
-            
-            if ($dayDtrs->count() > 0) {
-                $totalHours = $dayDtrs->sum('total_hours');
-                $totalUsers = $dayDtrs->pluck('user_id')->unique()->count();
-                $avgHours = $totalUsers > 0 ? $totalHours / $totalUsers : 0;
-                
-                $presentCount = $dayDtrs->where('status', 'present')->count();
-                $completedCount = $dayDtrs->where('status', 'completed')->count();
-                $lateCount = $dayDtrs->where('status', 'late')->count();
-                
-                // Calculate daily performance score
-                $dailyScore = 0;
-                if ($totalUsers > 0) {
-                    $attendanceRate = ($presentCount + $completedCount) / $totalUsers;
-                    $punctualityRate = ($totalUsers - $lateCount) / $totalUsers;
-                    $dailyScore = ($attendanceRate * 0.6 + $punctualityRate * 0.4) * 100;
-                }
-                
-                $dailyPerformance[$dateStr] = [
-                    'date' => $currentDate->format('M d'),
-                    'avg_hours' => round($avgHours, 2),
-                    'performance_score' => round($dailyScore, 1),
-                    'present' => $presentCount,
-                    'completed' => $completedCount,
-                    'late' => $lateCount,
-                    'under_time' => $dayDtrs->where('status', 'under_time')->count(),
-                    'absent' => $totalUsers - $dayDtrs->count()
-                ];
-            } else {
-                $dailyPerformance[$dateStr] = [
-                    'date' => $currentDate->format('M d'),
-                    'avg_hours' => 0,
-                    'performance_score' => 0,
-                    'present' => 0,
-                    'completed' => 0,
-                    'late' => 0,
-                    'under_time' => 0,
-                    'absent' => 0
-                ];
+            $presentCount = $dayDtrs->where('status', 'present')->count();
+            $lateCount = $dayDtrs->where('status', 'late')->count();
+            $halfDayCount = $dayDtrs->where('status', 'half_day')->count();
+            $excusedCount = $dayDtrs->whereIn('status', self::EXCUSED_STATUSES)->count();
+            $recordedAbsentCount = $dayDtrs->where('status', 'absent')->count();
+            $usersWithDtr = $dayDtrs->pluck('user_id')->unique()->count();
+
+            $isWeekday = !$currentDate->isWeekend();
+            $absentForDay = $recordedAbsentCount;
+            if ($isWeekday) {
+                $absentForDay += max($totalUsers - $usersWithDtr, 0);
             }
+
+            $workedForDay = $presentCount + $lateCount + $halfDayCount;
+            $dayExpected = $isWeekday ? max($totalUsers, 1) : 0;
+            $attendanceRateForDay = $dayExpected > 0 ? (($workedForDay + $excusedCount) / $dayExpected) * 100 : 0;
+            $punctualityRateForDay = $workedForDay > 0 ? (($workedForDay - $lateCount) / $workedForDay) * 100 : 100;
+            $avgHours = $usersWithDtr > 0 ? ((float) $dayDtrs->sum('total_hours')) / $usersWithDtr : 0;
+            $hoursRateForDay = min(($avgHours / 8) * 100, 100);
+            $dailyScore = max(0, min(100, ($attendanceRateForDay * 0.45) + ($punctualityRateForDay * 0.25) + ($hoursRateForDay * 0.30)));
+
+            $dailyPerformance[$dateStr] = [
+                'date' => $currentDate->format('M d'),
+                'avg_hours' => round($avgHours, 2),
+                'performance_score' => round($dailyScore, 1),
+                'attendance_rate' => round($attendanceRateForDay, 1),
+                'present' => $presentCount,
+                'late' => $lateCount,
+                'half_day' => $halfDayCount,
+                'excused' => $excusedCount,
+                'absent' => $absentForDay,
+            ];
             
             $currentDate->addDay();
         }
@@ -228,9 +287,9 @@ class KpiController extends Controller
             $stackedAreaData[] = [
                 'date' => $data['date'],
                 'present' => $data['present'],
-                'completed' => $data['completed'],
                 'late' => $data['late'],
-                'under_time' => $data['under_time'],
+                'half_day' => $data['half_day'],
+                'excused' => $data['excused'],
                 'absent' => $data['absent']
             ];
         }
@@ -238,10 +297,10 @@ class KpiController extends Controller
         // Radar Chart Data - Average performance across metrics (for top performer vs average)
         $topPerformer = collect($performanceData)->first();
         $avgMetrics = [
-            'Attendance' => collect($performanceData)->avg('present_count') + collect($performanceData)->avg('completed_count'),
-            'Punctuality' => collect($performanceData)->avg('late_count') > 0 ? 100 - (collect($performanceData)->avg('late_count') / collect($performanceData)->avg('working_days') * 100) : 100,
+            'Attendance' => collect($performanceData)->avg('attendance_rate'),
+            'Punctuality' => collect($performanceData)->avg('punctuality_rate'),
             'Hours Worked' => collect($performanceData)->avg('total_hours'),
-            'Completion Rate' => collect($performanceData)->avg('completed_count') / max(collect($performanceData)->avg('working_days'), 1) * 100,
+            'Productivity' => collect($performanceData)->avg('hours_rate'),
             'Consistency' => collect($performanceData)->avg('working_days') / max(collect($performanceData)->avg('total_days'), 1) * 100,
             'Performance Score' => collect($performanceData)->avg('performance_score')
         ];
@@ -249,10 +308,10 @@ class KpiController extends Controller
         $topPerformerMetrics = [];
         if ($topPerformer) {
             $topPerformerMetrics = [
-                'Attendance' => $topPerformer['present_count'] + $topPerformer['completed_count'],
-                'Punctuality' => $topPerformer['working_days'] > 0 ? 100 - ($topPerformer['late_count'] / $topPerformer['working_days'] * 100) : 100,
+                'Attendance' => $topPerformer['attendance_rate'],
+                'Punctuality' => $topPerformer['punctuality_rate'],
                 'Hours Worked' => $topPerformer['total_hours'],
-                'Completion Rate' => $topPerformer['working_days'] > 0 ? ($topPerformer['completed_count'] / $topPerformer['working_days'] * 100) : 0,
+                'Productivity' => $topPerformer['hours_rate'],
                 'Consistency' => $topPerformer['total_days'] > 0 ? ($topPerformer['working_days'] / $topPerformer['total_days'] * 100) : 0,
                 'Performance Score' => $topPerformer['performance_score']
             ];
@@ -265,10 +324,65 @@ class KpiController extends Controller
             'Attendance' => max(max($avgMetrics['Attendance'], $topPerformerMetrics['Attendance'] ?? 0), 1),
             'Punctuality' => 100,
             'Hours Worked' => max(max($avgMetrics['Hours Worked'], $topPerformerMetrics['Hours Worked'] ?? 0), 1),
-            'Completion Rate' => 100,
+            'Productivity' => 100,
             'Consistency' => 100,
             'Performance Score' => 100
         ];
+
+        // Additional charts
+        $dailyAttendanceRateData = array_values(array_map(fn($d) => $d['attendance_rate'], $dailyPerformance));
+        $dailyLateData = array_values(array_map(fn($d) => $d['late'], $dailyPerformance));
+        $dailyHalfDayData = array_values(array_map(fn($d) => $d['half_day'], $dailyPerformance));
+
+        $departmentHours = [];
+        foreach ($performanceData as $data) {
+            $deptName = $data['user']->department->name ?? 'No Department';
+            if (!isset($departmentHours[$deptName])) {
+                $departmentHours[$deptName] = 0;
+            }
+            $departmentHours[$deptName] += (float) $data['total_hours'];
+        }
+        arsort($departmentHours);
+
+        $workingDaysDistribution = [
+            '0-20%' => 0,
+            '21-40%' => 0,
+            '41-60%' => 0,
+            '61-80%' => 0,
+            '81-100%' => 0,
+        ];
+        foreach ($performanceData as $data) {
+            $ratio = $data['expected_weekdays'] > 0 ? ($data['working_days'] / $data['expected_weekdays']) * 100 : 0;
+            if ($ratio <= 20) {
+                $workingDaysDistribution['0-20%']++;
+            } elseif ($ratio <= 40) {
+                $workingDaysDistribution['21-40%']++;
+            } elseif ($ratio <= 60) {
+                $workingDaysDistribution['41-60%']++;
+            } elseif ($ratio <= 80) {
+                $workingDaysDistribution['61-80%']++;
+            } else {
+                $workingDaysDistribution['81-100%']++;
+            }
+        }
+
+        $topBottom = collect($performanceData)->sortByDesc('performance_score');
+        $topBottomPerformers = [
+            'top' => $topBottom->take(5)->map(fn($d) => ['name' => $d['user']->name, 'score' => round($d['performance_score'], 1)])->values()->all(),
+            'bottom' => $topBottom->reverse()->take(5)->map(fn($d) => ['name' => $d['user']->name, 'score' => round($d['performance_score'], 1)])->values()->all(),
+        ];
+
+        $deficitByWeek = [];
+        foreach ($deficits as $deficit) {
+            $weekLabel = Carbon::parse($deficit->week_start)->format('M d');
+            if (!isset($deficitByWeek[$weekLabel])) {
+                $deficitByWeek[$weekLabel] = 0.0;
+            }
+            $deficitByWeek[$weekLabel] += (float) $deficit->deficit_hours;
+        }
+        ksort($deficitByWeek);
+        $deficitTrendLabels = array_keys($deficitByWeek);
+        $deficitTrendData = array_values($deficitByWeek);
         
         foreach ($avgMetrics as $key => $value) {
             $normalizedAvgMetrics[$key] = ($value / $maxValues[$key]) * 100;
@@ -289,6 +403,8 @@ class KpiController extends Controller
             'perfectAttendanceCount',
             'avgPerformanceScore',
             'totalHoursAll',
+            'avgDeficitHours',
+            'zeroDeficitCount',
             'topPerformers',
             'scoreRanges',
             'departmentAvg',
@@ -297,7 +413,15 @@ class KpiController extends Controller
             'stackedAreaData',
             'normalizedAvgMetrics',
             'normalizedTopMetrics',
-            'topPerformer'
+            'topPerformer',
+            'dailyAttendanceRateData',
+            'dailyLateData',
+            'dailyHalfDayData',
+            'departmentHours',
+            'workingDaysDistribution',
+            'topBottomPerformers',
+            'deficitTrendLabels',
+            'deficitTrendData'
         ));
     }
 }
