@@ -175,6 +175,18 @@ class StarlinkController extends Controller
             'status' => 'nullable|string|max:50',
             'end_user_email' => 'nullable|email|max:255',
         ]);
+        $validated['subscription_plan_type_id'] = ! empty($validated['subscription_plan_type_id']) ? (int) $validated['subscription_plan_type_id'] : null;
+
+        // Keep plain "plan" column in sync with selected subscription plan type
+        // because list/details/search currently read from starlinks.plan.
+        if (! empty($validated['subscription_plan_type_id'])) {
+            $selectedPlanName = SubscriptionPlanType::where('id', $validated['subscription_plan_type_id'])->value('name');
+            if ($selectedPlanName) {
+                $validated['plan'] = $selectedPlanName;
+            }
+        } elseif (empty($validated['plan'])) {
+            $validated['plan'] = null;
+        }
 
         // Check if a device with the same Starlink ID, Serial number, Kit number, or Router ID already exists
         $deviceFields = [
@@ -253,6 +265,16 @@ class StarlinkController extends Controller
         ]);
 
         $validated['subscription_plan_type_id'] = ! empty($validated['subscription_plan_type_id']) ? $validated['subscription_plan_type_id'] : null;
+        // Keep plain "plan" column in sync with selected subscription plan type
+        // because list/details/search currently read from starlinks.plan.
+        if (! empty($validated['subscription_plan_type_id'])) {
+            $selectedPlanName = SubscriptionPlanType::where('id', $validated['subscription_plan_type_id'])->value('name');
+            if ($selectedPlanName) {
+                $validated['plan'] = $selectedPlanName;
+            }
+        } elseif (empty($validated['plan'])) {
+            $validated['plan'] = null;
+        }
 
         // Ensure a linked account exists for the email so the dashboard shows data
         if (! empty($validated['account_linked_email'])) {
