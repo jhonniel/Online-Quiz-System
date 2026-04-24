@@ -1004,6 +1004,10 @@ class LeaveRequestController extends Controller
     public function studentIndex(Request $request)
     {
         $this->reconcilePendingAdditionalTimeRollbacks();
+        $user = auth()->user();
+        $allowedDepartmentIds = $user->canAccessStudentManagement()
+            ? $user->getAllowedStudentDepartmentIds()
+            : null;
 
         $search = trim((string) $request->input('search', ''));
         $perPage = (int) $request->input('per_page', 20);
@@ -1012,8 +1016,11 @@ class LeaveRequestController extends Controller
         }
 
         $query = LeaveRequest::with(['user', 'reviewer'])
-            ->whereHas('user', function($q) {
+            ->whereHas('user', function($q) use ($allowedDepartmentIds) {
                 $q->where('role', 'student');
+                if ($allowedDepartmentIds !== null) {
+                    $q->whereIn('department_id', $allowedDepartmentIds);
+                }
             });
 
         // Filter by status
@@ -1057,6 +1064,11 @@ class LeaveRequestController extends Controller
         $baseQuery = LeaveRequest::whereHas('user', function($q) {
             $q->where('role', 'student');
         });
+        if ($allowedDepartmentIds !== null) {
+            $baseQuery->whereHas('user', function($q) use ($allowedDepartmentIds) {
+                $q->whereIn('department_id', $allowedDepartmentIds);
+            });
+        }
         if ($request->has('student') && $request->student) {
             $baseQuery->where('user_id', $request->student);
         }
@@ -1089,6 +1101,9 @@ class LeaveRequestController extends Controller
 
         $students = \App\Models\User::where('role', 'student')
             ->where('is_active', true)
+            ->when($allowedDepartmentIds !== null, function ($q) use ($allowedDepartmentIds) {
+                $q->whereIn('department_id', $allowedDepartmentIds);
+            })
             ->orderBy('name')
             ->get();
 
@@ -1100,6 +1115,11 @@ class LeaveRequestController extends Controller
      */
     public function studentCalendar(Request $request)
     {
+        $user = auth()->user();
+        $allowedDepartmentIds = $user->canAccessStudentManagement()
+            ? $user->getAllowedStudentDepartmentIds()
+            : null;
+
         // Use Manila timezone for current date/month context
         $nowManila = Carbon::now('Asia/Manila');
         $monthParam = $request->input('month', $nowManila->format('Y-m'));
@@ -1120,8 +1140,11 @@ class LeaveRequestController extends Controller
 
         // Base query for leave requests that intersect the calendar range (students only)
         $leaveQuery = LeaveRequest::with('user')
-            ->whereHas('user', function($q) {
+            ->whereHas('user', function($q) use ($allowedDepartmentIds) {
                 $q->where('role', 'student');
+                if ($allowedDepartmentIds !== null) {
+                    $q->whereIn('department_id', $allowedDepartmentIds);
+                }
             })
             ->where(function ($outer) use ($startOfCalendar, $endOfCalendar) {
                 $outer->where(function ($q) use ($startOfCalendar, $endOfCalendar) {
@@ -1137,7 +1160,13 @@ class LeaveRequestController extends Controller
             });
 
         if ($studentId) {
-            $leaveQuery->where('user_id', $studentId);
+            $studentFilterQuery = User::where('id', $studentId)->where('role', 'student');
+            if ($allowedDepartmentIds !== null) {
+                $studentFilterQuery->whereIn('department_id', $allowedDepartmentIds);
+            }
+            if ($studentFilterQuery->exists()) {
+                $leaveQuery->where('user_id', $studentId);
+            }
         }
 
         $leaveRequests = $leaveQuery->get();
@@ -1194,6 +1223,9 @@ class LeaveRequestController extends Controller
         // Only show students who haven't met their required training hours
         $allStudents = \App\Models\User::where('role', 'student')
             ->where('is_active', true)
+            ->when($allowedDepartmentIds !== null, function ($q) use ($allowedDepartmentIds) {
+                $q->whereIn('department_id', $allowedDepartmentIds);
+            })
             ->get();
 
         // Get total DTR hours for all students
@@ -1242,6 +1274,11 @@ class LeaveRequestController extends Controller
      */
     public function storeForStudent(Request $request)
     {
+        $user = auth()->user();
+        $allowedDepartmentIds = $user->canAccessStudentManagement()
+            ? $user->getAllowedStudentDepartmentIds()
+            : null;
+
         $validated = $request->validate([
             'student_ids' => ['required', 'array', 'min:1'],
             'student_ids.*' => [
@@ -1272,6 +1309,9 @@ class LeaveRequestController extends Controller
 
         foreach ($validated['student_ids'] as $studentId) {
             $student = User::findOrFail($studentId);
+            if ($allowedDepartmentIds !== null && !in_array($student->department_id, $allowedDepartmentIds, true)) {
+                continue;
+            }
 
             $leaveRequest = LeaveRequest::create([
                 'user_id' => $student->id,
@@ -1302,6 +1342,12 @@ class LeaveRequestController extends Controller
             ]);
 
             $createdCount++;
+        }
+
+        if ($createdCount === 0) {
+            return redirect()->back()->withErrors([
+                'student_ids' => 'No leave requests were created. Selected students are outside your assigned departments.',
+            ])->withInput();
         }
 
         return redirect()->back()->with('success', "Leave request filed for {$createdCount} student(s).");

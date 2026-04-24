@@ -1311,10 +1311,16 @@ class DtrController extends Controller
         if (!$user->isAdmin() && !$user->canAccessStudentManagement()) {
             abort(403, 'Access denied. You do not have permission to access Student Management.');
         }
+        $allowedDepartmentIds = $user->canAccessStudentManagement()
+            ? $user->getAllowedStudentDepartmentIds()
+            : null;
 
         $query = Dtr::with(['user.university'])
-            ->whereHas('user', function($q) {
+            ->whereHas('user', function($q) use ($allowedDepartmentIds) {
                 $q->where('role', 'student');
+                if ($allowedDepartmentIds !== null) {
+                    $q->whereIn('department_id', $allowedDepartmentIds);
+                }
             });
 
         // Filter by university
@@ -1365,6 +1371,9 @@ class DtrController extends Controller
         // Get students for filter dropdown (only students, optionally filtered by university)
         $studentsQuery = User::where('role', 'student')
             ->where('is_active', true);
+        if ($allowedDepartmentIds !== null) {
+            $studentsQuery->whereIn('department_id', $allowedDepartmentIds);
+        }
 
         if ($request->filled('university_id')) {
             $studentsQuery->where('university_id', $request->university_id);
@@ -1473,9 +1482,15 @@ class DtrController extends Controller
         if (!$user->isAdmin() && !$user->canAccessStudentManagement()) {
             abort(403, 'Access denied. You do not have permission to access Student Management.');
         }
+        $allowedDepartmentIds = $user->canAccessStudentManagement()
+            ? $user->getAllowedStudentDepartmentIds()
+            : null;
 
         $students = User::where('role', 'student')
             ->where('is_active', true)
+            ->when($allowedDepartmentIds !== null, function ($q) use ($allowedDepartmentIds) {
+                $q->whereIn('department_id', $allowedDepartmentIds);
+            })
             ->orderBy('name')
             ->get();
 
@@ -1495,6 +1510,9 @@ class DtrController extends Controller
         if (!$user->isAdmin() && !$user->canAccessStudentManagement()) {
             abort(403, 'Access denied. You do not have permission to perform this action.');
         }
+        $allowedDepartmentIds = $user->canAccessStudentManagement()
+            ? $user->getAllowedStudentDepartmentIds()
+            : null;
 
         $request->validate([
             'user_id' => 'required|exists:users,id',
@@ -1514,6 +1532,11 @@ class DtrController extends Controller
         if (!$student) {
             return redirect()->back()
                 ->withErrors(['user_id' => 'Selected user is not a student.'])
+                ->withInput();
+        }
+        if ($allowedDepartmentIds !== null && !in_array($student->department_id, $allowedDepartmentIds, true)) {
+            return redirect()->back()
+                ->withErrors(['user_id' => 'Selected student is outside your assigned departments.'])
                 ->withInput();
         }
 
@@ -1587,13 +1610,22 @@ class DtrController extends Controller
         if (!$user->isAdmin() && !$user->canAccessStudentManagement()) {
             abort(403, 'Access denied. You do not have permission to perform this action.');
         }
+        $allowedDepartmentIds = $user->canAccessStudentManagement()
+            ? $user->getAllowedStudentDepartmentIds()
+            : null;
         // Verify this is a student DTR
         if (!$dtr->user || $dtr->user->role !== 'student') {
             abort(404, 'DTR record not found for students.');
         }
+        if ($allowedDepartmentIds !== null && !in_array($dtr->user->department_id, $allowedDepartmentIds, true)) {
+            abort(403, 'Access denied. You cannot manage this student department.');
+        }
 
         $students = User::where('role', 'student')
             ->where('is_active', true)
+            ->when($allowedDepartmentIds !== null, function ($q) use ($allowedDepartmentIds) {
+                $q->whereIn('department_id', $allowedDepartmentIds);
+            })
             ->orderBy('name')
             ->get();
 
@@ -1625,6 +1657,9 @@ class DtrController extends Controller
         if (!$user->isAdmin() && !$user->canAccessStudentManagement()) {
             abort(403, 'Access denied. You do not have permission to perform this action.');
         }
+        $allowedDepartmentIds = $user->canAccessStudentManagement()
+            ? $user->getAllowedStudentDepartmentIds()
+            : null;
 
         // Log the incoming request
         Log::info('Student DTR Update Request', [
@@ -1638,6 +1673,9 @@ class DtrController extends Controller
         // Verify this is a student DTR
         if (!$dtr->user || $dtr->user->role !== 'student') {
             abort(404, 'DTR record not found for students.');
+        }
+        if ($allowedDepartmentIds !== null && !in_array($dtr->user->department_id, $allowedDepartmentIds, true)) {
+            abort(403, 'Access denied. You cannot manage this student department.');
         }
 
         // Store original values for rollback if needed
@@ -1674,6 +1712,11 @@ class DtrController extends Controller
         if (!$student) {
             return redirect()->back()
                 ->withErrors(['user_id' => 'Selected user is not a student.'])
+                ->withInput();
+        }
+        if ($allowedDepartmentIds !== null && !in_array($student->department_id, $allowedDepartmentIds, true)) {
+            return redirect()->back()
+                ->withErrors(['user_id' => 'Selected student is outside your assigned departments.'])
                 ->withInput();
         }
 
@@ -1891,9 +1934,15 @@ class DtrController extends Controller
         if (!$user->isAdmin() && !$user->canAccessStudentManagement()) {
             abort(403, 'Access denied. You do not have permission to perform this action.');
         }
+        $allowedDepartmentIds = $user->canAccessStudentManagement()
+            ? $user->getAllowedStudentDepartmentIds()
+            : null;
         // Ensure the record belongs to a student
         if (!$dtr->user || $dtr->user->role !== 'student') {
             abort(404, 'DTR record not found for students.');
+        }
+        if ($allowedDepartmentIds !== null && !in_array($dtr->user->department_id, $allowedDepartmentIds, true)) {
+            abort(403, 'Access denied. You cannot manage this student department.');
         }
 
         $currentUser = auth()->user();
@@ -1932,6 +1981,9 @@ class DtrController extends Controller
         if (!$user->isAdmin() && !$user->canAccessStudentManagement()) {
             abort(403, 'Access denied. You do not have permission to perform this action.');
         }
+        $allowedDepartmentIds = $user->canAccessStudentManagement()
+            ? $user->getAllowedStudentDepartmentIds()
+            : null;
         $request->validate([
             'dtr_ids' => 'required|array',
             'dtr_ids.*' => 'required|integer|exists:dtrs,id',
@@ -1951,8 +2003,11 @@ class DtrController extends Controller
 
         // Get all DTR records and verify they belong to students
         $dtrs = Dtr::whereIn('id', $dtrIds)
-            ->whereHas('user', function($q) {
+            ->whereHas('user', function($q) use ($allowedDepartmentIds) {
                 $q->where('role', 'student');
+                if ($allowedDepartmentIds !== null) {
+                    $q->whereIn('department_id', $allowedDepartmentIds);
+                }
             })
             ->get();
 
@@ -2062,6 +2117,9 @@ class DtrController extends Controller
         if (!$user->isAdmin() && !$user->canAccessStudentManagement()) {
             abort(403, 'Access denied. You do not have permission to perform this action.');
         }
+        $allowedDepartmentIds = $user->canAccessStudentManagement()
+            ? $user->getAllowedStudentDepartmentIds()
+            : null;
         $currentUser = auth()->user();
 
         // Only super admins (full access) can delete student DTR records
@@ -2076,8 +2134,11 @@ class DtrController extends Controller
 
         // Get all DTR records and verify they belong to students
         $dtrs = Dtr::whereIn('id', $request->dtr_ids)
-            ->whereHas('user', function($q) {
+            ->whereHas('user', function($q) use ($allowedDepartmentIds) {
                 $q->where('role', 'student');
+                if ($allowedDepartmentIds !== null) {
+                    $q->whereIn('department_id', $allowedDepartmentIds);
+                }
             })
             ->get();
 
@@ -2125,9 +2186,15 @@ class DtrController extends Controller
         if (!$user->isAdmin() && !$user->canAccessStudentManagement()) {
             abort(403, 'Access denied. You do not have permission to perform this action.');
         }
+        $allowedDepartmentIds = $user->canAccessStudentManagement()
+            ? $user->getAllowedStudentDepartmentIds()
+            : null;
         $query = Dtr::with(['user.university'])
-            ->whereHas('user', function($q) {
+            ->whereHas('user', function($q) use ($allowedDepartmentIds) {
                 $q->where('role', 'student');
+                if ($allowedDepartmentIds !== null) {
+                    $q->whereIn('department_id', $allowedDepartmentIds);
+                }
             });
 
         // Filter by university
@@ -2142,8 +2209,16 @@ class DtrController extends Controller
         // Filter by student
         $selectedStudent = null;
         if ($request->filled('student_id')) {
-            $selectedStudent = User::find($request->student_id);
-            $query->where('user_id', $request->student_id);
+            $selectedStudentQuery = User::where('id', $request->student_id)->where('role', 'student');
+            if ($allowedDepartmentIds !== null) {
+                $selectedStudentQuery->whereIn('department_id', $allowedDepartmentIds);
+            }
+            $selectedStudent = $selectedStudentQuery->first();
+            if ($selectedStudent) {
+                $query->where('user_id', $selectedStudent->id);
+            } else {
+                $query->whereRaw('1 = 0');
+            }
         }
 
         // Filter by date range

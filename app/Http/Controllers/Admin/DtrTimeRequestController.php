@@ -28,10 +28,17 @@ class DtrTimeRequestController extends Controller
             if (!$user->isAdmin() && !$user->canAccessStudentManagement()) {
                 abort(403, 'Access denied. You do not have permission to access Student Management.');
             }
+
+            $allowedDepartmentIds = $user->canAccessStudentManagement()
+                ? $user->getAllowedStudentDepartmentIds()
+                : null;
             
             $query = DtrTimeRequest::with(['user', 'reviewer'])
-                ->whereHas('user', function ($q) {
+                ->whereHas('user', function ($q) use ($allowedDepartmentIds) {
                     $q->where('role', 'student');
+                    if ($allowedDepartmentIds !== null) {
+                        $q->whereIn('department_id', $allowedDepartmentIds);
+                    }
                 });
 
             // Filter by status
@@ -69,6 +76,11 @@ class DtrTimeRequestController extends Controller
             $baseStatusQuery = DtrTimeRequest::whereHas('user', function ($q) {
                 $q->where('role', 'student');
             });
+            if ($allowedDepartmentIds !== null) {
+                $baseStatusQuery->whereHas('user', function ($q) use ($allowedDepartmentIds) {
+                    $q->whereIn('department_id', $allowedDepartmentIds);
+                });
+            }
 
             $pendingCount = (clone $baseStatusQuery)->where('status', 'pending')->count();
             $rejectedCount = (clone $baseStatusQuery)->where('status', 'rejected')->count();
@@ -76,6 +88,9 @@ class DtrTimeRequestController extends Controller
             // Get all students for filter dropdown
             $students = \App\Models\User::where('role', 'student')
                 ->where('is_active', true)
+                ->when($allowedDepartmentIds !== null, function ($q) use ($allowedDepartmentIds) {
+                    $q->whereIn('department_id', $allowedDepartmentIds);
+                })
                 ->orderBy('name')
                 ->get();
 
@@ -107,6 +122,10 @@ class DtrTimeRequestController extends Controller
         // Check if user has student_management permission or is admin
         if (!$user->isAdmin() && !$user->canAccessStudentManagement()) {
             abort(403, 'Access denied. You do not have permission to perform this action.');
+        }
+        $allowedStudentDepartmentIds = $user->getAllowedStudentDepartmentIds();
+        if ($allowedStudentDepartmentIds !== null && !in_array($dtrTimeRequest->user->department_id, $allowedStudentDepartmentIds, true)) {
+            abort(403, 'Access denied. You cannot manage this student department.');
         }
         
         if ($dtrTimeRequest->status !== 'pending') {
@@ -158,6 +177,10 @@ class DtrTimeRequestController extends Controller
         // Check if user has student_management permission or is admin
         if (!$user->isAdmin() && !$user->canAccessStudentManagement()) {
             abort(403, 'Access denied. You do not have permission to perform this action.');
+        }
+        $allowedStudentDepartmentIds = $user->getAllowedStudentDepartmentIds();
+        if ($allowedStudentDepartmentIds !== null && !in_array($dtrTimeRequest->user->department_id, $allowedStudentDepartmentIds, true)) {
+            abort(403, 'Access denied. You cannot manage this student department.');
         }
         
         if ($dtrTimeRequest->status !== 'pending') {
