@@ -34,8 +34,12 @@ class StudentDashboardController extends Controller
             ->selectRaw('user_id, MIN(date) as internship_start, MAX(date) as internship_last, COALESCE(SUM(total_hours), 0) as internship_total_hours')
             ->groupBy('user_id');
 
+        $allowedDepartmentIds = $user->canAccessStudentManagement()
+            ? $user->getAllowedStudentDepartmentIds()
+            : null;
+
         $studentsQuery = User::query()
-            ->with('university')
+            ->with(['university', 'department'])
             ->where('role', 'student')
             ->leftJoinSub($dtrAgg, 'dtr_agg', function ($join) {
                 $join->on('dtr_agg.user_id', '=', 'users.id');
@@ -47,6 +51,10 @@ class StudentDashboardController extends Controller
                 DB::raw('COALESCE(dtr_agg.internship_total_hours, 0) as internship_total_hours'),
             ]);
 
+        if (is_array($allowedDepartmentIds) && !empty($allowedDepartmentIds)) {
+            $studentsQuery->whereIn('users.department_id', $allowedDepartmentIds);
+        }
+
         if ($search !== '') {
             $studentsQuery->where(function ($q) use ($search) {
                 if (ctype_digit($search)) {
@@ -55,6 +63,10 @@ class StudentDashboardController extends Controller
 
                 $q->orWhere('users.name', 'like', "%{$search}%")
                     ->orWhere('users.email', 'like', "%{$search}%")
+                    ->orWhereHas('department', function ($dq) use ($search) {
+                        $dq->where('name', 'like', "%{$search}%")
+                            ->orWhere('code', 'like', "%{$search}%");
+                    })
                     ->orWhereHas('university', function ($uq) use ($search) {
                         $uq->where('name', 'like', "%{$search}%")
                             ->orWhere('location', 'like', "%{$search}%");
@@ -81,10 +93,19 @@ class StudentDashboardController extends Controller
         }
 
         // Get all active students with their required training hours
-        $students = User::with('university')
+        $allowedDepartmentIds = $user->canAccessStudentManagement()
+            ? $user->getAllowedStudentDepartmentIds()
+            : null;
+
+        $students = User::with(['university', 'department'])
             ->where('role', 'student')
-            ->where('is_active', true)
-            ->get();
+            ->where('is_active', true);
+
+        if (is_array($allowedDepartmentIds) && !empty($allowedDepartmentIds)) {
+            $students->whereIn('department_id', $allowedDepartmentIds);
+        }
+
+        $students = $students->get();
 
         if ($students->isEmpty()) {
             $ranked = collect();

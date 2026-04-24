@@ -172,8 +172,10 @@ class AdminPermissionController extends Controller
             'content_management' => 'boolean',
             'analytics_reports' => 'boolean',
             'employee_management' => 'boolean',
-            'allowed_departments' => 'nullable|array',
-            'allowed_departments.*' => 'exists:departments,id',
+            'allowed_employee_departments' => 'nullable|array',
+            'allowed_employee_departments.*' => 'exists:departments,id',
+            'allowed_student_departments' => 'nullable|array',
+            'allowed_student_departments.*' => 'exists:departments,id',
             'student_management' => 'boolean',
             'hiring_process' => 'boolean',
             'allowed_positions' => 'nullable|array',
@@ -205,12 +207,18 @@ class AdminPermissionController extends Controller
             'system' => $request->has('system'),
         ];
 
-        // Handle allowed departments - only set if employee_management is enabled
+        // Handle allowed employee departments
         if ($request->has('employee_management')) {
-            $permissions['allowed_departments'] = $request->input('allowed_departments', []);
+            $permissions['allowed_employee_departments'] = $request->input('allowed_employee_departments', []);
         } else {
-            // If employee_management is disabled, clear allowed_departments
-            $permissions['allowed_departments'] = null;
+            $permissions['allowed_employee_departments'] = null;
+        }
+
+        // Handle allowed student departments
+        if ($request->has('student_management')) {
+            $permissions['allowed_student_departments'] = $request->input('allowed_student_departments', []);
+        } else {
+            $permissions['allowed_student_departments'] = null;
         }
 
         // Handle allowed positions - only set if hiring_process is enabled

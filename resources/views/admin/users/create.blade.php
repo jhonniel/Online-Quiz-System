@@ -223,11 +223,11 @@
                         </div>
                     </div>
 
-                    <!-- Department (Employees Only) -->
+                    <!-- Department (Employees and Students) -->
                     <div class="space-y-2" id="department_wrapper"
-                         @if(old('role') === 'employee') style="" @else style="display:none;" @endif>
+                         @if(in_array(old('role'), ['employee', 'student'], true)) style="" @else style="display:none;" @endif>
                         <label for="department_id" class="block text-sm font-semibold text-gray-700">
-                            Department <span class="text-red-500">*</span>
+                            Department <span class="text-red-500" id="department_required_indicator" @if(old('role') !== 'employee') style="display:none;" @endif>*</span>
                         </label>
                         <div class="relative group">
                             <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none z-10">
@@ -609,21 +609,29 @@ document.addEventListener('DOMContentLoaded', function() {
         toggleLeaveBalances();
     }
 
-    // Show Department only for employees
+    // Show Department for employees and students
     const departmentWrapper = document.getElementById('department_wrapper');
     const departmentSelect = document.getElementById('department_id');
+    const departmentRequiredIndicator = document.getElementById('department_required_indicator');
     if (roleSelect && departmentWrapper) {
         function toggleDepartment() {
-            if (roleSelect.value === 'employee') {
+            const show = roleSelect.value === 'employee' || roleSelect.value === 'student';
+            if (show) {
                 departmentWrapper.style.display = '';
                 if (departmentSelect) {
-                    departmentSelect.required = true;
+                    departmentSelect.required = roleSelect.value === 'employee';
+                }
+                if (departmentRequiredIndicator) {
+                    departmentRequiredIndicator.style.display = roleSelect.value === 'employee' ? '' : 'none';
                 }
             } else {
                 departmentWrapper.style.display = 'none';
                 if (departmentSelect) {
                     departmentSelect.required = false;
                     departmentSelect.value = '';
+                }
+                if (departmentRequiredIndicator) {
+                    departmentRequiredIndicator.style.display = 'none';
                 }
             }
         }

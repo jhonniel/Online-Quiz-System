@@ -97,9 +97,27 @@
                         <div class="flex-1 min-w-0">
                             <div class="text-sm font-medium text-gray-900">{{ $item['label'] }}</div>
                             <p class="mt-1 text-sm text-gray-500">{{ $item['desc'] }}</p>
-                            @if($item['key'] === 'employee_management' && $permission && $permission->employee_management && !empty($permission->allowed_departments))
-                                @php $deptNames = $departments->whereIn('id', $permission->allowed_departments)->pluck('name'); @endphp
-                                <p class="mt-2 text-xs text-gray-600">Allowed departments: {{ $deptNames->join(', ') }}</p>
+                            @if($item['key'] === 'employee_management' && $permission && $permission->employee_management)
+                                @php
+                                    $allowedEmployeeDepartments = $permission->allowed_employee_departments ?? $permission->allowed_departments;
+                                    $employeeDeptNames = !empty($allowedEmployeeDepartments)
+                                        ? $departments->whereIn('id', $allowedEmployeeDepartments)->pluck('name')
+                                        : collect();
+                                @endphp
+                                @if(!empty($allowedEmployeeDepartments))
+                                    <p class="mt-2 text-xs text-gray-600">Allowed employee departments: {{ $employeeDeptNames->join(', ') }}</p>
+                                @endif
+                            @endif
+                            @if($item['key'] === 'student_management' && $permission && $permission->student_management)
+                                @php
+                                    $allowedStudentDepartments = $permission->allowed_student_departments ?? $permission->allowed_departments;
+                                    $studentDeptNames = !empty($allowedStudentDepartments)
+                                        ? $departments->whereIn('id', $allowedStudentDepartments)->pluck('name')
+                                        : collect();
+                                @endphp
+                                @if(!empty($allowedStudentDepartments))
+                                    <p class="mt-2 text-xs text-gray-600">Allowed student departments: {{ $studentDeptNames->join(', ') }}</p>
+                                @endif
                             @endif
                             @if($item['key'] === 'hiring_process' && $permission && $permission->hiring_process && !empty($permission->allowed_positions))
                                 @php $posNames = $hiringPositions->whereIn('id', $permission->allowed_positions)->pluck('title'); @endphp

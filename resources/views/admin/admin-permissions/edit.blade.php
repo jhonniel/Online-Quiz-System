@@ -121,22 +121,22 @@
                                 </label>
                                 <p class="mt-1 text-sm text-gray-500">Access to employee DTR, leave requests, and time reports</p>
 
-                                <!-- Department Selection (shown only when Employee Management is checked) -->
-                                <div id="department-selection" class="mt-4 {{ ($permission && $permission->employee_management) ? '' : 'hidden' }}">
+                                <!-- Employee Department Selection -->
+                                <div id="employee-department-selection" class="mt-4 {{ ($permission && $permission->employee_management) ? '' : 'hidden' }}">
                                     <label class="block text-sm font-medium text-gray-700 mb-2">
-                                        Allowed Departments
+                                        Allowed Employee Departments
                                         <span class="text-xs text-gray-500 font-normal">(Leave empty to allow all departments)</span>
                                     </label>
                                     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 max-h-48 overflow-y-auto p-3 bg-gray-50 rounded-md border border-gray-200">
                                         @foreach($departments as $department)
                                             <div class="flex items-center">
                                                 <input type="checkbox"
-                                                       name="allowed_departments[]"
-                                                       id="dept_{{ $department->id }}"
+                                                       name="allowed_employee_departments[]"
+                                                       id="employee_dept_{{ $department->id }}"
                                                        value="{{ $department->id }}"
-                                                       {{ ($permission && $permission->allowed_departments && in_array($department->id, $permission->allowed_departments)) ? 'checked' : '' }}
+                                                       {{ ($permission && (($permission->allowed_employee_departments ?? $permission->allowed_departments) && in_array($department->id, ($permission->allowed_employee_departments ?? $permission->allowed_departments)))) ? 'checked' : '' }}
                                                        class="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded">
-                                                <label for="dept_{{ $department->id }}" class="ml-2 text-sm text-gray-700 cursor-pointer">
+                                                <label for="employee_dept_{{ $department->id }}" class="ml-2 text-sm text-gray-700 cursor-pointer">
                                                     {{ $department->name }}
                                                     @if($department->code)
                                                         <span class="text-gray-500">({{ $department->code }})</span>
@@ -160,12 +160,42 @@
                                id="student_management"
                                value="1"
                                {{ ($permission && $permission->student_management) ? 'checked' : '' }}
-                               class="mt-1 h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded">
+                               class="mt-1 h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
+                               onchange="toggleDepartmentSelection()">
                         <div class="flex-1">
                             <label for="student_management" class="block text-sm font-medium text-gray-900 cursor-pointer">
                                 Student Management
                             </label>
                             <p class="mt-1 text-sm text-gray-500">Access to student dashboard, DTR, and leave requests</p>
+
+                            <!-- Student Department Selection -->
+                            <div id="student-department-selection" class="mt-4 {{ ($permission && $permission->student_management) ? '' : 'hidden' }}">
+                                <label class="block text-sm font-medium text-gray-700 mb-2">
+                                    Allowed Student Departments
+                                    <span class="text-xs text-gray-500 font-normal">(Leave empty to allow all departments)</span>
+                                </label>
+                                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 max-h-48 overflow-y-auto p-3 bg-gray-50 rounded-md border border-gray-200">
+                                    @foreach($departments as $department)
+                                        <div class="flex items-center">
+                                            <input type="checkbox"
+                                                   name="allowed_student_departments[]"
+                                                   id="student_dept_{{ $department->id }}"
+                                                   value="{{ $department->id }}"
+                                                   {{ ($permission && (($permission->allowed_student_departments ?? $permission->allowed_departments) && in_array($department->id, ($permission->allowed_student_departments ?? $permission->allowed_departments)))) ? 'checked' : '' }}
+                                                   class="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded">
+                                            <label for="student_dept_{{ $department->id }}" class="ml-2 text-sm text-gray-700 cursor-pointer">
+                                                {{ $department->name }}
+                                                @if($department->code)
+                                                    <span class="text-gray-500">({{ $department->code }})</span>
+                                                @endif
+                                            </label>
+                                        </div>
+                                    @endforeach
+                                </div>
+                                @if($departments->isEmpty())
+                                    <p class="mt-2 text-sm text-gray-500">No departments available. <a href="{{ url('/admin/departments') }}" class="text-indigo-600 hover:text-indigo-800">Create departments</a> first.</p>
+                                @endif
+                            </div>
                         </div>
                     </div>
 
@@ -377,16 +407,29 @@
 <script>
 function toggleDepartmentSelection() {
     const employeeManagementCheckbox = document.getElementById('employee_management');
-    const departmentSelection = document.getElementById('department-selection');
+    const studentManagementCheckbox = document.getElementById('student_management');
+    const employeeDepartmentSelection = document.getElementById('employee-department-selection');
+    const studentDepartmentSelection = document.getElementById('student-department-selection');
 
-    if (employeeManagementCheckbox && departmentSelection) {
+    if (employeeManagementCheckbox && employeeDepartmentSelection) {
         if (employeeManagementCheckbox.checked) {
-            departmentSelection.classList.remove('hidden');
+            employeeDepartmentSelection.classList.remove('hidden');
         } else {
-            departmentSelection.classList.add('hidden');
-            // Uncheck all department checkboxes when Employee Management is disabled
-            const departmentCheckboxes = departmentSelection.querySelectorAll('input[type="checkbox"]');
-            departmentCheckboxes.forEach(checkbox => {
+            employeeDepartmentSelection.classList.add('hidden');
+            const departmentCheckboxes = employeeDepartmentSelection.querySelectorAll('input[type="checkbox"]');
+            departmentCheckboxes.forEach((checkbox) => {
+                checkbox.checked = false;
+            });
+        }
+    }
+
+    if (studentManagementCheckbox && studentDepartmentSelection) {
+        if (studentManagementCheckbox.checked) {
+            studentDepartmentSelection.classList.remove('hidden');
+        } else {
+            studentDepartmentSelection.classList.add('hidden');
+            const departmentCheckboxes = studentDepartmentSelection.querySelectorAll('input[type="checkbox"]');
+            departmentCheckboxes.forEach((checkbox) => {
                 checkbox.checked = false;
             });
         }

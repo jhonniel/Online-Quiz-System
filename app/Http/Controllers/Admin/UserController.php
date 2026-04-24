@@ -142,7 +142,7 @@ class UserController extends Controller
             'password' => Hash::make($request->password),
             'role' => $request->role,
             'university_id' => $universityId,
-            'department_id' => $request->role === 'employee' ? $request->department_id : null,
+            'department_id' => in_array($request->role, ['employee', 'student'], true) ? $request->department_id : null,
             'is_active' => $request->has('is_active'),
             'required_training_hours' => $request->required_training_hours,
         ]);
@@ -409,7 +409,7 @@ class UserController extends Controller
             'email' => $request->email,
             'role' => $request->role,
             'university_id' => $universityId,
-            'department_id' => $request->role === 'employee' ? $request->department_id : null,
+            'department_id' => in_array($request->role, ['employee', 'student'], true) ? $request->department_id : null,
             'is_active' => $request->has('is_active'),
         ];
 

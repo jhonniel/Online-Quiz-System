@@ -675,8 +675,8 @@ class User extends Authenticatable
             return false;
         }
 
-        // If allowed_departments is null or empty, user can manage all departments
-        $allowedDepartments = $adminPermission->allowed_departments;
+        // Prefer dedicated employee department restrictions. Fallback to legacy allowed_departments.
+        $allowedDepartments = $adminPermission->allowed_employee_departments ?? $adminPermission->allowed_departments;
         if (empty($allowedDepartments)) {
             return true;
         }
@@ -713,8 +713,36 @@ class User extends Authenticatable
             return [];
         }
 
-        // Return allowed_departments (null or empty means all departments)
-        $allowedDepartments = $adminPermission->allowed_departments;
+        // Prefer dedicated employee department restrictions. Fallback to legacy allowed_departments.
+        $allowedDepartments = $adminPermission->allowed_employee_departments ?? $adminPermission->allowed_departments;
+        return empty($allowedDepartments) ? null : $allowedDepartments;
+    }
+
+    /**
+     * Get allowed department IDs for Student Management filtering.
+     * Returns null if user can access all departments, empty array if no access.
+     */
+    public function getAllowedStudentDepartmentIds(): ?array
+    {
+        if ($this->isSuperAdmin()) {
+            return null;
+        }
+
+        if (!$this->canAccessStudentManagement()) {
+            return [];
+        }
+
+        if (!$this->relationLoaded('adminPermission')) {
+            $this->load('adminPermission');
+        }
+
+        $adminPermission = $this->adminPermission;
+        if (!$adminPermission) {
+            return [];
+        }
+
+        // Prefer dedicated student department restrictions. Fallback to legacy allowed_departments.
+        $allowedDepartments = $adminPermission->allowed_student_departments ?? $adminPermission->allowed_departments;
         return empty($allowedDepartments) ? null : $allowedDepartments;
     }
 
