@@ -30,6 +30,7 @@ class UserController extends Controller
         }
 
         $schoolId = $request->input('school');
+        $roleFilter = trim((string) $request->input('role', ''));
         $schools = University::active()->orderBy('name')->get();
 
         $query = User::with(['university', 'department'])
@@ -38,6 +39,10 @@ class UserController extends Controller
 
         if ($schoolId !== null && $schoolId !== '') {
             $query->where('university_id', (int) $schoolId);
+        }
+
+        if ($roleFilter !== '') {
+            $query->where('role', $roleFilter);
         }
 
         if ($search !== '') {
@@ -59,7 +64,7 @@ class UserController extends Controller
 
         $users = $query->paginate($perPage)->appends($request->query());
 
-        return view('admin.users.index', compact('users', 'search', 'perPage', 'schools', 'schoolId'));
+        return view('admin.users.index', compact('users', 'search', 'perPage', 'schools', 'schoolId', 'roleFilter'));
     }
 
     public function api(Request $request)

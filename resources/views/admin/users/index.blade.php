@@ -29,12 +29,10 @@
                     <p class="text-indigo-100 text-xs sm:text-sm mt-0.5">Manage system users, roles, and permissions</p>
                 </div>
             </div>
-            <a href="{{ url('/admin/users/create') }}" class="inline-flex items-center justify-center px-4 py-2.5 sm:py-2 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-white/20 hover:bg-white/30 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-white/50 transition-colors w-full sm:w-auto">
-                <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
-                </svg>
-                Add User
-            </a>
+            <div class="hidden sm:flex items-center gap-2 text-xs text-indigo-100">
+                <span class="inline-flex items-center rounded-full bg-white/15 px-3 py-1">Total: {{ $users->total() }}</span>
+                <span class="inline-flex items-center rounded-full bg-white/15 px-3 py-1">Page: {{ $users->count() }}</span>
+            </div>
         </div>
     </div>
 
@@ -79,15 +77,34 @@
         </div>
     @endif
 
-    <!-- Search and Filter Bar (single line: search, school, actions – match reference image) -->
+    <!-- Quick Summary -->
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 flex-shrink-0">
+        <div class="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
+            <p class="text-xs font-medium uppercase tracking-wider text-gray-500">Total Users</p>
+            <p class="mt-1 text-2xl font-semibold text-gray-900">{{ number_format($users->total()) }}</p>
+        </div>
+        <div class="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
+            <p class="text-xs font-medium uppercase tracking-wider text-gray-500">Active (This Page)</p>
+            <p class="mt-1 text-2xl font-semibold text-green-700">{{ $users->getCollection()->where('is_active', true)->count() }}</p>
+        </div>
+        <div class="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
+            <p class="text-xs font-medium uppercase tracking-wider text-gray-500">Pending Approval (This Page)</p>
+            <p class="mt-1 text-2xl font-semibold text-amber-700">{{ $users->getCollection()->where('is_approved', false)->count() }}</p>
+        </div>
+    </div>
+
+    <!-- Search and Filter Bar -->
     <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-4 flex-shrink-0">
-        <div class="flex flex-wrap md:flex-nowrap items-center gap-3 sm:gap-4">
+        <div class="flex flex-col lg:flex-row lg:items-center gap-3 sm:gap-4">
             <form id="users-search-form" method="GET" action="{{ url('/admin/users') }}" class="flex-1 min-w-0">
                 @if(request()->has('per_page'))
                     <input type="hidden" name="per_page" value="{{ request('per_page') }}">
                 @endif
                 @if(isset($schoolId) && $schoolId !== '' && $schoolId !== null)
                     <input type="hidden" name="school" value="{{ $schoolId }}">
+                @endif
+                @if(isset($roleFilter) && $roleFilter !== '')
+                    <input type="hidden" name="role" value="{{ $roleFilter }}">
                 @endif
                 <div class="relative">
                     <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
@@ -114,7 +131,7 @@
                     @endif
                 </div>
             </form>
-            <div class="flex-shrink-0">
+            <div class="flex-shrink-0 self-start lg:self-auto">
                 <button type="submit" form="users-search-form"
                         class="inline-flex items-center justify-center gap-1.5 rounded-lg border border-transparent px-4 py-2 text-sm font-medium text-white shadow-sm bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors">
                     Search
@@ -128,6 +145,9 @@
                 @if(request('search'))
                     <input type="hidden" name="search" value="{{ request('search') }}">
                 @endif
+                @if(isset($roleFilter) && $roleFilter !== '')
+                    <input type="hidden" name="role" value="{{ $roleFilter }}">
+                @endif
                 <div class="flex items-center gap-2">
                     <label for="school-filter" class="text-sm font-medium text-gray-700 whitespace-nowrap">School</label>
                     <select name="school" id="school-filter" class="rounded-lg border border-gray-300 bg-white py-2 pl-3 pr-8 text-sm text-gray-900 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500 min-w-[140px]">
@@ -139,7 +159,30 @@
                 </div>
             </form>
             @endif
-            <div class="flex items-center gap-2 flex-shrink-0 ml-auto">
+            <form method="GET" action="{{ url('/admin/users') }}" class="flex-shrink-0" id="role-filter-form">
+                @if(request()->has('per_page'))
+                    <input type="hidden" name="per_page" value="{{ request('per_page') }}">
+                @endif
+                @if(request('search'))
+                    <input type="hidden" name="search" value="{{ request('search') }}">
+                @endif
+                @if(isset($schoolId) && $schoolId !== '' && $schoolId !== null)
+                    <input type="hidden" name="school" value="{{ $schoolId }}">
+                @endif
+                <div class="flex items-center gap-2">
+                    <label for="role-filter" class="text-sm font-medium text-gray-700 whitespace-nowrap">Role</label>
+                    <select name="role" id="role-filter" class="rounded-lg border border-gray-300 bg-white py-2 pl-3 pr-8 text-sm text-gray-900 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500 min-w-[140px]">
+                        <option value="">All roles</option>
+                        <option value="admin" {{ (isset($roleFilter) && $roleFilter === 'admin') ? 'selected' : '' }}>Administrator</option>
+                        <option value="student" {{ (isset($roleFilter) && $roleFilter === 'student') ? 'selected' : '' }}>Student</option>
+                        <option value="employee" {{ (isset($roleFilter) && $roleFilter === 'employee') ? 'selected' : '' }}>Employee</option>
+                        <option value="technician" {{ (isset($roleFilter) && $roleFilter === 'technician') ? 'selected' : '' }}>Technician</option>
+                        <option value="applicant" {{ (isset($roleFilter) && $roleFilter === 'applicant') ? 'selected' : '' }}>Applicant</option>
+                        <option value="user" {{ (isset($roleFilter) && $roleFilter === 'user') ? 'selected' : '' }}>User (Legacy)</option>
+                    </select>
+                </div>
+            </form>
+            <div class="flex items-center gap-2 flex-shrink-0 lg:ml-auto">
                 <button id="send-credentials-btn" type="button" disabled
                         class="inline-flex items-center justify-center gap-1.5 rounded-lg border border-transparent px-4 py-2 text-sm font-medium text-white shadow-sm bg-teal-600 hover:bg-teal-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-teal-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
                     <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -326,9 +369,9 @@
                                     {{ $user->university ? $user->university->name : '—' }}
                                 </td>
                                 <td class="px-4 py-3 text-sm text-gray-600 hidden xl:table-cell truncate max-w-[120px]">
-                                    @if($user->role === 'employee' && $user->department)
+                                    @if(in_array($user->role, ['employee', 'student'], true) && $user->department)
                                         {{ $user->department->name }}
-                                    @elseif($user->role === 'employee')
+                                    @elseif(in_array($user->role, ['employee', 'student'], true))
                                         <span class="text-amber-600">—</span>
                                     @else
                                         —
@@ -466,7 +509,9 @@
 
 <script>
     function confirmUserAction(action, button) {
-        event.preventDefault();
+        if (typeof event !== 'undefined' && event) {
+            event.preventDefault();
+        }
 
         let message = '';
         switch(action) {
@@ -510,6 +555,15 @@
         if (schoolFilter && schoolFilterForm) {
             schoolFilter.addEventListener('change', function() {
                 schoolFilterForm.submit();
+            });
+        }
+
+        // Role filter: auto-submit on change
+        const roleFilter = document.getElementById('role-filter');
+        const roleFilterForm = document.getElementById('role-filter-form');
+        if (roleFilter && roleFilterForm) {
+            roleFilter.addEventListener('change', function() {
+                roleFilterForm.submit();
             });
         }
 
