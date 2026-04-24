@@ -226,6 +226,24 @@
                         </button>
                     </div>
                 </div>
+                <div class="flex flex-col sm:flex-row sm:items-center gap-2">
+                    <label for="bulk-department-select" class="text-sm font-medium text-indigo-900">Assign Department</label>
+                    <div class="flex flex-wrap items-center gap-2">
+                        <select id="bulk-department-select" class="block flex-1 min-w-[180px] px-3 py-2.5 sm:py-2 border border-indigo-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm bg-white">
+                            <option value="">Select a department</option>
+                            @foreach(($departments ?? collect()) as $department)
+                                <option value="{{ $department->id }}">{{ $department->name }}</option>
+                            @endforeach
+                        </select>
+                        <button id="bulk-department-assign-btn" type="button" disabled
+                                class="inline-flex items-center justify-center px-4 py-2.5 sm:py-2 border border-transparent rounded-lg text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed touch-manipulation min-h-[44px] sm:min-h-0">
+                            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                            </svg>
+                            Apply
+                        </button>
+                    </div>
+                </div>
             </div>
             <button id="clear-selection-btn" type="button"
                     class="text-sm text-indigo-600 hover:text-indigo-800 font-medium touch-manipulation py-1 self-start sm:self-center">
@@ -240,6 +258,10 @@
             <form id="bulk-role-form" method="POST" action="{{ url('/admin/users/bulk-assign-role') }}">
                 @csrf
                 <input type="hidden" name="role" id="role-input" value="">
+            </form>
+            <form id="bulk-department-form" method="POST" action="{{ url('/admin/users/bulk-assign-department') }}">
+                @csrf
+                <input type="hidden" name="department_id" id="department-input" value="">
             </form>
 
             <!-- Mobile: Card list (visible below md) -->
@@ -590,6 +612,10 @@
         const clearSelectionBtn = document.getElementById('clear-selection-btn');
         const bulkRoleForm = document.getElementById('bulk-role-form');
         const roleInput = document.getElementById('role-input');
+        const bulkDepartmentSelect = document.getElementById('bulk-department-select');
+        const bulkDepartmentAssignBtn = document.getElementById('bulk-department-assign-btn');
+        const bulkDepartmentForm = document.getElementById('bulk-department-form');
+        const departmentInput = document.getElementById('department-input');
 
         // Update selected count and show/hide bulk action bar
         function updateSelection() {
@@ -612,6 +638,9 @@
 
             // Enable/disable assign button based on role selection
             bulkAssignBtn.disabled = !bulkRoleSelect.value || count === 0;
+            if (bulkDepartmentAssignBtn && bulkDepartmentSelect) {
+                bulkDepartmentAssignBtn.disabled = !bulkDepartmentSelect.value || count === 0;
+            }
         }
 
         // Select all checkbox
@@ -633,6 +662,11 @@
         bulkRoleSelect.addEventListener('change', function() {
             bulkAssignBtn.disabled = !this.value || document.querySelectorAll('.user-checkbox:checked').length === 0;
         });
+        if (bulkDepartmentSelect && bulkDepartmentAssignBtn) {
+            bulkDepartmentSelect.addEventListener('change', function() {
+                bulkDepartmentAssignBtn.disabled = !this.value || document.querySelectorAll('.user-checkbox:checked').length === 0;
+            });
+        }
 
         // Clear selection
         clearSelectionBtn.addEventListener('click', function() {
@@ -644,6 +678,9 @@
                 selectAllCheckbox.indeterminate = false;
             }
             bulkRoleSelect.value = '';
+            if (bulkDepartmentSelect) {
+                bulkDepartmentSelect.value = '';
+            }
             updateSelection();
         });
 
@@ -678,6 +715,38 @@
                 bulkRoleForm.submit();
             }
         });
+
+        if (bulkDepartmentAssignBtn && bulkDepartmentForm && departmentInput && bulkDepartmentSelect) {
+            bulkDepartmentAssignBtn.addEventListener('click', function() {
+                const selectedCheckboxes = document.querySelectorAll('.user-checkbox:checked');
+                const selectedUserIds = Array.from(selectedCheckboxes).map(cb => cb.value);
+                const selectedDepartmentId = bulkDepartmentSelect.value;
+
+                if (selectedUserIds.length === 0 || !selectedDepartmentId) {
+                    alert('Please select at least one user and a department.');
+                    return;
+                }
+
+                const departmentLabel = bulkDepartmentSelect.options[bulkDepartmentSelect.selectedIndex]?.text || 'department';
+                const confirmMessage = `Assign "${departmentLabel}" department to ${selectedUserIds.length} selected user(s)?\n\nOnly employee and student roles will be updated.`;
+
+                if (!confirm(confirmMessage)) {
+                    return;
+                }
+
+                bulkDepartmentForm.querySelectorAll('input[name="user_ids[]"]').forEach(input => input.remove());
+                selectedUserIds.forEach(userId => {
+                    const input = document.createElement('input');
+                    input.type = 'hidden';
+                    input.name = 'user_ids[]';
+                    input.value = userId;
+                    bulkDepartmentForm.appendChild(input);
+                });
+
+                departmentInput.value = selectedDepartmentId;
+                bulkDepartmentForm.submit();
+            });
+        }
 
         // Send Credentials Button
         const sendCredentialsBtn = document.getElementById('send-credentials-btn');

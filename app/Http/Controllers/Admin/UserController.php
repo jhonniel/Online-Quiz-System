@@ -32,6 +32,7 @@ class UserController extends Controller
         $schoolId = $request->input('school');
         $roleFilter = trim((string) $request->input('role', ''));
         $schools = University::active()->orderBy('name')->get();
+        $departments = Department::active()->orderBy('name')->get();
 
         $query = User::with(['university', 'department'])
             ->orderBy('is_approved', 'asc') // Show pending users first
@@ -64,7 +65,7 @@ class UserController extends Controller
 
         $users = $query->paginate($perPage)->appends($request->query());
 
-        return view('admin.users.index', compact('users', 'search', 'perPage', 'schools', 'schoolId', 'roleFilter'));
+        return view('admin.users.index', compact('users', 'search', 'perPage', 'schools', 'schoolId', 'roleFilter', 'departments'));
     }
 
     public function api(Request $request)
@@ -560,6 +561,47 @@ class UserController extends Controller
             return redirect()->back()
                 ->with('error', 'No users were updated. Please check your selection.');
         }
+    }
+
+    public function bulkAssignDepartment(Request $request)
+    {
+        $request->validate([
+            'user_ids' => 'required|array|min:1',
+            'user_ids.*' => 'exists:users,id',
+            'department_id' => 'required|exists:departments,id',
+        ], [
+            'user_ids.required' => 'Please select at least one user.',
+            'user_ids.array' => 'Invalid user selection format.',
+            'user_ids.*.exists' => 'One or more selected users do not exist.',
+            'department_id.required' => 'Please select a department to assign.',
+            'department_id.exists' => 'Selected department does not exist.',
+        ]);
+
+        $userIds = $request->input('user_ids', []);
+        $departmentId = (int) $request->input('department_id');
+
+        // Limit department assignment to Employee and Student roles.
+        $query = User::whereIn('id', $userIds)
+            ->whereIn('role', ['employee', 'student']);
+
+        $updated = $query->update(['department_id' => $departmentId]);
+        $selectedCount = count($userIds);
+        $skipped = max($selectedCount - $updated, 0);
+
+        if ($updated <= 0) {
+            return redirect()->back()
+                ->with('error', 'No eligible users were updated. Only employees and students can be assigned a department.');
+        }
+
+        $department = Department::find($departmentId);
+        $departmentName = $department ? $department->name : 'selected department';
+        $message = "Assigned '{$departmentName}' department to {$updated} user(s).";
+
+        if ($skipped > 0) {
+            $message .= " Skipped {$skipped} user(s) because only employee/student roles support department assignment.";
+        }
+
+        return redirect()->back()->with('success', $message);
     }
 
     /**
