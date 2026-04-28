@@ -124,8 +124,11 @@ class DtrTimeRequestController extends Controller
             abort(403, 'Access denied. You do not have permission to perform this action.');
         }
         $allowedStudentDepartmentIds = $user->getAllowedStudentDepartmentIds();
-        if ($allowedStudentDepartmentIds !== null && !in_array($dtrTimeRequest->user->department_id, $allowedStudentDepartmentIds, true)) {
-            abort(403, 'Access denied. You cannot manage this student department.');
+        if ($allowedStudentDepartmentIds !== null) {
+            $normalizedAllowedDepartmentIds = array_map('intval', $allowedStudentDepartmentIds);
+            if (!in_array((int) $dtrTimeRequest->user->department_id, $normalizedAllowedDepartmentIds, true)) {
+                abort(403, 'Access denied. You cannot manage this student department.');
+            }
         }
         
         if ($dtrTimeRequest->status !== 'pending') {
@@ -179,8 +182,11 @@ class DtrTimeRequestController extends Controller
             abort(403, 'Access denied. You do not have permission to perform this action.');
         }
         $allowedStudentDepartmentIds = $user->getAllowedStudentDepartmentIds();
-        if ($allowedStudentDepartmentIds !== null && !in_array($dtrTimeRequest->user->department_id, $allowedStudentDepartmentIds, true)) {
-            abort(403, 'Access denied. You cannot manage this student department.');
+        if ($allowedStudentDepartmentIds !== null) {
+            $normalizedAllowedDepartmentIds = array_map('intval', $allowedStudentDepartmentIds);
+            if (!in_array((int) $dtrTimeRequest->user->department_id, $normalizedAllowedDepartmentIds, true)) {
+                abort(403, 'Access denied. You cannot manage this student department.');
+            }
         }
         
         if ($dtrTimeRequest->status !== 'pending') {
