@@ -135,11 +135,7 @@
                         
                         if ($travelRequest) {
                             $travelTypeLabel = $travelRequest->type_label ?? 'Travel';
-                            $approvalTime = $travelRequest->reviewed_at ? $travelRequest->reviewed_at->format('M d, Y g:i A') : '';
                             $travelText = 'Travel: ' . $travelTypeLabel;
-                            if ($approvalTime) {
-                                $travelText .= ' (Approved: ' . $approvalTime . ')';
-                            }
                             if ($remarks) {
                                 $remarks = $remarks . ' | ' . $travelText;
                             } else {
@@ -147,12 +143,12 @@
                             }
                         } elseif ($approvedLeave) {
                             $leaveTypeLabel = $approvedLeave->type_label ?? ucfirst(str_replace('_', ' ', $approvedLeave->type));
-                            $approvalTime = $approvedLeave->reviewed_at ? $approvedLeave->reviewed_at->format('M d, Y g:i A') : '';
                             $leaveText = 'Leave: ' . $leaveTypeLabel;
-                            if ($approvalTime) {
-                                $leaveText .= ' (Approved: ' . $approvalTime . ')';
-                            }
-                            if (stripos((string) $remarks, $leaveText) === false) {
+                            $legacyLeaveText = 'Approved Leave: ' . $leaveTypeLabel;
+                            if (
+                                stripos((string) $remarks, $leaveText) === false
+                                && stripos((string) $remarks, $legacyLeaveText) === false
+                            ) {
                                 if ($remarks) {
                                     $remarks = $remarks . ' | ' . $leaveText;
                                 } else {
