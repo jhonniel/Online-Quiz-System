@@ -262,7 +262,7 @@
             @if(!empty($lazyMonthBrowsing) && $browseMonth)
                 <div class="mt-3">
                     <span class="inline-flex items-center rounded-full bg-indigo-100 text-indigo-800 text-xs font-medium px-3 py-1">
-                        Showing {{ $browseMonth->format('F Y') }} only
+                        Showing {{ $browseMonth->format('F Y') }} to {{ now()->startOfMonth()->format('F Y') }}
                     </span>
                 </div>
             @endif

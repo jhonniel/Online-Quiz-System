@@ -80,9 +80,10 @@ class DtrController extends Controller
             $query->whereDate('date', '<=', $request->date_to);
         }
         if ($lazyMonthBrowsing && $browseMonth) {
+            $currentMonthEnd = Carbon::today()->startOfMonth()->endOfMonth();
             $query->whereBetween('date', [
                 $browseMonth->copy()->startOfMonth()->toDateString(),
-                $browseMonth->copy()->endOfMonth()->toDateString(),
+                $currentMonthEnd->toDateString(),
             ]);
         }
 
@@ -140,7 +141,7 @@ class DtrController extends Controller
 
         if ($lazyMonthBrowsing && $browseMonth) {
             $dateFrom = $browseMonth->copy()->startOfMonth();
-            $dateTo = $browseMonth->copy()->endOfMonth();
+            $dateTo = Carbon::today()->startOfMonth()->endOfMonth();
         }
 
         // Ensure a concrete range exists so Time Records can still show full weeks
@@ -552,13 +553,6 @@ class DtrController extends Controller
             unset($weekGroup);
         }
         unset($monthGroup);
-
-        if ($lazyMonthBrowsing && $browseMonth) {
-            $browseMonthKey = $browseMonth->format('Y-m');
-            $groupedDtrs = isset($groupedDtrs[$browseMonthKey])
-                ? [$browseMonthKey => $groupedDtrs[$browseMonthKey]]
-                : [];
-        }
 
         $totalRecords = 0;
         foreach ($groupedDtrs as $monthGroup) {
