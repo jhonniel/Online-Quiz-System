@@ -201,6 +201,7 @@ class DtrController extends Controller
                 $start = Carbon::parse($leave->start_date);
                 $end = $leave->end_date ? Carbon::parse($leave->end_date) : $start->copy();
                 $period = new \Carbon\CarbonPeriod($start, $end);
+                $approvedTypeRemark = 'Approved Leave: ' . ($leave->type_label ?? ucfirst(str_replace('_', ' ', $leave->type)));
 
                 foreach ($period as $day) {
                     if ($day->lt($dateFrom) || $day->gt($dateTo)) {
@@ -229,6 +230,13 @@ class DtrController extends Controller
                             $entry->leave_type_label = $leave->type_label ?? ucfirst(str_replace('_', ' ', $leave->type));
                             $entry->setRelation('user', $leave->user);
                             $leaveEntries->push($entry);
+                        } else {
+                            $existingRemarks = trim((string) ($existingDtr->remarks ?? ''));
+                            if (stripos($existingRemarks, $approvedTypeRemark) === false) {
+                                $existingDtr->remarks = $existingRemarks !== ''
+                                    ? $existingRemarks . ' | ' . $approvedTypeRemark
+                                    : $approvedTypeRemark;
+                            }
                         }
                     } elseif ($leave->type === 'absent') {
                         // Absent leave: should not add 8 hours, keep 0 hours and mark as absent.
@@ -282,6 +290,9 @@ class DtrController extends Controller
                             } else {
                                 $existingDtr->remarks = $offsetLabel;
                             }
+                            if (stripos((string) ($existingDtr->remarks ?? ''), $approvedTypeRemark) === false) {
+                                $existingDtr->remarks .= ' | ' . $approvedTypeRemark;
+                            }
                         } else {
                             // Persist so it consistently appears in DTR listings/exports
                             $entry = Dtr::firstOrCreate(
@@ -325,24 +336,24 @@ class DtrController extends Controller
                             if ($existingDtr->status !== 'travel') {
                                 $existingDtr->status = 'travel';
                             }
+                            $existingRemarks = trim((string) ($existingDtr->remarks ?? ''));
+                            if (stripos($existingRemarks, $approvedTypeRemark) === false) {
+                                $existingDtr->remarks = $existingRemarks !== ''
+                                    ? $existingRemarks . ' | ' . $approvedTypeRemark
+                                    : $approvedTypeRemark;
+                            }
                         }
                     } elseif ($leave->type === 'work_from_home') {
                         // Work From Home should not auto-create 8h DTR entries.
                         // DTR hours for WFH are expected to come from imported/actual records.
-                        // Also clean up legacy auto-generated remarks so imported remarks remain visible.
+                        // Preserve imported remarks and append approved request type for visibility.
                         if ($existingDtr) {
-                            $legacyWfhRemark = 'Approved Leave: Work From Home';
                             $existingRemarks = trim((string) ($existingDtr->remarks ?? ''));
-                            if ($existingRemarks !== '') {
-                                $cleanedRemarks = trim(str_replace(
-                                    [$legacyWfhRemark . '; ', '; ' . $legacyWfhRemark, $legacyWfhRemark],
-                                    '',
-                                    $existingRemarks
-                                ));
-                                if ($cleanedRemarks !== $existingRemarks) {
-                                    $existingDtr->remarks = $cleanedRemarks !== '' ? $cleanedRemarks : null;
-                                    $existingDtr->save();
-                                }
+                            if (stripos($existingRemarks, $approvedTypeRemark) === false) {
+                                $existingDtr->remarks = $existingRemarks !== ''
+                                    ? $existingRemarks . ' | ' . $approvedTypeRemark
+                                    : $approvedTypeRemark;
+                                $existingDtr->save();
                             }
                         }
                         continue;
@@ -364,6 +375,13 @@ class DtrController extends Controller
                             $entry->leave_type_label = $leave->type_label ?? ucfirst(str_replace('_', ' ', $leave->type));
                             $entry->setRelation('user', $leave->user);
                             $leaveEntries->push($entry);
+                        } else {
+                            $existingRemarks = trim((string) ($existingDtr->remarks ?? ''));
+                            if (stripos($existingRemarks, $approvedTypeRemark) === false) {
+                                $existingDtr->remarks = $existingRemarks !== ''
+                                    ? $existingRemarks . ' | ' . $approvedTypeRemark
+                                    : $approvedTypeRemark;
+                            }
                         }
                     }
                 }
