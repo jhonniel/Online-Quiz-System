@@ -160,7 +160,8 @@ class DtrController extends Controller
 
         // Align to full week boundaries so every date in the displayed weeks
         // can be represented (via real or synthetic rows).
-        if ($dateFrom && $dateTo) {
+        // Skip this in month-browsing mode to avoid spilling into adjacent months.
+        if ($dateFrom && $dateTo && !$lazyMonthBrowsing) {
             $dateFrom = $dateFrom->copy()->startOfWeek();
             $dateTo = $dateTo->copy()->endOfWeek();
         }
