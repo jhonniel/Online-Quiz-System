@@ -143,7 +143,12 @@
                             } else {
                                 $remarks = $travelText;
                             }
-                        } elseif (isset($dtr->leave_request) && $dtr->leave_request && $dtr->leave_request->status === 'approved') {
+                        } elseif (
+                            isset($dtr->leave_request)
+                            && $dtr->leave_request
+                            && $dtr->leave_request->status === 'approved'
+                            && $dtr->leave_request->type !== 'work_from_home'
+                        ) {
                             $leaveTypeLabel = $dtr->leave_request->type_label ?? ucfirst(str_replace('_', ' ', $dtr->leave_request->type));
                             $approvalTime = $dtr->leave_request->reviewed_at ? $dtr->leave_request->reviewed_at->format('M d, Y g:i A') : '';
                             $leaveText = 'Leave: ' . $leaveTypeLabel;

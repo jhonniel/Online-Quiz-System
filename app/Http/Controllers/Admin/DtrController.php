@@ -26,6 +26,18 @@ class DtrController extends Controller
     public function index(Request $request)
     {
         $user = auth()->user();
+        $lazyMonthBrowsing = !$request->filled('date_from') && !$request->filled('date_to');
+        $browseMonth = null;
+        if ($lazyMonthBrowsing) {
+            $browseMonthInput = (string) $request->input('browse_month', '');
+            try {
+                $browseMonth = $browseMonthInput !== ''
+                    ? Carbon::createFromFormat('Y-m', $browseMonthInput)->startOfMonth()
+                    : Carbon::today()->startOfMonth();
+            } catch (\Throwable $e) {
+                $browseMonth = Carbon::today()->startOfMonth();
+            }
+        }
 
         $query = Dtr::with('user')
             ->whereHas('user', function($q) {
@@ -66,6 +78,12 @@ class DtrController extends Controller
         }
         if ($request->filled('date_to')) {
             $query->whereDate('date', '<=', $request->date_to);
+        }
+        if ($lazyMonthBrowsing && $browseMonth) {
+            $query->whereBetween('date', [
+                $browseMonth->copy()->startOfMonth()->toDateString(),
+                $browseMonth->copy()->endOfMonth()->toDateString(),
+            ]);
         }
 
         // Filter by status
@@ -119,6 +137,11 @@ class DtrController extends Controller
         // Approved overtime from leave requests (only count approved overtime requests)
         $dateFrom = $request->filled('date_from') ? Carbon::parse($request->date_from) : ($dtrs->min('date') ? $dtrs->min('date')->copy() : null);
         $dateTo = $request->filled('date_to') ? Carbon::parse($request->date_to) : ($dtrs->max('date') ? $dtrs->max('date')->copy() : null);
+
+        if ($lazyMonthBrowsing && $browseMonth) {
+            $dateFrom = $browseMonth->copy()->startOfMonth();
+            $dateTo = $browseMonth->copy()->endOfMonth();
+        }
 
         // Ensure a concrete range exists so Time Records can still show full weeks
         // (including HOLIDAY/ABSENT rows) even when base DTR data is empty.
@@ -301,6 +324,26 @@ class DtrController extends Controller
                                 $existingDtr->status = 'travel';
                             }
                         }
+                    } elseif ($leave->type === 'work_from_home') {
+                        // Work From Home should not auto-create 8h DTR entries.
+                        // DTR hours for WFH are expected to come from imported/actual records.
+                        // Also clean up legacy auto-generated remarks so imported remarks remain visible.
+                        if ($existingDtr) {
+                            $legacyWfhRemark = 'Approved Leave: Work From Home';
+                            $existingRemarks = trim((string) ($existingDtr->remarks ?? ''));
+                            if ($existingRemarks !== '') {
+                                $cleanedRemarks = trim(str_replace(
+                                    [$legacyWfhRemark . '; ', '; ' . $legacyWfhRemark, $legacyWfhRemark],
+                                    '',
+                                    $existingRemarks
+                                ));
+                                if ($cleanedRemarks !== $existingRemarks) {
+                                    $existingDtr->remarks = $cleanedRemarks !== '' ? $cleanedRemarks : null;
+                                    $existingDtr->save();
+                                }
+                            }
+                        }
+                        continue;
                     } else {
                         // Other leave types: create entry with 08:00 hours
                         if (!$existingDtr) {
@@ -391,8 +434,6 @@ class DtrController extends Controller
                 ])->values();
             }
         }
-
-        $totalRecords = $dtrs->count();
 
         // Group DTRs by Month -> ISO Week -> Employee
         $groupedDtrs = [];
@@ -511,7 +552,64 @@ class DtrController extends Controller
         }
         unset($monthGroup);
 
-        return view('admin.dtr.index', compact('groupedDtrs', 'employees', 'departments', 'totalRecords'));
+        if ($lazyMonthBrowsing && $browseMonth) {
+            $browseMonthKey = $browseMonth->format('Y-m');
+            $groupedDtrs = isset($groupedDtrs[$browseMonthKey])
+                ? [$browseMonthKey => $groupedDtrs[$browseMonthKey]]
+                : [];
+        }
+
+        $totalRecords = 0;
+        foreach ($groupedDtrs as $monthGroup) {
+            foreach (($monthGroup['weeks'] ?? []) as $weekGroup) {
+                foreach (($weekGroup['employees'] ?? []) as $employeeGroup) {
+                    $totalRecords += count($employeeGroup['records'] ?? []);
+                }
+            }
+        }
+
+        $previousBrowseMonth = null;
+        $nextBrowseMonth = null;
+        if ($lazyMonthBrowsing && $browseMonth && $employees->isNotEmpty()) {
+            $employeeIds = $employees->pluck('id');
+
+            $earliestDtrDate = Dtr::whereIn('user_id', $employeeIds)->min('date');
+            $earliestLeaveDate = LeaveRequest::whereIn('user_id', $employeeIds)
+                ->where('status', 'approved')
+                ->where('type', '!=', 'overtime')
+                ->min('start_date');
+
+            $earliestMonth = null;
+            if ($earliestDtrDate) {
+                $earliestMonth = Carbon::parse($earliestDtrDate)->startOfMonth();
+            }
+            if ($earliestLeaveDate) {
+                $earliestLeaveMonth = Carbon::parse($earliestLeaveDate)->startOfMonth();
+                $earliestMonth = $earliestMonth
+                    ? ($earliestLeaveMonth->lt($earliestMonth) ? $earliestLeaveMonth : $earliestMonth)
+                    : $earliestLeaveMonth;
+            }
+
+            if ($earliestMonth && $browseMonth->gt($earliestMonth)) {
+                $previousBrowseMonth = $browseMonth->copy()->subMonth()->format('Y-m');
+            }
+
+            $currentMonth = Carbon::today()->startOfMonth();
+            if ($browseMonth->lt($currentMonth)) {
+                $nextBrowseMonth = $browseMonth->copy()->addMonth()->format('Y-m');
+            }
+        }
+
+        return view('admin.dtr.index', compact(
+            'groupedDtrs',
+            'employees',
+            'departments',
+            'totalRecords',
+            'lazyMonthBrowsing',
+            'browseMonth',
+            'previousBrowseMonth',
+            'nextBrowseMonth'
+        ));
     }
 
     /**
@@ -2853,6 +2951,11 @@ class DtrController extends Controller
                         }
                     }
                     
+                    // Work From Home should only use actual imported DTR hours.
+                    if ($leave->type === 'work_from_home') {
+                        continue;
+                    }
+
                     // Add hours if no DTR exists OR if DTR exists but has 0 hours
                     if (!$hasDtr || ($dtrRecord && ($dtrRecord->total_hours ?? 0) == 0)) {
                         if ($dtrRecord && ($dtrRecord->total_hours ?? 0) > 0) {
@@ -3004,6 +3107,11 @@ class DtrController extends Controller
                     $hasDtr = isset($dtrMapByEmployeeAndDate[$employeeId][$dateKey]);
                     $dtrRecord = $hasDtr ? $dtrMapByEmployeeAndDate[$employeeId][$dateKey] : null;
                     
+                    // Work From Home should only use actual imported DTR hours.
+                    if ($leave->type === 'work_from_home') {
+                        continue;
+                    }
+
                     // Add if no DTR or DTR has 0 hours
                     if (!$hasDtr || ($dtrRecord && ($dtrRecord->total_hours ?? 0) == 0)) {
                         if ($dtrRecord && ($dtrRecord->total_hours ?? 0) > 0) {

@@ -259,9 +259,16 @@
         <div class="px-6 py-4 border-b border-gray-200 bg-gray-50">
             <h2 class="text-lg font-semibold text-gray-900">Time Records</h2>
             <p class="text-sm text-gray-600 mt-1">Total records: {{ $totalRecords }}</p>
+            @if(!empty($lazyMonthBrowsing) && $browseMonth)
+                <div class="mt-3">
+                    <span class="inline-flex items-center rounded-full bg-indigo-100 text-indigo-800 text-xs font-medium px-3 py-1">
+                        Showing {{ $browseMonth->format('F Y') }} only
+                    </span>
+                </div>
+            @endif
         </div>
 
-        <div class="overflow-x-auto" id="dtr-groups-root">
+        <div class="overflow-x-auto" id="dtr-groups-root" data-auto-open-first-month="{{ !empty($lazyMonthBrowsing) ? 'true' : 'false' }}">
             @forelse($groupedDtrs as $monthKey => $month)
                 <div class="border-b border-gray-200" data-month-group>
                     <button type="button"
@@ -570,6 +577,29 @@
                     <p class="mt-1 text-sm text-gray-500">No employee time records match your filters.</p>
                 </div>
             @endforelse
+
+            @if(!empty($lazyMonthBrowsing) && ($previousBrowseMonth || $nextBrowseMonth || ($browseMonth && $browseMonth->format('Y-m') !== now()->startOfMonth()->format('Y-m'))))
+                <div class="px-6 py-4 border-t border-gray-200 bg-gray-50 flex flex-wrap items-center gap-2">
+                    @if($previousBrowseMonth)
+                        <a href="{{ url('/admin/dtr') . '?' . http_build_query(array_merge(request()->except('browse_month'), ['browse_month' => $previousBrowseMonth])) }}"
+                           class="inline-flex items-center px-3 py-1.5 border border-gray-300 text-xs font-medium rounded-lg text-gray-700 bg-white hover:bg-gray-50">
+                            View Past Month
+                        </a>
+                    @endif
+                    @if($nextBrowseMonth)
+                        <a href="{{ url('/admin/dtr') . '?' . http_build_query(array_merge(request()->except('browse_month'), ['browse_month' => $nextBrowseMonth])) }}"
+                           class="inline-flex items-center px-3 py-1.5 border border-gray-300 text-xs font-medium rounded-lg text-gray-700 bg-white hover:bg-gray-50">
+                            View Newer Month
+                        </a>
+                    @endif
+                    @if($browseMonth && $browseMonth->format('Y-m') !== now()->startOfMonth()->format('Y-m'))
+                        <a href="{{ url('/admin/dtr') . '?' . http_build_query(request()->except('browse_month')) }}"
+                           class="inline-flex items-center px-3 py-1.5 border border-indigo-200 text-xs font-medium rounded-lg text-indigo-700 bg-indigo-50 hover:bg-indigo-100">
+                            Back to Current Month
+                        </a>
+                    @endif
+                </div>
+            @endif
         </div>
 </div>
 
@@ -655,10 +685,18 @@
                 return;
             }
 
-            // Collapse all months by default
-            content.classList.add('hidden');
-            content.style.display = 'none';
-            if (chevron) chevron.textContent = '+';
+            const shouldAutoOpen = root.dataset.autoOpenFirstMonth === 'true'
+                && monthGroup === root.querySelector('[data-month-group]');
+
+            if (shouldAutoOpen) {
+                content.classList.remove('hidden');
+                content.style.display = '';
+                if (chevron) chevron.textContent = '−';
+            } else {
+                content.classList.add('hidden');
+                content.style.display = 'none';
+                if (chevron) chevron.textContent = '+';
+            }
 
             button.addEventListener('click', function (e) {
                 e.preventDefault();
