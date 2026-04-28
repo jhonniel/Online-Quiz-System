@@ -96,11 +96,13 @@
                         // Check if this DTR has an approved leave request
                         $hasApprovedLeave = false;
                         $approvedLeaveType = null;
+                        $approvedLeave = null;
                         if (isset($leaveRequestMap[$employeeId][$dateKey])) {
                             $leaveReq = $leaveRequestMap[$employeeId][$dateKey];
                             if ($leaveReq->status === 'approved') {
                                 $hasApprovedLeave = true;
                                 $approvedLeaveType = $leaveReq->type ?? null;
+                                $approvedLeave = $leaveReq;
                             }
                         }
                         
@@ -143,22 +145,19 @@
                             } else {
                                 $remarks = $travelText;
                             }
-                        } elseif (
-                            isset($dtr->leave_request)
-                            && $dtr->leave_request
-                            && $dtr->leave_request->status === 'approved'
-                            && $dtr->leave_request->type !== 'work_from_home'
-                        ) {
-                            $leaveTypeLabel = $dtr->leave_request->type_label ?? ucfirst(str_replace('_', ' ', $dtr->leave_request->type));
-                            $approvalTime = $dtr->leave_request->reviewed_at ? $dtr->leave_request->reviewed_at->format('M d, Y g:i A') : '';
+                        } elseif ($approvedLeave) {
+                            $leaveTypeLabel = $approvedLeave->type_label ?? ucfirst(str_replace('_', ' ', $approvedLeave->type));
+                            $approvalTime = $approvedLeave->reviewed_at ? $approvedLeave->reviewed_at->format('M d, Y g:i A') : '';
                             $leaveText = 'Leave: ' . $leaveTypeLabel;
                             if ($approvalTime) {
                                 $leaveText .= ' (Approved: ' . $approvalTime . ')';
                             }
-                            if ($remarks) {
-                                $remarks = $remarks . ' | ' . $leaveText;
-                            } else {
-                                $remarks = $leaveText;
+                            if (stripos((string) $remarks, $leaveText) === false) {
+                                if ($remarks) {
+                                    $remarks = $remarks . ' | ' . $leaveText;
+                                } else {
+                                    $remarks = $leaveText;
+                                }
                             }
                         }
                         
