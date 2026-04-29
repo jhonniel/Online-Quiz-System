@@ -96,6 +96,7 @@
                 <!-- Navigation -->
                 <div class="flex-1 flex flex-col overflow-y-auto bg-gray-800">
                     <nav class="flex-1 px-2 py-4 space-y-1">
+                        <p class="px-2 pb-1 text-[11px] font-semibold uppercase tracking-wider text-gray-400">User Features</p>
                         <!-- Dashboard -->
                         <a href="{{ url('/dashboard') }}"
                            class="group flex items-center px-2 py-2 text-sm font-medium rounded-md transition-colors duration-200 {{ request()->routeIs('user.dashboard') ? 'bg-indigo-700 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white' }}"
@@ -122,6 +123,129 @@
                                     Quizzes
                                 </span>
                             </a>
+                        @endif
+
+                        @if(false && auth()->user()->hasAnyAdminPermission() && !auth()->user()->isSuperAdmin())
+                        <div class="pt-4 mt-4 border-t border-gray-700 space-y-1">
+                            <p class="px-2 pb-1 text-[11px] font-semibold uppercase tracking-wider text-purple-300">Admin Features</p>
+                            @if(auth()->user()->canAccessContentManagement())
+                            <a href="{{ url('/admin/quizzes') }}"
+                               class="group flex items-center px-2 py-2 text-sm font-medium rounded-md transition-colors duration-200 {{ request()->routeIs('admin.quizzes.*') || request()->routeIs('quizzes.*') ? 'bg-purple-700 text-white' : 'text-purple-300 hover:bg-purple-700 hover:text-white' }}"
+                               :class="sidebarCollapsed ? 'justify-center' : ''"
+                               :title="sidebarCollapsed ? 'Content' : ''">
+                                <svg class="h-5 w-5" :class="sidebarCollapsed ? '' : 'mr-3'" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                                <span class="transition-opacity duration-300" :class="sidebarCollapsed ? 'opacity-0 w-0 overflow-hidden' : 'opacity-100'">Content</span>
+                            </a>
+                            @endif
+                            @if(auth()->user()->canAccessAnalyticsReports())
+                            <a href="{{ url('/admin/analytics') }}"
+                               class="group flex items-center px-2 py-2 text-sm font-medium rounded-md transition-colors duration-200 {{ request()->routeIs('admin.analytics.*') ? 'bg-purple-700 text-white' : 'text-purple-300 hover:bg-purple-700 hover:text-white' }}"
+                               :class="sidebarCollapsed ? 'justify-center' : ''"
+                               :title="sidebarCollapsed ? 'Analytics' : ''">
+                                <svg class="h-5 w-5" :class="sidebarCollapsed ? '' : 'mr-3'" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg>
+                                <span class="transition-opacity duration-300" :class="sidebarCollapsed ? 'opacity-0 w-0 overflow-hidden' : 'opacity-100'">Analytics</span>
+                            </a>
+                            @endif
+                            @if(auth()->user()->canAccessEmployeeManagement())
+                            <a href="{{ url('/admin/dtr') }}"
+                               class="group flex items-center px-2 py-2 text-sm font-medium rounded-md transition-colors duration-200 {{ request()->routeIs('admin.dtr.*') ? 'bg-purple-700 text-white' : 'text-purple-300 hover:bg-purple-700 hover:text-white' }}"
+                               :class="sidebarCollapsed ? 'justify-center' : ''"
+                               :title="sidebarCollapsed ? 'Employees' : ''">
+                                <svg class="h-5 w-5" :class="sidebarCollapsed ? '' : 'mr-3'" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                                <span class="transition-opacity duration-300" :class="sidebarCollapsed ? 'opacity-0 w-0 overflow-hidden' : 'opacity-100'">Employees</span>
+                            </a>
+                            @endif
+                            @if(auth()->user()->canAccessStudentManagement())
+                            <a href="{{ url('/admin/student-management/students') }}"
+                               class="group flex items-center px-2 py-2 text-sm font-medium rounded-md transition-colors duration-200 {{ request()->routeIs('admin.student-management.*') ? 'bg-purple-700 text-white' : 'text-purple-300 hover:bg-purple-700 hover:text-white' }}"
+                               :class="sidebarCollapsed ? 'justify-center' : ''"
+                               :title="sidebarCollapsed ? 'Students' : ''">
+                                <svg class="h-5 w-5" :class="sidebarCollapsed ? '' : 'mr-3'" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z"></path></svg>
+                                <span class="transition-opacity duration-300" :class="sidebarCollapsed ? 'opacity-0 w-0 overflow-hidden' : 'opacity-100'">Students</span>
+                            </a>
+                            @endif
+                            @if(auth()->user()->canAccessHiringProcess())
+                            <a href="{{ url('/admin/hiring-process') }}"
+                               class="group flex items-center px-2 py-2 text-sm font-medium rounded-md transition-colors duration-200 {{ request()->routeIs('admin.hiring-process.*') || request()->routeIs('admin.hiring-*') ? 'bg-purple-700 text-white' : 'text-purple-300 hover:bg-purple-700 hover:text-white' }}"
+                               :class="sidebarCollapsed ? 'justify-center' : ''"
+                               :title="sidebarCollapsed ? 'Hiring' : ''">
+                                <svg class="h-5 w-5" :class="sidebarCollapsed ? '' : 'mr-3'" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path></svg>
+                                <span class="transition-opacity duration-300" :class="sidebarCollapsed ? 'opacity-0 w-0 overflow-hidden' : 'opacity-100'">Hiring</span>
+                            </a>
+                            @endif
+                            @if(auth()->user()->canAccessCommunication())
+                            <a href="{{ url('/admin/contact-messages') }}"
+                               class="group flex items-center px-2 py-2 text-sm font-medium rounded-md transition-colors duration-200 {{ request()->routeIs('contact-messages.*') || request()->routeIs('live-chat.*') ? 'bg-purple-700 text-white' : 'text-purple-300 hover:bg-purple-700 hover:text-white' }}"
+                               :class="sidebarCollapsed ? 'justify-center' : ''"
+                               :title="sidebarCollapsed ? 'Communication' : ''">
+                                <svg class="h-5 w-5" :class="sidebarCollapsed ? '' : 'mr-3'" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 4.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path></svg>
+                                <span class="transition-opacity duration-300" :class="sidebarCollapsed ? 'opacity-0 w-0 overflow-hidden' : 'opacity-100'">Communication</span>
+                            </a>
+                            @endif
+                            @if(auth()->user()->canAccessBilling())
+                            <a href="{{ url('/admin/billing') }}"
+                               class="group flex items-center px-2 py-2 text-sm font-medium rounded-md transition-colors duration-200 {{ request()->is('admin/billing*') ? 'bg-purple-700 text-white' : 'text-purple-300 hover:bg-purple-700 hover:text-white' }}"
+                               :class="sidebarCollapsed ? 'justify-center' : ''"
+                               :title="sidebarCollapsed ? 'Billing' : ''">
+                                <svg class="h-5 w-5" :class="sidebarCollapsed ? '' : 'mr-3'" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a5 5 0 00-10 0v2m-2 0h14a1 1 0 011 1v9a2 2 0 01-2 2H6a2 2 0 01-2-2v-9a1 1 0 011-1zm7 4h.01"></path></svg>
+                                <span class="transition-opacity duration-300" :class="sidebarCollapsed ? 'opacity-0 w-0 overflow-hidden' : 'opacity-100'">Billing</span>
+                            </a>
+                            @endif
+                            @if(auth()->user()->canAccessLinkedAccounts())
+                            <a href="{{ url('/admin/linked-accounts') }}"
+                               class="group flex items-center px-2 py-2 text-sm font-medium rounded-md transition-colors duration-200 {{ request()->is('admin/linked-accounts*') || request()->is('admin/starlinks*') || request()->is('admin/omadas*') || request()->is('admin/subscription-plan-types*') ? 'bg-purple-700 text-white' : 'text-purple-300 hover:bg-purple-700 hover:text-white' }}"
+                               :class="sidebarCollapsed ? 'justify-center' : ''"
+                               :title="sidebarCollapsed ? 'Subscriptions' : ''">
+                                <svg class="h-5 w-5" :class="sidebarCollapsed ? '' : 'mr-3'" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg>
+                                <span class="transition-opacity duration-300" :class="sidebarCollapsed ? 'opacity-0 w-0 overflow-hidden' : 'opacity-100'">Subscriptions</span>
+                            </a>
+                            @endif
+                            @if(auth()->user()->canAccessFiles())
+                            <a href="{{ url('/admin/files') }}"
+                               class="group flex items-center px-2 py-2 text-sm font-medium rounded-md transition-colors duration-200 {{ request()->routeIs('admin.files.*') ? 'bg-purple-700 text-white' : 'text-purple-300 hover:bg-purple-700 hover:text-white' }}"
+                               :class="sidebarCollapsed ? 'justify-center' : ''"
+                               :title="sidebarCollapsed ? 'Files' : ''">
+                                <svg class="h-5 w-5" :class="sidebarCollapsed ? '' : 'mr-3'" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V7z"></path></svg>
+                                <span class="transition-opacity duration-300" :class="sidebarCollapsed ? 'opacity-0 w-0 overflow-hidden' : 'opacity-100'">Files</span>
+                            </a>
+                            @endif
+                            @if(auth()->user()->canAccessConfession())
+                            <a href="{{ url('/admin/confession') }}"
+                               class="group flex items-center px-2 py-2 text-sm font-medium rounded-md transition-colors duration-200 {{ request()->is('admin/confession*') ? 'bg-purple-700 text-white' : 'text-purple-300 hover:bg-purple-700 hover:text-white' }}"
+                               :class="sidebarCollapsed ? 'justify-center' : ''"
+                               :title="sidebarCollapsed ? 'Confession' : ''">
+                                <svg class="h-5 w-5" :class="sidebarCollapsed ? '' : 'mr-3'" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h.01M12 10h.01M16 10h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4-.8L3 20l1.2-3.2A7.56 7.56 0 013 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path></svg>
+                                <span class="transition-opacity duration-300" :class="sidebarCollapsed ? 'opacity-0 w-0 overflow-hidden' : 'opacity-100'">Confession</span>
+                            </a>
+                            @endif
+                            @if(auth()->user()->canAccessFeedback())
+                            <a href="{{ url('/admin/feedback') }}"
+                               class="group flex items-center px-2 py-2 text-sm font-medium rounded-md transition-colors duration-200 {{ request()->routeIs('admin.feedback.*') ? 'bg-purple-700 text-white' : 'text-purple-300 hover:bg-purple-700 hover:text-white' }}"
+                               :class="sidebarCollapsed ? 'justify-center' : ''"
+                               :title="sidebarCollapsed ? 'Feedback' : ''">
+                                <svg class="h-5 w-5" :class="sidebarCollapsed ? '' : 'mr-3'" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 8h10M7 12h6m-9 8l3.5-3H19a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v9a2 2 0 002 2h2z"></path></svg>
+                                <span class="transition-opacity duration-300" :class="sidebarCollapsed ? 'opacity-0 w-0 overflow-hidden' : 'opacity-100'">Feedback</span>
+                            </a>
+                            @endif
+                            @if(auth()->user()->canAccessUserManagement())
+                            <a href="{{ url('/admin/users') }}"
+                               class="group flex items-center px-2 py-2 text-sm font-medium rounded-md transition-colors duration-200 {{ request()->routeIs('admin.users.*') ? 'bg-purple-700 text-white' : 'text-purple-300 hover:bg-purple-700 hover:text-white' }}"
+                               :class="sidebarCollapsed ? 'justify-center' : ''"
+                               :title="sidebarCollapsed ? 'Users' : ''">
+                                <svg class="h-5 w-5" :class="sidebarCollapsed ? '' : 'mr-3'" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"></path></svg>
+                                <span class="transition-opacity duration-300" :class="sidebarCollapsed ? 'opacity-0 w-0 overflow-hidden' : 'opacity-100'">Users</span>
+                            </a>
+                            @endif
+                            @if(auth()->user()->canAccessSystem())
+                            <a href="{{ url('/admin/settings') }}"
+                               class="group flex items-center px-2 py-2 text-sm font-medium rounded-md transition-colors duration-200 {{ request()->routeIs('admin.settings.*') ? 'bg-purple-700 text-white' : 'text-purple-300 hover:bg-purple-700 hover:text-white' }}"
+                               :class="sidebarCollapsed ? 'justify-center' : ''"
+                               :title="sidebarCollapsed ? 'Settings' : ''">
+                                <svg class="h-5 w-5" :class="sidebarCollapsed ? '' : 'mr-3'" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+                                <span class="transition-opacity duration-300" :class="sidebarCollapsed ? 'opacity-0 w-0 overflow-hidden' : 'opacity-100'">Settings</span>
+                            </a>
+                            @endif
+                        </div>
                         @endif
 
                         @if(auth()->user()->role === 'technician')
@@ -304,11 +428,20 @@
                             @endif
                             @if(auth()->user()->canAccessCommunication())
                             <a href="{{ url('/admin/contact-messages') }}"
-                               class="group flex items-center px-2 py-2 text-sm font-medium rounded-md transition-colors duration-200 {{ request()->routeIs('contact-messages.*') || request()->routeIs('live-chat.*') || request()->routeIs('admin.feedback.*') ? 'bg-purple-700 text-white' : 'text-purple-300 hover:bg-purple-700 hover:text-white' }}"
+                               class="group flex items-center px-2 py-2 text-sm font-medium rounded-md transition-colors duration-200 {{ request()->routeIs('contact-messages.*') || request()->routeIs('live-chat.*') ? 'bg-purple-700 text-white' : 'text-purple-300 hover:bg-purple-700 hover:text-white' }}"
                                :class="sidebarCollapsed ? 'justify-center' : ''"
                                :title="sidebarCollapsed ? 'Communication' : ''">
                                 <svg class="h-5 w-5" :class="sidebarCollapsed ? '' : 'mr-3'" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 4.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path></svg>
                                 <span class="transition-opacity duration-300" :class="sidebarCollapsed ? 'opacity-0 w-0 overflow-hidden' : 'opacity-100'">Communication</span>
+                            </a>
+                            @endif
+                            @if(auth()->user()->canAccessBilling())
+                            <a href="{{ url('/admin/billing') }}"
+                               class="group flex items-center px-2 py-2 text-sm font-medium rounded-md transition-colors duration-200 {{ request()->is('admin/billing*') ? 'bg-purple-700 text-white' : 'text-purple-300 hover:bg-purple-700 hover:text-white' }}"
+                               :class="sidebarCollapsed ? 'justify-center' : ''"
+                               :title="sidebarCollapsed ? 'Billing' : ''">
+                                <svg class="h-5 w-5" :class="sidebarCollapsed ? '' : 'mr-3'" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a5 5 0 00-10 0v2m-2 0h14a1 1 0 011 1v9a2 2 0 01-2 2H6a2 2 0 01-2-2v-9a1 1 0 011-1zm7 4h.01"></path></svg>
+                                <span class="transition-opacity duration-300" :class="sidebarCollapsed ? 'opacity-0 w-0 overflow-hidden' : 'opacity-100'">Billing</span>
                             </a>
                             @endif
                             @if(auth()->user()->canAccessLinkedAccounts())
@@ -318,6 +451,33 @@
                                :title="sidebarCollapsed ? 'Subscriptions' : ''">
                                 <svg class="h-5 w-5" :class="sidebarCollapsed ? '' : 'mr-3'" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg>
                                 <span class="transition-opacity duration-300" :class="sidebarCollapsed ? 'opacity-0 w-0 overflow-hidden' : 'opacity-100'">Subscriptions</span>
+                            </a>
+                            @endif
+                            @if(auth()->user()->canAccessFiles())
+                            <a href="{{ url('/admin/files') }}"
+                               class="group flex items-center px-2 py-2 text-sm font-medium rounded-md transition-colors duration-200 {{ request()->routeIs('admin.files.*') ? 'bg-purple-700 text-white' : 'text-purple-300 hover:bg-purple-700 hover:text-white' }}"
+                               :class="sidebarCollapsed ? 'justify-center' : ''"
+                               :title="sidebarCollapsed ? 'Files' : ''">
+                                <svg class="h-5 w-5" :class="sidebarCollapsed ? '' : 'mr-3'" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V7z"></path></svg>
+                                <span class="transition-opacity duration-300" :class="sidebarCollapsed ? 'opacity-0 w-0 overflow-hidden' : 'opacity-100'">Files</span>
+                            </a>
+                            @endif
+                            @if(auth()->user()->canAccessConfession())
+                            <a href="{{ url('/admin/confession') }}"
+                               class="group flex items-center px-2 py-2 text-sm font-medium rounded-md transition-colors duration-200 {{ request()->is('admin/confession*') ? 'bg-purple-700 text-white' : 'text-purple-300 hover:bg-purple-700 hover:text-white' }}"
+                               :class="sidebarCollapsed ? 'justify-center' : ''"
+                               :title="sidebarCollapsed ? 'Confession' : ''">
+                                <svg class="h-5 w-5" :class="sidebarCollapsed ? '' : 'mr-3'" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h.01M12 10h.01M16 10h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4-.8L3 20l1.2-3.2A7.56 7.56 0 013 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path></svg>
+                                <span class="transition-opacity duration-300" :class="sidebarCollapsed ? 'opacity-0 w-0 overflow-hidden' : 'opacity-100'">Confession</span>
+                            </a>
+                            @endif
+                            @if(auth()->user()->canAccessFeedback())
+                            <a href="{{ url('/admin/feedback') }}"
+                               class="group flex items-center px-2 py-2 text-sm font-medium rounded-md transition-colors duration-200 {{ request()->routeIs('admin.feedback.*') ? 'bg-purple-700 text-white' : 'text-purple-300 hover:bg-purple-700 hover:text-white' }}"
+                               :class="sidebarCollapsed ? 'justify-center' : ''"
+                               :title="sidebarCollapsed ? 'Feedback' : ''">
+                                <svg class="h-5 w-5" :class="sidebarCollapsed ? '' : 'mr-3'" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 8h10M7 12h6m-9 8l3.5-3H19a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v9a2 2 0 002 2h2z"></path></svg>
+                                <span class="transition-opacity duration-300" :class="sidebarCollapsed ? 'opacity-0 w-0 overflow-hidden' : 'opacity-100'">Feedback</span>
                             </a>
                             @endif
                             @if(auth()->user()->canAccessUserManagement())
@@ -446,6 +606,7 @@
 
                     <!-- Mobile navigation -->
                     <nav class="flex-1 px-2 py-4 space-y-1">
+                        <p class="px-2 pb-1 text-[11px] font-semibold uppercase tracking-wider text-gray-400">User Features</p>
                         <a href="{{ url('/dashboard') }}"
                            @click="sidebarOpen = false"
                            class="group flex items-center px-2 py-2 text-sm font-medium rounded-md transition-colors duration-200 {{ request()->routeIs('user.dashboard') ? 'bg-indigo-700 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white' }}">
@@ -454,6 +615,51 @@
                             </svg>
                             Dashboard
                         </a>
+
+                        @if(false && auth()->user()->hasAnyAdminPermission() && !auth()->user()->isSuperAdmin())
+                        <div class="pt-4 mt-4 border-t border-gray-700 space-y-1">
+                            <p class="px-2 pb-1 text-[11px] font-semibold uppercase tracking-wider text-purple-300">Admin Features</p>
+                            @if(auth()->user()->canAccessContentManagement())
+                            <a href="{{ url('/admin/quizzes') }}" @click="sidebarOpen = false" class="group flex items-center px-2 py-2 text-sm font-medium rounded-md transition-colors duration-200 {{ request()->routeIs('admin.quizzes.*') || request()->routeIs('quizzes.*') ? 'bg-purple-700 text-white' : 'text-purple-300 hover:bg-purple-700 hover:text-white' }}"><svg class="mr-3 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>Content</a>
+                            @endif
+                            @if(auth()->user()->canAccessAnalyticsReports())
+                            <a href="{{ url('/admin/analytics') }}" @click="sidebarOpen = false" class="group flex items-center px-2 py-2 text-sm font-medium rounded-md transition-colors duration-200 {{ request()->routeIs('admin.analytics.*') ? 'bg-purple-700 text-white' : 'text-purple-300 hover:bg-purple-700 hover:text-white' }}"><svg class="mr-3 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg>Analytics</a>
+                            @endif
+                            @if(auth()->user()->canAccessEmployeeManagement())
+                            <a href="{{ url('/admin/dtr') }}" @click="sidebarOpen = false" class="group flex items-center px-2 py-2 text-sm font-medium rounded-md transition-colors duration-200 {{ request()->routeIs('admin.dtr.*') ? 'bg-purple-700 text-white' : 'text-purple-300 hover:bg-purple-700 hover:text-white' }}"><svg class="mr-3 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>Employees</a>
+                            @endif
+                            @if(auth()->user()->canAccessStudentManagement())
+                            <a href="{{ url('/admin/student-management/students') }}" @click="sidebarOpen = false" class="group flex items-center px-2 py-2 text-sm font-medium rounded-md transition-colors duration-200 {{ request()->routeIs('admin.student-management.*') ? 'bg-purple-700 text-white' : 'text-purple-300 hover:bg-purple-700 hover:text-white' }}"><svg class="mr-3 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z"></path></svg>Students</a>
+                            @endif
+                            @if(auth()->user()->canAccessHiringProcess())
+                            <a href="{{ url('/admin/hiring-process') }}" @click="sidebarOpen = false" class="group flex items-center px-2 py-2 text-sm font-medium rounded-md transition-colors duration-200 {{ request()->routeIs('admin.hiring-process.*') || request()->routeIs('admin.hiring-*') ? 'bg-purple-700 text-white' : 'text-purple-300 hover:bg-purple-700 hover:text-white' }}"><svg class="mr-3 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path></svg>Hiring</a>
+                            @endif
+                            @if(auth()->user()->canAccessCommunication())
+                            <a href="{{ url('/admin/contact-messages') }}" @click="sidebarOpen = false" class="group flex items-center px-2 py-2 text-sm font-medium rounded-md transition-colors duration-200 {{ request()->routeIs('contact-messages.*') || request()->routeIs('live-chat.*') ? 'bg-purple-700 text-white' : 'text-purple-300 hover:bg-purple-700 hover:text-white' }}"><svg class="mr-3 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 4.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path></svg>Communication</a>
+                            @endif
+                            @if(auth()->user()->canAccessBilling())
+                            <a href="{{ url('/admin/billing') }}" @click="sidebarOpen = false" class="group flex items-center px-2 py-2 text-sm font-medium rounded-md transition-colors duration-200 {{ request()->is('admin/billing*') ? 'bg-purple-700 text-white' : 'text-purple-300 hover:bg-purple-700 hover:text-white' }}"><svg class="mr-3 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a5 5 0 00-10 0v2m-2 0h14a1 1 0 011 1v9a2 2 0 01-2 2H6a2 2 0 01-2-2v-9a1 1 0 011-1zm7 4h.01"></path></svg>Billing</a>
+                            @endif
+                            @if(auth()->user()->canAccessLinkedAccounts())
+                            <a href="{{ url('/admin/linked-accounts') }}" @click="sidebarOpen = false" class="group flex items-center px-2 py-2 text-sm font-medium rounded-md transition-colors duration-200 {{ request()->is('admin/linked-accounts*') || request()->is('admin/starlinks*') || request()->is('admin/omadas*') || request()->is('admin/subscription-plan-types*') ? 'bg-purple-700 text-white' : 'text-purple-300 hover:bg-purple-700 hover:text-white' }}"><svg class="mr-3 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg>Subscriptions</a>
+                            @endif
+                            @if(auth()->user()->canAccessFiles())
+                            <a href="{{ url('/admin/files') }}" @click="sidebarOpen = false" class="group flex items-center px-2 py-2 text-sm font-medium rounded-md transition-colors duration-200 {{ request()->routeIs('admin.files.*') ? 'bg-purple-700 text-white' : 'text-purple-300 hover:bg-purple-700 hover:text-white' }}"><svg class="mr-3 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V7z"></path></svg>Files</a>
+                            @endif
+                            @if(auth()->user()->canAccessConfession())
+                            <a href="{{ url('/admin/confession') }}" @click="sidebarOpen = false" class="group flex items-center px-2 py-2 text-sm font-medium rounded-md transition-colors duration-200 {{ request()->is('admin/confession*') ? 'bg-purple-700 text-white' : 'text-purple-300 hover:bg-purple-700 hover:text-white' }}"><svg class="mr-3 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h.01M12 10h.01M16 10h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4-.8L3 20l1.2-3.2A7.56 7.56 0 013 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path></svg>Confession</a>
+                            @endif
+                            @if(auth()->user()->canAccessFeedback())
+                            <a href="{{ url('/admin/feedback') }}" @click="sidebarOpen = false" class="group flex items-center px-2 py-2 text-sm font-medium rounded-md transition-colors duration-200 {{ request()->routeIs('admin.feedback.*') ? 'bg-purple-700 text-white' : 'text-purple-300 hover:bg-purple-700 hover:text-white' }}"><svg class="mr-3 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 8h10M7 12h6m-9 8l3.5-3H19a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v9a2 2 0 002 2h2z"></path></svg>Feedback</a>
+                            @endif
+                            @if(auth()->user()->canAccessUserManagement())
+                            <a href="{{ url('/admin/users') }}" @click="sidebarOpen = false" class="group flex items-center px-2 py-2 text-sm font-medium rounded-md transition-colors duration-200 {{ request()->routeIs('admin.users.*') ? 'bg-purple-700 text-white' : 'text-purple-300 hover:bg-purple-700 hover:text-white' }}"><svg class="mr-3 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"></path></svg>Users</a>
+                            @endif
+                            @if(auth()->user()->canAccessSystem())
+                            <a href="{{ url('/admin/settings') }}" @click="sidebarOpen = false" class="group flex items-center px-2 py-2 text-sm font-medium rounded-md transition-colors duration-200 {{ request()->routeIs('admin.settings.*') ? 'bg-purple-700 text-white' : 'text-purple-300 hover:bg-purple-700 hover:text-white' }}"><svg class="mr-3 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>Settings</a>
+                            @endif
+                        </div>
+                        @endif
 
                         <a href="{{ url('/quizzes') }}"
                            @click="sidebarOpen = false"
@@ -588,9 +794,44 @@
                             @endif
                             @if(auth()->user()->canAccessCommunication())
                             <a href="{{ url('/admin/contact-messages') }}" @click="sidebarOpen = false"
-                               class="group flex items-center px-2 py-2 text-sm font-medium rounded-md transition-colors duration-200 {{ request()->routeIs('contact-messages.*') || request()->routeIs('live-chat.*') || request()->routeIs('admin.feedback.*') ? 'bg-purple-700 text-white' : 'text-purple-300 hover:bg-purple-700 hover:text-white' }}">
+                               class="group flex items-center px-2 py-2 text-sm font-medium rounded-md transition-colors duration-200 {{ request()->routeIs('contact-messages.*') || request()->routeIs('live-chat.*') ? 'bg-purple-700 text-white' : 'text-purple-300 hover:bg-purple-700 hover:text-white' }}">
                                 <svg class="mr-3 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 4.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path></svg>
                                 Communication
+                            </a>
+                            @endif
+                            @if(auth()->user()->canAccessBilling())
+                            <a href="{{ url('/admin/billing') }}" @click="sidebarOpen = false"
+                               class="group flex items-center px-2 py-2 text-sm font-medium rounded-md transition-colors duration-200 {{ request()->is('admin/billing*') ? 'bg-purple-700 text-white' : 'text-purple-300 hover:bg-purple-700 hover:text-white' }}">
+                                <svg class="mr-3 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a5 5 0 00-10 0v2m-2 0h14a1 1 0 011 1v9a2 2 0 01-2 2H6a2 2 0 01-2-2v-9a1 1 0 011-1zm7 4h.01"></path></svg>
+                                Billing
+                            </a>
+                            @endif
+                            @if(auth()->user()->canAccessLinkedAccounts())
+                            <a href="{{ url('/admin/linked-accounts') }}" @click="sidebarOpen = false"
+                               class="group flex items-center px-2 py-2 text-sm font-medium rounded-md transition-colors duration-200 {{ request()->is('admin/linked-accounts*') || request()->is('admin/starlinks*') || request()->is('admin/omadas*') || request()->is('admin/subscription-plan-types*') ? 'bg-purple-700 text-white' : 'text-purple-300 hover:bg-purple-700 hover:text-white' }}">
+                                <svg class="mr-3 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg>
+                                Subscriptions
+                            </a>
+                            @endif
+                            @if(auth()->user()->canAccessFiles())
+                            <a href="{{ url('/admin/files') }}" @click="sidebarOpen = false"
+                               class="group flex items-center px-2 py-2 text-sm font-medium rounded-md transition-colors duration-200 {{ request()->routeIs('admin.files.*') ? 'bg-purple-700 text-white' : 'text-purple-300 hover:bg-purple-700 hover:text-white' }}">
+                                <svg class="mr-3 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V7z"></path></svg>
+                                Files
+                            </a>
+                            @endif
+                            @if(auth()->user()->canAccessConfession())
+                            <a href="{{ url('/admin/confession') }}" @click="sidebarOpen = false"
+                               class="group flex items-center px-2 py-2 text-sm font-medium rounded-md transition-colors duration-200 {{ request()->is('admin/confession*') ? 'bg-purple-700 text-white' : 'text-purple-300 hover:bg-purple-700 hover:text-white' }}">
+                                <svg class="mr-3 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h.01M12 10h.01M16 10h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4-.8L3 20l1.2-3.2A7.56 7.56 0 013 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path></svg>
+                                Confession
+                            </a>
+                            @endif
+                            @if(auth()->user()->canAccessFeedback())
+                            <a href="{{ url('/admin/feedback') }}" @click="sidebarOpen = false"
+                               class="group flex items-center px-2 py-2 text-sm font-medium rounded-md transition-colors duration-200 {{ request()->routeIs('admin.feedback.*') ? 'bg-purple-700 text-white' : 'text-purple-300 hover:bg-purple-700 hover:text-white' }}">
+                                <svg class="mr-3 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 8h10M7 12h6m-9 8l3.5-3H19a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v9a2 2 0 002 2h2z"></path></svg>
+                                Feedback
                             </a>
                             @endif
                             @if(auth()->user()->canAccessUserManagement())
