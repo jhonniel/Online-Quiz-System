@@ -161,30 +161,7 @@ class StarlinkController extends Controller
         return $pdf->download('starlinks_export.pdf');
     }
 
-    public function removeClientName(Request $request)
-    {
-        $this->ensureCanAccess();
-
-        if (! Schema::hasColumn('starlinks', 'municipality')) {
-            return redirect()->to('/admin/starlinks')->with('warning', 'Client Name column is not available yet.');
-        }
-
-        $validated = $request->validate([
-            'client_name' => 'required|string|max:255',
-        ]);
-
-        $clientName = trim((string) $validated['client_name']);
-        if ($clientName === '') {
-            return redirect()->to('/admin/starlinks')->with('warning', 'Please select a valid client name.');
-        }
-
-        $affected = Starlink::query()
-            ->whereRaw('LOWER(COALESCE(municipality, \'\')) = LOWER(?)', [$clientName])
-            ->update(['municipality' => null]);
-
-        return redirect()->to('/admin/starlinks')
-            ->with('success', "Removed client name '{$clientName}' from {$affected} record(s).");
-    }
+    // Client Name removal UI was intentionally removed from the starlinks list page.
 
     public function show(Starlink $starlink)
     {
