@@ -54,6 +54,7 @@
                         'resolved' => 'bg-green-100 text-green-800',
                         default => 'bg-gray-100 text-gray-800',
                     };
+                    $isPaid = ($ticket->payment_status ?? \App\Models\TicketReport::PAYMENT_STATUS_PENDING) === \App\Models\TicketReport::PAYMENT_STATUS_PAID;
                 @endphp
                 <div class="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm">
                     <div class="flex items-start justify-between gap-3">
@@ -67,6 +68,11 @@
                     <div class="mt-3 space-y-1 pb-3 border-b border-gray-100">
                         <p class="text-sm font-medium text-gray-900">{{ $ticket->type_label }}</p>
                         <p class="text-xs text-gray-600">Reporter: {{ $ticket->full_name }}</p>
+                        <div class="pt-1">
+                            <span class="inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-semibold {{ $isPaid ? 'bg-green-100 text-green-800' : 'bg-amber-100 text-amber-800' }}">
+                                {{ $isPaid ? 'Paid' : 'Pending for payment' }}
+                            </span>
+                        </div>
                     </div>
                     <form method="POST" action="{{ url('/technician/tickets/' . $ticket->id) }}" class="mt-3 space-y-3">
                         @csrf
@@ -119,6 +125,7 @@
                                 'resolved' => 'bg-green-100 text-green-800',
                                 default => 'bg-gray-100 text-gray-800',
                             };
+                            $isPaid = ($ticket->payment_status ?? \App\Models\TicketReport::PAYMENT_STATUS_PENDING) === \App\Models\TicketReport::PAYMENT_STATUS_PAID;
                         @endphp
                         <tr class="hover:bg-gray-50/60 transition-colors">
                             <td class="px-5 py-4 align-top">
@@ -133,6 +140,10 @@
                             <td class="px-5 py-4 text-sm text-gray-700 align-top">{{ $ticket->type_label }}</td>
                             <td class="px-5 py-4 text-sm text-gray-700 align-top">{{ $ticket->full_name }}</td>
                             <td class="px-5 py-4 text-sm text-gray-700 align-top">
+                                <span class="inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold {{ $isPaid ? 'bg-green-100 text-green-800' : 'bg-amber-100 text-amber-800' }}">
+                                    {{ $isPaid ? 'Paid' : 'Pending for payment' }}
+                                </span>
+                                <div class="mt-2"></div>
                                 <span class="inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold {{ $statusClasses }}">
                                     {{ strtoupper(str_replace('_', ' ', $ticket->status)) }}
                                 </span>

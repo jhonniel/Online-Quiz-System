@@ -30,6 +30,9 @@ class DashboardController extends Controller
                     TicketReport::STATUS_RESOLVED,
                     TicketReport::STATUS_CLOSED,
                 ])->count();
+            $assignedPendingPayment = (clone $assignedTicketsQuery)
+                ->where('payment_status', TicketReport::PAYMENT_STATUS_PENDING)
+                ->count();
 
             $recentAssignedTickets = (clone $assignedTicketsQuery)
                 ->latest()
@@ -40,6 +43,7 @@ class DashboardController extends Controller
                 'assignedTotal',
                 'assignedOpen',
                 'assignedResolved',
+                'assignedPendingPayment',
                 'recentAssignedTickets'
             ));
         }

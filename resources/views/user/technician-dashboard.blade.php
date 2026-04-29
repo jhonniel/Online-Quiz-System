@@ -24,7 +24,7 @@
             </a>
         </div>
 
-        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             <div class="bg-white rounded-xl shadow p-4 border border-gray-100">
                 <p class="text-sm text-gray-500">Total Assigned</p>
                 <p class="text-2xl font-bold text-gray-900 mt-1">{{ $assignedTotal }}</p>
@@ -36,6 +36,10 @@
             <div class="bg-white rounded-xl shadow p-4 border border-gray-100">
                 <p class="text-sm text-gray-500">Resolved / Closed</p>
                 <p class="text-2xl font-bold text-green-600 mt-1">{{ $assignedResolved }}</p>
+            </div>
+            <div class="bg-white rounded-xl shadow p-4 border border-gray-100">
+                <p class="text-sm text-gray-500">Pending for payment</p>
+                <p class="text-2xl font-bold text-amber-600 mt-1">{{ $assignedPendingPayment }}</p>
             </div>
         </div>
 
@@ -51,6 +55,7 @@
                             <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Type</th>
                             <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Reporter</th>
                             <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
+                            <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Payment</th>
                             <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Updated</th>
                         </tr>
                     </thead>
@@ -66,11 +71,19 @@
                                         {{ str_replace('_', ' ', ucfirst($ticket->status)) }}
                                     </span>
                                 </td>
+                                @php
+                                    $isPaid = ($ticket->payment_status ?? \App\Models\TicketReport::PAYMENT_STATUS_PENDING) === \App\Models\TicketReport::PAYMENT_STATUS_PAID;
+                                @endphp
+                                <td class="px-4 py-2 text-sm">
+                                    <span class="inline-flex px-2 py-0.5 rounded-full text-xs font-medium {{ $isPaid ? 'bg-green-100 text-green-800' : 'bg-amber-100 text-amber-800' }}">
+                                        {{ $isPaid ? 'Paid' : 'Pending for payment' }}
+                                    </span>
+                                </td>
                                 <td class="px-4 py-2 text-sm text-gray-500">{{ $ticket->updated_at?->format('M d, Y h:i A') }}</td>
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="5" class="px-4 py-6 text-sm text-gray-500 text-center">No assigned tickets found.</td>
+                                <td colspan="6" class="px-4 py-6 text-sm text-gray-500 text-center">No assigned tickets found.</td>
                             </tr>
                         @endforelse
                     </tbody>
