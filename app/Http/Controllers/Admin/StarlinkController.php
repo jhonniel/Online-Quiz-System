@@ -9,6 +9,7 @@ use App\Models\SubscriptionPlanType;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Validation\ValidationException;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
@@ -28,8 +29,9 @@ class StarlinkController extends Controller
     public function index(Request $request)
     {
         $this->ensureCanAccess();
+        $hasMunicipalityColumn = Schema::hasColumn('starlinks', 'municipality');
 
-        [$query, $search, $statusFilter, $accountEmailFilter, $clientNameFilter] = $this->buildFilteredQuery($request);
+        [$query, $search, $statusFilter, $accountEmailFilter, $clientNameFilter] = $this->buildFilteredQuery($request, $hasMunicipalityColumn);
 
         $starlinks = $query->paginate(15)->withQueryString();
 
@@ -51,13 +53,58 @@ class StarlinkController extends Controller
             $overdueCounts[$s->id] = 1; // Currently overdue
         }
 
-        return view('admin.starlinks.index', compact('starlinks', 'search', 'statusFilter', 'accountEmailFilter', 'clientNameFilter', 'overdueCounts'));
+        $accountEmailOptions = Starlink::query()
+            ->whereNotNull('account_linked_email')
+            ->whereRaw("TRIM(account_linked_email) <> ''")
+            ->pluck('account_linked_email')
+            ->map(fn ($email) => trim((string) $email))
+            ->filter()
+            ->values()
+            ->all();
+
+        $linkedAccountEmailOptions = LinkedAccount::query()
+            ->whereIn('id', Starlink::query()->whereNotNull('linked_account_id')->pluck('linked_account_id'))
+            ->whereNotNull('email')
+            ->pluck('email')
+            ->map(fn ($email) => trim((string) $email))
+            ->filter()
+            ->values()
+            ->all();
+
+        $accountEmailOptions = array_values(array_unique(array_merge($accountEmailOptions, $linkedAccountEmailOptions)));
+        sort($accountEmailOptions, SORT_NATURAL | SORT_FLAG_CASE);
+
+        $clientNameOptions = [];
+        if ($hasMunicipalityColumn) {
+            $clientNameOptions = Starlink::query()
+                ->whereNotNull('municipality')
+                ->whereRaw("TRIM(municipality) <> ''")
+                ->pluck('municipality')
+                ->map(fn ($name) => trim((string) $name))
+                ->filter()
+                ->unique()
+                ->values()
+                ->all();
+            sort($clientNameOptions, SORT_NATURAL | SORT_FLAG_CASE);
+        }
+
+        return view('admin.starlinks.index', compact(
+            'starlinks',
+            'search',
+            'statusFilter',
+            'accountEmailFilter',
+            'clientNameFilter',
+            'accountEmailOptions',
+            'clientNameOptions',
+            'overdueCounts'
+        ));
     }
 
     public function exportCsv(Request $request): StreamedResponse
     {
         $this->ensureCanAccess();
-        [$query] = $this->buildFilteredQuery($request);
+        $hasMunicipalityColumn = Schema::hasColumn('starlinks', 'municipality');
+        [$query] = $this->buildFilteredQuery($request, $hasMunicipalityColumn);
         $starlinks = $query->orderByDesc('created_at')->get();
 
         $headers = [
@@ -75,7 +122,7 @@ class StarlinkController extends Controller
             'Start Date',
         ];
 
-        return new StreamedResponse(function () use ($starlinks, $headers) {
+        return new StreamedResponse(function () use ($starlinks, $headers, $hasMunicipalityColumn) {
             $out = fopen('php://output', 'w');
             fputcsv($out, $headers);
             foreach ($starlinks as $s) {
@@ -87,7 +134,7 @@ class StarlinkController extends Controller
                     $s->kit_number,
                     $s->router_id,
                     $s->office_location,
-                    $s->municipality,
+                    $hasMunicipalityColumn ? ($s->municipality ?? '') : '',
                     $s->plan,
                     $s->status,
                     $s->contact_email,
@@ -104,10 +151,11 @@ class StarlinkController extends Controller
     public function exportPdf(Request $request)
     {
         $this->ensureCanAccess();
-        [$query, $search, $statusFilter, $accountEmailFilter, $clientNameFilter] = $this->buildFilteredQuery($request);
+        $hasMunicipalityColumn = Schema::hasColumn('starlinks', 'municipality');
+        [$query, $search, $statusFilter, $accountEmailFilter, $clientNameFilter] = $this->buildFilteredQuery($request, $hasMunicipalityColumn);
         $starlinks = $query->orderByDesc('created_at')->get();
 
-        $pdf = Pdf::loadView('admin.starlinks.export-pdf', compact('starlinks', 'search', 'statusFilter', 'accountEmailFilter', 'clientNameFilter'))
+        $pdf = Pdf::loadView('admin.starlinks.export-pdf', compact('starlinks', 'search', 'statusFilter', 'accountEmailFilter', 'clientNameFilter', 'hasMunicipalityColumn'))
             ->setPaper('a4', 'landscape');
 
         return $pdf->download('starlinks_export.pdf');
@@ -562,7 +610,7 @@ class StarlinkController extends Controller
         return $count;
     }
 
-    private function buildFilteredQuery(Request $request): array
+    private function buildFilteredQuery(Request $request, bool $hasMunicipalityColumn = true): array
     {
         $query = Starlink::with('linkedAccount')->orderByDesc('created_at');
         $dbDriver = DB::connection()->getDriverName();
@@ -577,17 +625,17 @@ class StarlinkController extends Controller
             $query->whereRaw('LOWER(COALESCE(status, \'\')) = LOWER(?)', [$statusFilter]);
         }
         if ($accountEmailFilter !== '') {
-            $term = '%' . $accountEmailFilter . '%';
-            $query->where(function ($q) use ($term) {
-                $q->whereRaw('LOWER(COALESCE(account_linked_email, \'\')) LIKE LOWER(?)', [$term])
-                    ->orWhereHas('linkedAccount', function ($q2) use ($term) {
-                        $q2->whereRaw('LOWER(COALESCE(email, \'\')) LIKE LOWER(?)', [$term]);
+            $query->where(function ($q) use ($accountEmailFilter) {
+                $q->whereRaw('LOWER(COALESCE(account_linked_email, \'\')) = LOWER(?)', [$accountEmailFilter])
+                    ->orWhereHas('linkedAccount', function ($q2) use ($accountEmailFilter) {
+                        $q2->whereRaw('LOWER(COALESCE(email, \'\')) = LOWER(?)', [$accountEmailFilter]);
                     });
             });
         }
         if ($clientNameFilter !== '') {
-            $term = '%' . $clientNameFilter . '%';
-            $query->whereRaw('LOWER(COALESCE(municipality, \'\')) LIKE LOWER(?)', [$term]);
+            if ($hasMunicipalityColumn) {
+                $query->whereRaw('LOWER(COALESCE(municipality, \'\')) = LOWER(?)', [$clientNameFilter]);
+            }
         }
 
         if ($search && trim($search) !== '') {
@@ -599,7 +647,7 @@ class StarlinkController extends Controller
                 }
 
                 $term = '%' . $token . '%';
-                $query->where(function ($q) use ($term, $token, $idLikeSql) {
+                $query->where(function ($q) use ($term, $token, $idLikeSql, $hasMunicipalityColumn) {
                     $q->whereRaw($idLikeSql, [$term])
                         ->orWhereRaw('LOWER(COALESCE(account_linked_email, \'\')) LIKE LOWER(?)', [$term])
                         ->orWhereRaw('LOWER(COALESCE(starlink_id, \'\')) LIKE LOWER(?)', [$term])
@@ -607,7 +655,9 @@ class StarlinkController extends Controller
                         ->orWhereRaw('LOWER(COALESCE(kit_number, \'\')) LIKE LOWER(?)', [$term])
                         ->orWhereRaw('LOWER(COALESCE(router_id, \'\')) LIKE LOWER(?)', [$term])
                         ->orWhereRaw('LOWER(COALESCE(office_location, \'\')) LIKE LOWER(?)', [$term])
-                        ->orWhereRaw('LOWER(COALESCE(municipality, \'\')) LIKE LOWER(?)', [$term])
+                        ->when($hasMunicipalityColumn, function ($q3) use ($term) {
+                            $q3->orWhereRaw('LOWER(COALESCE(municipality, \'\')) LIKE LOWER(?)', [$term]);
+                        })
                         ->orWhereRaw('LOWER(COALESCE(ssid, \'\')) LIKE LOWER(?)', [$term])
                         ->orWhereRaw('LOWER(COALESCE(wifi_password, \'\')) LIKE LOWER(?)', [$term])
                         ->orWhereRaw('LOWER(COALESCE(plan, \'\')) LIKE LOWER(?)', [$term])

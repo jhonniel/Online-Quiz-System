@@ -72,8 +72,18 @@
                         <option value="Active" {{ (($statusFilter ?? '') === 'Active') ? 'selected' : '' }}>Active</option>
                         <option value="Inactive" {{ (($statusFilter ?? '') === 'Inactive') ? 'selected' : '' }}>Inactive</option>
                     </select>
-                    <input type="text" name="account_email_filter" value="{{ old('account_email_filter', $accountEmailFilter ?? '') }}" placeholder="Filter Account/Email" class="block w-full py-2 px-3 rounded-lg border border-gray-300 text-sm placeholder-gray-400 focus:ring-indigo-500 focus:border-indigo-500" />
-                    <input type="text" name="client_name_filter" value="{{ old('client_name_filter', $clientNameFilter ?? '') }}" placeholder="Filter Client Name" class="block w-full py-2 px-3 rounded-lg border border-gray-300 text-sm placeholder-gray-400 focus:ring-indigo-500 focus:border-indigo-500" />
+                    <select name="account_email_filter" class="block w-full py-2 px-3 rounded-lg border border-gray-300 text-sm text-gray-700 focus:ring-indigo-500 focus:border-indigo-500">
+                        <option value="">All Account / Email</option>
+                        @foreach(($accountEmailOptions ?? []) as $emailOption)
+                            <option value="{{ $emailOption }}" {{ (($accountEmailFilter ?? '') === $emailOption) ? 'selected' : '' }}>{{ $emailOption }}</option>
+                        @endforeach
+                    </select>
+                    <select name="client_name_filter" class="block w-full py-2 px-3 rounded-lg border border-gray-300 text-sm text-gray-700 focus:ring-indigo-500 focus:border-indigo-500">
+                        <option value="">All Client Names</option>
+                        @foreach(($clientNameOptions ?? []) as $clientNameOption)
+                            <option value="{{ $clientNameOption }}" {{ (($clientNameFilter ?? '') === $clientNameOption) ? 'selected' : '' }}>{{ $clientNameOption }}</option>
+                        @endforeach
+                    </select>
                     <button type="submit" class="px-4 py-2 rounded-lg text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 transition-colors whitespace-nowrap">Search</button>
                     @if(!empty($search) || !empty($statusFilter) || !empty($accountEmailFilter) || !empty($clientNameFilter))
                         <a href="{{ url('/admin/starlinks') }}" class="px-4 py-2 rounded-lg text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 transition-colors whitespace-nowrap">Clear</a>
