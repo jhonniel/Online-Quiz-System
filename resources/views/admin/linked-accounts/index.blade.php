@@ -248,7 +248,7 @@
                     <p class="text-xs text-gray-500 mt-0.5">Top clients by Starlink devices</p>
                 </div>
             </div>
-            <div class="p-4 sm:p-5 flex-1 min-h-0 flex items-center">
+            <div class="p-4 sm:p-5 flex-1 min-h-0 flex items-start">
                 <div class="w-full">
                     <div class="flex items-center justify-between gap-3 mb-3">
                         <p class="text-xs font-semibold text-gray-700 uppercase tracking-wider">Top Client Names</p>
