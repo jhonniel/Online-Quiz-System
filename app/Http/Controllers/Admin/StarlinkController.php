@@ -264,9 +264,7 @@ class StarlinkController extends Controller
         ]);
         $selectedClientName = trim((string) ($validated['municipality_select'] ?? ''));
         $customClientName = trim((string) ($validated['municipality_custom'] ?? ''));
-        if ($selectedClientName === '__remove__') {
-            $validated['municipality'] = null;
-        } elseif ($selectedClientName === '__custom__') {
+        if ($selectedClientName === '__custom__') {
             $validated['municipality'] = $customClientName !== '' ? $customClientName : null;
         } elseif ($selectedClientName !== '') {
             $validated['municipality'] = $selectedClientName;
@@ -371,9 +369,7 @@ class StarlinkController extends Controller
 
         $selectedClientName = trim((string) ($validated['municipality_select'] ?? ''));
         $customClientName = trim((string) ($validated['municipality_custom'] ?? ''));
-        if ($selectedClientName === '__remove__') {
-            $validated['municipality'] = null;
-        } elseif ($selectedClientName === '__custom__') {
+        if ($selectedClientName === '__custom__') {
             $validated['municipality'] = $customClientName !== '' ? $customClientName : null;
         } elseif ($selectedClientName !== '') {
             $validated['municipality'] = $selectedClientName;
