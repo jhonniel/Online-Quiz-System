@@ -216,29 +216,6 @@
                     </div>
                 @endif
 
-                <div class="mt-4">
-                    <div class="flex items-center justify-between gap-3 mb-2">
-                        <p class="text-xs font-semibold text-gray-700 uppercase tracking-wider">Client name counts</p>
-                        @if(!empty($clientNameUniqueCount))
-                            <p class="text-xs text-gray-500">Total: {{ $clientNameUniqueCount }}</p>
-                        @endif
-                    </div>
-
-                    @if(!empty($clientNameCountsTop) && $clientNameCountsTop->count() > 0)
-                        <ul class="space-y-2">
-                            @foreach($clientNameCountsTop as $clientName => $count)
-                                <li class="flex items-center justify-between gap-3">
-                                    <span class="text-sm text-gray-700 truncate max-w-[180px]">{{ $clientName }}</span>
-                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-indigo-100 text-indigo-800">
-                                        {{ $count }}
-                                    </span>
-                                </li>
-                            @endforeach
-                        </ul>
-                    @else
-                        <p class="text-sm text-gray-500">No client names available yet.</p>
-                    @endif
-                </div>
             </div>
         </div>
         <div class="lg:col-span-4 bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden flex flex-col">
