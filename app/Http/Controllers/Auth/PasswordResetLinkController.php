@@ -87,9 +87,16 @@ class PasswordResetLinkController extends Controller
             }
         }
 
-        return $status == Password::RESET_LINK_SENT
-                    ? back()->with('status', 'We have emailed your password reset link. Please check your inbox.')
-                    : back()->withInput($request->only('email'))
-                        ->withErrors(['email' => __($status)]);
+        if ($status === Password::RESET_LINK_SENT) {
+            return back()->with('status', 'We have emailed your password reset link. Please check your inbox.');
+        }
+
+        // If user requests again too quickly, keep UX successful and ask them to check inbox.
+        if ($status === Password::RESET_THROTTLED) {
+            return back()->with('status', 'A reset link was already requested recently. Please check your email inbox (and spam).');
+        }
+
+        return back()->withInput($request->only('email'))
+            ->withErrors(['email' => __($status)]);
     }
 }

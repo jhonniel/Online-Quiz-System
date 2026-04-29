@@ -105,8 +105,13 @@ class UserController extends Controller
             'name' => 'required|string|max:255',
             'email' => 'required|string|email|max:255|unique:users',
             'password' => 'required|string|min:8|confirmed',
-            'role' => 'required|string|in:admin,user,student,employee,applicant,technician',
-            'university_id' => 'nullable',
+            'role' => 'required|string|in:admin,user,student,employee,teacher,applicant,technician',
+            'university_id' => [
+                'nullable',
+                Rule::requiredIf(function () use ($request) {
+                    return $request->role === 'teacher';
+                }),
+            ],
             'new_university_name' => 'nullable|string|max:255',
             'department_id' => [
                 'nullable',
@@ -148,7 +153,7 @@ class UserController extends Controller
             'password' => Hash::make($request->password),
             'role' => $request->role,
             'university_id' => $universityId,
-            'department_id' => in_array($request->role, ['employee', 'student'], true) ? $request->department_id : null,
+            'department_id' => in_array($request->role, ['employee', 'student', 'teacher'], true) ? $request->department_id : null,
             'is_active' => $request->has('is_active'),
             'required_training_hours' => $request->required_training_hours,
         ]);
@@ -373,8 +378,13 @@ class UserController extends Controller
             'name' => 'required|string|max:255',
             'email' => ['required', 'string', 'email', 'max:255', Rule::unique('users')->ignore($user->id)],
             'password' => 'nullable|string|min:8|confirmed',
-            'role' => 'required|string|in:admin,user,student,employee,applicant,technician',
-            'university_id' => 'nullable',
+            'role' => 'required|string|in:admin,user,student,employee,teacher,applicant,technician',
+            'university_id' => [
+                'nullable',
+                Rule::requiredIf(function () use ($request) {
+                    return $request->role === 'teacher';
+                }),
+            ],
             'new_university_name' => 'nullable|string|max:255',
             'department_id' => [
                 'nullable',
@@ -415,7 +425,7 @@ class UserController extends Controller
             'email' => $request->email,
             'role' => $request->role,
             'university_id' => $universityId,
-            'department_id' => in_array($request->role, ['employee', 'student'], true) ? $request->department_id : null,
+            'department_id' => in_array($request->role, ['employee', 'student', 'teacher'], true) ? $request->department_id : null,
             'is_active' => $request->has('is_active'),
         ];
 
@@ -510,7 +520,7 @@ class UserController extends Controller
         $request->validate([
             'user_ids' => 'required|array',
             'user_ids.*' => 'exists:users,id',
-            'role' => 'required|string|in:admin,user,student,employee,applicant,technician',
+            'role' => 'required|string|in:admin,user,student,employee,teacher,applicant,technician',
         ], [
             'user_ids.required' => 'Please select at least one user.',
             'user_ids.array' => 'Invalid user selection format.',
@@ -549,6 +559,7 @@ class UserController extends Controller
                 'admin' => 'Administrator',
                 'student' => 'Student',
                 'employee' => 'Employee',
+                'teacher' => 'Teacher',
                 'applicant' => 'Applicant',
                 'technician' => 'Technician',
                 'user' => 'User',

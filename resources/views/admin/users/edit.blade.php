@@ -80,6 +80,7 @@
                                 <option value="admin" {{ old('role', $user->role) == 'admin' ? 'selected' : '' }}>Administrator</option>
                                 <option value="student" {{ old('role', $user->role) == 'student' ? 'selected' : '' }}>Student</option>
                                 <option value="employee" {{ old('role', $user->role) == 'employee' ? 'selected' : '' }}>Employee</option>
+                                <option value="teacher" {{ old('role', $user->role) == 'teacher' ? 'selected' : '' }}>Teacher</option>
                                 <option value="technician" {{ old('role', $user->role) == 'technician' ? 'selected' : '' }}>Technician</option>
                                 <option value="applicant" {{ old('role', $user->role) == 'applicant' ? 'selected' : '' }}>Applicant</option>
                                 <option value="user" {{ old('role', $user->role) == 'user' ? 'selected' : '' }}>User (Legacy)</option>
@@ -96,7 +97,7 @@
                     </div>
                     <div class="p-5 sm:p-6 space-y-5">
                         <div>
-                            <label for="university_select" class="block text-sm font-semibold text-gray-700 mb-1.5">University/School</label>
+                            <label for="university_select" class="block text-sm font-semibold text-gray-700 mb-1.5">University/School <span class="text-red-500 {{ old('role', $user->role) === 'teacher' ? '' : 'hidden' }}" id="university_required_indicator">*</span></label>
                             <select name="university_id" id="university_select"
                                     class="block w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm">
                                 <option value="">No university selected</option>
@@ -119,7 +120,7 @@
                             @error('university_id') <p class="mt-1 text-sm text-red-600">{{ $message }}</p> @enderror
                         </div>
 
-                        <div id="department_wrapper" class="{{ in_array(old('role', $user->role), ['employee', 'student'], true) ? '' : 'hidden' }}">
+                        <div id="department_wrapper" class="{{ in_array(old('role', $user->role), ['employee', 'student', 'teacher'], true) ? '' : 'hidden' }}">
                             <label for="department_id" class="block text-sm font-semibold text-gray-700 mb-1.5">Department <span class="text-red-500 {{ old('role', $user->role) === 'employee' ? '' : 'hidden' }}" id="department_required_indicator">*</span></label>
                             <select name="department_id" id="department_id"
                                     class="block w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 text-sm @error('department_id') border-red-500 @enderror">
@@ -238,6 +239,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const leaveBalancesWrapper = document.getElementById('leave_balances_wrapper');
     const departmentWrapper = document.getElementById('department_wrapper');
     const departmentSelect = document.getElementById('department_id');
+    const universityRequiredIndicator = document.getElementById('university_required_indicator');
 
     if (universitySelect && newUniversityContainer && newUniversityInput) {
         universitySelect.addEventListener('change', function() {
@@ -269,7 +271,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     function toggleDepartment() {
         if (roleSelect && departmentWrapper && departmentSelect) {
-            const show = roleSelect.value === 'employee' || roleSelect.value === 'student';
+            const show = roleSelect.value === 'employee' || roleSelect.value === 'student' || roleSelect.value === 'teacher';
             departmentWrapper.classList.toggle('hidden', !show);
             departmentSelect.required = roleSelect.value === 'employee';
             const departmentRequiredIndicator = document.getElementById('department_required_indicator');
@@ -280,15 +282,27 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
+    function toggleUniversityRequirement() {
+        if (roleSelect && universitySelect) {
+            const isTeacher = roleSelect.value === 'teacher';
+            universitySelect.required = isTeacher;
+            if (universityRequiredIndicator) {
+                universityRequiredIndicator.classList.toggle('hidden', !isTeacher);
+            }
+        }
+    }
+
     if (roleSelect) {
         roleSelect.addEventListener('change', function() {
             toggleRequiredHours();
             toggleLeaveBalances();
             toggleDepartment();
+            toggleUniversityRequirement();
         });
         toggleRequiredHours();
         toggleLeaveBalances();
         toggleDepartment();
+        toggleUniversityRequirement();
     }
 
     const form = document.getElementById('editUserForm');

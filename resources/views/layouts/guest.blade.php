@@ -1,5 +1,11 @@
 @php
     $settings = \App\Models\Setting::getAll();
+    $settings = array_merge([
+        'system_name' => 'System',
+        'system_description' => 'Online Management System',
+        'primary_color' => '#4F46E5',
+        'secondary_color' => '#6B7280',
+    ], is_array($settings) ? $settings : []);
 @endphp
 
 <!DOCTYPE html>

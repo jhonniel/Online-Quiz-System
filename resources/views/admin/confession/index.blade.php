@@ -18,6 +18,53 @@
         </div>
     </div>
 
+    <div class="bg-white border border-gray-200 rounded-lg shadow-sm p-5 mb-6">
+        <h2 class="text-base font-semibold text-gray-900">Anon Name</h2>
+        <p class="mt-1 text-sm text-gray-500">
+            Choose which name sources can be used for Say-it. The system randomly picks one source for each new session.
+        </p>
+        <form method="POST" action="{{ url('/admin/confession/anon-name-settings') }}" class="mt-4 space-y-4">
+            @csrf
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                <label class="flex items-start gap-2 rounded-md border border-gray-200 p-3">
+                    <input
+                        type="checkbox"
+                        name="anon_name_sources[]"
+                        value="default_codename"
+                        class="mt-1 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                        {{ in_array('default_codename', $selectedAnonSources ?? [], true) ? 'checked' : '' }}
+                    >
+                    <span>
+                        <span class="block text-sm font-medium text-gray-900">Default codename</span>
+                        <span class="block text-xs text-gray-500">Current format (example: anonymous_fox_12345)</span>
+                    </span>
+                </label>
+
+                @foreach(($roleOptions ?? collect()) as $role)
+                    @php($sourceKey = 'role_' . $role)
+                    <label class="flex items-start gap-2 rounded-md border border-gray-200 p-3">
+                        <input
+                            type="checkbox"
+                            name="anon_name_sources[]"
+                            value="{{ $sourceKey }}"
+                            class="mt-1 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                            {{ in_array($sourceKey, $selectedAnonSources ?? [], true) ? 'checked' : '' }}
+                        >
+                        <span class="text-sm font-medium text-gray-900">{{ ucfirst($role) }} names</span>
+                    </label>
+                @endforeach
+            </div>
+
+            @error('anon_name_sources')
+                <p class="text-sm text-red-600">{{ $message }}</p>
+            @enderror
+
+            <button type="submit" class="inline-flex items-center px-4 py-2 rounded-md bg-indigo-600 text-white text-sm font-medium hover:bg-indigo-700">
+                Save Anon Name Settings
+            </button>
+        </form>
+    </div>
+
     <div class="bg-white shadow rounded-lg overflow-hidden">
         <ul class="divide-y divide-gray-200">
             @forelse($posts as $post)

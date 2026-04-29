@@ -8,8 +8,10 @@ use App\Models\ConfessionHashtag;
 use App\Models\ConfessionPost;
 use App\Models\ConfessionPostVote;
 use App\Models\ConfessionTopic;
+use App\Models\Setting;
 use App\Services\ConfessionCodenameService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
 
@@ -281,7 +283,7 @@ class SayItController extends Controller
                 Storage::disk('digitalocean')->delete($post->image_path);
             } catch (\Exception $e) {
                 // Log but don't fail deletion
-                \Log::warning('Failed to delete confession post image: ' . $e->getMessage());
+                Log::warning('Failed to delete confession post image: ' . $e->getMessage());
             }
         }
 
@@ -307,11 +309,17 @@ class SayItController extends Controller
 
     protected static function codenameForSession(Request $request): string
     {
-        if ($request->session()->has('sayit_codename')) {
+        $settingsVersion = (string) Setting::get('confession_anon_name_settings_version', 'v1');
+        $sessionVersion = (string) $request->session()->get('sayit_codename_settings_version', '');
+
+        if ($request->session()->has('sayit_codename') && $sessionVersion === $settingsVersion) {
             return $request->session()->get('sayit_codename');
         }
+
         $codename = ConfessionCodenameService::generate();
         $request->session()->put('sayit_codename', $codename);
+        $request->session()->put('sayit_codename_settings_version', $settingsVersion);
+
         return $codename;
     }
 }

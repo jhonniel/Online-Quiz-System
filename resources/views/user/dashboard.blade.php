@@ -93,6 +93,31 @@
     </div>
     @endif
 
+    @if(auth()->user()->role === 'student' && ($evaluationAvailable ?? false))
+    <div class="bg-emerald-50 border-b border-emerald-200 p-4 flex-shrink-0">
+        <div class="flex items-start">
+            <div class="flex-shrink-0">
+                <svg class="h-5 w-5 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+            </div>
+            <div class="ml-3 flex-1">
+                <h3 class="text-sm font-medium text-emerald-800">Evaluation Form Available</h3>
+                <p class="mt-1 text-sm text-emerald-700">
+                    You completed your required training hours. Please submit
+                    <span class="font-semibold">{{ $evaluationFormTitle ?? 'the evaluation form' }}</span>.
+                </p>
+                <div class="mt-3">
+                    <a href="{{ url('/evaluation') }}"
+                       class="inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-emerald-700 bg-emerald-100 hover:bg-emerald-200">
+                        Open Evaluation Form
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+    @endif
+
     <!-- Stats Cards -->
     @if(auth()->user()->role !== 'applicant')
     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 sm:gap-3 lg:gap-4 flex-shrink-0 p-4">

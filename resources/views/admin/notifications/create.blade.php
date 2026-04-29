@@ -116,24 +116,55 @@
             <div>
                 <label class="block text-sm font-medium text-gray-700 mb-2">Recipients</label>
                 <div class="space-y-4">
-                    <!-- Send to All Users -->
+                    <!-- Send to All Roles -->
                     <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
                         <div class="flex items-center">
-                            <input type="radio" id="send_to_all" name="recipient_type" value="all"
+                            <input type="radio" id="send_to_all_roles" name="recipient_type" value="all_roles"
+                                   {{ old('recipient_type') === 'all_roles' ? 'checked' : '' }}
                                    class="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300">
-                            <label for="send_to_all" class="ml-3 text-sm font-medium text-gray-900">
-                                Send to All Users
+                            <label for="send_to_all_roles" class="ml-3 text-sm font-medium text-gray-900">
+                                Send to All Roles
                             </label>
                         </div>
-                        <p class="mt-1 text-sm text-gray-600">This will send the notification to all registered users in the system.</p>
+                        <p class="mt-1 text-sm text-gray-600">This will send the notification to all users across all available roles.</p>
+                    </div>
+
+                    <!-- Send to Specific Roles -->
+                    <div class="bg-indigo-50 border border-indigo-200 rounded-lg p-4">
+                        <div class="flex items-center">
+                            <input type="radio" id="send_to_roles" name="recipient_type" value="specific_roles"
+                                   {{ old('recipient_type') === 'specific_roles' ? 'checked' : '' }}
+                                   class="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300">
+                            <label for="send_to_roles" class="ml-3 text-sm font-medium text-gray-900">
+                                Send to Specific Roles
+                            </label>
+                        </div>
+                        <p class="mt-1 text-sm text-gray-600">Select one or more roles to receive this notification.</p>
+
+                        <div id="role_selection" class="mt-4 hidden">
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                @foreach($roles as $role)
+                                    <label class="flex items-center px-3 py-2 border border-gray-200 rounded-md bg-white">
+                                        <input type="checkbox" name="roles[]" value="{{ $role }}"
+                                               {{ in_array($role, old('roles', []), true) ? 'checked' : '' }}
+                                               class="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded">
+                                        <span class="ml-2 text-sm text-gray-800">{{ $roleLabels[$role] ?? ucfirst($role) }}</span>
+                                    </label>
+                                @endforeach
+                            </div>
+                        </div>
+                        @error('roles')
+                            <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                        @enderror
                     </div>
 
                     <!-- Send to Specific Users -->
                     <div class="bg-gray-50 border border-gray-200 rounded-lg p-4">
                         <div class="flex items-center">
-                            <input type="radio" id="send_to_specific" name="recipient_type" value="specific"
+                            <input type="radio" id="send_to_specific_users" name="recipient_type" value="specific_users"
+                                   {{ old('recipient_type') === 'specific_users' ? 'checked' : '' }}
                                    class="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300">
-                            <label for="send_to_specific" class="ml-3 text-sm font-medium text-gray-900">
+                            <label for="send_to_specific_users" class="ml-3 text-sm font-medium text-gray-900">
                                 Send to Specific Users
                             </label>
                         </div>
@@ -145,6 +176,7 @@
                                 @foreach($users as $user)
                                     <label class="flex items-center px-4 py-2 hover:bg-gray-100 cursor-pointer">
                                         <input type="checkbox" name="user_ids[]" value="{{ $user->id }}"
+                                               {{ in_array((string) $user->id, array_map('strval', old('user_ids', [])), true) ? 'checked' : '' }}
                                                class="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded">
                                         <div class="ml-3 flex items-center">
                                             @if($user->profile_picture)
@@ -195,6 +227,18 @@
                 </div>
             </div>
 
+            @php
+                $usersByRole = $users->groupBy('role')->map(fn ($items) => $items->count());
+            @endphp
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">Recipient Summary</label>
+                <div id="recipient_summary_box" class="bg-indigo-50 border border-indigo-200 rounded-lg p-4">
+                    <p id="recipient_summary" class="text-sm text-indigo-800 font-medium">
+                        This will notify: 0 users
+                    </p>
+                </div>
+            </div>
+
             <!-- Submit Buttons -->
             <div class="flex items-center justify-end space-x-3 pt-6 border-t border-gray-200">
                 <a href="{{ route('admin.notifications.index') }}"
@@ -213,17 +257,40 @@
     </div>
 </div>
 
+<script type="application/json" id="users-data-json">{!! json_encode($users->map(fn($u) => ['id' => (int) $u->id, 'role' => $u->role])->values()) !!}</script>
+<script type="application/json" id="role-labels-json">{!! json_encode($roleLabels) !!}</script>
+<script type="application/json" id="users-by-role-count-json">{!! json_encode($usersByRole) !!}</script>
 <script>
+const usersData = JSON.parse(document.getElementById('users-data-json').textContent || '[]');
+const roleLabels = JSON.parse(document.getElementById('role-labels-json').textContent || '{}');
+const usersByRoleCount = JSON.parse(document.getElementById('users-by-role-count-json').textContent || '{}');
+
 // Handle recipient type change
+function toggleRecipientSections() {
+    const selected = document.querySelector('input[name="recipient_type"]:checked');
+    const roleSelection = document.getElementById('role_selection');
+    const userSelection = document.getElementById('user_selection');
+    const selectedType = selected ? selected.value : null;
+
+    roleSelection.classList.toggle('hidden', selectedType !== 'specific_roles');
+    userSelection.classList.toggle('hidden', selectedType !== 'specific_users');
+
+    updateRecipientSummary();
+}
+
 document.querySelectorAll('input[name="recipient_type"]').forEach(radio => {
     radio.addEventListener('change', function() {
-        const userSelection = document.getElementById('user_selection');
-        if (this.value === 'specific') {
-            userSelection.classList.remove('hidden');
-        } else {
-            userSelection.classList.add('hidden');
-        }
+        toggleRecipientSections();
     });
+});
+toggleRecipientSections();
+
+document.querySelectorAll('input[name="roles[]"]').forEach(checkbox => {
+    checkbox.addEventListener('change', updateRecipientSummary);
+});
+
+document.querySelectorAll('input[name="user_ids[]"]').forEach(checkbox => {
+    checkbox.addEventListener('change', updateRecipientSummary);
 });
 
 // Update preview in real-time
@@ -246,7 +313,98 @@ function deselectAllUsers() {
     document.querySelectorAll('input[name="user_ids[]"]').forEach(checkbox => {
         checkbox.checked = false;
     });
+    updateRecipientSummary();
 }
+
+function updateRecipientSummary() {
+    const summaryEl = document.getElementById('recipient_summary');
+    const summaryBoxEl = document.getElementById('recipient_summary_box');
+    const selectedRecipientType = document.querySelector('input[name="recipient_type"]:checked');
+    const setSummaryState = (state) => {
+        summaryBoxEl.classList.remove(
+            'bg-indigo-50', 'border-indigo-200',
+            'bg-green-50', 'border-green-200',
+            'bg-amber-50', 'border-amber-200',
+            'bg-red-50', 'border-red-200'
+        );
+        summaryEl.classList.remove(
+            'text-indigo-800',
+            'text-green-800',
+            'text-amber-800',
+            'text-red-800'
+        );
+
+        if (state === 'success') {
+            summaryBoxEl.classList.add('bg-green-50', 'border-green-200');
+            summaryEl.classList.add('text-green-800');
+        } else if (state === 'warning') {
+            summaryBoxEl.classList.add('bg-amber-50', 'border-amber-200');
+            summaryEl.classList.add('text-amber-800');
+        } else if (state === 'error') {
+            summaryBoxEl.classList.add('bg-red-50', 'border-red-200');
+            summaryEl.classList.add('text-red-800');
+        } else {
+            summaryBoxEl.classList.add('bg-indigo-50', 'border-indigo-200');
+            summaryEl.classList.add('text-indigo-800');
+        }
+    };
+
+    if (!selectedRecipientType) {
+        summaryEl.textContent = 'Select a recipient option to preview audience size.';
+        setSummaryState('warning');
+        return;
+    }
+
+    const recipientType = selectedRecipientType.value;
+    if (recipientType === 'all_roles') {
+        const roleNames = Object.keys(usersByRoleCount);
+        const totalUsers = roleNames.reduce((total, role) => total + Number(usersByRoleCount[role] || 0), 0);
+        const labelText = roleNames.map(role => roleLabels[role] || role.charAt(0).toUpperCase() + role.slice(1)).join(', ');
+        summaryEl.textContent = `This will notify: ${totalUsers} users (${labelText || 'No roles'})`;
+        setSummaryState(totalUsers > 0 ? 'success' : 'warning');
+        return;
+    }
+
+    if (recipientType === 'specific_roles') {
+        const selectedRoles = Array.from(document.querySelectorAll('input[name="roles[]"]:checked')).map(input => input.value);
+        const totalUsers = selectedRoles.reduce((total, role) => total + Number(usersByRoleCount[role] || 0), 0);
+        const labelText = selectedRoles.map(role => roleLabels[role] || role.charAt(0).toUpperCase() + role.slice(1)).join(', ');
+        if (selectedRoles.length === 0) {
+            summaryEl.textContent = 'No roles selected yet. Please choose at least one role.';
+            setSummaryState('warning');
+        } else if (totalUsers === 0) {
+            summaryEl.textContent = `Selected roles (${labelText}) currently have no users.`;
+            setSummaryState('error');
+        } else {
+            summaryEl.textContent = `This will notify: ${totalUsers} users (${labelText})`;
+            setSummaryState('success');
+        }
+        return;
+    }
+
+    const selectedUsers = Array.from(document.querySelectorAll('input[name="user_ids[]"]:checked')).map(input => Number(input.value));
+    const selectedUsersSet = new Set(selectedUsers);
+    const roleCountMap = {};
+
+    usersData.forEach(user => {
+        if (selectedUsersSet.has(Number(user.id))) {
+            roleCountMap[user.role] = (roleCountMap[user.role] || 0) + 1;
+        }
+    });
+
+    const roleBreakdown = Object.keys(roleCountMap)
+        .map(role => `${roleLabels[role] || role}: ${roleCountMap[role]}`)
+        .join(', ');
+
+    if (selectedUsers.length === 0) {
+        summaryEl.textContent = 'No specific users selected yet. Please choose at least one user.';
+        setSummaryState('warning');
+    } else {
+        summaryEl.textContent = `This will notify: ${selectedUsers.length} users${roleBreakdown ? ` (${roleBreakdown})` : ''}`;
+        setSummaryState('success');
+    }
+}
+updateRecipientSummary();
 
 // Template functions
 function useTemplate(templateType) {
@@ -294,7 +452,16 @@ document.querySelector('form').addEventListener('submit', function(e) {
         return;
     }
 
-    if (recipientType.value === 'specific') {
+    if (recipientType.value === 'specific_roles') {
+        const selectedRoles = document.querySelectorAll('input[name="roles[]"]:checked');
+        if (selectedRoles.length === 0) {
+            e.preventDefault();
+            alert('Please select at least one role.');
+            return;
+        }
+    }
+
+    if (recipientType.value === 'specific_users') {
         const selectedUsers = document.querySelectorAll('input[name="user_ids[]"]:checked');
         if (selectedUsers.length === 0) {
             e.preventDefault();

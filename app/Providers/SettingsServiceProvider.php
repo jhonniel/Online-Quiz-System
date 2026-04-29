@@ -5,6 +5,7 @@ namespace App\Providers;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Facades\View;
 use Illuminate\Support\Facades\Storage;
+use App\Models\News;
 use App\Models\Setting;
 
 class SettingsServiceProvider extends ServiceProvider
@@ -97,6 +98,34 @@ class SettingsServiceProvider extends ServiceProvider
             $mergedSettings = array_merge($baseSettings, $existingSettings);
 
             $view->with('settings', $mergedSettings);
+
+            $teacherUnreadAnnouncementsCount = 0;
+            if (auth()->check() && auth()->user()->role === 'teacher') {
+                $lastSeenAt = auth()->user()->teacher_announcements_seen_at;
+
+                $query = News::query()
+                    ->where('is_published', true)
+                    ->where(function ($q) {
+                        $q->whereNull('published_at')
+                            ->orWhere('published_at', '<=', now());
+                    });
+
+                if ($lastSeenAt) {
+                    $query->where(function ($q) use ($lastSeenAt) {
+                        $q->where(function ($withPublishedAt) use ($lastSeenAt) {
+                            $withPublishedAt->whereNotNull('published_at')
+                                ->where('published_at', '>', $lastSeenAt);
+                        })->orWhere(function ($withoutPublishedAt) use ($lastSeenAt) {
+                            $withoutPublishedAt->whereNull('published_at')
+                                ->where('created_at', '>', $lastSeenAt);
+                        });
+                    });
+                }
+
+                $teacherUnreadAnnouncementsCount = $query->count();
+            }
+
+            $view->with('teacherUnreadAnnouncementsCount', $teacherUnreadAnnouncementsCount);
         });
 
         // Ensure adminPermission relationship is loaded for authenticated users in admin views

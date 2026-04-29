@@ -19,6 +19,9 @@ return new class extends Migration
             DB::statement('PRAGMA foreign_keys = OFF');
 
             DB::statement('ALTER TABLE user_activities RENAME TO user_activities_old');
+            DB::statement('DROP INDEX IF EXISTS user_activities_user_id_activity_type_index');
+            DB::statement('DROP INDEX IF EXISTS user_activities_activity_type_created_at_index');
+            DB::statement('DROP INDEX IF EXISTS user_activities_created_at_index');
 
             Schema::create('user_activities', function (Blueprint $table) {
                 $table->id();
@@ -79,6 +82,9 @@ return new class extends Migration
             DB::statement('PRAGMA foreign_keys = OFF');
 
             DB::statement('ALTER TABLE user_activities RENAME TO user_activities_old');
+            DB::statement('DROP INDEX IF EXISTS user_activities_user_id_activity_type_index');
+            DB::statement('DROP INDEX IF EXISTS user_activities_activity_type_created_at_index');
+            DB::statement('DROP INDEX IF EXISTS user_activities_created_at_index');
 
             Schema::create('user_activities', function (Blueprint $table) {
                 $table->id();

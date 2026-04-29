@@ -27,8 +27,9 @@ class SystemHealthMetrics
     {
         $response = $next($request);
 
-        // Avoid counting the health polling endpoints to prevent self-noise.
-        if ($request->is('admin/settings/health') || $request->is('admin/settings/health-metrics')) {
+        // Avoid counting the metrics endpoint to prevent recursive self-noise.
+        // Keep counting /admin/settings/health so activity is visible while viewing System Health.
+        if ($request->is('admin/settings/health-metrics')) {
             return $response;
         }
 

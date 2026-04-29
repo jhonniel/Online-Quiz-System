@@ -110,7 +110,38 @@
                             </span>
                         </a>
 
-                        @if(auth()->user()->role !== 'technician')
+                        @if(auth()->user()->role === 'teacher')
+                            <a href="{{ url('/teacher/students') }}"
+                               class="group flex items-center px-2 py-2 text-sm font-medium rounded-md transition-colors duration-200 {{ request()->routeIs('user.teacher.students') ? 'bg-indigo-700 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white' }}"
+                               :class="sidebarCollapsed ? 'justify-center' : ''"
+                               :title="sidebarCollapsed ? 'My Students' : ''">
+                                <svg class="h-5 w-5" :class="sidebarCollapsed ? '' : 'mr-3'" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5V4H2v16h5m10 0v-2a3 3 0 00-3-3H10a3 3 0 00-3 3v2m10 0H7m10-9a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                                </svg>
+                                <span class="transition-opacity duration-300" :class="sidebarCollapsed ? 'opacity-0 w-0 overflow-hidden' : 'opacity-100'">
+                                    My Students
+                                </span>
+                            </a>
+                            <a href="{{ url('/teacher/news') }}"
+                               class="group flex items-center px-2 py-2 text-sm font-medium rounded-md transition-colors duration-200 {{ request()->routeIs('user.teacher.news') ? 'bg-indigo-700 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white' }}"
+                               :class="sidebarCollapsed ? 'justify-center' : ''"
+                               :title="sidebarCollapsed ? 'Announcements' : ''">
+                                <svg class="h-5 w-5" :class="sidebarCollapsed ? '' : 'mr-3'" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z"></path>
+                                </svg>
+                                <span class="transition-opacity duration-300" :class="sidebarCollapsed ? 'opacity-0 w-0 overflow-hidden' : 'opacity-100'">
+                                    Announcements
+                                </span>
+                                @if(($teacherUnreadAnnouncementsCount ?? 0) > 0)
+                                    <span class="ml-auto inline-flex items-center justify-center min-w-[1.25rem] h-5 px-1.5 rounded-full text-[10px] font-semibold bg-red-500 text-white"
+                                          :class="sidebarCollapsed ? 'hidden' : ''">
+                                        {{ $teacherUnreadAnnouncementsCount > 99 ? '99+' : $teacherUnreadAnnouncementsCount }}
+                                    </span>
+                                @endif
+                            </a>
+                        @endif
+
+                        @if(!in_array(auth()->user()->role, ['technician', 'teacher'], true))
                             <!-- Quizzes -->
                             <a href="{{ url('/quizzes') }}"
                                class="group flex items-center px-2 py-2 text-sm font-medium rounded-md transition-colors duration-200 {{ request()->routeIs('user.quizzes.*') ? 'bg-indigo-700 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white' }}"
@@ -124,6 +155,7 @@
                                 </span>
                             </a>
                         @endif
+
 
                         @if(false && auth()->user()->hasAnyAdminPermission() && !auth()->user()->isSuperAdmin())
                         <div class="pt-4 mt-4 border-t border-gray-700 space-y-1">
@@ -393,8 +425,8 @@
                             </span>
                         </a>
 
-                        <!-- Term of Reference (TOR) - Student Only -->
-                        @if(auth()->user()->role === 'student')
+                        <!-- Term of Reference (TOR) - Student and Teacher -->
+                        @if(in_array(auth()->user()->role, ['student', 'teacher'], true))
                         <a href="{{ url('/tor') }}"
                            class="group flex items-center px-2 py-2 text-sm font-medium rounded-md transition-colors duration-200 {{ request()->routeIs('user.tor') ? 'bg-indigo-700 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white' }}"
                            :class="sidebarCollapsed ? 'justify-center' : ''"
@@ -683,6 +715,30 @@
                             Dashboard
                         </a>
 
+                        @if(auth()->user()->role === 'teacher')
+                        <a href="{{ url('/teacher/students') }}"
+                           @click="sidebarOpen = false"
+                           class="group flex items-center px-2 py-2 text-sm font-medium rounded-md transition-colors duration-200 {{ request()->routeIs('user.teacher.students') ? 'bg-indigo-700 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white' }}">
+                            <svg class="mr-3 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5V4H2v16h5m10 0v-2a3 3 0 00-3-3H10a3 3 0 00-3 3v2m10 0H7m10-9a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                            </svg>
+                            My Students
+                        </a>
+                        <a href="{{ url('/teacher/news') }}"
+                           @click="sidebarOpen = false"
+                           class="group flex items-center px-2 py-2 text-sm font-medium rounded-md transition-colors duration-200 {{ request()->routeIs('user.teacher.news') ? 'bg-indigo-700 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white' }}">
+                            <svg class="mr-3 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z"></path>
+                            </svg>
+                            Announcements
+                            @if(($teacherUnreadAnnouncementsCount ?? 0) > 0)
+                                <span class="ml-auto inline-flex items-center justify-center min-w-[1.25rem] h-5 px-1.5 rounded-full text-[10px] font-semibold bg-red-500 text-white">
+                                    {{ $teacherUnreadAnnouncementsCount > 99 ? '99+' : $teacherUnreadAnnouncementsCount }}
+                                </span>
+                            @endif
+                        </a>
+                        @endif
+
                         @if(false && auth()->user()->hasAnyAdminPermission() && !auth()->user()->isSuperAdmin())
                         <div class="pt-4 mt-4 border-t border-gray-700 space-y-1">
                             <p class="px-2 pb-1 text-[11px] font-semibold uppercase tracking-wider text-purple-300">Admin Features</p>
@@ -728,14 +784,17 @@
                         </div>
                         @endif
 
-                        <a href="{{ url('/quizzes') }}"
-                           @click="sidebarOpen = false"
-                           class="group flex items-center px-2 py-2 text-sm font-medium rounded-md transition-colors duration-200 {{ request()->routeIs('user.quizzes.*') ? 'bg-indigo-700 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white' }}">
-                            <svg class="mr-3 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
-                            </svg>
-                            Quizzes
-                        </a>
+                        @if(!in_array(auth()->user()->role, ['technician', 'teacher'], true))
+                            <a href="{{ url('/quizzes') }}"
+                               @click="sidebarOpen = false"
+                               class="group flex items-center px-2 py-2 text-sm font-medium rounded-md transition-colors duration-200 {{ request()->routeIs('user.quizzes.*') ? 'bg-indigo-700 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white' }}">
+                                <svg class="mr-3 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                                </svg>
+                                Quizzes
+                            </a>
+                        @endif
+
 
                         @if(auth()->user()->role === 'applicant')
                         <a href="{{ url('/hiring-application') }}"
@@ -809,7 +868,7 @@
                             Feedback
                         </a>
 
-                        @if(auth()->user()->role === 'student')
+                        @if(in_array(auth()->user()->role, ['student', 'teacher'], true))
                         <a href="{{ url('/tor') }}"
                            @click="sidebarOpen = false"
                            class="group flex items-center px-2 py-2 text-sm font-medium rounded-md transition-colors duration-200 {{ request()->routeIs('user.tor') ? 'bg-indigo-700 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white' }}">

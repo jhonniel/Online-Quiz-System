@@ -18,30 +18,8 @@
                 $torUrl = null;
                 
                 if ($torPdfPath) {
-                    $assetDisk = 'digitalocean';
-                    try {
-                        if (\Illuminate\Support\Facades\Storage::disk($assetDisk)->exists($torPdfPath)) {
-                            // Try to get a temporary URL for iframe display
-                            if (method_exists(\Illuminate\Support\Facades\Storage::disk($assetDisk), 'temporaryUrl')) {
-                                $torUrl = \Illuminate\Support\Facades\Storage::disk($assetDisk)
-                                    ->temporaryUrl($torPdfPath, now()->addMinutes(60));
-                            } else {
-                                // Fallback: use the direct stream route
-                                $torUrl = url('/tor-pdf');
-                            }
-                        } else {
-                            // Fallback to public disk
-                            if (\Illuminate\Support\Facades\Storage::disk('public')->exists($torPdfPath)) {
-                                $torUrl = \Illuminate\Support\Facades\Storage::disk('public')->url($torPdfPath);
-                            } else {
-                                // Use the stream route as last resort
-                                $torUrl = url('/tor-pdf');
-                            }
-                        }
-                    } catch (\Exception $e) {
-                        // Use the stream route as fallback
-                        $torUrl = url('/tor-pdf');
-                    }
+                    // Always use app stream route to avoid broken external temporary URLs.
+                    $torUrl = url('/tor-pdf');
                 }
             @endphp
 

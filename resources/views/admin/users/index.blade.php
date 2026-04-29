@@ -176,6 +176,7 @@
                         <option value="admin" {{ (isset($roleFilter) && $roleFilter === 'admin') ? 'selected' : '' }}>Administrator</option>
                         <option value="student" {{ (isset($roleFilter) && $roleFilter === 'student') ? 'selected' : '' }}>Student</option>
                         <option value="employee" {{ (isset($roleFilter) && $roleFilter === 'employee') ? 'selected' : '' }}>Employee</option>
+                        <option value="teacher" {{ (isset($roleFilter) && $roleFilter === 'teacher') ? 'selected' : '' }}>Teacher</option>
                         <option value="technician" {{ (isset($roleFilter) && $roleFilter === 'technician') ? 'selected' : '' }}>Technician</option>
                         <option value="applicant" {{ (isset($roleFilter) && $roleFilter === 'applicant') ? 'selected' : '' }}>Applicant</option>
                         <option value="user" {{ (isset($roleFilter) && $roleFilter === 'user') ? 'selected' : '' }}>User (Legacy)</option>
@@ -213,6 +214,7 @@
                             <option value="admin">Administrator</option>
                             <option value="student">Student</option>
                             <option value="employee">Employee</option>
+                            <option value="teacher">Teacher</option>
                             <option value="technician">Technician</option>
                             <option value="applicant">Applicant</option>
                             <option value="user">User (Legacy)</option>

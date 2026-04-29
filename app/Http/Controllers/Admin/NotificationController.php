@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Notification;
 use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 
 class NotificationController extends Controller
 {
@@ -30,8 +31,25 @@ class NotificationController extends Controller
 
     public function create()
     {
-        $users = User::where('role', 'user')->orderBy('name')->get();
-        return view('admin.notifications.create', compact('users'));
+        $users = User::orderBy('name')->get();
+        $roles = User::query()
+            ->select('role')
+            ->distinct()
+            ->orderBy('role')
+            ->pluck('role')
+            ->values();
+
+        $roleLabels = [
+            'admin' => 'Administrator',
+            'student' => 'Student',
+            'employee' => 'Employee',
+            'teacher' => 'Teacher',
+            'applicant' => 'Applicant',
+            'technician' => 'Technician',
+            'user' => 'User',
+        ];
+
+        return view('admin.notifications.create', compact('users', 'roles', 'roleLabels'));
     }
 
     public function store(Request $request)
@@ -40,16 +58,36 @@ class NotificationController extends Controller
             'title' => 'required|string|max:255',
             'message' => 'required|string|max:1000',
             'type' => 'required|in:admin_notification,system_update,bug_alert,custom',
-            'recipient_type' => 'required|in:all,specific',
-            'user_ids' => 'required_if:recipient_type,specific|array|min:1',
+            'recipient_type' => 'required|in:all_roles,specific_roles,specific_users,all,specific',
+            'roles' => 'required_if:recipient_type,specific_roles|array|min:1',
+            'roles.*' => ['string', Rule::exists('users', 'role')],
+            'user_ids' => 'required_if:recipient_type,specific_users,specific|array|min:1',
             'user_ids.*' => 'exists:users,id',
         ]);
 
         $createdCount = 0;
+        $recipientType = (string) $request->recipient_type;
+        if ($recipientType === 'all') {
+            $recipientType = 'all_roles';
+        } elseif ($recipientType === 'specific') {
+            $recipientType = 'specific_users';
+        }
 
-        if ($request->recipient_type === 'all') {
-            // Send to all users
-            $users = User::where('role', 'user')->get();
+        if ($recipientType === 'all_roles') {
+            // Send to all users across all roles.
+            $users = User::query()->get();
+            foreach ($users as $user) {
+                Notification::createAdminNotification(
+                    $user->id,
+                    $request->title,
+                    $request->message,
+                    $request->type
+                );
+                $createdCount++;
+            }
+        } elseif ($recipientType === 'specific_roles') {
+            $roles = $request->roles ?? [];
+            $users = User::query()->whereIn('role', $roles)->get();
             foreach ($users as $user) {
                 Notification::createAdminNotification(
                     $user->id,
@@ -73,7 +111,11 @@ class NotificationController extends Controller
             }
         }
 
-        $recipientText = $request->recipient_type === 'all' ? 'all users' : 'selected users';
+        $recipientText = match ($recipientType) {
+            'all_roles' => 'all users across all roles',
+            'specific_roles' => 'users in selected roles',
+            default => 'selected users',
+        };
         return redirect('/admin/notifications')
             ->with('success', "Notification sent to {$createdCount} {$recipientText} successfully!");
     }
@@ -86,7 +128,7 @@ class NotificationController extends Controller
             'type' => 'required|in:admin_notification,system_update,bug_alert',
         ]);
 
-        $users = User::where('role', 'user')->get();
+        $users = User::query()->get();
         $createdCount = 0;
 
         foreach ($users as $user) {

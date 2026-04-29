@@ -736,11 +736,15 @@ class LandingController extends Controller
             abort(404, 'Privacy Policy PDF not found.');
         }
 
-        // TOR files are uploaded from Admin Settings to the digitalocean disk.
+        // PDF files are uploaded from Admin Settings to the digitalocean disk.
         $assetDisk = 'digitalocean';
+        $digitaloceanConfig = config('filesystems.disks.digitalocean', []);
+        $isDigitaloceanConfigured = !empty($digitaloceanConfig['bucket'])
+            && !empty($digitaloceanConfig['key'])
+            && !empty($digitaloceanConfig['secret']);
 
         try {
-            if (Storage::disk($assetDisk)->exists($privacyPolicyPdfPath)) {
+            if ($isDigitaloceanConfigured && Storage::disk($assetDisk)->exists($privacyPolicyPdfPath)) {
                 // Try to get a temporary URL for streaming
                 if (method_exists(Storage::disk($assetDisk), 'temporaryUrl')) {
                     $url = Storage::disk($assetDisk)->temporaryUrl($privacyPolicyPdfPath, now()->addMinutes(60));
@@ -755,7 +759,7 @@ class LandingController extends Controller
                     ]);
                 }
             }
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             // Fallback to public disk
             if (Storage::disk('public')->exists($privacyPolicyPdfPath)) {
                 $file = Storage::disk('public')->get($privacyPolicyPdfPath);
@@ -792,37 +796,23 @@ class LandingController extends Controller
             }
         }
 
-        // TOR files are uploaded from Admin Settings to the digitalocean disk.
-        $assetDisk = 'digitalocean';
-
-        try {
-            if (Storage::disk($assetDisk)->exists($torPdfPath)) {
-                // Try to get a temporary URL for streaming
-                if (method_exists(Storage::disk($assetDisk), 'temporaryUrl')) {
-                    $url = Storage::disk($assetDisk)->temporaryUrl($torPdfPath, now()->addMinutes(60));
-                    return redirect($url);
-                } else {
-                    // Fallback: stream the file directly
-                    $file = Storage::disk($assetDisk)->get($torPdfPath);
-                    $fileName = basename($torPdfPath);
-                    return Response::make($file, 200, [
-                        'Content-Type' => 'application/pdf',
-                        'Content-Disposition' => 'inline; filename="' . $fileName . '"',
-                    ]);
+        // TOR files are uploaded from Admin Settings to Spaces (preferred) or fallback disks.
+        $candidateDisks = ['spaces', 'digitalocean', 'public'];
+        foreach ($candidateDisks as $disk) {
+            try {
+                if (!Storage::disk($disk)->exists($torPdfPath)) {
+                    continue;
                 }
-            }
-        } catch (\Throwable $e) {
-            // Continue to public disk fallback below.
-        }
 
-        // Fallback to public disk only (avoid requiring legacy "spaces" S3 config).
-        if (Storage::disk('public')->exists($torPdfPath)) {
-            $file = Storage::disk('public')->get($torPdfPath);
-            $fileName = basename($torPdfPath);
-            return Response::make($file, 200, [
-                'Content-Type' => 'application/pdf',
-                'Content-Disposition' => 'inline; filename="' . $fileName . '"',
-            ]);
+                $file = Storage::disk($disk)->get($torPdfPath);
+                $fileName = basename($torPdfPath);
+                return Response::make($file, 200, [
+                    'Content-Type' => 'application/pdf',
+                    'Content-Disposition' => 'inline; filename="' . $fileName . '"',
+                ]);
+            } catch (\Throwable $e) {
+                // Try next disk.
+            }
         }
 
         abort(404, 'TOR PDF not found.');

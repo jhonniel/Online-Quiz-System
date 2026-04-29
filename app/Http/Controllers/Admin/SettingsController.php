@@ -377,6 +377,16 @@ class SettingsController extends Controller
         // Memory Usage
         $health['server']['memory_usage'] = $this->formatBytes(memory_get_usage(true));
         $health['server']['memory_peak'] = $this->formatBytes(memory_get_peak_usage(true));
+        $health['server']['ram_current_usage'] = 'Unavailable';
+        $health['server']['ram_total'] = null;
+        $health['server']['ram_used_percent'] = null;
+
+        $ramStats = $this->getSystemRamUsage();
+        if (!empty($ramStats)) {
+            $health['server']['ram_current_usage'] = $ramStats['used'];
+            $health['server']['ram_total'] = $ramStats['total'];
+            $health['server']['ram_used_percent'] = $ramStats['used_percent'];
+        }
 
         // Disk Space (if available)
         if (function_exists('disk_free_space') && function_exists('disk_total_space')) {
@@ -428,6 +438,73 @@ class SettingsController extends Controller
         }
 
         return round($bytes, $precision) . ' ' . $units[$i];
+    }
+
+    /**
+     * Best-effort system RAM usage (cross-platform with graceful fallback).
+     */
+    private function getSystemRamUsage(): array
+    {
+        try {
+            $os = PHP_OS_FAMILY;
+
+            if ($os === 'Linux' && is_readable('/proc/meminfo')) {
+                $content = @file_get_contents('/proc/meminfo');
+                if (is_string($content) && $content !== '') {
+                    $mem = [];
+                    foreach (preg_split('/\R/', $content) as $line) {
+                        if (preg_match('/^(MemTotal|MemAvailable):\s+(\d+)\s+kB$/', trim($line), $m)) {
+                            $mem[$m[1]] = (int) $m[2] * 1024;
+                        }
+                    }
+
+                    if (!empty($mem['MemTotal']) && !empty($mem['MemAvailable'])) {
+                        $total = (float) $mem['MemTotal'];
+                        $used = max($total - (float) $mem['MemAvailable'], 0.0);
+                        $percent = $total > 0 ? round(($used / $total) * 100, 2) : null;
+
+                        return [
+                            'used' => $this->formatBytes($used),
+                            'total' => $this->formatBytes($total),
+                            'used_percent' => $percent,
+                        ];
+                    }
+                }
+            }
+
+            if ($os === 'Darwin' && function_exists('shell_exec')) {
+                $totalBytesRaw = @shell_exec('sysctl -n hw.memsize 2>/dev/null');
+                $vmStatRaw = @shell_exec('vm_stat 2>/dev/null');
+                if (is_string($totalBytesRaw) && is_string($vmStatRaw)) {
+                    $total = (float) trim($totalBytesRaw);
+                    if ($total > 0) {
+                        preg_match('/page size of (\d+) bytes/', $vmStatRaw, $pageSizeMatch);
+                        $pageSize = isset($pageSizeMatch[1]) ? (int) $pageSizeMatch[1] : 4096;
+
+                        $freePages = 0;
+                        foreach (['Pages free', 'Pages inactive', 'Pages speculative'] as $label) {
+                            if (preg_match('/' . preg_quote($label, '/') . ':\s+(\d+)\./', $vmStatRaw, $m)) {
+                                $freePages += (int) $m[1];
+                            }
+                        }
+
+                        $available = (float) $freePages * $pageSize;
+                        $used = max($total - $available, 0.0);
+                        $percent = round(($used / $total) * 100, 2);
+
+                        return [
+                            'used' => $this->formatBytes($used),
+                            'total' => $this->formatBytes($total),
+                            'used_percent' => $percent,
+                        ];
+                    }
+                }
+            }
+        } catch (\Throwable $e) {
+            // Ignore and return empty stats.
+        }
+
+        return [];
     }
 
     public function update(Request $request)
@@ -530,9 +607,14 @@ class SettingsController extends Controller
             Setting::set('secondary_color', $request->secondary_color, 'color', 'Secondary color for the system');
         }
 
-        // Use cloud disk for branding assets
-        $assetDisk = 'digitalocean';
-        $assetRoot = trim(env('DIGITALOCEAN_SPACES_ROOT_PATH', ''), '/');
+        // Use DigitalOcean if configured; otherwise fallback to public disk.
+        $digitaloceanConfig = config('filesystems.disks.digitalocean', []);
+        $isDigitaloceanConfigured = !empty($digitaloceanConfig['bucket'])
+            && !empty($digitaloceanConfig['key'])
+            && !empty($digitaloceanConfig['secret'])
+            && !empty($digitaloceanConfig['endpoint']);
+        $assetDisk = $isDigitaloceanConfigured ? 'digitalocean' : 'public';
+        $assetRoot = $isDigitaloceanConfigured ? trim(env('DIGITALOCEAN_SPACES_ROOT_PATH', ''), '/') : '';
         $logoDir = $assetRoot ? $assetRoot . '/logos' : 'logos';
         $iconDir = $assetRoot ? $assetRoot . '/icons' : 'icons';
 
@@ -627,19 +709,32 @@ class SettingsController extends Controller
         Setting::set('hiring_application_url', $hiringApplicationUrl !== '' ? $hiringApplicationUrl : 'hiring/apply', 'text', 'Custom URL path for hiring application form (e.g., careers, jobs, apply)');
 
         // Handle TOR PDF upload
-        $assetDisk = 'digitalocean';
-        $assetRoot = trim(env('DIGITALOCEAN_SPACES_ROOT_PATH', ''), '/');
         $torDir = $assetRoot ? $assetRoot . '/hiring/tor' : 'hiring/tor';
 
         if ($request->hasFile('hiring_tor_pdf')) {
+            $spacesConfig = config('filesystems.disks.spaces', []);
+            $isSpacesConfigured = !empty($spacesConfig['bucket'])
+                && !empty($spacesConfig['key'])
+                && !empty($spacesConfig['secret'])
+                && !empty($spacesConfig['endpoint']);
+            $torDisk = $isSpacesConfigured ? 'spaces' : $assetDisk;
+
             // Delete old TOR PDF if exists
             $oldTorPdf = Setting::get('hiring_tor_pdf');
-            if ($oldTorPdf && Storage::disk($assetDisk)->exists($oldTorPdf)) {
-                Storage::disk($assetDisk)->delete($oldTorPdf);
+            if ($oldTorPdf) {
+                foreach (['spaces', 'digitalocean', 'public'] as $disk) {
+                    try {
+                        if (Storage::disk($disk)->exists($oldTorPdf)) {
+                            Storage::disk($disk)->delete($oldTorPdf);
+                        }
+                    } catch (\Throwable $e) {
+                        // Continue cleanup on other disks.
+                    }
+                }
             }
 
-            // Store new TOR PDF
-            $torPdfPath = $request->file('hiring_tor_pdf')->store($torDir, $assetDisk);
+            // Store new TOR PDF (prefer Spaces disk).
+            $torPdfPath = $request->file('hiring_tor_pdf')->store($torDir, $torDisk);
             Setting::set('hiring_tor_pdf', $torPdfPath, 'file', 'TOR (Term of Reference) PDF for Internship positions');
         }
 

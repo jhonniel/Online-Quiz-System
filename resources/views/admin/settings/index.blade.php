@@ -769,19 +769,24 @@
                                         $torPdfUrl = null;
                                         if ($torPdfPath) {
                                             try {
-                                                $storage = \Illuminate\Support\Facades\Storage::disk('digitalocean');
-                                                if ($storage->exists($torPdfPath)) {
+                                                foreach (['spaces', 'digitalocean', 'public'] as $disk) {
+                                                    $storage = \Illuminate\Support\Facades\Storage::disk($disk);
+                                                    if (!$storage->exists($torPdfPath)) {
+                                                        continue;
+                                                    }
+
                                                     if (method_exists($storage, 'temporaryUrl')) {
                                                         try {
                                                             $torPdfUrl = $storage->temporaryUrl($torPdfPath, now()->addHours(24));
-                                                        } catch (\Exception $e) {
+                                                        } catch (\Throwable $e) {
                                                             $torPdfUrl = $storage->url($torPdfPath);
                                                         }
                                                     } else {
                                                         $torPdfUrl = $storage->url($torPdfPath);
                                                     }
+                                                    break;
                                                 }
-                                            } catch (\Exception $e) {
+                                            } catch (\Throwable $e) {
                                                 $torPdfUrl = null;
                                             }
                                         }
@@ -814,14 +819,14 @@
                                                     if (method_exists($storage, 'temporaryUrl')) {
                                                         try {
                                                             $privacyPolicyPdfUrl = $storage->temporaryUrl($privacyPolicyPdfPath, now()->addHours(24));
-                                                        } catch (\Exception $e) {
+                                                        } catch (\Throwable $e) {
                                                             $privacyPolicyPdfUrl = $storage->url($privacyPolicyPdfPath);
                                                         }
                                                     } else {
                                                         $privacyPolicyPdfUrl = $storage->url($privacyPolicyPdfPath);
                                                     }
                                                 }
-                                            } catch (\Exception $e) {
+                                            } catch (\Throwable $e) {
                                                 $privacyPolicyPdfUrl = null;
                                             }
                                         }
@@ -1685,6 +1690,18 @@
                                     <p class="text-lg font-semibold text-gray-900" id="memory-usage">{{ $health['server']['memory_usage'] ?? 'Unknown' }}</p>
                                 </div>
                                 <div class="bg-gray-50 rounded-lg p-4 border border-gray-200">
+                                    <p class="text-xs font-medium text-gray-500 uppercase mb-1">Current RAM Usage</p>
+                                    <p class="text-lg font-semibold text-gray-900" id="ram-current-usage">
+                                        {{ $health['server']['ram_current_usage'] ?? 'Unavailable' }}
+                                        @if(!empty($health['server']['ram_total']))
+                                            / {{ $health['server']['ram_total'] }}
+                                        @endif
+                                    </p>
+                                    @if(isset($health['server']['ram_used_percent']) && $health['server']['ram_used_percent'] !== null)
+                                        <p class="text-xs text-gray-500 mt-1" id="ram-used-percent">{{ $health['server']['ram_used_percent'] }}% used</p>
+                                    @endif
+                                </div>
+                                <div class="bg-gray-50 rounded-lg p-4 border border-gray-200">
                                     <p class="text-xs font-medium text-gray-500 uppercase mb-1">Peak Memory</p>
                                     <p class="text-lg font-semibold text-gray-900" id="memory-peak">{{ $health['server']['memory_peak'] ?? 'Unknown' }}</p>
                                 </div>
@@ -2136,6 +2153,12 @@ document.addEventListener('DOMContentLoaded', function() {
             updateElement('php-version', data.server.php_version);
             updateElement('memory-limit', data.server.php_memory_limit);
             updateElement('memory-usage', data.server.memory_usage);
+            const ramCurrent = data.server.ram_current_usage || 'Unavailable';
+            const ramTotal = data.server.ram_total ? (' / ' + data.server.ram_total) : '';
+            updateElement('ram-current-usage', ramCurrent + ramTotal);
+            if (data.server.ram_used_percent !== undefined && data.server.ram_used_percent !== null) {
+                updateElement('ram-used-percent', data.server.ram_used_percent + '% used');
+            }
             updateElement('memory-peak', data.server.memory_peak);
             if (data.server.php_max_execution_time) {
                 updateElement('exec-time', data.server.php_max_execution_time + 's');

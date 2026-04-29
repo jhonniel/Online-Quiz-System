@@ -27,9 +27,9 @@ class ProfileTest extends TestCase
 
         $response = $this
             ->actingAs($user)
-            ->patch('/profile', [
+            ->put('/profile', [
                 'name' => 'Test User',
-                'email' => 'test@example.com',
+                'bio' => 'Updated bio',
             ]);
 
         $response
@@ -39,8 +39,7 @@ class ProfileTest extends TestCase
         $user->refresh();
 
         $this->assertSame('Test User', $user->name);
-        $this->assertSame('test@example.com', $user->email);
-        $this->assertNull($user->email_verified_at);
+        $this->assertSame('Updated bio', $user->bio);
     }
 
     public function test_email_verification_status_is_unchanged_when_the_email_address_is_unchanged(): void
@@ -49,9 +48,9 @@ class ProfileTest extends TestCase
 
         $response = $this
             ->actingAs($user)
-            ->patch('/profile', [
+            ->put('/profile', [
                 'name' => 'Test User',
-                'email' => $user->email,
+                'bio' => 'No email changes here',
             ]);
 
         $response
@@ -61,7 +60,7 @@ class ProfileTest extends TestCase
         $this->assertNotNull($user->refresh()->email_verified_at);
     }
 
-    public function test_user_can_delete_their_account(): void
+    public function test_delete_profile_route_is_not_available(): void
     {
         $user = User::factory()->create();
 
@@ -71,15 +70,10 @@ class ProfileTest extends TestCase
                 'password' => 'password',
             ]);
 
-        $response
-            ->assertSessionHasNoErrors()
-            ->assertRedirect('/');
-
-        $this->assertGuest();
-        $this->assertNull($user->fresh());
+        $response->assertStatus(405);
     }
 
-    public function test_correct_password_must_be_provided_to_delete_account(): void
+    public function test_wrong_password_delete_profile_still_not_allowed(): void
     {
         $user = User::factory()->create();
 
@@ -90,10 +84,6 @@ class ProfileTest extends TestCase
                 'password' => 'wrong-password',
             ]);
 
-        $response
-            ->assertSessionHasErrorsIn('userDeletion', 'password')
-            ->assertRedirect('/profile');
-
-        $this->assertNotNull($user->fresh());
+        $response->assertStatus(405);
     }
 }

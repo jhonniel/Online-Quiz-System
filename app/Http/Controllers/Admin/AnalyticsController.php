@@ -14,6 +14,16 @@ use Illuminate\Support\Facades\Cache;
 
 class AnalyticsController extends Controller
 {
+    private function studentRoles(): array
+    {
+        return ['student', 'user'];
+    }
+
+    private function completedAttemptHistory($query)
+    {
+        return $query->where('status', 'completed');
+    }
+
     public function index()
     {
         // Get overall student performance rankings
@@ -62,14 +72,16 @@ class AnalyticsController extends Controller
 
     private function getTopPerformers()
     {
-        return User::where('role', 'user')
+        return User::whereIn('role', $this->studentRoles())
             ->where('is_active', true)
             ->with(['university', 'quizAttemptHistory' => function($query) {
-                $query->where('status', 'completed');
+                $this->completedAttemptHistory($query);
             }])
-            ->withSum('quizAttemptHistory', 'score')
+            ->withSum(['quizAttemptHistory' => function ($query) {
+                $this->completedAttemptHistory($query);
+            }], 'score')
             ->withCount(['quizAttemptHistory' => function($query) {
-                $query->where('status', 'completed');
+                $this->completedAttemptHistory($query);
             }])
             ->get()
             ->filter(function($user) {
@@ -98,25 +110,29 @@ class AnalyticsController extends Controller
 
     private function getStudentPerformanceStats()
     {
-        $totalStudents = User::where('role', 'user')->where('is_active', true)->count();
-        $studentsWithAttempts = User::where('role', 'user')
+        $totalStudents = User::whereIn('role', $this->studentRoles())->where('is_active', true)->count();
+        $studentsWithAttempts = User::whereIn('role', $this->studentRoles())
             ->where('is_active', true)
             ->whereHas('quizAttemptHistory', function($query) {
-                $query->where('status', 'completed');
+                $this->completedAttemptHistory($query);
             })
             ->count();
 
-        $totalScore = User::where('role', 'user')
+        $totalScore = User::whereIn('role', $this->studentRoles())
             ->where('is_active', true)
-            ->withSum('quizAttemptHistory', 'score')
+            ->withSum(['quizAttemptHistory' => function ($query) {
+                $this->completedAttemptHistory($query);
+            }], 'score')
             ->get()
             ->sum('quiz_attempt_history_sum_score');
 
         $averageScore = $studentsWithAttempts > 0 ? round($totalScore / $studentsWithAttempts, 2) : 0;
 
-        $topScore = User::where('role', 'user')
+        $topScore = User::whereIn('role', $this->studentRoles())
             ->where('is_active', true)
-            ->withSum('quizAttemptHistory', 'score')
+            ->withSum(['quizAttemptHistory' => function ($query) {
+                $this->completedAttemptHistory($query);
+            }], 'score')
             ->get()
             ->max('quiz_attempt_history_sum_score') ?? 0;
 
@@ -191,11 +207,11 @@ class AnalyticsController extends Controller
 
                 return [
                     'university' => $university,
-                    'total_students' => $university->users->where('role', 'user')->count(),
+                    'total_students' => $university->users->whereIn('role', $this->studentRoles())->count(),
                     'total_attempts' => $allAttempts->count(),
                     'average_score' => $allAttempts->count() > 0 ? round($allAttempts->avg('points_earned'), 2) : 0,
                     'highest_score' => $allAttempts->max('points_earned') ?? 0,
-                    'active_students' => $university->users->where('role', 'user')->where('is_active', true)->count()
+                    'active_students' => $university->users->whereIn('role', $this->studentRoles())->where('is_active', true)->count()
                 ];
             })
             ->sortByDesc('average_score');
@@ -225,8 +241,8 @@ class AnalyticsController extends Controller
 
     private function getOverallStats()
     {
-        $totalUsers = User::where('role', 'user')->count();
-        $activeUsers = User::where('role', 'user')->where('is_active', true)->count();
+        $totalUsers = User::whereIn('role', $this->studentRoles())->count();
+        $activeUsers = User::whereIn('role', $this->studentRoles())->where('is_active', true)->count();
         $totalQuizzes = Quiz::where('is_active', true)->count();
         $totalAttempts = QuizAttemptHistory::where('status', 'completed')->count();
         $averageScore = QuizAttemptHistory::where('status', 'completed')->avg('score') ?? 0;
@@ -322,7 +338,7 @@ class AnalyticsController extends Controller
 
     private function getStudentTopicStrengths()
     {
-        return User::where('role', 'user')
+        return User::whereIn('role', $this->studentRoles())
             ->where('is_active', true)
             ->with(['quizAttemptHistory.quiz'])
             ->get()
@@ -373,7 +389,7 @@ class AnalyticsController extends Controller
     public function getStudentDetails($userId)
     {
         $user = User::with(['university', 'quizAttempts.quiz'])
-            ->where('role', 'user')
+            ->whereIn('role', $this->studentRoles())
             ->findOrFail($userId);
 
         $attempts = $user->quizAttempts->where('completed_at', '!=', null);
@@ -564,14 +580,16 @@ class AnalyticsController extends Controller
     private function getQuizRankings()
     {
         try {
-            $students = User::where('role', 'student')
+            $students = User::whereIn('role', $this->studentRoles())
                 ->where('is_active', true)
                 ->with(['university', 'quizAttemptHistory' => function($query) {
-                    $query->where('status', 'completed');
+                    $this->completedAttemptHistory($query);
                 }])
-                ->withSum('quizAttemptHistory', 'score')
+                ->withSum(['quizAttemptHistory' => function ($query) {
+                    $this->completedAttemptHistory($query);
+                }], 'score')
                 ->withCount(['quizAttemptHistory' => function($query) {
-                    $query->where('status', 'completed');
+                    $this->completedAttemptHistory($query);
                 }])
                 ->get()
                 ->filter(function($user) {

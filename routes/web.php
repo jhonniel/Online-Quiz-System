@@ -236,6 +236,10 @@ Route::prefix('admin')->middleware(['auth', 'admin'])->group(function () {
         Route::patch('forum/{forum}/toggle-pin', [App\Http\Controllers\Admin\ForumController::class, 'togglePin'])->name('admin.forum.toggle-pin');
         Route::post('forum/comment', [App\Http\Controllers\Admin\ForumController::class, 'comment'])->name('admin.forum.comment');
         Route::post('forum/comment/like', [App\Http\Controllers\Admin\ForumController::class, 'likeComment'])->name('admin.forum.comment.like');
+        Route::resource('evaluations', App\Http\Controllers\Admin\EvaluationController::class)->except(['show'])->names('admin.evaluations');
+        Route::post('evaluations/{evaluation}/activate', [App\Http\Controllers\Admin\EvaluationController::class, 'activate'])->name('admin.evaluations.activate');
+        Route::get('evaluations/{evaluation}/submissions', [App\Http\Controllers\Admin\EvaluationController::class, 'submissions'])->name('admin.evaluations.submissions');
+        Route::post('evaluations/force-send', [App\Http\Controllers\Admin\EvaluationController::class, 'forceSend'])->name('admin.evaluations.force-send');
     });
 
     // Analytics & Reports
@@ -245,6 +249,7 @@ Route::prefix('admin')->middleware(['auth', 'admin'])->group(function () {
         Route::get('analytics/student/{userId}', [App\Http\Controllers\Admin\AnalyticsController::class, 'getStudentDetails'])->name('admin.analytics.student-details');
         Route::get('analytics/topic/{topic}', [App\Http\Controllers\Admin\AnalyticsController::class, 'getTopicDetails'])->name('admin.analytics.topic-details')->where('topic', '.*');
         Route::get('analytics/error-logs', [ErrorLogController::class, 'index'])->name('admin.analytics.error-logs');
+        Route::get('analytics/students-review', [App\Http\Controllers\Admin\EvaluationController::class, 'reviews'])->name('admin.evaluations.reviews');
     });
 
     // Key Performance Indicator (KPI) - Only for super admins
@@ -373,6 +378,7 @@ Route::prefix('admin')->middleware(['auth', 'admin'])->group(function () {
     Route::put('confession/topics/{confession_topic}', [App\Http\Controllers\Admin\ConfessionController::class, 'updateTopic'])->name('admin.confession.topics.update');
     Route::delete('confession/topics/{confession_topic}', [App\Http\Controllers\Admin\ConfessionController::class, 'destroyTopic'])->name('admin.confession.topics.destroy');
     Route::delete('confession/posts/{confession_post}', [App\Http\Controllers\Admin\ConfessionController::class, 'destroy']);
+    Route::post('confession/anon-name-settings', [App\Http\Controllers\Admin\ConfessionController::class, 'updateAnonNameSettings'])->name('admin.confession.anon-name-settings');
     Route::get('confession/banned-words', [App\Http\Controllers\Admin\ConfessionBannedWordController::class, 'index'])->name('admin.confession.banned-words');
     Route::post('confession/banned-words', [App\Http\Controllers\Admin\ConfessionBannedWordController::class, 'store']);
     Route::delete('confession/banned-words/{banned_word}', [App\Http\Controllers\Admin\ConfessionBannedWordController::class, 'destroy'])->name('admin.confession.banned-words.destroy');
@@ -484,6 +490,8 @@ Route::prefix('admin')->middleware(['auth', 'admin'])->group(function () {
 // User Routes
 Route::middleware(['auth'])->group(function () {
     Route::get('/dashboard', [UserDashboardController::class, 'index'])->name('user.dashboard');
+    Route::get('/teacher/students', [UserDashboardController::class, 'teacherStudents'])->name('user.teacher.students');
+    Route::get('/teacher/news', [UserDashboardController::class, 'teacherNews'])->name('user.teacher.news');
     Route::get('/technician/tickets', [App\Http\Controllers\User\TechnicianTicketController::class, 'index'])->name('user.technician-tickets.index');
     Route::patch('/technician/tickets/{ticket}', [App\Http\Controllers\User\TechnicianTicketController::class, 'update'])->name('user.technician-tickets.update');
     // TOR PDF for students
@@ -578,6 +586,8 @@ Route::middleware(['auth'])->group(function () {
     // Feedback Routes
     Route::resource('feedback', App\Http\Controllers\User\FeedbackController::class)->names('user.feedback');
     Route::get('feedback-stats', [App\Http\Controllers\User\FeedbackController::class, 'getStats'])->name('user.feedback.stats');
+    Route::get('/evaluation', [App\Http\Controllers\User\EvaluationController::class, 'create'])->name('user.evaluation.create');
+    Route::post('/evaluation', [App\Http\Controllers\User\EvaluationController::class, 'store'])->name('user.evaluation.store');
 
     // Forum Routes
     Route::get('forum', [App\Http\Controllers\User\ForumController::class, 'index'])->name('forum.index');

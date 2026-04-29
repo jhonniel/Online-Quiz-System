@@ -31,6 +31,8 @@ class User extends Authenticatable
         'status',
         'last_activity',
         'last_seen',
+        'teacher_announcements_seen_at',
+        'evaluation_forced_at',
         'profile_picture',
         'cover_photo',
         'bio',
@@ -63,6 +65,8 @@ class User extends Authenticatable
             'is_approved' => 'boolean',
             'last_activity' => 'datetime',
             'last_seen' => 'datetime',
+            'teacher_announcements_seen_at' => 'datetime',
+            'evaluation_forced_at' => 'datetime',
         ];
     }
 
@@ -180,6 +184,11 @@ class User extends Authenticatable
         return $this->role === 'technician';
     }
 
+    public function isTeacher()
+    {
+        return $this->role === 'teacher';
+    }
+
     public function isActive()
     {
         return $this->is_active;
@@ -191,6 +200,7 @@ class User extends Authenticatable
             'admin' => 'Administrator',
             'student' => 'Student',
             'employee' => 'Employee',
+            'teacher' => 'Teacher',
             'applicant' => 'Applicant',
             'technician' => 'Technician',
             'user' => 'User',
@@ -204,6 +214,7 @@ class User extends Authenticatable
             'admin' => 'bg-purple-100 text-purple-800',
             'student' => 'bg-blue-100 text-blue-800',
             'employee' => 'bg-green-100 text-green-800',
+            'teacher' => 'bg-sky-100 text-sky-800',
             'applicant' => 'bg-yellow-100 text-yellow-800',
             'technician' => 'bg-cyan-100 text-cyan-800',
             'user' => 'bg-gray-100 text-gray-800',

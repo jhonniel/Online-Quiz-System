@@ -6,6 +6,8 @@ use App\Http\Controllers\Controller;
 use App\Models\ConfessionComment;
 use App\Models\ConfessionPost;
 use App\Models\ConfessionTopic;
+use App\Models\Setting;
+use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
@@ -21,7 +23,68 @@ class ConfessionController extends Controller
             ->orderByDesc('created_at')
             ->paginate(20);
 
-        return view('admin.confession.index', compact('posts'));
+        $roleOptions = User::query()
+            ->whereNotNull('role')
+            ->select('role')
+            ->distinct()
+            ->orderBy('role')
+            ->pluck('role')
+            ->filter(fn ($role) => is_string($role) && $role !== '')
+            ->values();
+
+        $selectedAnonSources = Setting::get('confession_anon_name_sources', ['default_codename']);
+        if (!is_array($selectedAnonSources)) {
+            $selectedAnonSources = ['default_codename'];
+        }
+
+        return view('admin.confession.index', compact('posts', 'roleOptions', 'selectedAnonSources'));
+    }
+
+    public function updateAnonNameSettings(Request $request)
+    {
+        $request->validate([
+            'anon_name_sources' => ['required', 'array', 'min:1'],
+            'anon_name_sources.*' => ['string'],
+        ]);
+
+        $roleOptions = User::query()
+            ->whereNotNull('role')
+            ->select('role')
+            ->distinct()
+            ->pluck('role')
+            ->filter(fn ($role) => is_string($role) && $role !== '')
+            ->values()
+            ->all();
+
+        $allowedSources = collect(['default_codename'])
+            ->merge(collect($roleOptions)->map(fn ($role) => 'role_' . $role))
+            ->values()
+            ->all();
+
+        $selected = collect($request->input('anon_name_sources', []))
+            ->filter(fn ($value) => is_string($value) && in_array($value, $allowedSources, true))
+            ->unique()
+            ->values()
+            ->all();
+
+        if (empty($selected)) {
+            $selected = ['default_codename'];
+        }
+
+        Setting::set(
+            'confession_anon_name_sources',
+            $selected,
+            'json',
+            'Controls how anonymous names are generated in Say-it.'
+        );
+        Setting::set(
+            'confession_anon_name_settings_version',
+            now()->toDateTimeString(),
+            'text',
+            'Used to refresh session codenames when anon name settings change.'
+        );
+
+        return redirect('/admin/confession')->with('success', 'Anon name settings updated.');
     }
 
     public function dashboard()

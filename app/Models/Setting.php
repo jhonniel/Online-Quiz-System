@@ -3,12 +3,15 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Log;
 
 class Setting extends Model
 {
     protected $fillable = [
         'key',
         'value',
+        'type',
+        'description',
     ];
 
     protected $casts = [
@@ -38,7 +41,17 @@ class Setting extends Model
         // If value is a JSON-encoded string (starts with "), decode it
         if (is_string($rawValue) && str_starts_with(trim($rawValue), '"') && str_ends_with(trim($rawValue), '"')) {
             $decoded = json_decode($rawValue, true);
-            return $decoded !== null ? $decoded : trim($rawValue, '"');
+            if ($decoded === null) {
+                return trim($rawValue, '"');
+            }
+
+            // Handle double-encoded JSON (e.g. "\"[\\\"a\\\",\\\"b\\\"]\"")
+            if (is_string($decoded) && (str_starts_with(trim($decoded), '{') || str_starts_with(trim($decoded), '['))) {
+                $decodedTwice = json_decode($decoded, true);
+                return $decodedTwice !== null ? $decodedTwice : $decoded;
+            }
+
+            return $decoded;
         }
         
         return $rawValue;
@@ -101,7 +114,7 @@ class Setting extends Model
             }
         } catch (\Exception $e) {
             // Log error but don't throw
-            \Log::warning('Failed to clear setting cache', ['error' => $e->getMessage()]);
+            Log::warning('Failed to clear setting cache', ['error' => $e->getMessage()]);
         }
     }
 }

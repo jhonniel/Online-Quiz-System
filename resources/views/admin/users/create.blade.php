@@ -150,6 +150,7 @@
                                 <option value="admin" {{ old('role') == 'admin' ? 'selected' : '' }}>Administrator</option>
                                 <option value="student" {{ old('role') == 'student' ? 'selected' : '' }}>Student</option>
                                 <option value="employee" {{ old('role') == 'employee' ? 'selected' : '' }}>Employee</option>
+                                <option value="teacher" {{ old('role') == 'teacher' ? 'selected' : '' }}>Teacher</option>
                                 <option value="technician" {{ old('role') == 'technician' ? 'selected' : '' }}>Technician</option>
                                 <option value="applicant" {{ old('role') == 'applicant' ? 'selected' : '' }}>Applicant</option>
                                 <option value="user" {{ old('role') == 'user' ? 'selected' : '' }}>User (Legacy)</option>
@@ -174,7 +175,7 @@
                     <!-- University -->
                     <div class="space-y-2">
                         <label for="university_select" class="block text-sm font-semibold text-gray-700">
-                            University/School
+                            University/School <span class="text-red-500" id="university_required_indicator" @if(old('role') !== 'teacher') style="display:none;" @endif>*</span>
                         </label>
                         <div class="relative group">
                             <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none z-10">
@@ -185,7 +186,7 @@
                             <select name="university_id"
                                     id="university_select"
                                     class="block w-full pl-12 pr-10 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200 bg-gray-50 focus:bg-white appearance-none cursor-pointer">
-                                <option value="">Select or add new (optional)</option>
+                                <option value="">Select or add new</option>
                                 @foreach($universities as $university)
                                     <option value="{{ $university->id }}" {{ old('university_id') == $university->id ? 'selected' : '' }}>
                                         {{ $university->name }}
@@ -223,9 +224,9 @@
                         </div>
                     </div>
 
-                    <!-- Department (Employees and Students) -->
+                    <!-- Department (Employees, Students, and Teachers) -->
                     <div class="space-y-2" id="department_wrapper"
-                         @if(in_array(old('role'), ['employee', 'student'], true)) style="" @else style="display:none;" @endif>
+                         @if(in_array(old('role'), ['employee', 'student', 'teacher'], true)) style="" @else style="display:none;" @endif>
                         <label for="department_id" class="block text-sm font-semibold text-gray-700">
                             Department <span class="text-red-500" id="department_required_indicator" @if(old('role') !== 'employee') style="display:none;" @endif>*</span>
                         </label>
@@ -556,6 +557,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const matchText = document.getElementById('match-text');
     const roleSelect = document.getElementById('role');
     const requiredHoursWrapper = document.getElementById('required_training_hours_wrapper');
+    const universityRequiredIndicator = document.getElementById('university_required_indicator');
 
     // University selection toggle
     if (universitySelect && newUniversityContainer && newUniversityInput) {
@@ -593,6 +595,20 @@ document.addEventListener('DOMContentLoaded', function() {
         toggleRequiredHours();
     }
 
+    // University is required for teacher role
+    if (roleSelect && universitySelect) {
+        function toggleUniversityRequirement() {
+            const isTeacher = roleSelect.value === 'teacher';
+            universitySelect.required = isTeacher;
+            if (universityRequiredIndicator) {
+                universityRequiredIndicator.style.display = isTeacher ? '' : 'none';
+            }
+        }
+
+        roleSelect.addEventListener('change', toggleUniversityRequirement);
+        toggleUniversityRequirement();
+    }
+
     // Show Leave Balances only for employees
     const leaveBalancesWrapper = document.getElementById('leave_balances_wrapper');
     if (roleSelect && leaveBalancesWrapper) {
@@ -609,13 +625,13 @@ document.addEventListener('DOMContentLoaded', function() {
         toggleLeaveBalances();
     }
 
-    // Show Department for employees and students
+    // Show Department for employees, students, and teachers
     const departmentWrapper = document.getElementById('department_wrapper');
     const departmentSelect = document.getElementById('department_id');
     const departmentRequiredIndicator = document.getElementById('department_required_indicator');
     if (roleSelect && departmentWrapper) {
         function toggleDepartment() {
-            const show = roleSelect.value === 'employee' || roleSelect.value === 'student';
+            const show = roleSelect.value === 'employee' || roleSelect.value === 'student' || roleSelect.value === 'teacher';
             if (show) {
                 departmentWrapper.style.display = '';
                 if (departmentSelect) {
