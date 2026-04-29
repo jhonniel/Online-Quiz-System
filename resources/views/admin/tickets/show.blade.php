@@ -227,6 +227,23 @@
                             </span>
                         </div>
                         <div>
+                            <p class="text-xs font-medium text-gray-500 uppercase tracking-wider">Payment Status</p>
+                            @php
+                                $isPaid = ($ticket->payment_status ?? \App\Models\TicketReport::PAYMENT_STATUS_PENDING) === \App\Models\TicketReport::PAYMENT_STATUS_PAID;
+                            @endphp
+                            <span class="inline-flex items-center mt-1 px-3 py-1 rounded-full text-sm font-medium {{ $isPaid ? 'bg-green-100 text-green-800' : 'bg-amber-100 text-amber-800' }}">
+                                {{ $isPaid ? 'Paid' : 'Pending for payment' }}
+                            </span>
+                            <p class="mt-1 text-sm text-gray-700">
+                                Amount:
+                                @if($ticket->amount_paid !== null)
+                                    &#8369;{{ number_format((float) $ticket->amount_paid, 2) }}
+                                @else
+                                    —
+                                @endif
+                            </p>
+                        </div>
+                        <div>
                             <p class="text-xs font-medium text-gray-500 uppercase tracking-wider">Category</p>
                             <p class="mt-1 text-sm font-medium text-gray-900">{{ $ticket->type_label }}</p>
                         </div>
@@ -245,6 +262,43 @@
                             <p class="text-xs font-medium text-gray-500 uppercase tracking-wider">Assigned to</p>
                             <p class="mt-1 text-sm text-gray-700">{{ $ticket->assignedTo?->name ?? 'Unassigned' }}</p>
                         </div>
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                    <div class="px-4 py-3 border-b border-gray-200 bg-gray-50">
+                        <h3 class="text-sm font-semibold text-gray-900">Payment</h3>
+                    </div>
+                    <div class="p-4">
+                        <form method="POST" action="{{ url('admin/tickets/' . $ticket->id) }}" class="space-y-3">
+                            @csrf
+                            @method('PATCH')
+                            <input type="hidden" name="status" value="{{ $ticket->status }}">
+                            <label for="payment_status" class="block text-xs font-medium text-gray-600">Payment status</label>
+                            <select name="payment_status" id="payment_status" class="block w-full rounded-lg border border-gray-300 py-2.5 px-3 text-sm focus:ring-indigo-500 focus:border-indigo-500">
+                                <option value="{{ \App\Models\TicketReport::PAYMENT_STATUS_PENDING }}" {{ ($ticket->payment_status ?? \App\Models\TicketReport::PAYMENT_STATUS_PENDING) === \App\Models\TicketReport::PAYMENT_STATUS_PENDING ? 'selected' : '' }}>
+                                    Pending for payment
+                                </option>
+                                <option value="{{ \App\Models\TicketReport::PAYMENT_STATUS_PAID }}" {{ ($ticket->payment_status ?? \App\Models\TicketReport::PAYMENT_STATUS_PENDING) === \App\Models\TicketReport::PAYMENT_STATUS_PAID ? 'selected' : '' }}>
+                                    Paid
+                                </option>
+                            </select>
+                            <label for="amount_paid" class="block text-xs font-medium text-gray-600">Amount paid</label>
+                            <input
+                                type="number"
+                                name="amount_paid"
+                                id="amount_paid"
+                                min="0"
+                                step="0.01"
+                                value="{{ old('amount_paid', $ticket->amount_paid !== null ? number_format((float) $ticket->amount_paid, 2, '.', '') : '') }}"
+                                placeholder="0.00"
+                                class="block w-full rounded-lg border border-gray-300 py-2.5 px-3 text-sm focus:ring-indigo-500 focus:border-indigo-500"
+                            >
+                            <p class="text-xs text-gray-500">This amount is admin-only and hidden from users.</p>
+                            <button type="submit" class="w-full inline-flex items-center justify-center px-4 py-2.5 border border-transparent rounded-lg text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 transition-colors shadow-sm">
+                                Save payment details
+                            </button>
+                        </form>
                     </div>
                 </div>
 

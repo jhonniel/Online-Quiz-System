@@ -49,6 +49,12 @@
                                     <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium {{ $badge }}">
                                         {{ $statusLabel }}
                                     </span>
+                                    @php
+                                        $isPaid = ($ticket->payment_status ?? \App\Models\TicketReport::PAYMENT_STATUS_PENDING) === \App\Models\TicketReport::PAYMENT_STATUS_PAID;
+                                    @endphp
+                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium {{ $isPaid ? 'bg-green-100 text-green-800' : 'bg-amber-100 text-amber-800' }}">
+                                        {{ $isPaid ? 'PAID' : 'PENDING FOR PAYMENT' }}
+                                    </span>
                                     <span class="text-xs text-gray-400">{{ $ticket->type_label }}</span>
                                 </div>
                                 <p class="mt-2 text-sm text-gray-600 line-clamp-2">{{ Str::limit($ticket->description, 120) }}</p>

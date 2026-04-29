@@ -71,6 +71,7 @@ class ReportProblemController extends Controller
             'address' => $validated['address'] ?? null,
             'image_path' => $imagePath,
             'status' => TicketReport::STATUS_OPEN,
+            'payment_status' => TicketReport::PAYMENT_STATUS_PENDING,
         ]);
 
         $emailSent = false;

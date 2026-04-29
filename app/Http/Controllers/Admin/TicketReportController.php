@@ -84,6 +84,8 @@ class TicketReportController extends Controller
         $request->validate([
             'status' => 'sometimes|in:' . implode(',', TicketReport::adminStatuses()),
             'admin_notes' => 'nullable|string|max:10000',
+            'payment_status' => 'sometimes|in:' . implode(',', TicketReport::paymentStatuses()),
+            'amount_paid' => 'nullable|numeric|min:0|max:999999999.99',
             'assigned_to_user_id' => [
                 'nullable',
                 Rule::exists('users', 'id')->where(function ($query) {
@@ -94,9 +96,22 @@ class TicketReportController extends Controller
 
         $data = [];
         $statusChanged = false;
+        $paymentChanged = false;
         if ($request->has('status') && $request->status !== $ticket_report->status) {
             $data['status'] = $request->status;
             $statusChanged = true;
+        }
+        if ($request->has('payment_status') && $request->payment_status !== $ticket_report->payment_status) {
+            $data['payment_status'] = $request->payment_status;
+            $paymentChanged = true;
+        }
+        if (array_key_exists('amount_paid', $request->all())) {
+            $incomingAmount = $request->filled('amount_paid') ? (float) $request->input('amount_paid') : null;
+            $currentAmount = $ticket_report->amount_paid !== null ? (float) $ticket_report->amount_paid : null;
+            if ($incomingAmount !== $currentAmount) {
+                $data['amount_paid'] = $incomingAmount;
+                $paymentChanged = true;
+            }
         }
         if (array_key_exists('admin_notes', $request->all())) {
             $data['admin_notes'] = $request->admin_notes;
@@ -125,6 +140,15 @@ class TicketReportController extends Controller
                     'action' => $action,
                     'from_status' => $fromStatus,
                     'to_status' => $toStatus,
+                    'meta' => null,
+                ]);
+            } elseif ($paymentChanged) {
+                TicketReportLog::create([
+                    'ticket_report_id' => $ticket_report->id,
+                    'user_id' => (int) Auth::id(),
+                    'action' => 'payment_updated',
+                    'from_status' => $ticket_report->status,
+                    'to_status' => $ticket_report->status,
                     'meta' => null,
                 ]);
             } elseif (array_key_exists('admin_notes', $request->all())) {
@@ -175,6 +199,8 @@ class TicketReportController extends Controller
             }
         } elseif (array_key_exists('admin_notes', $request->all())) {
             $message = 'Notes saved.';
+        } elseif ($paymentChanged) {
+            $message = 'Payment details updated.';
         } elseif (array_key_exists('assigned_to_user_id', $request->all())) {
             $message = 'Assignee updated.';
         }

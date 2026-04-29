@@ -48,15 +48,22 @@
                 @endif
 
                 @if(!empty($ticket))
+                    @php
+                        $paymentStatus = $ticket->payment_status ?? \App\Models\TicketReport::PAYMENT_STATUS_PENDING;
+                        $paymentStatusLabel = $paymentStatus === \App\Models\TicketReport::PAYMENT_STATUS_PAID ? 'Paid' : 'Pending for payment';
+                        $paymentBadge = $paymentStatus === \App\Models\TicketReport::PAYMENT_STATUS_PAID
+                            ? 'bg-green-100 text-green-700'
+                            : 'bg-amber-100 text-amber-700';
+                    @endphp
                     <div class="rounded-xl border border-gray-200 bg-gray-50/70 p-4 sm:p-5 space-y-2">
                         <p class="text-sm text-gray-600">
                             <span class="font-semibold text-gray-900">Ticket Number:</span>
                             {{ $ticket->ticket_number }}
                         </p>
                         <p class="text-sm text-gray-600">
-                            <span class="font-semibold text-gray-900">Status:</span>
-                            <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold {{ $ticket->status === 'closed' ? 'bg-gray-200 text-gray-800' : 'bg-emerald-100 text-emerald-700' }}">
-                                {{ strtoupper($ticket->status) }}
+                            <span class="font-semibold text-gray-900">Payment Status:</span>
+                            <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold {{ $paymentBadge }}">
+                                {{ $paymentStatusLabel }}
                             </span>
                         </p>
                         <p class="text-sm text-gray-600">

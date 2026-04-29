@@ -128,12 +128,12 @@
                             <a href="{{ url('/technician/tickets') }}"
                                class="group flex items-center px-2 py-2 text-sm font-medium rounded-md transition-colors duration-200 {{ request()->routeIs('user.technician-tickets.*') ? 'bg-indigo-700 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white' }}"
                                :class="sidebarCollapsed ? 'justify-center' : ''"
-                               :title="sidebarCollapsed ? 'My Tickets' : ''">
+                               :title="sidebarCollapsed ? 'Assigned Tickets' : ''">
                                 <svg class="h-5 w-5" :class="sidebarCollapsed ? '' : 'mr-3'" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L6 20.75M14.25 7l3.75-3.75M7 7h.01M17 17h.01M7 17h.01M17 7h.01M12 12l0 0"></path>
                                 </svg>
                                 <span class="transition-opacity duration-300" :class="sidebarCollapsed ? 'opacity-0 w-0 overflow-hidden' : 'opacity-100'">
-                                    My Tickets
+                                    Assigned Tickets
                                 </span>
                             </a>
                         @endif

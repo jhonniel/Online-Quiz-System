@@ -21,6 +21,12 @@ class TicketReport extends Model
         'status',
         'assigned_to_user_id',
         'admin_notes',
+        'payment_status',
+        'amount_paid',
+    ];
+
+    protected $casts = [
+        'amount_paid' => 'decimal:2',
     ];
 
     public const STATUS_OPEN = 'open';
@@ -31,6 +37,9 @@ class TicketReport extends Model
     // Legacy value kept for backward compatibility
     public const STATUS_CLOSED = 'closed';
 
+    public const PAYMENT_STATUS_PENDING = 'pending_for_payment';
+    public const PAYMENT_STATUS_PAID = 'paid';
+
     public static function adminStatuses(): array
     {
         return [
@@ -39,6 +48,14 @@ class TicketReport extends Model
             self::STATUS_NEEDS_INVESTIGATION,
             self::STATUS_RESOLVED,
             self::STATUS_CLOSED,
+        ];
+    }
+
+    public static function paymentStatuses(): array
+    {
+        return [
+            self::PAYMENT_STATUS_PENDING,
+            self::PAYMENT_STATUS_PAID,
         ];
     }
 
