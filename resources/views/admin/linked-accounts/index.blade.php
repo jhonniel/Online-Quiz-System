@@ -256,7 +256,7 @@
                     </div>
 
                     @if(!empty($clientNameCountsTop) && $clientNameCountsTop->count() > 0)
-                        <ul class="divide-y divide-gray-200">
+                        <ul class="divide-y divide-gray-200 max-h-[320px] overflow-y-auto pr-1">
                             @foreach($clientNameCountsTop as $clientName => $count)
                                 <li class="px-4 sm:px-5 py-3 hover:bg-gray-50/50 transition-colors flex items-center justify-between gap-3">
                                     <div class="min-w-0 flex-1">
