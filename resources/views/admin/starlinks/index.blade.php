@@ -33,6 +33,14 @@
                     <svg class="w-4 h-4 mr-2 text-gray-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
                     Sample template
                 </a>
+                <a href="{{ url('/admin/starlinks/export/csv') . '?' . http_build_query(request()->only(['search', 'status_filter', 'account_email_filter', 'client_name_filter'])) }}" class="inline-flex items-center px-3 py-2 sm:px-4 sm:py-2.5 border border-emerald-200 rounded-lg text-sm font-medium text-emerald-700 bg-emerald-50 hover:bg-emerald-100 transition-colors">
+                    <svg class="w-4 h-4 mr-2 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v8m0 0l-3-3m3 3l3-3M4 16v1a2 2 0 002 2h12a2 2 0 002-2v-1"></path></svg>
+                    Export CSV
+                </a>
+                <a href="{{ url('/admin/starlinks/export/pdf') . '?' . http_build_query(request()->only(['search', 'status_filter', 'account_email_filter', 'client_name_filter'])) }}" class="inline-flex items-center px-3 py-2 sm:px-4 sm:py-2.5 border border-red-200 rounded-lg text-sm font-medium text-red-700 bg-red-50 hover:bg-red-100 transition-colors">
+                    <svg class="w-4 h-4 mr-2 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 8h10M7 12h6m-8 8h14a2 2 0 002-2V8l-6-6H5a2 2 0 00-2 2v14a2 2 0 002 2z"></path></svg>
+                    Export PDF
+                </a>
             </div>
         </div>
     </div>
@@ -50,17 +58,24 @@
             <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                 <div>
                     <h2 class="text-base font-semibold text-gray-900">All devices</h2>
-                    <p class="text-sm text-gray-500 mt-0.5">{{ $starlinks->total() }} device{{ $starlinks->total() !== 1 ? 's' : '' }}{!! !empty($search) ? ' <span class="text-gray-600">(matching search)</span>' : '' !!}</p>
+                    <p class="text-sm text-gray-500 mt-0.5">{{ $starlinks->total() }} device{{ $starlinks->total() !== 1 ? 's' : '' }}{!! (!empty($search) || !empty($statusFilter) || !empty($accountEmailFilter) || !empty($clientNameFilter)) ? ' <span class="text-gray-600">(filtered results)</span>' : '' !!}</p>
                 </div>
-                <form method="GET" action="{{ url('/admin/starlinks') }}" class="flex gap-2 w-full sm:w-auto sm:min-w-[280px]">
+                <form method="GET" action="{{ url('/admin/starlinks') }}" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-[1fr_180px_1fr_1fr_auto_auto] gap-2 w-full">
                     <div class="relative flex-1 sm:flex-initial">
                         <span class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none text-gray-400">
                             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
                         </span>
                         <input type="text" name="search" value="{{ old('search', $search ?? '') }}" placeholder="Search any field: account, ID, serial, location, plan, status…" class="block w-full pl-10 pr-3 py-2 rounded-lg border border-gray-300 text-sm placeholder-gray-400 focus:ring-indigo-500 focus:border-indigo-500" />
                     </div>
+                    <select name="status_filter" class="block w-full py-2 px-3 rounded-lg border border-gray-300 text-sm text-gray-700 focus:ring-indigo-500 focus:border-indigo-500">
+                        <option value="">All Statuses</option>
+                        <option value="Active" {{ (($statusFilter ?? '') === 'Active') ? 'selected' : '' }}>Active</option>
+                        <option value="Inactive" {{ (($statusFilter ?? '') === 'Inactive') ? 'selected' : '' }}>Inactive</option>
+                    </select>
+                    <input type="text" name="account_email_filter" value="{{ old('account_email_filter', $accountEmailFilter ?? '') }}" placeholder="Filter Account/Email" class="block w-full py-2 px-3 rounded-lg border border-gray-300 text-sm placeholder-gray-400 focus:ring-indigo-500 focus:border-indigo-500" />
+                    <input type="text" name="client_name_filter" value="{{ old('client_name_filter', $clientNameFilter ?? '') }}" placeholder="Filter Client Name" class="block w-full py-2 px-3 rounded-lg border border-gray-300 text-sm placeholder-gray-400 focus:ring-indigo-500 focus:border-indigo-500" />
                     <button type="submit" class="px-4 py-2 rounded-lg text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 transition-colors whitespace-nowrap">Search</button>
-                    @if(!empty($search))
+                    @if(!empty($search) || !empty($statusFilter) || !empty($accountEmailFilter) || !empty($clientNameFilter))
                         <a href="{{ url('/admin/starlinks') }}" class="px-4 py-2 rounded-lg text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 transition-colors whitespace-nowrap">Clear</a>
                     @endif
                 </form>
@@ -74,7 +89,7 @@
                         <th scope="col" class="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden sm:table-cell">Starlink ID</th>
                         <th scope="col" class="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden md:table-cell">Kit No.</th>
                         <th scope="col" class="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden md:table-cell">Office / Location</th>
-                        <th scope="col" class="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden md:table-cell">Municipality</th>
+                        <th scope="col" class="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden md:table-cell">Client Name</th>
                         <th scope="col" class="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden lg:table-cell">Plan</th>
                         <th scope="col" class="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
                         <th scope="col" class="px-4 sm:px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
@@ -207,7 +222,7 @@
                         <div><dt class="text-sm font-medium text-gray-500 uppercase tracking-wider">SSID</dt><dd class="mt-1.5 text-base text-gray-900" x-text="device.ssid || '—'"></dd></div>
                         <div class="sm:col-span-2"><dt class="text-sm font-medium text-gray-500 uppercase tracking-wider">WiFi password</dt><dd class="mt-1.5 text-base text-gray-900 font-mono" x-text="device.wifi_password ? '••••••••' : '—'"></dd></div>
                         <div><dt class="text-sm font-medium text-gray-500 uppercase tracking-wider">Office / location</dt><dd class="mt-1.5 text-base text-gray-900" x-text="device.office_location || '—'"></dd></div>
-                        <div><dt class="text-sm font-medium text-gray-500 uppercase tracking-wider">Municipality</dt><dd class="mt-1.5 text-base text-gray-900" x-text="device.municipality || '—'"></dd></div>
+                        <div><dt class="text-sm font-medium text-gray-500 uppercase tracking-wider">Client Name</dt><dd class="mt-1.5 text-base text-gray-900" x-text="device.municipality || '—'"></dd></div>
                         <div><dt class="text-sm font-medium text-gray-500 uppercase tracking-wider">Start date</dt><dd class="mt-1.5 text-base text-gray-900" x-text="device.start_date_formatted || '—'"></dd></div>
                         <div><dt class="text-sm font-medium text-gray-500 uppercase tracking-wider">PO No.</dt><dd class="mt-1.5 text-base text-gray-900" x-text="device.po_no || '—'"></dd></div>
                         <div><dt class="text-sm font-medium text-gray-500 uppercase tracking-wider">Contact email</dt><dd class="mt-1.5 text-base text-gray-900" x-text="device.contact_email || '—'"></dd></div>

@@ -56,7 +56,7 @@
                     <dd class="mt-1 text-sm text-gray-900">{{ $starlink->office_location ?? '—' }}</dd>
                 </div>
                 <div>
-                    <dt class="text-xs font-medium text-gray-500 uppercase tracking-wider">Municipality</dt>
+                    <dt class="text-xs font-medium text-gray-500 uppercase tracking-wider">Client Name</dt>
                     <dd class="mt-1 text-sm text-gray-900">{{ $starlink->municipality ?? '—' }}</dd>
                 </div>
                 <div>

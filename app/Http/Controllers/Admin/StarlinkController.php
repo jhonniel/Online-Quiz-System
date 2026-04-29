@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\LinkedAccount;
 use App\Models\Starlink;
 use App\Models\SubscriptionPlanType;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
@@ -28,58 +29,7 @@ class StarlinkController extends Controller
     {
         $this->ensureCanAccess();
 
-        $query = Starlink::with('linkedAccount')->orderByDesc('created_at');
-        $dbDriver = DB::connection()->getDriverName();
-        $idLikeSql = $dbDriver === 'pgsql' ? 'CAST(id AS TEXT) LIKE ?' : 'CAST(id AS CHAR) LIKE ?';
-
-        $search = $request->input('search');
-        if ($search && trim($search) !== '') {
-            // Split by spaces so users can type natural multi-word queries.
-            // Each term must match at least one searchable field.
-            $tokens = preg_split('/\s+/', trim($search)) ?: [];
-            foreach ($tokens as $token) {
-                $token = trim($token);
-                if ($token === '') {
-                    continue;
-                }
-
-                $term = '%' . $token . '%';
-                $query->where(function ($q) use ($term, $token, $idLikeSql) {
-                    $q->whereRaw($idLikeSql, [$term])
-                        // Explicit primary fields from the listing table.
-                        ->orWhereRaw('LOWER(COALESCE(account_linked_email, \'\')) LIKE LOWER(?)', [$term]) // Account / Email
-                        ->orWhereRaw('LOWER(COALESCE(starlink_id, \'\')) LIKE LOWER(?)', [$term]) // Starlink ID
-                        ->orWhereRaw('LOWER(COALESCE(serial_number, \'\')) LIKE LOWER(?)', [$term]) // Serial number
-                        ->orWhereRaw('LOWER(COALESCE(kit_number, \'\')) LIKE LOWER(?)', [$term]) // Kit number
-                        ->orWhereRaw('LOWER(COALESCE(router_id, \'\')) LIKE LOWER(?)', [$term]) // Router ID
-                        ->orWhereRaw('LOWER(COALESCE(office_location, \'\')) LIKE LOWER(?)', [$term]) // Office / location
-                        ->orWhereRaw('LOWER(COALESCE(municipality, \'\')) LIKE LOWER(?)', [$term]) // Municipality
-                        // Additional searchable fields.
-                        ->orWhereRaw('LOWER(COALESCE(ssid, \'\')) LIKE LOWER(?)', [$term])
-                        ->orWhereRaw('LOWER(COALESCE(wifi_password, \'\')) LIKE LOWER(?)', [$term])
-                        ->orWhereRaw('LOWER(COALESCE(plan, \'\')) LIKE LOWER(?)', [$term])
-                        ->orWhereRaw('LOWER(COALESCE(status, \'\')) LIKE LOWER(?)', [$term])
-                        ->orWhereRaw('LOWER(COALESCE(po_no, \'\')) LIKE LOWER(?)', [$term])
-                        ->orWhereRaw('LOWER(COALESCE(contact_email, \'\')) LIKE LOWER(?)', [$term])
-                        ->orWhereRaw('LOWER(COALESCE(end_user_email, \'\')) LIKE LOWER(?)', [$term])
-                        ->orWhereRaw('LOWER(COALESCE(billing_interval, \'\')) LIKE LOWER(?)', [$term])
-                        ->orWhereHas('linkedAccount', function ($q2) use ($term) {
-                            $q2->whereRaw('LOWER(COALESCE(email, \'\')) LIKE LOWER(?)', [$term])
-                                ->orWhereRaw('LOWER(COALESCE(name, \'\')) LIKE LOWER(?)', [$term]);
-                        });
-
-                    // Exact ID / date matching (database-agnostic helpers)
-                    if (ctype_digit($token)) {
-                        $q->orWhere('id', (int) $token);
-                    }
-                    if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $token)) {
-                        $q->orWhereDate('start_date', $token)
-                            ->orWhereDate('last_paid_date', $token)
-                            ->orWhereDate('advance_payment_until', $token);
-                    }
-                });
-            }
-        }
+        [$query, $search, $statusFilter, $accountEmailFilter, $clientNameFilter] = $this->buildFilteredQuery($request);
 
         $starlinks = $query->paginate(15)->withQueryString();
 
@@ -101,7 +51,66 @@ class StarlinkController extends Controller
             $overdueCounts[$s->id] = 1; // Currently overdue
         }
 
-        return view('admin.starlinks.index', compact('starlinks', 'search', 'overdueCounts'));
+        return view('admin.starlinks.index', compact('starlinks', 'search', 'statusFilter', 'accountEmailFilter', 'clientNameFilter', 'overdueCounts'));
+    }
+
+    public function exportCsv(Request $request): StreamedResponse
+    {
+        $this->ensureCanAccess();
+        [$query] = $this->buildFilteredQuery($request);
+        $starlinks = $query->orderByDesc('created_at')->get();
+
+        $headers = [
+            'ID',
+            'Account/Email',
+            'Starlink ID',
+            'Serial Number',
+            'Kit Number',
+            'Router ID',
+            'Office/Location',
+            'Client Name',
+            'Plan',
+            'Status',
+            'Contact Email',
+            'Start Date',
+        ];
+
+        return new StreamedResponse(function () use ($starlinks, $headers) {
+            $out = fopen('php://output', 'w');
+            fputcsv($out, $headers);
+            foreach ($starlinks as $s) {
+                fputcsv($out, [
+                    $s->id,
+                    $s->account_linked_email ?: ($s->linkedAccount?->email ?? ''),
+                    $s->starlink_id,
+                    $s->serial_number,
+                    $s->kit_number,
+                    $s->router_id,
+                    $s->office_location,
+                    $s->municipality,
+                    $s->plan,
+                    $s->status,
+                    $s->contact_email,
+                    $s->start_date?->format('Y-m-d'),
+                ]);
+            }
+            fclose($out);
+        }, 200, [
+            'Content-Type' => 'text/csv; charset=UTF-8',
+            'Content-Disposition' => 'attachment; filename="starlinks_export.csv"',
+        ]);
+    }
+
+    public function exportPdf(Request $request)
+    {
+        $this->ensureCanAccess();
+        [$query, $search, $statusFilter, $accountEmailFilter, $clientNameFilter] = $this->buildFilteredQuery($request);
+        $starlinks = $query->orderByDesc('created_at')->get();
+
+        $pdf = Pdf::loadView('admin.starlinks.export-pdf', compact('starlinks', 'search', 'statusFilter', 'accountEmailFilter', 'clientNameFilter'))
+            ->setPaper('a4', 'landscape');
+
+        return $pdf->download('starlinks_export.pdf');
     }
 
     public function show(Starlink $starlink)
@@ -325,6 +334,7 @@ class StarlinkController extends Controller
             'ssid',
             'wifi_password',
             'office_location',
+            'client_name',
             'start_date',
             'po_no',
             'contact_email',
@@ -346,6 +356,7 @@ class StarlinkController extends Controller
                 'MySSID',
                 'wifipassword',
                 'Main Office',
+                'ABC Company',
                 '2024-01-15',
                 'PO-123',
                 'contact@example.com',
@@ -382,8 +393,12 @@ class StarlinkController extends Controller
                 ->with('error', 'The CSV file is empty or invalid.');
         }
 
-        $expected = ['account_linked_email', 'starlink_id', 'serial_number', 'kit_number', 'router_id', 'ssid', 'wifi_password', 'office_location', 'start_date', 'po_no', 'contact_email', 'plan', 'status', 'end_user_email'];
+        $expected = ['account_linked_email', 'starlink_id', 'serial_number', 'kit_number', 'router_id', 'ssid', 'wifi_password', 'office_location', 'client_name', 'start_date', 'po_no', 'contact_email', 'plan', 'status', 'end_user_email'];
         $header = array_map('trim', $header);
+        // Backward compatibility: old files may still use "municipality".
+        if (! in_array('client_name', $header, true) && in_array('municipality', $header, true)) {
+            $header = array_map(fn ($h) => $h === 'municipality' ? 'client_name' : $h, $header);
+        }
         $missing = array_diff($expected, $header);
         if (! empty($missing)) {
             fclose($handle);
@@ -410,6 +425,8 @@ class StarlinkController extends Controller
             foreach ($expected as $key) {
                 $data[$key] = $assoc[$key] ?? null;
             }
+            $data['municipality'] = $data['client_name'] ?? null;
+            unset($data['client_name']);
 
             // Skip row if a device with same Starlink ID, Serial number, Kit number, or Router ID already exists
             $alreadyExists = false;
@@ -543,5 +560,79 @@ class StarlinkController extends Controller
         }
 
         return $count;
+    }
+
+    private function buildFilteredQuery(Request $request): array
+    {
+        $query = Starlink::with('linkedAccount')->orderByDesc('created_at');
+        $dbDriver = DB::connection()->getDriverName();
+        $idLikeSql = $dbDriver === 'pgsql' ? 'CAST(id AS TEXT) LIKE ?' : 'CAST(id AS CHAR) LIKE ?';
+
+        $search = $request->input('search');
+        $statusFilter = trim((string) $request->input('status_filter', ''));
+        $accountEmailFilter = trim((string) $request->input('account_email_filter', ''));
+        $clientNameFilter = trim((string) $request->input('client_name_filter', ''));
+
+        if ($statusFilter !== '') {
+            $query->whereRaw('LOWER(COALESCE(status, \'\')) = LOWER(?)', [$statusFilter]);
+        }
+        if ($accountEmailFilter !== '') {
+            $term = '%' . $accountEmailFilter . '%';
+            $query->where(function ($q) use ($term) {
+                $q->whereRaw('LOWER(COALESCE(account_linked_email, \'\')) LIKE LOWER(?)', [$term])
+                    ->orWhereHas('linkedAccount', function ($q2) use ($term) {
+                        $q2->whereRaw('LOWER(COALESCE(email, \'\')) LIKE LOWER(?)', [$term]);
+                    });
+            });
+        }
+        if ($clientNameFilter !== '') {
+            $term = '%' . $clientNameFilter . '%';
+            $query->whereRaw('LOWER(COALESCE(municipality, \'\')) LIKE LOWER(?)', [$term]);
+        }
+
+        if ($search && trim($search) !== '') {
+            $tokens = preg_split('/\s+/', trim($search)) ?: [];
+            foreach ($tokens as $token) {
+                $token = trim($token);
+                if ($token === '') {
+                    continue;
+                }
+
+                $term = '%' . $token . '%';
+                $query->where(function ($q) use ($term, $token, $idLikeSql) {
+                    $q->whereRaw($idLikeSql, [$term])
+                        ->orWhereRaw('LOWER(COALESCE(account_linked_email, \'\')) LIKE LOWER(?)', [$term])
+                        ->orWhereRaw('LOWER(COALESCE(starlink_id, \'\')) LIKE LOWER(?)', [$term])
+                        ->orWhereRaw('LOWER(COALESCE(serial_number, \'\')) LIKE LOWER(?)', [$term])
+                        ->orWhereRaw('LOWER(COALESCE(kit_number, \'\')) LIKE LOWER(?)', [$term])
+                        ->orWhereRaw('LOWER(COALESCE(router_id, \'\')) LIKE LOWER(?)', [$term])
+                        ->orWhereRaw('LOWER(COALESCE(office_location, \'\')) LIKE LOWER(?)', [$term])
+                        ->orWhereRaw('LOWER(COALESCE(municipality, \'\')) LIKE LOWER(?)', [$term])
+                        ->orWhereRaw('LOWER(COALESCE(ssid, \'\')) LIKE LOWER(?)', [$term])
+                        ->orWhereRaw('LOWER(COALESCE(wifi_password, \'\')) LIKE LOWER(?)', [$term])
+                        ->orWhereRaw('LOWER(COALESCE(plan, \'\')) LIKE LOWER(?)', [$term])
+                        ->orWhereRaw('LOWER(COALESCE(status, \'\')) LIKE LOWER(?)', [$term])
+                        ->orWhereRaw('LOWER(COALESCE(po_no, \'\')) LIKE LOWER(?)', [$term])
+                        ->orWhereRaw('LOWER(COALESCE(contact_email, \'\')) LIKE LOWER(?)', [$term])
+                        ->orWhereRaw('LOWER(COALESCE(end_user_email, \'\')) LIKE LOWER(?)', [$term])
+                        ->orWhereRaw('LOWER(COALESCE(billing_interval, \'\')) LIKE LOWER(?)', [$term])
+                        ->orWhereHas('linkedAccount', function ($q2) use ($term) {
+                            $q2->whereRaw('LOWER(COALESCE(email, \'\')) LIKE LOWER(?)', [$term])
+                                ->orWhereRaw('LOWER(COALESCE(name, \'\')) LIKE LOWER(?)', [$term]);
+                        });
+
+                    if (ctype_digit($token)) {
+                        $q->orWhere('id', (int) $token);
+                    }
+                    if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $token)) {
+                        $q->orWhereDate('start_date', $token)
+                            ->orWhereDate('last_paid_date', $token)
+                            ->orWhereDate('advance_payment_until', $token);
+                    }
+                });
+            }
+        }
+
+        return [$query, $search, $statusFilter, $accountEmailFilter, $clientNameFilter];
     }
 }

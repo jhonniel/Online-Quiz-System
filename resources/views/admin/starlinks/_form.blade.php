@@ -82,8 +82,8 @@
             @error('office_location')<p class="mt-1.5 text-sm text-red-600">{{ $message }}</p>@enderror
         </div>
         <div>
-            <label for="municipality" class="block text-sm font-medium text-gray-700">Municipality</label>
-            <input type="text" name="municipality" id="municipality" value="{{ old('municipality', $starlink?->municipality ?? '') }}" class="{{ $inputClass }}" placeholder="e.g. Quezon City" />
+            <label for="municipality" class="block text-sm font-medium text-gray-700">Client Name</label>
+            <input type="text" name="municipality" id="municipality" value="{{ old('municipality', $starlink?->municipality ?? '') }}" class="{{ $inputClass }}" placeholder="e.g. ABC Company" />
             @error('municipality')<p class="mt-1.5 text-sm text-red-600">{{ $message }}</p>@enderror
         </div>
         <div>
