@@ -799,18 +799,8 @@ class LandingController extends Controller
                     ]);
                 }
             }
-        } catch (\Exception $e) {
-            // Fallback to legacy/alternate disks.
-            if (Storage::disk('spaces')->exists($torPdfPath)) {
-                $file = Storage::disk('spaces')->get($torPdfPath);
-                $fileName = basename($torPdfPath);
-                return Response::make($file, 200, [
-                    'Content-Type' => 'application/pdf',
-                    'Content-Disposition' => 'inline; filename="' . $fileName . '"',
-                ]);
-            }
-
-            // Fallback to public disk
+        } catch (\Throwable $e) {
+            // Fallback to public disk only (avoid requiring legacy "spaces" S3 config).
             if (Storage::disk('public')->exists($torPdfPath)) {
                 $file = Storage::disk('public')->get($torPdfPath);
                 $fileName = basename($torPdfPath);
