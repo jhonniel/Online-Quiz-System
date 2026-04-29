@@ -4,6 +4,7 @@ namespace App\Http\Controllers\User;
 
 use App\Http\Controllers\Controller;
 use App\Models\QuizAssignment;
+use App\Models\TicketReport;
 use Illuminate\Http\Request;
 
 class DashboardController extends Controller
@@ -11,6 +12,37 @@ class DashboardController extends Controller
     public function index()
     {
         $user = auth()->user();
+
+        // Technician users get a ticket-focused dashboard.
+        if ($user->role === 'technician') {
+            $assignedTicketsQuery = TicketReport::query()
+                ->where('assigned_to_user_id', $user->id);
+
+            $assignedTotal = (clone $assignedTicketsQuery)->count();
+            $assignedOpen = (clone $assignedTicketsQuery)
+                ->whereIn('status', [
+                    TicketReport::STATUS_OPEN,
+                    TicketReport::STATUS_PROCESSING,
+                    TicketReport::STATUS_NEEDS_INVESTIGATION,
+                ])->count();
+            $assignedResolved = (clone $assignedTicketsQuery)
+                ->whereIn('status', [
+                    TicketReport::STATUS_RESOLVED,
+                    TicketReport::STATUS_CLOSED,
+                ])->count();
+
+            $recentAssignedTickets = (clone $assignedTicketsQuery)
+                ->latest()
+                ->take(10)
+                ->get();
+
+            return view('user.technician-dashboard', compact(
+                'assignedTotal',
+                'assignedOpen',
+                'assignedResolved',
+                'recentAssignedTickets'
+            ));
+        }
         
         // For applicants, only show assigned quizzes (not all available quizzes)
         if ($user->role === 'applicant') {

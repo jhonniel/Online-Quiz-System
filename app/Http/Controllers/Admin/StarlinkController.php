@@ -53,6 +53,7 @@ class StarlinkController extends Controller
                         ->orWhereRaw('LOWER(COALESCE(kit_number, \'\')) LIKE LOWER(?)', [$term]) // Kit number
                         ->orWhereRaw('LOWER(COALESCE(router_id, \'\')) LIKE LOWER(?)', [$term]) // Router ID
                         ->orWhereRaw('LOWER(COALESCE(office_location, \'\')) LIKE LOWER(?)', [$term]) // Office / location
+                        ->orWhereRaw('LOWER(COALESCE(municipality, \'\')) LIKE LOWER(?)', [$term]) // Municipality
                         // Additional searchable fields.
                         ->orWhereRaw('LOWER(COALESCE(ssid, \'\')) LIKE LOWER(?)', [$term])
                         ->orWhereRaw('LOWER(COALESCE(wifi_password, \'\')) LIKE LOWER(?)', [$term])
@@ -121,6 +122,7 @@ class StarlinkController extends Controller
                 'ssid' => $starlink->ssid,
                 'wifi_password' => $starlink->wifi_password,
                 'office_location' => $starlink->office_location,
+                'municipality' => $starlink->municipality,
                 'start_date' => $starlink->start_date?->format('Y-m-d'),
                 'po_no' => $starlink->po_no,
                 'contact_email' => $starlink->contact_email,
@@ -164,6 +166,7 @@ class StarlinkController extends Controller
             'ssid' => 'nullable|string|max:255',
             'wifi_password' => 'nullable|string|max:255',
             'office_location' => 'nullable|string|max:255',
+            'municipality' => 'nullable|string|max:255',
             'start_date' => 'nullable|date',
             'advance_payment_until' => 'nullable|date',
             'last_paid_date' => 'nullable|date',
@@ -252,6 +255,7 @@ class StarlinkController extends Controller
             'ssid' => 'nullable|string|max:255',
             'wifi_password' => 'nullable|string|max:255',
             'office_location' => 'nullable|string|max:255',
+            'municipality' => 'nullable|string|max:255',
             'start_date' => 'nullable|date',
             'advance_payment_until' => 'nullable|date',
             'last_paid_date' => 'nullable|date',

@@ -482,6 +482,8 @@ Route::prefix('admin')->middleware(['auth', 'admin'])->group(function () {
 // User Routes
 Route::middleware(['auth'])->group(function () {
     Route::get('/dashboard', [UserDashboardController::class, 'index'])->name('user.dashboard');
+    Route::get('/technician/tickets', [App\Http\Controllers\User\TechnicianTicketController::class, 'index'])->name('user.technician-tickets.index');
+    Route::patch('/technician/tickets/{ticket}', [App\Http\Controllers\User\TechnicianTicketController::class, 'update'])->name('user.technician-tickets.update');
     // TOR PDF for students
     Route::get('/tor', [UserDashboardController::class, 'tor'])->name('user.tor');
     Route::get('/quizzes', [UserQuizController::class, 'index'])->name('user.quizzes.index');

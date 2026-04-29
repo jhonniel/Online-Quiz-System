@@ -260,7 +260,7 @@
                         </div>
                     </div>
 
-                    <!-- Linked Accounts -->
+                    <!-- Starlinks Accounts -->
                     <div class="flex items-start space-x-3 p-4 border border-gray-200 rounded-lg hover:bg-gray-50">
                         <input type="checkbox"
                                name="linked_accounts"
@@ -270,9 +270,9 @@
                                class="mt-1 h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded">
                         <div class="flex-1">
                             <label for="linked_accounts" class="block text-sm font-medium text-gray-900 cursor-pointer">
-                                Linked Accounts
+                                Starlinks Accounts
                             </label>
-                            <p class="mt-1 text-sm text-gray-500">Access to Linked Accounts dashboard, Starlinks, Omada, and Plan Types</p>
+                            <p class="mt-1 text-sm text-gray-500">Access to Starlinks Accounts dashboard, Starlinks, Omada, and Plan Types</p>
                         </div>
                     </div>
 

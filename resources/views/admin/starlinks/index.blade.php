@@ -15,7 +15,7 @@
             <div class="flex flex-wrap gap-2">
                 <a href="{{ url('/admin/linked-accounts') }}" class="inline-flex items-center px-3 py-2 sm:px-4 sm:py-2.5 border border-gray-200 rounded-lg text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 transition-colors">
                     <svg class="w-4 h-4 mr-2 text-gray-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z"></path></svg>
-                    Linked Accounts
+                    Starlinks Accounts
                 </a>
                 <a href="{{ url('/admin/omadas') }}" class="inline-flex items-center px-3 py-2 sm:px-4 sm:py-2.5 border border-gray-200 rounded-lg text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 transition-colors">
                     <svg class="w-4 h-4 mr-2 text-gray-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 12h14M5 12a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v4a2 2 0 01-2 2M5 12a2 2 0 00-2 2v4a2 2 0 002 2m14-8V6a2 2 0 00-2-2m-4 0a2 2 0 00-2 2v4a2 2 0 002 2m4 0h2"></path></svg>
@@ -201,6 +201,7 @@
                         <div><dt class="text-sm font-medium text-gray-500 uppercase tracking-wider">SSID</dt><dd class="mt-1.5 text-base text-gray-900" x-text="device.ssid || '—'"></dd></div>
                         <div class="sm:col-span-2"><dt class="text-sm font-medium text-gray-500 uppercase tracking-wider">WiFi password</dt><dd class="mt-1.5 text-base text-gray-900 font-mono" x-text="device.wifi_password ? '••••••••' : '—'"></dd></div>
                         <div><dt class="text-sm font-medium text-gray-500 uppercase tracking-wider">Office / location</dt><dd class="mt-1.5 text-base text-gray-900" x-text="device.office_location || '—'"></dd></div>
+                        <div><dt class="text-sm font-medium text-gray-500 uppercase tracking-wider">Municipality</dt><dd class="mt-1.5 text-base text-gray-900" x-text="device.municipality || '—'"></dd></div>
                         <div><dt class="text-sm font-medium text-gray-500 uppercase tracking-wider">Start date</dt><dd class="mt-1.5 text-base text-gray-900" x-text="device.start_date_formatted || '—'"></dd></div>
                         <div><dt class="text-sm font-medium text-gray-500 uppercase tracking-wider">PO No.</dt><dd class="mt-1.5 text-base text-gray-900" x-text="device.po_no || '—'"></dd></div>
                         <div><dt class="text-sm font-medium text-gray-500 uppercase tracking-wider">Contact email</dt><dd class="mt-1.5 text-base text-gray-900" x-text="device.contact_email || '—'"></dd></div>

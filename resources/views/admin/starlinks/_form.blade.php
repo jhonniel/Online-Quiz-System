@@ -82,6 +82,11 @@
             @error('office_location')<p class="mt-1.5 text-sm text-red-600">{{ $message }}</p>@enderror
         </div>
         <div>
+            <label for="municipality" class="block text-sm font-medium text-gray-700">Municipality</label>
+            <input type="text" name="municipality" id="municipality" value="{{ old('municipality', $starlink?->municipality ?? '') }}" class="{{ $inputClass }}" placeholder="e.g. Quezon City" />
+            @error('municipality')<p class="mt-1.5 text-sm text-red-600">{{ $message }}</p>@enderror
+        </div>
+        <div>
             <label for="start_date" class="block text-sm font-medium text-gray-700">Start date</label>
             <input type="date" name="start_date" id="start_date" value="{{ old('start_date', $starlink?->start_date?->format('Y-m-d') ?? '') }}" class="{{ $inputClass }}" />
             @error('start_date')<p class="mt-1.5 text-sm text-red-600">{{ $message }}</p>@enderror

@@ -17,6 +17,7 @@ class Starlink extends Model
         'ssid',
         'wifi_password',
         'office_location',
+        'municipality',
         'start_date',
         'advance_payment_until',
         'last_paid_date',

@@ -71,7 +71,7 @@
                     ['key' => 'student_management', 'label' => 'Student Management', 'desc' => 'Student dashboard, DTR, and leave requests'],
                     ['key' => 'hiring_process', 'label' => 'Hiring Process', 'desc' => 'Hiring positions and applications'],
                     ['key' => 'communication', 'label' => 'Communication', 'desc' => 'Live chat, contact messages, and notifications'],
-                    ['key' => 'linked_accounts', 'label' => 'Linked Accounts', 'desc' => 'Linked Accounts dashboard, Starlinks, Omada, and Plan Types'],
+                    ['key' => 'linked_accounts', 'label' => 'Starlinks Accounts', 'desc' => 'Starlinks Accounts dashboard, Starlinks, Omada, and Plan Types'],
                     ['key' => 'billing', 'label' => 'Billing', 'desc' => 'Starlink/Omada billing, mark as paid, and statements'],
                     ['key' => 'files', 'label' => 'File Storage', 'desc' => 'Admin file storage and shared files'],
                     ['key' => 'confession', 'label' => 'Confession (Say-it)', 'desc' => 'Confession board management, topics, and banned words'],
