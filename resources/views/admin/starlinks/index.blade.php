@@ -100,6 +100,7 @@
                         <th scope="col" class="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden md:table-cell">Kit No.</th>
                         <th scope="col" class="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden md:table-cell">Office / Location</th>
                         <th scope="col" class="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden md:table-cell">Client Name</th>
+                        <th scope="col" class="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden md:table-cell">Start Date</th>
                         <th scope="col" class="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden lg:table-cell">Plan</th>
                         <th scope="col" class="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
                         <th scope="col" class="px-4 sm:px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
@@ -139,6 +140,9 @@
                             <td class="px-4 sm:px-6 py-4 text-sm text-gray-600 hidden md:table-cell max-w-[140px] truncate" title="{{ $starlink->municipality ?? '' }}">
                                 {{ $starlink->municipality ? Str::limit($starlink->municipality, 18) : '—' }}
                             </td>
+                            <td class="px-4 sm:px-6 py-4 text-sm text-gray-600 hidden md:table-cell whitespace-nowrap">
+                                {{ $starlink->start_date ? \Illuminate\Support\Carbon::parse($starlink->start_date)->format('M d, Y') : '—' }}
+                            </td>
                             <td class="px-4 sm:px-6 py-4 whitespace-nowrap hidden lg:table-cell">
                                 @if($starlink->plan)
                                     <span class="text-sm text-gray-700">{{ $starlink->plan }}</span>
@@ -161,18 +165,15 @@
                                 <div class="flex items-center justify-end gap-1 sm:gap-2">
                                     <button type="button" @click.prevent="openView({{ $starlink->id }})" class="inline-flex items-center px-2.5 py-1.5 rounded-lg text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 transition-colors" title="View">
                                         <svg class="w-4 h-4 sm:mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path></svg>
-                                        <span class="hidden sm:inline">View</span>
                                     </button>
                                     <a href="{{ url('/admin/starlinks/'.$starlink->id.'/edit') }}" class="inline-flex items-center px-2.5 py-1.5 rounded-lg text-sm font-medium text-indigo-700 bg-indigo-50 hover:bg-indigo-100 transition-colors" title="Edit">
                                         <svg class="w-4 h-4 sm:mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
-                                        <span class="hidden sm:inline">Edit</span>
                                     </a>
                                     <form action="{{ url('/admin/starlinks/'.$starlink->id) }}" method="POST" class="inline" onsubmit="return confirm('Remove this Starlink device?');">
                                         @csrf
                                         @method('DELETE')
                                         <button type="submit" class="inline-flex items-center px-2.5 py-1.5 rounded-lg text-sm font-medium text-red-700 bg-red-50 hover:bg-red-100 transition-colors" title="Remove">
                                             <svg class="w-4 h-4 sm:mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
-                                            <span class="hidden sm:inline">Remove</span>
                                         </button>
                                     </form>
                                 </div>
@@ -180,7 +181,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="8" class="px-4 sm:px-6 py-16 text-center">
+                            <td colspan="9" class="px-4 sm:px-6 py-16 text-center">
                                 <div class="flex flex-col items-center">
                                     <div class="w-14 h-14 rounded-full bg-gray-100 flex items-center justify-center mb-4">
                                         <svg class="w-7 h-7 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.111 16.404a5.5 5.5 0 017.778 0M12 20h.01m-7.08-7.071c3.904-3.905 10.236-3.905 14.141 0M1.394 9.393c5.857-5.857 15.355-5.857 21.213 0"></path></svg>

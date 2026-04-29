@@ -775,13 +775,25 @@ class LandingController extends Controller
      */
     public function torPdf()
     {
-        $torPdfPath = Setting::get('hiring_tor_pdf');
-
-        if (!$torPdfPath) {
+        $torPdfPath = (string) Setting::get('hiring_tor_pdf', '');
+        if ($torPdfPath === '') {
             abort(404, 'TOR PDF not found.');
         }
 
-        $assetDisk = 'spaces';
+        // Support legacy values where a full URL was saved instead of a storage path.
+        if (filter_var($torPdfPath, FILTER_VALIDATE_URL)) {
+            $parsedPath = parse_url($torPdfPath, PHP_URL_PATH);
+            $normalizedPath = is_string($parsedPath) ? ltrim(urldecode($parsedPath), '/') : '';
+
+            if ($normalizedPath !== '') {
+                $torPdfPath = $normalizedPath;
+            } else {
+                return redirect($torPdfPath);
+            }
+        }
+
+        // TOR files are uploaded from Admin Settings to the digitalocean disk.
+        $assetDisk = 'digitalocean';
 
         try {
             if (Storage::disk($assetDisk)->exists($torPdfPath)) {
@@ -800,15 +812,17 @@ class LandingController extends Controller
                 }
             }
         } catch (\Throwable $e) {
-            // Fallback to public disk only (avoid requiring legacy "spaces" S3 config).
-            if (Storage::disk('public')->exists($torPdfPath)) {
-                $file = Storage::disk('public')->get($torPdfPath);
-                $fileName = basename($torPdfPath);
-                return Response::make($file, 200, [
-                    'Content-Type' => 'application/pdf',
-                    'Content-Disposition' => 'inline; filename="' . $fileName . '"',
-                ]);
-            }
+            // Continue to public disk fallback below.
+        }
+
+        // Fallback to public disk only (avoid requiring legacy "spaces" S3 config).
+        if (Storage::disk('public')->exists($torPdfPath)) {
+            $file = Storage::disk('public')->get($torPdfPath);
+            $fileName = basename($torPdfPath);
+            return Response::make($file, 200, [
+                'Content-Type' => 'application/pdf',
+                'Content-Disposition' => 'inline; filename="' . $fileName . '"',
+            ]);
         }
 
         abort(404, 'TOR PDF not found.');
