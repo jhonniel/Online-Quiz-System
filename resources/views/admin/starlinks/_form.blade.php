@@ -102,8 +102,8 @@
                 value="{{ $customClientName }}"
                 class="{{ $inputClass }}"
                 placeholder="If not listed, enter client name"
-                x-show="selectedClientName === '__custom__' || selectedClientName === ''"
-                x-bind:disabled="!(selectedClientName === '__custom__' || selectedClientName === '')"
+                x-show="selectedClientName === '__custom__'"
+                x-bind:disabled="selectedClientName !== '__custom__'"
             />
             @error('municipality_select')<p class="mt-1.5 text-sm text-red-600">{{ $message }}</p>@enderror
             @error('municipality_custom')<p class="mt-1.5 text-sm text-red-600">{{ $message }}</p>@enderror
