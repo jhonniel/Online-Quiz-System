@@ -2,6 +2,11 @@
     $starlink = $starlink ?? null;
     $currentLinkedAccountId = $currentLinkedAccountId ?? $starlink?->linked_account_id ?? null;
     $subscriptionPlanTypes = $subscriptionPlanTypes ?? collect();
+    $clientNameOptions = $clientNameOptions ?? [];
+    $existingClientName = old('municipality', $starlink?->municipality ?? '');
+    $isExistingClientNameInOptions = in_array($existingClientName, $clientNameOptions, true);
+    $selectedClientName = old('municipality_select', $isExistingClientNameInOptions ? $existingClientName : ($existingClientName !== '' ? '__custom__' : ''));
+    $customClientName = old('municipality_custom', $isExistingClientNameInOptions ? '' : $existingClientName);
     $inputClass = 'mt-1 block w-full rounded-lg border border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm px-3 py-2';
     $selectClass = 'mt-1 block w-full rounded-lg border border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm px-3 py-2';
     $gridClass = 'grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-6';
@@ -81,9 +86,27 @@
             <input type="text" name="office_location" id="office_location" value="{{ old('office_location', $starlink?->office_location ?? '') }}" class="{{ $inputClass }}" placeholder="e.g. Main Office" />
             @error('office_location')<p class="mt-1.5 text-sm text-red-600">{{ $message }}</p>@enderror
         </div>
-        <div>
-            <label for="municipality" class="block text-sm font-medium text-gray-700">Client Name</label>
-            <input type="text" name="municipality" id="municipality" value="{{ old('municipality', $starlink?->municipality ?? '') }}" class="{{ $inputClass }}" placeholder="e.g. ABC Company" />
+        <div x-data="{ selectedClientName: @js($selectedClientName) }">
+            <label for="municipality_select" class="block text-sm font-medium text-gray-700">Client Name</label>
+            <select name="municipality_select" id="municipality_select" x-model="selectedClientName" class="{{ $selectClass }}">
+                <option value="">— Select Client Name —</option>
+                @foreach($clientNameOptions as $clientNameOption)
+                    <option value="{{ $clientNameOption }}" {{ $selectedClientName === $clientNameOption ? 'selected' : '' }}>{{ $clientNameOption }}</option>
+                @endforeach
+                <option value="__custom__" {{ $selectedClientName === '__custom__' ? 'selected' : '' }}>Other (Add / Edit)</option>
+            </select>
+            <input
+                type="text"
+                name="municipality_custom"
+                id="municipality_custom"
+                value="{{ $customClientName }}"
+                class="{{ $inputClass }}"
+                placeholder="If not listed, enter client name"
+                x-show="selectedClientName === '__custom__' || selectedClientName === ''"
+                x-bind:disabled="!(selectedClientName === '__custom__' || selectedClientName === '')"
+            />
+            @error('municipality_select')<p class="mt-1.5 text-sm text-red-600">{{ $message }}</p>@enderror
+            @error('municipality_custom')<p class="mt-1.5 text-sm text-red-600">{{ $message }}</p>@enderror
             @error('municipality')<p class="mt-1.5 text-sm text-red-600">{{ $message }}</p>@enderror
         </div>
         <div>

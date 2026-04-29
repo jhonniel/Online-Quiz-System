@@ -205,8 +205,9 @@ class StarlinkController extends Controller
         $linkedAccounts = LinkedAccount::orderBy('email')->get();
         $subscriptionPlanTypes = SubscriptionPlanType::where('subscription_type', 'starlink')->orderBy('name')->get();
         $currentLinkedAccountId = null;
+        $clientNameOptions = $this->getClientNameOptions();
 
-        return view('admin.starlinks.create', compact('linkedAccounts', 'subscriptionPlanTypes', 'currentLinkedAccountId'));
+        return view('admin.starlinks.create', compact('linkedAccounts', 'subscriptionPlanTypes', 'currentLinkedAccountId', 'clientNameOptions'));
     }
 
     public function store(Request $request)
@@ -223,7 +224,8 @@ class StarlinkController extends Controller
             'ssid' => 'nullable|string|max:255',
             'wifi_password' => 'nullable|string|max:255',
             'office_location' => 'nullable|string|max:255',
-            'municipality' => 'nullable|string|max:255',
+            'municipality_select' => 'nullable|string|max:255',
+            'municipality_custom' => 'nullable|string|max:255',
             'start_date' => 'nullable|date',
             'advance_payment_until' => 'nullable|date',
             'last_paid_date' => 'nullable|date',
@@ -235,6 +237,19 @@ class StarlinkController extends Controller
             'status' => 'nullable|string|max:50',
             'end_user_email' => 'nullable|email|max:255',
         ]);
+        $selectedClientName = trim((string) ($validated['municipality_select'] ?? ''));
+        $customClientName = trim((string) ($validated['municipality_custom'] ?? ''));
+        if ($selectedClientName === '__custom__') {
+            $validated['municipality'] = $customClientName !== '' ? $customClientName : null;
+        } elseif ($selectedClientName !== '') {
+            $validated['municipality'] = $selectedClientName;
+        } elseif ($customClientName !== '') {
+            $validated['municipality'] = $customClientName;
+        } else {
+            $validated['municipality'] = null;
+        }
+        unset($validated['municipality_select'], $validated['municipality_custom']);
+
         $validated['subscription_plan_type_id'] = ! empty($validated['subscription_plan_type_id']) ? (int) $validated['subscription_plan_type_id'] : null;
 
         // Keep plain "plan" column in sync with selected subscription plan type
@@ -294,8 +309,9 @@ class StarlinkController extends Controller
         }
 
         $subscriptionPlanTypes = SubscriptionPlanType::where('subscription_type', 'starlink')->orderBy('name')->get();
+        $clientNameOptions = $this->getClientNameOptions();
 
-        return view('admin.starlinks.edit', compact('starlink', 'linkedAccounts', 'subscriptionPlanTypes', 'currentLinkedAccountId'));
+        return view('admin.starlinks.edit', compact('starlink', 'linkedAccounts', 'subscriptionPlanTypes', 'currentLinkedAccountId', 'clientNameOptions'));
     }
 
     public function update(Request $request, Starlink $starlink)
@@ -312,7 +328,8 @@ class StarlinkController extends Controller
             'ssid' => 'nullable|string|max:255',
             'wifi_password' => 'nullable|string|max:255',
             'office_location' => 'nullable|string|max:255',
-            'municipality' => 'nullable|string|max:255',
+            'municipality_select' => 'nullable|string|max:255',
+            'municipality_custom' => 'nullable|string|max:255',
             'start_date' => 'nullable|date',
             'advance_payment_until' => 'nullable|date',
             'last_paid_date' => 'nullable|date',
@@ -324,6 +341,19 @@ class StarlinkController extends Controller
             'status' => 'nullable|string|max:50',
             'end_user_email' => 'nullable|email|max:255',
         ]);
+
+        $selectedClientName = trim((string) ($validated['municipality_select'] ?? ''));
+        $customClientName = trim((string) ($validated['municipality_custom'] ?? ''));
+        if ($selectedClientName === '__custom__') {
+            $validated['municipality'] = $customClientName !== '' ? $customClientName : null;
+        } elseif ($selectedClientName !== '') {
+            $validated['municipality'] = $selectedClientName;
+        } elseif ($customClientName !== '') {
+            $validated['municipality'] = $customClientName;
+        } else {
+            $validated['municipality'] = null;
+        }
+        unset($validated['municipality_select'], $validated['municipality_custom']);
 
         $validated['subscription_plan_type_id'] = ! empty($validated['subscription_plan_type_id']) ? $validated['subscription_plan_type_id'] : null;
         // Keep plain "plan" column in sync with selected subscription plan type
@@ -684,5 +714,25 @@ class StarlinkController extends Controller
         }
 
         return [$query, $search, $statusFilter, $accountEmailFilter, $clientNameFilter];
+    }
+
+    private function getClientNameOptions(): array
+    {
+        if (! Schema::hasColumn('starlinks', 'municipality')) {
+            return [];
+        }
+
+        $clientNameOptions = Starlink::query()
+            ->whereNotNull('municipality')
+            ->whereRaw("TRIM(municipality) <> ''")
+            ->pluck('municipality')
+            ->map(fn ($name) => trim((string) $name))
+            ->filter()
+            ->unique()
+            ->values()
+            ->all();
+
+        sort($clientNameOptions, SORT_NATURAL | SORT_FLAG_CASE);
+        return $clientNameOptions;
     }
 }
