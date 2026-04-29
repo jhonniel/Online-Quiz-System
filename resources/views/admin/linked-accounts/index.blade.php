@@ -215,27 +215,73 @@
                         </div>
                     </div>
                 @endif
+
+                <div class="mt-4">
+                    <div class="flex items-center justify-between gap-3 mb-2">
+                        <p class="text-xs font-semibold text-gray-700 uppercase tracking-wider">Client name counts</p>
+                        @if(!empty($clientNameUniqueCount))
+                            <p class="text-xs text-gray-500">Total: {{ $clientNameUniqueCount }}</p>
+                        @endif
+                    </div>
+
+                    @if(!empty($clientNameCountsTop) && $clientNameCountsTop->count() > 0)
+                        <ul class="space-y-2">
+                            @foreach($clientNameCountsTop as $clientName => $count)
+                                <li class="flex items-center justify-between gap-3">
+                                    <span class="text-sm text-gray-700 truncate max-w-[180px]">{{ $clientName }}</span>
+                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-indigo-100 text-indigo-800">
+                                        {{ $count }}
+                                    </span>
+                                </li>
+                            @endforeach
+                        </ul>
+                    @else
+                        <p class="text-sm text-gray-500">No client names available yet.</p>
+                    @endif
+                </div>
             </div>
         </div>
         <div class="lg:col-span-4 bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden flex flex-col">
             <div class="px-4 sm:px-5 py-3 border-b border-gray-200 bg-gray-50/50 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                 <div>
-                    <h2 class="text-sm font-semibold text-gray-900">Quick actions</h2>
-                    <p class="text-xs text-gray-500 mt-0.5">Manage devices and accounts</p>
-                </div>
-                <div class="flex flex-wrap gap-2">
-                    <a href="{{ url('/admin/starlinks/create') }}" class="inline-flex items-center px-3 py-2 rounded-lg text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 transition-colors">
-                        <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
-                        Add Starlink
-                    </a>
-                    <a href="{{ url('/admin/omadas') }}" class="inline-flex items-center px-3 py-2 rounded-lg text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 transition-colors">
-                        <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 12h14"></path></svg>
-                        Manage Omada
-                    </a>
+                    <h2 class="text-sm font-semibold text-gray-900">Client name counts</h2>
+                    <p class="text-xs text-gray-500 mt-0.5">Top clients by Starlink devices</p>
                 </div>
             </div>
             <div class="p-4 sm:p-5 flex-1 min-h-0 flex items-center">
-                <p class="text-sm text-gray-500">Use the buttons above or the table below to manage linked accounts and devices.</p>
+                <div class="w-full">
+                    <div class="flex items-center justify-between gap-3 mb-3">
+                        <p class="text-xs font-semibold text-gray-700 uppercase tracking-wider">Top Client Names</p>
+                        <p class="text-xs text-gray-500">{{ $clientNameUniqueCount ?? 0 }} total</p>
+                    </div>
+
+                    @if(!empty($clientNameCountsTop) && $clientNameCountsTop->count() > 0)
+                        <ul class="divide-y divide-gray-200 max-h-[260px] overflow-y-auto">
+                            @foreach($clientNameCountsTop as $clientName => $count)
+                                <li class="px-4 sm:px-5 py-3 hover:bg-gray-50/50 transition-colors flex items-center justify-between gap-3">
+                                    <div class="min-w-0 flex-1">
+                                        <p class="font-medium text-gray-900 truncate">{{ $clientName }}</p>
+                                        <p class="text-xs text-gray-500 truncate">Starlink devices</p>
+                                    </div>
+                                    <div class="flex items-center gap-2 flex-shrink-0">
+                                        <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800" title="Starlinks linked to this client name">
+                                            {{ $count }} Starlink
+                                        </span>
+                                    </div>
+                                </li>
+                            @endforeach
+                        </ul>
+                    @else
+                        <div class="px-4 sm:px-5 py-10 text-center">
+                            <p class="text-sm font-medium text-gray-700">No client names available yet</p>
+                            <p class="text-xs text-gray-500 mt-1">Add Starlinks and set Client Name to see counts here.</p>
+                        </div>
+                    @endif
+
+                    <p class="mt-3 text-xs text-gray-400">
+                        Counts are based on Starlinks client name (stored in `starlinks.municipality`).
+                    </p>
+                </div>
             </div>
         </div>
     </div>

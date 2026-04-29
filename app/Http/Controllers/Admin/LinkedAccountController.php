@@ -8,6 +8,7 @@ use App\Models\Omada;
 use App\Models\Starlink;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 class LinkedAccountController extends Controller
 {
@@ -173,6 +174,19 @@ class LinkedAccountController extends Controller
         $planTypeLabels = $planCountsRaw->keys()->values()->all();
         $planTypeData = $planCountsRaw->values()->all();
 
+        // Chart/list: Client name counts (stored in starlinks.municipality)
+        $clientNameCountsTop = collect();
+        $clientNameUniqueCount = 0;
+        if (Schema::hasColumn('starlinks', 'municipality')) {
+            $clientNameCountsRaw = Starlink::select('municipality')->get()->groupBy(function ($s) {
+                $v = $s->municipality !== null ? trim((string) $s->municipality) : '';
+                return $v !== '' ? $v : null;
+            })->filter()->map->count()->sortDesc();
+
+            $clientNameUniqueCount = $clientNameCountsRaw->count();
+            $clientNameCountsTop = $clientNameCountsRaw->take(5);
+        }
+
         // Starlinks to be billed next month: have start_date, respect billing_interval (monthly/yearly) and advance_payment_until
         $nextMonthStart = now()->addMonth()->startOfMonth();
         $nextMonthEnd = $nextMonthStart->copy()->endOfMonth();
@@ -220,6 +234,8 @@ class LinkedAccountController extends Controller
             'omadaStatusData',
             'planTypeLabels',
             'planTypeData',
+            'clientNameCountsTop',
+            'clientNameUniqueCount',
             'starlinksToBillNextMonth',
             'nextMonthStart',
             'omadaOngoingBilling'
