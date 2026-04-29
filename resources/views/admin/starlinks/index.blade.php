@@ -90,6 +90,20 @@
                     @endif
                 </form>
             </div>
+            <div class="mt-3 flex flex-col sm:flex-row sm:items-center sm:justify-end gap-2">
+                <form method="POST" action="{{ url('/admin/starlinks/client-names/remove') }}" class="flex flex-col sm:flex-row gap-2 sm:items-center" onsubmit="return confirm('Remove this client name from all Starlink records? This will clear the value where it is used.');">
+                    @csrf
+                    <select name="client_name" class="block w-full sm:w-[260px] h-10 px-3 rounded-lg border border-red-300 text-sm text-gray-700 focus:ring-red-500 focus:border-red-500" required>
+                        <option value="">Select Client Name to Remove</option>
+                        @foreach(($clientNameOptions ?? []) as $clientNameOption)
+                            <option value="{{ $clientNameOption }}">{{ $clientNameOption }}</option>
+                        @endforeach
+                    </select>
+                    <button type="submit" class="h-10 px-4 rounded-lg text-sm font-medium text-red-700 bg-red-100 border border-red-200 hover:bg-red-200 transition-colors whitespace-nowrap">
+                        Remove Client Name
+                    </button>
+                </form>
+            </div>
         </div>
         <div class="overflow-x-auto">
             <table class="min-w-full divide-y divide-gray-200">

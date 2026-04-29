@@ -434,6 +434,7 @@ Route::prefix('admin')->middleware(['auth', 'admin'])->group(function () {
         Route::get('starlinks/import/template', [App\Http\Controllers\Admin\StarlinkController::class, 'importTemplate'])->name('admin.starlinks.import.template');
         Route::get('starlinks/export/csv', [App\Http\Controllers\Admin\StarlinkController::class, 'exportCsv'])->name('admin.starlinks.export.csv');
         Route::get('starlinks/export/pdf', [App\Http\Controllers\Admin\StarlinkController::class, 'exportPdf'])->name('admin.starlinks.export.pdf');
+        Route::post('starlinks/client-names/remove', [App\Http\Controllers\Admin\StarlinkController::class, 'removeClientName'])->name('admin.starlinks.client-names.remove');
         Route::post('starlinks/import', [App\Http\Controllers\Admin\StarlinkController::class, 'processImport'])->name('admin.starlinks.import.process');
         Route::resource('starlinks', App\Http\Controllers\Admin\StarlinkController::class)->names('admin.starlinks');
         Route::get('omadas/import', [App\Http\Controllers\Admin\OmadaController::class, 'importForm'])->name('admin.omadas.import');
