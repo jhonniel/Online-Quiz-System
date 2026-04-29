@@ -9,8 +9,8 @@
 </style>
 @endpush
 
-@section('title', 'Starlinks Accounts – Dashboard')
-@section('page-title', 'Starlinks Accounts')
+@section('title', 'Subscriptions – Dashboard')
+@section('page-title', 'Subscriptions')
 
 @section('content')
 <div class="px-3 sm:px-4 lg:px-6 py-4 w-full">
@@ -18,7 +18,7 @@
     <div class="mb-5 sm:mb-6">
         <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
-                <h1 class="text-xl sm:text-2xl font-bold text-gray-900 tracking-tight">Starlinks Accounts</h1>
+                <h1 class="text-xl sm:text-2xl font-bold text-gray-900 tracking-tight">Subscriptions</h1>
                 <p class="mt-1 text-sm text-gray-500">Dashboard of linked accounts, Starlink and Omada devices. View stats and manage devices.</p>
             </div>
             <div class="flex flex-wrap gap-2">
