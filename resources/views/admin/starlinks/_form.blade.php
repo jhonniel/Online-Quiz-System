@@ -90,6 +90,7 @@
             <label for="municipality_select" class="block text-sm font-medium text-gray-700">Client Name</label>
             <select name="municipality_select" id="municipality_select" x-model="selectedClientName" class="{{ $selectClass }}">
                 <option value="">— Select Client Name —</option>
+                <option value="__remove__">— Remove Client Name —</option>
                 @foreach($clientNameOptions as $clientNameOption)
                     <option value="{{ $clientNameOption }}" {{ $selectedClientName === $clientNameOption ? 'selected' : '' }}>{{ $clientNameOption }}</option>
                 @endforeach
