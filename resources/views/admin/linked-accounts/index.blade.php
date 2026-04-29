@@ -261,7 +261,7 @@
                         <table class="min-w-full divide-y divide-gray-200">
                             <thead class="bg-gray-50">
                                 <tr>
-                                    <th scope="col" class="px-4 sm:px-5 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Device / Account</th>
+                                    <th scope="col" class="px-4 sm:px-5 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Device / Account (Client Name)</th>
                                     <th scope="col" class="px-4 sm:px-5 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden sm:table-cell">Plan</th>
                                     <th scope="col" class="px-4 sm:px-5 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Billing</th>
                                     <th scope="col" class="px-4 sm:px-5 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Next billing</th>
@@ -275,6 +275,9 @@
                                             <div>
                                                 <p class="font-medium text-gray-900 truncate max-w-[200px] sm:max-w-none">{{ $starlink->starlink_id ?: $starlink->serial_number ?: '—' }}</p>
                                                 <p class="text-sm text-gray-500 truncate max-w-[200px] sm:max-w-none">{{ $starlink->account_linked_email ?? ($starlink->linkedAccount?->email ?? '—') }}</p>
+                                                <p class="text-sm text-gray-600 truncate max-w-[200px] sm:max-w-none">
+                                                    Client: {{ $starlink->municipality ?? '—' }}
+                                                </p>
                                             </div>
                                         </td>
                                         <td class="px-4 sm:px-5 py-3 text-sm text-gray-600 hidden sm:table-cell">{{ $starlink->plan ?? '—' }}</td>
