@@ -105,32 +105,7 @@
     </div>
 
     <!-- Navigation -->
-    <nav class="mt-6 px-3 flex-1 overflow-y-auto sidebar-scroll"
-         x-init="$nextTick(() => {
-            const userFeatures = $el.querySelector('.user-features-section');
-            if (userFeatures) {
-                $el.prepend(userFeatures);
-            }
-
-            // Auto-open any permission section that contains the active page link.
-            const sectionGroups = Array.from($el.querySelectorAll('div.mb-6[x-data]'));
-            sectionGroups.forEach((group) => {
-                const panel = group.querySelector('div.space-y-1');
-                if (!panel) return;
-
-                const hasActiveChild = !!panel.querySelector('a.bg-indigo-700, a.bg-purple-700');
-                if (!hasActiveChild) return;
-
-                const toggleBtn = group.querySelector('button');
-                if (!toggleBtn) return;
-
-                const arrowIcon = toggleBtn.querySelector('svg');
-                const isOpen = !!(arrowIcon && arrowIcon.classList.contains('rotate-180'));
-                if (!isOpen) {
-                    toggleBtn.click();
-                }
-            });
-         })">
+    <nav class="mt-6 px-3 flex-1 overflow-y-auto sidebar-scroll">
         <!-- Dashboard (full access only) -->
         @if(auth()->user()->isSuperAdmin())
         <div class="mb-6">
@@ -155,7 +130,7 @@
 
         <!-- Content Management -->
         @if(auth()->user()->canAccessContentManagement())
-        <div class="mb-6 user-features-section" x-data="{
+        <div class="mb-6" x-data="{
             open: (localStorage.getItem('nav-content-management') || 'true') === 'true',
             toggle() {
                 this.open = !this.open;
@@ -221,7 +196,7 @@
 
         <!-- CONFESSION (Say-it) -->
         @if(auth()->user()->canAccessConfession())
-        <div class="mb-6" x-data="{
+        <div class="mb-6 user-features-section" x-data="{
             open: (localStorage.getItem('nav-confession') || 'true') === 'true',
             toggle() {
                 this.open = !this.open;

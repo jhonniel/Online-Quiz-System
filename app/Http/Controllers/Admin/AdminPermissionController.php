@@ -8,6 +8,7 @@ use App\Models\AdminPermission;
 use App\Models\Department;
 use App\Models\HiringPosition;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Schema;
 
 class AdminPermissionController extends Controller
 {
@@ -168,14 +169,14 @@ class AdminPermissionController extends Controller
                 ->with('error', 'Only full-access admins can update permissions for non-employee users.');
         }
 
-        $validated = $request->validate([
+        $hasAllowedEmployeeDepartments = Schema::hasColumn('admin_permissions', 'allowed_employee_departments');
+        $hasAllowedStudentDepartments = Schema::hasColumn('admin_permissions', 'allowed_student_departments');
+        $hasAllowedDepartments = Schema::hasColumn('admin_permissions', 'allowed_departments');
+
+        $rules = [
             'content_management' => 'boolean',
             'analytics_reports' => 'boolean',
             'employee_management' => 'boolean',
-            'allowed_employee_departments' => 'nullable|array',
-            'allowed_employee_departments.*' => 'exists:departments,id',
-            'allowed_student_departments' => 'nullable|array',
-            'allowed_student_departments.*' => 'exists:departments,id',
             'student_management' => 'boolean',
             'hiring_process' => 'boolean',
             'allowed_positions' => 'nullable|array',
@@ -188,7 +189,20 @@ class AdminPermissionController extends Controller
             'feedback' => 'boolean',
             'user_management' => 'boolean',
             'system' => 'boolean',
-        ]);
+        ];
+
+        // Validate these inputs only when the DB supports them.
+        if ($hasAllowedEmployeeDepartments) {
+            $rules['allowed_employee_departments'] = 'nullable|array';
+            $rules['allowed_employee_departments.*'] = 'exists:departments,id';
+        }
+
+        if ($hasAllowedStudentDepartments) {
+            $rules['allowed_student_departments'] = 'nullable|array';
+            $rules['allowed_student_departments.*'] = 'exists:departments,id';
+        }
+
+        $request->validate($rules);
 
         // Convert checkboxes to boolean (they may not be present in request)
         $permissions = [
@@ -207,18 +221,31 @@ class AdminPermissionController extends Controller
             'system' => $request->has('system'),
         ];
 
-        // Handle allowed employee departments
-        if ($request->has('employee_management')) {
-            $permissions['allowed_employee_departments'] = $request->input('allowed_employee_departments', []);
-        } else {
-            $permissions['allowed_employee_departments'] = null;
+        // Handle department scopes for both new and legacy schemas.
+        $employeeDepartments = $request->has('employee_management')
+            ? $request->input('allowed_employee_departments', [])
+            : [];
+        $studentDepartments = $request->has('student_management')
+            ? $request->input('allowed_student_departments', [])
+            : [];
+
+        if ($hasAllowedEmployeeDepartments) {
+            $permissions['allowed_employee_departments'] = $request->has('employee_management')
+                ? $employeeDepartments
+                : null;
         }
 
-        // Handle allowed student departments
-        if ($request->has('student_management')) {
-            $permissions['allowed_student_departments'] = $request->input('allowed_student_departments', []);
-        } else {
-            $permissions['allowed_student_departments'] = null;
+        if ($hasAllowedStudentDepartments) {
+            $permissions['allowed_student_departments'] = $request->has('student_management')
+                ? $studentDepartments
+                : null;
+        }
+
+        if ($hasAllowedDepartments) {
+            $mergedDepartments = array_values(array_unique(array_map('intval', array_merge($employeeDepartments, $studentDepartments))));
+            $permissions['allowed_departments'] = (!empty($mergedDepartments) && ($request->has('employee_management') || $request->has('student_management')))
+                ? $mergedDepartments
+                : null;
         }
 
         // Handle allowed positions - only set if hiring_process is enabled

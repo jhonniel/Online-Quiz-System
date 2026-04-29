@@ -95,16 +95,7 @@
 
                 <!-- Navigation -->
                 <div class="flex-1 flex flex-col overflow-y-auto bg-gray-800">
-                    <nav class="flex-1 px-2 py-4 space-y-1"
-                         x-init="$nextTick(() => {
-                            const adminSection = Array.from($el.children).find((child) => {
-                                const label = child.querySelector('p');
-                                return label && label.textContent.trim() === 'Admin Features';
-                            });
-                            if (adminSection) {
-                                $el.appendChild(adminSection);
-                            }
-                         })">
+                    <nav class="flex-1 px-2 py-4 space-y-1">
                         <p class="px-2 pb-1 text-[11px] font-semibold uppercase tracking-wider text-gray-400">User Features</p>
                         <!-- Dashboard -->
                         <a href="{{ url('/dashboard') }}"
@@ -156,13 +147,26 @@
                             </a>
                             @endif
                             @if(auth()->user()->canAccessEmployeeManagement())
-                            <a href="{{ url('/admin/dtr') }}"
-                               class="group flex items-center px-2 py-2 text-sm font-medium rounded-md transition-colors duration-200 {{ request()->routeIs('admin.dtr.*') ? 'bg-purple-700 text-white' : 'text-purple-300 hover:bg-purple-700 hover:text-white' }}"
-                               :class="sidebarCollapsed ? 'justify-center' : ''"
-                               :title="sidebarCollapsed ? 'Employees' : ''">
-                                <svg class="h-5 w-5" :class="sidebarCollapsed ? '' : 'mr-3'" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-                                <span class="transition-opacity duration-300" :class="sidebarCollapsed ? 'opacity-0 w-0 overflow-hidden' : 'opacity-100'">Employees</span>
-                            </a>
+                            <div x-data="{ open: (localStorage.getItem('user-admin-employees') || 'false') === 'true' }"
+                                 x-init="if ({{ request()->routeIs('admin.dtr.*') || request()->routeIs('admin.employee-dashboard.*') ? 'true' : 'false' }}) { open = true; }"
+                                 x-effect="localStorage.setItem('user-admin-employees', open)"
+                                 class="space-y-1">
+                                <button @click="open = !open" type="button" class="w-full flex items-center justify-between px-2 py-2 text-sm font-medium rounded-md text-purple-300 hover:bg-purple-700 hover:text-white transition-colors duration-200">
+                                    <span class="flex items-center">
+                                        <svg class="h-5 w-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                                        Employees
+                                    </span>
+                                    <svg class="h-4 w-4 transition-transform duration-200" :class="{ 'rotate-180': open }" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                                </button>
+                                <div x-show="open" class="ml-4 space-y-1">
+                                    <a href="{{ url('/admin/dtr') }}" class="group flex items-center px-2 py-2 text-sm font-medium rounded-md transition-colors duration-200 {{ request()->routeIs('admin.dtr.*') ? 'bg-purple-700 text-white' : 'text-purple-300 hover:bg-purple-700 hover:text-white' }}">
+                                        DTR
+                                    </a>
+                                    <a href="{{ url('/admin/employee-dashboard') }}" class="group flex items-center px-2 py-2 text-sm font-medium rounded-md transition-colors duration-200 {{ request()->routeIs('admin.employee-dashboard.*') ? 'bg-purple-700 text-white' : 'text-purple-300 hover:bg-purple-700 hover:text-white' }}">
+                                        Employee Dashboard
+                                    </a>
+                                </div>
+                            </div>
                             @endif
                             @if(auth()->user()->canAccessStudentManagement())
                             <a href="{{ url('/admin/student-management/students') }}"
@@ -174,22 +178,40 @@
                             </a>
                             @endif
                             @if(auth()->user()->canAccessHiringProcess())
-                            <a href="{{ url('/admin/hiring-process') }}"
-                               class="group flex items-center px-2 py-2 text-sm font-medium rounded-md transition-colors duration-200 {{ request()->routeIs('admin.hiring-process.*') || request()->routeIs('admin.hiring-*') ? 'bg-purple-700 text-white' : 'text-purple-300 hover:bg-purple-700 hover:text-white' }}"
-                               :class="sidebarCollapsed ? 'justify-center' : ''"
-                               :title="sidebarCollapsed ? 'Hiring' : ''">
-                                <svg class="h-5 w-5" :class="sidebarCollapsed ? '' : 'mr-3'" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path></svg>
-                                <span class="transition-opacity duration-300" :class="sidebarCollapsed ? 'opacity-0 w-0 overflow-hidden' : 'opacity-100'">Hiring</span>
-                            </a>
+                            <div x-data="{ open: (localStorage.getItem('user-admin-hiring') || 'false') === 'true' }"
+                                 x-init="if ({{ request()->routeIs('admin.hiring-process.*') || request()->routeIs('admin.hiring-*') || request()->routeIs('admin.hiring-applications.*') ? 'true' : 'false' }}) { open = true; }"
+                                 x-effect="localStorage.setItem('user-admin-hiring', open)"
+                                 class="space-y-1">
+                                <button @click="open = !open" type="button" class="w-full flex items-center justify-between px-2 py-2 text-sm font-medium rounded-md text-purple-300 hover:bg-purple-700 hover:text-white transition-colors duration-200">
+                                    <span class="flex items-center">
+                                        <svg class="h-5 w-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path></svg>
+                                        Hiring
+                                    </span>
+                                    <svg class="h-4 w-4 transition-transform duration-200" :class="{ 'rotate-180': open }" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                                </button>
+                                <div x-show="open" class="ml-4 space-y-1">
+                                    <a href="{{ url('/admin/hiring-process') }}" class="group flex items-center px-2 py-2 text-sm font-medium rounded-md transition-colors duration-200 {{ request()->routeIs('admin.hiring-process.*') || request()->routeIs('admin.hiring-*') ? 'bg-purple-700 text-white' : 'text-purple-300 hover:bg-purple-700 hover:text-white' }}">Hiring Process</a>
+                                    <a href="{{ url('/admin/hiring-applications') }}" class="group flex items-center px-2 py-2 text-sm font-medium rounded-md transition-colors duration-200 {{ request()->routeIs('admin.hiring-applications.*') ? 'bg-purple-700 text-white' : 'text-purple-300 hover:bg-purple-700 hover:text-white' }}">Applications</a>
+                                </div>
+                            </div>
                             @endif
                             @if(auth()->user()->canAccessCommunication())
-                            <a href="{{ url('/admin/contact-messages') }}"
-                               class="group flex items-center px-2 py-2 text-sm font-medium rounded-md transition-colors duration-200 {{ request()->routeIs('contact-messages.*') || request()->routeIs('live-chat.*') ? 'bg-purple-700 text-white' : 'text-purple-300 hover:bg-purple-700 hover:text-white' }}"
-                               :class="sidebarCollapsed ? 'justify-center' : ''"
-                               :title="sidebarCollapsed ? 'Communication' : ''">
-                                <svg class="h-5 w-5" :class="sidebarCollapsed ? '' : 'mr-3'" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 4.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path></svg>
-                                <span class="transition-opacity duration-300" :class="sidebarCollapsed ? 'opacity-0 w-0 overflow-hidden' : 'opacity-100'">Communication</span>
-                            </a>
+                            <div x-data="{ open: (localStorage.getItem('user-admin-communication') || 'false') === 'true' }"
+                                 x-init="if ({{ request()->routeIs('contact-messages.*') || request()->routeIs('live-chat.*') ? 'true' : 'false' }}) { open = true; }"
+                                 x-effect="localStorage.setItem('user-admin-communication', open)"
+                                 class="space-y-1">
+                                <button @click="open = !open" type="button" class="w-full flex items-center justify-between px-2 py-2 text-sm font-medium rounded-md text-purple-300 hover:bg-purple-700 hover:text-white transition-colors duration-200">
+                                    <span class="flex items-center">
+                                        <svg class="h-5 w-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 4.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path></svg>
+                                        Communication
+                                    </span>
+                                    <svg class="h-4 w-4 transition-transform duration-200" :class="{ 'rotate-180': open }" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                                </button>
+                                <div x-show="open" class="ml-4 space-y-1">
+                                    <a href="{{ url('/admin/contact-messages') }}" class="group flex items-center px-2 py-2 text-sm font-medium rounded-md transition-colors duration-200 {{ request()->routeIs('contact-messages.*') ? 'bg-purple-700 text-white' : 'text-purple-300 hover:bg-purple-700 hover:text-white' }}">Messages</a>
+                                    <a href="{{ url('/admin/live-chat') }}" class="group flex items-center px-2 py-2 text-sm font-medium rounded-md transition-colors duration-200 {{ request()->routeIs('live-chat.*') ? 'bg-purple-700 text-white' : 'text-purple-300 hover:bg-purple-700 hover:text-white' }}">Live Chat</a>
+                                </div>
+                            </div>
                             @endif
                             @if(auth()->user()->canAccessBilling())
                             <a href="{{ url('/admin/billing') }}"
@@ -409,13 +431,25 @@
                             </a>
                             @endif
                             @if(auth()->user()->canAccessEmployeeManagement())
-                            <a href="{{ url('/admin/dtr') }}"
-                               class="group flex items-center px-2 py-2 text-sm font-medium rounded-md transition-colors duration-200 {{ request()->routeIs('admin.dtr.*') ? 'bg-purple-700 text-white' : 'text-purple-300 hover:bg-purple-700 hover:text-white' }}"
-                               :class="sidebarCollapsed ? 'justify-center' : ''"
-                               :title="sidebarCollapsed ? 'Employees' : ''">
-                                <svg class="h-5 w-5" :class="sidebarCollapsed ? '' : 'mr-3'" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-                                <span class="transition-opacity duration-300" :class="sidebarCollapsed ? 'opacity-0 w-0 overflow-hidden' : 'opacity-100'">Employees</span>
-                            </a>
+                            <div x-data="{ open: (localStorage.getItem('user-admin-employees-desktop') || 'false') === 'true' }"
+                                 x-init="if ({{ request()->routeIs('admin.dtr.*') ? 'true' : 'false' }}) { open = true; }"
+                                 x-effect="localStorage.setItem('user-admin-employees-desktop', open)"
+                                 class="space-y-1">
+                                <button @click="open = !open" type="button"
+                                        class="w-full flex items-center justify-between px-2 py-2 text-sm font-medium rounded-md text-purple-300 hover:bg-purple-700 hover:text-white transition-colors duration-200"
+                                        :class="sidebarCollapsed ? 'justify-center' : ''"
+                                        :title="sidebarCollapsed ? 'Employees' : ''">
+                                    <span class="flex items-center">
+                                        <svg class="h-5 w-5" :class="sidebarCollapsed ? '' : 'mr-3'" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                                        <span class="transition-opacity duration-300" :class="sidebarCollapsed ? 'opacity-0 w-0 overflow-hidden' : 'opacity-100'">Employees</span>
+                                    </span>
+                                    <svg class="h-4 w-4 transition-transform duration-200" :class="{ 'rotate-180': open, 'opacity-0 w-0 overflow-hidden': sidebarCollapsed }" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                                </button>
+                                <div x-show="open && !sidebarCollapsed" class="ml-4 space-y-1">
+                                    <a href="{{ url('/admin/dtr') }}"
+                                       class="group flex items-center px-2 py-2 text-sm font-medium rounded-md transition-colors duration-200 {{ request()->routeIs('admin.dtr.*') ? 'bg-purple-700 text-white' : 'text-purple-300 hover:bg-purple-700 hover:text-white' }}">DTR</a>
+                                </div>
+                            </div>
                             @endif
                             @if(auth()->user()->canAccessStudentManagement())
                             <a href="{{ url('/admin/student-management/students') }}"
@@ -427,22 +461,46 @@
                             </a>
                             @endif
                             @if(auth()->user()->canAccessHiringProcess())
-                            <a href="{{ url('/admin/hiring-process') }}"
-                               class="group flex items-center px-2 py-2 text-sm font-medium rounded-md transition-colors duration-200 {{ request()->routeIs('admin.hiring-process.*') || request()->routeIs('admin.hiring-*') ? 'bg-purple-700 text-white' : 'text-purple-300 hover:bg-purple-700 hover:text-white' }}"
-                               :class="sidebarCollapsed ? 'justify-center' : ''"
-                               :title="sidebarCollapsed ? 'Hiring' : ''">
-                                <svg class="h-5 w-5" :class="sidebarCollapsed ? '' : 'mr-3'" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path></svg>
-                                <span class="transition-opacity duration-300" :class="sidebarCollapsed ? 'opacity-0 w-0 overflow-hidden' : 'opacity-100'">Hiring</span>
-                            </a>
+                            <div x-data="{ open: (localStorage.getItem('user-admin-hiring-desktop') || 'false') === 'true' }"
+                                 x-init="if ({{ request()->routeIs('admin.hiring-process.*') || request()->routeIs('admin.hiring-*') ? 'true' : 'false' }}) { open = true; }"
+                                 x-effect="localStorage.setItem('user-admin-hiring-desktop', open)"
+                                 class="space-y-1">
+                                <button @click="open = !open" type="button"
+                                        class="w-full flex items-center justify-between px-2 py-2 text-sm font-medium rounded-md text-purple-300 hover:bg-purple-700 hover:text-white transition-colors duration-200"
+                                        :class="sidebarCollapsed ? 'justify-center' : ''"
+                                        :title="sidebarCollapsed ? 'Hiring' : ''">
+                                    <span class="flex items-center">
+                                        <svg class="h-5 w-5" :class="sidebarCollapsed ? '' : 'mr-3'" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path></svg>
+                                        <span class="transition-opacity duration-300" :class="sidebarCollapsed ? 'opacity-0 w-0 overflow-hidden' : 'opacity-100'">Hiring</span>
+                                    </span>
+                                    <svg class="h-4 w-4 transition-transform duration-200" :class="{ 'rotate-180': open, 'opacity-0 w-0 overflow-hidden': sidebarCollapsed }" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                                </button>
+                                <div x-show="open && !sidebarCollapsed" class="ml-4 space-y-1">
+                                    <a href="{{ url('/admin/hiring-process') }}"
+                                       class="group flex items-center px-2 py-2 text-sm font-medium rounded-md transition-colors duration-200 {{ request()->routeIs('admin.hiring-process.*') || request()->routeIs('admin.hiring-*') ? 'bg-purple-700 text-white' : 'text-purple-300 hover:bg-purple-700 hover:text-white' }}">Hiring Process</a>
+                                </div>
+                            </div>
                             @endif
                             @if(auth()->user()->canAccessCommunication())
-                            <a href="{{ url('/admin/contact-messages') }}"
-                               class="group flex items-center px-2 py-2 text-sm font-medium rounded-md transition-colors duration-200 {{ request()->routeIs('contact-messages.*') || request()->routeIs('live-chat.*') ? 'bg-purple-700 text-white' : 'text-purple-300 hover:bg-purple-700 hover:text-white' }}"
-                               :class="sidebarCollapsed ? 'justify-center' : ''"
-                               :title="sidebarCollapsed ? 'Communication' : ''">
-                                <svg class="h-5 w-5" :class="sidebarCollapsed ? '' : 'mr-3'" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 4.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path></svg>
-                                <span class="transition-opacity duration-300" :class="sidebarCollapsed ? 'opacity-0 w-0 overflow-hidden' : 'opacity-100'">Communication</span>
-                            </a>
+                            <div x-data="{ open: (localStorage.getItem('user-admin-communication-desktop') || 'false') === 'true' }"
+                                 x-init="if ({{ request()->routeIs('contact-messages.*') ? 'true' : 'false' }}) { open = true; }"
+                                 x-effect="localStorage.setItem('user-admin-communication-desktop', open)"
+                                 class="space-y-1">
+                                <button @click="open = !open" type="button"
+                                        class="w-full flex items-center justify-between px-2 py-2 text-sm font-medium rounded-md text-purple-300 hover:bg-purple-700 hover:text-white transition-colors duration-200"
+                                        :class="sidebarCollapsed ? 'justify-center' : ''"
+                                        :title="sidebarCollapsed ? 'Communication' : ''">
+                                    <span class="flex items-center">
+                                        <svg class="h-5 w-5" :class="sidebarCollapsed ? '' : 'mr-3'" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 4.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path></svg>
+                                        <span class="transition-opacity duration-300" :class="sidebarCollapsed ? 'opacity-0 w-0 overflow-hidden' : 'opacity-100'">Communication</span>
+                                    </span>
+                                    <svg class="h-4 w-4 transition-transform duration-200" :class="{ 'rotate-180': open, 'opacity-0 w-0 overflow-hidden': sidebarCollapsed }" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                                </button>
+                                <div x-show="open && !sidebarCollapsed" class="ml-4 space-y-1">
+                                    <a href="{{ url('/admin/contact-messages') }}"
+                                       class="group flex items-center px-2 py-2 text-sm font-medium rounded-md transition-colors duration-200 {{ request()->routeIs('contact-messages.*') ? 'bg-purple-700 text-white' : 'text-purple-300 hover:bg-purple-700 hover:text-white' }}">Messages</a>
+                                </div>
+                            </div>
                             @endif
                             @if(auth()->user()->canAccessBilling())
                             <a href="{{ url('/admin/billing') }}"
@@ -614,16 +672,7 @@
                     </div>
 
                     <!-- Mobile navigation -->
-                    <nav class="flex-1 px-2 py-4 space-y-1"
-                         x-init="$nextTick(() => {
-                            const adminSection = Array.from($el.children).find((child) => {
-                                const label = child.querySelector('p');
-                                return label && label.textContent.trim() === 'Admin Features';
-                            });
-                            if (adminSection) {
-                                $el.appendChild(adminSection);
-                            }
-                         })">
+                    <nav class="flex-1 px-2 py-4 space-y-1">
                         <p class="px-2 pb-1 text-[11px] font-semibold uppercase tracking-wider text-gray-400">User Features</p>
                         <a href="{{ url('/dashboard') }}"
                            @click="sidebarOpen = false"
@@ -790,11 +839,21 @@
                             </a>
                             @endif
                             @if(auth()->user()->canAccessEmployeeManagement())
-                            <a href="{{ url('/admin/dtr') }}" @click="sidebarOpen = false"
-                               class="group flex items-center px-2 py-2 text-sm font-medium rounded-md transition-colors duration-200 {{ request()->routeIs('admin.dtr.*') ? 'bg-purple-700 text-white' : 'text-purple-300 hover:bg-purple-700 hover:text-white' }}">
-                                <svg class="mr-3 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-                                Employees
-                            </a>
+                            <div x-data="{ open: (localStorage.getItem('user-admin-employees-mobile') || 'false') === 'true' }"
+                                 x-init="if ({{ request()->routeIs('admin.dtr.*') ? 'true' : 'false' }}) { open = true; }"
+                                 x-effect="localStorage.setItem('user-admin-employees-mobile', open)"
+                                 class="space-y-1">
+                                <button @click="open = !open" type="button" class="w-full flex items-center justify-between px-2 py-2 text-sm font-medium rounded-md text-purple-300 hover:bg-purple-700 hover:text-white transition-colors duration-200">
+                                    <span class="flex items-center">
+                                        <svg class="mr-3 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                                        Employees
+                                    </span>
+                                    <svg class="h-4 w-4 transition-transform duration-200" :class="{ 'rotate-180': open }" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                                </button>
+                                <div x-show="open" class="ml-4 space-y-1">
+                                    <a href="{{ url('/admin/dtr') }}" @click="sidebarOpen = false" class="group flex items-center px-2 py-2 text-sm font-medium rounded-md transition-colors duration-200 {{ request()->routeIs('admin.dtr.*') ? 'bg-purple-700 text-white' : 'text-purple-300 hover:bg-purple-700 hover:text-white' }}">DTR</a>
+                                </div>
+                            </div>
                             @endif
                             @if(auth()->user()->canAccessStudentManagement())
                             <a href="{{ url('/admin/student-management/students') }}" @click="sidebarOpen = false"
@@ -804,18 +863,38 @@
                             </a>
                             @endif
                             @if(auth()->user()->canAccessHiringProcess())
-                            <a href="{{ url('/admin/hiring-process') }}" @click="sidebarOpen = false"
-                               class="group flex items-center px-2 py-2 text-sm font-medium rounded-md transition-colors duration-200 {{ request()->routeIs('admin.hiring-process.*') || request()->routeIs('admin.hiring-*') ? 'bg-purple-700 text-white' : 'text-purple-300 hover:bg-purple-700 hover:text-white' }}">
-                                <svg class="mr-3 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path></svg>
-                                Hiring
-                            </a>
+                            <div x-data="{ open: (localStorage.getItem('user-admin-hiring-mobile') || 'false') === 'true' }"
+                                 x-init="if ({{ request()->routeIs('admin.hiring-process.*') || request()->routeIs('admin.hiring-*') ? 'true' : 'false' }}) { open = true; }"
+                                 x-effect="localStorage.setItem('user-admin-hiring-mobile', open)"
+                                 class="space-y-1">
+                                <button @click="open = !open" type="button" class="w-full flex items-center justify-between px-2 py-2 text-sm font-medium rounded-md text-purple-300 hover:bg-purple-700 hover:text-white transition-colors duration-200">
+                                    <span class="flex items-center">
+                                        <svg class="mr-3 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path></svg>
+                                        Hiring
+                                    </span>
+                                    <svg class="h-4 w-4 transition-transform duration-200" :class="{ 'rotate-180': open }" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                                </button>
+                                <div x-show="open" class="ml-4 space-y-1">
+                                    <a href="{{ url('/admin/hiring-process') }}" @click="sidebarOpen = false" class="group flex items-center px-2 py-2 text-sm font-medium rounded-md transition-colors duration-200 {{ request()->routeIs('admin.hiring-process.*') || request()->routeIs('admin.hiring-*') ? 'bg-purple-700 text-white' : 'text-purple-300 hover:bg-purple-700 hover:text-white' }}">Hiring Process</a>
+                                </div>
+                            </div>
                             @endif
                             @if(auth()->user()->canAccessCommunication())
-                            <a href="{{ url('/admin/contact-messages') }}" @click="sidebarOpen = false"
-                               class="group flex items-center px-2 py-2 text-sm font-medium rounded-md transition-colors duration-200 {{ request()->routeIs('contact-messages.*') || request()->routeIs('live-chat.*') ? 'bg-purple-700 text-white' : 'text-purple-300 hover:bg-purple-700 hover:text-white' }}">
-                                <svg class="mr-3 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 4.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path></svg>
-                                Communication
-                            </a>
+                            <div x-data="{ open: (localStorage.getItem('user-admin-communication-mobile') || 'false') === 'true' }"
+                                 x-init="if ({{ request()->routeIs('contact-messages.*') ? 'true' : 'false' }}) { open = true; }"
+                                 x-effect="localStorage.setItem('user-admin-communication-mobile', open)"
+                                 class="space-y-1">
+                                <button @click="open = !open" type="button" class="w-full flex items-center justify-between px-2 py-2 text-sm font-medium rounded-md text-purple-300 hover:bg-purple-700 hover:text-white transition-colors duration-200">
+                                    <span class="flex items-center">
+                                        <svg class="mr-3 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 4.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path></svg>
+                                        Communication
+                                    </span>
+                                    <svg class="h-4 w-4 transition-transform duration-200" :class="{ 'rotate-180': open }" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                                </button>
+                                <div x-show="open" class="ml-4 space-y-1">
+                                    <a href="{{ url('/admin/contact-messages') }}" @click="sidebarOpen = false" class="group flex items-center px-2 py-2 text-sm font-medium rounded-md transition-colors duration-200 {{ request()->routeIs('contact-messages.*') ? 'bg-purple-700 text-white' : 'text-purple-300 hover:bg-purple-700 hover:text-white' }}">Messages</a>
+                                </div>
+                            </div>
                             @endif
                             @if(auth()->user()->canAccessBilling())
                             <a href="{{ url('/admin/billing') }}" @click="sidebarOpen = false"
