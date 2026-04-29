@@ -60,25 +60,25 @@
                     <h2 class="text-base font-semibold text-gray-900">All devices</h2>
                     <p class="text-sm text-gray-500 mt-0.5">{{ $starlinks->total() }} device{{ $starlinks->total() !== 1 ? 's' : '' }}{!! (!empty($search) || !empty($statusFilter) || !empty($accountEmailFilter) || !empty($clientNameFilter)) ? ' <span class="text-gray-600">(filtered results)</span>' : '' !!}</p>
                 </div>
-                <form method="GET" action="{{ url('/admin/starlinks') }}" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-[1fr_180px_1fr_1fr_auto_auto] gap-2 w-full">
+                <form method="GET" action="{{ url('/admin/starlinks') }}" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-[1fr_150px_220px_220px_auto_auto] gap-2 w-full">
                     <div class="relative flex-1 sm:flex-initial">
                         <span class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none text-gray-400">
                             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
                         </span>
                         <input type="text" name="search" value="{{ old('search', $search ?? '') }}" placeholder="Search any field: account, ID, serial, location, plan, status…" class="block w-full pl-10 pr-3 py-2 rounded-lg border border-gray-300 text-sm placeholder-gray-400 focus:ring-indigo-500 focus:border-indigo-500" />
                     </div>
-                    <select name="status_filter" class="block w-full py-2 px-3 rounded-lg border border-gray-300 text-sm text-gray-700 focus:ring-indigo-500 focus:border-indigo-500">
+                    <select name="status_filter" class="block w-full h-10 px-3 rounded-lg border border-gray-300 text-sm text-gray-700 focus:ring-indigo-500 focus:border-indigo-500">
                         <option value="">All Statuses</option>
                         <option value="Active" {{ (($statusFilter ?? '') === 'Active') ? 'selected' : '' }}>Active</option>
                         <option value="Inactive" {{ (($statusFilter ?? '') === 'Inactive') ? 'selected' : '' }}>Inactive</option>
                     </select>
-                    <select name="account_email_filter" class="block w-full py-2 px-3 rounded-lg border border-gray-300 text-sm text-gray-700 focus:ring-indigo-500 focus:border-indigo-500">
+                    <select name="account_email_filter" class="block w-full h-10 px-3 rounded-lg border border-gray-300 text-sm text-gray-700 focus:ring-indigo-500 focus:border-indigo-500">
                         <option value="">All Account / Email</option>
                         @foreach(($accountEmailOptions ?? []) as $emailOption)
                             <option value="{{ $emailOption }}" {{ (($accountEmailFilter ?? '') === $emailOption) ? 'selected' : '' }}>{{ $emailOption }}</option>
                         @endforeach
                     </select>
-                    <select name="client_name_filter" class="block w-full py-2 px-3 rounded-lg border border-gray-300 text-sm text-gray-700 focus:ring-indigo-500 focus:border-indigo-500">
+                    <select name="client_name_filter" class="block w-full h-10 px-3 rounded-lg border border-gray-300 text-sm text-gray-700 focus:ring-indigo-500 focus:border-indigo-500">
                         <option value="">All Client Names</option>
                         @foreach(($clientNameOptions ?? []) as $clientNameOption)
                             <option value="{{ $clientNameOption }}" {{ (($clientNameFilter ?? '') === $clientNameOption) ? 'selected' : '' }}>{{ $clientNameOption }}</option>
