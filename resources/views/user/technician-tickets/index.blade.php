@@ -44,7 +44,60 @@
             <h2 class="text-sm font-semibold text-gray-900">Ticket Queue</h2>
             <p class="text-xs text-gray-500 mt-0.5">Update status and notes directly from this list.</p>
         </div>
-        <div class="overflow-x-auto">
+        <div class="md:hidden p-3 space-y-3 bg-gradient-to-b from-gray-50/60 to-white">
+            @forelse($tickets as $ticket)
+                @php
+                    $statusClasses = match($ticket->status) {
+                        'open' => 'bg-amber-100 text-amber-800',
+                        'processing' => 'bg-blue-100 text-blue-800',
+                        'needs_investigation' => 'bg-purple-100 text-purple-800',
+                        'resolved' => 'bg-green-100 text-green-800',
+                        default => 'bg-gray-100 text-gray-800',
+                    };
+                @endphp
+                <div class="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm">
+                    <div class="flex items-start justify-between gap-3">
+                        <span class="inline-flex items-center rounded-lg bg-indigo-50 text-indigo-700 px-2.5 py-1 text-[11px] font-semibold tracking-wide">
+                            {{ $ticket->ticket_number }}
+                        </span>
+                        <span class="inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-semibold {{ $statusClasses }}">
+                            {{ strtoupper(str_replace('_', ' ', $ticket->status)) }}
+                        </span>
+                    </div>
+                    <div class="mt-3 space-y-1 pb-3 border-b border-gray-100">
+                        <p class="text-sm font-medium text-gray-900">{{ $ticket->type_label }}</p>
+                        <p class="text-xs text-gray-600">Reporter: {{ $ticket->full_name }}</p>
+                    </div>
+                    <form method="POST" action="{{ url('/technician/tickets/' . $ticket->id) }}" class="mt-3 space-y-3">
+                        @csrf
+                        @method('PATCH')
+                        <div class="rounded-xl border border-gray-100 bg-gray-50/70 p-3">
+                            <label class="block text-[11px] font-semibold tracking-wide uppercase text-gray-500 mb-1.5">Update Status</label>
+                            <select name="status" class="w-full rounded-xl border-gray-300 bg-white text-sm font-medium text-gray-700 focus:border-indigo-500 focus:ring-indigo-500">
+                                <option value="open" {{ $ticket->status === 'open' ? 'selected' : '' }}>Open</option>
+                                <option value="processing" {{ $ticket->status === 'processing' ? 'selected' : '' }}>Processing</option>
+                                <option value="needs_investigation" {{ $ticket->status === 'needs_investigation' ? 'selected' : '' }}>Needs Investigation</option>
+                                <option value="resolved" {{ $ticket->status === 'resolved' ? 'selected' : '' }}>Resolved</option>
+                            </select>
+                        </div>
+                        <div class="rounded-xl border border-gray-100 bg-gray-50/70 p-3">
+                            <label class="block text-[11px] font-semibold tracking-wide uppercase text-gray-500 mb-1.5">Update Notes</label>
+                            <textarea name="admin_notes" rows="3" class="w-full rounded-xl border-gray-300 bg-white text-sm focus:border-indigo-500 focus:ring-indigo-500" placeholder="Add update note...">{{ old('admin_notes', $ticket->admin_notes) }}</textarea>
+                        </div>
+                        <button type="submit" class="w-full inline-flex items-center justify-center px-3.5 py-2.5 rounded-xl bg-indigo-600 text-white text-xs font-semibold hover:bg-indigo-700 shadow-sm transition-colors">
+                            Save Update
+                        </button>
+                    </form>
+                </div>
+            @empty
+                <div class="rounded-xl border border-gray-200 bg-white px-5 py-10 text-center">
+                    <p class="text-sm font-medium text-gray-700">No tickets assigned yet.</p>
+                    <p class="text-xs text-gray-500 mt-1">Once an admin assigns tickets, they will appear here.</p>
+                </div>
+            @endforelse
+        </div>
+
+        <div class="hidden md:block overflow-x-auto">
             <table class="min-w-full divide-y divide-gray-200">
                 <thead class="bg-gray-50">
                     <tr>
@@ -58,8 +111,21 @@
                 </thead>
                 <tbody class="divide-y divide-gray-100">
                     @forelse($tickets as $ticket)
+                        @php
+                            $statusClasses = match($ticket->status) {
+                                'open' => 'bg-amber-100 text-amber-800',
+                                'processing' => 'bg-blue-100 text-blue-800',
+                                'needs_investigation' => 'bg-purple-100 text-purple-800',
+                                'resolved' => 'bg-green-100 text-green-800',
+                                default => 'bg-gray-100 text-gray-800',
+                            };
+                        @endphp
                         <tr class="hover:bg-gray-50/60 transition-colors">
                             <td class="px-5 py-4 align-top">
+                                <form id="ticket-update-{{ $ticket->id }}" method="POST" action="{{ url('/technician/tickets/' . $ticket->id) }}" class="hidden">
+                                    @csrf
+                                    @method('PATCH')
+                                </form>
                                 <span class="inline-flex items-center rounded-lg bg-indigo-50 text-indigo-700 px-2.5 py-1 text-xs font-semibold">
                                     {{ $ticket->ticket_number }}
                                 </span>
@@ -67,36 +133,25 @@
                             <td class="px-5 py-4 text-sm text-gray-700 align-top">{{ $ticket->type_label }}</td>
                             <td class="px-5 py-4 text-sm text-gray-700 align-top">{{ $ticket->full_name }}</td>
                             <td class="px-5 py-4 text-sm text-gray-700 align-top">
-                                @php
-                                    $statusClasses = match($ticket->status) {
-                                        'open' => 'bg-amber-100 text-amber-800',
-                                        'processing' => 'bg-blue-100 text-blue-800',
-                                        'needs_investigation' => 'bg-purple-100 text-purple-800',
-                                        'resolved' => 'bg-green-100 text-green-800',
-                                        default => 'bg-gray-100 text-gray-800',
-                                    };
-                                @endphp
                                 <span class="inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold {{ $statusClasses }}">
                                     {{ strtoupper(str_replace('_', ' ', $ticket->status)) }}
                                 </span>
-                                <form method="POST" action="{{ url('/technician/tickets/' . $ticket->id) }}" class="space-y-2 mt-3">
-                                    @csrf
-                                    @method('PATCH')
-                                    <select name="status" class="w-full rounded-lg border-gray-300 text-sm focus:border-indigo-500 focus:ring-indigo-500">
+                                <div class="mt-3">
+                                    <select name="status" form="ticket-update-{{ $ticket->id }}" class="w-full rounded-lg border-gray-300 text-sm focus:border-indigo-500 focus:ring-indigo-500">
                                         <option value="open" {{ $ticket->status === 'open' ? 'selected' : '' }}>Open</option>
                                         <option value="processing" {{ $ticket->status === 'processing' ? 'selected' : '' }}>Processing</option>
                                         <option value="needs_investigation" {{ $ticket->status === 'needs_investigation' ? 'selected' : '' }}>Needs Investigation</option>
                                         <option value="resolved" {{ $ticket->status === 'resolved' ? 'selected' : '' }}>Resolved</option>
                                     </select>
+                                </div>
                             </td>
                             <td class="px-5 py-4 text-sm text-gray-700 align-top">
-                                    <textarea name="admin_notes" rows="3" class="w-full rounded-lg border-gray-300 text-sm focus:border-indigo-500 focus:ring-indigo-500" placeholder="Add update note...">{{ old('admin_notes', $ticket->admin_notes) }}</textarea>
+                                <textarea name="admin_notes" form="ticket-update-{{ $ticket->id }}" rows="3" class="w-full rounded-lg border-gray-300 text-sm focus:border-indigo-500 focus:ring-indigo-500" placeholder="Add update note...">{{ old('admin_notes', $ticket->admin_notes) }}</textarea>
                             </td>
                             <td class="px-5 py-4 text-sm text-gray-700 align-top">
-                                    <button type="submit" class="inline-flex items-center justify-center px-3.5 py-2 rounded-lg bg-indigo-600 text-white text-xs font-semibold hover:bg-indigo-700 shadow-sm transition-colors">
-                                        Save Update
-                                    </button>
-                                </form>
+                                <button type="submit" form="ticket-update-{{ $ticket->id }}" class="inline-flex items-center justify-center px-3.5 py-2 rounded-lg bg-indigo-600 text-white text-xs font-semibold hover:bg-indigo-700 shadow-sm transition-colors">
+                                    Save Update
+                                </button>
                             </td>
                         </tr>
                     @empty
