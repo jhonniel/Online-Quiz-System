@@ -704,7 +704,7 @@
         </div>
         @endif
 
-        <!-- Starlinks Accounts (linked_accounts or billing permission) -->
+        <!-- Subscriptions (linked_accounts or billing permission) -->
         @if(auth()->user()->canAccessLinkedAccounts() || auth()->user()->canAccessBilling())
         <div class="mb-6" x-data="{
             open: (localStorage.getItem('nav-linked-accounts') || 'true') === 'true',
@@ -716,7 +716,7 @@
             <button @click="toggle()"
                     class="w-full flex items-center justify-between px-3 py-2 text-xs font-semibold text-gray-400 uppercase tracking-wider hover:text-gray-300 transition-opacity duration-300"
                     :class="sidebarCollapsed ? 'opacity-0 h-0 overflow-hidden pointer-events-none' : 'opacity-100'">
-                <span>Starlinks Accounts</span>
+                <span>Subscriptions</span>
                 <svg class="w-4 h-4 transition-transform duration-200" :class="{ 'rotate-180': open }" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
                 </svg>
