@@ -21,6 +21,7 @@ class TicketReport extends Model
         'status',
         'assigned_to_user_id',
         'admin_notes',
+        'admin_attachment_path',
         'payment_status',
         'amount_paid',
     ];
@@ -106,6 +107,20 @@ class TicketReport extends Model
         }
         if (Storage::disk('public')->exists($this->image_path)) {
             return Storage::disk('public')->url($this->image_path);
+        }
+        return null;
+    }
+
+    public function getAdminAttachmentUrlAttribute(): ?string
+    {
+        if (! $this->admin_attachment_path) {
+            return null;
+        }
+        if (Storage::disk('digitalocean')->exists($this->admin_attachment_path)) {
+            return Storage::disk('digitalocean')->url($this->admin_attachment_path);
+        }
+        if (Storage::disk('public')->exists($this->admin_attachment_path)) {
+            return Storage::disk('public')->url($this->admin_attachment_path);
         }
         return null;
     }

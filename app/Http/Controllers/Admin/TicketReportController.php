@@ -13,6 +13,7 @@ use Illuminate\Validation\Rule;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Storage;
 
 class TicketReportController extends Controller
 {
@@ -84,6 +85,7 @@ class TicketReportController extends Controller
         $request->validate([
             'status' => 'sometimes|in:' . implode(',', TicketReport::adminStatuses()),
             'admin_notes' => 'nullable|string|max:10000',
+            'admin_attachment' => 'nullable|file|max:10240|mimes:pdf,doc,docx,xls,xlsx,csv,ppt,pptx,txt,jpg,jpeg,png,zip,rar',
             'payment_status' => 'sometimes|in:' . implode(',', TicketReport::paymentStatuses()),
             'amount_paid' => 'nullable|numeric|min:0|max:999999999.99',
             'assigned_to_user_id' => [
@@ -97,6 +99,7 @@ class TicketReportController extends Controller
         $data = [];
         $statusChanged = false;
         $paymentChanged = false;
+        $attachmentChanged = false;
         if ($request->has('status') && $request->status !== $ticket_report->status) {
             $data['status'] = $request->status;
             $statusChanged = true;
@@ -119,10 +122,27 @@ class TicketReportController extends Controller
         if (array_key_exists('assigned_to_user_id', $request->all())) {
             $data['assigned_to_user_id'] = $request->filled('assigned_to_user_id') ? (int) $request->input('assigned_to_user_id') : null;
         }
+        if ($request->hasFile('admin_attachment')) {
+            $file = $request->file('admin_attachment');
+            $safeName = preg_replace('/[^a-zA-Z0-9._-]/', '', (string) $file->getClientOriginalName());
+            $path = 'ticket-reports/admin-attachments/' . now()->format('Y/m/d') . '/' . uniqid('', true) . '_' . $safeName;
+            Storage::disk('digitalocean')->put($path, file_get_contents($file->getRealPath()), 'public');
+            $data['admin_attachment_path'] = $path;
+            $attachmentChanged = true;
+        }
         if (! empty($data)) {
             $fromStatus = $ticket_report->status;
             $beforeAssignedTo = $ticket_report->assigned_to_user_id;
+            $previousAttachmentPath = $ticket_report->admin_attachment_path;
             $ticket_report->update($data);
+
+            if ($attachmentChanged && $previousAttachmentPath && $previousAttachmentPath !== ($data['admin_attachment_path'] ?? null)) {
+                if (Storage::disk('digitalocean')->exists($previousAttachmentPath)) {
+                    Storage::disk('digitalocean')->delete($previousAttachmentPath);
+                } elseif (Storage::disk('public')->exists($previousAttachmentPath)) {
+                    Storage::disk('public')->delete($previousAttachmentPath);
+                }
+            }
 
             if ($statusChanged) {
                 $toStatus = $data['status'];
@@ -140,6 +160,15 @@ class TicketReportController extends Controller
                     'action' => $action,
                     'from_status' => $fromStatus,
                     'to_status' => $toStatus,
+                    'meta' => null,
+                ]);
+            } elseif ($attachmentChanged) {
+                TicketReportLog::create([
+                    'ticket_report_id' => $ticket_report->id,
+                    'user_id' => (int) Auth::id(),
+                    'action' => 'attachment_uploaded',
+                    'from_status' => $ticket_report->status,
+                    'to_status' => $ticket_report->status,
                     'meta' => null,
                 ]);
             } elseif ($paymentChanged) {
@@ -199,6 +228,8 @@ class TicketReportController extends Controller
             }
         } elseif (array_key_exists('admin_notes', $request->all())) {
             $message = 'Notes saved.';
+        } elseif ($attachmentChanged) {
+            $message = 'Attachment uploaded.';
         } elseif ($paymentChanged) {
             $message = 'Payment details updated.';
         } elseif (array_key_exists('assigned_to_user_id', $request->all())) {

@@ -74,6 +74,15 @@
                             <span class="font-semibold text-gray-900">Submitted:</span>
                             {{ optional($ticket->created_at)->format('M d, Y h:i A') }}
                         </p>
+                        @if($ticket->admin_attachment_url)
+                            <p class="text-sm text-gray-600">
+                                <span class="font-semibold text-gray-900">Admin Attachment:</span>
+                                <a href="{{ $ticket->admin_attachment_url }}" target="_blank" rel="noopener" class="inline-flex items-center gap-1 text-indigo-600 hover:underline font-medium">
+                                    View file
+                                    <i class="fas fa-external-link-alt text-xs"></i>
+                                </a>
+                            </p>
+                        @endif
                     </div>
                 @endif
             </div>

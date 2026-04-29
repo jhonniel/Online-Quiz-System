@@ -3,8 +3,12 @@
 namespace App\Http\Controllers;
 
 use App\Mail\TicketReportReceived;
+use App\Mail\TicketReportAdminNotification;
+use App\Models\Setting;
 use App\Models\TicketProblemType;
 use App\Models\TicketReport;
+use App\Models\User;
+use App\Services\MailConfigService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Log;
@@ -75,7 +79,9 @@ class ReportProblemController extends Controller
         ]);
 
         $emailSent = false;
+        $adminNotificationSentCount = 0;
         try {
+            MailConfigService::configure();
             Mail::to($ticket->email)->send(new TicketReportReceived($ticket));
             Log::info('Ticket report confirmation sent', ['ticket' => $ticket->ticket_number, 'to' => $ticket->email]);
             $emailSent = true;
@@ -88,8 +94,59 @@ class ReportProblemController extends Controller
             report($e);
         }
 
+        try {
+            $adminEmails = $this->resolveTicketAdminNotificationEmails();
+            foreach ($adminEmails as $adminEmail) {
+                Mail::to($adminEmail)->send(new TicketReportAdminNotification($ticket));
+                $adminNotificationSentCount++;
+            }
+
+            Log::info('Ticket report admin notifications sent', [
+                'ticket' => $ticket->ticket_number,
+                'recipients' => $adminEmails,
+                'sent_count' => $adminNotificationSentCount,
+            ]);
+        } catch (\Throwable $e) {
+            Log::warning('Ticket report admin notification email failed: ' . $e->getMessage(), [
+                'ticket' => $ticket->ticket_number,
+                'sent_count' => $adminNotificationSentCount,
+                'exception' => $e,
+            ]);
+            report($e);
+        }
+
         $successMsg = 'Your report has been submitted. Your ticket number is: ' . $ticket->ticket_number;
         $successMsg .= $emailSent ? '. We have sent a confirmation to your email.' : '. A confirmation email could not be sent.';
         return redirect()->back()->with('success', $successMsg);
+    }
+
+    /**
+     * Get admin notification recipients for report-problem submissions.
+     */
+    protected function resolveTicketAdminNotificationEmails(): array
+    {
+        $emailsRaw = (string) Setting::get('ticket_admin_notification_email', '');
+
+        if (trim($emailsRaw) === '') {
+            $emailsRaw = (string) Setting::get('leave_admin_notification_email', '');
+        }
+
+        $emails = [];
+        if (trim($emailsRaw) !== '') {
+            $emails = array_filter(array_map('trim', explode(',', $emailsRaw)));
+        }
+
+        if (empty($emails)) {
+            $emails = User::query()
+                ->where('role', 'admin')
+                ->whereNotNull('email')
+                ->pluck('email')
+                ->map(fn ($email) => trim((string) $email))
+                ->filter()
+                ->values()
+                ->all();
+        }
+
+        return array_values(array_unique(array_filter($emails, fn ($email) => (bool) filter_var($email, FILTER_VALIDATE_EMAIL))));
     }
 }

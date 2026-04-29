@@ -85,6 +85,16 @@
                     </div>
                 @endif
 
+                @if($ticket->admin_attachment_url)
+                    <div>
+                        <p class="text-xs font-medium text-gray-500 uppercase tracking-wider mb-2">Admin attachment</p>
+                        <a href="{{ $ticket->admin_attachment_url }}" target="_blank" rel="noopener" class="inline-flex items-center gap-2 rounded-lg border border-indigo-200 bg-indigo-50 px-3 py-2 text-sm font-medium text-indigo-700 hover:bg-indigo-100">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828L18 9.828a4 4 0 10-5.657-5.657L5.757 10.757a6 6 0 108.486 8.486L20.5 13"></path></svg>
+                            View uploaded file
+                        </a>
+                    </div>
+                @endif
+
                 {{-- Contact information --}}
                 <div class="pt-2">
                     <p class="text-xs font-medium text-gray-500 uppercase tracking-wider mb-4">Contact information</p>
@@ -323,6 +333,27 @@
                             <p class="text-xs text-gray-500">Only users with role <span class="font-semibold">technician</span> are shown.</p>
                             <button type="submit" class="w-full inline-flex items-center justify-center px-4 py-2.5 border border-transparent rounded-lg text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 transition-colors shadow-sm">
                                 Save assignee
+                            </button>
+                        </form>
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                    <div class="px-4 py-3 border-b border-gray-200 bg-gray-50">
+                        <h3 class="text-sm font-semibold text-gray-900">Upload File for Reporter</h3>
+                    </div>
+                    <div class="p-4">
+                        <form method="POST" action="{{ url('admin/tickets/' . $ticket->id) }}" enctype="multipart/form-data" class="space-y-3">
+                            @csrf
+                            @method('PATCH')
+                            <label for="admin_attachment" class="block text-xs font-medium text-gray-600">Attachment file</label>
+                            <input type="file" name="admin_attachment" id="admin_attachment" class="block w-full rounded-lg border border-gray-300 py-2 px-3 text-sm text-gray-700 focus:ring-indigo-500 focus:border-indigo-500">
+                            <p class="text-xs text-gray-500">Allowed: PDF, Office docs, images, TXT, ZIP/RAR (max 10MB).</p>
+                            @if($ticket->admin_attachment_url)
+                                <a href="{{ $ticket->admin_attachment_url }}" target="_blank" rel="noopener" class="inline-flex items-center text-xs font-medium text-indigo-600 hover:underline">Current file: Open attachment</a>
+                            @endif
+                            <button type="submit" class="w-full inline-flex items-center justify-center px-4 py-2.5 border border-transparent rounded-lg text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 transition-colors shadow-sm">
+                                Upload attachment
                             </button>
                         </form>
                     </div>

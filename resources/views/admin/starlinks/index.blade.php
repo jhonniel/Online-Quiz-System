@@ -74,6 +74,7 @@
                         <th scope="col" class="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden sm:table-cell">Starlink ID</th>
                         <th scope="col" class="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden md:table-cell">Kit No.</th>
                         <th scope="col" class="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden md:table-cell">Office / Location</th>
+                        <th scope="col" class="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden md:table-cell">Municipality</th>
                         <th scope="col" class="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden lg:table-cell">Plan</th>
                         <th scope="col" class="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
                         <th scope="col" class="px-4 sm:px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
@@ -107,7 +108,12 @@
                             <td class="px-4 sm:px-6 py-4 text-sm text-gray-600 font-mono hidden md:table-cell">
                                 {{ $starlink->kit_number ?: '—' }}
                             </td>
-                            <td class="px-4 sm:px-6 py-4 text-sm text-gray-600 hidden md:table-cell max-w-[140px] truncate" title="{{ $starlink->office_location ?? '' }}">{{ $starlink->office_location ? Str::limit($starlink->office_location, 22) : '—' }}</td>
+                            <td class="px-4 sm:px-6 py-4 text-sm text-gray-600 hidden md:table-cell max-w-[160px] truncate" title="{{ $starlink->office_location ?? '' }}">
+                                {{ $starlink->office_location ? Str::limit($starlink->office_location, 22) : '—' }}
+                            </td>
+                            <td class="px-4 sm:px-6 py-4 text-sm text-gray-600 hidden md:table-cell max-w-[140px] truncate" title="{{ $starlink->municipality ?? '' }}">
+                                {{ $starlink->municipality ? Str::limit($starlink->municipality, 18) : '—' }}
+                            </td>
                             <td class="px-4 sm:px-6 py-4 whitespace-nowrap hidden lg:table-cell">
                                 @if($starlink->plan)
                                     <span class="text-sm text-gray-700">{{ $starlink->plan }}</span>
@@ -149,7 +155,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="7" class="px-4 sm:px-6 py-16 text-center">
+                            <td colspan="8" class="px-4 sm:px-6 py-16 text-center">
                                 <div class="flex flex-col items-center">
                                     <div class="w-14 h-14 rounded-full bg-gray-100 flex items-center justify-center mb-4">
                                         <svg class="w-7 h-7 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.111 16.404a5.5 5.5 0 017.778 0M12 20h.01m-7.08-7.071c3.904-3.905 10.236-3.905 14.141 0M1.394 9.393c5.857-5.857 15.355-5.857 21.213 0"></path></svg>
