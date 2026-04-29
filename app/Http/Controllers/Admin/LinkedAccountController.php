@@ -184,7 +184,8 @@ class LinkedAccountController extends Controller
             })->filter()->map->count()->sortDesc();
 
             $clientNameUniqueCount = $clientNameCountsRaw->count();
-            $clientNameCountsTop = $clientNameCountsRaw->take(5);
+            // Show all client names (not just top 5) so the UI can list every value.
+            $clientNameCountsTop = $clientNameCountsRaw;
         }
 
         // Starlinks to be billed next month: have start_date, respect billing_interval (monthly/yearly) and advance_payment_until
