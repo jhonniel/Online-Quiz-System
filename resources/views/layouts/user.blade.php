@@ -256,6 +256,7 @@
                         <!-- Admin permissions only (no admin dashboard link; show only assigned permission areas) -->
                         @if(auth()->user()->hasAnyAdminPermission() && !auth()->user()->isSuperAdmin())
                         <div class="pt-4 mt-4 border-t border-gray-700 space-y-1">
+                            <p class="px-2 pb-1 text-[11px] font-semibold uppercase tracking-wider text-purple-300">Admin Features</p>
                             @if(auth()->user()->canAccessContentManagement())
                             <a href="{{ url('/admin/quizzes') }}"
                                class="group flex items-center px-2 py-2 text-sm font-medium rounded-md transition-colors duration-200 {{ request()->routeIs('admin.quizzes.*') || request()->routeIs('quizzes.*') ? 'bg-purple-700 text-white' : 'text-purple-300 hover:bg-purple-700 hover:text-white' }}"
@@ -549,6 +550,7 @@
                         <!-- Admin permissions only (no admin dashboard; only assigned permission areas) -->
                         @if(auth()->user()->hasAnyAdminPermission() && !auth()->user()->isSuperAdmin())
                         <div class="pt-4 mt-4 border-t border-gray-700 space-y-1">
+                            <p class="px-2 pb-1 text-[11px] font-semibold uppercase tracking-wider text-purple-300">Admin Features</p>
                             @if(auth()->user()->canAccessContentManagement())
                             <a href="{{ url('/admin/quizzes') }}" @click="sidebarOpen = false"
                                class="group flex items-center px-2 py-2 text-sm font-medium rounded-md transition-colors duration-200 {{ request()->routeIs('admin.quizzes.*') || request()->routeIs('quizzes.*') ? 'bg-purple-700 text-white' : 'text-purple-300 hover:bg-purple-700 hover:text-white' }}">
