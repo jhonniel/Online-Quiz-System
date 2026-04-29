@@ -95,7 +95,16 @@
 
                 <!-- Navigation -->
                 <div class="flex-1 flex flex-col overflow-y-auto bg-gray-800">
-                    <nav class="flex-1 px-2 py-4 space-y-1">
+                    <nav class="flex-1 px-2 py-4 space-y-1"
+                         x-init="$nextTick(() => {
+                            const adminSection = Array.from($el.children).find((child) => {
+                                const label = child.querySelector('p');
+                                return label && label.textContent.trim() === 'Admin Features';
+                            });
+                            if (adminSection) {
+                                $el.appendChild(adminSection);
+                            }
+                         })">
                         <p class="px-2 pb-1 text-[11px] font-semibold uppercase tracking-wider text-gray-400">User Features</p>
                         <!-- Dashboard -->
                         <a href="{{ url('/dashboard') }}"
@@ -605,7 +614,16 @@
                     </div>
 
                     <!-- Mobile navigation -->
-                    <nav class="flex-1 px-2 py-4 space-y-1">
+                    <nav class="flex-1 px-2 py-4 space-y-1"
+                         x-init="$nextTick(() => {
+                            const adminSection = Array.from($el.children).find((child) => {
+                                const label = child.querySelector('p');
+                                return label && label.textContent.trim() === 'Admin Features';
+                            });
+                            if (adminSection) {
+                                $el.appendChild(adminSection);
+                            }
+                         })">
                         <p class="px-2 pb-1 text-[11px] font-semibold uppercase tracking-wider text-gray-400">User Features</p>
                         <a href="{{ url('/dashboard') }}"
                            @click="sidebarOpen = false"

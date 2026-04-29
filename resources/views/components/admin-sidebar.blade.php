@@ -868,8 +868,8 @@
         }"
         x-init="if ({{ request()->routeIs('admin.tasks.*') ? 'true' : 'false' }}) { open = true; }">
             <button @click="toggle()"
-                    class="w-full flex items-center justify-between px-2 py-2 text-sm font-medium rounded-md transition-colors duration-200 text-gray-300 hover:bg-gray-700 hover:text-white"
-                    :class="sidebarCollapsed ? 'justify-center px-2' : 'px-3'"
+                    class="w-full flex items-center justify-between px-3 py-2 text-xs font-semibold text-gray-400 uppercase tracking-wider hover:text-gray-300 transition-opacity duration-300"
+                    :class="sidebarCollapsed ? 'opacity-0 h-0 overflow-hidden pointer-events-none' : 'opacity-100'"
                     :title="sidebarCollapsed ? 'TASK TO DO' : ''">
                 <div class="flex items-center">
                     <span class="transition-opacity duration-300 whitespace-nowrap" :class="sidebarCollapsed ? 'opacity-0 w-0 overflow-hidden absolute' : 'opacity-100'">
