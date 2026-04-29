@@ -105,7 +105,32 @@
     </div>
 
     <!-- Navigation -->
-    <nav class="mt-6 px-3 flex-1 overflow-y-auto sidebar-scroll">
+    <nav class="mt-6 px-3 flex-1 overflow-y-auto sidebar-scroll"
+         x-init="$nextTick(() => {
+            const userFeatures = $el.querySelector('.user-features-section');
+            if (userFeatures) {
+                $el.prepend(userFeatures);
+            }
+
+            // Auto-open any permission section that contains the active page link.
+            const sectionGroups = Array.from($el.querySelectorAll('div.mb-6[x-data]'));
+            sectionGroups.forEach((group) => {
+                const panel = group.querySelector('div.space-y-1');
+                if (!panel) return;
+
+                const hasActiveChild = !!panel.querySelector('a.bg-indigo-700, a.bg-purple-700');
+                if (!hasActiveChild) return;
+
+                const toggleBtn = group.querySelector('button');
+                if (!toggleBtn) return;
+
+                const arrowIcon = toggleBtn.querySelector('svg');
+                const isOpen = !!(arrowIcon && arrowIcon.classList.contains('rotate-180'));
+                if (!isOpen) {
+                    toggleBtn.click();
+                }
+            });
+         })">
         <!-- Dashboard (full access only) -->
         @if(auth()->user()->isSuperAdmin())
         <div class="mb-6">
@@ -130,7 +155,7 @@
 
         <!-- Content Management -->
         @if(auth()->user()->canAccessContentManagement())
-        <div class="mb-6" x-data="{
+        <div class="mb-6 user-features-section" x-data="{
             open: (localStorage.getItem('nav-content-management') || 'true') === 'true',
             toggle() {
                 this.open = !this.open;
@@ -426,7 +451,8 @@
                 this.open = !this.open;
                 localStorage.setItem('nav-student-management', this.open);
             }
-        }">
+        }"
+        x-init="if ({{ request()->routeIs('admin.student-management.*') || request()->routeIs('admin.student-dtr.*') || request()->routeIs('admin.student-leave-requests.*') || request()->routeIs('admin.time-requests.*') ? 'true' : 'false' }}) { open = true; }">
             <button @click="toggle()"
                     class="w-full flex items-center justify-between px-3 py-2 text-xs font-semibold text-gray-400 uppercase tracking-wider hover:text-gray-300 transition-opacity duration-300"
                     :class="sidebarCollapsed ? 'opacity-0 h-0 overflow-hidden pointer-events-none' : 'opacity-100'">
@@ -516,7 +542,8 @@
                 this.open = !this.open;
                 localStorage.setItem('nav-hiring-process', this.open);
             }
-        }">
+        }"
+        x-init="if ({{ request()->routeIs('admin.hiring-process.*') || request()->routeIs('admin.hiring-positions.*') || request()->routeIs('admin.hiring-applications.*') ? 'true' : 'false' }}) { open = true; }">
             <button @click="toggle()"
                     class="w-full flex items-center justify-between px-3 py-2 text-xs font-semibold text-gray-400 uppercase tracking-wider hover:text-gray-300 transition-opacity duration-300"
                     :class="sidebarCollapsed ? 'opacity-0 h-0 overflow-hidden pointer-events-none' : 'opacity-100'">
@@ -712,7 +739,8 @@
                 this.open = !this.open;
                 localStorage.setItem('nav-linked-accounts', this.open);
             }
-        }">
+        }"
+        x-init="if ({{ request()->routeIs('admin.linked-accounts.*') || request()->routeIs('admin.starlinks.*') || request()->routeIs('admin.omadas.*') || request()->is('admin/subscription-plan-types*') || request()->is('admin/billing*') ? 'true' : 'false' }}) { open = true; }">
             <button @click="toggle()"
                     class="w-full flex items-center justify-between px-3 py-2 text-xs font-semibold text-gray-400 uppercase tracking-wider hover:text-gray-300 transition-opacity duration-300"
                     :class="sidebarCollapsed ? 'opacity-0 h-0 overflow-hidden pointer-events-none' : 'opacity-100'">
