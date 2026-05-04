@@ -52,9 +52,12 @@
                         Please make sure to be available on this date and time. We will contact you with further details about the interview location if needed.
                     </p>
                 @else
-                    <h2 style="margin: 16px 0 8px 0; font-size: 16px; color: #111827;">Interview scheduling</h2>
+                    <h2 style="margin: 16px 0 8px 0; font-size: 16px; color: #111827;">Application under review</h2>
                     <p style="margin: 0 0 12px 0;">
-                        You will receive a <strong>separate email</strong> when your interview is scheduled. That message will include the date and time, whether the interview will be <strong>on-site or online</strong>, and—if it is online—a <strong>meeting link</strong> to join (for example Zoom or Google Meet). Please check your inbox (including spam or promotions folders).
+                        This email is only a confirmation that we have received your application and that it is <strong>now with our team for review</strong>. It is <strong>not</strong> an interview invitation and does <strong>not</strong> schedule an interview.
+                    </p>
+                    <p style="margin: 0 0 12px 0;">
+                        We will send you a <strong>separate email</strong> after our team has finished reviewing your application. Please watch your inbox (including spam or promotions folders).
                     </p>
                 @endif
 
