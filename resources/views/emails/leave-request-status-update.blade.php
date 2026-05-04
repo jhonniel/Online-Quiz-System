@@ -39,10 +39,13 @@
                     @endif
                 </p>
 
-                @if($adminNotes)
-                    <h2 style="margin: 0 0 8px 0; font-size: 16px; color: #111827;">Admin Notes</h2>
+                @php
+                    $reviewerNotes = isset($adminNotes) ? trim((string) $adminNotes) : '';
+                @endphp
+                @if($reviewerNotes !== '')
+                    <h2 style="margin: 0 0 8px 0; font-size: 16px; color: #111827;">Notes from reviewer</h2>
                     <p style="margin: 0 0 12px 0; white-space: pre-line;">
-                        {{ $adminNotes }}
+                        {{ $reviewerNotes }}
                     </p>
                 @endif
 
@@ -52,7 +55,7 @@
                     @elseif($status === 'rejected')
                         ❌ Your {{ $leaveRequest->type_label }} request has been <strong>{{ $statusLabel }}</strong>. If you have any questions, please contact your supervisor or HR.
                     @elseif($status === 'resubmission_requested' || ($status === 'pending' && $leaveRequest->reviewed_at))
-                        ⚠️ Your {{ $leaveRequest->type_label }} request has been <strong>{{ $statusLabel }}</strong>. Please review the admin notes above and make the necessary corrections. You can edit your request from your leave requests page.
+                        ⚠️ Your {{ $leaveRequest->type_label }} request has been <strong>{{ $statusLabel }}</strong>. Please review the reviewer notes above (if any) and make the necessary corrections. You can edit your request from your leave requests page.
                     @endif
                 </p>
 

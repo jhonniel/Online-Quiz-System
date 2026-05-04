@@ -19,11 +19,13 @@ class InterviewRescheduled extends Mailable
     public $adminNotes;
     public $isReschedule;
     public $address;
+    public $interviewFormat;
+    public $meetingLink;
 
     /**
      * Create a new message instance.
      */
-    public function __construct($application, $interviewDate, $adminNotes = null, $position = null, $isReschedule = false, $address = null)
+    public function __construct($application, $interviewDate, $adminNotes = null, $position = null, $isReschedule = false, $address = null, $interviewFormat = 'on_site', $meetingLink = null)
     {
         $this->application = $application;
         $this->position = $position;
@@ -31,6 +33,8 @@ class InterviewRescheduled extends Mailable
         $this->adminNotes = $adminNotes;
         $this->isReschedule = $isReschedule;
         $this->address = $address;
+        $this->interviewFormat = $interviewFormat;
+        $this->meetingLink = $meetingLink;
     }
 
     /**
@@ -62,6 +66,8 @@ class InterviewRescheduled extends Mailable
                 'adminNotes' => $this->adminNotes,
                 'isReschedule' => $this->isReschedule,
                 'address' => $this->address,
+                'interviewFormat' => $this->interviewFormat,
+                'meetingLink' => $this->meetingLink,
             ],
         );
     }

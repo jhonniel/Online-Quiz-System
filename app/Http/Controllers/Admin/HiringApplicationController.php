@@ -305,6 +305,7 @@ class HiringApplicationController extends Controller
                     'email' => $application->email,
                     'type' => 'interview',
                     'status' => 'scheduled',
+                    'interview_format' => $application->interview_format ?? 'on_site',
                 ];
             }
         }
@@ -497,7 +498,7 @@ class HiringApplicationController extends Controller
                         $application,
                         $application->email,
                         $password,
-                        $application->interview_date,
+                        null,
                         $application->hiringPosition
                     ));
             } catch (\Exception $e) {
@@ -696,7 +697,7 @@ class HiringApplicationController extends Controller
                         $application,
                         $application->email,
                         $password,
-                        $application->interview_date,
+                        null,
                         $application->hiringPosition
                     ));
             } catch (\Exception $e) {
@@ -718,10 +719,20 @@ class HiringApplicationController extends Controller
             abort(403, 'Access denied. You do not have permission to schedule interviews for this position.');
         }
 
-        $request->validate([
+        $interviewFormat = $request->input('interview_format');
+        $rules = [
             'admin_notes' => 'nullable|string|max:1000',
             'interview_date' => 'required|date|after_or_equal:now',
-        ]);
+            'interview_format' => 'required|in:on_site,online',
+        ];
+        if ($interviewFormat === 'online') {
+            $rules['interview_meeting_link'] = 'required|url|max:2048';
+        } else {
+            $rules['interview_meeting_link'] = 'nullable|string|max:2048';
+        }
+        $request->validate($rules);
+
+        $meetingLink = $interviewFormat === 'online' ? $request->input('interview_meeting_link') : null;
 
         // Check if this is a reschedule (interview was already scheduled and date/time is changing)
         $isReschedule = $application->status === 'interview_scheduled' &&
@@ -732,6 +743,8 @@ class HiringApplicationController extends Controller
             'status' => 'interview_scheduled',
             'admin_notes' => $request->admin_notes,
             'interview_date' => $request->interview_date,
+            'interview_format' => $interviewFormat,
+            'interview_meeting_link' => $meetingLink,
             'reviewed_by' => Auth::id(),
             'reviewed_at' => now(),
         ]);
@@ -758,6 +771,7 @@ class HiringApplicationController extends Controller
                 'applicant_email' => $application->email,
                 'position' => $application->hiringPosition->title ?? $application->position_applied,
                 'interview_date' => $request->interview_date,
+                'interview_format' => $interviewFormat,
                 'admin_notes' => $request->admin_notes,
                 'is_reschedule' => $isReschedule,
             ]
@@ -770,8 +784,8 @@ class HiringApplicationController extends Controller
                 // Ensure mail configuration is up to date from settings
                 MailConfigService::configure();
 
-                // Get address from settings
-                $address = \App\Models\Setting::get('contact_address');
+                // Physical address only relevant for on-site interviews
+                $address = $interviewFormat === 'on_site' ? \App\Models\Setting::get('contact_address') : null;
 
                 Mail::to($application->email)
                     ->send(new \App\Mail\InterviewRescheduled(
@@ -780,7 +794,9 @@ class HiringApplicationController extends Controller
                         $request->admin_notes,
                         $application->hiringPosition,
                         $isReschedule,
-                        $address
+                        $address,
+                        $interviewFormat,
+                        $meetingLink
                     ));
 
                 Log::info('Interview ' . ($isReschedule ? 'rescheduled' : 'scheduled') . ' email sent successfully', [

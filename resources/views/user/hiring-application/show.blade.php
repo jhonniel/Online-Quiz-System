@@ -81,6 +81,16 @@
                                     <p class="mt-2 text-lg font-semibold text-gray-900">
                                         {{ $application->interview_date->format('F j, Y g:i A') }}
                                     </p>
+                                    @if(($application->interview_format ?? 'on_site') === 'online')
+                                        <p class="mt-2 text-sm text-gray-600">Online interview</p>
+                                        @if($application->interview_meeting_link)
+                                            <p class="mt-1">
+                                                <a href="{{ $application->interview_meeting_link }}" target="_blank" rel="noopener noreferrer" class="text-sm font-medium text-indigo-600 hover:text-indigo-800">Join meeting</a>
+                                            </p>
+                                        @endif
+                                    @elseif(in_array($application->status, ['interview_scheduled', 'done_interview'], true))
+                                        <p class="mt-2 text-sm text-gray-600">On-site interview</p>
+                                    @endif
                                 </div>
                             @endif
                         </div>

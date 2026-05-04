@@ -28,7 +28,21 @@
                     <strong>Date &amp; Time:</strong> {{ \Carbon\Carbon::parse($interviewDate)->format('F j, Y g:i A') }}
                 </p>
 
-                @if($address)
+                <p style="margin: 0 0 12px 0;">
+                    <strong>Format:</strong>
+                    @if(($interviewFormat ?? 'on_site') === 'online')
+                        Online (virtual meeting)
+                    @else
+                        On-site
+                    @endif
+                </p>
+
+                @if(($interviewFormat ?? 'on_site') === 'online' && !empty($meetingLink))
+                    <p style="margin: 0 0 12px 0;">
+                        <strong>Meeting link:</strong><br>
+                        <a href="{{ $meetingLink }}" style="color: #2563eb; text-decoration: underline; word-break: break-all;">{{ $meetingLink }}</a>
+                    </p>
+                @elseif(($interviewFormat ?? 'on_site') === 'on_site' && $address)
                     <p style="margin: 0 0 12px 0;">
                         <strong>Location:</strong><br>
                         {{ $address }}
@@ -44,9 +58,11 @@
 
                 <p style="margin: 0 0 12px 0;">
                     @if($isReschedule)
-                        Please note the new interview date above. If you have any questions or concerns, please contact us.
+                        Please note the new interview details above. If you have any questions or concerns, please contact us.
+                    @elseif(($interviewFormat ?? 'on_site') === 'online')
+                        Please join using the meeting link at the scheduled time. If you have trouble accessing the link, reply to this email or contact us.
                     @else
-                        Please make sure to be available on this date. We will contact you with further details about the interview location and time.
+                        Please make sure to be available on this date. We will contact you with further details about the interview location if needed.
                     @endif
                 </p>
 

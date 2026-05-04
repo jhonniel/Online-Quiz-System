@@ -89,10 +89,13 @@
                                             @php
                                                 $bgColor = $interview['type'] === 'accepted' ? 'bg-green-100 hover:bg-green-200 text-green-800' : 'bg-indigo-100 hover:bg-indigo-200 text-indigo-800';
                                                 $label = $interview['type'] === 'accepted' ? 'Accepted' : 'Interview';
+                                                if (($interview['type'] ?? '') === 'interview' && ($interview['interview_format'] ?? 'on_site') === 'online') {
+                                                    $label .= ' (Online)';
+                                                }
                                             @endphp
                                             <a href="{{ url('/admin/hiring-applications/' . $interview['id']) }}"
                                                class="block px-2 py-1 text-xs rounded {{ $bgColor }} transition-colors"
-                                               title="{{ $interview['applicant_name'] }} - {{ $interview['position'] }} ({{ $interview['interview_time'] }})">
+                                               title="{{ $interview['applicant_name'] }} - {{ $interview['position'] }} ({{ $interview['interview_time'] }}){{ ($interview['type'] ?? '') === 'interview' && ($interview['interview_format'] ?? 'on_site') === 'online' ? ' — Online' : '' }}">
                                                 <div class="font-semibold truncate">{{ $interview['interview_time'] }} - {{ $label }}</div>
                                                 <div class="truncate">{{ $interview['applicant_name'] }}</div>
                                                 <div class="truncate {{ $interview['type'] === 'accepted' ? 'text-green-700' : 'text-indigo-600' }}">{{ $interview['position'] }}</div>

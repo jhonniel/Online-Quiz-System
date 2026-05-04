@@ -30,6 +30,12 @@
                 <p style="margin: 0 0 8px 0;">
                     <strong>Date &amp; Time:</strong> {{ $interviewDate->format('F j, Y \\a\\t g:i A') }}
                 </p>
+                @if(($application->interview_format ?? 'on_site') === 'online' && $application->interview_meeting_link)
+                    <p style="margin: 0 0 12px 0;">
+                        <strong>Meeting link:</strong>
+                        <a href="{{ $application->interview_meeting_link }}" style="color: #2563eb; text-decoration: underline; word-break: break-all;">{{ $application->interview_meeting_link }}</a>
+                    </p>
+                @endif
                 @if($application->interview_date)
                     <p style="margin: 0 0 12px 0;">
                         <strong>Original Schedule:</strong> {{ $application->interview_date->format('F j, Y \\a\\t g:i A') }}

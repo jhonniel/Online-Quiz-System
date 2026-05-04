@@ -198,7 +198,7 @@
                         <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-red-100 text-red-800">
                             Rejected
                         </span>
-                @elseif($application->status == 'interview_scheduled')
+                    @elseif($application->status == 'interview_scheduled')
                     <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800">
                         Interview Scheduled
                     </span>
@@ -206,6 +206,22 @@
                         <div class="mt-3">
                             <label class="text-sm font-medium text-gray-500">Interview Date & Time</label>
                             <p class="mt-1 text-sm text-gray-900">{{ $application->interview_date->format('F j, Y g:i A') }}</p>
+                        </div>
+                    @endif
+                    @if(($application->interview_format ?? 'on_site') === 'online')
+                        <div class="mt-3">
+                            <label class="text-sm font-medium text-gray-500">Interview format</label>
+                            <p class="mt-1 text-sm text-gray-900">Online</p>
+                            @if($application->interview_meeting_link)
+                                <p class="mt-1 text-xs text-gray-600 break-all">
+                                    <a href="{{ $application->interview_meeting_link }}" target="_blank" rel="noopener noreferrer" class="text-indigo-600 hover:text-indigo-800">Open meeting link</a>
+                                </p>
+                            @endif
+                        </div>
+                    @elseif($application->interview_date)
+                        <div class="mt-3">
+                            <label class="text-sm font-medium text-gray-500">Interview format</label>
+                            <p class="mt-1 text-sm text-gray-900">On-site</p>
                         </div>
                     @endif
                     <div class="mt-3">
@@ -219,6 +235,22 @@
                             <div class="mt-3">
                                 <label class="text-sm font-medium text-gray-500">Interview Date & Time</label>
                                 <p class="mt-1 text-sm text-gray-900">{{ $application->interview_date->format('F j, Y g:i A') }}</p>
+                            </div>
+                        @endif
+                        @if(($application->interview_format ?? 'on_site') === 'online')
+                            <div class="mt-3">
+                                <label class="text-sm font-medium text-gray-500">Interview format</label>
+                                <p class="mt-1 text-sm text-gray-900">Online</p>
+                                @if($application->interview_meeting_link)
+                                    <p class="mt-1 text-xs text-gray-600 break-all">
+                                        <a href="{{ $application->interview_meeting_link }}" target="_blank" rel="noopener noreferrer" class="text-indigo-600 hover:text-indigo-800">Open meeting link</a>
+                                    </p>
+                                @endif
+                            </div>
+                        @elseif($application->interview_date)
+                            <div class="mt-3">
+                                <label class="text-sm font-medium text-gray-500">Interview format</label>
+                                <p class="mt-1 text-sm text-gray-900">On-site</p>
                             </div>
                         @endif
                         <div class="mt-3">
@@ -416,6 +448,9 @@
                             </p>
                         </form>
                     @elseif($application->status == 'accepted')
+                        @php
+                            $scheduleInterviewFormat = old('interview_format', $application->interview_format ?? 'on_site');
+                        @endphp
                         <form action="{{ url('/admin/hiring-applications/' . $application->id . '/schedule-interview') }}" method="POST">
                             @csrf
                             <div class="mb-3">
@@ -430,6 +465,36 @@
                                        value="{{ old('interview_date', $application->interview_date ? $application->interview_date->format('Y-m-d\TH:i') : '') }}"
                                        class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm @error('interview_date') border-red-500 @enderror">
                                 @error('interview_date')
+                                    <p class="mt-1 text-xs text-red-600">{{ $message }}</p>
+                                @enderror
+                            </div>
+                            <fieldset class="mb-3">
+                                <legend class="block text-sm font-medium text-gray-700 mb-2">Interview format <span class="text-red-500">*</span></legend>
+                                <div class="space-y-2">
+                                    <label class="flex items-center gap-2 text-sm text-gray-800 cursor-pointer">
+                                        <input type="radio" name="interview_format" value="on_site" class="rounded-full border-gray-300 text-indigo-600 focus:ring-indigo-500" {{ $scheduleInterviewFormat === 'on_site' ? 'checked' : '' }}>
+                                        <span>On-site</span>
+                                    </label>
+                                    <label class="flex items-center gap-2 text-sm text-gray-800 cursor-pointer">
+                                        <input type="radio" name="interview_format" value="online" class="rounded-full border-gray-300 text-indigo-600 focus:ring-indigo-500" {{ $scheduleInterviewFormat === 'online' ? 'checked' : '' }}>
+                                        <span>Online (Zoom, Google Meet, etc.)</span>
+                                    </label>
+                                </div>
+                                @error('interview_format')
+                                    <p class="mt-1 text-xs text-red-600">{{ $message }}</p>
+                                @enderror
+                            </fieldset>
+                            <div id="interview_meeting_link_wrap" class="mb-3 {{ $scheduleInterviewFormat === 'online' ? '' : 'hidden' }}">
+                                <label for="interview_meeting_link_schedule" class="block text-sm font-medium text-gray-700 mb-1">
+                                    Meeting link <span class="text-red-500">*</span>
+                                </label>
+                                <input type="url"
+                                       name="interview_meeting_link"
+                                       id="interview_meeting_link_schedule"
+                                       value="{{ old('interview_meeting_link', $application->interview_meeting_link) }}"
+                                       placeholder="https://zoom.us/j/... or https://meet.google.com/..."
+                                       class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm @error('interview_meeting_link') border-red-500 @enderror">
+                                @error('interview_meeting_link')
                                     <p class="mt-1 text-xs text-red-600">{{ $message }}</p>
                                 @enderror
                             </div>
@@ -454,6 +519,9 @@
                             </button>
                         </form>
                     @elseif($application->status == 'interview_scheduled')
+                        @php
+                            $rescheduleInterviewFormat = old('interview_format', $application->interview_format ?? 'on_site');
+                        @endphp
                         <form action="{{ url('/admin/hiring-applications/' . $application->id . '/schedule-interview') }}" method="POST">
                             @csrf
                             <div class="mb-3">
@@ -468,6 +536,36 @@
                                        value="{{ old('interview_date', $application->interview_date ? $application->interview_date->format('Y-m-d\TH:i') : '') }}"
                                        class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm @error('interview_date') border-red-500 @enderror">
                                 @error('interview_date')
+                                    <p class="mt-1 text-xs text-red-600">{{ $message }}</p>
+                                @enderror
+                            </div>
+                            <fieldset class="mb-3">
+                                <legend class="block text-sm font-medium text-gray-700 mb-2">Interview format <span class="text-red-500">*</span></legend>
+                                <div class="space-y-2">
+                                    <label class="flex items-center gap-2 text-sm text-gray-800 cursor-pointer">
+                                        <input type="radio" name="interview_format" value="on_site" class="rounded-full border-gray-300 text-indigo-600 focus:ring-indigo-500" {{ $rescheduleInterviewFormat === 'on_site' ? 'checked' : '' }}>
+                                        <span>On-site</span>
+                                    </label>
+                                    <label class="flex items-center gap-2 text-sm text-gray-800 cursor-pointer">
+                                        <input type="radio" name="interview_format" value="online" class="rounded-full border-gray-300 text-indigo-600 focus:ring-indigo-500" {{ $rescheduleInterviewFormat === 'online' ? 'checked' : '' }}>
+                                        <span>Online (Zoom, Google Meet, etc.)</span>
+                                    </label>
+                                </div>
+                                @error('interview_format')
+                                    <p class="mt-1 text-xs text-red-600">{{ $message }}</p>
+                                @enderror
+                            </fieldset>
+                            <div id="interview_meeting_link_wrap" class="mb-3 {{ $rescheduleInterviewFormat === 'online' ? '' : 'hidden' }}">
+                                <label for="interview_meeting_link_reschedule" class="block text-sm font-medium text-gray-700 mb-1">
+                                    Meeting link <span class="text-red-500">*</span>
+                                </label>
+                                <input type="url"
+                                       name="interview_meeting_link"
+                                       id="interview_meeting_link_reschedule"
+                                       value="{{ old('interview_meeting_link', $application->interview_meeting_link) }}"
+                                       placeholder="https://zoom.us/j/... or https://meet.google.com/..."
+                                       class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm @error('interview_meeting_link') border-red-500 @enderror">
+                                @error('interview_meeting_link')
                                     <p class="mt-1 text-xs text-red-600">{{ $message }}</p>
                                 @enderror
                             </div>
@@ -757,6 +855,11 @@
                                                 <span class="font-medium">Interview Date:</span> {{ \Carbon\Carbon::parse($log->metadata['interview_date'])->format('F j, Y g:i A') }}
                                             </div>
                                         @endif
+                                        @if(isset($log->metadata['interview_format']))
+                                            <div class="text-sm text-gray-600">
+                                                <span class="font-medium">Format:</span> {{ $log->metadata['interview_format'] === 'online' ? 'Online' : 'On-site' }}
+                                            </div>
+                                        @endif
                                         @if(isset($log->metadata['admin_notes']) && !empty($log->metadata['admin_notes']))
                                             <div class="text-sm text-gray-600 bg-gray-50 rounded p-2 mt-2">
                                                 {{ $log->metadata['admin_notes'] }}
@@ -797,6 +900,17 @@ function copyToClipboard(text) {
 
 // Loading animation for action buttons
 document.addEventListener('DOMContentLoaded', function() {
+    const meetingLinkWrap = document.getElementById('interview_meeting_link_wrap');
+    function syncInterviewMeetingLinkRow() {
+        if (!meetingLinkWrap) return;
+        const onlineSelected = document.querySelector('input[name="interview_format"][value="online"]:checked');
+        meetingLinkWrap.classList.toggle('hidden', !onlineSelected);
+    }
+    document.querySelectorAll('input[name="interview_format"]').forEach(function (radio) {
+        radio.addEventListener('change', syncInterviewMeetingLinkRow);
+    });
+    syncInterviewMeetingLinkRow();
+
     // Get all action buttons
     const actionButtons = document.querySelectorAll('button[type="submit"].action-button');
 

@@ -54,6 +54,11 @@ class LeaveRequestStatusUpdate extends Mailable
     {
         return new Content(
             view: 'emails.leave-request-status-update',
+            with: [
+                'leaveRequest' => $this->leaveRequest,
+                'status' => $this->status,
+                'adminNotes' => $this->adminNotes,
+            ],
         );
     }
 

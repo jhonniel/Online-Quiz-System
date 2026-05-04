@@ -763,7 +763,11 @@ class LeaveRequestController extends Controller
             ]);
 
             Mail::to($leaveRequest->user->email)->send(
-                new LeaveRequestStatusUpdate($leaveRequest, 'approved', $request->admin_notes)
+                new LeaveRequestStatusUpdate(
+                    $leaveRequest,
+                    'approved',
+                    $this->normalizedLeaveRequestMailNotes($leaveRequest->admin_notes)
+                )
             );
 
             Log::info('Leave request approval email sent successfully', [
@@ -839,7 +843,11 @@ class LeaveRequestController extends Controller
             ]);
 
             Mail::to($leaveRequest->user->email)->send(
-                new LeaveRequestStatusUpdate($leaveRequest, 'approved', $request->admin_notes)
+                new LeaveRequestStatusUpdate(
+                    $leaveRequest,
+                    'approved',
+                    $this->normalizedLeaveRequestMailNotes($leaveRequest->admin_notes)
+                )
             );
 
             Log::info('Leave request force acceptance email sent successfully', [
@@ -902,7 +910,11 @@ class LeaveRequestController extends Controller
             ]);
 
             Mail::to($leaveRequest->user->email)->send(
-                new LeaveRequestStatusUpdate($leaveRequest, 'rejected', $request->admin_notes)
+                new LeaveRequestStatusUpdate(
+                    $leaveRequest,
+                    'rejected',
+                    $this->normalizedLeaveRequestMailNotes($leaveRequest->admin_notes)
+                )
             );
 
             Log::info('Leave request rejection email sent successfully', [
@@ -976,8 +988,11 @@ class LeaveRequestController extends Controller
                 'user_name' => $leaveRequest->user->name
             ]);
 
+            $resubmissionEmailNotes = $this->normalizedLeaveRequestMailNotes($request->admin_notes)
+                ?? $this->normalizedLeaveRequestMailNotes($leaveRequest->admin_notes);
+
             Mail::to($leaveRequest->user->email)->send(
-                new LeaveRequestStatusUpdate($leaveRequest, 'resubmission_requested', $request->admin_notes)
+                new LeaveRequestStatusUpdate($leaveRequest, 'resubmission_requested', $resubmissionEmailNotes)
             );
 
             Log::info('Leave request resubmission email sent successfully', [
@@ -1914,6 +1929,16 @@ class LeaveRequestController extends Controller
         }
 
         return $reasonToStore;
+    }
+
+    /**
+     * Trim reviewer notes for leave status emails; return null when empty so the template can omit the section.
+     */
+    private function normalizedLeaveRequestMailNotes(?string $notes): ?string
+    {
+        $trimmed = trim((string) ($notes ?? ''));
+
+        return $trimmed === '' ? null : $trimmed;
     }
 
     /**

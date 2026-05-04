@@ -31,6 +31,8 @@ class HiringApplication extends Model
         'token_expires_at',
         'user_id',
         'interview_date',
+        'interview_format',
+        'interview_meeting_link',
     ];
 
     protected $casts = [
@@ -86,6 +88,11 @@ class HiringApplication extends Model
     public function isInterviewScheduled()
     {
         return $this->status === 'interview_scheduled';
+    }
+
+    public function isInterviewOnline(): bool
+    {
+        return ($this->interview_format ?? 'on_site') === 'online';
     }
 
     public function isInterviewDone()
