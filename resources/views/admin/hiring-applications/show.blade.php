@@ -413,24 +413,28 @@
                             'hiring_application_follow_up_sent' => 'Follow-Up Email Sent',
                             'hiring_application_interview_done' => 'Interview Done',
                             'hiring_application_hired' => 'Marked as Hired',
+                            'hiring_application_intern_accepted' => 'Intern Accepted',
                             'hiring_application_hired_cancelled' => 'Hired Status Cancelled',
                             'hiring_application_deleted' => 'Application Deleted',
+                            'hiring_application_updated' => 'Record Updated',
                             default => ucfirst(str_replace('_', ' ', str_replace('hiring_application_', '', $log->action))),
                         };
                         $borderColor = match($log->action) {
-                            'hiring_application_accepted', 'hiring_application_reconsidered', 'hiring_application_hired' => 'border-green-500',
+                            'hiring_application_accepted', 'hiring_application_reconsidered', 'hiring_application_hired', 'hiring_application_intern_accepted' => 'border-green-500',
                             'hiring_application_rejected', 'hiring_application_hired_cancelled' => 'border-red-500',
                             'hiring_application_interview_scheduled', 'hiring_application_interview_rescheduled', 'hiring_application_follow_up_sent' => 'border-blue-500',
                             'hiring_application_interview_done' => 'border-purple-500',
                             'hiring_application_deleted' => 'border-gray-400',
+                            'hiring_application_updated' => 'border-slate-400',
                             default => 'border-gray-400',
                         };
                         $badgeColor = match($log->action) {
-                            'hiring_application_accepted', 'hiring_application_reconsidered', 'hiring_application_hired' => 'bg-green-100 text-green-800',
+                            'hiring_application_accepted', 'hiring_application_reconsidered', 'hiring_application_hired', 'hiring_application_intern_accepted' => 'bg-green-100 text-green-800',
                             'hiring_application_rejected', 'hiring_application_hired_cancelled' => 'bg-red-100 text-red-800',
                             'hiring_application_interview_scheduled', 'hiring_application_interview_rescheduled', 'hiring_application_follow_up_sent' => 'bg-blue-100 text-blue-800',
                             'hiring_application_interview_done' => 'bg-purple-100 text-purple-800',
                             'hiring_application_deleted' => 'bg-gray-100 text-gray-800',
+                            'hiring_application_updated' => 'bg-slate-100 text-slate-800',
                             default => 'bg-gray-100 text-gray-800',
                         };
                     @endphp
@@ -470,6 +474,47 @@
                                         @if(isset($log->metadata['is_reschedule']) && $log->metadata['is_reschedule'])
                                             <div class="text-sm text-blue-600">
                                                 <span class="font-medium">Type:</span> Rescheduled
+                                            </div>
+                                        @endif
+                                        @if(!empty($log->metadata['changes']) && is_array($log->metadata['changes']))
+                                            @php
+                                                $changeLabels = [
+                                                    'admin_notes' => 'Admin notes',
+                                                    'status' => 'Status',
+                                                    'interview_date' => 'Interview date',
+                                                    'interview_format' => 'Interview format',
+                                                    'interview_meeting_link' => 'Meeting link',
+                                                    'user_id' => 'Linked user',
+                                                    'reviewed_by' => 'Reviewed by (user id)',
+                                                    'reviewed_at' => 'Reviewed at',
+                                                    'hiring_position_id' => 'Position',
+                                                ];
+                                            @endphp
+                                            <div class="mt-2 space-y-2">
+                                                <p class="text-xs font-medium text-gray-600 uppercase tracking-wide">Fields changed</p>
+                                                @foreach($log->metadata['changes'] as $field => $pair)
+                                                    @if(is_array($pair) && (array_key_exists('old', $pair) || array_key_exists('new', $pair)))
+                                                        <div class="text-sm border border-gray-100 rounded-md p-2 bg-gray-50/90">
+                                                            <div class="font-medium text-gray-800">{{ $changeLabels[$field] ?? ucfirst(str_replace('_', ' ', $field)) }}</div>
+                                                            <div class="mt-1 text-xs text-gray-600 break-words">
+                                                                <span class="text-gray-500">From:</span>
+                                                                @php
+                                                                    $fromVal = $pair['old'] ?? null;
+                                                                    $fromStr = $fromVal === null || $fromVal === '' ? '—' : (is_scalar($fromVal) ? (string) $fromVal : json_encode($fromVal));
+                                                                @endphp
+                                                                {{ $fromStr }}
+                                                            </div>
+                                                            <div class="mt-0.5 text-xs text-gray-800 break-words">
+                                                                <span class="text-gray-500">To:</span>
+                                                                @php
+                                                                    $toVal = $pair['new'] ?? null;
+                                                                    $toStr = $toVal === null || $toVal === '' ? '—' : (is_scalar($toVal) ? (string) $toVal : json_encode($toVal));
+                                                                @endphp
+                                                                {{ $toStr }}
+                                                            </div>
+                                                        </div>
+                                                    @endif
+                                                @endforeach
                                             </div>
                                         @endif
                                     </div>

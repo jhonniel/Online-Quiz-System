@@ -471,17 +471,35 @@ class HiringApplicationController extends Controller
         }
 
         // Update application (interview date/time is set via Schedule Interview, not required on accept)
-        $application->update([
-            'status' => 'accepted',
-            'admin_notes' => $request->admin_notes,
-            'reviewed_by' => Auth::id(),
-            'reviewed_at' => now(),
-            'interview_date' => $request->filled('interview_date') ? $request->interview_date : null,
-            'user_id' => $user->id,
-        ]);
+        HiringApplication::withoutEvents(function () use ($application, $request, $user) {
+            $application->update([
+                'status' => 'accepted',
+                'admin_notes' => $request->admin_notes,
+                'reviewed_by' => Auth::id(),
+                'reviewed_at' => now(),
+                'interview_date' => $request->filled('interview_date') ? $request->interview_date : null,
+                'user_id' => $user->id,
+            ]);
+        });
 
         // Refresh to get the properly formatted datetime
         $application->refresh();
+
+        $application->loadMissing('hiringPosition');
+        UserActivity::logActivity(
+            Auth::user(),
+            'action',
+            'hiring_application_accepted',
+            [
+                'application_id' => $application->id,
+                'applicant_name' => $application->full_name,
+                'applicant_email' => $application->email,
+                'position' => $application->hiringPosition->title ?? $application->position_applied,
+                'admin_notes' => $request->admin_notes,
+                'interview_date' => $application->interview_date?->toDateTimeString(),
+                'user_id' => $user->id,
+            ]
+        );
 
         // Generate acceptance token (for backward compatibility)
         $token = $application->generateAcceptanceToken();
@@ -524,12 +542,14 @@ class HiringApplicationController extends Controller
             'admin_notes' => 'nullable|string|max:1000',
         ]);
 
-        $application->update([
-            'status' => 'rejected',
-            'admin_notes' => $request->admin_notes,
-            'reviewed_by' => Auth::id(),
-            'reviewed_at' => now(),
-        ]);
+        HiringApplication::withoutEvents(function () use ($application, $request) {
+            $application->update([
+                'status' => 'rejected',
+                'admin_notes' => $request->admin_notes,
+                'reviewed_by' => Auth::id(),
+                'reviewed_at' => now(),
+            ]);
+        });
 
         // Log the action
         UserActivity::logActivity(
@@ -652,14 +672,16 @@ class HiringApplicationController extends Controller
         }
 
         // Update application (interview date/time is set via Schedule Interview, not required on reconsider)
-        $application->update([
-            'status' => 'accepted',
-            'admin_notes' => $request->admin_notes,
-            'reviewed_by' => Auth::id(),
-            'reviewed_at' => now(),
-            'interview_date' => $request->filled('interview_date') ? $request->interview_date : null,
-            'user_id' => $user->id,
-        ]);
+        HiringApplication::withoutEvents(function () use ($application, $request, $user) {
+            $application->update([
+                'status' => 'accepted',
+                'admin_notes' => $request->admin_notes,
+                'reviewed_by' => Auth::id(),
+                'reviewed_at' => now(),
+                'interview_date' => $request->filled('interview_date') ? $request->interview_date : null,
+                'user_id' => $user->id,
+            ]);
+        });
 
         // Refresh to get the properly formatted datetime
         $application->refresh();
@@ -739,15 +761,17 @@ class HiringApplicationController extends Controller
                        $application->interview_date &&
                        $application->interview_date->format('Y-m-d H:i') !== date('Y-m-d H:i', strtotime($request->interview_date));
 
-        $application->update([
-            'status' => 'interview_scheduled',
-            'admin_notes' => $request->admin_notes,
-            'interview_date' => $request->interview_date,
-            'interview_format' => $interviewFormat,
-            'interview_meeting_link' => $meetingLink,
-            'reviewed_by' => Auth::id(),
-            'reviewed_at' => now(),
-        ]);
+        HiringApplication::withoutEvents(function () use ($application, $request, $interviewFormat, $meetingLink) {
+            $application->update([
+                'status' => 'interview_scheduled',
+                'admin_notes' => $request->admin_notes,
+                'interview_date' => $request->interview_date,
+                'interview_format' => $interviewFormat,
+                'interview_meeting_link' => $meetingLink,
+                'reviewed_by' => Auth::id(),
+                'reviewed_at' => now(),
+            ]);
+        });
 
         // Ensure user account is activated so they can login and take quizzes
         if ($application->user_id) {
@@ -966,12 +990,14 @@ class HiringApplicationController extends Controller
         }
 
         // Update application status to done_interview
-        $application->update([
-            'status' => 'done_interview',
-            'admin_notes' => $request->admin_notes ?? $application->admin_notes,
-            'reviewed_by' => Auth::id(),
-            'reviewed_at' => now(),
-        ]);
+        HiringApplication::withoutEvents(function () use ($application, $request) {
+            $application->update([
+                'status' => 'done_interview',
+                'admin_notes' => $request->admin_notes ?? $application->admin_notes,
+                'reviewed_by' => Auth::id(),
+                'reviewed_at' => now(),
+            ]);
+        });
 
         // Ensure user account is activated so they can login and take quizzes
         if ($application->user_id) {
@@ -1045,12 +1071,14 @@ class HiringApplicationController extends Controller
         $previousStatus = $application->status;
 
         // Update application status to hired
-        $application->update([
-            'status' => 'hired',
-            'admin_notes' => $request->admin_notes ?? $application->admin_notes,
-            'reviewed_by' => Auth::id(),
-            'reviewed_at' => now(),
-        ]);
+        HiringApplication::withoutEvents(function () use ($application, $request) {
+            $application->update([
+                'status' => 'hired',
+                'admin_notes' => $request->admin_notes ?? $application->admin_notes,
+                'reviewed_by' => Auth::id(),
+                'reviewed_at' => now(),
+            ]);
+        });
 
         // Prepare user update data
         $userUpdateData = [
@@ -1158,12 +1186,14 @@ class HiringApplicationController extends Controller
         $previousStatus = $application->status;
 
         // Update application status to hired
-        $application->update([
-            'status' => 'hired',
-            'admin_notes' => $request->admin_notes ?? $application->admin_notes,
-            'reviewed_by' => Auth::id(),
-            'reviewed_at' => now(),
-        ]);
+        HiringApplication::withoutEvents(function () use ($application, $request) {
+            $application->update([
+                'status' => 'hired',
+                'admin_notes' => $request->admin_notes ?? $application->admin_notes,
+                'reviewed_by' => Auth::id(),
+                'reviewed_at' => now(),
+            ]);
+        });
 
         // Prepare user update data - change role to student for interns
         $userUpdateData = [
@@ -1261,12 +1291,14 @@ class HiringApplicationController extends Controller
         $previousStatus = $application->interview_date ? 'interview_scheduled' : 'accepted';
 
         // Update application status
-        $application->update([
-            'status' => $previousStatus,
-            'admin_notes' => $request->admin_notes ?? $application->admin_notes,
-            'reviewed_by' => Auth::id(),
-            'reviewed_at' => now(),
-        ]);
+        HiringApplication::withoutEvents(function () use ($application, $request, $previousStatus) {
+            $application->update([
+                'status' => $previousStatus,
+                'admin_notes' => $request->admin_notes ?? $application->admin_notes,
+                'reviewed_by' => Auth::id(),
+                'reviewed_at' => now(),
+            ]);
+        });
 
         // Deactivate user account so they cannot login
         $user->update([

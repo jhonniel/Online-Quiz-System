@@ -6,7 +6,9 @@ use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Mail;
+use App\Models\HiringApplication;
 use App\Models\Setting;
+use App\Observers\HiringApplicationObserver;
 use App\Services\MailConfigService;
 
 class AppServiceProvider extends ServiceProvider
@@ -35,6 +37,8 @@ class AppServiceProvider extends ServiceProvider
         
         // Register dynamic hiring application route based on admin settings
         $this->registerHiringApplicationRoute();
+
+        HiringApplication::observe(HiringApplicationObserver::class);
         
         // Route model binding for DtrTimeRequest
         Route::bind('dtrTimeRequest', function ($value) {
