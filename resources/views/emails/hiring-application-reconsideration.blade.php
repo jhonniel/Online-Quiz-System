@@ -68,7 +68,11 @@
                     <li>Your account is already active, so you can log in immediately.</li>
                     <li>Use the login button above or visit our website to access your account.</li>
                     @if($position && strcasecmp($position->employment_type ?? '', 'Internship') === 0)
-                        <li><strong>Please read the TOR (Term of Reference) PDF file attached to this email.</strong></li>
+                        <li>
+                            Please read the
+                            <a href="{{ $torPdfUrl }}" target="_blank" rel="noopener noreferrer" style="color: #4f46e5; font-weight: 700; text-decoration: underline;">TOR (Term of Reference) PDF</a>
+                            on our website for the current version; a copy is also attached to this email when available.
+                        </li>
                     @endif
                 </ul>
 

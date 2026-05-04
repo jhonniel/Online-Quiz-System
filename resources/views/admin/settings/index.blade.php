@@ -766,35 +766,12 @@
                                     <label for="hiring_tor_pdf" class="block text-sm font-medium text-gray-700 mb-2">TOR (Term of Reference) PDF</label>
                                     @php
                                         $torPdfPath = $settings['hiring_tor_pdf'] ?? null;
-                                        $torPdfUrl = null;
-                                        if ($torPdfPath) {
-                                            try {
-                                                foreach (['spaces', 'digitalocean', 'public'] as $disk) {
-                                                    $storage = \Illuminate\Support\Facades\Storage::disk($disk);
-                                                    if (!$storage->exists($torPdfPath)) {
-                                                        continue;
-                                                    }
-
-                                                    if (method_exists($storage, 'temporaryUrl')) {
-                                                        try {
-                                                            $torPdfUrl = $storage->temporaryUrl($torPdfPath, now()->addHours(24));
-                                                        } catch (\Throwable $e) {
-                                                            $torPdfUrl = $storage->url($torPdfPath);
-                                                        }
-                                                    } else {
-                                                        $torPdfUrl = $storage->url($torPdfPath);
-                                                    }
-                                                    break;
-                                                }
-                                            } catch (\Throwable $e) {
-                                                $torPdfUrl = null;
-                                            }
-                                        }
+                                        $hasTorPdfInSettings = is_string($torPdfPath) && trim($torPdfPath) !== '';
                                     @endphp
-                                    @if($torPdfUrl)
+                                    @if($hasTorPdfInSettings)
                                         <div class="mb-3">
                                             <p class="text-sm text-gray-600 mb-2">Current TOR PDF:</p>
-                                            <a href="{{ $torPdfUrl }}" target="_blank" class="inline-flex items-center px-3 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors">
+                                            <a href="{{ url('/tor-pdf') }}" target="_blank" rel="noopener noreferrer" class="inline-flex items-center px-3 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors">
                                                 <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"></path>
                                                 </svg>

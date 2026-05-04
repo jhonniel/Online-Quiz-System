@@ -61,6 +61,7 @@ class HiringApplicationReconsideration extends Mailable
                 'password' => $this->password,
                 'interviewDate' => $this->interviewDate,
                 'loginUrl' => $this->loginUrl,
+                'torPdfUrl' => url('/tor-pdf'),
             ],
         );
     }
