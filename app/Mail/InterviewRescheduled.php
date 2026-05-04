@@ -46,6 +46,8 @@ class InterviewRescheduled extends Mailable
         $subject = $this->isReschedule
             ? "Interview Rescheduled - {$positionTitle}"
             : "Interview Scheduled - {$positionTitle}";
+        $formatSuffix = (($this->interviewFormat ?? 'on_site') === 'online') ? ' (Online)' : ' (On-site)';
+        $subject .= $formatSuffix;
 
         return new Envelope(
             subject: $subject,

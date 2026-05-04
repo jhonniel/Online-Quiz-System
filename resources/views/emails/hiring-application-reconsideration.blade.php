@@ -51,6 +51,11 @@
                     <p style="margin: 0 0 12px 0;">
                         Please make sure to be available on this date and time. We will contact you with further details about the interview location if needed.
                     </p>
+                @else
+                    <h2 style="margin: 16px 0 8px 0; font-size: 16px; color: #111827;">Interview scheduling</h2>
+                    <p style="margin: 0 0 12px 0;">
+                        You will receive a <strong>separate email</strong> when your interview is scheduled. That message will include the date and time, whether the interview will be <strong>on-site or online</strong>, and—if it is online—a <strong>meeting link</strong> to join (for example Zoom or Google Meet). Please check your inbox (including spam or promotions folders).
+                    </p>
                 @endif
 
                 <h2 style="margin: 16px 0 8px 0; font-size: 16px; color: #111827;">Important Notes</h2>

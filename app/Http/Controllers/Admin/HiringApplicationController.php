@@ -410,7 +410,7 @@ class HiringApplicationController extends Controller
 
         $request->validate([
             'admin_notes' => 'nullable|string|max:1000',
-            'interview_date' => 'required|date|after_or_equal:now',
+            'interview_date' => 'nullable|date|after_or_equal:now',
         ]);
 
         // Generate a random password for the applicant
@@ -470,13 +470,13 @@ class HiringApplicationController extends Controller
             $user->update($updateData);
         }
 
-        // Update application
+        // Update application (interview date/time is set via Schedule Interview, not required on accept)
         $application->update([
             'status' => 'accepted',
             'admin_notes' => $request->admin_notes,
             'reviewed_by' => Auth::id(),
             'reviewed_at' => now(),
-            'interview_date' => $request->interview_date,
+            'interview_date' => $request->filled('interview_date') ? $request->interview_date : null,
             'user_id' => $user->id,
         ]);
 
@@ -591,7 +591,7 @@ class HiringApplicationController extends Controller
 
         $request->validate([
             'admin_notes' => 'nullable|string|max:1000',
-            'interview_date' => 'required|date|after_or_equal:now',
+            'interview_date' => 'nullable|date|after_or_equal:now',
         ]);
 
         // Generate a random password for the applicant
@@ -651,13 +651,13 @@ class HiringApplicationController extends Controller
             $user->update($updateData);
         }
 
-        // Update application
+        // Update application (interview date/time is set via Schedule Interview, not required on reconsider)
         $application->update([
             'status' => 'accepted',
             'admin_notes' => $request->admin_notes,
             'reviewed_by' => Auth::id(),
             'reviewed_at' => now(),
-            'interview_date' => $request->interview_date,
+            'interview_date' => $request->filled('interview_date') ? $request->interview_date : null,
             'user_id' => $user->id,
         ]);
 
