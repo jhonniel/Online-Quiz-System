@@ -119,7 +119,14 @@ class StudentDashboardController extends Controller
                 ->groupBy('user_id')
                 ->pluck('total_hours_sum', 'user_id');
 
-            $ranked = $students->map(function ($student) use ($totalsByStudent) {
+            // Count approved leave requests per student (all leave types)
+            $approvedLeaveRequestsByStudent = LeaveRequest::whereIn('user_id', $studentIds)
+                ->where('status', 'approved')
+                ->selectRaw('user_id, COUNT(*) as approved_leave_count')
+                ->groupBy('user_id')
+                ->pluck('approved_leave_count', 'user_id');
+
+            $ranked = $students->map(function ($student) use ($totalsByStudent, $approvedLeaveRequestsByStudent) {
                 $required = (float) ($student->required_training_hours ?? 0);
                 $totalRaw = (float) ($totalsByStudent[$student->id] ?? 0);
                 $rollbackHours = $this->getPendingResubmissionRollbackHours((int) $student->id);
@@ -143,6 +150,7 @@ class StudentDashboardController extends Controller
                     'required_hours' => $required,
                     'total_hours' => $total,
                     'remaining_hours' => $remaining,
+                    'approved_leave_requests' => (int) ($approvedLeaveRequestsByStudent[$student->id] ?? 0),
                     'required_hours_formatted' => $this->formatHours($required),
                     'total_hours_formatted' => $this->formatHours($total),
                     'remaining_hours_formatted' => $this->formatHours($remaining),
