@@ -94,7 +94,9 @@
                             <th class="px-3 sm:px-6 py-3 text-right text-[11px] sm:text-xs font-semibold text-gray-500 uppercase tracking-wider">Time Needed (Required)</th>
                             <th class="px-3 sm:px-6 py-3 text-right text-[11px] sm:text-xs font-semibold text-gray-500 uppercase tracking-wider">Total Time from DTR</th>
                             <th class="px-3 sm:px-6 py-3 text-right text-[11px] sm:text-xs font-semibold text-gray-500 uppercase tracking-wider">Remaining Time Needed</th>
-                            <th class="px-3 sm:px-6 py-3 text-center text-[11px] sm:text-xs font-semibold text-gray-500 uppercase tracking-wider">Approved Leave Requests</th>
+                            @if($showApprovedLeaveRequests ?? false)
+                                <th class="px-3 sm:px-6 py-3 text-center text-[11px] sm:text-xs font-semibold text-gray-500 uppercase tracking-wider">Approved Leave Requests</th>
+                            @endif
                             <th class="px-3 sm:px-6 py-3 text-left text-[11px] sm:text-xs font-semibold text-gray-500 uppercase tracking-wider">Estimated End Date</th>
                         </tr>
                     </thead>
@@ -149,11 +151,13 @@
                                         </span>
                                     </span>
                                 </td>
-                                <td class="px-3 sm:px-6 py-3 whitespace-nowrap text-xs sm:text-sm text-center text-gray-700">
-                                    <span class="inline-flex items-center justify-center min-w-[2.25rem] px-2.5 py-1 rounded-full border border-indigo-200 bg-indigo-50 text-indigo-700 text-[11px] font-semibold">
-                                        {{ (int) ($row['approved_leave_requests'] ?? 0) }}
-                                    </span>
-                                </td>
+                                @if($showApprovedLeaveRequests ?? false)
+                                    <td class="px-3 sm:px-6 py-3 whitespace-nowrap text-xs sm:text-sm text-center text-gray-700">
+                                        <span class="inline-flex items-center justify-center min-w-[2.25rem] px-2.5 py-1 rounded-full border border-indigo-200 bg-indigo-50 text-indigo-700 text-[11px] font-semibold">
+                                            {{ (int) ($row['approved_leave_requests'] ?? 0) }}
+                                        </span>
+                                    </td>
+                                @endif
                                 <td class="px-3 sm:px-6 py-3 whitespace-nowrap text-xs sm:text-sm text-gray-700">
                                     @if(($row['remaining_hours'] ?? 0) > 0 && !empty($row['estimated_end_date_formatted']))
                                         {{ $row['estimated_end_date_formatted'] }}
@@ -164,7 +168,7 @@
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="8" class="px-3 sm:px-6 py-8 text-center text-sm text-gray-500">
+                                <td colspan="{{ ($showApprovedLeaveRequests ?? false) ? 8 : 7 }}" class="px-3 sm:px-6 py-8 text-center text-sm text-gray-500">
                                     No student records found. Once students have required hours and DTR entries, they will appear here.
                                 </td>
                             </tr>

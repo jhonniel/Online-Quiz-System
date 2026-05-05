@@ -92,6 +92,8 @@ class StudentDashboardController extends Controller
             abort(403, 'Access denied. You do not have permission to access Student Management.');
         }
 
+        $showApprovedLeaveRequests = $user->isAdmin() || $user->canAccessStudentManagement();
+
         // Get all active students with their required training hours
         $allowedDepartmentIds = $user->canAccessStudentManagement()
             ? $user->getAllowedStudentDepartmentIds()
@@ -119,12 +121,15 @@ class StudentDashboardController extends Controller
                 ->groupBy('user_id')
                 ->pluck('total_hours_sum', 'user_id');
 
-            // Count approved leave requests per student (all leave types)
-            $approvedLeaveRequestsByStudent = LeaveRequest::whereIn('user_id', $studentIds)
-                ->where('status', 'approved')
-                ->selectRaw('user_id, COUNT(*) as approved_leave_count')
-                ->groupBy('user_id')
-                ->pluck('approved_leave_count', 'user_id');
+            $approvedLeaveRequestsByStudent = collect();
+            if ($showApprovedLeaveRequests) {
+                // Count approved leave requests per student (all leave types)
+                $approvedLeaveRequestsByStudent = LeaveRequest::whereIn('user_id', $studentIds)
+                    ->where('status', 'approved')
+                    ->selectRaw('user_id, COUNT(*) as approved_leave_count')
+                    ->groupBy('user_id')
+                    ->pluck('approved_leave_count', 'user_id');
+            }
 
             $ranked = $students->map(function ($student) use ($totalsByStudent, $approvedLeaveRequestsByStudent) {
                 $required = (float) ($student->required_training_hours ?? 0);
@@ -157,6 +162,9 @@ class StudentDashboardController extends Controller
                     'estimated_end_date' => $estimatedEndDate,
                     'estimated_end_date_formatted' => $estimatedEndDateFormatted,
                 ];
+            })->filter(function ($row) {
+                // Show only students who still need to complete required time.
+                return ($row['remaining_hours'] ?? 0) > 0;
             })->sortByDesc('remaining_hours')->values();
 
             // Get rank history and last arrow from cache
@@ -271,6 +279,7 @@ class StudentDashboardController extends Controller
             'students' => $ranked,
             'studentsWithRemainingTime' => $studentsWithRemainingTime,
             'studentsEndingThisMonth' => $studentsEndingThisMonth ?? 0,
+            'showApprovedLeaveRequests' => $showApprovedLeaveRequests,
         ]);
     }
 
