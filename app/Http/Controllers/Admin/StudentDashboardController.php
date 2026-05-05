@@ -74,12 +74,109 @@ class StudentDashboardController extends Controller
             });
         }
 
+        $studentsForStats = (clone $studentsQuery)->get();
+
+        $statsTotalStudents = $studentsForStats->count();
+        $statsWithLoggedTime = $studentsForStats->filter(function ($s) {
+            return (float) ($s->internship_total_hours ?? 0) > 0;
+        })->count();
+        $statsCompleted = $studentsForStats->filter(function ($s) {
+            $required = (float) ($s->required_training_hours ?? 0);
+            $total = (float) ($s->internship_total_hours ?? 0);
+
+            return $required > 0 && $total >= $required;
+        })->count();
+        $statsOngoing = max($statsTotalStudents - $statsCompleted, 0);
+
+        $completionPercents = $studentsForStats->map(function ($s) {
+            $required = (float) ($s->required_training_hours ?? 0);
+            $total = (float) ($s->internship_total_hours ?? 0);
+            if ($required <= 0) {
+                return 0.0;
+            }
+
+            return min(($total / $required) * 100, 100);
+        });
+        $statsAvgCompletion = $completionPercents->isNotEmpty()
+            ? round((float) $completionPercents->avg(), 1)
+            : 0.0;
+
+        $approvedLeaveCountsByStudent = collect();
+        if ($studentsForStats->isNotEmpty()) {
+            $approvedLeaveCountsByStudent = LeaveRequest::query()
+                ->whereIn('user_id', $studentsForStats->pluck('id'))
+                ->where('status', 'approved')
+                ->selectRaw('user_id, COUNT(*) as approved_count')
+                ->groupBy('user_id')
+                ->pluck('approved_count', 'user_id');
+        }
+        $statsTotalApprovedLeaveRequests = (int) $approvedLeaveCountsByStudent->sum();
+
+        $statsTopLeaveRequester = null;
+        if ($approvedLeaveCountsByStudent->isNotEmpty()) {
+            $topLeaveUserId = (int) $approvedLeaveCountsByStudent->sortDesc()->keys()->first();
+            $topLeaveCount = (int) ($approvedLeaveCountsByStudent[$topLeaveUserId] ?? 0);
+            $topLeaveStudent = $studentsForStats->firstWhere('id', $topLeaveUserId);
+            if ($topLeaveStudent && $topLeaveCount > 0) {
+                $statsTopLeaveRequester = [
+                    'name' => (string) $topLeaveStudent->name,
+                    'count' => $topLeaveCount,
+                ];
+            }
+        }
+
+        $statsTopSchools = $studentsForStats
+            ->groupBy(function ($s) {
+                return optional($s->university)->name ?? 'No school assigned';
+            })
+            ->map->count()
+            ->sortDesc()
+            ->take(5);
+        $statsTopSchoolsMax = (int) max((int) ($statsTopSchools->max() ?? 0), 1);
+
+        $statsRemainingBuckets = [
+            'Over 80 hours' => 0,
+            '40 to 80 hours' => 0,
+            '1 to 39.99 hours' => 0,
+            'Done / exceeded' => 0,
+        ];
+        foreach ($studentsForStats as $s) {
+            $required = (float) ($s->required_training_hours ?? 0);
+            $total = (float) ($s->internship_total_hours ?? 0);
+            $remaining = $required - $total;
+            if ($remaining <= 0) {
+                $statsRemainingBuckets['Done / exceeded']++;
+            } elseif ($remaining >= 80) {
+                $statsRemainingBuckets['Over 80 hours']++;
+            } elseif ($remaining >= 40) {
+                $statsRemainingBuckets['40 to 80 hours']++;
+            } else {
+                $statsRemainingBuckets['1 to 39.99 hours']++;
+            }
+        }
+        $statsRemainingBucketsMax = (int) max(max($statsRemainingBuckets), 1);
+
         $students = $studentsQuery
             ->orderBy('users.name')
             ->paginate($perPage)
             ->appends($request->query());
 
-        return view('admin.student-management.students', compact('students', 'search', 'perPage'));
+        return view('admin.student-management.students', compact(
+            'students',
+            'search',
+            'perPage',
+            'statsTotalStudents',
+            'statsWithLoggedTime',
+            'statsCompleted',
+            'statsOngoing',
+            'statsAvgCompletion',
+            'statsTotalApprovedLeaveRequests',
+            'statsTopLeaveRequester',
+            'statsTopSchools',
+            'statsTopSchoolsMax',
+            'statsRemainingBuckets',
+            'statsRemainingBucketsMax'
+        ));
     }
 
     public function index(Request $request)

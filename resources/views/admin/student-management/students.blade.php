@@ -25,6 +25,62 @@
         </div>
     </div>
 
+    <!-- Students Analytics -->
+    <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-6 gap-4">
+        <div class="bg-white border border-gray-200 rounded-lg p-4 shadow-sm">
+            <p class="text-xs font-semibold uppercase tracking-wide text-gray-500">Total Students</p>
+            <p class="mt-2 text-2xl font-bold text-gray-900">{{ number_format($statsTotalStudents ?? 0) }}</p>
+            <p class="mt-1 text-xs text-gray-500">Current filtered scope</p>
+        </div>
+        <div class="bg-white border border-gray-200 rounded-lg p-4 shadow-sm">
+            <p class="text-xs font-semibold uppercase tracking-wide text-gray-500">With Logged Time</p>
+            <p class="mt-2 text-2xl font-bold text-indigo-700">{{ number_format($statsWithLoggedTime ?? 0) }}</p>
+            <p class="mt-1 text-xs text-gray-500">Students with DTR hours</p>
+        </div>
+        <div class="bg-white border border-gray-200 rounded-lg p-4 shadow-sm">
+            <p class="text-xs font-semibold uppercase tracking-wide text-gray-500">Completed</p>
+            <p class="mt-2 text-2xl font-bold text-emerald-700">{{ number_format($statsCompleted ?? 0) }}</p>
+            <p class="mt-1 text-xs text-gray-500">Reached required hours</p>
+        </div>
+        <div class="bg-white border border-gray-200 rounded-lg p-4 shadow-sm">
+            <p class="text-xs font-semibold uppercase tracking-wide text-gray-500">Average Completion</p>
+            <p class="mt-2 text-2xl font-bold text-purple-700">{{ number_format((float) ($statsAvgCompletion ?? 0), 1) }}%</p>
+            <p class="mt-1 text-xs text-gray-500">Across visible students</p>
+        </div>
+        <div class="bg-white border border-gray-200 rounded-lg p-4 shadow-sm">
+            <p class="text-xs font-semibold uppercase tracking-wide text-gray-500">Approved Leave Requests</p>
+            <p class="mt-2 text-2xl font-bold text-indigo-700">{{ number_format((int) ($statsTotalApprovedLeaveRequests ?? 0)) }}</p>
+            <p class="mt-1 text-xs text-gray-500">Total approved in current scope</p>
+        </div>
+        <div class="bg-white border border-gray-200 rounded-lg p-4 shadow-sm">
+            <p class="text-xs font-semibold uppercase tracking-wide text-gray-500">Most Leave Requests</p>
+            @if(!empty($statsTopLeaveRequester))
+                <p class="mt-2 text-lg font-bold text-gray-900 truncate" title="{{ $statsTopLeaveRequester['name'] }}">{{ $statsTopLeaveRequester['name'] }}</p>
+                <p class="mt-1 text-xs text-gray-500">{{ number_format((int) $statsTopLeaveRequester['count']) }} approved requests</p>
+            @else
+                <p class="mt-2 text-base font-semibold text-gray-600">No approved requests yet</p>
+                <p class="mt-1 text-xs text-gray-500">Will show top student here</p>
+            @endif
+        </div>
+    </div>
+
+    <div class="grid grid-cols-1 xl:grid-cols-2 gap-4">
+        <div class="bg-white border border-gray-200 rounded-lg p-4 shadow-sm">
+            <h3 class="text-sm font-semibold text-gray-900">Top Schools (Student Count)</h3>
+            <div class="mt-3 h-64">
+                <canvas id="topSchoolsBarChart"></canvas>
+            </div>
+        </div>
+
+        <div class="bg-white border border-gray-200 rounded-lg p-4 shadow-sm">
+            <h3 class="text-sm font-semibold text-gray-900">Remaining Hours Distribution</h3>
+            <div class="mt-3 h-64">
+                <canvas id="remainingHoursBarChart"></canvas>
+            </div>
+            <p class="mt-3 text-xs text-gray-500">Includes students who are done and those still ongoing.</p>
+        </div>
+    </div>
+
     <!-- Filters -->
     <div class="bg-white shadow-sm rounded-lg border border-gray-200 p-4">
         <form method="GET" action="{{ url('/admin/student-management/students') }}" class="flex items-center justify-between flex-wrap gap-4">
@@ -158,5 +214,82 @@
         @endif
     </div>
 </div>
+@endsection
+
+@section('scripts')
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script type="application/json" id="student-list-analytics-data">
+{!! json_encode([
+    'topSchools' => [
+        'labels' => array_values(array_map('strval', array_keys(($statsTopSchools ?? collect())->toArray()))),
+        'values' => array_values(array_map('intval', array_values(($statsTopSchools ?? collect())->toArray()))),
+    ],
+    'remainingBuckets' => [
+        'labels' => array_values(array_map('strval', array_keys($statsRemainingBuckets ?? []))),
+        'values' => array_values(array_map('intval', array_values($statsRemainingBuckets ?? []))),
+    ],
+]) !!}
+</script>
+<script>
+    (function () {
+        const node = document.getElementById('student-list-analytics-data');
+        const payload = node ? JSON.parse(node.textContent) : {
+            topSchools: { labels: [], values: [] },
+            remainingBuckets: { labels: [], values: [] },
+        };
+
+        const common = {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false },
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: { precision: 0 },
+                    grid: { color: '#e5e7eb' },
+                },
+                x: {
+                    grid: { display: false },
+                },
+            },
+        };
+
+        const schoolsCanvas = document.getElementById('topSchoolsBarChart');
+        if (schoolsCanvas) {
+            new Chart(schoolsCanvas, {
+                type: 'bar',
+                data: {
+                    labels: payload.topSchools.labels,
+                    datasets: [{
+                        data: payload.topSchools.values,
+                        backgroundColor: '#4f46e5',
+                        borderRadius: 6,
+                        maxBarThickness: 46,
+                    }],
+                },
+                options: common,
+            });
+        }
+
+        const remainingCanvas = document.getElementById('remainingHoursBarChart');
+        if (remainingCanvas) {
+            new Chart(remainingCanvas, {
+                type: 'bar',
+                data: {
+                    labels: payload.remainingBuckets.labels,
+                    datasets: [{
+                        data: payload.remainingBuckets.values,
+                        backgroundColor: '#10b981',
+                        borderRadius: 6,
+                        maxBarThickness: 46,
+                    }],
+                },
+                options: common,
+            });
+        }
+    })();
+</script>
 @endsection
 
