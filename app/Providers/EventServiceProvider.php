@@ -8,6 +8,7 @@ use Illuminate\Foundation\Support\Providers\EventServiceProvider as ServiceProvi
 use Illuminate\Auth\Events\Login;
 use Illuminate\Auth\Events\Logout;
 use App\Listeners\LogUserActivity;
+use App\Listeners\RequireStudentRulesRegulationsOnLogin;
 
 class EventServiceProvider extends ServiceProvider
 {
@@ -22,6 +23,7 @@ class EventServiceProvider extends ServiceProvider
         ],
         Login::class => [
             LogUserActivity::class,
+            RequireStudentRulesRegulationsOnLogin::class,
         ],
         Logout::class => [
             LogUserActivity::class . '@handleLogout',

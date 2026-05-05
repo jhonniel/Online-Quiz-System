@@ -39,6 +39,14 @@ class User extends Authenticatable
         'overtime_months_credited',
         'required_training_hours',
         'qr_code_id',
+        'student_rules_warning',
+        'student_rules_marquee_enabled',
+        'student_rules_notice_message',
+        'student_terminated',
+        'ojt_requirement_met_at',
+        'ojt_completion_congratulations_sent_at',
+        'ojt_post_completion_grace_closed_at',
+        'ojt_account_disabled_notice_sent_at',
     ];
 
     /**
@@ -67,6 +75,13 @@ class User extends Authenticatable
             'last_seen' => 'datetime',
             'teacher_announcements_seen_at' => 'datetime',
             'evaluation_forced_at' => 'datetime',
+            'student_rules_warning' => 'boolean',
+            'student_rules_marquee_enabled' => 'boolean',
+            'student_terminated' => 'boolean',
+            'ojt_requirement_met_at' => 'datetime',
+            'ojt_completion_congratulations_sent_at' => 'datetime',
+            'ojt_post_completion_grace_closed_at' => 'datetime',
+            'ojt_account_disabled_notice_sent_at' => 'datetime',
         ];
     }
 

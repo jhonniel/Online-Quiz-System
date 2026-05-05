@@ -11,6 +11,7 @@ use App\Models\User;
 use App\Models\University;
 use App\Models\Department;
 use App\Models\LeaveRequest;
+use App\Services\StudentOjtPostCompletionService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\DB;
@@ -1993,6 +1994,10 @@ class DtrController extends Controller
                     'status' => $updatedDtr->status,
                 ]
             ]);
+
+                if ($updatedDtr->user && $updatedDtr->user->role === 'student') {
+                    app(StudentOjtPostCompletionService::class)->syncForStudentId((int) $updatedDtr->user_id);
+                }
 
                 return redirect('/admin/student-dtr')
                     ->with('success', 'Student DTR record updated successfully.');

@@ -16,6 +16,10 @@ class Kernel extends ConsoleKernel
         $schedule->command('sayit:delete-unengaged')
             ->hourly()
             ->withoutOverlapping();
+
+        $schedule->command('students:process-ojt-post-completion')
+            ->dailyAt('06:30')
+            ->withoutOverlapping();
     }
 
     /**

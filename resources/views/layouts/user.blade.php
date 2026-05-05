@@ -28,6 +28,8 @@
 
     <!-- Quiz Animation Styles -->
     <style>
+        [x-cloak] { display: none !important; }
+
         .question-transition {
             transition: all 0.3s ease-in-out;
         }
@@ -70,10 +72,95 @@
         .custom-scrollbar::-webkit-scrollbar-thumb:hover {
             background: #a8a8a8;
         }
+
+        /*
+          Seamless loop: N equal segments in one row; translate by exactly 1/N of the track
+          width so one segment exits and the next identical one lines up (works when text is
+          shorter than the viewport — two-chunk -50% leaves a gap in that case).
+        */
+        @keyframes student-rules-marquee-scroll {
+            from { transform: translate3d(0, 0, 0); }
+            to { transform: translate3d(calc(-100% / 24), 0, 0); }
+        }
+
+        .student-rules-marquee-inner {
+            display: flex;
+            flex-direction: row;
+            flex-shrink: 0;
+            width: max-content;
+            min-width: max-content;
+            will-change: transform;
+            backface-visibility: hidden;
+            animation: student-rules-marquee-scroll 8s linear infinite;
+        }
+
+        .student-rules-marquee-inner:hover {
+            animation-play-state: paused;
+        }
     </style>
 </head>
 
-<body class="font-sans antialiased bg-gray-50" x-data="{ sidebarOpen: false, sidebarCollapsed: false }">
+@php
+    $authUser = auth()->check() ? auth()->user() : null;
+    $studentRulesMarqueeActive = false;
+    $studentRulesMarqueeMessage = '';
+    $studentRulesWarningBanner = false;
+    $studentRulesWarningMarqueeMessage = '';
+    if ($authUser && $authUser->role === 'student') {
+        $noticeMsg = trim((string) ($authUser->student_rules_notice_message ?? ''));
+        if ($noticeMsg !== '' && (bool) ($authUser->student_rules_warning ?? false)) {
+            $studentRulesWarningBanner = true;
+            $studentRulesWarningMarqueeMessage = $noticeMsg;
+        }
+        if ($noticeMsg !== '' && (bool) ($authUser->student_rules_marquee_enabled ?? false)) {
+            $studentRulesMarqueeActive = true;
+            $studentRulesMarqueeMessage = $noticeMsg;
+        }
+    }
+    if ($studentRulesMarqueeActive) {
+        $studentRulesWarningBanner = false;
+    }
+    $studentRulesBannerRows = ($studentRulesMarqueeActive ? 1 : 0) + ($studentRulesWarningBanner ? 1 : 0);
+    $studentRulesBodyPad = $studentRulesBannerRows === 2
+        ? ' pt-20 sm:pt-24'
+        : ($studentRulesBannerRows === 1 ? ' pt-10 sm:pt-11' : '');
+@endphp
+<body class="font-sans antialiased bg-gray-50{{ $studentRulesBodyPad }}" x-data="{ sidebarOpen: false, sidebarCollapsed: false }">
+    @if($studentRulesBannerRows > 0)
+        <div class="fixed top-0 left-0 right-0 z-[190] flex flex-col shadow-md" aria-label="Student notices">
+            @if($studentRulesMarqueeActive)
+                <div class="flex items-stretch bg-red-700 text-white border-b-2 border-red-900 overflow-hidden" role="alert">
+                    <div class="flex shrink-0 items-center justify-center px-2 sm:px-3 bg-red-900 border-r border-red-600">
+                        <span class="text-[9px] sm:text-xs font-extrabold uppercase tracking-wider sm:tracking-widest text-white whitespace-nowrap">Final notice</span>
+                    </div>
+                    <div class="flex flex-1 min-w-0 overflow-hidden items-center justify-start py-1.5 sm:py-2">
+                        <div class="student-rules-marquee-inner text-sm font-semibold tracking-wide text-white">
+                            @foreach(range(1, 24) as $marqueeI)
+                            <span class="inline-flex shrink-0 items-center pr-[2in] whitespace-nowrap" @if($marqueeI > 1) aria-hidden="true" @endif>{{ $studentRulesMarqueeMessage }}</span>
+                            @endforeach
+                        </div>
+                    </div>
+                </div>
+            @endif
+            @if($studentRulesWarningBanner)
+                <div class="flex items-stretch bg-amber-200 text-amber-950 border-b border-amber-400 overflow-hidden" role="status" aria-label="Rules violation warning">
+                    <div class="flex shrink-0 items-center justify-center gap-1.5 px-2 sm:px-3 bg-amber-800 border-r border-amber-600">
+                        <svg class="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0 text-amber-100" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
+                        </svg>
+                        <span class="text-[9px] sm:text-xs font-extrabold uppercase tracking-wider sm:tracking-widest text-amber-50 whitespace-nowrap">Violation warning</span>
+                    </div>
+                    <div class="flex flex-1 min-w-0 overflow-hidden items-center justify-start py-1.5 sm:py-2 bg-amber-200">
+                        <div class="student-rules-marquee-inner text-xs sm:text-sm font-semibold tracking-wide text-amber-950">
+                            @foreach(range(1, 24) as $marqueeI)
+                            <span class="inline-flex shrink-0 items-center pr-[2in] whitespace-nowrap" @if($marqueeI > 1) aria-hidden="true" @endif>{{ $studentRulesWarningMarqueeMessage }}</span>
+                            @endforeach
+                        </div>
+                    </div>
+                </div>
+            @endif
+        </div>
+    @endif
     <div class="min-h-screen flex">
         <!-- Sidebar -->
         <div class="hidden lg:flex lg:flex-shrink-0">
@@ -2002,6 +2089,12 @@
                     }
                 }
             </script>
+        @endif
+    @endauth
+
+    @auth
+        @if(auth()->user()->role === 'student' && session('student_rules_regulations_pending') === true)
+            @include('components.student-rules-regulations-modal')
         @endif
     @endauth
 

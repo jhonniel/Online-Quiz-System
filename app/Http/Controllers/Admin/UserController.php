@@ -7,6 +7,7 @@ use App\Models\User;
 use App\Models\University;
 use App\Models\Department;
 use App\Models\LeaveBalance;
+use App\Mail\StudentRulesNoticeMail;
 use App\Mail\UserCredentials;
 use App\Services\MailConfigService;
 use Illuminate\Http\Request;
@@ -398,11 +399,33 @@ class UserController extends Controller
             'leave_allowance' => 'nullable|numeric|min:0|max:365',
             'vacation_allowance' => 'nullable|numeric|min:0|max:365',
             'sick_allowance' => 'nullable|numeric|min:0|max:365',
+            'student_rules_warning' => 'nullable|boolean',
+            'student_rules_marquee_enabled' => 'nullable|boolean',
+            'student_rules_notice_message' => [
+                'nullable',
+                'string',
+                'max:5000',
+                Rule::requiredIf(function () use ($request) {
+                    return $request->role === 'student'
+                        && ($request->boolean('student_rules_warning') || $request->boolean('student_rules_marquee_enabled'));
+                }),
+            ],
+            'student_terminated' => 'nullable|boolean',
         ]);
 
         // Custom validation for new university
         if ($request->university_id === 'new' && !$request->filled('new_university_name')) {
             return back()->withErrors(['new_university_name' => 'Please enter a university name when adding a new university.'])->withInput();
+        }
+
+        if ($request->role === 'student'
+            && $request->boolean('student_rules_warning')
+            && $request->boolean('student_rules_marquee_enabled')) {
+            return back()
+                ->withErrors([
+                    'student_rules_notices' => 'Rules violation warning and final notice cannot both be enabled. Choose one and save again.',
+                ])
+                ->withInput();
         }
 
         // Handle university assignment
@@ -439,7 +462,40 @@ class UserController extends Controller
             $data['required_training_hours'] = null;
         }
 
+        if ($request->role === 'student') {
+            $data['student_rules_warning'] = $request->boolean('student_rules_warning');
+            $data['student_rules_marquee_enabled'] = $request->boolean('student_rules_marquee_enabled');
+            $noticeMsg = trim((string) ($request->input('student_rules_notice_message') ?? ''));
+            $data['student_rules_notice_message'] = $noticeMsg !== '' ? $noticeMsg : null;
+            $data['student_terminated'] = $request->boolean('student_terminated');
+        } else {
+            $data['student_rules_warning'] = false;
+            $data['student_rules_marquee_enabled'] = false;
+            $data['student_rules_notice_message'] = null;
+            $data['student_terminated'] = false;
+        }
+
+        $prevStudentRulesWarning = (bool) ($user->student_rules_warning ?? false);
+        $prevStudentRulesMarquee = (bool) ($user->student_rules_marquee_enabled ?? false);
+
         $user->update($data);
+
+        if ($request->role === 'student' && filter_var($user->email, FILTER_VALIDATE_EMAIL)) {
+            $notifyViolation = ! empty($data['student_rules_warning']) && ! $prevStudentRulesWarning;
+            $notifyFinal = ! empty($data['student_rules_marquee_enabled']) && ! $prevStudentRulesMarquee;
+            if ($notifyViolation || $notifyFinal) {
+                $noticeType = $notifyFinal ? 'final' : 'violation';
+                try {
+                    Mail::to($user->email)->send(new StudentRulesNoticeMail(
+                        $user->fresh(),
+                        $noticeType,
+                        $data['student_rules_notice_message'] ?? null
+                    ));
+                } catch (\Throwable $e) {
+                    Log::warning('Student rules notice email failed: '.$e->getMessage());
+                }
+            }
+        }
 
         // Handle leave balances for employees
         if ($request->role === 'employee' && ($request->has('leave_allowance') || $request->has('vacation_allowance') || $request->has('sick_allowance'))) {

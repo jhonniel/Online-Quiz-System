@@ -149,6 +149,68 @@
                     </div>
                 </div>
 
+                <div id="student_rules_compliance_wrapper" class="bg-white rounded-xl sm:rounded-2xl shadow-lg border border-gray-200 overflow-hidden {{ old('role', $user->role) === 'student' ? '' : 'hidden' }}">
+                    <div class="px-6 py-4 border-b border-gray-100 bg-amber-50/80">
+                        <h2 class="text-lg font-semibold text-gray-900">Student rules &amp; notices</h2>
+                        <p class="text-sm text-gray-600 mt-0.5">
+                            <strong class="text-gray-800">Rules violation warning</strong> (yellow): light-amber rules modal, “You have violated the rules”, and a <strong class="text-amber-800">yellow scrolling banner</strong> at the top.
+                            <strong class="text-gray-800">Final notice</strong> (red): red rules modal, “This is your final warning…”, and a <strong class="text-red-700">red scrolling banner</strong>.
+                            <span class="text-gray-800 font-medium">Only one of these can be enabled at a time.</span>
+                        </p>
+                    </div>
+                    <div class="p-5 sm:p-6 space-y-5">
+                        @error('student_rules_notices')
+                            <div class="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800" role="alert">{{ $message }}</div>
+                        @enderror
+                        <input type="hidden" name="student_rules_warning" value="0">
+                        <label class="flex items-start gap-3 cursor-pointer group">
+                            <input type="checkbox" name="student_rules_warning" value="1" id="student_rules_warning"
+                                   class="mt-1 h-4 w-4 text-amber-600 focus:ring-amber-500 border-gray-300 rounded"
+                                   {{ (string) old('student_rules_warning', ($user->student_rules_warning ?? false) ? '1' : '0') === '1' ? 'checked' : '' }}>
+                            <span class="text-sm text-gray-700">
+                                <span class="font-semibold text-gray-900">Rules violation warning</span><br>
+                                When enabled, the student gets a <strong class="text-amber-800">yellow top banner</strong> with a continuous marquee and the rules modal uses a light yellow style with “You have violated the rules” above the title when they log in.
+                            </span>
+                        </label>
+                        @error('student_rules_warning') <p class="text-sm text-red-600">{{ $message }}</p> @enderror
+
+                        <div class="border-t border-gray-100 pt-5">
+                            <input type="hidden" name="student_rules_marquee_enabled" value="0">
+                            <label class="flex items-start gap-3 cursor-pointer group">
+                                <input type="checkbox" name="student_rules_marquee_enabled" value="1" id="student_rules_marquee_enabled"
+                                       class="mt-1 h-4 w-4 text-amber-600 focus:ring-amber-500 border-gray-300 rounded"
+                                       {{ (string) old('student_rules_marquee_enabled', ($user->student_rules_marquee_enabled ?? false) ? '1' : '0') === '1' ? 'checked' : '' }}>
+                                <span class="text-sm text-gray-700">
+                                    <span class="font-semibold text-gray-900">Enable final notice (scrolling banner)</span><br>
+                                    When enabled, a <strong class="text-red-700">red</strong> “Final notice” banner with scrolling text appears at the top of the student portal on every page until you turn it off or change their role.
+                                </span>
+                            </label>
+                            @error('student_rules_marquee_enabled') <p class="text-sm text-red-600">{{ $message }}</p> @enderror
+                        </div>
+                        <div>
+                            <label for="student_rules_notice_message" class="block text-sm font-semibold text-gray-700 mb-1.5">Notice message</label>
+                            <textarea name="student_rules_notice_message" id="student_rules_notice_message" rows="3"
+                                      class="block w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 text-sm @error('student_rules_notice_message') border-red-500 @enderror"
+                                      placeholder="This text is saved to the account and shown in the scrolling top banner (yellow or red) for the option you enable above.">{{ old('student_rules_notice_message', $user->student_rules_notice_message ?? '') }}</textarea>
+                            <p class="mt-1 text-xs text-gray-500">Required when either notice type is enabled. Plain text; it is stored in the database and drives the marquee for that student.</p>
+                            @error('student_rules_notice_message') <p class="mt-1 text-sm text-red-600">{{ $message }}</p> @enderror
+                        </div>
+                        <div class="border-t border-amber-200 pt-5 space-y-2">
+                            <input type="hidden" name="student_terminated" value="0">
+                            <label class="flex items-start gap-3 cursor-pointer group">
+                                <input type="checkbox" name="student_terminated" value="1" id="student_terminated"
+                                       class="mt-1 h-4 w-4 text-red-600 focus:ring-red-500 border-gray-300 rounded"
+                                       {{ (string) old('student_terminated', ($user->student_terminated ?? false) ? '1' : '0') === '1' ? 'checked' : '' }}>
+                                <span class="text-sm text-gray-700">
+                                    <span class="font-semibold text-red-800">Student terminated</span><br>
+                                    When checked, this student cannot log in. Session access ends on the next request. Remove when restoring access (e.g. reinstatement).
+                                </span>
+                            </label>
+                            @error('student_terminated') <p class="text-sm text-red-600">{{ $message }}</p> @enderror
+                        </div>
+                    </div>
+                </div>
+
                 @php
                     $currentYear = now()->year;
                     $leaveBalance = \App\Models\LeaveBalance::where('user_id', $user->id)->where('year', $currentYear)->first();
@@ -236,6 +298,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const newUniversityInput = document.getElementById('new_university_name');
     const roleSelect = document.getElementById('role');
     const requiredHoursWrapper = document.getElementById('required_training_hours_wrapper');
+    const studentRulesComplianceWrapper = document.getElementById('student_rules_compliance_wrapper');
     const leaveBalancesWrapper = document.getElementById('leave_balances_wrapper');
     const departmentWrapper = document.getElementById('department_wrapper');
     const departmentSelect = document.getElementById('department_id');
@@ -262,6 +325,11 @@ document.addEventListener('DOMContentLoaded', function() {
     function toggleRequiredHours() {
         if (roleSelect && requiredHoursWrapper) {
             requiredHoursWrapper.classList.toggle('hidden', roleSelect.value !== 'student');
+        }
+    }
+    function toggleStudentRulesCompliance() {
+        if (roleSelect && studentRulesComplianceWrapper) {
+            studentRulesComplianceWrapper.classList.toggle('hidden', roleSelect.value !== 'student');
         }
     }
     function toggleLeaveBalances() {
@@ -295,14 +363,31 @@ document.addEventListener('DOMContentLoaded', function() {
     if (roleSelect) {
         roleSelect.addEventListener('change', function() {
             toggleRequiredHours();
+            toggleStudentRulesCompliance();
             toggleLeaveBalances();
             toggleDepartment();
             toggleUniversityRequirement();
         });
         toggleRequiredHours();
+        toggleStudentRulesCompliance();
         toggleLeaveBalances();
         toggleDepartment();
         toggleUniversityRequirement();
+    }
+
+    const studentRulesWarningCb = document.getElementById('student_rules_warning');
+    const studentRulesMarqueeCb = document.getElementById('student_rules_marquee_enabled');
+    if (studentRulesWarningCb && studentRulesMarqueeCb) {
+        studentRulesWarningCb.addEventListener('change', function() {
+            if (this.checked) {
+                studentRulesMarqueeCb.checked = false;
+            }
+        });
+        studentRulesMarqueeCb.addEventListener('change', function() {
+            if (this.checked) {
+                studentRulesWarningCb.checked = false;
+            }
+        });
     }
 
     const form = document.getElementById('editUserForm');
@@ -319,6 +404,18 @@ document.addEventListener('DOMContentLoaded', function() {
                 if (newUniversityInput) {
                     newUniversityInput.focus();
                     newUniversityInput.required = true;
+                }
+                return false;
+            }
+            if (roleSelect && roleSelect.value === 'student'
+                && studentRulesWarningCb && studentRulesMarqueeCb
+                && studentRulesWarningCb.checked && studentRulesMarqueeCb.checked) {
+                e.preventDefault();
+                const msg = 'Rules violation warning and final notice cannot both be enabled. Uncheck one of them.';
+                if (typeof ToastNotification !== 'undefined') {
+                    ToastNotification.warning(msg);
+                } else {
+                    alert(msg);
                 }
                 return false;
             }

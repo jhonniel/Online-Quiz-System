@@ -73,6 +73,17 @@ Route::prefix('admin')->middleware(['auth', 'admin'])->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('admin.dashboard');
     Route::get('/activity-data', [DashboardController::class, 'getActivityData'])->name('admin.activity-data');
 
+    // System → Settings, Rules, health (register early so route names always resolve)
+    Route::middleware(['admin.permission:system'])->group(function () {
+        Route::get('/settings', [\App\Http\Controllers\Admin\SettingsController::class, 'index'])->name('admin.settings.index');
+        Route::post('/settings', [\App\Http\Controllers\Admin\SettingsController::class, 'update'])->name('admin.settings.update');
+        Route::get('/settings/health', [\App\Http\Controllers\Admin\SettingsController::class, 'getHealth'])->name('admin.settings.health');
+        Route::get('/settings/health-metrics', [\App\Http\Controllers\Admin\SettingsController::class, 'getHealthMetrics'])->name('admin.settings.health-metrics');
+        Route::post('/settings/test-email', [\App\Http\Controllers\Admin\SettingsController::class, 'testEmail'])->name('admin.settings.test-email');
+        Route::get('/system/rules', [\App\Http\Controllers\Admin\SettingsController::class, 'rulesRegulations'])->name('admin.system.rules');
+        Route::post('/system/rules', [\App\Http\Controllers\Admin\SettingsController::class, 'updateRulesRegulations'])->name('admin.system.rules.update');
+    });
+
     // Billing (requires billing permission or super admin)
     Route::middleware(['admin.permission:billing'])->group(function () {
         Route::get('billing', [App\Http\Controllers\Admin\BillingController::class, 'index'])->name('admin.billing.index');
@@ -451,13 +462,6 @@ Route::prefix('admin')->middleware(['auth', 'admin'])->group(function () {
 
     // System Management
     Route::middleware(['admin.permission:system'])->group(function () {
-        // Settings Management
-        Route::get('/settings', [\App\Http\Controllers\Admin\SettingsController::class, 'index'])->name('admin.settings.index');
-        Route::post('/settings', [\App\Http\Controllers\Admin\SettingsController::class, 'update'])->name('admin.settings.update');
-        Route::get('/settings/health', [\App\Http\Controllers\Admin\SettingsController::class, 'getHealth'])->name('admin.settings.health');
-        Route::get('/settings/health-metrics', [\App\Http\Controllers\Admin\SettingsController::class, 'getHealthMetrics'])->name('admin.settings.health-metrics');
-        Route::post('/settings/test-email', [\App\Http\Controllers\Admin\SettingsController::class, 'testEmail'])->name('admin.settings.test-email');
-
         // Landing Page Management
         Route::get('/landing-page', [\App\Http\Controllers\Admin\LandingPageController::class, 'index'])->name('admin.landing-page.index');
         Route::post('/landing-page', [\App\Http\Controllers\Admin\LandingPageController::class, 'update'])->name('admin.landing-page.update');
@@ -488,8 +492,9 @@ Route::prefix('admin')->middleware(['auth', 'admin'])->group(function () {
     });
 
 // User Routes
-Route::middleware(['auth'])->group(function () {
+Route::middleware(['auth', 'student.not_terminated'])->group(function () {
     Route::get('/dashboard', [UserDashboardController::class, 'index'])->name('user.dashboard');
+    Route::post('/dashboard/rules-regulations/acknowledge', [UserDashboardController::class, 'acknowledgeRulesRegulations'])->name('user.rules-regulations.acknowledge');
     Route::get('/teacher/students', [UserDashboardController::class, 'teacherStudents'])->name('user.teacher.students');
     Route::get('/teacher/news', [UserDashboardController::class, 'teacherNews'])->name('user.teacher.news');
     Route::get('/technician/tickets', [App\Http\Controllers\User\TechnicianTicketController::class, 'index'])->name('user.technician-tickets.index');

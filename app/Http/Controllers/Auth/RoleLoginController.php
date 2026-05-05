@@ -29,6 +29,15 @@ class RoleLoginController extends Controller
         $credentials = $request->only('email', 'password');
         $remember = $request->filled('remember');
 
+        $existing = User::where('email', $request->input('email'))->first();
+        if ($existing && $existing->role === 'student' && (bool) $existing->student_terminated) {
+            throw ValidationException::withMessages([
+                'email' => [
+                    'Your student account has been terminated. You cannot sign in. Contact the administration if you need assistance.',
+                ],
+            ]);
+        }
+
         if (Auth::attempt($credentials, $remember)) {
             $request->session()->regenerate();
 

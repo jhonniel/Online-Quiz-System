@@ -91,6 +91,7 @@ class SettingsServiceProvider extends ServiceProvider
                 'social_youtube' => Setting::get('social_youtube', ''),
                 'contact_live_chat_days' => Setting::get('contact_live_chat_days', 'Monday - Friday'),
                 'contact_live_chat_time' => Setting::get('contact_live_chat_time', '10:00 AM - 5:00 PM EST'),
+                'student_rules_regulations_html' => Setting::get('student_rules_regulations_html', ''),
             ];
 
             // Merge existing settings (from controller) with base settings

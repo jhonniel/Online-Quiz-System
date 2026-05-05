@@ -33,7 +33,7 @@ Route::middleware('guest')->group(function () {
         ->name('password.store');
 });
 
-Route::middleware('auth')->group(function () {
+Route::middleware(['auth', 'student.not_terminated'])->group(function () {
     Route::get('profile', [UserProfileController::class, 'show'])->name('profile.show');
     Route::get('profile/edit', [UserProfileController::class, 'edit'])->name('profile.edit');
     Route::put('profile', [UserProfileController::class, 'update'])->name('profile.update');

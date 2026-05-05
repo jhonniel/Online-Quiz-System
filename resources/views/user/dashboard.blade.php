@@ -118,6 +118,43 @@
     </div>
     @endif
 
+    @if(auth()->user()->role === 'student' && !empty($studentOjtAccessCountdown))
+    @php
+        $ojtDaysLeft = (int) ($studentOjtAccessCountdown['days_remaining'] ?? 0);
+        $ojtAccessEnd = $studentOjtAccessCountdown['access_end_date'] ?? null;
+    @endphp
+    <div class="bg-amber-50 border-b border-amber-200 p-4 flex-shrink-0" role="status">
+        <div class="flex items-start gap-3">
+            <div class="flex-shrink-0 mt-0.5">
+                <svg class="h-5 w-5 text-amber-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+            </div>
+            <div class="min-w-0 flex-1">
+                <h3 class="text-sm font-semibold text-amber-900">Post–OJT account access</h3>
+                @if($ojtDaysLeft === 0)
+                    <p class="mt-1 text-sm text-amber-800">
+                        Your scheduled access period has ended or ends today. Your student account may be disabled automatically. If you still need access, contact the administration right away.
+                    </p>
+                @else
+                    <p class="mt-1 text-sm text-amber-800">
+                        <span class="text-2xl font-bold text-amber-950 tabular-nums">{{ $ojtDaysLeft }}</span>
+                        <span class="font-medium">{{ \Illuminate\Support\Str::plural('day', $ojtDaysLeft) }}</span>
+                        remaining until your student account may be automatically disabled after your OJT completion grace period.
+                    </p>
+                @endif
+                @if($ojtAccessEnd instanceof \Carbon\Carbon)
+                    <p class="mt-2 text-xs text-amber-700/90">
+                        Scheduled end of this access window:
+                        <time datetime="{{ $ojtAccessEnd->toDateString() }}">{{ $ojtAccessEnd->timezone(config('app.timezone'))->format('F j, Y') }}</time>
+                        ({{ config('app.timezone') }}).
+                    </p>
+                @endif
+            </div>
+        </div>
+    </div>
+    @endif
+
     <!-- Stats Cards -->
     @if(auth()->user()->role !== 'applicant')
     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 sm:gap-3 lg:gap-4 flex-shrink-0 p-4">

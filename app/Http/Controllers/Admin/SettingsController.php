@@ -12,6 +12,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\View;
 use Illuminate\Support\Str;
 
 class SettingsController extends Controller
@@ -983,6 +984,7 @@ class SettingsController extends Controller
         Cache::forget('setting.hiring_stages');
         Cache::forget('setting.hiring_email_notifications');
         Cache::forget('setting.hiring_instructions');
+        Cache::forget('setting.student_rules_regulations_html');
         Cache::forget('setting.hiring_application_public_access');
         Cache::forget('setting.hiring_application_url');
         Cache::forget('setting.hiring_tor_pdf');
@@ -992,6 +994,40 @@ class SettingsController extends Controller
 
         return redirect('/admin/settings')
             ->with('success', 'Settings updated successfully.');
+    }
+
+    /**
+     * Dedicated editor for student RULES AND REGULATIONS modal body (System → Rules).
+     */
+    public function rulesRegulations()
+    {
+        $html = (string) Setting::get('student_rules_regulations_html', '');
+        $defaultRulesHtml = View::make('components.student-rules-regulations-default-body')->render();
+
+        return view('admin.settings.rules-regulations', [
+            'student_rules_regulations_html' => $html,
+            'default_rules_html' => $defaultRulesHtml,
+            'has_custom_rules' => trim($html) !== '',
+        ]);
+    }
+
+    /**
+     * Save HTML body shown under "RULES AND REGULATIONS" in the student agreement modal.
+     */
+    public function updateRulesRegulations(Request $request)
+    {
+        $request->validate([
+            'student_rules_regulations_html' => 'nullable|string|max:65000',
+        ]);
+
+        $html = (string) ($request->input('student_rules_regulations_html') ?? '');
+        Setting::set('student_rules_regulations_html', $html, 'text', 'HTML body for student rules and regulations login modal');
+
+        Cache::forget('setting.student_rules_regulations_html');
+        Setting::clearCache();
+
+        return redirect('/admin/system/rules')
+            ->with('success', 'RULES AND REGULATIONS body saved to the database. Students will see updates the next time the agreement modal is shown.');
     }
 
     /**

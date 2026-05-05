@@ -10,10 +10,14 @@ use App\Models\News;
 use App\Models\QuizAssignment;
 use App\Models\TicketReport;
 use App\Models\User;
+use App\Models\UserActivity;
+use App\Services\StudentOjtPostCompletionService;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Schema;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Schema;
 
 class DashboardController extends Controller
 {
@@ -22,6 +26,7 @@ class DashboardController extends Controller
         $user = auth()->user();
         $evaluationAvailable = false;
         $evaluationFormTitle = null;
+        $studentOjtAccessCountdown = null;
 
         // Technician users get a ticket-focused dashboard.
         if ($user->role === 'technician') {
@@ -123,6 +128,11 @@ class DashboardController extends Controller
                 ->first();
         }
 
+        if ($user->role === 'student' && Schema::hasColumn('users', 'ojt_requirement_met_at')) {
+            $studentOjtAccessCountdown = app(StudentOjtPostCompletionService::class)
+                ->studentAccountDisableCountdownForDashboard($user);
+        }
+
         if ($user->role === 'student' && Schema::hasTable('evaluation_forms') && Schema::hasTable('evaluation_submissions')) {
             $requiredHours = (float) ($user->required_training_hours ?? 0);
             $loggedHours = (float) Dtr::query()->where('user_id', $user->id)->sum('total_hours');
@@ -147,7 +157,8 @@ class DashboardController extends Controller
             'totalQuizzes',
             'ongoingQuiz',
             'evaluationAvailable',
-            'evaluationFormTitle'
+            'evaluationFormTitle',
+            'studentOjtAccessCountdown'
         ));
     }
 
@@ -157,6 +168,33 @@ class DashboardController extends Controller
     public function tor()
     {
         return view('user.tor');
+    }
+
+    /**
+     * Student confirms they have read and agree to the rules and regulations (this session).
+     */
+    public function acknowledgeRulesRegulations(Request $request): JsonResponse
+    {
+        $user = $request->user();
+        abort_unless($user && $user->role === 'student', 403);
+
+        $request->session()->put('student_rules_regulations_pending', false);
+
+        try {
+            UserActivity::logActivity($user, 'action', 'rules_regulations_acknowledged', [
+                'user_id' => $user->id,
+                'user_name' => $user->name,
+                'user_email' => $user->email,
+                'role' => $user->role,
+            ]);
+        } catch (\Throwable $e) {
+            Log::warning('Failed to log rules_regulations_acknowledged', [
+                'user_id' => $user->id,
+                'error' => $e->getMessage(),
+            ]);
+        }
+
+        return response()->json(['ok' => true]);
     }
 
     public function teacherStudents(Request $request)
