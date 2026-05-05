@@ -75,12 +75,40 @@
                 <div>
                     <h2 class="text-base sm:text-lg font-semibold text-gray-900">Student Time Ranking</h2>
                     <p class="text-xs sm:text-sm text-gray-500">
-                        Sorted by <span class="font-medium">Remaining Time Needed</span> in descending order.
+                        Default sort is <span class="font-medium">Remaining Time Needed (High to Low)</span>.
                     </p>
                 </div>
-                <div class="inline-flex items-center px-3 py-1.5 rounded-full bg-gray-50 border border-gray-200 text-[11px] sm:text-xs text-gray-600">
-                    <span class="w-2 h-2 rounded-full bg-emerald-500 mr-2"></span>
-                    Negative remaining time means the student has already exceeded the required hours.
+                <div class="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 w-full sm:w-auto">
+                    <form method="GET" action="{{ url('/admin/student-management/dashboard') }}" class="w-full sm:w-auto flex flex-wrap items-end gap-2 sm:gap-2.5">
+                        <div class="flex flex-col gap-1 min-w-[210px]">
+                            <label for="sort_by" class="text-[11px] sm:text-xs text-gray-600 font-medium">Sort by</label>
+                            <select id="sort_by" name="sort_by" class="h-10 w-full rounded-md border border-gray-300 bg-white px-3 text-xs sm:text-sm focus:border-indigo-500 focus:ring-indigo-500">
+                            <option value="school" {{ ($sortBy ?? 'remaining_hours') === 'school' ? 'selected' : '' }}>School</option>
+                            <option value="required_hours" {{ ($sortBy ?? 'remaining_hours') === 'required_hours' ? 'selected' : '' }}>Time Needed</option>
+                            <option value="total_hours" {{ ($sortBy ?? 'remaining_hours') === 'total_hours' ? 'selected' : '' }}>Total Time from DTR</option>
+                            <option value="remaining_hours" {{ ($sortBy ?? 'remaining_hours') === 'remaining_hours' ? 'selected' : '' }}>Remaining Time Needed</option>
+                            <option value="approved_leave_requests" {{ ($sortBy ?? 'remaining_hours') === 'approved_leave_requests' ? 'selected' : '' }}>Approved Leave</option>
+                            <option value="estimated_end_date" {{ ($sortBy ?? 'remaining_hours') === 'estimated_end_date' ? 'selected' : '' }}>Estimated End Date</option>
+                            </select>
+                        </div>
+
+                        <div class="flex flex-col gap-1 min-w-[170px]">
+                            <label for="sort_dir" class="text-[11px] sm:text-xs text-gray-600 font-medium">Order</label>
+                            <select id="sort_dir" name="sort_dir" class="h-10 w-full rounded-md border border-gray-300 bg-white px-3 text-xs sm:text-sm focus:border-indigo-500 focus:ring-indigo-500">
+                            <option value="desc" {{ ($sortDir ?? 'desc') === 'desc' ? 'selected' : '' }}>High to Lowest</option>
+                            <option value="asc" {{ ($sortDir ?? 'desc') === 'asc' ? 'selected' : '' }}>Lowest to High</option>
+                            </select>
+                        </div>
+
+                        <button type="submit" class="h-10 inline-flex items-center justify-center px-4 rounded-md bg-indigo-600 text-white text-xs sm:text-sm font-medium hover:bg-indigo-700">
+                            Apply
+                        </button>
+                    </form>
+
+                    <div class="inline-flex items-center px-3 py-1.5 rounded-full bg-gray-50 border border-gray-200 text-[11px] sm:text-xs text-gray-600">
+                        <span class="w-2 h-2 rounded-full bg-emerald-500 mr-2"></span>
+                        Showing students who still need remaining time.
+                    </div>
                 </div>
             </div>
 

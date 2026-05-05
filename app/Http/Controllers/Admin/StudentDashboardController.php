@@ -94,6 +94,24 @@ class StudentDashboardController extends Controller
 
         // If user reaches this page, they already passed student-management access checks.
         $showApprovedLeaveRequests = true;
+        $sortBy = (string) $request->input('sort_by', 'remaining_hours');
+        $sortDir = strtolower((string) $request->input('sort_dir', 'desc'));
+
+        $allowedSortBy = [
+            'school',
+            'required_hours',
+            'total_hours',
+            'remaining_hours',
+            'approved_leave_requests',
+            'estimated_end_date',
+        ];
+        if (!in_array($sortBy, $allowedSortBy, true)) {
+            $sortBy = 'remaining_hours';
+        }
+        if (!in_array($sortDir, ['asc', 'desc'], true)) {
+            $sortDir = 'desc';
+        }
+        $sortDescending = $sortDir === 'desc';
 
         // Get all active students with their required training hours
         $allowedDepartmentIds = $user->canAccessStudentManagement()
@@ -165,7 +183,19 @@ class StudentDashboardController extends Controller
                 ];
             })->filter(function ($row) {
                 return ($row['remaining_hours'] ?? 0) > 0;
-            })->sortByDesc('remaining_hours')->values();
+            });
+
+            $ranked = $ranked->sortBy(function ($row) use ($sortBy, $sortDescending) {
+                return match ($sortBy) {
+                    'school' => strtolower((string) (optional($row['student']->university)->name ?? '')),
+                    'required_hours' => (float) ($row['required_hours'] ?? 0),
+                    'total_hours' => (float) ($row['total_hours'] ?? 0),
+                    'approved_leave_requests' => (int) ($row['approved_leave_requests'] ?? 0),
+                    'estimated_end_date' => $row['estimated_end_date']
+                        ?? ($sortDescending ? '0000-00-00' : '9999-12-31'),
+                    default => (float) ($row['remaining_hours'] ?? 0),
+                };
+            }, SORT_NATURAL, $sortDescending)->values();
 
             // Get rank history and last arrow from cache
             $rankHistory = Cache::get('student_rankings_history', []); // Array of [student_id => [rank1, rank2, rank3, ...]]
@@ -280,6 +310,8 @@ class StudentDashboardController extends Controller
             'studentsWithRemainingTime' => $studentsWithRemainingTime,
             'studentsEndingThisMonth' => $studentsEndingThisMonth ?? 0,
             'showApprovedLeaveRequests' => $showApprovedLeaveRequests,
+            'sortBy' => $sortBy,
+            'sortDir' => $sortDir,
         ]);
     }
 
