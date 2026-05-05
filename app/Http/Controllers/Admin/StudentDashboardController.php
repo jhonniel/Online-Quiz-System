@@ -92,7 +92,8 @@ class StudentDashboardController extends Controller
             abort(403, 'Access denied. You do not have permission to access Student Management.');
         }
 
-        $showApprovedLeaveRequests = $user->isAdmin() || $user->canAccessStudentManagement();
+        // If user reaches this page, they already passed student-management access checks.
+        $showApprovedLeaveRequests = true;
 
         // Get all active students with their required training hours
         $allowedDepartmentIds = $user->canAccessStudentManagement()
