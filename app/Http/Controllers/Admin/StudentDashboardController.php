@@ -162,9 +162,6 @@ class StudentDashboardController extends Controller
                     'estimated_end_date' => $estimatedEndDate,
                     'estimated_end_date_formatted' => $estimatedEndDateFormatted,
                 ];
-            })->filter(function ($row) {
-                // Show only students who still need to complete required time.
-                return ($row['remaining_hours'] ?? 0) > 0;
             })->sortByDesc('remaining_hours')->values();
 
             // Get rank history and last arrow from cache
