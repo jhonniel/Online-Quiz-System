@@ -223,11 +223,11 @@
                 <div class="flex flex-col gap-3 sm:text-right shrink-0 sm:min-w-[11rem]">
                     <div>
                         <p class="text-xs font-medium text-indigo-700 uppercase tracking-wide">exit conference</p>
+                        <p class="text-[11px] text-indigo-600 mt-0.5">This is your target date to be finished on your Internship or OJT.</p>
                         @if($ojtTargetEndDate instanceof \Carbon\CarbonInterface)
                             <p class="text-sm font-semibold text-indigo-950 tabular-nums">
                                 {{ $ojtTargetEndDate->timezone(config('app.timezone'))->format('F j, Y') }}
                             </p>
-                            <p class="text-[11px] text-indigo-600 mt-0.5">Set by your administrator</p>
                         @else
                             <p class="text-sm font-semibold text-indigo-950 tabular-nums">Not set</p>
                             @if($possibleExitConferenceDate instanceof \Carbon\CarbonInterface && $possibleExitWeekdays > 0)
