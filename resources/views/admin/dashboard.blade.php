@@ -184,7 +184,7 @@
         </div>
 
         <!-- OJT Slots -->
-        <a href="{{ route('admin.settings.index') }}" class="bg-gradient-to-r from-fuchsia-50 to-fuchsia-100 overflow-hidden shadow rounded-lg border border-fuchsia-200 block hover:border-fuchsia-300 hover:shadow-md transition-shadow">
+        <a href="{{ url('/admin/settings') }}" class="bg-gradient-to-r from-fuchsia-50 to-fuchsia-100 overflow-hidden shadow rounded-lg border border-fuchsia-200 block hover:border-fuchsia-300 hover:shadow-md transition-shadow">
             <div class="p-4 sm:p-5">
                 <div class="flex items-center">
                     <div class="flex-shrink-0">
