@@ -18,6 +18,24 @@ use Illuminate\Support\Facades\Log;
 class HiringApplicationController extends Controller
 {
     /**
+     * OJT slots used = ongoing interns:
+     * active students with required training hours set and still below required based on logged DTR total.
+     */
+    private function getOngoingInternsCount(): int
+    {
+        $userTable = (new \App\Models\User)->getTable();
+        $dtrTable = (new \App\Models\Dtr)->getTable();
+
+        return \App\Models\User::where('role', 'student')
+            ->where('is_active', true)
+            ->where('required_training_hours', '>', 0)
+            ->whereRaw(
+                "COALESCE((SELECT SUM({$dtrTable}.total_hours) FROM {$dtrTable} WHERE {$dtrTable}.user_id = {$userTable}.id), 0) < {$userTable}.required_training_hours"
+            )
+            ->count();
+    }
+
+    /**
      * Apply position-based filtering to the query based on user's allowed positions
      */
     private function applyPositionFilter($query)
@@ -1185,12 +1203,12 @@ class HiringApplicationController extends Controller
         // OJT slot capacity guard (configured in Admin Settings).
         $ojtTotalSlots = (int) \App\Models\Setting::get('ojt_total_slots', 0);
         if ($ojtTotalSlots > 0) {
-            $currentUsedSlots = \App\Models\User::where('role', 'student')
-                ->where('is_active', true)
-                ->count();
+            $currentUsedSlots = $this->getOngoingInternsCount();
 
-            // Count this acceptance only when the user is not already an active student.
-            $willConsumeNewSlot = ! ($user->role === 'student' && (bool) $user->is_active);
+            // Count this acceptance only when the user is not already an ongoing intern.
+            $willConsumeNewSlot = ! ($user->role === 'student'
+                && (bool) $user->is_active
+                && (float) ($user->required_training_hours ?? 0) > 0);
             $projectedUsedSlots = $currentUsedSlots + ($willConsumeNewSlot ? 1 : 0);
 
             if ($projectedUsedSlots > $ojtTotalSlots) {
@@ -1279,9 +1297,7 @@ class HiringApplicationController extends Controller
 
         $successMessage = 'Intern accepted. User account is now active with student role and can login.';
         if (($ojtTotalSlots ?? 0) > 0) {
-            $updatedUsedSlots = \App\Models\User::where('role', 'student')
-                ->where('is_active', true)
-                ->count();
+            $updatedUsedSlots = $this->getOngoingInternsCount();
             $remainingSlots = max($ojtTotalSlots - $updatedUsedSlots, 0);
             if ($remainingSlots <= 3) {
                 $successMessage .= " Warning: OJT capacity is low ({$updatedUsedSlots}/{$ojtTotalSlots} used, {$remainingSlots} slots left).";

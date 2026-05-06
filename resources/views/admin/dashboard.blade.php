@@ -194,12 +194,12 @@
                     </div>
                     <div class="ml-3 sm:ml-5 w-0 flex-1 min-w-0">
                         <dl>
-                            <dt class="text-xs sm:text-sm font-medium text-fuchsia-700 truncate">OJT Slots Used</dt>
+                            <dt class="text-xs sm:text-sm font-medium text-fuchsia-700 truncate">OJT Slots Used (Ongoing)</dt>
                             @if(($ojtTotalSlots ?? 0) > 0)
                                 <dd class="text-base sm:text-lg font-medium text-fuchsia-900">{{ $ojtSlotsUsed ?? 0 }} / {{ $ojtTotalSlots ?? 0 }}</dd>
                                 <dd class="text-xs text-fuchsia-600 mt-1">{{ $ojtSlotsRemaining ?? 0 }} slots available</dd>
                             @else
-                                <dd class="text-base sm:text-lg font-medium text-fuchsia-900">{{ $ojtSlotsUsed ?? 0 }} active students</dd>
+                                <dd class="text-base sm:text-lg font-medium text-fuchsia-900">{{ $ojtSlotsUsed ?? 0 }} ongoing interns</dd>
                                 <dd class="text-xs text-fuchsia-600 mt-1">Set total slots in Admin Settings</dd>
                             @endif
                         </dl>
@@ -249,30 +249,6 @@
             </div>
         </div>
 
-        <!-- Students: training time not yet completed -->
-        <a href="{{ url('/admin/student-management/dashboard') }}" class="bg-gradient-to-r from-rose-50 to-orange-50 overflow-hidden shadow rounded-lg border border-rose-200 block hover:border-rose-300 hover:shadow-md transition-shadow">
-            <div class="p-4 sm:p-5">
-                <div class="flex items-center">
-                    <div class="flex-shrink-0">
-                        <svg class="h-5 w-5 sm:h-6 sm:w-6 text-rose-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                        </svg>
-                    </div>
-                    <div class="ml-3 sm:ml-5 w-0 flex-1 min-w-0">
-                        <dl>
-                            <dt class="text-xs sm:text-sm font-medium text-rose-800 truncate">Students — training incomplete</dt>
-                            <dd class="text-base sm:text-lg font-medium text-rose-900">{{ $studentsIncompleteTrainingCount ?? 0 }}</dd>
-                            <dd class="text-xs text-rose-700 mt-1">
-                                Active students under required DTR hours
-                                @if(($studentsWithTrainingRequirementCount ?? 0) > 0)
-                                    <span class="whitespace-nowrap">({{ $studentsWithTrainingRequirementCount }} with a set target)</span>
-                                @endif
-                            </dd>
-                        </dl>
-                    </div>
-                </div>
-            </div>
-        </a>
     </div>
 
     <!-- Real-time User Activity -->

@@ -180,7 +180,15 @@ class DashboardController extends Controller
             $activeEmployees = User::where('role', 'employee')->where('is_active', true)->count();
             $activeStudents = User::where('role', 'student')->where('is_active', true)->count();
             $ojtTotalSlots = (int) Setting::get('ojt_total_slots', 0);
-            $ojtSlotsUsed = $activeStudents;
+            $userTable = (new User)->getTable();
+            $dtrTable = (new Dtr)->getTable();
+            $ojtSlotsUsed = User::where('role', 'student')
+                ->where('is_active', true)
+                ->where('required_training_hours', '>', 0)
+                ->whereRaw(
+                    "COALESCE((SELECT SUM({$dtrTable}.total_hours) FROM {$dtrTable} WHERE {$dtrTable}.user_id = {$userTable}.id), 0) < {$userTable}.required_training_hours"
+                )
+                ->count();
             $ojtSlotsRemaining = max($ojtTotalSlots - $ojtSlotsUsed, 0);
 
             // DTR Statistics - with error handling
