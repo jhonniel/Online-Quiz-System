@@ -140,24 +140,34 @@ class DtrTimeRequestController extends Controller
             ->whereDate('date', $dtrTimeRequest->date)
             ->first();
 
-        if ($existingDtr) {
-            return back()->withErrors(['error' => 'DTR record already exists for this date.']);
-        }
-
         $validated = $request->validate([
             'admin_notes' => 'nullable|string|max:1000',
         ]);
 
-        // Create DTR record
-        Dtr::create([
-            'user_id' => $dtrTimeRequest->user_id,
-            'date' => $dtrTimeRequest->date,
-            'total_hours' => $dtrTimeRequest->hours,
-            'overtime_hours' => 0,
-            'status' => 'present',
-            'remarks' => 'Approved time request' . ($dtrTimeRequest->remarks ? ': ' . $dtrTimeRequest->remarks : ''),
-            'added_time_from_note' => $dtrTimeRequest->hours, // Mark as added time
-        ]);
+        $approvedRemark = 'Approved time request'.($dtrTimeRequest->remarks ? ': '.$dtrTimeRequest->remarks : '');
+        if ($existingDtr) {
+            $newTotalHours = ((float) ($existingDtr->total_hours ?? 0)) + (float) $dtrTimeRequest->hours;
+            $newAddedTime = ((float) ($existingDtr->added_time_from_note ?? 0)) + (float) $dtrTimeRequest->hours;
+            $existingRemarks = trim((string) ($existingDtr->remarks ?? ''));
+
+            $existingDtr->total_hours = $newTotalHours;
+            $existingDtr->overtime_hours = max($newTotalHours - 8.0, 0);
+            $existingDtr->status = $existingDtr->status ?: 'present';
+            $existingDtr->added_time_from_note = $newAddedTime;
+            $existingDtr->remarks = $existingRemarks !== '' ? $existingRemarks.' | '.$approvedRemark : $approvedRemark;
+            $existingDtr->save();
+        } else {
+            // Create DTR record when none exists yet.
+            Dtr::create([
+                'user_id' => $dtrTimeRequest->user_id,
+                'date' => $dtrTimeRequest->date,
+                'total_hours' => $dtrTimeRequest->hours,
+                'overtime_hours' => max(((float) $dtrTimeRequest->hours) - 8.0, 0),
+                'status' => 'present',
+                'remarks' => $approvedRemark,
+                'added_time_from_note' => $dtrTimeRequest->hours,
+            ]);
+        }
 
         // Update time request
         $dtrTimeRequest->update([
@@ -167,7 +177,7 @@ class DtrTimeRequestController extends Controller
             'reviewed_at' => now(),
         ]);
 
-        return back()->with('success', 'Time request approved and DTR record created successfully.');
+        return back()->with('success', 'Time request approved and hours were applied to the DTR successfully.');
     }
 
     /**

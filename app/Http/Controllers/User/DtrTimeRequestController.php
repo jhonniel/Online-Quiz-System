@@ -181,16 +181,6 @@ class DtrTimeRequestController extends Controller
                 continue;
             }
 
-            // Check if DTR already exists for this date
-            $existingDtr = \App\Models\Dtr::where('user_id', $user->id)
-                ->whereDate('date', $day['date'])
-                ->first();
-
-            if ($existingDtr) {
-                $skippedCount++;
-                continue;
-            }
-
             // Create time request for this day
             try {
                 $timeRequest = DtrTimeRequest::create([
@@ -237,7 +227,7 @@ class DtrTimeRequestController extends Controller
                 'skipped_count' => $skippedCount,
                 'errors_count' => count($errors)
             ]);
-            return back()->withErrors(['days' => 'No new time requests were created. All dates may already have pending/approved requests or existing DTR records.'])->withInput();
+            return back()->withErrors(['days' => 'No new time requests were created. All dates may already have pending/approved requests.'])->withInput();
         }
         
         \Log::info('DTR Time Requests Created Successfully', [
@@ -248,7 +238,7 @@ class DtrTimeRequestController extends Controller
 
         $message = "Successfully submitted {$createdCount} time request(s).";
         if ($skippedCount > 0) {
-            $message .= " {$skippedCount} date(s) were skipped (already have requests or DTR records).";
+            $message .= " {$skippedCount} date(s) were skipped (already have pending/approved requests).";
         }
 
         return back()->with('success', $message);

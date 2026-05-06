@@ -164,6 +164,26 @@
                     </div>
                     @endif
 
+                    <div id="overtime-specific-dates-container" class="hidden">
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            Select specific overtime date(s) from your chosen range <span class="text-red-500">*</span>
+                        </label>
+                        <div id="overtime-specific-dates-wrap"
+                             data-old-selected='@json(old("overtime_specific_dates", []))'
+                             class="rounded-lg border border-gray-200 bg-gray-50 p-3 min-h-[3rem]">
+                            <p class="text-xs text-gray-500">Pick Start Date and End Date above first (Overtime only).</p>
+                        </div>
+                        <p class="mt-1 text-xs text-gray-500">
+                            Overtime requests filed within the past 7 days are eligible for approval.
+                        </p>
+                        @error('overtime_specific_dates')
+                            <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                        @enderror
+                        @error('overtime_specific_dates.*')
+                            <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                        @enderror
+                    </div>
+
                     <!-- Reason (label/required change to "Location of travel" when type = Travel) -->
                     <div id="reason-field">
                         <label for="reason" class="block text-sm font-medium text-gray-700 mb-2">
@@ -186,12 +206,15 @@
                     <!-- Supporting Document (Optional; hidden for Travel) -->
                     <div id="supporting-section">
                         <label class="block text-sm font-medium text-gray-700 mb-2">
-                            Supporting Document (e.g., Medical Certificate, Proof, Attachments)
+                            Supporting Document (e.g., Hubstaff screenshots, ClickUp links/screenshots)
                         </label>
-                        <input type="file" name="supporting_document" accept=".pdf,.jpg,.jpeg,.png"
+                        <input type="file" name="supporting_documents[]" accept=".pdf,.jpg,.jpeg,.png" multiple
                                class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100">
-                        <p class="mt-1 text-xs text-gray-500">Optional, PDF/JPG/PNG up to 5MB. Attach for any request type.</p>
-                        @error('supporting_document')
+                        <p class="mt-1 text-xs text-gray-500">Optional, upload up to 5 files (PDF/JPG/PNG), 5MB max per file.</p>
+                        @error('supporting_documents')
+                            <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                        @enderror
+                        @error('supporting_documents.*')
                             <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
                         @enderror
                     </div>
@@ -219,23 +242,6 @@
                                 Enter the total overtime time in <strong>HH:MM</strong> (e.g., 01:00, 02:30). No AM/PM.
                             </p>
                             @error('overtime_hours')
-                                <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
-                            @enderror
-                        </div>
-
-                        <!-- Overtime Dates Text -->
-                        <div>
-                            <label for="overtime_dates" class="block text-sm font-medium text-gray-700 mb-2">
-                                Overtime Dates <span class="text-red-500">*</span>
-                            </label>
-                            <input type="text" name="overtime_dates" id="overtime_dates"
-                                   value="{{ old('overtime_dates') }}"
-                                   placeholder="e.g., May 10–11, 2025 or specific dates"
-                                   class="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
-                            <p class="mt-1 text-xs text-gray-500">
-                                Clearly state the date(s) when the overtime will be rendered.
-                            </p>
-                            @error('overtime_dates')
                                 <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
                             @enderror
                         </div>
@@ -421,10 +427,11 @@
 </div>
 @endif
 
+<div id="leave-request-page-data" data-show-no-balance="{{ ($showNoBalanceModalOnLoad ?? false) ? '1' : '0' }}" hidden></div>
+<script id="leave-request-balances-json" type="application/json">{!! json_encode($balances ?? null) !!}</script>
 <script>
-    window.showNoBalanceModalOnLoad = @json($showNoBalanceModalOnLoad ?? false);
-</script>
-<script>
+    window.showNoBalanceModalOnLoad =
+        (document.getElementById('leave-request-page-data')?.dataset.showNoBalance === '1');
     const startDateInput = document.getElementById('start_date');
     const endDateInput = document.getElementById('end_date');
     const typeSelect = document.getElementById('type');
@@ -436,11 +443,13 @@
     const additionalTimeHoursWrap = document.getElementById('additional-time-hours-wrap');
     const additionalTimeHoursInput = document.getElementById('additional_time_total_hours');
     const additionalTimeModeInputs = document.querySelectorAll('input[name="additional_time_mode"]');
+    const overtimeSpecificDatesContainer = document.getElementById('overtime-specific-dates-container');
+    const overtimeSpecificDatesWrap = document.getElementById('overtime-specific-dates-wrap');
     const submitBtn = document.getElementById('submit-btn');
     const noBalanceModal = document.getElementById('no-balance-modal');
     const today = new Date().toISOString().split('T')[0];
 
-    const balances = @json($balances ?? null);
+    const balances = JSON.parse(document.getElementById('leave-request-balances-json').textContent || 'null');
     const balanceCheckTypes = ['vacation_leave', 'sick_leave', 'offset'];
     const offsetHoursInput = document.getElementById('offset_hours');
     function parseHoursValue(val) {
@@ -495,6 +504,61 @@
         if (submitBtn) submitBtn.disabled = !!noBalance;
     }
 
+    function renderOvertimeSpecificDates() {
+        if (!overtimeSpecificDatesWrap) return;
+        const isOvertime = typeSelect.value === 'overtime';
+        if (!isOvertime) {
+            overtimeSpecificDatesWrap.innerHTML = '<p class="text-xs text-gray-500">Visible only when Request Type is Overtime.</p>';
+            return;
+        }
+
+        const start = startDateInput.value;
+        const end = endDateInput.value || start;
+        if (!start || !end) {
+            overtimeSpecificDatesWrap.innerHTML = '<p class="text-xs text-gray-500">Pick Start Date and End Date first.</p>';
+            return;
+        }
+
+        const startDate = new Date(start + 'T00:00:00');
+        const endDate = new Date(end + 'T00:00:00');
+        if (Number.isNaN(startDate.getTime()) || Number.isNaN(endDate.getTime()) || endDate < startDate) {
+            overtimeSpecificDatesWrap.innerHTML = '<p class="text-xs text-red-600">Invalid date range. End Date must be same or after Start Date.</p>';
+            return;
+        }
+
+        const currentChecked = Array.from(
+            overtimeSpecificDatesWrap.querySelectorAll('input[name="overtime_specific_dates[]"]:checked')
+        ).map((el) => el.value);
+        const oldSelected = (() => {
+            try {
+                return JSON.parse(overtimeSpecificDatesWrap.dataset.oldSelected || '[]');
+            } catch (e) {
+                return [];
+            }
+        })();
+        const selectedSet = new Set(currentChecked.length ? currentChecked : oldSelected);
+
+        const rows = [];
+        let cursor = new Date(startDate);
+        while (cursor <= endDate) {
+            const y = cursor.getFullYear();
+            const m = String(cursor.getMonth() + 1).padStart(2, '0');
+            const d = String(cursor.getDate()).padStart(2, '0');
+            const value = `${y}-${m}-${d}`;
+            rows.push(`
+                <label class="inline-flex items-center gap-2 text-sm text-gray-700 mr-4 mb-2">
+                    <input type="checkbox" name="overtime_specific_dates[]" value="${value}" ${selectedSet.has(value) ? 'checked' : ''} class="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500">
+                    <span>${value}</span>
+                </label>
+            `);
+            cursor.setDate(cursor.getDate() + 1);
+        }
+
+        overtimeSpecificDatesWrap.innerHTML = rows.length > 0
+            ? `<div class="flex flex-wrap">${rows.join('')}</div>`
+            : '<p class="text-xs text-gray-500">No selectable dates in range.</p>';
+    }
+
     // Auto-set end_date min/max when relevant
     function syncEndDateMin() {
         if (!endDateInput) return;
@@ -502,7 +566,10 @@
         if (typeSelect.value === 'travel') {
             endDateInput.removeAttribute('min');
             endDateInput.setAttribute('max', today);
-        } else if (typeSelect.value === 'overtime' || typeSelect.value === 'additional_time') {
+        } else if (typeSelect.value === 'overtime') {
+            endDateInput.min = startDate || today;
+            endDateInput.setAttribute('max', today);
+        } else if (typeSelect.value === 'additional_time') {
             endDateInput.removeAttribute('min');
             endDateInput.removeAttribute('max');
         } else if (startDate) {
@@ -518,10 +585,12 @@
         if (!endDateInput.value) {
             syncEndDateMin();
         }
+        renderOvertimeSpecificDates();
         updateNoBalancePrompt();
     });
 
     endDateInput.addEventListener('focus', syncEndDateMin);
+    endDateInput.addEventListener('change', renderOvertimeSpecificDates);
 
     function getAdditionalTimeMode() {
         const selected = document.querySelector('input[name="additional_time_mode"]:checked');
@@ -564,7 +633,14 @@
             startDateInput.removeAttribute('min');
             startDateInput.setAttribute('max', today);
             if (endDateInput) endDateInput.setAttribute('max', today);
-        } else if (typeSelect.value === 'overtime' || typeSelect.value === 'additional_time') {
+        } else if (typeSelect.value === 'overtime') {
+            const overtimeMin = new Date();
+            overtimeMin.setDate(overtimeMin.getDate() - 7);
+            const overtimeMinText = overtimeMin.toISOString().split('T')[0];
+            startDateInput.setAttribute('min', overtimeMinText);
+            startDateInput.setAttribute('max', today);
+            if (endDateInput) endDateInput.setAttribute('max', today);
+        } else if (typeSelect.value === 'additional_time') {
             startDateInput.removeAttribute('min');
             startDateInput.removeAttribute('max');
             if (endDateInput) endDateInput.removeAttribute('max');
@@ -576,8 +652,10 @@
 
         if (typeSelect.value === 'overtime') {
             overtimeSection.classList.remove('hidden');
+            if (overtimeSpecificDatesContainer) overtimeSpecificDatesContainer.classList.remove('hidden');
         } else {
             overtimeSection.classList.add('hidden');
+            if (overtimeSpecificDatesContainer) overtimeSpecificDatesContainer.classList.add('hidden');
         }
 
         if (typeSelect.value === 'work_from_home') {
@@ -630,6 +708,7 @@
         }
 
         syncEndDateMin();
+        renderOvertimeSpecificDates();
     }
 
     typeSelect.addEventListener('change', updateRequestTypeSections);

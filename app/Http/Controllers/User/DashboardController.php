@@ -12,6 +12,8 @@ use App\Models\QuizAssignment;
 use App\Models\TicketReport;
 use App\Models\User;
 use App\Models\UserActivity;
+use App\Models\LeaveBalance;
+use App\Models\Setting;
 use App\Services\StudentOjtPostCompletionService;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
@@ -32,6 +34,9 @@ class DashboardController extends Controller
         $studentResubmissionRequests = collect();
         $studentOjtAccessCountdown = null;
         $studentLeaveBalanceSummary = null;
+        $employeeLeaveSummary = null;
+        $employeeLeaveCharts = null;
+        $employeeResubmissionRequests = collect();
 
         // Technician users get a ticket-focused dashboard.
         if ($user->role === 'technician') {
@@ -282,6 +287,114 @@ class DashboardController extends Controller
             ];
         }
 
+        if ($user->role === 'employee') {
+            $employeeLeaveBaseQuery = LeaveRequest::query()
+                ->where('user_id', $user->id);
+
+            $currentYear = now()->year;
+            $defaultVacation = (float) Setting::get('default_vacation_balance', 15);
+            $defaultSick = (float) Setting::get('default_sick_leave_balance', 10);
+            $leaveBalance = LeaveBalance::firstOrCreateWithCarryover(
+                (int) $user->id,
+                (int) $currentYear,
+                (float) $defaultVacation,
+                (float) $defaultSick
+            );
+            $leaveAllowance = (float) $leaveBalance->vacation_allowance + (float) $leaveBalance->sick_allowance;
+            $usedLeaveCredits = (float) LeaveRequest::query()
+                ->where('user_id', $user->id)
+                ->whereIn('type', ['leave', 'vacation_leave', 'sick_leave'])
+                ->where('status', 'approved')
+                ->whereYear('start_date', $currentYear)
+                ->get()
+                ->sum('days');
+            $leaveCreditsRemaining = max($leaveAllowance - $usedLeaveCredits, 0);
+
+            $today = Carbon::today();
+            $overtimeEarnedMinutes = 0;
+            $approvedOvertimeRequests = LeaveRequest::query()
+                ->where('user_id', $user->id)
+                ->where('type', 'overtime')
+                ->where('status', 'approved')
+                ->whereDate('start_date', '<=', $today)
+                ->get(['reason']);
+            foreach ($approvedOvertimeRequests as $requestItem) {
+                $raw = (string) ($requestItem->reason ?? '');
+                if (preg_match('/Total Overtime Hours:\s*([0-9]{2}:[0-9]{2})/', $raw, $m)) {
+                    [$h, $mPart] = array_map('intval', explode(':', $m[1]));
+                    $overtimeEarnedMinutes += $h * 60 + $mPart;
+                }
+            }
+            $offsetDeductHours = (float) LeaveRequest::query()
+                ->where('user_id', $user->id)
+                ->where('type', 'offset')
+                ->where('status', 'approved')
+                ->get()
+                ->sum('offset_hours_needed');
+            $overtimeBalanceMinutes = $overtimeEarnedMinutes - (int) round($offsetDeductHours * 60);
+            $otSign = $overtimeBalanceMinutes < 0 ? '-' : '';
+            $otAbs = abs($overtimeBalanceMinutes);
+            $otH = intdiv($otAbs, 60);
+            $otM = $otAbs % 60;
+
+            $employeeLeaveSummary = [
+                'total_requests' => (clone $employeeLeaveBaseQuery)->count(),
+                'pending_requests' => (clone $employeeLeaveBaseQuery)->where('status', 'pending')->count(),
+                'approved_requests' => (clone $employeeLeaveBaseQuery)->where('status', 'approved')->count(),
+                'rejected_requests' => (clone $employeeLeaveBaseQuery)->where('status', 'rejected')->count(),
+                'resubmission_requests' => (clone $employeeLeaveBaseQuery)->awaitingUserResubmission()->count(),
+                'leave_credits_year' => (int) $currentYear,
+                'leave_credits_allowance' => round($leaveAllowance, 2),
+                'leave_credits_used' => round($usedLeaveCredits, 2),
+                'leave_credits_remaining' => round($leaveCreditsRemaining, 2),
+                'overtime_balance_minutes' => (int) $overtimeBalanceMinutes,
+                'overtime_balance_formatted' => $otSign.sprintf('%02d:%02d', $otH, $otM),
+            ];
+
+            $employeeResubmissionRequests = LeaveRequest::query()
+                ->where('user_id', $user->id)
+                ->awaitingUserResubmission()
+                ->latest('updated_at')
+                ->with('reviewer')
+                ->take(5)
+                ->get();
+
+            $months = collect(range(5, 0))->map(fn ($index) => now()->subMonths($index)->startOfMonth());
+            $months = $months->push(now()->startOfMonth())->values();
+            $monthlyLabels = $months->map(fn (Carbon $month) => $month->format('M Y'))->values();
+            $monthlyCounts = $months->mapWithKeys(fn (Carbon $month) => [
+                $month->format('Y-m') => 0,
+            ]);
+
+            $monthlyLeaveRows = LeaveRequest::query()
+                ->where('user_id', $user->id)
+                ->whereDate('created_at', '>=', $months->first()->toDateString())
+                ->get(['created_at']);
+
+            foreach ($monthlyLeaveRows as $row) {
+                $key = Carbon::parse($row->created_at)->format('Y-m');
+                if ($monthlyCounts->has($key)) {
+                    $monthlyCounts[$key] = (int) $monthlyCounts[$key] + 1;
+                }
+            }
+
+            $employeeLeaveCharts = [
+                'status' => [
+                    'labels' => ['Pending', 'Approved', 'Rejected', 'Resubmission'],
+                    'values' => [
+                        (int) ($employeeLeaveSummary['pending_requests'] ?? 0),
+                        (int) ($employeeLeaveSummary['approved_requests'] ?? 0),
+                        (int) ($employeeLeaveSummary['rejected_requests'] ?? 0),
+                        (int) ($employeeLeaveSummary['resubmission_requests'] ?? 0),
+                    ],
+                ],
+                'monthly' => [
+                    'labels' => $monthlyLabels->all(),
+                    'values' => array_values($monthlyCounts->all()),
+                ],
+            ];
+        }
+
         return view('user.dashboard', compact(
             'allQuizzes',
             'assignedQuizzes',
@@ -295,7 +408,10 @@ class DashboardController extends Controller
             'studentTrainingStats',
             'studentTrainingCharts',
             'studentResubmissionRequests',
-            'studentLeaveBalanceSummary'
+            'studentLeaveBalanceSummary',
+            'employeeLeaveSummary',
+            'employeeLeaveCharts',
+            'employeeResubmissionRequests'
         ));
     }
 

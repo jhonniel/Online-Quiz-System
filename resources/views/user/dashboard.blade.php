@@ -1,7 +1,7 @@
 @extends('layouts.user')
 
 @section('content')
-<div class="h-full flex flex-col min-h-0">
+<div class="min-h-full flex flex-col">
     <!-- Search and Filter Bar -->
     @if(auth()->user()->role !== 'applicant')
     <div class="bg-white shadow-sm border-b border-gray-200 p-4 flex-shrink-0">
@@ -323,6 +323,103 @@
     </div>
     @endif
 
+    @if(auth()->user()->role === 'employee' && !empty($employeeLeaveSummary))
+    <div class="p-4 pt-2 flex-shrink-0 space-y-4">
+        <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-5 gap-4">
+            <div class="bg-white border border-gray-200 rounded-lg p-4 shadow-sm">
+                <p class="text-xs font-medium uppercase tracking-wide text-gray-500">Total Leave Requests</p>
+                <p class="mt-1 text-2xl font-bold text-gray-900">{{ number_format((int) ($employeeLeaveSummary['total_requests'] ?? 0)) }}</p>
+            </div>
+            <div class="bg-amber-50 border border-amber-200 rounded-lg p-4 shadow-sm">
+                <p class="text-xs font-medium uppercase tracking-wide text-amber-700">Pending</p>
+                <p class="mt-1 text-2xl font-bold text-amber-900">{{ number_format((int) ($employeeLeaveSummary['pending_requests'] ?? 0)) }}</p>
+            </div>
+            <div class="bg-emerald-50 border border-emerald-200 rounded-lg p-4 shadow-sm">
+                <p class="text-xs font-medium uppercase tracking-wide text-emerald-700">Approved</p>
+                <p class="mt-1 text-2xl font-bold text-emerald-900">{{ number_format((int) ($employeeLeaveSummary['approved_requests'] ?? 0)) }}</p>
+            </div>
+            <div class="bg-red-50 border border-red-200 rounded-lg p-4 shadow-sm">
+                <p class="text-xs font-medium uppercase tracking-wide text-red-700">Rejected</p>
+                <p class="mt-1 text-2xl font-bold text-red-900">{{ number_format((int) ($employeeLeaveSummary['rejected_requests'] ?? 0)) }}</p>
+            </div>
+            <div class="bg-rose-50 border border-rose-200 rounded-lg p-4 shadow-sm">
+                <p class="text-xs font-medium uppercase tracking-wide text-rose-700">For Resubmission</p>
+                <p class="mt-1 text-2xl font-bold text-rose-900">{{ number_format((int) ($employeeLeaveSummary['resubmission_requests'] ?? 0)) }}</p>
+            </div>
+        </div>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 shadow-sm">
+                <p class="text-xs font-medium uppercase tracking-wide text-blue-700">Leave Credits Remaining</p>
+                <p class="mt-1 text-2xl font-bold text-blue-900">{{ number_format((float) ($employeeLeaveSummary['leave_credits_remaining'] ?? 0), 2) }}</p>
+                <p class="text-[11px] mt-1 text-blue-700">
+                    {{ (int) ($employeeLeaveSummary['leave_credits_year'] ?? now()->year) }} pool:
+                    <span class="tabular-nums">{{ number_format((float) ($employeeLeaveSummary['leave_credits_used'] ?? 0), 2) }}</span>
+                    day(s) used
+                    <span class="text-blue-600">·</span>
+                    <span class="tabular-nums">{{ number_format((float) ($employeeLeaveSummary['leave_credits_allowance'] ?? 0), 2) }}</span>
+                    day(s) allowance
+                </p>
+                <p class="text-[11px] mt-0.5 text-blue-700">Usable for Vacation Leave / Sick Leave (approved requests this year)</p>
+            </div>
+            <div class="bg-violet-50 border border-violet-200 rounded-lg p-4 shadow-sm">
+                <p class="text-xs font-medium uppercase tracking-wide text-violet-700">Overtime Balance</p>
+                <p class="mt-1 text-2xl font-bold text-violet-900 tabular-nums">{{ $employeeLeaveSummary['overtime_balance_formatted'] ?? '00:00' }}</p>
+                <p class="text-[11px] mt-1 text-violet-700">Available hours that can be used for Offset</p>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 xl:grid-cols-2 gap-3">
+            <div class="bg-white border border-gray-200 rounded-lg p-4 shadow-sm">
+                <h3 class="text-sm font-semibold text-gray-900 mb-2">Leave Request Status Breakdown</h3>
+                <div class="h-60">
+                    <canvas id="employeeLeaveStatusChart"></canvas>
+                </div>
+            </div>
+            <div class="bg-white border border-gray-200 rounded-lg p-4 shadow-sm">
+                <h3 class="text-sm font-semibold text-gray-900 mb-2">Leave Requests Filed (Last 6 Months)</h3>
+                <div class="h-60">
+                    <canvas id="employeeMonthlyLeaveChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+    @endif
+
+    @if(auth()->user()->role === 'employee' && isset($employeeResubmissionRequests) && $employeeResubmissionRequests->isNotEmpty())
+    <div class="p-4 pt-0 flex-shrink-0">
+        <div class="bg-rose-50 border border-rose-200 rounded-lg p-4" role="status">
+            <div class="flex items-start justify-between gap-3">
+                <div>
+                    <h3 class="text-sm font-semibold text-rose-900">Leave Requests For Resubmission</h3>
+                    <p class="mt-1 text-xs text-rose-700">
+                        You have {{ $employeeResubmissionRequests->count() }} request{{ $employeeResubmissionRequests->count() > 1 ? 's' : '' }} that need updates and resubmission.
+                    </p>
+                </div>
+                <a href="{{ url('/leave-requests') }}"
+                   class="inline-flex items-center px-3 py-1.5 rounded-md text-xs font-medium border border-rose-300 text-rose-700 bg-white hover:bg-rose-100">
+                    Open Leave Requests
+                </a>
+            </div>
+            <div class="mt-3 space-y-2">
+                @foreach($employeeResubmissionRequests as $resubReq)
+                    <div class="flex items-center justify-between bg-white/80 border border-rose-100 rounded-md px-3 py-2">
+                        <div>
+                            <p class="text-xs font-semibold text-gray-800">{{ $resubReq->type_label ?? ucfirst(str_replace('_', ' ', (string) $resubReq->type)) }}</p>
+                            <p class="text-[11px] text-gray-600">
+                                Updated {{ optional($resubReq->updated_at)->format('M j, Y g:i A') ?? '—' }}
+                            </p>
+                        </div>
+                        <a href="{{ route('user.leave-requests.edit', $resubReq) }}"
+                           class="inline-flex items-center px-2.5 py-1 rounded-md text-[11px] font-medium text-white bg-rose-600 hover:bg-rose-700">
+                            Resubmit
+                        </a>
+                    </div>
+                @endforeach
+            </div>
+        </div>
+    </div>
+    @endif
+
     <!-- Stats Cards -->
     @if(auth()->user()->role !== 'applicant')
     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 sm:gap-3 lg:gap-4 flex-shrink-0 p-4">
@@ -387,10 +484,10 @@
 
     <!-- Available Quizzes -->
     @if(auth()->user()->role !== 'applicant')
-    <div class="bg-white shadow-sm border-t border-gray-200 overflow-hidden flex-1 flex flex-col">
+    <div class="bg-white shadow-sm border-t border-gray-200 overflow-hidden flex flex-col">
 
         @if($allQuizzes->count() > 0)
-            <div class="overflow-x-auto flex-1 min-h-0">
+            <div class="overflow-auto">
                 <table class="min-w-full divide-y divide-gray-200">
                     <thead class="bg-gray-50 sticky top-0 z-10">
                         <tr>
@@ -532,6 +629,12 @@
 <script type="application/json" id="student-training-charts-data">
 {!! json_encode($studentTrainingCharts ?? [
     'progress' => ['labels' => [], 'values' => []],
+    'monthly' => ['labels' => [], 'values' => []],
+]) !!}
+</script>
+<script type="application/json" id="employee-leave-charts-data">
+{!! json_encode($employeeLeaveCharts ?? [
+    'status' => ['labels' => [], 'values' => []],
     'monthly' => ['labels' => [], 'values' => []],
 ]) !!}
 </script>
@@ -740,6 +843,52 @@ document.addEventListener('DOMContentLoaded', function() {
                 datasets: [{
                     data: studentChartData.monthly.values,
                     backgroundColor: '#3b82f6',
+                    borderRadius: 6,
+                    maxBarThickness: 36,
+                }],
+            },
+            options: commonBarOptions,
+        });
+    }
+
+    const employeeChartNode = document.getElementById('employee-leave-charts-data');
+    const employeeChartData = employeeChartNode ? JSON.parse(employeeChartNode.textContent) : {
+        status: { labels: [], values: [] },
+        monthly: { labels: [], values: [] },
+    };
+
+    const employeeStatusCanvas = document.getElementById('employeeLeaveStatusChart');
+    if (employeeStatusCanvas && employeeChartData.status?.labels?.length) {
+        new Chart(employeeStatusCanvas, {
+            type: 'doughnut',
+            data: {
+                labels: employeeChartData.status.labels,
+                datasets: [{
+                    data: employeeChartData.status.values,
+                    backgroundColor: ['#f59e0b', '#10b981', '#ef4444', '#f43f5e'],
+                    borderColor: '#ffffff',
+                    borderWidth: 2,
+                }],
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { position: 'bottom' },
+                },
+            },
+        });
+    }
+
+    const employeeMonthlyCanvas = document.getElementById('employeeMonthlyLeaveChart');
+    if (employeeMonthlyCanvas && employeeChartData.monthly?.labels?.length) {
+        new Chart(employeeMonthlyCanvas, {
+            type: 'bar',
+            data: {
+                labels: employeeChartData.monthly.labels,
+                datasets: [{
+                    data: employeeChartData.monthly.values,
+                    backgroundColor: '#6366f1',
                     borderRadius: 6,
                     maxBarThickness: 36,
                 }],

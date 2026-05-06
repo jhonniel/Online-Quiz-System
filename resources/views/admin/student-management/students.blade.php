@@ -26,7 +26,7 @@
     </div>
 
     <!-- Students Analytics -->
-    <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-6 gap-4">
+    <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-7 gap-4">
         <div class="bg-white border border-gray-200 rounded-lg p-4 shadow-sm">
             <p class="text-xs font-semibold uppercase tracking-wide text-gray-500">Total Students</p>
             <p class="mt-2 text-2xl font-bold text-gray-900">{{ number_format($statsTotalStudents ?? 0) }}</p>
@@ -41,6 +41,11 @@
             <p class="text-xs font-semibold uppercase tracking-wide text-gray-500">Completed</p>
             <p class="mt-2 text-2xl font-bold text-emerald-700">{{ number_format($statsCompleted ?? 0) }}</p>
             <p class="mt-1 text-xs text-gray-500">Reached required hours</p>
+        </div>
+        <div class="bg-white border border-gray-200 rounded-lg p-4 shadow-sm">
+            <p class="text-xs font-semibold uppercase tracking-wide text-gray-500">Ongoing, No Time Logged</p>
+            <p class="mt-2 text-2xl font-bold text-amber-700">{{ number_format((int) ($statsOngoingNoLoggedTime ?? 0)) }}</p>
+            <p class="mt-1 text-xs text-gray-500">Required hours set, zero DTR hours yet</p>
         </div>
         <div class="bg-white border border-gray-200 rounded-lg p-4 shadow-sm">
             <p class="text-xs font-semibold uppercase tracking-wide text-gray-500">Average Completion</p>
@@ -79,6 +84,18 @@
             </div>
             <p class="mt-3 text-xs text-gray-500">Includes students who are done and those still ongoing.</p>
         </div>
+    </div>
+
+    <div class="bg-white border border-gray-200 rounded-lg shadow-sm overflow-hidden">
+        <div class="px-4 py-3 border-b border-gray-200 bg-gray-50">
+            <h3 class="text-sm font-semibold text-gray-900">Exit conference — closest to today (by school)</h3>
+            <p class="mt-1 text-xs text-gray-500">
+                Each row is one school in your scope. The student listed has the exit-conference date nearest to today
+                (admin-set OJT target if present; otherwise estimated from required hours and first DTR date, matching the student dashboard rule).
+                This table uses <strong>all students in scope</strong>, not the search box below.
+            </p>
+        </div>
+        @include('admin.student-management.partials.exit-conference-closest-by-school-table', ['exitConferenceClosestBySchool' => $exitConferenceClosestBySchool ?? []])
     </div>
 
     <!-- Filters -->

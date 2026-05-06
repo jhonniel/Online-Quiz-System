@@ -8,6 +8,7 @@ use App\Models\LeaveRequestLog;
 use App\Models\User;
 use App\Models\Dtr;
 use App\Models\QuizAttemptHistory;
+use App\Models\University;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
@@ -15,21 +16,13 @@ use Carbon\Carbon;
 
 class StudentDashboardController extends Controller
 {
-    public function students(Request $request)
+    /**
+     * Base query for student list in Student Management: role student, DTR aggregates, department scope (no search).
+     *
+     * @return \Illuminate\Database\Eloquent\Builder<User>
+     */
+    private function studentManagementStudentsBaseQuery(User $user)
     {
-        // Check if user has student_management permission or is admin
-        $user = auth()->user();
-        if (!$user->isAdmin() && !$user->canAccessStudentManagement()) {
-            abort(403, 'Access denied. You do not have permission to access Student Management.');
-        }
-
-        $search = trim((string) $request->input('search', ''));
-        $perPage = (int) $request->input('per_page', 20);
-        if (!in_array($perPage, [10, 20, 50, 100], true)) {
-            $perPage = 20;
-        }
-
-        // Aggregate DTRs to determine internship start/end (first and last DTR dates)
         $dtrAgg = Dtr::query()
             ->selectRaw('user_id, MIN(date) as internship_start, MAX(date) as internship_last, COALESCE(SUM(total_hours), 0) as internship_total_hours')
             ->groupBy('user_id');
@@ -54,6 +47,26 @@ class StudentDashboardController extends Controller
         if (is_array($allowedDepartmentIds) && !empty($allowedDepartmentIds)) {
             $studentsQuery->whereIn('users.department_id', $allowedDepartmentIds);
         }
+
+        return $studentsQuery;
+    }
+
+    public function students(Request $request)
+    {
+        // Check if user has student_management permission or is admin
+        $user = auth()->user();
+        if (!$user->isAdmin() && !$user->canAccessStudentManagement()) {
+            abort(403, 'Access denied. You do not have permission to access Student Management.');
+        }
+
+        $search = trim((string) $request->input('search', ''));
+        $perPage = (int) $request->input('per_page', 20);
+        if (!in_array($perPage, [10, 20, 50, 100], true)) {
+            $perPage = 20;
+        }
+
+        $studentsQuery = $this->studentManagementStudentsBaseQuery($user);
+        $studentsQueryUnfilteredForExitConference = clone $studentsQuery;
 
         if ($search !== '') {
             $studentsQuery->where(function ($q) use ($search) {
@@ -87,6 +100,14 @@ class StudentDashboardController extends Controller
             return $required > 0 && $total >= $required;
         })->count();
         $statsOngoing = max($statsTotalStudents - $statsCompleted, 0);
+
+        // Ongoing (has a requirement) but zero DTR hours logged — internship not yet started on time records.
+        $statsOngoingNoLoggedTime = $studentsForStats->filter(function ($s) {
+            $required = (float) ($s->required_training_hours ?? 0);
+            $total = (float) ($s->internship_total_hours ?? 0);
+
+            return $required > 0 && $total <= 0;
+        })->count();
 
         $completionPercents = $studentsForStats->map(function ($s) {
             $required = (float) ($s->required_training_hours ?? 0);
@@ -161,6 +182,10 @@ class StudentDashboardController extends Controller
             ->paginate($perPage)
             ->appends($request->query());
 
+        $exitConferenceClosestBySchool = $this->buildExitConferenceClosestBySchoolRows(
+            $studentsQueryUnfilteredForExitConference->get()
+        );
+
         return view('admin.student-management.students', compact(
             'students',
             'search',
@@ -169,14 +194,165 @@ class StudentDashboardController extends Controller
             'statsWithLoggedTime',
             'statsCompleted',
             'statsOngoing',
+            'statsOngoingNoLoggedTime',
             'statsAvgCompletion',
             'statsTotalApprovedLeaveRequests',
             'statsTopLeaveRequester',
             'statsTopSchools',
             'statsTopSchoolsMax',
             'statsRemainingBuckets',
-            'statsRemainingBucketsMax'
+            'statsRemainingBucketsMax',
+            'exitConferenceClosestBySchool'
         ));
+    }
+
+    /**
+     * One row per school in scope: the student whose effective exit-conference date is closest to today
+     * (smallest calendar distance). Uses admin OJT target when set, else same estimate as student dashboard.
+     *
+     * @param  \Illuminate\Support\Collection<int, User>  $students
+     * @return list<array{school_name: string, student_id: ?int, student_name: ?string, student_email: ?string, exit_date: ?string, exit_date_formatted: ?string, source: ?string, signed_days_from_today: ?int}>
+     */
+    private function buildExitConferenceClosestBySchoolRows($students): array
+    {
+        if ($students->isEmpty()) {
+            return [];
+        }
+
+        $today = Carbon::today()->timezone((string) config('app.timezone'))->startOfDay();
+
+        $uniIds = $students->pluck('university_id')->filter()->unique()->sort()->values();
+        $rows = [];
+
+        foreach (University::query()->whereIn('id', $uniIds)->orderBy('name')->get() as $uni) {
+            $group = $students->where('university_id', $uni->id);
+            $rows[] = array_merge(['school_name' => (string) $uni->name], $this->pickStudentClosestExitConferenceRow($group, $today));
+        }
+
+        $noSchoolGroup = $students->filter(fn (User $s) => empty($s->university_id));
+        if ($noSchoolGroup->isNotEmpty()) {
+            $rows[] = array_merge(
+                ['school_name' => 'No school assigned'],
+                $this->pickStudentClosestExitConferenceRow($noSchoolGroup, $today)
+            );
+        }
+
+        usort($rows, function (array $a, array $b): int {
+            if ($a['school_name'] === 'No school assigned') {
+                return 1;
+            }
+            if ($b['school_name'] === 'No school assigned') {
+                return -1;
+            }
+
+            return strcasecmp((string) $a['school_name'], (string) $b['school_name']);
+        });
+
+        return $rows;
+    }
+
+    /**
+     * @param  \Illuminate\Support\Collection<int, User>|iterable<User>  $group
+     * @return array{student_name: ?string, student_id: ?int, student_email: ?string, exit_date: ?string, exit_date_formatted: ?string, source: ?string, signed_days_from_today: ?int}
+     */
+    private function pickStudentClosestExitConferenceRow(iterable $group, Carbon $today): array
+    {
+        $best = null;
+        $bestAbs = null;
+
+        foreach ($group as $student) {
+            $resolved = $this->resolveExitConferenceDateForStudentStats($student);
+            if ($resolved === null) {
+                continue;
+            }
+            /** @var Carbon $exitStart */
+            $exitStart = $resolved['date']->copy()->startOfDay();
+            /** @var string $source */
+            $source = $resolved['source'];
+            $signedDaysFromToday = (int) $today->diffInDays($exitStart, false);
+            $abs = abs($signedDaysFromToday);
+
+            $shouldReplace = $best === null
+                || $abs < $bestAbs
+                || ($abs === $bestAbs && $exitStart->lt($best['exit']));
+
+            if ($shouldReplace) {
+                $best = [
+                    'exit' => $exitStart,
+                    'student' => $student,
+                    'source' => $source,
+                    'signed_days_from_today' => $signedDaysFromToday,
+                ];
+                $bestAbs = $abs;
+            }
+        }
+
+        if ($best === null) {
+            return [
+                'student_name' => null,
+                'student_id' => null,
+                'student_email' => null,
+                'exit_date' => null,
+                'exit_date_formatted' => null,
+                'source' => null,
+                'signed_days_from_today' => null,
+            ];
+        }
+
+        /** @var User $u */
+        $u = $best['student'];
+
+        return [
+            'student_name' => $u->name,
+            'student_id' => (int) $u->id,
+            'student_email' => $u->email,
+            'exit_date' => $best['exit']->toDateString(),
+            'exit_date_formatted' => $best['exit']->timezone((string) config('app.timezone'))->format('M j, Y'),
+            'source' => $best['source'],
+            'signed_days_from_today' => (int) $best['signed_days_from_today'],
+        ];
+    }
+
+    /**
+     * @return array{date: Carbon, source: 'admin'|'estimated'}|null
+     */
+    private function resolveExitConferenceDateForStudentStats(User $student): ?array
+    {
+        $tz = (string) config('app.timezone');
+        $requiredHours = (float) ($student->required_training_hours ?? 0);
+        $loggedHours = (float) ($student->internship_total_hours ?? 0);
+        $remainingHours = max($requiredHours - $loggedHours, 0);
+
+        $adminTarget = $student->ojt_target_end_date;
+        if ($adminTarget !== null) {
+            return [
+                'date' => Carbon::parse($adminTarget)->timezone($tz)->startOfDay(),
+                'source' => 'admin',
+            ];
+        }
+
+        if ($requiredHours <= 0 || $remainingHours <= 0) {
+            return null;
+        }
+
+        $weekdaysForFullRequirement = max(1, (int) ceil($requiredHours / 8.0));
+        $firstDtrRaw = $student->internship_start ?? null;
+        if ($firstDtrRaw !== null && $firstDtrRaw !== '') {
+            $anchor = Carbon::parse($firstDtrRaw)->timezone($tz)->startOfDay();
+
+            return [
+                'date' => $anchor->copy()->addWeekdays($weekdaysForFullRequirement),
+                'source' => 'estimated',
+            ];
+        }
+
+        $todayStart = now()->timezone($tz)->startOfDay();
+        $weekdaysForRemaining = max(1, (int) ceil($remainingHours / 8.0));
+
+        return [
+            'date' => $todayStart->copy()->addWeekdays($weekdaysForRemaining),
+            'source' => 'estimated',
+        ];
     }
 
     public function index(Request $request)

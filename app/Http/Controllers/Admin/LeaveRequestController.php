@@ -584,6 +584,8 @@ class LeaveRequestController extends Controller
             'wfh_address' => ['required_if:type,work_from_home', 'nullable', 'string', 'max:255'],
             'wfh_tasks' => ['required_if:type,work_from_home', 'nullable', 'string', 'max:2000', new ClickUpTasksUrlsOnly],
             'offset_hours' => ['nullable', 'regex:/^\d{2}:\d{2}$/'],
+            'supporting_documents' => ['nullable', 'array', 'max:5'],
+            'supporting_documents.*' => ['file', 'mimes:pdf,jpg,jpeg,png', 'max:5120'],
         ]);
 
         if ($validated['type'] === 'offset') {
@@ -660,6 +662,7 @@ class LeaveRequestController extends Controller
 
             // All requests (including travel) are pending until explicitly approved
             $travelHours = $validated['type'] === 'travel' ? (float) ($validated['travel_hours'] ?? 8.0) : null;
+            [$supportingPaths, $legacySupportingPath] = $this->storeSupportingDocumentsFromRequest($request);
             $leaveRequest = LeaveRequest::create([
                 'user_id' => $employee->id,
                 'type' => $validated['type'],
@@ -667,6 +670,8 @@ class LeaveRequestController extends Controller
                 'end_date' => $validated['end_date'] ?? $validated['start_date'],
                 'reason' => $reasonToStore,
                 'travel_hours' => $travelHours,
+                'supporting_document_path' => $legacySupportingPath,
+                'supporting_document_paths' => $supportingPaths,
                 'status' => 'pending',
                 'reviewed_by' => null,
                 'reviewed_at' => null,
@@ -1351,6 +1356,8 @@ class LeaveRequestController extends Controller
             'start_date' => ['required', 'date'],
             'end_date' => ['nullable', 'date', 'after_or_equal:start_date'],
             'reason' => ['nullable', 'string', 'max:1000'],
+            'supporting_documents' => ['nullable', 'array', 'max:5'],
+            'supporting_documents.*' => ['file', 'mimes:pdf,jpg,jpeg,png', 'max:5120'],
         ]);
 
         $typeInput = $validated['type'];
@@ -1373,12 +1380,15 @@ class LeaveRequestController extends Controller
                 continue;
             }
 
+            [$supportingPaths, $legacySupportingPath] = $this->storeSupportingDocumentsFromRequest($request);
             $leaveRequest = LeaveRequest::create([
                 'user_id' => $student->id,
                 'type' => $validated['type'],
                 'start_date' => $validated['start_date'],
                 'end_date' => $validated['end_date'] ?? $validated['start_date'],
                 'reason' => $validated['reason'] ?? '',
+                'supporting_document_path' => $legacySupportingPath,
+                'supporting_document_paths' => $supportingPaths,
                 'status' => 'pending',
                 'reviewed_by' => null,
                 'reviewed_at' => null,
@@ -1978,6 +1988,43 @@ class LeaveRequestController extends Controller
         }
 
         return $reasonToStore;
+    }
+
+    /**
+     * @return array{0: list<string>, 1: string|null}
+     */
+    private function storeSupportingDocumentsFromRequest(Request $request): array
+    {
+        $paths = [];
+        $supportDir = 'leave-supporting-docs';
+        $assetDisk = 'digitalocean';
+        $doConfigured = ! empty(env('DIGITALOCEAN_SPACES_KEY') ?: env('DO_SPACES_KEY'))
+            && ! empty(env('DIGITALOCEAN_SPACES_SECRET') ?: env('DO_SPACES_SECRET'))
+            && ! empty(env('DIGITALOCEAN_SPACES_BUCKET') ?: env('DO_SPACES_BUCKET'));
+
+        if ($doConfigured) {
+            $assetRoot = trim(env('DIGITALOCEAN_SPACES_ROOT_PATH', ''), '/');
+            $supportDir = $assetRoot ? $assetRoot.'/'.$supportDir : $supportDir;
+        }
+
+        $disk = $doConfigured ? $assetDisk : config('filesystems.default', 'local');
+        $files = $request->file('supporting_documents', []);
+
+        foreach ($files as $file) {
+            try {
+                $storedPath = $file->store($supportDir, $disk);
+                if ($storedPath) {
+                    $paths[] = $storedPath;
+                }
+            } catch (\Throwable $e) {
+                Log::warning('Admin-filed leave request supporting document store failed, skipping file', [
+                    'error' => $e->getMessage(),
+                    'disk' => $disk,
+                ]);
+            }
+        }
+
+        return [$paths, $paths[0] ?? null];
     }
 
     /**

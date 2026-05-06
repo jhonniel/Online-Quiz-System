@@ -242,6 +242,10 @@ class LeaveRequestController extends Controller
         if ($typeInput === 'travel') {
             $startDateRules[] = 'before_or_equal:today';
             $endDateRules[] = 'before_or_equal:today';
+        } elseif ($typeInput === 'overtime') {
+            $startDateRules[] = 'after_or_equal:'.now()->subDays(7)->toDateString();
+            $startDateRules[] = 'before_or_equal:today';
+            $endDateRules = ['required', 'date', 'after_or_equal:start_date', 'before_or_equal:today'];
         } elseif (! ($typeInput === 'overtime' || ($user->role === 'student' && $typeInput === 'additional_time'))) {
             $startDateRules[] = 'after_or_equal:today';
         }
@@ -254,9 +258,11 @@ class LeaveRequestController extends Controller
             'additional_time_total_hours' => ['nullable', 'regex:/^\d{1,3}:\d{2}$/'],
             // Reason is REQUIRED for overtime (used as the clear explanation of extra hours)
             'reason' => 'required_if:type,travel|nullable|string|max:1000',
-            'supporting_document' => 'nullable|file|mimes:pdf,jpg,jpeg,png|max:5120',
+            'supporting_documents' => ['nullable', 'array', 'max:5'],
+            'supporting_documents.*' => ['file', 'mimes:pdf,jpg,jpeg,png', 'max:5120'],
             'overtime_hours' => 'required_if:type,overtime|nullable|regex:/^\\d{2}:\\d{2}$/',
-            'overtime_dates' => 'required_if:type,overtime|nullable|string|max:255',
+            'overtime_specific_dates' => ['required_if:type,overtime', 'array', 'min:1'],
+            'overtime_specific_dates.*' => ['date'],
             'overtime_tasks' => ['required_if:type,overtime', 'nullable', 'string', 'max:2000', new ClickUpTasksUrlsOnly],
             'wfh_mode' => 'required_if:type,work_from_home|nullable|in:working_remotely,request_to_be_excused',
             'wfh_address' => 'required_if:type,work_from_home|nullable|string|max:255',
@@ -270,6 +276,17 @@ class LeaveRequestController extends Controller
             return redirect()->back()
                 ->withErrors(['type' => 'Only employees can file travel leave requests.'])
                 ->withInput();
+        }
+
+        if ($validated['type'] === 'overtime') {
+            $overtimeDateValidationError = $this->validateOvertimeDateSelection(
+                (string) ($validated['start_date'] ?? ''),
+                (string) ($validated['end_date'] ?? ''),
+                $validated['overtime_specific_dates'] ?? []
+            );
+            if ($overtimeDateValidationError !== null) {
+                return redirect()->back()->withErrors($overtimeDateValidationError)->withInput();
+            }
         }
 
         if ($user->role === 'student' && $validated['type'] === 'absent') {
@@ -323,7 +340,8 @@ class LeaveRequestController extends Controller
         if ($validated['type'] === 'overtime') {
             $details = "Overtime Request Details:\n";
             $details .= 'Total Overtime Hours: '.($validated['overtime_hours'] ?? '')."\n";
-            $details .= 'Overtime Dates: '.($validated['overtime_dates'] ?? '')."\n";
+            $details .= 'Overtime Date Range: '.($validated['start_date'] ?? '').' to '.($validated['end_date'] ?? $validated['start_date'] ?? '')."\n";
+            $details .= 'Overtime Dates: '.$this->normalizedSpecificOvertimeDates($validated['overtime_specific_dates'] ?? [])."\n";
             $details .= "Tasks / ClickUp Links:\n".($validated['overtime_tasks'] ?? '')."\n";
 
             if (! empty($reasonToStore)) {
@@ -449,31 +467,7 @@ class LeaveRequestController extends Controller
             }
         }
 
-        // Handle supporting document (only stored if provided)
-        $supportingPath = null;
-        if ($request->hasFile('supporting_document')) {
-            $supportDir = 'leave-supporting-docs';
-            $assetDisk = 'digitalocean';
-            $doConfigured = ! empty(env('DIGITALOCEAN_SPACES_KEY') ?: env('DO_SPACES_KEY'))
-                && ! empty(env('DIGITALOCEAN_SPACES_SECRET') ?: env('DO_SPACES_SECRET'))
-                && ! empty(env('DIGITALOCEAN_SPACES_BUCKET') ?: env('DO_SPACES_BUCKET'));
-            if ($doConfigured) {
-                $assetRoot = trim(env('DIGITALOCEAN_SPACES_ROOT_PATH', ''), '/');
-                $supportDir = $assetRoot ? $assetRoot.'/'.$supportDir : $supportDir;
-            }
-            try {
-                $supportingPath = $request->file('supporting_document')->store(
-                    $supportDir,
-                    $doConfigured ? $assetDisk : config('filesystems.default', 'local')
-                );
-            } catch (\Throwable $e) {
-                Log::warning('Leave request supporting document store failed, saving request without file', [
-                    'error' => $e->getMessage(),
-                    'disk' => $doConfigured ? $assetDisk : 'local',
-                ]);
-                $supportingPath = null;
-            }
-        }
+        [$supportingPaths, $legacySupportingPath] = $this->storeSupportingDocumentsFromRequest($request);
 
         $travelHours = $validated['type'] === 'travel' ? (float) ($validated['travel_hours'] ?? 8.0) : null;
         $leaveRequest = LeaveRequest::create([
@@ -483,7 +477,8 @@ class LeaveRequestController extends Controller
             'end_date' => $validated['end_date'] ?? $validated['start_date'],
             'reason' => $reasonToStore,
             'travel_hours' => $travelHours,
-            'supporting_document_path' => $supportingPath,
+            'supporting_document_path' => $legacySupportingPath,
+            'supporting_document_paths' => $supportingPaths,
             'status' => 'pending',
             'reviewed_by' => null,
             'reviewed_at' => null,
@@ -686,7 +681,7 @@ class LeaveRequestController extends Controller
             'additional_time_mode' => 'fixed_date',
             'additional_time_total_hours' => '',
             'overtime_hours' => '',
-            'overtime_dates' => '',
+            'overtime_specific_dates' => [],
             'overtime_tasks' => '',
             'wfh_mode' => '',
             'wfh_address' => '',
@@ -700,8 +695,16 @@ class LeaveRequestController extends Controller
             if (preg_match('/Total Overtime Hours:\s*(.+)/', $raw, $m)) {
                 $editData['overtime_hours'] = trim($m[1]);
             }
+            if (preg_match('/Overtime Date Range:\s*(\d{4}-\d{2}-\d{2})\s+to\s+(\d{4}-\d{2}-\d{2})/i', $raw, $m)) {
+                $editData['start_date'] = trim($m[1]);
+                $editData['end_date'] = trim($m[2]);
+            }
             if (preg_match('/Overtime Dates:\s*(.+)/', $raw, $m)) {
-                $editData['overtime_dates'] = trim($m[1]);
+                $editData['overtime_specific_dates'] = collect(explode(',', trim($m[1])))
+                    ->map(fn ($value) => trim($value))
+                    ->filter(fn ($value) => preg_match('/^\d{4}-\d{2}-\d{2}$/', $value) === 1)
+                    ->values()
+                    ->all();
             }
             if (preg_match('/Tasks \/ ClickUp Links:\s*(.+?)(?:\n+Additional Explanation:|\z)/s', $raw, $m)) {
                 $editData['overtime_tasks'] = trim($m[1]);
@@ -791,6 +794,10 @@ class LeaveRequestController extends Controller
         if ($typeInput === 'travel') {
             $startDateRules[] = 'before_or_equal:today';
             $endDateRules[] = 'before_or_equal:today';
+        } elseif ($typeInput === 'overtime') {
+            $startDateRules[] = 'after_or_equal:'.now()->subDays(7)->toDateString();
+            $startDateRules[] = 'before_or_equal:today';
+            $endDateRules = ['required', 'date', 'after_or_equal:start_date', 'before_or_equal:today'];
         } elseif (! ($typeInput === 'overtime' || ($user->role === 'student' && $typeInput === 'additional_time'))) {
             $startDateRules[] = 'after_or_equal:today';
         }
@@ -802,9 +809,11 @@ class LeaveRequestController extends Controller
             'additional_time_mode' => 'nullable|in:fixed_date,total_hours',
             'additional_time_total_hours' => ['nullable', 'regex:/^\d{1,3}:\d{2}$/'],
             'reason' => 'required_if:type,travel|nullable|string|max:1000',
-            'supporting_document' => 'nullable|file|mimes:pdf,jpg,jpeg,png|max:5120',
+            'supporting_documents' => ['nullable', 'array', 'max:5'],
+            'supporting_documents.*' => ['file', 'mimes:pdf,jpg,jpeg,png', 'max:5120'],
             'overtime_hours' => 'required_if:type,overtime|nullable|regex:/^\\d{2}:\\d{2}$/',
-            'overtime_dates' => 'required_if:type,overtime|nullable|string|max:255',
+            'overtime_specific_dates' => ['required_if:type,overtime', 'array', 'min:1'],
+            'overtime_specific_dates.*' => ['date'],
             'overtime_tasks' => ['required_if:type,overtime', 'nullable', 'string', 'max:2000', new ClickUpTasksUrlsOnly],
             'wfh_mode' => 'required_if:type,work_from_home|nullable|in:working_remotely,request_to_be_excused',
             'wfh_address' => 'required_if:type,work_from_home|nullable|string|max:255',
@@ -817,6 +826,17 @@ class LeaveRequestController extends Controller
             return redirect()->back()
                 ->withErrors(['type' => 'Only employees can file travel leave requests.'])
                 ->withInput();
+        }
+
+        if ($validated['type'] === 'overtime') {
+            $overtimeDateValidationError = $this->validateOvertimeDateSelection(
+                (string) ($validated['start_date'] ?? ''),
+                (string) ($validated['end_date'] ?? ''),
+                $validated['overtime_specific_dates'] ?? []
+            );
+            if ($overtimeDateValidationError !== null) {
+                return redirect()->back()->withErrors($overtimeDateValidationError)->withInput();
+            }
         }
 
         if ($user->role === 'student' && $validated['type'] === 'absent') {
@@ -867,7 +887,8 @@ class LeaveRequestController extends Controller
         if ($validated['type'] === 'overtime') {
             $details = "Overtime Request Details:\n";
             $details .= 'Total Overtime Hours: '.($validated['overtime_hours'] ?? '')."\n";
-            $details .= 'Overtime Dates: '.($validated['overtime_dates'] ?? '')."\n";
+            $details .= 'Overtime Date Range: '.($validated['start_date'] ?? '').' to '.($validated['end_date'] ?? $validated['start_date'] ?? '')."\n";
+            $details .= 'Overtime Dates: '.$this->normalizedSpecificOvertimeDates($validated['overtime_specific_dates'] ?? [])."\n";
             $details .= "Tasks / ClickUp Links:\n".($validated['overtime_tasks'] ?? '')."\n";
 
             if (! empty($reasonToStore)) {
@@ -962,22 +983,12 @@ class LeaveRequestController extends Controller
             }
         }
 
-        // Handle supporting document (replace if new one provided)
-        $supportingPath = $leaveRequest->supporting_document_path;
-        if ($request->hasFile('supporting_document')) {
-            $assetDisk = 'digitalocean';
-            $assetRoot = trim(env('DIGITALOCEAN_SPACES_ROOT_PATH', ''), '/');
-            $supportDir = $assetRoot ? $assetRoot.'/leave-supporting-docs' : 'leave-supporting-docs';
-
-            if ($supportingPath) {
-                try {
-                    \Illuminate\Support\Facades\Storage::disk($assetDisk)->delete($supportingPath);
-                } catch (\Throwable $e) {
-                    // ignore delete errors
-                }
-            }
-
-            $supportingPath = $request->file('supporting_document')->store($supportDir, $assetDisk);
+        // Handle supporting documents (replace all when new files are uploaded)
+        $supportingPaths = $leaveRequest->all_supporting_document_paths;
+        $legacySupportingPath = $leaveRequest->supporting_document_path;
+        if ($request->hasFile('supporting_documents')) {
+            $this->deleteSupportingDocumentPaths($supportingPaths);
+            [$supportingPaths, $legacySupportingPath] = $this->storeSupportingDocumentsFromRequest($request);
         }
 
         $travelHours = $validated['type'] === 'travel' ? (float) ($validated['travel_hours'] ?? 8.0) : null;
@@ -989,7 +1000,8 @@ class LeaveRequestController extends Controller
             'end_date' => $validated['end_date'] ?? $validated['start_date'],
             'reason' => $reasonToStore,
             'travel_hours' => $travelHours,
-            'supporting_document_path' => $supportingPath,
+            'supporting_document_path' => $legacySupportingPath,
+            'supporting_document_paths' => $supportingPaths,
             'status' => 'pending',
             'reviewed_by' => null,
             'reviewed_at' => null,
@@ -1313,6 +1325,132 @@ class LeaveRequestController extends Controller
         }
 
         return ($hours * 60) + $minutes;
+    }
+
+    /**
+     * @return array{0: list<string>, 1: string|null}
+     */
+    private function storeSupportingDocumentsFromRequest(Request $request): array
+    {
+        $paths = [];
+        $supportDir = 'leave-supporting-docs';
+        $assetDisk = 'digitalocean';
+        $doConfigured = ! empty(env('DIGITALOCEAN_SPACES_KEY') ?: env('DO_SPACES_KEY'))
+            && ! empty(env('DIGITALOCEAN_SPACES_SECRET') ?: env('DO_SPACES_SECRET'))
+            && ! empty(env('DIGITALOCEAN_SPACES_BUCKET') ?: env('DO_SPACES_BUCKET'));
+
+        if ($doConfigured) {
+            $assetRoot = trim(env('DIGITALOCEAN_SPACES_ROOT_PATH', ''), '/');
+            $supportDir = $assetRoot ? $assetRoot.'/'.$supportDir : $supportDir;
+        }
+
+        $disk = $doConfigured ? $assetDisk : config('filesystems.default', 'local');
+        $files = $request->file('supporting_documents', []);
+
+        foreach ($files as $file) {
+            try {
+                $storedPath = $file->store($supportDir, $disk);
+                if ($storedPath) {
+                    $paths[] = $storedPath;
+                }
+            } catch (\Throwable $e) {
+                Log::warning('Leave request supporting document store failed, skipping file', [
+                    'error' => $e->getMessage(),
+                    'disk' => $disk,
+                ]);
+            }
+        }
+
+        return [$paths, $paths[0] ?? null];
+    }
+
+    /**
+     * @param  list<string>  $paths
+     */
+    private function deleteSupportingDocumentPaths(array $paths): void
+    {
+        if (empty($paths)) {
+            return;
+        }
+
+        $assetDisk = 'digitalocean';
+        $doConfigured = ! empty(env('DIGITALOCEAN_SPACES_KEY') ?: env('DO_SPACES_KEY'))
+            && ! empty(env('DIGITALOCEAN_SPACES_SECRET') ?: env('DO_SPACES_SECRET'))
+            && ! empty(env('DIGITALOCEAN_SPACES_BUCKET') ?: env('DO_SPACES_BUCKET'));
+
+        $disk = $doConfigured ? $assetDisk : config('filesystems.default', 'local');
+
+        foreach ($paths as $path) {
+            try {
+                \Illuminate\Support\Facades\Storage::disk($disk)->delete($path);
+            } catch (\Throwable $e) {
+                // Ignore delete failures; stale files should not block updates.
+            }
+        }
+    }
+
+    /**
+     * Validate overtime range and specific selected dates.
+     *
+     * @param  array<int, mixed>  $specificDates
+     * @return array<string, string>|null
+     */
+    private function validateOvertimeDateSelection(string $startDate, string $endDate, array $specificDates): ?array
+    {
+        try {
+            $start = Carbon::parse($startDate)->startOfDay();
+            $end = Carbon::parse($endDate)->startOfDay();
+        } catch (\Throwable) {
+            return ['start_date' => 'Please choose a valid overtime date range.'];
+        }
+
+        $today = now()->startOfDay();
+        $earliest = $today->copy()->subDays(7);
+
+        if ($start->lt($earliest) || $start->gt($today)) {
+            return ['start_date' => 'For overtime, the start date must be within the last 7 days up to today.'];
+        }
+        if ($end->lt($start) || $end->gt($today)) {
+            return ['end_date' => 'For overtime, the end date must be within the selected range and not later than today.'];
+        }
+
+        $normalized = collect($specificDates)
+            ->map(fn ($date) => trim((string) $date))
+            ->filter()
+            ->unique()
+            ->values();
+
+        if ($normalized->isEmpty()) {
+            return ['overtime_specific_dates' => 'Select at least one specific overtime date from the chosen range.'];
+        }
+
+        foreach ($normalized as $date) {
+            try {
+                $picked = Carbon::parse($date)->startOfDay();
+            } catch (\Throwable) {
+                return ['overtime_specific_dates' => 'One or more selected overtime dates are invalid.'];
+            }
+
+            if ($picked->lt($start) || $picked->gt($end)) {
+                return ['overtime_specific_dates' => 'Selected overtime dates must be inside the chosen start/end range only.'];
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * @param  array<int, mixed>  $specificDates
+     */
+    private function normalizedSpecificOvertimeDates(array $specificDates): string
+    {
+        return collect($specificDates)
+            ->map(fn ($date) => trim((string) $date))
+            ->filter(fn ($date) => preg_match('/^\d{4}-\d{2}-\d{2}$/', $date) === 1)
+            ->unique()
+            ->sort()
+            ->values()
+            ->implode(', ');
     }
 
     private function calculateLeaveRequestDays(string $startDate, ?string $endDate = null): float

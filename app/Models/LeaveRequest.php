@@ -16,6 +16,7 @@ class LeaveRequest extends Model
         'reason',
         'travel_hours',
         'supporting_document_path',
+        'supporting_document_paths',
         'status',
         'admin_notes',
         'reviewed_by',
@@ -27,7 +28,29 @@ class LeaveRequest extends Model
         'end_date' => 'date',
         'reviewed_at' => 'datetime',
         'travel_hours' => 'float',
+        'supporting_document_paths' => 'array',
     ];
+
+    /**
+     * Normalized list of supporting document paths (new multi-upload + legacy single path).
+     *
+     * @return list<string>
+     */
+    public function getAllSupportingDocumentPathsAttribute(): array
+    {
+        $paths = collect($this->supporting_document_paths ?? [])
+            ->map(fn ($path) => trim((string) $path))
+            ->filter()
+            ->values();
+
+        if ($paths->isNotEmpty()) {
+            return $paths->all();
+        }
+
+        $legacy = trim((string) ($this->supporting_document_path ?? ''));
+
+        return $legacy !== '' ? [$legacy] : [];
+    }
 
     /**
      * Get the user who created this leave request.

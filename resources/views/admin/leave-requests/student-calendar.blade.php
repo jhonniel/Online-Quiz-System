@@ -52,7 +52,7 @@
             <!-- Quick Create Leave for Student(s) -->
             <div class="bg-white rounded-2xl shadow border border-gray-200 p-2.5 sm:p-3 lg:h-[54%] flex flex-col">
                 <h2 class="text-xs sm:text-sm font-bold text-gray-900 mb-1.5">File Leave for Student(s)</h2>
-                <form action="{{ url('/admin/student-leave-requests/create-for-student') }}" method="POST" class="space-y-2 lg:flex-1 lg:overflow-y-auto lg:pr-1">
+                <form action="{{ url('/admin/student-leave-requests/create-for-student') }}" method="POST" enctype="multipart/form-data" class="space-y-2 lg:flex-1 lg:overflow-y-auto lg:pr-1">
                     @csrf
 
                     <div class="space-y-1">
@@ -96,6 +96,11 @@
                     <div class="space-y-1">
                         <label for="student_create_reason" class="block text-xs font-medium text-gray-700">Reason (optional)</label>
                         <textarea name="reason" id="student_create_reason" rows="2" class="w-full px-2.5 py-1.5 text-xs border border-gray-300 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500" placeholder="Add brief notes"></textarea>
+                    </div>
+                    <div class="space-y-1">
+                        <label for="student_supporting_documents" class="block text-xs font-medium text-gray-700">Supporting Document(s) <span class="text-gray-400">(optional)</span></label>
+                        <input type="file" name="supporting_documents[]" id="student_supporting_documents" multiple accept=".pdf,.jpg,.jpeg,.png" class="w-full text-xs text-gray-600 file:mr-2 file:py-1 file:px-2 file:rounded-md file:border-0 file:text-xs file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100">
+                        <p class="text-[10px] text-gray-500">Upload up to 5 files (PDF/JPG/PNG), 5MB max per file.</p>
                     </div>
 
                     <button type="submit" id="file-student-leave-btn" class="w-full inline-flex items-center justify-center px-3 py-1 text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded-md shadow focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed">
