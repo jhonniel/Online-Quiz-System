@@ -166,7 +166,7 @@
         </div>
     @endif
     <div
-        class="flex overflow-hidden h-[calc(100vh-var(--layout-offset-mobile))] sm:h-[calc(100vh-var(--layout-offset-desktop))]"
+        class="flex min-h-0 overflow-hidden h-[calc(100vh-var(--layout-offset-mobile))] sm:h-[calc(100vh-var(--layout-offset-desktop))]"
         style="--layout-offset-mobile: {{ $layoutOffsetMobilePx }}px; --layout-offset-desktop: {{ $layoutOffsetDesktopPx }}px;"
     >
         <!-- Sidebar -->
@@ -1179,7 +1179,7 @@
         </div>
 
         <!-- Main content -->
-        <div class="flex-1 flex flex-col overflow-hidden transition-all duration-300">
+        <div class="flex-1 min-h-0 flex flex-col overflow-hidden transition-all duration-300">
             <!-- Top header bar -->
             <div class="flex items-center justify-between h-16 px-4 bg-white border-b border-gray-200">
                 <div class="flex items-center space-x-3">
@@ -1306,7 +1306,7 @@
             </div>
 
             <!-- Page content -->
-            <main class="flex-1 overflow-y-auto bg-gray-50">
+            <main class="flex-1 min-h-0 overflow-y-auto bg-gray-50">
                 <div class="h-full">
                     <div class="h-full">
                         @if(session('success'))
