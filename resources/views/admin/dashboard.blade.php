@@ -1360,7 +1360,7 @@
         'activityLogLogoutData' => $activityLogLogoutData ?? [],
         'activityLogPageViewData' => $activityLogPageViewData ?? [],
         'activityLogGuestPageViewData' => $activityLogGuestPageViewData ?? [],
-        'activityDataUrl' => route('admin.activity-data'),
+        'activityDataUrl' => url('/admin/activity-data'),
     ];
 @endphp
 <script type="application/json" id="dashboard-chart-payload">{!! json_encode($__dashboardCharts, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT | JSON_THROW_ON_ERROR) !!}</script>
