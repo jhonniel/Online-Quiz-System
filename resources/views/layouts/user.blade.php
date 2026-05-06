@@ -233,6 +233,28 @@
                                     </span>
                                 @endif
                             </a>
+                            <a href="{{ url('/teacher/excused-requests') }}"
+                               class="group flex items-center px-2 py-2 text-sm font-medium rounded-md transition-colors duration-200 {{ request()->routeIs('user.teacher.excused-requests.*') ? 'bg-indigo-700 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white' }}"
+                               :class="sidebarCollapsed ? 'justify-center' : ''"
+                               :title="sidebarCollapsed ? 'Excused Requests' : ''">
+                                <svg class="h-5 w-5" :class="sidebarCollapsed ? '' : 'mr-3'" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                                </svg>
+                                <span class="transition-opacity duration-300" :class="sidebarCollapsed ? 'opacity-0 w-0 overflow-hidden' : 'opacity-100'">
+                                    Excused Requests
+                                </span>
+                            </a>
+                            <a href="{{ url('/teacher/moa') }}"
+                               class="group flex items-center px-2 py-2 text-sm font-medium rounded-md transition-colors duration-200 {{ request()->routeIs('user.teacher.moa.*') ? 'bg-indigo-700 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white' }}"
+                               :class="sidebarCollapsed ? 'justify-center' : ''"
+                               :title="sidebarCollapsed ? 'Upload MOA' : ''">
+                                <svg class="h-5 w-5" :class="sidebarCollapsed ? '' : 'mr-3'" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 16V8m0 0l-3 3m3-3l3 3M5 19h14"></path>
+                                </svg>
+                                <span class="transition-opacity duration-300" :class="sidebarCollapsed ? 'opacity-0 w-0 overflow-hidden' : 'opacity-100'">
+                                    Upload MOA
+                                </span>
+                            </a>
                         @endif
 
                         @if(!in_array(auth()->user()->role, ['technician', 'teacher'], true))
@@ -831,6 +853,22 @@
                                 </span>
                             @endif
                         </a>
+                        <a href="{{ url('/teacher/excused-requests') }}"
+                           @click="sidebarOpen = false"
+                           class="group flex items-center px-2 py-2 text-sm font-medium rounded-md transition-colors duration-200 {{ request()->routeIs('user.teacher.excused-requests.*') ? 'bg-indigo-700 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white' }}">
+                            <svg class="mr-3 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                            </svg>
+                            Excused Requests
+                        </a>
+                        <a href="{{ url('/teacher/moa') }}"
+                           @click="sidebarOpen = false"
+                           class="group flex items-center px-2 py-2 text-sm font-medium rounded-md transition-colors duration-200 {{ request()->routeIs('user.teacher.moa.*') ? 'bg-indigo-700 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white' }}">
+                            <svg class="mr-3 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 16V8m0 0l-3 3m3-3l3 3M5 19h14"></path>
+                            </svg>
+                            Upload MOA
+                        </a>
                         @endif
 
                         @if(false && auth()->user()->hasAnyAdminPermission() && !auth()->user()->isSuperAdmin())
@@ -1181,10 +1219,10 @@
         <!-- Main content -->
         <div class="flex-1 min-h-0 flex flex-col overflow-hidden transition-all duration-300">
             <!-- Top header bar -->
-            <div class="flex items-center justify-between h-16 px-4 bg-white border-b border-gray-200">
-                <div class="flex items-center space-x-3">
+            <div class="flex items-center justify-between h-16 px-3 sm:px-4 bg-white border-b border-gray-200 gap-2 min-w-0">
+                <div class="flex items-center space-x-2 sm:space-x-3 min-w-0 flex-1">
                     <!-- Mobile menu button -->
-                    <button @click="sidebarOpen = !sidebarOpen" class="lg:hidden text-gray-500 hover:text-gray-700 focus:outline-none">
+                    <button type="button" @click="sidebarOpen = !sidebarOpen" class="lg:hidden shrink-0 text-gray-500 hover:text-gray-700 focus:outline-none touch-manipulation" aria-label="Open menu">
                         <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
                         </svg>
@@ -1197,11 +1235,11 @@
                         </svg>
                     </button>
 
-                    <h1 class="text-lg font-semibold text-gray-900">@yield('page-title', 'Dashboard')</h1>
+                    <h1 class="text-base sm:text-lg font-semibold text-gray-900 truncate min-w-0">@yield('page-title', 'Dashboard')</h1>
                 </div>
 
                 <!-- Top right section -->
-                <div class="flex items-center space-x-2 sm:space-x-4">
+                <div class="flex items-center space-x-1 sm:space-x-4 shrink-0">
                     <!-- Notification Bell -->
                     <div class="relative" x-data="notificationBell()">
                         <button @click="toggleNotifications()" class="relative p-2 text-gray-500 hover:text-gray-700 focus:outline-none">
@@ -1306,7 +1344,7 @@
             </div>
 
             <!-- Page content -->
-            <main class="flex-1 min-h-0 overflow-y-auto bg-gray-50 px-3 sm:px-4 lg:px-6 py-3 sm:py-4">
+            <main class="flex-1 min-h-0 min-w-0 overflow-y-auto overflow-x-hidden bg-gray-50 px-3 sm:px-4 lg:px-6 py-3 sm:py-4">
                 <div class="min-h-full">
                     <div>
                         @if(session('success'))

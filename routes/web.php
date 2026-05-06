@@ -1,26 +1,28 @@
 <?php
 
-use App\Http\Controllers\ProfileController;
-use App\Http\Controllers\RedirectController;
-use App\Http\Controllers\LandingController;
-use App\Http\Controllers\Auth\RoleLoginController;
-use App\Http\Controllers\Auth\RegisteredUserController;
-use App\Http\Controllers\Admin\DashboardController;
-use App\Http\Controllers\Admin\UserController as AdminUserController;
-use App\Http\Controllers\Admin\QuizController as AdminQuizController;
-use App\Http\Controllers\Admin\SettingsController as AdminSettingsController;
-use App\Http\Controllers\Admin\ImportController as AdminImportController;
-use App\Http\Controllers\Admin\UniversityController;
-use App\Http\Controllers\Admin\ContactMessageController as AdminContactMessageController;
-use App\Http\Controllers\Admin\LiveChatController as AdminLiveChatController;
-use App\Http\Controllers\ChatController;
-use App\Http\Controllers\StatusController;
-use App\Http\Controllers\Admin\StudentDashboardController;
-use App\Http\Controllers\Admin\ErrorLogController;
 use App\Http\Controllers\Admin\AdminPermissionController;
+use App\Http\Controllers\Admin\ContactMessageController as AdminContactMessageController;
+use App\Http\Controllers\Admin\DashboardController;
+use App\Http\Controllers\Admin\ErrorLogController;
+use App\Http\Controllers\Admin\ImportController as AdminImportController;
+use App\Http\Controllers\Admin\LiveChatController as AdminLiveChatController;
+use App\Http\Controllers\Admin\QuizController as AdminQuizController;
+use App\Http\Controllers\Admin\StudentDashboardController;
+use App\Http\Controllers\Admin\TeacherExcusedRequestController as AdminTeacherExcusedRequestController;
+use App\Http\Controllers\Admin\TeacherMoaController as AdminTeacherMoaController;
+use App\Http\Controllers\Admin\UniversityController;
+use App\Http\Controllers\Admin\UserController as AdminUserController;
+use App\Http\Controllers\Auth\RegisteredUserController;
+use App\Http\Controllers\Auth\RoleLoginController;
+use App\Http\Controllers\ChatController;
+use App\Http\Controllers\LandingController;
+use App\Http\Controllers\RedirectController;
+use App\Http\Controllers\StatusController;
+use App\Http\Controllers\TeacherInviteController;
 use App\Http\Controllers\User\DashboardController as UserDashboardController;
-use App\Http\Controllers\User\QuizController as UserQuizController;
 use App\Http\Controllers\User\FileController as UserFileController;
+use App\Http\Controllers\User\QuizController as UserQuizController;
+use App\Http\Controllers\User\TeacherMoaController as UserTeacherMoaController;
 use Illuminate\Support\Facades\Route;
 
 // Landing Page Routes
@@ -62,6 +64,12 @@ Route::post('/logout', [RoleLoginController::class, 'logout'])->name('logout');
 Route::get('/register', [RegisteredUserController::class, 'create'])->name('register')->middleware('guest');
 Route::post('/register', [RegisteredUserController::class, 'store'])->middleware('guest');
 
+// Teacher invitation activation (public)
+Route::middleware('guest')->group(function () {
+    Route::get('/teacher/invite/{token}', [TeacherInviteController::class, 'showActivationForm'])->name('teacher.invites.activate');
+    Route::post('/teacher/invite/{token}', [TeacherInviteController::class, 'activate'])->name('teacher.invites.activate.submit');
+});
+
 // Include Auth Routes (Password Reset, etc.)
 require __DIR__.'/auth.php';
 
@@ -72,6 +80,7 @@ Route::get('/home', [RedirectController::class, 'home'])->name('home');
 Route::prefix('admin')->middleware(['auth', 'admin'])->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('admin.dashboard');
     Route::get('/activity-data', [DashboardController::class, 'getActivityData'])->name('admin.activity-data');
+    Route::redirect('/teacher-invites', '/admin/teachers-management/invite-links');
 
     // System → Settings, Rules, health (register early so route names always resolve)
     Route::middleware(['admin.permission:system'])->group(function () {
@@ -125,6 +134,13 @@ Route::prefix('admin')->middleware(['auth', 'admin'])->group(function () {
         Route::post('users/bulk-assign-ojt-target-end-date', [AdminUserController::class, 'bulkAssignOjtTargetEndDate'])->name('admin.users.bulk-assign-ojt-target-end-date');
         Route::post('users/{user}/send-credentials', [AdminUserController::class, 'sendCredentials'])->name('admin.users.send-credentials');
         Route::post('users/send-bulk-credentials', [AdminUserController::class, 'sendBulkCredentials'])->name('admin.users.send-bulk-credentials');
+        Route::get('teachers-management/teachers', [AdminUserController::class, 'teachersManagement'])->name('admin.teachers-management.teachers');
+        Route::get('teachers-management/invite-links', [TeacherInviteController::class, 'adminIndex'])->name('admin.teacher-invites.index');
+        Route::post('teachers-management/invite-links', [TeacherInviteController::class, 'adminStore'])->name('admin.teacher-invites.store');
+        Route::get('teachers-management/moa', [AdminTeacherMoaController::class, 'index'])->name('admin.teacher-moa.index');
+        Route::post('teachers-management/moa/{user}/allow-reupload', [AdminTeacherMoaController::class, 'allowReupload'])->name('admin.teacher-moa.allow-reupload');
+        Route::get('teachers-management/moa/{user}/preview', [AdminTeacherMoaController::class, 'preview'])->name('admin.teacher-moa.preview');
+        Route::get('teachers-management/teacher-excused-requests', [AdminTeacherExcusedRequestController::class, 'index'])->name('admin.teacher-excused-requests.index');
 
         // Department Management
         Route::resource('departments', App\Http\Controllers\Admin\DepartmentController::class)->names('admin.departments');
@@ -147,90 +163,90 @@ Route::prefix('admin')->middleware(['auth', 'admin'])->group(function () {
 
         // Quiz Management
         Route::resource('quizzes', AdminQuizController::class);
-    Route::get('quizzes/{quiz}/export-history/pdf', [AdminQuizController::class, 'exportQuizHistoryPdf'])->name('admin.quizzes.export-history-pdf');
-    Route::post('quizzes/{quiz}/assign', [AdminQuizController::class, 'assignToUsers'])->name('admin.quizzes.assign');
-    Route::get('quizzes/{quiz}/assigned-users', [AdminQuizController::class, 'getAssignedUsers'])->name('admin.quizzes.assigned-users');
-    Route::get('quizzes/{quiz}/results', [AdminQuizController::class, 'results'])->name('admin.quizzes.results');
-    Route::post('quizzes/{quiz}/import-questions', [AdminQuizController::class, 'importQuestions'])->name('admin.quizzes.import-questions');
-    Route::get('quizzes/template/download', [AdminQuizController::class, 'downloadTemplate'])->name('admin.quizzes.template.download');
-    Route::post('quizzes/export-csv', [AdminQuizController::class, 'exportToCsv'])->name('admin.quizzes.export-csv');
+        Route::get('quizzes/{quiz}/export-history/pdf', [AdminQuizController::class, 'exportQuizHistoryPdf'])->name('admin.quizzes.export-history-pdf');
+        Route::post('quizzes/{quiz}/assign', [AdminQuizController::class, 'assignToUsers'])->name('admin.quizzes.assign');
+        Route::get('quizzes/{quiz}/assigned-users', [AdminQuizController::class, 'getAssignedUsers'])->name('admin.quizzes.assigned-users');
+        Route::get('quizzes/{quiz}/results', [AdminQuizController::class, 'results'])->name('admin.quizzes.results');
+        Route::post('quizzes/{quiz}/import-questions', [AdminQuizController::class, 'importQuestions'])->name('admin.quizzes.import-questions');
+        Route::get('quizzes/template/download', [AdminQuizController::class, 'downloadTemplate'])->name('admin.quizzes.template.download');
+        Route::post('quizzes/export-csv', [AdminQuizController::class, 'exportToCsv'])->name('admin.quizzes.export-csv');
 
-    // Task Management - Dashboard and Analytics (Super Admin Only)
-    Route::get('tasks/dashboard', [App\Http\Controllers\Admin\TaskController::class, 'dashboard'])->name('admin.tasks.dashboard');
-    Route::get('tasks/dashboard/chart-data', [App\Http\Controllers\Admin\TaskController::class, 'getChartData'])->name('admin.tasks.dashboard.chart-data');
-    // Task Management - My Tasks and Group Tasks (Available to Students and Employees)
-    Route::get('tasks', [App\Http\Controllers\Admin\TaskController::class, 'index'])->name('admin.tasks.index');
-    Route::post('tasks', [App\Http\Controllers\Admin\TaskController::class, 'store'])->name('admin.tasks.store');
-    Route::put('tasks/{task}', [App\Http\Controllers\Admin\TaskController::class, 'update'])->name('admin.tasks.update');
-    Route::post('tasks/{task}/reorder', [App\Http\Controllers\Admin\TaskController::class, 'reorder'])->name('admin.tasks.reorder');
-    Route::delete('tasks/{task}', [App\Http\Controllers\Admin\TaskController::class, 'destroy'])->name('admin.tasks.destroy');
-    Route::post('tasks/update-order', [App\Http\Controllers\Admin\TaskController::class, 'updateOrder'])->name('admin.tasks.update-order');
-    Route::post('tasks/{task}/comments', [App\Http\Controllers\Admin\TaskController::class, 'addComment'])->name('admin.tasks.add-comment');
-    Route::post('tasks/{task}/attachments', [App\Http\Controllers\Admin\TaskController::class, 'uploadAttachment'])->name('admin.tasks.upload-attachment');
-    Route::delete('tasks/attachments/{attachment}', [App\Http\Controllers\Admin\TaskController::class, 'deleteAttachment'])->name('admin.tasks.delete-attachment');
+        // Task Management - Dashboard and Analytics (Super Admin Only)
+        Route::get('tasks/dashboard', [App\Http\Controllers\Admin\TaskController::class, 'dashboard'])->name('admin.tasks.dashboard');
+        Route::get('tasks/dashboard/chart-data', [App\Http\Controllers\Admin\TaskController::class, 'getChartData'])->name('admin.tasks.dashboard.chart-data');
+        // Task Management - My Tasks and Group Tasks (Available to Students and Employees)
+        Route::get('tasks', [App\Http\Controllers\Admin\TaskController::class, 'index'])->name('admin.tasks.index');
+        Route::post('tasks', [App\Http\Controllers\Admin\TaskController::class, 'store'])->name('admin.tasks.store');
+        Route::put('tasks/{task}', [App\Http\Controllers\Admin\TaskController::class, 'update'])->name('admin.tasks.update');
+        Route::post('tasks/{task}/reorder', [App\Http\Controllers\Admin\TaskController::class, 'reorder'])->name('admin.tasks.reorder');
+        Route::delete('tasks/{task}', [App\Http\Controllers\Admin\TaskController::class, 'destroy'])->name('admin.tasks.destroy');
+        Route::post('tasks/update-order', [App\Http\Controllers\Admin\TaskController::class, 'updateOrder'])->name('admin.tasks.update-order');
+        Route::post('tasks/{task}/comments', [App\Http\Controllers\Admin\TaskController::class, 'addComment'])->name('admin.tasks.add-comment');
+        Route::post('tasks/{task}/attachments', [App\Http\Controllers\Admin\TaskController::class, 'uploadAttachment'])->name('admin.tasks.upload-attachment');
+        Route::delete('tasks/attachments/{attachment}', [App\Http\Controllers\Admin\TaskController::class, 'deleteAttachment'])->name('admin.tasks.delete-attachment');
 
-    // News Management
-    Route::resource('news', App\Http\Controllers\Admin\NewsController::class)->names([
-        'index' => 'admin.news.index',
-        'create' => 'admin.news.create',
-        'store' => 'admin.news.store',
-        'show' => 'admin.news.show',
-        'edit' => 'admin.news.edit',
-        'update' => 'admin.news.update',
-        'destroy' => 'admin.news.destroy',
-    ]);
-    Route::post('news/{news}/toggle-publish', [App\Http\Controllers\Admin\NewsController::class, 'togglePublish'])->name('admin.news.toggle-publish');
-    Route::post('news/toggle-section', [App\Http\Controllers\Admin\NewsController::class, 'toggleNewsSection'])->name('admin.news.toggle-section');
-    Route::post('tasks/{task}/assign-users', [App\Http\Controllers\Admin\TaskController::class, 'assignUsers'])->name('admin.tasks.assign-users');
-    
-    // Task Invitation Routes
-    Route::post('tasks/{task}/generate-invite-code', [App\Http\Controllers\Admin\TaskController::class, 'generateInviteCode'])->name('admin.tasks.generate-invite-code');
-    Route::post('tasks/{task}/get-invite-link', [App\Http\Controllers\Admin\TaskController::class, 'getInviteLink'])->name('admin.tasks.get-invite-link');
-    Route::post('tasks/{task}/generate-share-link', [App\Http\Controllers\Admin\TaskController::class, 'generateShareLink'])->name('admin.tasks.generate-share-link');
-    Route::post('tasks/{task}/invite-users', [App\Http\Controllers\Admin\TaskController::class, 'inviteUsers'])->name('admin.tasks.invite-users');
-    Route::post('tasks/join-by-code', [App\Http\Controllers\Admin\TaskController::class, 'joinByCode'])->name('admin.tasks.join-by-code')->middleware('auth');
-    Route::get('tasks/join-by-link/{token}', [App\Http\Controllers\Admin\TaskController::class, 'joinByLink'])->name('admin.tasks.join-by-link')->middleware('auth');
-    Route::post('tasks/invitations/{invitation}/accept', [App\Http\Controllers\Admin\TaskController::class, 'acceptInvitation'])->name('admin.tasks.invitations.accept');
-    Route::post('tasks/invitations/{invitation}/reject', [App\Http\Controllers\Admin\TaskController::class, 'rejectInvitation'])->name('admin.tasks.invitations.reject');
-    Route::get('tasks/pending-invitations', [App\Http\Controllers\Admin\TaskController::class, 'getPendingInvitations'])->name('admin.tasks.pending-invitations');
-    Route::post('tasks/{task}/convert-to-group', [App\Http\Controllers\Admin\TaskController::class, 'convertToGroup'])->name('admin.tasks.convert-to-group');
-    
-    // Custom Boards Management
-    Route::post('tasks/custom-boards', [App\Http\Controllers\Admin\TaskController::class, 'storeCustomBoard'])->name('admin.tasks.custom-boards.store');
-    Route::put('tasks/custom-boards/{customBoard}', [App\Http\Controllers\Admin\TaskController::class, 'updateCustomBoard'])->name('admin.tasks.custom-boards.update');
-    Route::delete('tasks/custom-boards/{customBoard}', [App\Http\Controllers\Admin\TaskController::class, 'destroyCustomBoard'])->name('admin.tasks.custom-boards.destroy');
-    Route::post('tasks/custom-boards/update-order', [App\Http\Controllers\Admin\TaskController::class, 'updateCustomBoardOrder'])->name('admin.tasks.custom-boards.update-order');
-            Route::post('tasks/custom-boards/{customBoard}/toggle-lock', [App\Http\Controllers\Admin\TaskController::class, 'toggleCustomBoardLock'])->name('admin.tasks.custom-boards.toggle-lock');
-            
-            // Task List Routes (for personal tasks)
-            Route::post('tasks/task-lists', [App\Http\Controllers\Admin\TaskController::class, 'storeTaskList'])->name('admin.tasks.task-lists.store');
-            Route::put('tasks/task-lists/{taskList}', [App\Http\Controllers\Admin\TaskController::class, 'updateTaskList'])->name('admin.tasks.task-lists.update');
-            Route::delete('tasks/task-lists/{taskList}', [App\Http\Controllers\Admin\TaskController::class, 'destroyTaskList'])->name('admin.tasks.task-lists.destroy');
-            
-            // Task List Sharing Routes
-            Route::post('tasks/task-lists/{taskList}/generate-invite-code', [App\Http\Controllers\Admin\TaskController::class, 'generateTaskListInviteCode'])->name('admin.tasks.task-lists.generate-invite-code');
-            Route::post('tasks/task-lists/{taskList}/generate-share-link', [App\Http\Controllers\Admin\TaskController::class, 'generateTaskListShareLink'])->name('admin.tasks.task-lists.generate-share-link');
-            Route::post('tasks/task-lists/{taskList}/send-invitation-email', [App\Http\Controllers\Admin\TaskController::class, 'sendTaskListInvitationEmail'])->name('admin.tasks.task-lists.send-invitation-email');
-            Route::post('tasks/task-lists/join-by-code', [App\Http\Controllers\Admin\TaskController::class, 'joinTaskListByCode'])->name('admin.tasks.task-lists.join-by-code')->middleware('auth');
-            Route::get('tasks/task-lists/join-by-link/{token}', [App\Http\Controllers\Admin\TaskController::class, 'joinTaskListByLink'])->name('admin.tasks.join-task-list-by-link')->middleware('auth');
-            
-            // Custom Priority Routes
-            Route::post('tasks/custom-priorities', [App\Http\Controllers\Admin\TaskController::class, 'storeCustomPriority'])->name('admin.tasks.custom-priorities.store');
-            Route::put('tasks/custom-priorities/{customPriority}', [App\Http\Controllers\Admin\TaskController::class, 'updateCustomPriority'])->name('admin.tasks.custom-priorities.update');
-            Route::delete('tasks/custom-priorities/{customPriority}', [App\Http\Controllers\Admin\TaskController::class, 'destroyCustomPriority'])->name('admin.tasks.custom-priorities.destroy');
+        // News Management
+        Route::resource('news', App\Http\Controllers\Admin\NewsController::class)->names([
+            'index' => 'admin.news.index',
+            'create' => 'admin.news.create',
+            'store' => 'admin.news.store',
+            'show' => 'admin.news.show',
+            'edit' => 'admin.news.edit',
+            'update' => 'admin.news.update',
+            'destroy' => 'admin.news.destroy',
+        ]);
+        Route::post('news/{news}/toggle-publish', [App\Http\Controllers\Admin\NewsController::class, 'togglePublish'])->name('admin.news.toggle-publish');
+        Route::post('news/toggle-section', [App\Http\Controllers\Admin\NewsController::class, 'toggleNewsSection'])->name('admin.news.toggle-section');
+        Route::post('tasks/{task}/assign-users', [App\Http\Controllers\Admin\TaskController::class, 'assignUsers'])->name('admin.tasks.assign-users');
 
-    // Quiz Assignment Management
-    Route::post('quiz-assignments/{assignment}/reset', [AdminQuizController::class, 'resetAssignment'])->name('admin.quiz-assignments.reset');
-    Route::get('quiz-assignments/{assignment}/history', [AdminQuizController::class, 'viewAttemptHistory'])->name('admin.quiz-assignments.history');
-    Route::get('quiz-assignments/{assignment}/history/pdf', [AdminQuizController::class, 'exportAttemptHistoryPdf'])->name('admin.quiz-assignments.history.pdf');
-    Route::post('quiz-assignments/{assignment}/allow-retake', [AdminQuizController::class, 'allowRetake'])->name('admin.quiz-assignments.allow-retake');
-    Route::get('quiz-attempts/{attemptId}/details', [AdminQuizController::class, 'getAttemptDetails'])->name('admin.quiz-attempts.details');
-    Route::get('quizzes/{quizId}/users/{userId}/history', [AdminQuizController::class, 'getUserQuizHistory'])->name('admin.quizzes.user-history');
+        // Task Invitation Routes
+        Route::post('tasks/{task}/generate-invite-code', [App\Http\Controllers\Admin\TaskController::class, 'generateInviteCode'])->name('admin.tasks.generate-invite-code');
+        Route::post('tasks/{task}/get-invite-link', [App\Http\Controllers\Admin\TaskController::class, 'getInviteLink'])->name('admin.tasks.get-invite-link');
+        Route::post('tasks/{task}/generate-share-link', [App\Http\Controllers\Admin\TaskController::class, 'generateShareLink'])->name('admin.tasks.generate-share-link');
+        Route::post('tasks/{task}/invite-users', [App\Http\Controllers\Admin\TaskController::class, 'inviteUsers'])->name('admin.tasks.invite-users');
+        Route::post('tasks/join-by-code', [App\Http\Controllers\Admin\TaskController::class, 'joinByCode'])->name('admin.tasks.join-by-code')->middleware('auth');
+        Route::get('tasks/join-by-link/{token}', [App\Http\Controllers\Admin\TaskController::class, 'joinByLink'])->name('admin.tasks.join-by-link')->middleware('auth');
+        Route::post('tasks/invitations/{invitation}/accept', [App\Http\Controllers\Admin\TaskController::class, 'acceptInvitation'])->name('admin.tasks.invitations.accept');
+        Route::post('tasks/invitations/{invitation}/reject', [App\Http\Controllers\Admin\TaskController::class, 'rejectInvitation'])->name('admin.tasks.invitations.reject');
+        Route::get('tasks/pending-invitations', [App\Http\Controllers\Admin\TaskController::class, 'getPendingInvitations'])->name('admin.tasks.pending-invitations');
+        Route::post('tasks/{task}/convert-to-group', [App\Http\Controllers\Admin\TaskController::class, 'convertToGroup'])->name('admin.tasks.convert-to-group');
 
-    // Manual Grading
-    Route::get('manual-grading', [AdminQuizController::class, 'manualGrading'])->name('admin.manual-grading');
-    Route::get('all-text-attempts', [AdminQuizController::class, 'allTextAttempts'])->name('admin.all-text-attempts');
-    Route::post('quiz-attempts/{attempt}/grade', [AdminQuizController::class, 'gradeAttempt'])->name('admin.quiz-attempts.grade');
+        // Custom Boards Management
+        Route::post('tasks/custom-boards', [App\Http\Controllers\Admin\TaskController::class, 'storeCustomBoard'])->name('admin.tasks.custom-boards.store');
+        Route::put('tasks/custom-boards/{customBoard}', [App\Http\Controllers\Admin\TaskController::class, 'updateCustomBoard'])->name('admin.tasks.custom-boards.update');
+        Route::delete('tasks/custom-boards/{customBoard}', [App\Http\Controllers\Admin\TaskController::class, 'destroyCustomBoard'])->name('admin.tasks.custom-boards.destroy');
+        Route::post('tasks/custom-boards/update-order', [App\Http\Controllers\Admin\TaskController::class, 'updateCustomBoardOrder'])->name('admin.tasks.custom-boards.update-order');
+        Route::post('tasks/custom-boards/{customBoard}/toggle-lock', [App\Http\Controllers\Admin\TaskController::class, 'toggleCustomBoardLock'])->name('admin.tasks.custom-boards.toggle-lock');
+
+        // Task List Routes (for personal tasks)
+        Route::post('tasks/task-lists', [App\Http\Controllers\Admin\TaskController::class, 'storeTaskList'])->name('admin.tasks.task-lists.store');
+        Route::put('tasks/task-lists/{taskList}', [App\Http\Controllers\Admin\TaskController::class, 'updateTaskList'])->name('admin.tasks.task-lists.update');
+        Route::delete('tasks/task-lists/{taskList}', [App\Http\Controllers\Admin\TaskController::class, 'destroyTaskList'])->name('admin.tasks.task-lists.destroy');
+
+        // Task List Sharing Routes
+        Route::post('tasks/task-lists/{taskList}/generate-invite-code', [App\Http\Controllers\Admin\TaskController::class, 'generateTaskListInviteCode'])->name('admin.tasks.task-lists.generate-invite-code');
+        Route::post('tasks/task-lists/{taskList}/generate-share-link', [App\Http\Controllers\Admin\TaskController::class, 'generateTaskListShareLink'])->name('admin.tasks.task-lists.generate-share-link');
+        Route::post('tasks/task-lists/{taskList}/send-invitation-email', [App\Http\Controllers\Admin\TaskController::class, 'sendTaskListInvitationEmail'])->name('admin.tasks.task-lists.send-invitation-email');
+        Route::post('tasks/task-lists/join-by-code', [App\Http\Controllers\Admin\TaskController::class, 'joinTaskListByCode'])->name('admin.tasks.task-lists.join-by-code')->middleware('auth');
+        Route::get('tasks/task-lists/join-by-link/{token}', [App\Http\Controllers\Admin\TaskController::class, 'joinTaskListByLink'])->name('admin.tasks.join-task-list-by-link')->middleware('auth');
+
+        // Custom Priority Routes
+        Route::post('tasks/custom-priorities', [App\Http\Controllers\Admin\TaskController::class, 'storeCustomPriority'])->name('admin.tasks.custom-priorities.store');
+        Route::put('tasks/custom-priorities/{customPriority}', [App\Http\Controllers\Admin\TaskController::class, 'updateCustomPriority'])->name('admin.tasks.custom-priorities.update');
+        Route::delete('tasks/custom-priorities/{customPriority}', [App\Http\Controllers\Admin\TaskController::class, 'destroyCustomPriority'])->name('admin.tasks.custom-priorities.destroy');
+
+        // Quiz Assignment Management
+        Route::post('quiz-assignments/{assignment}/reset', [AdminQuizController::class, 'resetAssignment'])->name('admin.quiz-assignments.reset');
+        Route::get('quiz-assignments/{assignment}/history', [AdminQuizController::class, 'viewAttemptHistory'])->name('admin.quiz-assignments.history');
+        Route::get('quiz-assignments/{assignment}/history/pdf', [AdminQuizController::class, 'exportAttemptHistoryPdf'])->name('admin.quiz-assignments.history.pdf');
+        Route::post('quiz-assignments/{assignment}/allow-retake', [AdminQuizController::class, 'allowRetake'])->name('admin.quiz-assignments.allow-retake');
+        Route::get('quiz-attempts/{attemptId}/details', [AdminQuizController::class, 'getAttemptDetails'])->name('admin.quiz-attempts.details');
+        Route::get('quizzes/{quizId}/users/{userId}/history', [AdminQuizController::class, 'getUserQuizHistory'])->name('admin.quizzes.user-history');
+
+        // Manual Grading
+        Route::get('manual-grading', [AdminQuizController::class, 'manualGrading'])->name('admin.manual-grading');
+        Route::get('all-text-attempts', [AdminQuizController::class, 'allTextAttempts'])->name('admin.all-text-attempts');
+        Route::post('quiz-attempts/{attempt}/grade', [AdminQuizController::class, 'gradeAttempt'])->name('admin.quiz-attempts.grade');
 
         // Quiz Import Routes
         Route::get('quizzes/import/form', [AdminQuizController::class, 'importForm'])->name('admin.quizzes.import-form');
@@ -268,7 +284,6 @@ Route::prefix('admin')->middleware(['auth', 'admin'])->group(function () {
     Route::middleware(['auth'])->group(function () {
         Route::get('kpi/dashboard', [App\Http\Controllers\Admin\KpiController::class, 'dashboard'])->name('admin.kpi.dashboard');
     });
-
 
     // Employee Management
     Route::middleware(['admin.permission:employee_management'])->group(function () {
@@ -325,7 +340,7 @@ Route::prefix('admin')->middleware(['auth', 'admin'])->group(function () {
         Route::get('/student-leave-requests', [App\Http\Controllers\Admin\LeaveRequestController::class, 'studentIndex'])->name('admin.student-leave-requests.index');
         Route::get('/student-leave-calendar', [App\Http\Controllers\Admin\LeaveRequestController::class, 'studentCalendar'])->name('admin.student-leave-requests.calendar');
         Route::post('/student-leave-requests/create-for-student', [App\Http\Controllers\Admin\LeaveRequestController::class, 'storeForStudent'])->name('admin.student-leave-requests.store-for-student');
-        
+
         // Student Time Requests Management
         Route::get('/time-requests', [App\Http\Controllers\Admin\DtrTimeRequestController::class, 'index'])->name('admin.time-requests.index');
         Route::post('/time-requests/{dtrTimeRequest}/approve', [App\Http\Controllers\Admin\DtrTimeRequestController::class, 'approve'])->name('admin.time-requests.approve');
@@ -363,38 +378,38 @@ Route::prefix('admin')->middleware(['auth', 'admin'])->group(function () {
 
     // File Storage (Admin) – requires files permission
     Route::middleware(['admin.permission:files'])->group(function () {
-    Route::get('files', [App\Http\Controllers\Admin\FileController::class, 'index'])->name('admin.files.index');
-    Route::post('files', [App\Http\Controllers\Admin\FileController::class, 'store'])->name('admin.files.store');
-    Route::post('files/presign', [App\Http\Controllers\Admin\FileController::class, 'presignUpload'])->name('admin.files.presign');
-    Route::post('files/confirm', [App\Http\Controllers\Admin\FileController::class, 'confirmUpload'])->name('admin.files.confirm');
-    Route::post('files/multipart/initiate', [App\Http\Controllers\Admin\FileController::class, 'initiateMultipartUpload'])->name('admin.files.multipart.initiate');
-    Route::post('files/multipart/presign-chunk', [App\Http\Controllers\Admin\FileController::class, 'presignChunk'])->name('admin.files.multipart.presign-chunk');
-    Route::post('files/multipart/upload-chunk', [App\Http\Controllers\Admin\FileController::class, 'uploadChunk'])->name('admin.files.multipart.upload-chunk');
-    Route::post('files/multipart/complete', [App\Http\Controllers\Admin\FileController::class, 'completeMultipartUpload'])->name('admin.files.multipart.complete');
-    Route::post('files/multipart/abort', [App\Http\Controllers\Admin\FileController::class, 'abortMultipartUpload'])->name('admin.files.multipart.abort');
-    Route::post('files/create-folder', [App\Http\Controllers\Admin\FileController::class, 'createFolder'])->name('admin.files.create-folder');
-    Route::put('files/{file}', [App\Http\Controllers\Admin\FileController::class, 'update'])->name('admin.files.update');
-    Route::delete('files/{file}', [App\Http\Controllers\Admin\FileController::class, 'destroy'])->name('admin.files.destroy');
-    Route::get('files/{file}/download', [App\Http\Controllers\Admin\FileController::class, 'download'])->name('admin.files.download');
-    Route::get('files/{file}/view', [App\Http\Controllers\Admin\FileController::class, 'view'])->name('admin.files.view');
-    Route::post('files/{file}/share', [App\Http\Controllers\Admin\FileController::class, 'share'])->name('admin.files.share');
-    Route::post('files/{file}/unshare', [App\Http\Controllers\Admin\FileController::class, 'unshare'])->name('admin.files.unshare');
-    Route::get('files/{file}/shared-users', [App\Http\Controllers\Admin\FileController::class, 'getSharedUsers'])->name('admin.files.shared-users');
+        Route::get('files', [App\Http\Controllers\Admin\FileController::class, 'index'])->name('admin.files.index');
+        Route::post('files', [App\Http\Controllers\Admin\FileController::class, 'store'])->name('admin.files.store');
+        Route::post('files/presign', [App\Http\Controllers\Admin\FileController::class, 'presignUpload'])->name('admin.files.presign');
+        Route::post('files/confirm', [App\Http\Controllers\Admin\FileController::class, 'confirmUpload'])->name('admin.files.confirm');
+        Route::post('files/multipart/initiate', [App\Http\Controllers\Admin\FileController::class, 'initiateMultipartUpload'])->name('admin.files.multipart.initiate');
+        Route::post('files/multipart/presign-chunk', [App\Http\Controllers\Admin\FileController::class, 'presignChunk'])->name('admin.files.multipart.presign-chunk');
+        Route::post('files/multipart/upload-chunk', [App\Http\Controllers\Admin\FileController::class, 'uploadChunk'])->name('admin.files.multipart.upload-chunk');
+        Route::post('files/multipart/complete', [App\Http\Controllers\Admin\FileController::class, 'completeMultipartUpload'])->name('admin.files.multipart.complete');
+        Route::post('files/multipart/abort', [App\Http\Controllers\Admin\FileController::class, 'abortMultipartUpload'])->name('admin.files.multipart.abort');
+        Route::post('files/create-folder', [App\Http\Controllers\Admin\FileController::class, 'createFolder'])->name('admin.files.create-folder');
+        Route::put('files/{file}', [App\Http\Controllers\Admin\FileController::class, 'update'])->name('admin.files.update');
+        Route::delete('files/{file}', [App\Http\Controllers\Admin\FileController::class, 'destroy'])->name('admin.files.destroy');
+        Route::get('files/{file}/download', [App\Http\Controllers\Admin\FileController::class, 'download'])->name('admin.files.download');
+        Route::get('files/{file}/view', [App\Http\Controllers\Admin\FileController::class, 'view'])->name('admin.files.view');
+        Route::post('files/{file}/share', [App\Http\Controllers\Admin\FileController::class, 'share'])->name('admin.files.share');
+        Route::post('files/{file}/unshare', [App\Http\Controllers\Admin\FileController::class, 'unshare'])->name('admin.files.unshare');
+        Route::get('files/{file}/shared-users', [App\Http\Controllers\Admin\FileController::class, 'getSharedUsers'])->name('admin.files.shared-users');
     });
 
     // Confession (Say-it) – requires confession permission
     Route::middleware(['admin.permission:confession'])->group(function () {
-    Route::get('confession', [App\Http\Controllers\Admin\ConfessionController::class, 'index']);
-    Route::get('confession/dashboard', [App\Http\Controllers\Admin\ConfessionController::class, 'dashboard']);
-    Route::get('confession/topics', [App\Http\Controllers\Admin\ConfessionController::class, 'topics'])->name('admin.confession.topics');
-    Route::get('confession/topics/{confession_topic}/edit', [App\Http\Controllers\Admin\ConfessionController::class, 'editTopic'])->name('admin.confession.topics.edit');
-    Route::put('confession/topics/{confession_topic}', [App\Http\Controllers\Admin\ConfessionController::class, 'updateTopic'])->name('admin.confession.topics.update');
-    Route::delete('confession/topics/{confession_topic}', [App\Http\Controllers\Admin\ConfessionController::class, 'destroyTopic'])->name('admin.confession.topics.destroy');
-    Route::delete('confession/posts/{confession_post}', [App\Http\Controllers\Admin\ConfessionController::class, 'destroy']);
-    Route::post('confession/anon-name-settings', [App\Http\Controllers\Admin\ConfessionController::class, 'updateAnonNameSettings'])->name('admin.confession.anon-name-settings');
-    Route::get('confession/banned-words', [App\Http\Controllers\Admin\ConfessionBannedWordController::class, 'index'])->name('admin.confession.banned-words');
-    Route::post('confession/banned-words', [App\Http\Controllers\Admin\ConfessionBannedWordController::class, 'store']);
-    Route::delete('confession/banned-words/{banned_word}', [App\Http\Controllers\Admin\ConfessionBannedWordController::class, 'destroy'])->name('admin.confession.banned-words.destroy');
+        Route::get('confession', [App\Http\Controllers\Admin\ConfessionController::class, 'index']);
+        Route::get('confession/dashboard', [App\Http\Controllers\Admin\ConfessionController::class, 'dashboard']);
+        Route::get('confession/topics', [App\Http\Controllers\Admin\ConfessionController::class, 'topics'])->name('admin.confession.topics');
+        Route::get('confession/topics/{confession_topic}/edit', [App\Http\Controllers\Admin\ConfessionController::class, 'editTopic'])->name('admin.confession.topics.edit');
+        Route::put('confession/topics/{confession_topic}', [App\Http\Controllers\Admin\ConfessionController::class, 'updateTopic'])->name('admin.confession.topics.update');
+        Route::delete('confession/topics/{confession_topic}', [App\Http\Controllers\Admin\ConfessionController::class, 'destroyTopic'])->name('admin.confession.topics.destroy');
+        Route::delete('confession/posts/{confession_post}', [App\Http\Controllers\Admin\ConfessionController::class, 'destroy']);
+        Route::post('confession/anon-name-settings', [App\Http\Controllers\Admin\ConfessionController::class, 'updateAnonNameSettings'])->name('admin.confession.anon-name-settings');
+        Route::get('confession/banned-words', [App\Http\Controllers\Admin\ConfessionBannedWordController::class, 'index'])->name('admin.confession.banned-words');
+        Route::post('confession/banned-words', [App\Http\Controllers\Admin\ConfessionBannedWordController::class, 'store']);
+        Route::delete('confession/banned-words/{banned_word}', [App\Http\Controllers\Admin\ConfessionBannedWordController::class, 'destroy'])->name('admin.confession.banned-words.destroy');
     });
 
     // Communication
@@ -486,12 +501,12 @@ Route::prefix('admin')->middleware(['auth', 'admin'])->group(function () {
 
     // Feedback Management – requires feedback permission
     Route::middleware(['admin.permission:feedback'])->group(function () {
-    Route::resource('feedback', App\Http\Controllers\Admin\FeedbackController::class)->names('admin.feedback');
-    Route::post('feedback/{feedback}/assign', [App\Http\Controllers\Admin\FeedbackController::class, 'assign'])->name('admin.feedback.assign');
-    Route::get('feedback-stats', [App\Http\Controllers\Admin\FeedbackController::class, 'getStats'])->name('admin.feedback.stats');
-    Route::get('feedback-admins', [App\Http\Controllers\Admin\FeedbackController::class, 'getAdmins'])->name('admin.feedback.admins');
+        Route::resource('feedback', App\Http\Controllers\Admin\FeedbackController::class)->names('admin.feedback');
+        Route::post('feedback/{feedback}/assign', [App\Http\Controllers\Admin\FeedbackController::class, 'assign'])->name('admin.feedback.assign');
+        Route::get('feedback-stats', [App\Http\Controllers\Admin\FeedbackController::class, 'getStats'])->name('admin.feedback.stats');
+        Route::get('feedback-admins', [App\Http\Controllers\Admin\FeedbackController::class, 'getAdmins'])->name('admin.feedback.admins');
     });
-    });
+});
 
 // User Routes
 Route::middleware(['auth', 'student.not_terminated'])->group(function () {
@@ -499,6 +514,11 @@ Route::middleware(['auth', 'student.not_terminated'])->group(function () {
     Route::post('/dashboard/rules-regulations/acknowledge', [UserDashboardController::class, 'acknowledgeRulesRegulations'])->name('user.rules-regulations.acknowledge');
     Route::get('/teacher/students', [UserDashboardController::class, 'teacherStudents'])->name('user.teacher.students');
     Route::get('/teacher/news', [UserDashboardController::class, 'teacherNews'])->name('user.teacher.news');
+    Route::get('/teacher/excused-requests', [UserDashboardController::class, 'teacherExcusedRequests'])->name('user.teacher.excused-requests.index');
+    Route::post('/teacher/excused-requests', [UserDashboardController::class, 'storeTeacherExcusedRequest'])->name('user.teacher.excused-requests.store');
+    Route::get('/teacher/moa', [UserTeacherMoaController::class, 'index'])->name('user.teacher.moa.index');
+    Route::post('/teacher/moa', [UserTeacherMoaController::class, 'store'])->name('user.teacher.moa.store');
+    Route::get('/teacher/moa/preview', [UserTeacherMoaController::class, 'preview'])->name('user.teacher.moa.preview');
     Route::get('/technician/tickets', [App\Http\Controllers\User\TechnicianTicketController::class, 'index'])->name('user.technician-tickets.index');
     Route::patch('/technician/tickets/{ticket}', [App\Http\Controllers\User\TechnicianTicketController::class, 'update'])->name('user.technician-tickets.update');
     // TOR PDF for students
@@ -551,7 +571,7 @@ Route::middleware(['auth', 'student.not_terminated'])->group(function () {
     // DTR (Employee Only)
     Route::get('/dtr', [App\Http\Controllers\User\DtrController::class, 'index'])->name('user.dtr.index');
     Route::get('/dtr/export-pdf', [App\Http\Controllers\User\DtrController::class, 'exportPdf'])->name('user.dtr.export-pdf');
-    
+
     // Student Time Requests
     Route::post('/dtr-time-requests', [App\Http\Controllers\User\DtrTimeRequestController::class, 'store'])->name('user.dtr-time-requests.store');
 
@@ -616,6 +636,4 @@ Route::middleware(['auth', 'student.not_terminated'])->group(function () {
     Route::delete('notifications/clear-all', [App\Http\Controllers\User\NotificationController::class, 'clearAll'])->name('notifications.clear-all');
 });
 
-
 // Authentication routes are handled above with role-based login
-

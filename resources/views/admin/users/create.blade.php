@@ -224,9 +224,9 @@
                         </div>
                     </div>
 
-                    <!-- Department (Employees, Students, and Teachers) -->
+                    <!-- Department (employees and students only) -->
                     <div class="space-y-2" id="department_wrapper"
-                         @if(in_array(old('role'), ['employee', 'student', 'teacher'], true)) style="" @else style="display:none;" @endif>
+                         @if(in_array(old('role'), ['employee', 'student'], true)) style="" @else style="display:none;" @endif>
                         <label for="department_id" class="block text-sm font-semibold text-gray-700">
                             Department <span class="text-red-500" id="department_required_indicator" @if(old('role') !== 'employee') style="display:none;" @endif>*</span>
                         </label>
@@ -684,13 +684,13 @@ document.addEventListener('DOMContentLoaded', function() {
         toggleLeaveBalances();
     }
 
-    // Show Department for employees, students, and teachers
+    // Show Department for employees and students only (teachers are not assigned to departments)
     const departmentWrapper = document.getElementById('department_wrapper');
     const departmentSelect = document.getElementById('department_id');
     const departmentRequiredIndicator = document.getElementById('department_required_indicator');
     if (roleSelect && departmentWrapper) {
         function toggleDepartment() {
-            const show = roleSelect.value === 'employee' || roleSelect.value === 'student' || roleSelect.value === 'teacher';
+            const show = roleSelect.value === 'employee' || roleSelect.value === 'student';
             if (show) {
                 departmentWrapper.style.display = '';
                 if (departmentSelect) {

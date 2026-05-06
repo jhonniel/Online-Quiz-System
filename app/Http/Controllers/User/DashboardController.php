@@ -6,14 +6,15 @@ use App\Http\Controllers\Controller;
 use App\Models\Dtr;
 use App\Models\EvaluationForm;
 use App\Models\EvaluationSubmission;
+use App\Models\LeaveBalance;
 use App\Models\LeaveRequest;
+use App\Models\LeaveRequestLog;
 use App\Models\News;
 use App\Models\QuizAssignment;
+use App\Models\Setting;
 use App\Models\TicketReport;
 use App\Models\User;
 use App\Models\UserActivity;
-use App\Models\LeaveBalance;
-use App\Models\Setting;
 use App\Services\StudentOjtPostCompletionService;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
@@ -21,6 +22,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Validation\Rule;
 
 class DashboardController extends Controller
 {
@@ -81,8 +83,14 @@ class DashboardController extends Controller
                 'totalStudents' => $teacherData['totalStudents'],
                 'activeStudents' => $teacherData['activeStudents'],
                 'ongoingInternships' => $teacherData['ongoingInternships'],
+                'completedInternships' => $teacherData['completedInternships'],
                 'schoolName' => $teacherData['schoolName'],
+                'ojtSlotsUsed' => $teacherData['ojtSlotsUsed'],
+                'ojtTotalSlots' => $teacherData['ojtTotalSlots'],
+                'ojtSlotsRemaining' => $teacherData['ojtSlotsRemaining'],
                 'teacherCharts' => $teacherData['charts'],
+                'studentsApprovedAbsentRanking' => $teacherData['studentsApprovedAbsentRanking'],
+                'nextExitConferenceDate' => $teacherData['nextExitConferenceDate'],
             ]);
         }
 
@@ -508,15 +516,178 @@ class DashboardController extends Controller
         return view('user.teacher-news', compact('news'));
     }
 
+    public function teacherExcusedRequests(Request $request)
+    {
+        $user = auth()->user();
+        abort_unless($user->role === 'teacher', 403);
+
+        $students = User::query()
+            ->where('role', 'student')
+            ->where('is_active', true)
+            ->where('university_id', $user->university_id)
+            ->orderBy('name')
+            ->get(['id', 'name', 'email']);
+
+        $perPage = (int) $request->input('per_page', 10);
+        if (! in_array($perPage, [10, 20, 50], true)) {
+            $perPage = 10;
+        }
+
+        $pastRequests = LeaveRequest::query()
+            ->where('type', 'absent')
+            ->whereHas('logs', function ($query) use ($user): void {
+                $query->where('action', 'filed_by_teacher')
+                    ->where('performed_by', $user->id);
+            })
+            ->with([
+                'user:id,name,email',
+                'logs' => function ($query) use ($user): void {
+                    $query->where('action', 'filed_by_teacher')
+                        ->where('performed_by', $user->id)
+                        ->with('performer:id,name,email')
+                        ->orderByDesc('created_at');
+                },
+            ])
+            ->orderByDesc('created_at')
+            ->paginate($perPage, ['*'], 'requests_page')
+            ->withQueryString();
+
+        return view('user.teacher-excused-requests', [
+            'students' => $students,
+            'schoolName' => optional($user->university)->name,
+            'pastRequests' => $pastRequests,
+            'perPage' => $perPage,
+        ]);
+    }
+
+    public function storeTeacherExcusedRequest(Request $request)
+    {
+        $teacher = auth()->user();
+        abort_unless($teacher->role === 'teacher', 403);
+
+        $validated = $request->validate([
+            'student_ids' => ['required', 'array', 'min:1'],
+            'student_ids.*' => [
+                'required',
+                Rule::exists('users', 'id')->where(function ($query) use ($teacher) {
+                    $query
+                        ->where('role', 'student')
+                        ->where('is_active', true)
+                        ->where('university_id', $teacher->university_id);
+                }),
+            ],
+            'start_date' => ['required', 'date'],
+            'end_date' => ['nullable', 'date', 'after_or_equal:start_date'],
+            'reason' => ['required', 'string', 'max:1000'],
+            'supporting_documents' => ['nullable', 'array', 'max:5'],
+            'supporting_documents.*' => ['file', 'mimes:pdf,jpg,jpeg,png', 'max:5120'],
+        ]);
+
+        [$supportingPaths, $legacySupportingPath] = $this->storeSupportingDocumentsFromRequest($request);
+        $createdCount = 0;
+
+        foreach ($validated['student_ids'] as $studentId) {
+            $student = User::query()
+                ->where('id', $studentId)
+                ->where('role', 'student')
+                ->where('is_active', true)
+                ->where('university_id', $teacher->university_id)
+                ->first();
+
+            if (! $student) {
+                continue;
+            }
+
+            $leaveRequest = LeaveRequest::create([
+                'user_id' => $student->id,
+                'type' => 'absent',
+                'start_date' => $validated['start_date'],
+                'end_date' => $validated['end_date'] ?? $validated['start_date'],
+                'reason' => trim("Teacher excused request by {$teacher->name} ({$teacher->email}).\n\n".$validated['reason']),
+                'supporting_document_path' => $legacySupportingPath,
+                'supporting_document_paths' => $supportingPaths,
+                'status' => 'pending',
+                'reviewed_by' => null,
+                'reviewed_at' => null,
+            ]);
+
+            LeaveRequestLog::create([
+                'leave_request_id' => $leaveRequest->id,
+                'action' => 'filed_by_teacher',
+                'status_before' => null,
+                'status_after' => 'pending',
+                'notes' => 'Filed by teacher on behalf of student',
+                'performed_by' => $teacher->id,
+            ]);
+
+            $createdCount++;
+        }
+
+        if ($createdCount === 0) {
+            return redirect()->back()
+                ->withErrors(['student_ids' => 'No requests were created. Please select valid students from your assigned school.'])
+                ->withInput();
+        }
+
+        return redirect(url('/teacher/excused-requests'))
+            ->with('success', "Excused request submitted for {$createdCount} student(s). Waiting for admin review.");
+    }
+
+    /**
+     * @return array{0: list<string>, 1: string|null}
+     */
+    private function storeSupportingDocumentsFromRequest(Request $request): array
+    {
+        $paths = [];
+        $supportDir = 'leave-supporting-docs';
+        $assetDisk = 'digitalocean';
+        $doConfigured = ! empty(env('DIGITALOCEAN_SPACES_KEY') ?: env('DO_SPACES_KEY'))
+            && ! empty(env('DIGITALOCEAN_SPACES_SECRET') ?: env('DO_SPACES_SECRET'))
+            && ! empty(env('DIGITALOCEAN_SPACES_BUCKET') ?: env('DO_SPACES_BUCKET'));
+
+        if ($doConfigured) {
+            $assetRoot = trim(env('DIGITALOCEAN_SPACES_ROOT_PATH', ''), '/');
+            $supportDir = $assetRoot ? $assetRoot.'/'.$supportDir : $supportDir;
+        }
+
+        $disk = $doConfigured ? $assetDisk : config('filesystems.default', 'local');
+        $files = $request->file('supporting_documents', []);
+
+        foreach ($files as $file) {
+            try {
+                $storedPath = $file->store($supportDir, $disk);
+                if ($storedPath) {
+                    $paths[] = $storedPath;
+                }
+            } catch (\Throwable $e) {
+                Log::warning('Teacher excused supporting document store failed, skipping file', [
+                    'error' => $e->getMessage(),
+                    'disk' => $disk,
+                    'teacher_id' => auth()->id(),
+                ]);
+            }
+        }
+
+        return [$paths, $paths[0] ?? null];
+    }
+
     private function getTeacherSchoolData(User $teacher): array
     {
         if (! $teacher->university_id) {
+            $emptyOjtTotal = (int) Setting::get('ojt_total_slots', 0);
+
             return [
                 'totalStudents' => 0,
                 'activeStudents' => 0,
                 'ongoingInternships' => 0,
+                'completedInternships' => 0,
                 'students' => collect(),
+                'studentsApprovedAbsentRanking' => collect(),
                 'schoolName' => null,
+                'ojtSlotsUsed' => 0,
+                'ojtTotalSlots' => $emptyOjtTotal,
+                'ojtSlotsRemaining' => $emptyOjtTotal,
+                'nextExitConferenceDate' => null,
                 'charts' => [
                     'studentStatus' => [
                         'labels' => ['Active', 'Inactive'],
@@ -529,6 +700,10 @@ class DashboardController extends Controller
                     'monthlyHours' => [
                         'labels' => [],
                         'values' => [],
+                    ],
+                    'internshipHoursSummary' => [
+                        'labels' => ['Required', 'Logged', 'Remaining'],
+                        'values' => [0, 0, 0],
                     ],
                 ],
             ];
@@ -545,16 +720,26 @@ class DashboardController extends Controller
             ->selectRaw('user_id, COALESCE(SUM(total_hours), 0) as logged_hours')
             ->groupBy('user_id');
 
+        $approvedAbsentCounts = LeaveRequest::query()
+            ->selectRaw('user_id, COUNT(*) as approved_absent_count')
+            ->where('type', 'absent')
+            ->where('status', 'approved')
+            ->groupBy('user_id');
+
         $students = User::query()
             ->with(['department', 'university'])
             ->leftJoinSub($dtrTotals, 'dtr_totals', function ($join) {
                 $join->on('dtr_totals.user_id', '=', 'users.id');
+            })
+            ->leftJoinSub($approvedAbsentCounts, 'absent_counts', function ($join) {
+                $join->on('absent_counts.user_id', '=', 'users.id');
             })
             ->where('users.role', 'student')
             ->where('users.university_id', $teacher->university_id)
             ->select([
                 'users.*',
                 DB::raw('COALESCE(dtr_totals.logged_hours, 0) as logged_hours'),
+                DB::raw('COALESCE(absent_counts.approved_absent_count, 0) as approved_absent_count'),
             ])
             ->orderBy('users.name')
             ->get();
@@ -601,6 +786,12 @@ class DashboardController extends Controller
             return $required > 0 && $logged < $required;
         })->count();
         $completedInternships = max($totalStudents - $ongoingInternships, 0);
+        $ojtTotalSlots = (int) Setting::get('ojt_total_slots', 0);
+        $ojtSlotsUsed = $ongoingInternships;
+        $ojtSlotsRemaining = max($ojtTotalSlots - $ojtSlotsUsed, 0);
+        $totalRequiredHours = (float) $students->sum(fn ($student) => (float) ($student->required_training_hours ?? 0));
+        $totalLoggedHours = (float) $students->sum(fn ($student) => (float) ($student->logged_hours ?? 0));
+        $totalRemainingHours = max($totalRequiredHours - $totalLoggedHours, 0);
 
         $months = collect(range(5, 0))->map(fn ($index) => now()->subMonths($index)->startOfMonth());
         $months = $months->push(now()->startOfMonth())->values();
@@ -623,6 +814,33 @@ class DashboardController extends Controller
             }
         }
 
+        $studentsApprovedAbsentRanking = $students
+            ->sort(function (User $a, User $b) {
+                $ca = (int) ($a->approved_absent_count ?? 0);
+                $cb = (int) ($b->approved_absent_count ?? 0);
+                if ($ca !== $cb) {
+                    return $cb <=> $ca;
+                }
+
+                return strcasecmp((string) $a->name, (string) $b->name);
+            })
+            ->values();
+
+        $nextExitConferenceDate = null;
+        $today = now()->startOfDay();
+        foreach ($students as $student) {
+            if (empty($student->ojt_target_end_date)) {
+                continue;
+            }
+            $d = Carbon::parse($student->ojt_target_end_date)->startOfDay();
+            if ($d->lt($today)) {
+                continue;
+            }
+            if ($nextExitConferenceDate === null || $d->lt($nextExitConferenceDate)) {
+                $nextExitConferenceDate = $d;
+            }
+        }
+
         $charts = [
             'studentStatus' => [
                 'labels' => ['Active', 'Inactive'],
@@ -639,13 +857,27 @@ class DashboardController extends Controller
                     array_values($monthlyHours->all())
                 ),
             ],
+            'internshipHoursSummary' => [
+                'labels' => ['Required', 'Logged', 'Remaining'],
+                'values' => [
+                    round($totalRequiredHours, 2),
+                    round($totalLoggedHours, 2),
+                    round($totalRemainingHours, 2),
+                ],
+            ],
         ];
 
         return [
             'totalStudents' => $totalStudents,
             'activeStudents' => $activeStudents,
             'ongoingInternships' => $ongoingInternships,
+            'completedInternships' => $completedInternships,
+            'ojtSlotsUsed' => $ojtSlotsUsed,
+            'ojtTotalSlots' => $ojtTotalSlots,
+            'ojtSlotsRemaining' => $ojtSlotsRemaining,
             'students' => $students,
+            'studentsApprovedAbsentRanking' => $studentsApprovedAbsentRanking,
+            'nextExitConferenceDate' => $nextExitConferenceDate,
             'schoolName' => optional($teacher->university)->name,
             'charts' => $charts,
         ];

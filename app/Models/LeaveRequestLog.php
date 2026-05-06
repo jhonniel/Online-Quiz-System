@@ -54,6 +54,7 @@ class LeaveRequestLog extends Model
             'leave_time_reverted' => 'Leave time adjusted',
             'travel_time_reverted' => 'Travel time adjusted',
             'filed_by_admin' => 'Filed by administrator',
+            'filed_by_teacher' => 'Filed by teacher',
             'requester_resubmitted' => 'Submission updated by requester',
             'updated' => 'Updated',
             'created' => 'Created',

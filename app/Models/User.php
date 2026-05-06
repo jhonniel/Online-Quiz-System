@@ -44,6 +44,9 @@ class User extends Authenticatable
         'evaluation_forced_at',
         'profile_picture',
         'cover_photo',
+        'moa_document_path',
+        'moa_uploaded_at',
+        'moa_reupload_allowed',
         'bio',
         'overtime_months_credited',
         'required_training_hours',
@@ -71,31 +74,39 @@ class User extends Authenticatable
     ];
 
     /**
-     * Get the attributes that should be cast.
+     * Laravel 10 reads `$casts`; a `casts()` method alone is ignored.
      *
-     * @return array<string, string>
+     * @var array<string, string>
      */
-    protected function casts(): array
+    protected $casts = [
+        'email_verified_at' => 'datetime',
+        'password' => 'hashed',
+        'is_active' => 'boolean',
+        'is_approved' => 'boolean',
+        'last_activity' => 'datetime',
+        'last_seen' => 'datetime',
+        'teacher_announcements_seen_at' => 'datetime',
+        'evaluation_forced_at' => 'datetime',
+        'moa_uploaded_at' => 'datetime',
+        'moa_reupload_allowed' => 'boolean',
+        'student_rules_warning' => 'boolean',
+        'student_rules_marquee_enabled' => 'boolean',
+        'student_terminated' => 'boolean',
+        'student_absence_allowance' => 'float',
+        'ojt_target_end_date' => 'date',
+        'ojt_requirement_met_at' => 'datetime',
+        'ojt_completion_congratulations_sent_at' => 'datetime',
+        'ojt_post_completion_grace_closed_at' => 'datetime',
+        'ojt_account_disabled_notice_sent_at' => 'datetime',
+    ];
+
+    protected static function booted(): void
     {
-        return [
-            'email_verified_at' => 'datetime',
-            'password' => 'hashed',
-            'is_active' => 'boolean',
-            'is_approved' => 'boolean',
-            'last_activity' => 'datetime',
-            'last_seen' => 'datetime',
-            'teacher_announcements_seen_at' => 'datetime',
-            'evaluation_forced_at' => 'datetime',
-            'student_rules_warning' => 'boolean',
-            'student_rules_marquee_enabled' => 'boolean',
-            'student_terminated' => 'boolean',
-            'student_absence_allowance' => 'float',
-            'ojt_target_end_date' => 'date',
-            'ojt_requirement_met_at' => 'datetime',
-            'ojt_completion_congratulations_sent_at' => 'datetime',
-            'ojt_post_completion_grace_closed_at' => 'datetime',
-            'ojt_account_disabled_notice_sent_at' => 'datetime',
-        ];
+        static::saving(function (User $user): void {
+            if ($user->role === 'teacher') {
+                $user->department_id = null;
+            }
+        });
     }
 
     // Relationships
@@ -456,6 +467,11 @@ class User extends Authenticatable
     public function getCoverPhotoUrl(): string
     {
         return $this->buildStorageUrl($this->cover_photo);
+    }
+
+    public function getMoaDocumentUrl(): string
+    {
+        return $this->buildStorageUrl($this->moa_document_path);
     }
 
     protected function buildStorageUrl(?string $path): string

@@ -120,7 +120,7 @@
                             @error('university_id') <p class="mt-1 text-sm text-red-600">{{ $message }}</p> @enderror
                         </div>
 
-                        <div id="department_wrapper" class="{{ in_array(old('role', $user->role), ['employee', 'student', 'teacher'], true) ? '' : 'hidden' }}">
+                        <div id="department_wrapper" class="{{ in_array(old('role', $user->role), ['employee', 'student'], true) ? '' : 'hidden' }}">
                             <label for="department_id" class="block text-sm font-semibold text-gray-700 mb-1.5">Department <span class="text-red-500 {{ old('role', $user->role) === 'employee' ? '' : 'hidden' }}" id="department_required_indicator">*</span></label>
                             <select name="department_id" id="department_id"
                                     class="block w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 text-sm @error('department_id') border-red-500 @enderror">
@@ -364,7 +364,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     function toggleDepartment() {
         if (roleSelect && departmentWrapper && departmentSelect) {
-            const show = roleSelect.value === 'employee' || roleSelect.value === 'student' || roleSelect.value === 'teacher';
+            const show = roleSelect.value === 'employee' || roleSelect.value === 'student';
             departmentWrapper.classList.toggle('hidden', !show);
             departmentSelect.required = roleSelect.value === 'employee';
             const departmentRequiredIndicator = document.getElementById('department_required_indicator');

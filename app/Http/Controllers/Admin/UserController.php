@@ -20,8 +20,16 @@ use Illuminate\Validation\Rule;
 
 class UserController extends Controller
 {
+    public function teachersManagement(Request $request)
+    {
+        $request->merge(['role' => 'teacher']);
+
+        return $this->index($request);
+    }
+
     public function index(Request $request)
     {
+        $isTeachersManagement = $request->routeIs('admin.teachers-management.teachers');
         $search = trim((string) $request->input('search', ''));
         $dbDriver = DB::connection()->getDriverName();
         $idLikeSql = $dbDriver === 'pgsql' ? 'CAST(id AS TEXT) LIKE ?' : 'CAST(id AS CHAR) LIKE ?';
@@ -31,11 +39,15 @@ class UserController extends Controller
         }
 
         $schoolId = $request->input('school');
-        $roleFilter = trim((string) $request->input('role', ''));
+        $roleFilter = $isTeachersManagement ? 'teacher' : trim((string) $request->input('role', ''));
         $schools = University::active()->orderBy('name')->get();
-        $departments = Department::active()->orderBy('name')->get();
+        $departments = $isTeachersManagement
+            ? collect()
+            : Department::active()->orderBy('name')->get();
 
-        $query = User::with(['university', 'department'])
+        $with = $isTeachersManagement ? ['university'] : ['university', 'department'];
+
+        $query = User::with($with)
             ->orderBy('is_approved', 'asc') // Show pending users first
             ->orderBy('created_at', 'desc');
 
@@ -48,25 +60,29 @@ class UserController extends Controller
         }
 
         if ($search !== '') {
-            $query->where(function ($q) use ($search, $idLikeSql) {
+            $query->where(function ($q) use ($search, $idLikeSql, $isTeachersManagement) {
                 $q->orWhereRaw($idLikeSql, ["%{$search}%"])
                     ->orWhere('name', 'like', "%{$search}%")
                     ->orWhere('email', 'like', "%{$search}%")
-                    ->orWhere('role', 'like', "%{$search}%")
-                    ->orWhereHas('department', function ($dq) use ($search) {
+                    ->orWhere('role', 'like', "%{$search}%");
+
+                if (! $isTeachersManagement) {
+                    $q->orWhereHas('department', function ($dq) use ($search) {
                         $dq->where('name', 'like', "%{$search}%")
                             ->orWhere('code', 'like', "%{$search}%");
-                    })
-                    ->orWhereHas('university', function ($uq) use ($search) {
-                        $uq->where('name', 'like', "%{$search}%")
-                            ->orWhere('code', 'like', "%{$search}%");
                     });
+                }
+
+                $q->orWhereHas('university', function ($uq) use ($search) {
+                    $uq->where('name', 'like', "%{$search}%")
+                        ->orWhere('code', 'like', "%{$search}%");
+                });
             });
         }
 
         $users = $query->paginate($perPage)->appends($request->query());
 
-        return view('admin.users.index', compact('users', 'search', 'perPage', 'schools', 'schoolId', 'roleFilter', 'departments'));
+        return view('admin.users.index', compact('users', 'search', 'perPage', 'schools', 'schoolId', 'roleFilter', 'departments', 'isTeachersManagement'));
     }
 
     public function api(Request $request)
@@ -158,7 +174,7 @@ class UserController extends Controller
             'password' => Hash::make($request->password),
             'role' => $request->role,
             'university_id' => $universityId,
-            'department_id' => in_array($request->role, ['employee', 'student', 'teacher'], true) ? $request->department_id : null,
+            'department_id' => in_array($request->role, ['employee', 'student'], true) ? $request->department_id : null,
             'is_active' => $request->has('is_active'),
             'required_training_hours' => $request->required_training_hours,
             'ojt_target_end_date' => $request->role === 'student' && $request->filled('ojt_target_end_date')
@@ -461,7 +477,7 @@ class UserController extends Controller
             'email' => $request->email,
             'role' => $request->role,
             'university_id' => $universityId,
-            'department_id' => in_array($request->role, ['employee', 'student', 'teacher'], true) ? $request->department_id : null,
+            'department_id' => in_array($request->role, ['employee', 'student'], true) ? $request->department_id : null,
             'is_active' => $request->has('is_active'),
         ];
 
@@ -632,7 +648,12 @@ class UserController extends Controller
             $query = $query->where('id', '!=', auth()->id());
         }
 
-        $updated = $query->update(['role' => $role]);
+        $payload = ['role' => $role];
+        if (! in_array($role, ['employee', 'student'], true)) {
+            $payload['department_id'] = null;
+        }
+
+        $updated = $query->update($payload);
 
         if ($updated > 0) {
             $roleLabel = match ($role) {

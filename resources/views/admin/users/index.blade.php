@@ -1,6 +1,15 @@
 @extends('layouts.admin')
 
-@section('page-title', 'User Management')
+@php
+    $isTeacherView = (bool) ($isTeachersManagement ?? false) || (($roleFilter ?? request('role')) === 'teacher');
+    $managementTitle = $isTeacherView ? 'Teachers Management' : 'User Management';
+    $managementDescription = $isTeacherView
+        ? 'Manage teacher accounts and invite links'
+        : 'Manage system users, roles, and permissions';
+    $usersIndexUrl = $isTeacherView ? url('/admin/teachers-management/teachers') : url('/admin/users');
+@endphp
+
+@section('page-title', $managementTitle)
 
 @section('breadcrumb')
     <li>
@@ -8,7 +17,7 @@
             <svg class="w-4 h-4 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
                 <path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd"></path>
             </svg>
-            <span class="ml-2 text-sm font-medium text-gray-500">Users</span>
+            <span class="ml-2 text-sm font-medium text-gray-500">{{ $isTeacherView ? 'Teachers Management' : 'Users' }}</span>
         </div>
     </li>
 @endsection
@@ -25,8 +34,8 @@
                     </svg>
                 </div>
                 <div class="ml-3 sm:ml-4 min-w-0">
-                    <h1 class="text-lg sm:text-xl font-bold text-white tracking-tight truncate">User Management</h1>
-                    <p class="text-indigo-100 text-xs sm:text-sm mt-0.5">Manage system users, roles, and permissions</p>
+                    <h1 class="text-lg sm:text-xl font-bold text-white tracking-tight truncate">{{ $managementTitle }}</h1>
+                    <p class="text-indigo-100 text-xs sm:text-sm mt-0.5">{{ $managementDescription }}</p>
                 </div>
             </div>
             <div class="hidden sm:flex items-center gap-2 text-xs text-indigo-100">
@@ -96,7 +105,7 @@
     <!-- Search and Filter Bar -->
     <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-4 flex-shrink-0">
         <div class="flex flex-col lg:flex-row lg:items-center gap-3 sm:gap-4">
-            <form id="users-search-form" method="GET" action="{{ url('/admin/users') }}" class="flex-1 min-w-0">
+            <form id="users-search-form" method="GET" action="{{ $usersIndexUrl }}" class="flex-1 min-w-0">
                 @if(request()->has('per_page'))
                     <input type="hidden" name="per_page" value="{{ request('per_page') }}">
                 @endif
@@ -138,7 +147,7 @@
                 </button>
             </div>
             @if(isset($schools) && $schools->isNotEmpty())
-            <form method="GET" action="{{ url('/admin/users') }}" class="flex-shrink-0" id="school-filter-form">
+            <form method="GET" action="{{ $usersIndexUrl }}" class="flex-shrink-0" id="school-filter-form">
                 @if(request()->has('per_page'))
                     <input type="hidden" name="per_page" value="{{ request('per_page') }}">
                 @endif
@@ -159,30 +168,32 @@
                 </div>
             </form>
             @endif
-            <form method="GET" action="{{ url('/admin/users') }}" class="flex-shrink-0" id="role-filter-form">
-                @if(request()->has('per_page'))
-                    <input type="hidden" name="per_page" value="{{ request('per_page') }}">
-                @endif
-                @if(request('search'))
-                    <input type="hidden" name="search" value="{{ request('search') }}">
-                @endif
-                @if(isset($schoolId) && $schoolId !== '' && $schoolId !== null)
-                    <input type="hidden" name="school" value="{{ $schoolId }}">
-                @endif
-                <div class="flex items-center gap-2">
-                    <label for="role-filter" class="text-sm font-medium text-gray-700 whitespace-nowrap">Role</label>
-                    <select name="role" id="role-filter" class="rounded-lg border border-gray-300 bg-white py-2 pl-3 pr-8 text-sm text-gray-900 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500 min-w-[140px]">
-                        <option value="">All roles</option>
-                        <option value="admin" {{ (isset($roleFilter) && $roleFilter === 'admin') ? 'selected' : '' }}>Administrator</option>
-                        <option value="student" {{ (isset($roleFilter) && $roleFilter === 'student') ? 'selected' : '' }}>Student</option>
-                        <option value="employee" {{ (isset($roleFilter) && $roleFilter === 'employee') ? 'selected' : '' }}>Employee</option>
-                        <option value="teacher" {{ (isset($roleFilter) && $roleFilter === 'teacher') ? 'selected' : '' }}>Teacher</option>
-                        <option value="technician" {{ (isset($roleFilter) && $roleFilter === 'technician') ? 'selected' : '' }}>Technician</option>
-                        <option value="applicant" {{ (isset($roleFilter) && $roleFilter === 'applicant') ? 'selected' : '' }}>Applicant</option>
-                        <option value="user" {{ (isset($roleFilter) && $roleFilter === 'user') ? 'selected' : '' }}>User (Legacy)</option>
-                    </select>
-                </div>
-            </form>
+            @if(!$isTeacherView)
+                <form method="GET" action="{{ $usersIndexUrl }}" class="flex-shrink-0" id="role-filter-form">
+                    @if(request()->has('per_page'))
+                        <input type="hidden" name="per_page" value="{{ request('per_page') }}">
+                    @endif
+                    @if(request('search'))
+                        <input type="hidden" name="search" value="{{ request('search') }}">
+                    @endif
+                    @if(isset($schoolId) && $schoolId !== '' && $schoolId !== null)
+                        <input type="hidden" name="school" value="{{ $schoolId }}">
+                    @endif
+                    <div class="flex items-center gap-2">
+                        <label for="role-filter" class="text-sm font-medium text-gray-700 whitespace-nowrap">Role</label>
+                        <select name="role" id="role-filter" class="rounded-lg border border-gray-300 bg-white py-2 pl-3 pr-8 text-sm text-gray-900 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500 min-w-[140px]">
+                            <option value="">All roles</option>
+                            <option value="admin" {{ (isset($roleFilter) && $roleFilter === 'admin') ? 'selected' : '' }}>Administrator</option>
+                            <option value="student" {{ (isset($roleFilter) && $roleFilter === 'student') ? 'selected' : '' }}>Student</option>
+                            <option value="employee" {{ (isset($roleFilter) && $roleFilter === 'employee') ? 'selected' : '' }}>Employee</option>
+                            <option value="teacher" {{ (isset($roleFilter) && $roleFilter === 'teacher') ? 'selected' : '' }}>Teacher</option>
+                            <option value="technician" {{ (isset($roleFilter) && $roleFilter === 'technician') ? 'selected' : '' }}>Technician</option>
+                            <option value="applicant" {{ (isset($roleFilter) && $roleFilter === 'applicant') ? 'selected' : '' }}>Applicant</option>
+                            <option value="user" {{ (isset($roleFilter) && $roleFilter === 'user') ? 'selected' : '' }}>User (Legacy)</option>
+                        </select>
+                    </div>
+                </form>
+            @endif
             <div class="flex items-center gap-2 flex-shrink-0 lg:ml-auto">
                 <button id="send-credentials-btn" type="button" disabled
                         class="inline-flex items-center justify-center gap-1.5 rounded-lg border border-transparent px-4 py-2 text-sm font-medium text-white shadow-sm bg-teal-600 hover:bg-teal-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-teal-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
@@ -195,7 +206,7 @@
                     <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
                     </svg>
-                    <span>Add User</span>
+                    <span>{{ $isTeacherView ? 'Add Teacher' : 'Add User' }}</span>
                 </a>
             </div>
         </div>
@@ -228,6 +239,7 @@
                         </button>
                     </div>
                 </div>
+                @if(!$isTeacherView)
                 <div class="flex flex-col sm:flex-row sm:items-center gap-2">
                     <label for="bulk-department-select" class="text-sm font-medium text-indigo-900">Assign Department</label>
                     <div class="flex flex-wrap items-center gap-2">
@@ -246,6 +258,7 @@
                         </button>
                     </div>
                 </div>
+                @endif
                 <div class="flex flex-col sm:flex-row sm:items-center gap-2">
                     <label for="bulk-ojt-date" class="text-sm font-medium text-indigo-900">Set OJT Exit Date</label>
                     <div class="flex flex-wrap items-center gap-2">
@@ -275,10 +288,12 @@
                 @csrf
                 <input type="hidden" name="role" id="role-input" value="">
             </form>
+            @if(!$isTeacherView)
             <form id="bulk-department-form" method="POST" action="{{ url('/admin/users/bulk-assign-department') }}">
                 @csrf
                 <input type="hidden" name="department_id" id="department-input" value="">
             </form>
+            @endif
             <form id="bulk-ojt-form" method="POST" action="{{ url('/admin/users/bulk-assign-ojt-target-end-date') }}">
                 @csrf
                 <input type="hidden" name="ojt_target_end_date" id="ojt-date-input" value="">
@@ -374,7 +389,9 @@
                             <th scope="col" class="px-4 py-3.5 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Name</th>
                             <th scope="col" class="px-4 py-3.5 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Email</th>
                             <th scope="col" class="px-4 py-3.5 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider hidden lg:table-cell">University</th>
+                            @if(!$isTeacherView)
                             <th scope="col" class="px-4 py-3.5 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider hidden xl:table-cell">Department</th>
+                            @endif
                             <th scope="col" class="px-4 py-3.5 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Status</th>
                             <th scope="col" class="px-4 py-3.5 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider hidden lg:table-cell">Approval</th>
                             <th scope="col" class="px-4 py-3.5 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider hidden xl:table-cell">Created</th>
@@ -410,6 +427,7 @@
                                 <td class="px-4 py-3 text-sm text-gray-600 hidden lg:table-cell truncate max-w-[140px]">
                                     {{ $user->university ? $user->university->name : '—' }}
                                 </td>
+                                @if(!$isTeacherView)
                                 <td class="px-4 py-3 text-sm text-gray-600 hidden xl:table-cell truncate max-w-[120px]">
                                     @if(in_array($user->role, ['employee', 'student'], true) && $user->department)
                                         {{ $user->department->name }}
@@ -419,6 +437,7 @@
                                         —
                                     @endif
                                 </td>
+                                @endif
                                 <td class="px-4 py-3">
                                     <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium {{ $user->is_active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800' }}">
                                         {{ $user->is_active ? 'Active' : 'Disabled' }}
@@ -534,14 +553,14 @@
                 <svg class="mx-auto h-12 w-12 sm:h-14 sm:w-14 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z" />
                 </svg>
-                <h3 class="mt-3 text-base sm:text-lg font-semibold text-gray-900">No users found</h3>
-                <p class="mt-1 text-sm text-gray-500 max-w-sm mx-auto">Get started by creating a new user or adjust your search filters.</p>
+                <h3 class="mt-3 text-base sm:text-lg font-semibold text-gray-900">{{ $isTeacherView ? 'No teachers found' : 'No users found' }}</h3>
+                <p class="mt-1 text-sm text-gray-500 max-w-sm mx-auto">{{ $isTeacherView ? 'Get started by creating a teacher account or adjust your search filters.' : 'Get started by creating a new user or adjust your search filters.' }}</p>
                 <div class="mt-6">
                     <a href="{{ url('/admin/users/create') }}" class="inline-flex items-center justify-center px-5 py-2.5 border border-transparent shadow-sm text-sm font-medium rounded-lg text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 touch-manipulation min-h-[44px]">
                         <svg class="mr-2 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
                         </svg>
-                        Add User
+                        {{ $isTeacherView ? 'Add Teacher' : 'Add User' }}
                     </a>
                 </div>
             </div>

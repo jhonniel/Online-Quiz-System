@@ -269,6 +269,15 @@ class LeaveRequestController extends Controller
             'wfh_tasks' => ['required_if:type,work_from_home', 'nullable', 'string', 'max:2000', new ClickUpTasksUrlsOnly],
             'offset_hours' => 'nullable|regex:/^\\d{2}:\\d{2}$/',
             'travel_hours' => ['nullable', 'numeric', 'min:0', 'max:24'],
+        ], [
+            'overtime_hours.required_if' => 'Overtime hours is required for Overtime requests.',
+            'overtime_hours.regex' => 'Overtime hours must be in HH:MM format (example: 02:30).',
+            'overtime_specific_dates.required_if' => 'Please select at least one overtime date.',
+            'overtime_specific_dates.array' => 'Invalid overtime date selection.',
+            'overtime_specific_dates.min' => 'Please select at least one overtime date.',
+            'overtime_specific_dates.*.date' => 'One or more overtime dates are invalid.',
+            'overtime_tasks.required_if' => 'Please provide your overtime task details/links.',
+            'overtime_tasks.max' => 'Overtime task details must not exceed 2000 characters.',
         ]);
 
         // Only employees can file travel; reject if someone bypasses the form
@@ -279,6 +288,11 @@ class LeaveRequestController extends Controller
         }
 
         if ($validated['type'] === 'overtime') {
+            $overtimeInputValidationError = $this->validateOvertimeInputData($validated);
+            if ($overtimeInputValidationError !== null) {
+                return redirect()->back()->withErrors($overtimeInputValidationError)->withInput();
+            }
+
             $overtimeDateValidationError = $this->validateOvertimeDateSelection(
                 (string) ($validated['start_date'] ?? ''),
                 (string) ($validated['end_date'] ?? ''),
@@ -287,6 +301,11 @@ class LeaveRequestController extends Controller
             if ($overtimeDateValidationError !== null) {
                 return redirect()->back()->withErrors($overtimeDateValidationError)->withInput();
             }
+        }
+
+        $requestTypeInputValidationError = $this->validateRequestTypeInputData($validated);
+        if ($requestTypeInputValidationError !== null) {
+            return redirect()->back()->withErrors($requestTypeInputValidationError)->withInput();
         }
 
         if ($user->role === 'student' && $validated['type'] === 'absent') {
@@ -820,6 +839,15 @@ class LeaveRequestController extends Controller
             'wfh_tasks' => ['required_if:type,work_from_home', 'nullable', 'string', 'max:2000', new ClickUpTasksUrlsOnly],
             'offset_hours' => 'nullable|regex:/^\\d{2}:\\d{2}$/',
             'travel_hours' => ['nullable', 'numeric', 'min:0', 'max:24'],
+        ], [
+            'overtime_hours.required_if' => 'Overtime hours is required for Overtime requests.',
+            'overtime_hours.regex' => 'Overtime hours must be in HH:MM format (example: 02:30).',
+            'overtime_specific_dates.required_if' => 'Please select at least one overtime date.',
+            'overtime_specific_dates.array' => 'Invalid overtime date selection.',
+            'overtime_specific_dates.min' => 'Please select at least one overtime date.',
+            'overtime_specific_dates.*.date' => 'One or more overtime dates are invalid.',
+            'overtime_tasks.required_if' => 'Please provide your overtime task details/links.',
+            'overtime_tasks.max' => 'Overtime task details must not exceed 2000 characters.',
         ]);
 
         if ($validated['type'] === 'travel' && $user->role !== 'employee') {
@@ -829,6 +857,11 @@ class LeaveRequestController extends Controller
         }
 
         if ($validated['type'] === 'overtime') {
+            $overtimeInputValidationError = $this->validateOvertimeInputData($validated);
+            if ($overtimeInputValidationError !== null) {
+                return redirect()->back()->withErrors($overtimeInputValidationError)->withInput();
+            }
+
             $overtimeDateValidationError = $this->validateOvertimeDateSelection(
                 (string) ($validated['start_date'] ?? ''),
                 (string) ($validated['end_date'] ?? ''),
@@ -837,6 +870,11 @@ class LeaveRequestController extends Controller
             if ($overtimeDateValidationError !== null) {
                 return redirect()->back()->withErrors($overtimeDateValidationError)->withInput();
             }
+        }
+
+        $requestTypeInputValidationError = $this->validateRequestTypeInputData($validated);
+        if ($requestTypeInputValidationError !== null) {
+            return redirect()->back()->withErrors($requestTypeInputValidationError)->withInput();
         }
 
         if ($user->role === 'student' && $validated['type'] === 'absent') {
@@ -1325,6 +1363,77 @@ class LeaveRequestController extends Controller
         }
 
         return ($hours * 60) + $minutes;
+    }
+
+    /**
+     * @param  array<string, mixed>  $validated
+     * @return array<string, string>|null
+     */
+    private function validateOvertimeInputData(array $validated): ?array
+    {
+        $hoursText = trim((string) ($validated['overtime_hours'] ?? ''));
+        if ($hoursText === '') {
+            return ['overtime_hours' => 'Overtime hours is required for Overtime requests.'];
+        }
+        if ($this->parseHourMinuteToMinutes($hoursText) <= 0) {
+            return ['overtime_hours' => 'Please enter a valid overtime duration in HH:MM (example: 01:30).'];
+        }
+
+        $tasksText = trim((string) ($validated['overtime_tasks'] ?? ''));
+        if ($tasksText === '') {
+            return ['overtime_tasks' => 'Please provide your overtime task details/links.'];
+        }
+
+        return null;
+    }
+
+    /**
+     * @param  array<string, mixed>  $validated
+     * @return array<string, string>|null
+     */
+    private function validateRequestTypeInputData(array $validated): ?array
+    {
+        $type = (string) ($validated['type'] ?? '');
+
+        if ($type === 'work_from_home') {
+            $address = trim((string) ($validated['wfh_address'] ?? ''));
+            if ($address === '') {
+                return ['wfh_address' => 'Remote address is required for Work From Home requests.'];
+            }
+
+            $tasks = trim((string) ($validated['wfh_tasks'] ?? ''));
+            if ($tasks === '') {
+                return ['wfh_tasks' => 'Please provide your work tasks/links for Work From Home requests.'];
+            }
+        }
+
+        if ($type === 'travel') {
+            $location = trim((string) ($validated['reason'] ?? ''));
+            if ($location === '') {
+                return ['reason' => 'Location of travel is required for Travel requests.'];
+            }
+
+            $travelHours = (float) ($validated['travel_hours'] ?? 8.0);
+            if ($travelHours <= 0) {
+                return ['travel_hours' => 'Travel hours must be greater than 0.'];
+            }
+        }
+
+        if ($type === 'offset') {
+            $offsetText = trim((string) ($validated['offset_hours'] ?? ''));
+            if ($offsetText !== '' && $this->parseHourMinuteToMinutes($offsetText) <= 0) {
+                return ['offset_hours' => 'Please enter valid hours to deduct in HH:MM format (example: 08:00).'];
+            }
+        }
+
+        if ($type === 'additional_time' && (($validated['additional_time_mode'] ?? null) === 'total_hours')) {
+            $totalHoursText = trim((string) ($validated['additional_time_total_hours'] ?? ''));
+            if ($this->parseHourMinuteToMinutes($totalHoursText) <= 0) {
+                return ['additional_time_total_hours' => 'Please enter valid total hours in HH:MM format (example: 08:30).'];
+            }
+        }
+
+        return null;
     }
 
     /**
