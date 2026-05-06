@@ -246,6 +246,20 @@
                         </button>
                     </div>
                 </div>
+                <div class="flex flex-col sm:flex-row sm:items-center gap-2">
+                    <label for="bulk-ojt-date" class="text-sm font-medium text-indigo-900">Set OJT Exit Date</label>
+                    <div class="flex flex-wrap items-center gap-2">
+                        <input type="date" id="bulk-ojt-date"
+                               class="block flex-1 min-w-[180px] px-3 py-2.5 sm:py-2 border border-indigo-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm bg-white">
+                        <button id="bulk-ojt-assign-btn" type="button" disabled
+                                class="inline-flex items-center justify-center px-4 py-2.5 sm:py-2 border border-transparent rounded-lg text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed touch-manipulation min-h-[44px] sm:min-h-0">
+                            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                            </svg>
+                            Apply
+                        </button>
+                    </div>
+                </div>
             </div>
             <button id="clear-selection-btn" type="button"
                     class="text-sm text-indigo-600 hover:text-indigo-800 font-medium touch-manipulation py-1 self-start sm:self-center">
@@ -264,6 +278,10 @@
             <form id="bulk-department-form" method="POST" action="{{ url('/admin/users/bulk-assign-department') }}">
                 @csrf
                 <input type="hidden" name="department_id" id="department-input" value="">
+            </form>
+            <form id="bulk-ojt-form" method="POST" action="{{ url('/admin/users/bulk-assign-ojt-target-end-date') }}">
+                @csrf
+                <input type="hidden" name="ojt_target_end_date" id="ojt-date-input" value="">
             </form>
 
             <!-- Mobile: Card list (visible below md) -->
@@ -618,6 +636,10 @@
         const bulkDepartmentAssignBtn = document.getElementById('bulk-department-assign-btn');
         const bulkDepartmentForm = document.getElementById('bulk-department-form');
         const departmentInput = document.getElementById('department-input');
+        const bulkOjtDate = document.getElementById('bulk-ojt-date');
+        const bulkOjtAssignBtn = document.getElementById('bulk-ojt-assign-btn');
+        const bulkOjtForm = document.getElementById('bulk-ojt-form');
+        const ojtDateInput = document.getElementById('ojt-date-input');
 
         // Update selected count and show/hide bulk action bar
         function updateSelection() {
@@ -642,6 +664,9 @@
             bulkAssignBtn.disabled = !bulkRoleSelect.value || count === 0;
             if (bulkDepartmentAssignBtn && bulkDepartmentSelect) {
                 bulkDepartmentAssignBtn.disabled = !bulkDepartmentSelect.value || count === 0;
+            }
+            if (bulkOjtAssignBtn && bulkOjtDate) {
+                bulkOjtAssignBtn.disabled = !bulkOjtDate.value || count === 0;
             }
         }
 
@@ -669,6 +694,11 @@
                 bulkDepartmentAssignBtn.disabled = !this.value || document.querySelectorAll('.user-checkbox:checked').length === 0;
             });
         }
+        if (bulkOjtDate && bulkOjtAssignBtn) {
+            bulkOjtDate.addEventListener('change', function() {
+                bulkOjtAssignBtn.disabled = !this.value || document.querySelectorAll('.user-checkbox:checked').length === 0;
+            });
+        }
 
         // Clear selection
         clearSelectionBtn.addEventListener('click', function() {
@@ -682,6 +712,9 @@
             bulkRoleSelect.value = '';
             if (bulkDepartmentSelect) {
                 bulkDepartmentSelect.value = '';
+            }
+            if (bulkOjtDate) {
+                bulkOjtDate.value = '';
             }
             updateSelection();
         });
@@ -747,6 +780,36 @@
 
                 departmentInput.value = selectedDepartmentId;
                 bulkDepartmentForm.submit();
+            });
+        }
+
+        if (bulkOjtAssignBtn && bulkOjtForm && ojtDateInput && bulkOjtDate) {
+            bulkOjtAssignBtn.addEventListener('click', function() {
+                const selectedCheckboxes = document.querySelectorAll('.user-checkbox:checked');
+                const selectedUserIds = Array.from(selectedCheckboxes).map(cb => cb.value);
+                const selectedDate = bulkOjtDate.value;
+
+                if (selectedUserIds.length === 0 || !selectedDate) {
+                    alert('Please select at least one user and an OJT target date.');
+                    return;
+                }
+
+                const confirmMessage = `Set OJT target end date to ${selectedDate} for ${selectedUserIds.length} selected user(s)?\n\nOnly student roles will be updated.`;
+                if (!confirm(confirmMessage)) {
+                    return;
+                }
+
+                bulkOjtForm.querySelectorAll('input[name="user_ids[]"]').forEach(input => input.remove());
+                selectedUserIds.forEach(userId => {
+                    const input = document.createElement('input');
+                    input.type = 'hidden';
+                    input.name = 'user_ids[]';
+                    input.value = userId;
+                    bulkOjtForm.appendChild(input);
+                });
+
+                ojtDateInput.value = selectedDate;
+                bulkOjtForm.submit();
             });
         }
 

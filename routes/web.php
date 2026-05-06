@@ -122,6 +122,7 @@ Route::prefix('admin')->middleware(['auth', 'admin'])->group(function () {
         Route::patch('users/{user}/leave-balance', [AdminUserController::class, 'updateLeaveBalance'])->name('admin.users.leave-balance');
         Route::post('users/bulk-assign-role', [AdminUserController::class, 'bulkAssignRole'])->name('admin.users.bulk-assign-role');
         Route::post('users/bulk-assign-department', [AdminUserController::class, 'bulkAssignDepartment'])->name('admin.users.bulk-assign-department');
+        Route::post('users/bulk-assign-ojt-target-end-date', [AdminUserController::class, 'bulkAssignOjtTargetEndDate'])->name('admin.users.bulk-assign-ojt-target-end-date');
         Route::post('users/{user}/send-credentials', [AdminUserController::class, 'sendCredentials'])->name('admin.users.send-credentials');
         Route::post('users/send-bulk-credentials', [AdminUserController::class, 'sendBulkCredentials'])->name('admin.users.send-bulk-credentials');
 

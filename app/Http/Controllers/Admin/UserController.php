@@ -695,6 +695,43 @@ class UserController extends Controller
         return redirect()->back()->with('success', $message);
     }
 
+    public function bulkAssignOjtTargetEndDate(Request $request)
+    {
+        $request->validate([
+            'user_ids' => 'required|array|min:1',
+            'user_ids.*' => 'exists:users,id',
+            'ojt_target_end_date' => 'required|date',
+        ], [
+            'user_ids.required' => 'Please select at least one user.',
+            'user_ids.array' => 'Invalid user selection format.',
+            'user_ids.*.exists' => 'One or more selected users do not exist.',
+            'ojt_target_end_date.required' => 'Please provide an OJT target end date.',
+            'ojt_target_end_date.date' => 'Invalid OJT target end date.',
+        ]);
+
+        $userIds = $request->input('user_ids', []);
+        $targetDate = (string) $request->input('ojt_target_end_date');
+
+        // Only students support OJT target end date / exit conference.
+        $query = User::whereIn('id', $userIds)->where('role', 'student');
+        $updated = $query->update(['ojt_target_end_date' => $targetDate]);
+        $selectedCount = count($userIds);
+        $skipped = max($selectedCount - $updated, 0);
+
+        if ($updated <= 0) {
+            return redirect()->back()
+                ->with('error', 'No eligible users were updated. Only students can have an OJT target end date.');
+        }
+
+        $formattedDate = Carbon::parse($targetDate)->format('M j, Y');
+        $message = "Set OJT target end date to {$formattedDate} for {$updated} student user(s).";
+        if ($skipped > 0) {
+            $message .= " Skipped {$skipped} user(s) because only students support this field.";
+        }
+
+        return redirect()->back()->with('success', $message);
+    }
+
     /**
      * Send credentials email to a single user.
      */
