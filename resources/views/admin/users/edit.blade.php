@@ -158,7 +158,7 @@
                             <div class="mt-4">
                                 <label for="student_absence_allowance" class="block text-sm font-semibold text-gray-700 mb-1.5">Allowable Absences Balance (Days)</label>
                                 <input type="number" name="student_absence_allowance" id="student_absence_allowance" step="0.01" min="0" max="365"
-                                       value="{{ old('student_absence_allowance', (float) ($user->student_absence_allowance ?? \App\Models\User::DEFAULT_STUDENT_ABSENCE_ALLOWANCE)) }}"
+                                       value="{{ old('student_absence_allowance', \App\Models\User::normalizedStudentAbsenceAllowance($user->student_absence_allowance)) }}"
                                        class="block w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 text-sm"
                                        placeholder="e.g. 5">
                                 <p class="mt-1 text-xs text-gray-500">Students cannot file <strong>Absent</strong> leave once this balance reaches 0.</p>

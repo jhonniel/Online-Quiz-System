@@ -271,7 +271,7 @@ class DashboardController extends Controller
                 ->get()
                 ->sum('days');
             $allowableAbsences = Schema::hasColumn('users', 'student_absence_allowance')
-                ? (float) ($user->student_absence_allowance ?? User::DEFAULT_STUDENT_ABSENCE_ALLOWANCE)
+                ? User::normalizedStudentAbsenceAllowance($user->student_absence_allowance)
                 : User::DEFAULT_STUDENT_ABSENCE_ALLOWANCE;
 
             $studentLeaveBalanceSummary = [

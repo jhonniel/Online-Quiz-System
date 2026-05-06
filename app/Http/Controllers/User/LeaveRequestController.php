@@ -8,6 +8,7 @@ use App\Models\Dtr;
 use App\Models\LeaveBalance;
 use App\Models\LeaveRequest;
 use App\Models\LeaveRequestLog;
+use App\Models\User;
 use App\Rules\ClickUpTasksUrlsOnly;
 use App\Services\MailConfigService;
 use Carbon\Carbon;
@@ -278,7 +279,7 @@ class LeaveRequestController extends Controller
             );
             $remainingAbsenceBalance = $this->getStudentRemainingAbsenceBalance(
                 (int) $user->id,
-                (float) ($user->student_absence_allowance ?? \App\Models\User::DEFAULT_STUDENT_ABSENCE_ALLOWANCE)
+                User::normalizedStudentAbsenceAllowance($user->student_absence_allowance)
             );
 
             if ($remainingAbsenceBalance <= 0) {
@@ -825,7 +826,7 @@ class LeaveRequestController extends Controller
             );
             $remainingAbsenceBalance = $this->getStudentRemainingAbsenceBalance(
                 (int) $user->id,
-                (float) ($user->student_absence_allowance ?? \App\Models\User::DEFAULT_STUDENT_ABSENCE_ALLOWANCE)
+                User::normalizedStudentAbsenceAllowance($user->student_absence_allowance)
             );
 
             if ($remainingAbsenceBalance <= 0) {

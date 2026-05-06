@@ -165,9 +165,7 @@ class UserController extends Controller
                 ? $request->ojt_target_end_date
                 : null,
             'student_absence_allowance' => $request->role === 'student'
-                ? (float) ($request->filled('student_absence_allowance')
-                    ? $request->input('student_absence_allowance')
-                    : User::DEFAULT_STUDENT_ABSENCE_ALLOWANCE)
+                ? User::normalizedStudentAbsenceAllowance($request->input('student_absence_allowance'))
                 : 0,
         ]);
 
@@ -483,9 +481,9 @@ class UserController extends Controller
             $noticeMsg = trim((string) ($request->input('student_rules_notice_message') ?? ''));
             $data['student_rules_notice_message'] = $noticeMsg !== '' ? $noticeMsg : null;
             $data['student_terminated'] = $request->boolean('student_terminated');
-            $data['student_absence_allowance'] = $request->filled('student_absence_allowance')
-                ? (float) $request->student_absence_allowance
-                : User::DEFAULT_STUDENT_ABSENCE_ALLOWANCE;
+            $data['student_absence_allowance'] = User::normalizedStudentAbsenceAllowance(
+                $request->input('student_absence_allowance')
+            );
             $data['ojt_target_end_date'] = $request->filled('ojt_target_end_date')
                 ? $request->ojt_target_end_date
                 : null;

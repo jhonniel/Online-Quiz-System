@@ -16,6 +16,13 @@ class User extends Authenticatable
 
     public const DEFAULT_STUDENT_ABSENCE_ALLOWANCE = 3.0;
 
+    public static function normalizedStudentAbsenceAllowance(mixed $raw): float
+    {
+        $value = is_numeric($raw) ? (float) $raw : 0.0;
+
+        return $value > 0 ? $value : self::DEFAULT_STUDENT_ABSENCE_ALLOWANCE;
+    }
+
     /**
      * The attributes that are mass assignable.
      *
