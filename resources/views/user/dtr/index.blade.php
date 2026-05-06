@@ -195,7 +195,7 @@
             </div>
         </div>
 
-        <div class="overflow-x-auto flex-1" id="dtr-groups-root">
+        <div class="overflow-auto flex-1" id="dtr-groups-root">
             @forelse($groupedDtrs as $monthKey => $month)
                 <div class="border-b border-gray-200" data-month-group>
                     <button type="button"

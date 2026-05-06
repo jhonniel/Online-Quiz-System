@@ -242,6 +242,10 @@
         </div>
 
         @if(!empty($studentLeaveBalanceSummary))
+        @php
+            $remainingAbsenceBalance = (float) ($studentLeaveBalanceSummary['remaining_absence_balance'] ?? 0);
+            $absenceBalanceExhausted = $remainingAbsenceBalance <= 0;
+        @endphp
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div class="bg-white border border-gray-200 rounded-lg p-4 shadow-sm">
                 <p class="text-xs font-medium uppercase tracking-wide text-gray-500">Accumulated Approved Leave Requests</p>
@@ -249,14 +253,14 @@
                     {{ number_format((int) ($studentLeaveBalanceSummary['approved_leave_count'] ?? 0)) }}
                 </p>
             </div>
-            <div class="bg-white border border-gray-200 rounded-lg p-4 shadow-sm">
-                <p class="text-xs font-medium uppercase tracking-wide text-gray-500">Available absence balance</p>
-                <p class="mt-0.5 text-[11px] text-gray-500 leading-snug">Based on the absence allowance your administrator set (approved “Absent” requests consume this balance).</p>
-                <p class="mt-2 text-2xl font-bold text-gray-900 tabular-nums">
-                    {{ number_format((float) ($studentLeaveBalanceSummary['remaining_absence_balance'] ?? 0), 2) }}
-                    <span class="text-base font-semibold text-gray-600">days left</span>
+            <div class="rounded-lg p-4 shadow-sm border {{ $absenceBalanceExhausted ? 'bg-red-50 border-red-200' : 'bg-white border-gray-200' }}">
+                <p class="text-xs font-medium uppercase tracking-wide {{ $absenceBalanceExhausted ? 'text-red-700' : 'text-gray-500' }}">Available absence balance</p>
+                <p class="mt-0.5 text-[11px] leading-snug {{ $absenceBalanceExhausted ? 'text-red-700' : 'text-gray-500' }}">Based on the absence allowance your administrator set (approved “Absent” requests consume this balance).</p>
+                <p class="mt-2 text-2xl font-bold tabular-nums {{ $absenceBalanceExhausted ? 'text-red-800' : 'text-gray-900' }}">
+                    {{ number_format($remainingAbsenceBalance, 2) }}
+                    <span class="text-base font-semibold {{ $absenceBalanceExhausted ? 'text-red-700' : 'text-gray-600' }}">days left</span>
                 </p>
-                <p class="text-xs text-gray-500 mt-1">
+                <p class="text-xs mt-1 {{ $absenceBalanceExhausted ? 'text-red-700' : 'text-gray-500' }}">
                     Used:
                     {{ number_format((float) ($studentLeaveBalanceSummary['approved_absent_days'] ?? 0), 2) }}
                     · Allowance:
