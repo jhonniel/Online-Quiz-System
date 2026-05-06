@@ -18,6 +18,7 @@ class StudentDashboardController extends Controller
 {
     /**
      * Base query for student list in Student Management: role student, DTR aggregates, department scope (no search).
+     * Excludes disabled or unapproved students unless they have logged DTR hours or still have required OJT hours remaining.
      *
      * @return \Illuminate\Database\Eloquent\Builder<User>
      */
@@ -43,6 +44,19 @@ class StudentDashboardController extends Controller
                 DB::raw('dtr_agg.internship_last as internship_last'),
                 DB::raw('COALESCE(dtr_agg.internship_total_hours, 0) as internship_total_hours'),
             ]);
+
+        // Hide disabled or not-yet-approved students unless they have DTR time logged or still have OJT hours to complete.
+        $studentsQuery->where(function ($outer) {
+            $outer->where(function ($q) {
+                $q->where('users.is_active', true)
+                    ->where('users.is_approved', true);
+            })
+                ->orWhereRaw('COALESCE(dtr_agg.internship_total_hours, 0) > 0')
+                ->orWhere(function ($q) {
+                    $q->whereRaw('COALESCE(users.required_training_hours, 0) > 0')
+                        ->whereRaw('COALESCE(dtr_agg.internship_total_hours, 0) < COALESCE(users.required_training_hours, 0)');
+                });
+        });
 
         if (is_array($allowedDepartmentIds) && !empty($allowedDepartmentIds)) {
             $studentsQuery->whereIn('users.department_id', $allowedDepartmentIds);
