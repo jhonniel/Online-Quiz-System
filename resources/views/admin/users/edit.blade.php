@@ -148,8 +148,14 @@
 
                             <div class="mt-4">
                                 <label for="ojt_target_end_date" class="block text-sm font-semibold text-gray-700 mb-1.5">OJT target end date / exit conference</label>
+                                @php
+                                    $ojtTargetEndDateValue = $user->ojt_target_end_date;
+                                    if (is_string($ojtTargetEndDateValue) && $ojtTargetEndDateValue !== '') {
+                                        $ojtTargetEndDateValue = \Carbon\Carbon::parse($ojtTargetEndDateValue);
+                                    }
+                                @endphp
                                 <input type="date" name="ojt_target_end_date" id="ojt_target_end_date"
-                                       value="{{ old('ojt_target_end_date', $user->ojt_target_end_date?->format('Y-m-d')) }}"
+                                       value="{{ old('ojt_target_end_date', $ojtTargetEndDateValue instanceof \Carbon\CarbonInterface ? $ojtTargetEndDateValue->format('Y-m-d') : '') }}"
                                        class="block w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 text-sm">
                                 <p class="mt-1 text-xs text-gray-500">Optional. Shown on the student dashboard as the official OJT deadline (clear the date to remove).</p>
                                 @error('ojt_target_end_date') <p class="mt-1 text-sm text-red-600">{{ $message }}</p> @enderror

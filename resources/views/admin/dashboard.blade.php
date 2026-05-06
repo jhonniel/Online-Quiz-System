@@ -184,23 +184,36 @@
         </div>
 
         <!-- OJT Slots -->
-        <a href="{{ url('/admin/settings') }}" class="bg-gradient-to-r from-fuchsia-50 to-fuchsia-100 overflow-hidden shadow rounded-lg border border-fuchsia-200 block hover:border-fuchsia-300 hover:shadow-md transition-shadow">
+        @php
+            $ojtTotalSlotsValue = (int) ($ojtTotalSlots ?? 0);
+            $ojtSlotsUsedValue = (int) ($ojtSlotsUsed ?? 0);
+            $ojtOverCapacity = $ojtTotalSlotsValue > 0 && $ojtSlotsUsedValue > $ojtTotalSlotsValue;
+        @endphp
+        <a href="{{ url('/admin/settings') }}"
+           onclick="window.location.href=this.href; return false;"
+           class="overflow-hidden shadow rounded-lg border block transition-shadow cursor-pointer {{ $ojtOverCapacity ? 'bg-gradient-to-r from-red-50 to-red-100 border-red-200 hover:border-red-300 hover:shadow-md' : 'bg-gradient-to-r from-fuchsia-50 to-fuchsia-100 border-fuchsia-200 hover:border-fuchsia-300 hover:shadow-md' }}">
             <div class="p-4 sm:p-5">
                 <div class="flex items-center">
                     <div class="flex-shrink-0">
-                        <svg class="h-5 w-5 sm:h-6 sm:w-6 text-fuchsia-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <svg class="h-5 w-5 sm:h-6 sm:w-6 {{ $ojtOverCapacity ? 'text-red-600' : 'text-fuchsia-600' }}" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
                         </svg>
                     </div>
                     <div class="ml-3 sm:ml-5 w-0 flex-1 min-w-0">
                         <dl>
-                            <dt class="text-xs sm:text-sm font-medium text-fuchsia-700 truncate">OJT Slots Used (Ongoing)</dt>
+                            <dt class="text-xs sm:text-sm font-medium {{ $ojtOverCapacity ? 'text-red-700' : 'text-fuchsia-700' }} truncate">OJT Slots Used (Ongoing)</dt>
                             @if(($ojtTotalSlots ?? 0) > 0)
-                                <dd class="text-base sm:text-lg font-medium text-fuchsia-900">{{ $ojtSlotsUsed ?? 0 }} / {{ $ojtTotalSlots ?? 0 }}</dd>
-                                <dd class="text-xs text-fuchsia-600 mt-1">{{ $ojtSlotsRemaining ?? 0 }} slots available</dd>
+                                <dd class="text-base sm:text-lg font-medium {{ $ojtOverCapacity ? 'text-red-900' : 'text-fuchsia-900' }}">{{ $ojtSlotsUsed ?? 0 }} / {{ $ojtTotalSlots ?? 0 }}</dd>
+                                <dd class="text-xs mt-1 {{ $ojtOverCapacity ? 'text-red-700' : 'text-fuchsia-600' }}">
+                                    @if($ojtOverCapacity)
+                                        Over capacity by {{ $ojtSlotsUsedValue - $ojtTotalSlotsValue }} slot{{ ($ojtSlotsUsedValue - $ojtTotalSlotsValue) > 1 ? 's' : '' }}
+                                    @else
+                                        {{ $ojtSlotsRemaining ?? 0 }} slots available
+                                    @endif
+                                </dd>
                             @else
-                                <dd class="text-base sm:text-lg font-medium text-fuchsia-900">{{ $ojtSlotsUsed ?? 0 }} ongoing interns</dd>
-                                <dd class="text-xs text-fuchsia-600 mt-1">Set total slots in Admin Settings</dd>
+                                <dd class="text-base sm:text-lg font-medium {{ $ojtOverCapacity ? 'text-red-900' : 'text-fuchsia-900' }}">{{ $ojtSlotsUsed ?? 0 }} ongoing interns</dd>
+                                <dd class="text-xs mt-1 {{ $ojtOverCapacity ? 'text-red-700' : 'text-fuchsia-600' }}">Set total slots in Admin Settings</dd>
                             @endif
                         </dl>
                     </div>

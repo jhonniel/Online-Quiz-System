@@ -192,6 +192,16 @@
         $possibleExitConferenceDate = $studentTrainingStats['possible_exit_conference_date'] ?? null;
         $possibleExitWeekdays = (int) ($studentTrainingStats['possible_exit_conference_weekdays'] ?? 0);
         $remainingTrainingHrs = (float) ($studentTrainingStats['remaining_hours'] ?? 0);
+
+        if (is_string($estimatedEndDate) && $estimatedEndDate !== '') {
+            $estimatedEndDate = \Carbon\Carbon::parse($estimatedEndDate);
+        }
+        if (is_string($ojtTargetEndDate) && $ojtTargetEndDate !== '') {
+            $ojtTargetEndDate = \Carbon\Carbon::parse($ojtTargetEndDate);
+        }
+        if (is_string($possibleExitConferenceDate) && $possibleExitConferenceDate !== '') {
+            $possibleExitConferenceDate = \Carbon\Carbon::parse($possibleExitConferenceDate);
+        }
     @endphp
     <div class="p-4 pt-0 flex-shrink-0 space-y-3">
         <div class="bg-indigo-50 border border-indigo-200 rounded-lg p-4">
