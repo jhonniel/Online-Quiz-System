@@ -211,22 +211,22 @@
                     @endif
                 </div>
                 <div class="flex flex-col gap-3 sm:text-right shrink-0 sm:min-w-[11rem]">
-                    @if($ojtTargetEndDate instanceof \Carbon\CarbonInterface)
-                        <div>
-                            <p class="text-xs font-medium text-indigo-700 uppercase tracking-wide">OJT target / exit conference</p>
+                    <div>
+                        <p class="text-xs font-medium text-indigo-700 uppercase tracking-wide">exit conference</p>
+                        @if($ojtTargetEndDate instanceof \Carbon\CarbonInterface)
                             <p class="text-sm font-semibold text-indigo-950 tabular-nums">
                                 {{ $ojtTargetEndDate->timezone(config('app.timezone'))->format('F j, Y') }}
                             </p>
                             <p class="text-[11px] text-indigo-600 mt-0.5">Set by your administrator</p>
-                        </div>
-                    @elseif($possibleExitConferenceDate instanceof \Carbon\CarbonInterface && $possibleExitWeekdays > 0)
-                        <div>
-                            <p class="text-xs font-medium text-indigo-700 uppercase tracking-wide">Possible exit conference (estimate)</p>
-                            <p class="text-sm font-semibold text-indigo-950 tabular-nums">
-                                {{ $possibleExitConferenceDate->timezone(config('app.timezone'))->format('F j, Y') }}
-                            </p>
-                        </div>
-                    @endif
+                        @else
+                            <p class="text-sm font-semibold text-indigo-950 tabular-nums">Not set</p>
+                            @if($possibleExitConferenceDate instanceof \Carbon\CarbonInterface && $possibleExitWeekdays > 0)
+                                <p class="text-[11px] text-indigo-600 mt-0.5">
+                                    Estimated: {{ $possibleExitConferenceDate->timezone(config('app.timezone'))->format('F j, Y') }}
+                                </p>
+                            @endif
+                        @endif
+                    </div>
                     <div>
                         <p class="text-xs font-medium text-indigo-700 uppercase tracking-wide">Projected completion (recent pace)</p>
                         <p class="text-sm font-semibold text-indigo-950 tabular-nums">

@@ -102,7 +102,7 @@
     <!-- Filters -->
     <div class="bg-white shadow-sm rounded-lg border border-gray-200 p-4">
         <form method="GET" action="{{ url('/admin/student-management/students') }}" class="flex items-center justify-between flex-wrap gap-4">
-            <div class="flex items-center space-x-4 flex-wrap">
+            <div class="flex flex-col sm:flex-row sm:items-center gap-3 w-full sm:w-auto">
                 <div class="flex-1 min-w-[240px] max-w-md">
                     <div class="relative">
                         <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -128,7 +128,7 @@
                     </div>
                 </div>
 
-                <div class="flex items-center space-x-2">
+                <div class="flex items-center gap-2 flex-wrap">
                     <label for="per_page" class="text-sm font-medium text-gray-700">Show:</label>
                     <select name="per_page" id="per_page" onchange="this.form.submit()"
                             class="px-3 py-2 border border-gray-300 rounded-md shadow-sm text-sm focus:ring-indigo-500 focus:border-indigo-500">

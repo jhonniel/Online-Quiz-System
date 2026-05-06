@@ -45,34 +45,6 @@
         /* Hide Alpine components until they are initialized (prevents modal flash) */
         [x-cloak] { display: none !important; }
 
-        /* CRITICAL FIX: Ensure main content has proper left padding to not appear behind sidebar */
-        html body .main-content-wrapper {
-            margin-left: 16rem !important;
-            width: calc(100% - 16rem) !important;
-        }
-        
-        html body .main-content-wrapper > main {
-            padding-left: 2rem !important;
-            padding-right: 2rem !important;
-        }
-        
-        @media (max-width: 1023px) {
-            html body .main-content-wrapper {
-                margin-left: 0 !important;
-                width: 100% !important;
-            }
-            html body .main-content-wrapper > main {
-                padding-left: 1rem !important;
-                padding-right: 1rem !important;
-            }
-        }
-        
-        @media (min-width: 640px) and (max-width: 1023px) {
-            html body .main-content-wrapper > main {
-                padding-left: 1.5rem !important;
-                padding-right: 1.5rem !important;
-            }
-        }
         .overflow-x-auto::-webkit-scrollbar {
             height: 8px;
         }
@@ -109,108 +81,8 @@
             background: #9ca3af;
         }
 
-        /* Main content spacing - force it to work */
-        body {
-            position: relative;
-        }
-        
-        body .main-content-wrapper {
-            position: relative !important;
-            margin-left: 16rem !important;
-            width: calc(100% - 16rem) !important;
-            min-width: 0 !important;
-            z-index: 1 !important;
-        }
-        
-        @media (min-width: 1024px) {
-            body .main-content-wrapper {
-                margin-left: 16rem !important;
-                width: calc(100% - 16rem) !important;
-            }
-        }
-        
-        @media (max-width: 1023px) {
-            body .main-content-wrapper {
-                margin-left: 0 !important;
-                width: 100% !important;
-            }
-        }
-        
-        /* Ensure content inside has proper spacing */
-        .main-content-wrapper > main {
-            margin-left: 0 !important;
-            position: relative !important;
-        }
-        
-        /* Ensure sidebar stays on top */
-        .fixed.inset-y-0.left-0.z-50 {
-            z-index: 50 !important;
-        }
-        
-        /* Force main content to start after sidebar on desktop */
-        @media (min-width: 1024px) {
-            body .main-content-wrapper {
-                margin-left: 16rem !important;
-                width: calc(100% - 16rem) !important;
-                padding-left: 0 !important;
-                left: 0 !important;
-            }
-            
-            /* Ensure sidebar is visible on desktop */
-            .fixed.inset-y-0.left-0.z-50 {
-                transform: translateX(0) !important;
-            }
-            
-            /* Force padding on main content */
-            .main-content-wrapper > main {
-                padding-left: 2rem !important;
-                padding-right: 2rem !important;
-            }
-        }
-        
-        @media (min-width: 640px) and (max-width: 1023px) {
-            .main-content-wrapper > main {
-                padding-left: 1.5rem !important;
-                padding-right: 1.5rem !important;
-            }
-        }
-        
-        @media (max-width: 639px) {
-            .main-content-wrapper > main {
-                padding-left: 1rem !important;
-                padding-right: 1rem !important;
-            }
-        }
-        
-        /* Ensure all content inside main has proper positioning and padding */
-        body .main-content-wrapper main {
-            position: relative !important;
-            z-index: 1 !important;
-            margin-left: 0 !important;
-            padding-left: 1rem !important;
-            padding-right: 1rem !important;
-            box-sizing: border-box !important;
-        }
-        
-        @media (min-width: 640px) {
-            body .main-content-wrapper main {
-                padding-left: 1.5rem !important;
-                padding-right: 1.5rem !important;
-            }
-        }
-        
-        @media (min-width: 1024px) {
-            body .main-content-wrapper main {
-                padding-left: 2rem !important;
-                padding-right: 2rem !important;
-            }
-        }
-        
-        /* Force analytics page content to respect margin */
-        .main-content-wrapper .space-y-4,
-        .main-content-wrapper .space-y-6 {
-            position: relative !important;
-            margin-left: 0 !important;
+        .main-content-wrapper {
+            min-width: 0;
         }
     </style>
 </head>
@@ -227,27 +99,8 @@
     @include('components.admin-sidebar')
 
     <!-- Main Content Area -->
-    <div class="main-content-wrapper flex-1 flex flex-col overflow-hidden"
-         style="position: relative !important; margin-left: 16rem !important; width: calc(100% - 16rem) !important; min-width: 0 !important; z-index: 1 !important; left: 0 !important;"
-         x-init="
-             const updateMargin = () => {
-                 if (window.innerWidth >= 1024) {
-                     const margin = sidebarCollapsed ? '4rem' : '16rem';
-                     $el.style.setProperty('margin-left', margin, 'important');
-                     $el.style.setProperty('width', 'calc(100% - ' + margin + ')', 'important');
-                     $el.style.setProperty('position', 'relative', 'important');
-                     $el.style.setProperty('z-index', '1', 'important');
-                     $el.style.setProperty('left', '0', 'important');
-                 } else {
-                     $el.style.setProperty('margin-left', '0', 'important');
-                     $el.style.setProperty('width', '100%', 'important');
-                     $el.style.setProperty('position', 'relative', 'important');
-                 }
-             };
-             updateMargin();
-             $watch('sidebarCollapsed', updateMargin);
-             window.addEventListener('resize', updateMargin);
-         ">
+    <div class="main-content-wrapper flex-1 flex flex-col overflow-hidden transition-[margin,width] duration-300"
+         :class="sidebarCollapsed ? 'lg:ml-16 lg:w-[calc(100%-4rem)]' : 'lg:ml-64 lg:w-[calc(100%-16rem)]'">
             <!-- Top Navigation Bar -->
             <header class="bg-white shadow-sm border-b border-gray-200 flex-shrink-0 sticky top-0 z-30">
                 <div class="flex items-center justify-between h-14 px-3 sm:px-4 lg:px-6">
@@ -316,7 +169,7 @@
                                  x-transition:leave="transition ease-in duration-75"
                                  x-transition:leave-start="opacity-100 scale-100"
                                  x-transition:leave-end="opacity-0 scale-95"
-                                 class="absolute right-0 mt-2 w-80 bg-white rounded-lg shadow-lg border border-gray-200 z-50">
+                                 class="absolute right-0 mt-2 w-[min(20rem,calc(100vw-1rem))] bg-white rounded-lg shadow-lg border border-gray-200 z-50">
                                 <div class="p-4 border-b border-gray-200">
                                     <div class="flex items-center justify-between">
                                         <h3 class="text-lg font-semibold text-gray-900">Notifications</h3>
@@ -407,7 +260,7 @@
             </header>
 
             <!-- Main Content -->
-            <main class="flex-1 overflow-y-auto bg-gray-50" style="padding-left: 2rem !important; padding-right: 2rem !important; min-width: 0 !important; box-sizing: border-box !important; display: block !important; position: relative !important;">
+            <main class="flex-1 overflow-y-auto bg-gray-50 px-3 sm:px-4 lg:px-8 min-w-0">
                 <!-- Flash Messages -->
                 @if(session('success'))
                     <div class="mb-3 bg-green-100 border border-green-400 text-green-700 px-4 py-2 rounded text-sm">

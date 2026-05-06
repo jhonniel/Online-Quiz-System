@@ -1201,7 +1201,7 @@
                 </div>
 
                 <!-- Top right section -->
-                <div class="flex items-center space-x-4">
+                <div class="flex items-center space-x-2 sm:space-x-4">
                     <!-- Notification Bell -->
                     <div class="relative" x-data="notificationBell()">
                         <button @click="toggleNotifications()" class="relative p-2 text-gray-500 hover:text-gray-700 focus:outline-none">
@@ -1220,7 +1220,7 @@
                              x-transition:leave="transition ease-in duration-75"
                              x-transition:leave-start="opacity-100 scale-100"
                              x-transition:leave-end="opacity-0 scale-95"
-                             class="absolute right-0 mt-2 w-80 bg-white rounded-lg shadow-lg border border-gray-200 z-50">
+                             class="absolute right-0 mt-2 w-[min(20rem,calc(100vw-1rem))] bg-white rounded-lg shadow-lg border border-gray-200 z-50">
                             <div class="p-4 border-b border-gray-200">
                                 <div class="flex items-center justify-between">
                                     <h3 class="text-lg font-semibold text-gray-900">Notifications</h3>
@@ -1306,7 +1306,7 @@
             </div>
 
             <!-- Page content -->
-            <main class="flex-1 min-h-0 overflow-y-auto bg-gray-50">
+            <main class="flex-1 min-h-0 overflow-y-auto bg-gray-50 px-3 sm:px-4 lg:px-6 py-3 sm:py-4">
                 <div class="min-h-full">
                     <div>
                         @if(session('success'))
@@ -1342,7 +1342,7 @@
                 </button>
 
                 <!-- Chat Window -->
-                <div id="chat-window" class="hidden absolute bottom-16 right-0 w-80 bg-white rounded-lg shadow-xl border border-gray-200">
+                <div id="chat-window" class="hidden absolute bottom-16 right-0 w-[calc(100vw-1.5rem)] sm:w-80 max-w-sm bg-white rounded-lg shadow-xl border border-gray-200">
                     <!-- Chat Header -->
                     <div class="bg-indigo-600 text-white p-4 rounded-t-lg flex justify-between items-center">
                         <div class="flex items-center space-x-3">
