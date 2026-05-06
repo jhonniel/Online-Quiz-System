@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Dtr;
 use App\Models\EvaluationForm;
 use App\Models\EvaluationSubmission;
+use App\Models\LeaveRequest;
 use App\Models\News;
 use App\Models\QuizAssignment;
 use App\Models\TicketReport;
@@ -26,7 +27,11 @@ class DashboardController extends Controller
         $user = auth()->user();
         $evaluationAvailable = false;
         $evaluationFormTitle = null;
+        $studentTrainingStats = null;
+        $studentTrainingCharts = null;
+        $studentResubmissionRequests = collect();
         $studentOjtAccessCountdown = null;
+        $studentLeaveBalanceSummary = null;
 
         // Technician users get a ticket-focused dashboard.
         if ($user->role === 'technician') {
@@ -149,6 +154,99 @@ class DashboardController extends Controller
             }
         }
 
+        if ($user->role === 'student') {
+            $requiredHours = (float) ($user->required_training_hours ?? 0);
+            $loggedHours = (float) Dtr::query()->where('user_id', $user->id)->sum('total_hours');
+            $remainingHours = max($requiredHours - $loggedHours, 0);
+
+            $recentDtrRows = Dtr::query()
+                ->where('user_id', $user->id)
+                ->whereDate('date', '>=', now()->subDays(30)->toDateString())
+                ->where('total_hours', '>', 0)
+                ->get(['date', 'total_hours']);
+            $activeDays = $recentDtrRows->pluck('date')->unique()->count();
+            $avgHoursPerActiveDay = $activeDays > 0
+                ? ((float) $recentDtrRows->sum('total_hours')) / $activeDays
+                : 0.0;
+
+            $estimatedEndDate = null;
+            if ($remainingHours > 0) {
+                $dailyHoursForEstimate = $avgHoursPerActiveDay > 0 ? $avgHoursPerActiveDay : 8.0;
+                $neededDays = (int) ceil($remainingHours / $dailyHoursForEstimate);
+                $estimatedEndDate = now()->addWeekdays(max($neededDays, 1))->startOfDay();
+            }
+
+            $months = collect(range(5, 0))->map(fn ($index) => now()->subMonths($index)->startOfMonth());
+            $months = $months->push(now()->startOfMonth())->values();
+            $monthlyLabels = $months->map(fn (Carbon $month) => $month->format('M Y'))->values();
+            $monthlyHours = $months->mapWithKeys(fn (Carbon $month) => [
+                $month->format('Y-m') => 0.0,
+            ]);
+
+            $monthlyDtrRows = Dtr::query()
+                ->where('user_id', $user->id)
+                ->whereDate('date', '>=', $months->first()->toDateString())
+                ->get(['date', 'total_hours']);
+
+            foreach ($monthlyDtrRows as $row) {
+                $key = Carbon::parse($row->date)->format('Y-m');
+                if ($monthlyHours->has($key)) {
+                    $monthlyHours[$key] = (float) $monthlyHours[$key] + (float) ($row->total_hours ?? 0);
+                }
+            }
+
+            $studentTrainingStats = [
+                'required_hours' => $requiredHours,
+                'logged_hours' => $loggedHours,
+                'remaining_hours' => $remainingHours,
+                'progress_percent' => $requiredHours > 0 ? min(($loggedHours / $requiredHours) * 100, 100) : 0,
+                'estimated_end_date' => $estimatedEndDate,
+            ];
+
+            $studentTrainingCharts = [
+                'progress' => [
+                    'labels' => ['Required Hours', 'Logged Hours', 'Remaining Hours'],
+                    'values' => [$requiredHours, $loggedHours, $remainingHours],
+                ],
+                'monthly' => [
+                    'labels' => $monthlyLabels->all(),
+                    'values' => $monthlyHours->values()->map(fn ($value) => round((float) $value, 2))->all(),
+                ],
+            ];
+
+            // Requests that were sent back by admin for correction/resubmission.
+            $studentResubmissionRequests = LeaveRequest::query()
+                ->where('user_id', $user->id)
+                ->where('status', 'pending')
+                ->whereNotNull('reviewed_at')
+                ->whereHas('logs', function ($q) {
+                    $q->where('action', 'resubmission_requested');
+                })
+                ->latest('updated_at')
+                ->with('reviewer')
+                ->take(3)
+                ->get();
+
+            $approvedLeaveCount = (int) LeaveRequest::query()
+                ->where('user_id', $user->id)
+                ->where('status', 'approved')
+                ->count();
+            $approvedAbsentDays = (float) LeaveRequest::query()
+                ->where('user_id', $user->id)
+                ->where('status', 'approved')
+                ->where('type', 'absent')
+                ->get()
+                ->sum('days');
+            $allowableAbsences = (float) ($user->student_absence_allowance ?? 0);
+
+            $studentLeaveBalanceSummary = [
+                'approved_leave_count' => $approvedLeaveCount,
+                'allowable_absences' => $allowableAbsences,
+                'approved_absent_days' => round($approvedAbsentDays, 2),
+                'remaining_absence_balance' => round(max($allowableAbsences - $approvedAbsentDays, 0), 2),
+            ];
+        }
+
         return view('user.dashboard', compact(
             'allQuizzes',
             'assignedQuizzes',
@@ -158,7 +256,11 @@ class DashboardController extends Controller
             'ongoingQuiz',
             'evaluationAvailable',
             'evaluationFormTitle',
-            'studentOjtAccessCountdown'
+            'studentOjtAccessCountdown',
+            'studentTrainingStats',
+            'studentTrainingCharts',
+            'studentResubmissionRequests',
+            'studentLeaveBalanceSummary'
         ));
     }
 

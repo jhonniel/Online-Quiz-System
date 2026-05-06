@@ -111,6 +111,7 @@ class LeaveRequest extends Model
             'pending' => 'bg-yellow-100 text-yellow-800',
             'approved' => 'bg-green-100 text-green-800',
             'rejected' => 'bg-red-100 text-red-800',
+            'for_more_verification' => 'bg-blue-100 text-blue-800',
             default => 'bg-gray-100 text-gray-800',
         };
     }
@@ -125,6 +126,9 @@ class LeaveRequest extends Model
     {
         if ($this->status === 'pending' && $this->reviewed_at) {
             return 'Resubmission';
+        }
+        if ($this->status === 'for_more_verification') {
+            return 'For More Verification';
         }
 
         return ucfirst($this->status);

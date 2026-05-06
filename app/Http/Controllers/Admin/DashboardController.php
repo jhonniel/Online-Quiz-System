@@ -3,26 +3,26 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
-use App\Models\User;
+use App\Models\ConfessionComment;
+use App\Models\ConfessionPost;
+use App\Models\ContactMessage;
+use App\Models\Dtr;
+use App\Models\DtrDeficit;
+use App\Models\ErrorLog;
+use App\Models\HiringApplication;
+use App\Models\LeaveRequest;
+use App\Models\Notification;
 use App\Models\Quiz;
-use App\Models\QuizAssignment;
 use App\Models\QuizAttempt;
+use App\Models\TicketReport;
 use App\Models\University;
+use App\Models\User;
 use App\Models\UserActivity;
 use App\Models\UserSession;
-use App\Models\Dtr;
-use App\Models\LeaveRequest;
-use App\Models\ConfessionPost;
-use App\Models\ConfessionComment;
-use App\Models\ContactMessage;
-use App\Models\Notification;
-use App\Models\TicketReport;
-use App\Models\HiringApplication;
-use App\Models\ErrorLog;
-use App\Models\DtrDeficit;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use Carbon\Carbon;
+use Illuminate\Support\Facades\Log;
 
 class DashboardController extends Controller
 {
@@ -32,6 +32,9 @@ class DashboardController extends Controller
     private function ensureCanAccessDashboard(): void
     {
         $user = auth()->user();
+        if (! $user instanceof User) {
+            abort(403, 'You do not have permission to view the Admin Dashboard.');
+        }
         if ($user->isSuperAdmin() || $user->hasAnyAdminPermission()) {
             return;
         }
@@ -44,6 +47,7 @@ class DashboardController extends Controller
     private function getChartPeriod(): string
     {
         $period = request('chart_period', 'week');
+
         return in_array($period, ['day', 'week', 'month', 'year', 'custom']) ? $period : 'week';
     }
 
@@ -63,6 +67,7 @@ class DashboardController extends Controller
             if ($fromDate->gt($toDate)) {
                 return null;
             }
+
             return [$fromDate, $toDate];
         } catch (\Exception $e) {
             return null;
@@ -107,6 +112,7 @@ class DashboardController extends Controller
                     $current->addMonth()->startOfMonth();
                 }
             }
+
             return $ranges;
         }
 
@@ -153,6 +159,7 @@ class DashboardController extends Controller
                 ];
             }
         }
+
         return $ranges;
     }
 
@@ -165,44 +172,44 @@ class DashboardController extends Controller
             $totalQuizzes = Quiz::count();
             $disabledUsers = User::where('role', 'user')->where('is_active', false)->count();
             $activeUsers = User::where('role', 'user')->where('is_active', true)->count();
-            
+
             // Employee and Student Statistics
             $totalEmployees = User::where('role', 'employee')->count();
             $totalStudents = User::where('role', 'student')->count();
             $activeEmployees = User::where('role', 'employee')->where('is_active', true)->count();
             $activeStudents = User::where('role', 'student')->where('is_active', true)->count();
-            
+
             // DTR Statistics - with error handling
             try {
                 $totalDtrRecords = Dtr::count();
-                $employeeDtrRecords = Dtr::whereHas('user', function($q) {
+                $employeeDtrRecords = Dtr::whereHas('user', function ($q) {
                     $q->where('role', 'employee');
                 })->count();
-                $studentDtrRecords = Dtr::whereHas('user', function($q) {
+                $studentDtrRecords = Dtr::whereHas('user', function ($q) {
                     $q->where('role', 'student');
                 })->count();
                 $todayDtrRecords = Dtr::whereDate('date', today())->count();
             } catch (\Exception $e) {
-                \Log::warning('DTR statistics error: ' . $e->getMessage());
+                Log::warning('DTR statistics error: '.$e->getMessage());
                 $totalDtrRecords = 0;
                 $employeeDtrRecords = 0;
                 $studentDtrRecords = 0;
                 $todayDtrRecords = 0;
             }
-            
+
             // Leave Request Statistics - with error handling
             try {
                 $totalLeaveRequests = LeaveRequest::count();
                 $pendingLeaveRequests = LeaveRequest::where('status', 'pending')->count();
                 $approvedLeaveRequests = LeaveRequest::where('status', 'approved')->count();
                 $rejectedLeaveRequests = LeaveRequest::where('status', 'rejected')->count();
-                $employeeLeaveRequests = LeaveRequest::whereHas('user', function($q) {
+                $employeeLeaveRequests = LeaveRequest::whereHas('user', function ($q) {
                     $q->where('role', 'employee');
                 })->where('status', 'pending')->count();
-                $studentLeaveRequests = LeaveRequest::whereHas('user', function($q) {
+                $studentLeaveRequests = LeaveRequest::whereHas('user', function ($q) {
                     $q->where('role', 'student');
                 })->where('status', 'pending')->count();
-                
+
                 // Recent Leave Requests
                 $recentLeaveRequests = LeaveRequest::with('user')
                     ->latest()
@@ -214,17 +221,17 @@ class DashboardController extends Controller
                 $ongoingLeaveEmployees = LeaveRequest::with('user')
                     ->where('status', 'approved')
                     ->where('end_date', '>=', $today)
-                    ->whereHas('user', fn($q) => $q->where('role', 'employee'))
+                    ->whereHas('user', fn ($q) => $q->where('role', 'employee'))
                     ->orderBy('start_date')
                     ->get();
                 $ongoingLeaveStudents = LeaveRequest::with('user')
                     ->where('status', 'approved')
                     ->where('end_date', '>=', $today)
-                    ->whereHas('user', fn($q) => $q->where('role', 'student'))
+                    ->whereHas('user', fn ($q) => $q->where('role', 'student'))
                     ->orderBy('start_date')
                     ->get();
             } catch (\Exception $e) {
-                \Log::warning('Leave request statistics error: ' . $e->getMessage());
+                Log::warning('Leave request statistics error: '.$e->getMessage());
                 $totalLeaveRequests = 0;
                 $pendingLeaveRequests = 0;
                 $approvedLeaveRequests = 0;
@@ -243,6 +250,7 @@ class DashboardController extends Controller
                     ->get()
                     ->map(function ($user) {
                         $user->total_deficit_hours = DtrDeficit::where('user_id', $user->id)->where('deficit_hours', '>', 0)->sum('deficit_hours');
+
                         return $user;
                     })
                     ->sortByDesc('total_deficit_hours')
@@ -253,15 +261,37 @@ class DashboardController extends Controller
                     ->get()
                     ->map(function ($user) {
                         $user->total_deficit_hours = DtrDeficit::where('user_id', $user->id)->where('deficit_hours', '>', 0)->sum('deficit_hours');
+
                         return $user;
                     })
                     ->sortByDesc('total_deficit_hours')
                     ->take(10)
                     ->values();
             } catch (\Exception $e) {
-                \Log::warning('Deficit stats error: ' . $e->getMessage());
+                Log::warning('Deficit stats error: '.$e->getMessage());
                 $studentsWithDeficit = collect();
                 $employeesWithDeficit = collect();
+            }
+
+            // Active students with a required training target whose logged DTR time is still below it
+            try {
+                $userTable = (new User)->getTable();
+                $dtrTable = (new Dtr)->getTable();
+                $studentsWithTrainingRequirementCount = User::where('role', 'student')
+                    ->where('is_active', true)
+                    ->where('required_training_hours', '>', 0)
+                    ->count();
+                $studentsIncompleteTrainingCount = User::where('role', 'student')
+                    ->where('is_active', true)
+                    ->where('required_training_hours', '>', 0)
+                    ->whereRaw(
+                        "COALESCE((SELECT SUM({$dtrTable}.total_hours) FROM {$dtrTable} WHERE {$dtrTable}.user_id = {$userTable}.id), 0) < {$userTable}.required_training_hours"
+                    )
+                    ->count();
+            } catch (\Exception $e) {
+                Log::warning('Student training completion stats error: '.$e->getMessage());
+                $studentsWithTrainingRequirementCount = 0;
+                $studentsIncompleteTrainingCount = 0;
             }
 
             // Recent Quizzes and Users - with error handling
@@ -269,7 +299,7 @@ class DashboardController extends Controller
                 $recentQuizzes = Quiz::with('creator')->latest()->take(5)->get();
                 $recentUsers = User::where('role', '!=', 'admin')->latest()->take(5)->get();
             } catch (\Exception $e) {
-                \Log::warning('Recent items error: ' . $e->getMessage());
+                Log::warning('Recent items error: '.$e->getMessage());
                 $recentQuizzes = collect();
                 $recentUsers = collect();
             }
@@ -293,13 +323,13 @@ class DashboardController extends Controller
                     ->withSum('quizAttemptHistory', 'score')
                     ->withCount('quizAttemptHistory')
                     ->get()
-                    ->filter(function($user) {
+                    ->filter(function ($user) {
                         return ($user->quiz_attempt_history_sum_score ?? 0) > 0;
                     })
                     ->sortByDesc('quiz_attempt_history_sum_score')
                     ->values();
             } catch (\Exception $e) {
-                \Log::warning('Top students error: ' . $e->getMessage());
+                Log::warning('Top students error: '.$e->getMessage());
                 $topStudents = collect();
             }
 
@@ -309,7 +339,7 @@ class DashboardController extends Controller
                     ->orderBy('users_count', 'desc')
                     ->get();
             } catch (\Exception $e) {
-                \Log::warning('University ranking error: ' . $e->getMessage());
+                Log::warning('University ranking error: '.$e->getMessage());
                 $universityRanking = collect();
             }
 
@@ -321,23 +351,23 @@ class DashboardController extends Controller
                     ->orderBy('student_count', 'desc')
                     ->get();
             } catch (\Exception $e) {
-                \Log::warning('Quiz popularity error: ' . $e->getMessage());
+                Log::warning('Quiz popularity error: '.$e->getMessage());
                 $quizPopularity = collect();
             }
 
             // Quiz Performance Ranking - with error handling
             try {
                 $quizPerformance = Quiz::select('quizzes.*',
-                        DB::raw('COUNT(DISTINCT quiz_attempts.user_id) as student_count'),
-                        DB::raw('COALESCE(AVG(quiz_attempts.points_earned), 0) as average_score'),
-                        DB::raw('COALESCE(MAX(quiz_attempts.points_earned), 0) as highest_score')
-                    )
+                    DB::raw('COUNT(DISTINCT quiz_attempts.user_id) as student_count'),
+                    DB::raw('COALESCE(AVG(quiz_attempts.points_earned), 0) as average_score'),
+                    DB::raw('COALESCE(MAX(quiz_attempts.points_earned), 0) as highest_score')
+                )
                     ->leftJoin('quiz_attempts', 'quizzes.id', '=', 'quiz_attempts.quiz_id')
                     ->groupBy('quizzes.id')
                     ->orderBy('average_score', 'desc')
                     ->get();
             } catch (\Exception $e) {
-                \Log::warning('Quiz performance error: ' . $e->getMessage());
+                Log::warning('Quiz performance error: '.$e->getMessage());
                 $quizPerformance = collect();
             }
 
@@ -345,13 +375,13 @@ class DashboardController extends Controller
             try {
                 $mostActiveUsers = UserActivity::selectRaw('user_id, COUNT(*) as action_count')
                     ->with('user')
-                    ->whereHas('user', fn($q) => $q->where('role', '!=', 'admin'))
+                    ->whereHas('user', fn ($q) => $q->where('role', '!=', 'admin'))
                     ->groupBy('user_id')
                     ->orderBy('action_count', 'desc')
                     ->limit(10)
                     ->get();
             } catch (\Exception $e) {
-                \Log::warning('Most active users error: ' . $e->getMessage());
+                Log::warning('Most active users error: '.$e->getMessage());
                 $mostActiveUsers = collect();
             }
 
@@ -363,7 +393,7 @@ class DashboardController extends Controller
                 $todayLogins = UserActivity::getTodayLoginCount();
                 $todayLogouts = UserActivity::getTodayLogoutCount();
             } catch (\Exception $e) {
-                \Log::warning('User activity statistics error: ' . $e->getMessage());
+                Log::warning('User activity statistics error: '.$e->getMessage());
                 // Fallback values if activity tracking fails
                 $activityStats = ['online' => 0, 'idle' => 0, 'offline' => 0, 'total_today' => 0];
                 $onlineUsers = collect();
@@ -381,7 +411,7 @@ class DashboardController extends Controller
                 $openTicketsCount = TicketReport::where('status', 'open')->count();
                 $pendingHiringCount = HiringApplication::whereIn('status', ['pending', 'screening'])->count();
             } catch (\Exception $e) {
-                \Log::warning('System stats error: ' . $e->getMessage());
+                Log::warning('System stats error: '.$e->getMessage());
                 $confessionPostsCount = 0;
                 $confessionCommentsCount = 0;
                 $contactMessagesCount = 0;
@@ -479,10 +509,10 @@ class DashboardController extends Controller
                 foreach ($chartRanges as $r) {
                     $dtrChartLabels[] = $r['label'];
                     $dtrEmployeeChartData[] = Dtr::whereBetween('date', [$r['start'], $r['end']])
-                        ->whereHas('user', fn($q) => $q->where('role', 'employee'))
+                        ->whereHas('user', fn ($q) => $q->where('role', 'employee'))
                         ->count();
                     $dtrStudentChartData[] = Dtr::whereBetween('date', [$r['start'], $r['end']])
-                        ->whereHas('user', fn($q) => $q->where('role', 'student'))
+                        ->whereHas('user', fn ($q) => $q->where('role', 'student'))
                         ->count();
                 }
             } catch (\Exception $e) {
@@ -495,9 +525,9 @@ class DashboardController extends Controller
             try {
                 $leaveRequestEmployeeLabels = ['Pending', 'Approved', 'Rejected'];
                 $leaveRequestEmployeeData = [
-                    LeaveRequest::where('status', 'pending')->whereHas('user', fn($q) => $q->where('role', 'employee'))->count(),
-                    LeaveRequest::where('status', 'approved')->whereHas('user', fn($q) => $q->where('role', 'employee'))->count(),
-                    LeaveRequest::where('status', 'rejected')->whereHas('user', fn($q) => $q->where('role', 'employee'))->count(),
+                    LeaveRequest::where('status', 'pending')->whereHas('user', fn ($q) => $q->where('role', 'employee'))->count(),
+                    LeaveRequest::where('status', 'approved')->whereHas('user', fn ($q) => $q->where('role', 'employee'))->count(),
+                    LeaveRequest::where('status', 'rejected')->whereHas('user', fn ($q) => $q->where('role', 'employee'))->count(),
                 ];
             } catch (\Exception $e) {
                 $leaveRequestEmployeeLabels = ['Pending', 'Approved', 'Rejected'];
@@ -508,9 +538,9 @@ class DashboardController extends Controller
             try {
                 $leaveRequestStudentLabels = ['Pending', 'Approved', 'Rejected'];
                 $leaveRequestStudentData = [
-                    LeaveRequest::where('status', 'pending')->whereHas('user', fn($q) => $q->where('role', 'student'))->count(),
-                    LeaveRequest::where('status', 'approved')->whereHas('user', fn($q) => $q->where('role', 'student'))->count(),
-                    LeaveRequest::where('status', 'rejected')->whereHas('user', fn($q) => $q->where('role', 'student'))->count(),
+                    LeaveRequest::where('status', 'pending')->whereHas('user', fn ($q) => $q->where('role', 'student'))->count(),
+                    LeaveRequest::where('status', 'approved')->whereHas('user', fn ($q) => $q->where('role', 'student'))->count(),
+                    LeaveRequest::where('status', 'rejected')->whereHas('user', fn ($q) => $q->where('role', 'student'))->count(),
                 ];
             } catch (\Exception $e) {
                 $leaveRequestStudentLabels = ['Pending', 'Approved', 'Rejected'];
@@ -585,7 +615,7 @@ class DashboardController extends Controller
                     ->groupBy('activity_type')
                     ->orderByDesc('count')
                     ->get();
-                $activityTypeLabels = $activityTypes->pluck('activity_type')->map(fn($t) => ucfirst(str_replace('_', ' ', $t)))->values()->all();
+                $activityTypeLabels = $activityTypes->pluck('activity_type')->map(fn ($t) => ucfirst(str_replace('_', ' ', $t)))->values()->all();
                 $activityTypeData = $activityTypes->pluck('count')->values()->all();
                 if (empty($activityTypeLabels)) {
                     $activityTypeLabels = ['Login', 'Logout'];
@@ -622,6 +652,8 @@ class DashboardController extends Controller
                 'ongoingLeaveEmployees',
                 'ongoingLeaveStudents',
                 'studentsWithDeficit',
+                'studentsWithTrainingRequirementCount',
+                'studentsIncompleteTrainingCount',
                 'employeesWithDeficit',
                 'recentQuizzes',
                 'recentUsers',
@@ -675,10 +707,10 @@ class DashboardController extends Controller
                 'mostActiveUsers'
             ));
         } catch (\Exception $e) {
-            \Log::error('Dashboard error: ' . $e->getMessage(), [
-                'trace' => $e->getTraceAsString()
+            Log::error('Dashboard error: '.$e->getMessage(), [
+                'trace' => $e->getTraceAsString(),
             ]);
-            
+
             // Return minimal data to prevent complete failure
             return view('admin.dashboard', [
                 'chartPeriod' => 'week',
@@ -706,6 +738,8 @@ class DashboardController extends Controller
                 'ongoingLeaveEmployees' => collect(),
                 'ongoingLeaveStudents' => collect(),
                 'studentsWithDeficit' => collect(),
+                'studentsWithTrainingRequirementCount' => 0,
+                'studentsIncompleteTrainingCount' => 0,
                 'employeesWithDeficit' => collect(),
                 'recentQuizzes' => collect(),
                 'recentUsers' => collect(),
@@ -783,7 +817,7 @@ class DashboardController extends Controller
                         'last_activity' => $session->last_activity_at->diffForHumans(),
                         'current_page' => $session->metadata['current_page'] ?? 'Unknown',
                         'ip_address' => $session->ip_address,
-                        'login_time' => $session->login_at->diffForHumans()
+                        'login_time' => $session->login_at->diffForHumans(),
                     ];
                 }),
                 'recentActivities' => $recentActivities->map(function ($activity) {
@@ -794,15 +828,15 @@ class DashboardController extends Controller
                         'action' => $activity->action,
                         'page_url' => $activity->page_url,
                         'created_at' => $activity->created_at->diffForHumans(),
-                        'ip_address' => $activity->ip_address
+                        'ip_address' => $activity->ip_address,
                     ];
-                })
+                }),
             ]);
         } catch (\Exception $e) {
             return response()->json([
                 'activityStats' => ['online' => 0, 'idle' => 0, 'offline' => 0, 'total_today' => 0],
                 'onlineUsers' => [],
-                'recentActivities' => []
+                'recentActivities' => [],
             ]);
         }
     }

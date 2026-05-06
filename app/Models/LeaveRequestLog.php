@@ -48,6 +48,7 @@ class LeaveRequestLog extends Model
         return match($this->action) {
             'approved' => 'Approved',
             'rejected' => 'Rejected',
+            'for_more_verification' => 'For More Verification',
             'resubmission_requested' => 'Resubmission Requested',
             'updated' => 'Updated',
             'created' => 'Created',

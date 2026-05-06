@@ -270,6 +270,26 @@ class LeaveRequestController extends Controller
                 ->withInput();
         }
 
+        if ($user->role === 'student' && $validated['type'] === 'absent') {
+            $requestedDays = $this->calculateLeaveRequestDays(
+                (string) $validated['start_date'],
+                isset($validated['end_date']) ? (string) $validated['end_date'] : null
+            );
+            $remainingAbsenceBalance = $this->getStudentRemainingAbsenceBalance((int) $user->id, (float) ($user->student_absence_allowance ?? 0));
+
+            if ($remainingAbsenceBalance <= 0) {
+                return redirect()->back()
+                    ->withErrors(['type' => 'You cannot file an Absent leave request because your allowable absences balance is 0.'])
+                    ->withInput();
+            }
+
+            if ($requestedDays > $remainingAbsenceBalance) {
+                return redirect()->back()
+                    ->withErrors(['type' => 'Requested absent days exceed your remaining allowable absences balance.'])
+                    ->withInput();
+            }
+        }
+
         // Student Additional Time: allow either explicit total hours OR fixed date(s) at 8h/day.
         if ($validated['type'] === 'additional_time' && $user->role === 'student') {
             $additionalMode = $validated['additional_time_mode'] ?? 'fixed_date';
@@ -788,6 +808,26 @@ class LeaveRequestController extends Controller
                 ->withInput();
         }
 
+        if ($user->role === 'student' && $validated['type'] === 'absent') {
+            $requestedDays = $this->calculateLeaveRequestDays(
+                (string) $validated['start_date'],
+                isset($validated['end_date']) ? (string) $validated['end_date'] : null
+            );
+            $remainingAbsenceBalance = $this->getStudentRemainingAbsenceBalance((int) $user->id, (float) ($user->student_absence_allowance ?? 0));
+
+            if ($remainingAbsenceBalance <= 0) {
+                return redirect()->back()
+                    ->withErrors(['type' => 'You cannot file an Absent leave request because your allowable absences balance is 0.'])
+                    ->withInput();
+            }
+
+            if ($requestedDays > $remainingAbsenceBalance) {
+                return redirect()->back()
+                    ->withErrors(['type' => 'Requested absent days exceed your remaining allowable absences balance.'])
+                    ->withInput();
+            }
+        }
+
         if ($validated['type'] === 'additional_time' && $user->role === 'student') {
             $additionalMode = $validated['additional_time_mode'] ?? 'fixed_date';
             if (!in_array($additionalMode, ['fixed_date', 'total_hours'], true)) {
@@ -1248,6 +1288,26 @@ class LeaveRequestController extends Controller
         }
 
         return ($hours * 60) + $minutes;
+    }
+
+    private function calculateLeaveRequestDays(string $startDate, ?string $endDate = null): float
+    {
+        $start = Carbon::parse($startDate)->startOfDay();
+        $end = $endDate ? Carbon::parse($endDate)->startOfDay() : $start->copy();
+
+        return (float) ($start->diffInDays($end) + 1);
+    }
+
+    private function getStudentRemainingAbsenceBalance(int $userId, float $allowableAbsences): float
+    {
+        $approvedAbsentDays = (float) LeaveRequest::query()
+            ->where('user_id', $userId)
+            ->where('type', 'absent')
+            ->where('status', 'approved')
+            ->get()
+            ->sum('days');
+
+        return max($allowableAbsences - $approvedAbsentDays, 0);
     }
 
     private function getPendingResubmissionRollbackHours(int $userId): float

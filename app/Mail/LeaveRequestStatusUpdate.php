@@ -36,6 +36,8 @@ class LeaveRequestStatusUpdate extends Mailable
         $statusLabel = ucfirst($this->status);
         if ($this->status === 'resubmission_requested' || ($this->status === 'pending' && $this->leaveRequest->reviewed_at)) {
             $statusLabel = 'Resubmission Required';
+        } elseif ($this->status === 'for_more_verification') {
+            $statusLabel = 'For More Verification';
         } elseif ($this->status === 'approved') {
             $statusLabel = 'Approved';
         } elseif ($this->status === 'rejected') {

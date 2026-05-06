@@ -3,24 +3,24 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
-use App\Models\LeaveRequest;
-use App\Models\LeaveRequestLog;
+use App\Mail\LeaveRequestStatusUpdate;
+use App\Models\Department;
 use App\Models\Dtr;
 use App\Models\DtrDeficit;
-use App\Models\Department;
-use App\Models\User;
 use App\Models\LeaveBalance;
+use App\Models\LeaveRequest;
+use App\Models\LeaveRequestLog;
 use App\Models\Setting;
-use App\Mail\LeaveRequestStatusUpdate;
+use App\Models\User;
 use App\Services\MailConfigService;
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Mail;
-use Illuminate\Support\Facades\Log;
-use Illuminate\Database\QueryException;
-use Illuminate\Validation\Rule;
 use Carbon\Carbon;
 use Carbon\CarbonPeriod;
+use Illuminate\Database\QueryException;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
+use Illuminate\Validation\Rule;
 
 class LeaveRequestController extends Controller
 {
@@ -31,15 +31,15 @@ class LeaveRequestController extends Controller
     {
         $this->reconcilePendingAdditionalTimeRollbacks();
 
-        $user = auth()->user();
+        $user = $this->requireAuthUser();
         $search = trim((string) $request->input('search', ''));
         $perPage = (int) $request->input('per_page', 20);
-        if (!in_array($perPage, [10, 20, 50, 100], true)) {
+        if (! in_array($perPage, [10, 20, 50, 100], true)) {
             $perPage = 20;
         }
 
         $query = LeaveRequest::with(['user', 'reviewer', 'approvedBy.performer', 'rejectedBy.performer', 'resubmissionRequestedBy.performer', 'logs'])
-            ->whereHas('user', function($q) {
+            ->whereHas('user', function ($q) {
                 $q->where('role', 'employee');
             });
 
@@ -47,7 +47,7 @@ class LeaveRequestController extends Controller
         if ($user->canAccessEmployeeManagement()) {
             $allowedDepartmentIds = $user->getAllowedDepartmentIds();
             if ($allowedDepartmentIds !== null) {
-                $query->whereHas('user', function($q) use ($allowedDepartmentIds) {
+                $query->whereHas('user', function ($q) use ($allowedDepartmentIds) {
                     $q->whereIn('department_id', $allowedDepartmentIds);
                 });
             }
@@ -67,7 +67,7 @@ class LeaveRequestController extends Controller
         if ($request->has('department_id') && $request->department_id) {
             $selectedDeptId = $request->department_id;
             if ($user->canManageDepartment($selectedDeptId)) {
-                $query->whereHas('user', function($q) use ($selectedDeptId) {
+                $query->whereHas('user', function ($q) use ($selectedDeptId) {
                     $q->where('department_id', $selectedDeptId);
                 });
             }
@@ -101,7 +101,7 @@ class LeaveRequestController extends Controller
             ->appends($request->query());
 
         // Statistics - only for employees (apply department restrictions)
-        $baseQuery = LeaveRequest::whereHas('user', function($q) {
+        $baseQuery = LeaveRequest::whereHas('user', function ($q) {
             $q->where('role', 'employee');
         });
 
@@ -109,7 +109,7 @@ class LeaveRequestController extends Controller
         if ($user->canAccessEmployeeManagement()) {
             $allowedDepartmentIds = $user->getAllowedDepartmentIds();
             if ($allowedDepartmentIds !== null) {
-                $baseQuery->whereHas('user', function($q) use ($allowedDepartmentIds) {
+                $baseQuery->whereHas('user', function ($q) use ($allowedDepartmentIds) {
                     $q->whereIn('department_id', $allowedDepartmentIds);
                 });
             }
@@ -118,7 +118,7 @@ class LeaveRequestController extends Controller
         if ($request->has('department_id') && $request->department_id) {
             $selectedDeptId = $request->department_id;
             if ($user->canManageDepartment($selectedDeptId)) {
-                $baseQuery->whereHas('user', function($q) use ($selectedDeptId) {
+                $baseQuery->whereHas('user', function ($q) use ($selectedDeptId) {
                     $q->where('department_id', $selectedDeptId);
                 });
             }
@@ -151,6 +151,7 @@ class LeaveRequestController extends Controller
             'pending' => (clone $baseQuery)->where('status', 'pending')->count(),
             'approved' => (clone $baseQuery)->where('status', 'approved')->count(),
             'rejected' => (clone $baseQuery)->where('status', 'rejected')->count(),
+            'for_more_verification' => (clone $baseQuery)->where('status', 'for_more_verification')->count(),
         ];
 
         // Get employees for filter dropdown (respecting department restrictions)
@@ -291,7 +292,7 @@ class LeaveRequestController extends Controller
                 $raw = $offsetRequest->reason ?? '';
                 // Parse "Hours to Deduct: HH:MM" from reason (same pattern used in DTR controller)
                 if (preg_match('/Hours to Deduct:\s*([0-9]{2}):([0-9]{2})/', $raw, $m)) {
-                    $offsetMinutes += (int)$m[1] * 60 + (int)$m[2];
+                    $offsetMinutes += (int) $m[1] * 60 + (int) $m[2];
                 } else {
                     // Fallback: use days * 8 hours if no explicit HH:MM pattern is present
                     $offsetMinutes += (int) round(($offsetRequest->days * 8) * 60);
@@ -343,7 +344,8 @@ class LeaveRequestController extends Controller
                 $minutes = (int) round(abs($decimal) * 60);
                 $h = intdiv($minutes, 60);
                 $m = $minutes % 60;
-                return $sign . sprintf('%02d:%02d', $h, $m);
+
+                return $sign.sprintf('%02d:%02d', $h, $m);
             };
 
             $studentTime = [
@@ -383,7 +385,7 @@ class LeaveRequestController extends Controller
      */
     public function calendar(Request $request)
     {
-        $user = auth()->user();
+        $user = $this->requireAuthUser();
 
         // Use Manila timezone for current date/month context
         $nowManila = Carbon::now('Asia/Manila');
@@ -408,7 +410,7 @@ class LeaveRequestController extends Controller
         // Only show employee leave requests
         // Wrap OR conditions in a single group so employee filter applies to all.
         $leaveQuery = LeaveRequest::with('user')
-            ->whereHas('user', function($q) use ($departmentId, $user) {
+            ->whereHas('user', function ($q) use ($departmentId, $user) {
                 $q->where('role', 'employee');
 
                 // Apply department restrictions if user has Employee Management with restrictions
@@ -428,12 +430,12 @@ class LeaveRequestController extends Controller
                 $outer->where(function ($q) use ($startOfCalendar, $endOfCalendar) {
                     // Requests with a start and end date that overlap the calendar window
                     $q->whereDate('start_date', '<=', $endOfCalendar->toDateString())
-                      ->whereDate('end_date', '>=', $startOfCalendar->toDateString());
+                        ->whereDate('end_date', '>=', $startOfCalendar->toDateString());
                 })->orWhere(function ($q) use ($startOfCalendar, $endOfCalendar) {
                     // Handle single-day requests where end_date is null
                     $q->whereNull('end_date')
-                      ->whereDate('start_date', '>=', $startOfCalendar->toDateString())
-                      ->whereDate('start_date', '<=', $endOfCalendar->toDateString());
+                        ->whereDate('start_date', '>=', $startOfCalendar->toDateString())
+                        ->whereDate('start_date', '<=', $endOfCalendar->toDateString());
                 });
             });
 
@@ -462,7 +464,7 @@ class LeaveRequestController extends Controller
             $dayPeriod = CarbonPeriod::create($rangeStart, $rangeEnd);
             foreach ($dayPeriod as $day) {
                 $key = $day->toDateString();
-                if (!isset($days[$key])) {
+                if (! isset($days[$key])) {
                     continue;
                 }
 
@@ -485,7 +487,7 @@ class LeaveRequestController extends Controller
                 $week = [];
             }
         }
-        if (!empty($week)) {
+        if (! empty($week)) {
             $weeks[] = $week;
         }
 
@@ -540,7 +542,7 @@ class LeaveRequestController extends Controller
      */
     public function storeForEmployee(Request $request)
     {
-        $user = auth()->user();
+        $user = $this->requireAuthUser();
 
         // Admin-side filing for employees: allow any leave type and any date (including past dates).
         $allowedTypes = [
@@ -554,7 +556,7 @@ class LeaveRequestController extends Controller
             'travel',
             'other',
         ];
-        
+
         $validated = $request->validate([
             'user_ids' => [
                 'required',
@@ -598,7 +600,7 @@ class LeaveRequestController extends Controller
         // Validate that user can manage all selected employees' departments
         foreach ($employeeIds as $employeeId) {
             $employee = User::findOrFail($employeeId);
-            if (!$user->canManageDepartment($employee->department_id)) {
+            if (! $user->canManageDepartment($employee->department_id)) {
                 return redirect()->back()
                     ->withErrors(['user_ids' => "You don't have permission to file leave for employees in this department."])
                     ->withInput();
@@ -647,8 +649,9 @@ class LeaveRequestController extends Controller
                 if ($daysRequested > $remainingLeaveCredits) {
                     $failedEmployees[] = [
                         'name' => $employee->name,
-                        'reason' => "only has {$remainingLeaveCredits} day(s) of Leave Credits remaining. Requested {$daysRequested} day(s)."
+                        'reason' => "only has {$remainingLeaveCredits} day(s) of Leave Credits remaining. Requested {$daysRequested} day(s).",
                     ];
+
                     continue;
                 }
             }
@@ -690,7 +693,7 @@ class LeaveRequestController extends Controller
         // Prepare success/error messages
         $message = '';
         if ($createdCount > 0) {
-            $message = "Leave request filed for {$createdCount} employee(s)." . ($validated['type'] === 'travel' ? ' Travel requests are subject to approval.' : '');
+            $message = "Leave request filed for {$createdCount} employee(s).".($validated['type'] === 'travel' ? ' Travel requests are subject to approval.' : '');
         }
         if (count($failedEmployees) > 0) {
             $failedNames = collect($failedEmployees)->pluck('name')->join(', ');
@@ -759,7 +762,7 @@ class LeaveRequestController extends Controller
             Log::info('Sending leave request approval email to user', [
                 'user_email' => $leaveRequest->user->email,
                 'leave_request_id' => $leaveRequest->id,
-                'user_name' => $leaveRequest->user->name
+                'user_name' => $leaveRequest->user->name,
             ]);
 
             Mail::to($leaveRequest->user->email)->send(
@@ -772,19 +775,19 @@ class LeaveRequestController extends Controller
 
             Log::info('Leave request approval email sent successfully', [
                 'user_email' => $leaveRequest->user->email,
-                'leave_request_id' => $leaveRequest->id
+                'leave_request_id' => $leaveRequest->id,
             ]);
         } catch (\Exception $e) {
             Log::error('Failed to send leave request approval email', [
                 'user_email' => $leaveRequest->user->email ?? 'unknown',
                 'leave_request_id' => $leaveRequest->id,
                 'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
+                'trace' => $e->getTraceAsString(),
             ]);
             // Don't fail the request if email fails
         }
 
-        return redirect('/admin/leave-requests/' . $leaveRequest->id)
+        return redirect('/admin/leave-requests/'.$leaveRequest->id)
             ->with('success', 'Leave request approved successfully.');
     }
 
@@ -796,13 +799,13 @@ class LeaveRequestController extends Controller
     {
         // Only allow force accept for offset requests
         if ($leaveRequest->type !== 'offset') {
-            return redirect('/admin/leave-requests/' . $leaveRequest->id)
+            return redirect('/admin/leave-requests/'.$leaveRequest->id)
                 ->with('error', 'Force accept is only available for offset requests.');
         }
 
         // Only allow for pending requests
-        if (!$leaveRequest->isPending()) {
-            return redirect('/admin/leave-requests/' . $leaveRequest->id)
+        if (! $leaveRequest->isPending()) {
+            return redirect('/admin/leave-requests/'.$leaveRequest->id)
                 ->with('error', 'This request has already been processed.');
         }
 
@@ -817,7 +820,7 @@ class LeaveRequestController extends Controller
 
         $leaveRequest->update([
             'status' => 'approved',
-            'admin_notes' => ($request->admin_notes ?? '') . ' [Force Accepted - Negative Balance]',
+            'admin_notes' => ($request->admin_notes ?? '').' [Force Accepted - Negative Balance]',
             'reviewed_by' => Auth::id(),
             'reviewed_at' => now(),
         ]);
@@ -828,7 +831,7 @@ class LeaveRequestController extends Controller
             'action' => 'approved',
             'status_before' => $statusBefore,
             'status_after' => 'approved',
-            'notes' => ($request->admin_notes ?? '') . ' [Force Accepted - Negative Balance]',
+            'notes' => ($request->admin_notes ?? '').' [Force Accepted - Negative Balance]',
             'performed_by' => Auth::id(),
         ]);
 
@@ -839,7 +842,7 @@ class LeaveRequestController extends Controller
             Log::info('Sending leave request force acceptance email to user', [
                 'user_email' => $leaveRequest->user->email,
                 'leave_request_id' => $leaveRequest->id,
-                'user_name' => $leaveRequest->user->name
+                'user_name' => $leaveRequest->user->name,
             ]);
 
             Mail::to($leaveRequest->user->email)->send(
@@ -852,19 +855,19 @@ class LeaveRequestController extends Controller
 
             Log::info('Leave request force acceptance email sent successfully', [
                 'user_email' => $leaveRequest->user->email,
-                'leave_request_id' => $leaveRequest->id
+                'leave_request_id' => $leaveRequest->id,
             ]);
         } catch (\Exception $e) {
             Log::error('Failed to send leave request force acceptance email', [
                 'user_email' => $leaveRequest->user->email ?? 'unknown',
                 'leave_request_id' => $leaveRequest->id,
                 'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
+                'trace' => $e->getTraceAsString(),
             ]);
             // Don't fail the request if email fails
         }
 
-        return redirect('/admin/leave-requests/' . $leaveRequest->id)
+        return redirect('/admin/leave-requests/'.$leaveRequest->id)
             ->with('success', 'Offset request force accepted. Negative balance will be applied to employee account.');
     }
 
@@ -906,7 +909,7 @@ class LeaveRequestController extends Controller
             Log::info('Sending leave request rejection email to user', [
                 'user_email' => $leaveRequest->user->email,
                 'leave_request_id' => $leaveRequest->id,
-                'user_name' => $leaveRequest->user->name
+                'user_name' => $leaveRequest->user->name,
             ]);
 
             Mail::to($leaveRequest->user->email)->send(
@@ -919,20 +922,83 @@ class LeaveRequestController extends Controller
 
             Log::info('Leave request rejection email sent successfully', [
                 'user_email' => $leaveRequest->user->email,
-                'leave_request_id' => $leaveRequest->id
+                'leave_request_id' => $leaveRequest->id,
             ]);
         } catch (\Exception $e) {
             Log::error('Failed to send leave request rejection email', [
                 'user_email' => $leaveRequest->user->email ?? 'unknown',
                 'leave_request_id' => $leaveRequest->id,
                 'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
+                'trace' => $e->getTraceAsString(),
             ]);
             // Don't fail the request if email fails
         }
 
-        return redirect('/admin/leave-requests/' . $leaveRequest->id)
+        return redirect('/admin/leave-requests/'.$leaveRequest->id)
             ->with('success', 'Leave request rejected successfully.');
+    }
+
+    /**
+     * Mark a leave request as requiring further verification.
+     */
+    public function verify(Request $request, LeaveRequest $leaveRequest)
+    {
+        $request->validate([
+            'admin_notes' => 'required|string|max:1000',
+        ]);
+
+        $leaveRequest->load('user');
+        $statusBefore = $leaveRequest->status;
+
+        $leaveRequest->update([
+            'status' => 'for_more_verification',
+            'admin_notes' => $request->admin_notes,
+            'reviewed_by' => Auth::id(),
+            'reviewed_at' => now(),
+        ]);
+
+        LeaveRequestLog::create([
+            'leave_request_id' => $leaveRequest->id,
+            'action' => 'for_more_verification',
+            'status_before' => $statusBefore,
+            'status_after' => 'for_more_verification',
+            'notes' => $request->admin_notes,
+            'performed_by' => Auth::id(),
+        ]);
+
+        try {
+            MailConfigService::configure();
+
+            Log::info('Sending leave request for-more-verification email to user', [
+                'user_email' => $leaveRequest->user->email,
+                'leave_request_id' => $leaveRequest->id,
+                'user_name' => $leaveRequest->user->name,
+            ]);
+
+            Mail::to($leaveRequest->user->email)->send(
+                new LeaveRequestStatusUpdate(
+                    $leaveRequest,
+                    'for_more_verification',
+                    $this->normalizedLeaveRequestMailNotes($leaveRequest->admin_notes)
+                )
+            );
+
+            Log::info('Leave request for-more-verification email sent successfully', [
+                'user_email' => $leaveRequest->user->email,
+                'leave_request_id' => $leaveRequest->id,
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Failed to send leave request verification email', [
+                'user_email' => $leaveRequest->user->email ?? 'unknown',
+                'leave_request_id' => $leaveRequest->id,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+            // Don't fail the request if email fails
+        }
+
+        return redirect('/admin/leave-requests/'.$leaveRequest->id)
+            ->with('success', 'Leave request marked for more verification.');
     }
 
     /**
@@ -958,7 +1024,7 @@ class LeaveRequestController extends Controller
         }
 
         $adminNotes = $request->admin_notes
-            ? ($leaveRequest->admin_notes ? $leaveRequest->admin_notes . "\n\n[Resubmission Request]: " . $request->admin_notes : $request->admin_notes)
+            ? ($leaveRequest->admin_notes ? $leaveRequest->admin_notes."\n\n[Resubmission Request]: ".$request->admin_notes : $request->admin_notes)
             : $leaveRequest->admin_notes;
 
         $leaveRequest->update([
@@ -985,7 +1051,7 @@ class LeaveRequestController extends Controller
             Log::info('Sending leave request resubmission email to user', [
                 'user_email' => $leaveRequest->user->email,
                 'leave_request_id' => $leaveRequest->id,
-                'user_name' => $leaveRequest->user->name
+                'user_name' => $leaveRequest->user->name,
             ]);
 
             $resubmissionEmailNotes = $this->normalizedLeaveRequestMailNotes($request->admin_notes)
@@ -997,19 +1063,19 @@ class LeaveRequestController extends Controller
 
             Log::info('Leave request resubmission email sent successfully', [
                 'user_email' => $leaveRequest->user->email,
-                'leave_request_id' => $leaveRequest->id
+                'leave_request_id' => $leaveRequest->id,
             ]);
         } catch (\Exception $e) {
             Log::error('Failed to send leave request resubmission email', [
                 'user_email' => $leaveRequest->user->email ?? 'unknown',
                 'leave_request_id' => $leaveRequest->id,
                 'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
+                'trace' => $e->getTraceAsString(),
             ]);
             // Don't fail the request if email fails
         }
 
-        return redirect('/admin/leave-requests/' . $leaveRequest->id)
+        return redirect('/admin/leave-requests/'.$leaveRequest->id)
             ->with('success', 'Leave request marked for resubmission. The employee will need to correct any errors.');
     }
 
@@ -1019,19 +1085,19 @@ class LeaveRequestController extends Controller
     public function studentIndex(Request $request)
     {
         $this->reconcilePendingAdditionalTimeRollbacks();
-        $user = auth()->user();
+        $user = $this->requireAuthUser();
         $allowedDepartmentIds = $user->canAccessStudentManagement()
             ? $user->getAllowedStudentDepartmentIds()
             : null;
 
         $search = trim((string) $request->input('search', ''));
         $perPage = (int) $request->input('per_page', 20);
-        if (!in_array($perPage, [10, 20, 50, 100], true)) {
+        if (! in_array($perPage, [10, 20, 50, 100], true)) {
             $perPage = 20;
         }
 
         $query = LeaveRequest::with(['user', 'reviewer'])
-            ->whereHas('user', function($q) use ($allowedDepartmentIds) {
+            ->whereHas('user', function ($q) use ($allowedDepartmentIds) {
                 $q->where('role', 'student');
                 if ($allowedDepartmentIds !== null) {
                     $q->whereIn('department_id', $allowedDepartmentIds);
@@ -1076,11 +1142,11 @@ class LeaveRequestController extends Controller
             ->appends($request->query());
 
         // Statistics
-        $baseQuery = LeaveRequest::whereHas('user', function($q) {
+        $baseQuery = LeaveRequest::whereHas('user', function ($q) {
             $q->where('role', 'student');
         });
         if ($allowedDepartmentIds !== null) {
-            $baseQuery->whereHas('user', function($q) use ($allowedDepartmentIds) {
+            $baseQuery->whereHas('user', function ($q) use ($allowedDepartmentIds) {
                 $q->whereIn('department_id', $allowedDepartmentIds);
             });
         }
@@ -1112,6 +1178,7 @@ class LeaveRequestController extends Controller
             'pending' => (clone $baseQuery)->where('status', 'pending')->count(),
             'approved' => (clone $baseQuery)->where('status', 'approved')->count(),
             'rejected' => (clone $baseQuery)->where('status', 'rejected')->count(),
+            'for_more_verification' => (clone $baseQuery)->where('status', 'for_more_verification')->count(),
         ];
 
         $students = \App\Models\User::where('role', 'student')
@@ -1130,7 +1197,7 @@ class LeaveRequestController extends Controller
      */
     public function studentCalendar(Request $request)
     {
-        $user = auth()->user();
+        $user = $this->requireAuthUser();
         $allowedDepartmentIds = $user->canAccessStudentManagement()
             ? $user->getAllowedStudentDepartmentIds()
             : null;
@@ -1155,7 +1222,7 @@ class LeaveRequestController extends Controller
 
         // Base query for leave requests that intersect the calendar range (students only)
         $leaveQuery = LeaveRequest::with('user')
-            ->whereHas('user', function($q) use ($allowedDepartmentIds) {
+            ->whereHas('user', function ($q) use ($allowedDepartmentIds) {
                 $q->where('role', 'student');
                 if ($allowedDepartmentIds !== null) {
                     $q->whereIn('department_id', $allowedDepartmentIds);
@@ -1165,12 +1232,12 @@ class LeaveRequestController extends Controller
                 $outer->where(function ($q) use ($startOfCalendar, $endOfCalendar) {
                     // Requests with a start and end date that overlap the calendar window
                     $q->whereDate('start_date', '<=', $endOfCalendar->toDateString())
-                      ->whereDate('end_date', '>=', $startOfCalendar->toDateString());
+                        ->whereDate('end_date', '>=', $startOfCalendar->toDateString());
                 })->orWhere(function ($q) use ($startOfCalendar, $endOfCalendar) {
                     // Handle single-day requests where end_date is null
                     $q->whereNull('end_date')
-                      ->whereDate('start_date', '>=', $startOfCalendar->toDateString())
-                      ->whereDate('start_date', '<=', $endOfCalendar->toDateString());
+                        ->whereDate('start_date', '>=', $startOfCalendar->toDateString())
+                        ->whereDate('start_date', '<=', $endOfCalendar->toDateString());
                 });
             });
 
@@ -1205,7 +1272,7 @@ class LeaveRequestController extends Controller
             $dayPeriod = CarbonPeriod::create($rangeStart, $rangeEnd);
             foreach ($dayPeriod as $day) {
                 $key = $day->toDateString();
-                if (!isset($days[$key])) {
+                if (! isset($days[$key])) {
                     continue;
                 }
 
@@ -1227,7 +1294,7 @@ class LeaveRequestController extends Controller
                 $week = [];
             }
         }
-        if (!empty($week)) {
+        if (! empty($week)) {
             $weeks[] = $week;
         }
 
@@ -1255,7 +1322,7 @@ class LeaveRequestController extends Controller
         // Also exclude disabled accounts
         $students = $allStudents->filter(function ($student) use ($totalsByStudent) {
             // Exclude disabled accounts
-            if (!$student->is_active) {
+            if (! $student->is_active) {
                 return false;
             }
 
@@ -1289,7 +1356,7 @@ class LeaveRequestController extends Controller
      */
     public function storeForStudent(Request $request)
     {
-        $user = auth()->user();
+        $user = $this->requireAuthUser();
         $allowedDepartmentIds = $user->canAccessStudentManagement()
             ? $user->getAllowedStudentDepartmentIds()
             : null;
@@ -1324,7 +1391,7 @@ class LeaveRequestController extends Controller
 
         foreach ($validated['student_ids'] as $studentId) {
             $student = User::findOrFail($studentId);
-            if ($allowedDepartmentIds !== null && !in_array($student->department_id, $allowedDepartmentIds, true)) {
+            if ($allowedDepartmentIds !== null && ! in_array($student->department_id, $allowedDepartmentIds, true)) {
                 continue;
             }
 
@@ -1397,7 +1464,7 @@ class LeaveRequestController extends Controller
                     if ($existingRemarks === '') {
                         $dtr->remarks = $additionalTimeRemark;
                     } elseif (strpos($existingRemarks, $additionalTimeRemark) === false) {
-                        $dtr->remarks = $existingRemarks . '; ' . $additionalTimeRemark;
+                        $dtr->remarks = $existingRemarks.'; '.$additionalTimeRemark;
                     }
                     $dtr->save();
 
@@ -1426,7 +1493,7 @@ class LeaveRequestController extends Controller
             if ($existingRemarks === '') {
                 $dtr->remarks = $additionalTimeRemark;
             } elseif (strpos($existingRemarks, $additionalTimeRemark) === false) {
-                $dtr->remarks = $existingRemarks . '; ' . $additionalTimeRemark;
+                $dtr->remarks = $existingRemarks.'; '.$additionalTimeRemark;
             }
 
             $dtr->save();
@@ -1442,7 +1509,7 @@ class LeaveRequestController extends Controller
         $alreadyReverted = LeaveRequestLog::where('leave_request_id', $leaveRequest->id)
             ->where('action', 'additional_time_reverted')
             ->exists();
-        if (!$force && $alreadyReverted) {
+        if (! $force && $alreadyReverted) {
             return;
         }
 
@@ -1454,7 +1521,7 @@ class LeaveRequestController extends Controller
             if ($minutes >= 0 && $minutes <= 59) {
                 $hoursToDeduct = $hours + ($minutes / 60);
                 if ($hoursToDeduct > 0) {
-                    $remarkToken = "Additional Time ({$hours}:".str_pad((string) $minutes, 2, '0', STR_PAD_LEFT).")";
+                    $remarkToken = "Additional Time ({$hours}:".str_pad((string) $minutes, 2, '0', STR_PAD_LEFT).')';
                     $date = Carbon::parse($leaveRequest->start_date);
                     $dtr = Dtr::where('user_id', $leaveRequest->user_id)
                         ->whereDate('date', $date->toDateString())
@@ -1467,7 +1534,7 @@ class LeaveRequestController extends Controller
                         $dtr->total_hours = $newTotal;
                         $dtr->overtime_hours = max($newTotal - 8.0, 0);
                         if ($existingRemarks !== '' && strpos($existingRemarks, $remarkToken) !== false) {
-                            $dtr->remarks = trim(str_replace([$remarkToken . '; ', '; ' . $remarkToken, $remarkToken], '', $existingRemarks));
+                            $dtr->remarks = trim(str_replace([$remarkToken.'; ', '; '.$remarkToken, $remarkToken], '', $existingRemarks));
                         }
                         $dtr->save();
                         $didRevert = true;
@@ -1483,6 +1550,7 @@ class LeaveRequestController extends Controller
                             'performed_by' => Auth::id(),
                         ]);
                     }
+
                     return;
                 }
             }
@@ -1497,7 +1565,7 @@ class LeaveRequestController extends Controller
                 ->whereDate('date', $date->toDateString())
                 ->first();
 
-            if (!$dtr) {
+            if (! $dtr) {
                 continue;
             }
 
@@ -1553,11 +1621,13 @@ class LeaveRequestController extends Controller
     {
         if ($leaveRequest->type === 'additional_time') {
             $this->revertAdditionalTimeFromDtr($leaveRequest, $force);
+
             return;
         }
 
         if (in_array($leaveRequest->type, ['leave', 'vacation_leave', 'sick_leave'], true)) {
             $this->revertLeaveTimeFromDtr($leaveRequest, $force);
+
             return;
         }
 
@@ -1571,7 +1641,7 @@ class LeaveRequestController extends Controller
         $alreadyReverted = LeaveRequestLog::where('leave_request_id', $leaveRequest->id)
             ->where('action', 'leave_time_reverted')
             ->exists();
-        if (!$force && $alreadyReverted) {
+        if (! $force && $alreadyReverted) {
             return;
         }
 
@@ -1586,7 +1656,7 @@ class LeaveRequestController extends Controller
                 ->whereDate('date', $date->toDateString())
                 ->first();
 
-            if (!$dtr) {
+            if (! $dtr) {
                 continue;
             }
 
@@ -1615,7 +1685,7 @@ class LeaveRequestController extends Controller
         $alreadyReverted = LeaveRequestLog::where('leave_request_id', $leaveRequest->id)
             ->where('action', 'travel_time_reverted')
             ->exists();
-        if (!$force && $alreadyReverted) {
+        if (! $force && $alreadyReverted) {
             return;
         }
 
@@ -1629,7 +1699,7 @@ class LeaveRequestController extends Controller
                 ->whereDate('date', $date->toDateString())
                 ->first();
 
-            if (!$dtr) {
+            if (! $dtr) {
                 continue;
             }
 
@@ -1678,8 +1748,8 @@ class LeaveRequestController extends Controller
             // Update remarks to include travel information
             $existingRemarks = $dtr->remarks ?? '';
             $travelRemark = "Travel Leave ({$hoursPerDay}h)";
-            if (!empty($existingRemarks) && strpos($existingRemarks, $travelRemark) === false) {
-                $dtr->remarks = $existingRemarks . '; ' . $travelRemark;
+            if (! empty($existingRemarks) && strpos($existingRemarks, $travelRemark) === false) {
+                $dtr->remarks = $existingRemarks.'; '.$travelRemark;
             } elseif (empty($existingRemarks)) {
                 $dtr->remarks = $travelRemark;
             }
@@ -1722,8 +1792,8 @@ class LeaveRequestController extends Controller
             // Update remarks to include leave information
             $existingRemarks = $dtr->remarks ?? '';
             $leaveRemark = "Approved {$leaveTypeLabel}";
-            if (!empty($existingRemarks) && strpos($existingRemarks, $leaveRemark) === false) {
-                $dtr->remarks = $existingRemarks . '; ' . $leaveRemark;
+            if (! empty($existingRemarks) && strpos($existingRemarks, $leaveRemark) === false) {
+                $dtr->remarks = $existingRemarks.'; '.$leaveRemark;
             } elseif (empty($existingRemarks)) {
                 $dtr->remarks = $leaveRemark;
             }
@@ -1796,7 +1866,7 @@ class LeaveRequestController extends Controller
             Log::error('Failed to calculate weekly deficit', [
                 'user_id' => $userId,
                 'date' => $date->toDateString(),
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ]);
         }
     }
@@ -1822,7 +1892,7 @@ class LeaveRequestController extends Controller
                 'overtime_hours' => 0,
             ]);
         } catch (QueryException $e) {
-            if (!$this->isDtrUniqueConstraintError($e)) {
+            if (! $this->isDtrUniqueConstraintError($e)) {
                 throw $e;
             }
 
@@ -1840,6 +1910,7 @@ class LeaveRequestController extends Controller
     private function isDtrUniqueConstraintError(QueryException $e): bool
     {
         $msg = $e->getMessage();
+
         return str_contains($msg, 'dtrs.user_id, dtrs.date')
             || str_contains($msg, 'UNIQUE constraint failed');
     }
@@ -1850,7 +1921,7 @@ class LeaveRequestController extends Controller
     private function parseHourMinuteToMinutesForAdminFiling(string $text): int
     {
         $text = trim($text);
-        if (!preg_match('/^(\d{1,3}):(\d{2})$/', $text, $m)) {
+        if (! preg_match('/^(\d{1,3}):(\d{2})$/', $text, $m)) {
             return 0;
         }
         $h = (int) $m[1];
@@ -1872,11 +1943,11 @@ class LeaveRequestController extends Controller
 
         if ($type === 'overtime') {
             $details = "Overtime Request Details:\n";
-            $details .= 'Total Overtime Hours: ' . ($validated['overtime_hours'] ?? '') . "\n";
-            $details .= 'Overtime Dates: ' . ($validated['overtime_dates'] ?? '') . "\n";
-            $details .= "Tasks / ClickUp Links:\n" . ($validated['overtime_tasks'] ?? '') . "\n";
+            $details .= 'Total Overtime Hours: '.($validated['overtime_hours'] ?? '')."\n";
+            $details .= 'Overtime Dates: '.($validated['overtime_dates'] ?? '')."\n";
+            $details .= "Tasks / ClickUp Links:\n".($validated['overtime_tasks'] ?? '')."\n";
             if ($reasonToStore !== '') {
-                $details .= "\nAdditional Explanation:\n" . $reasonToStore;
+                $details .= "\nAdditional Explanation:\n".$reasonToStore;
             }
 
             return $details;
@@ -1888,12 +1959,12 @@ class LeaveRequestController extends Controller
                 : 'Working remotely';
 
             $details = "Work From Home Request Details:\n";
-            $details .= 'Mode: ' . $modeLabel . "\n";
-            $details .= 'Remote Address: ' . ($validated['wfh_address'] ?? '') . "\n";
-            $details .= 'Work Dates: ' . ($validated['start_date'] ?? '') . ' to ' . ($validated['end_date'] ?? $validated['start_date']) . "\n";
-            $details .= "Tasks / ClickUp Links:\n" . ($validated['wfh_tasks'] ?? '') . "\n";
+            $details .= 'Mode: '.$modeLabel."\n";
+            $details .= 'Remote Address: '.($validated['wfh_address'] ?? '')."\n";
+            $details .= 'Work Dates: '.($validated['start_date'] ?? '').' to '.($validated['end_date'] ?? $validated['start_date'])."\n";
+            $details .= "Tasks / ClickUp Links:\n".($validated['wfh_tasks'] ?? '')."\n";
             if ($reasonToStore !== '') {
-                $details .= "\nAdditional Explanation:\n" . $reasonToStore;
+                $details .= "\nAdditional Explanation:\n".$reasonToStore;
             }
 
             return $details;
@@ -1915,17 +1986,17 @@ class LeaveRequestController extends Controller
             }
 
             $details = "Offset Request Details:\n";
-            $details .= 'Duration: ' . $days . ' ' . ($days === 1 ? 'day' : 'days') . "\n";
-            $details .= 'Hours to Deduct: ' . $offsetHours . "\n";
+            $details .= 'Duration: '.$days.' '.($days === 1 ? 'day' : 'days')."\n";
+            $details .= 'Hours to Deduct: '.$offsetHours."\n";
             if ($reasonToStore !== '') {
-                $details .= "\nReason:\n" . $reasonToStore;
+                $details .= "\nReason:\n".$reasonToStore;
             }
 
             return $details;
         }
 
         if ($type === 'travel') {
-            return 'Location of travel: ' . $reasonToStore;
+            return 'Location of travel: '.$reasonToStore;
         }
 
         return $reasonToStore;
@@ -1951,7 +2022,7 @@ class LeaveRequestController extends Controller
             ->where('action', 'filed_by_admin')
             ->first();
 
-        if (!$filedByAdminLog) {
+        if (! $filedByAdminLog) {
             return redirect('/admin/leave-requests')
                 ->with('error', 'This leave request cannot be deleted. Only requests filed by admins can be deleted.');
         }

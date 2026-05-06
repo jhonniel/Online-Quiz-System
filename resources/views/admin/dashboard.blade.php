@@ -140,7 +140,7 @@
     </div>
 
     <!-- Employee & Student Statistics -->
-    <div class="grid grid-cols-1 gap-3 sm:gap-4 md:gap-5 sm:grid-cols-2 lg:grid-cols-4">
+    <div class="grid grid-cols-1 gap-3 sm:gap-4 md:gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
         <!-- Total Employees -->
         <div class="bg-gradient-to-r from-blue-50 to-blue-100 overflow-hidden shadow rounded-lg border border-blue-200">
             <div class="p-4 sm:p-5">
@@ -223,6 +223,31 @@
                 </div>
             </div>
         </div>
+
+        <!-- Students: training time not yet completed -->
+        <a href="{{ url('/admin/student-management/dashboard') }}" class="bg-gradient-to-r from-rose-50 to-orange-50 overflow-hidden shadow rounded-lg border border-rose-200 block hover:border-rose-300 hover:shadow-md transition-shadow">
+            <div class="p-4 sm:p-5">
+                <div class="flex items-center">
+                    <div class="flex-shrink-0">
+                        <svg class="h-5 w-5 sm:h-6 sm:w-6 text-rose-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                    </div>
+                    <div class="ml-3 sm:ml-5 w-0 flex-1 min-w-0">
+                        <dl>
+                            <dt class="text-xs sm:text-sm font-medium text-rose-800 truncate">Students — training incomplete</dt>
+                            <dd class="text-base sm:text-lg font-medium text-rose-900">{{ $studentsIncompleteTrainingCount ?? 0 }}</dd>
+                            <dd class="text-xs text-rose-700 mt-1">
+                                Active students under required DTR hours
+                                @if(($studentsWithTrainingRequirementCount ?? 0) > 0)
+                                    <span class="whitespace-nowrap">({{ $studentsWithTrainingRequirementCount }} with a set target)</span>
+                                @endif
+                            </dd>
+                        </dl>
+                    </div>
+                </div>
+            </div>
+        </a>
     </div>
 
     <!-- Real-time User Activity -->
@@ -1303,40 +1328,105 @@
 @endsection
 
 @section('scripts')
+@php
+    $__dashboardCharts = [
+        'loginLabels' => $loginChartLabels ?? [],
+        'loginData' => $loginChartData ?? [],
+        'quizAttemptLabels' => $quizAttemptChartLabels ?? [],
+        'quizAttemptData' => $quizAttemptChartData ?? [],
+        'userRegLabels' => $userRegChartLabels ?? [],
+        'userRegData' => $userRegChartData ?? [],
+        'errorLogLabels' => $errorLogChartLabels ?? [],
+        'errorLogData' => $errorLogChartData ?? [],
+        'studentRegLabels' => $studentRegChartLabels ?? [],
+        'studentRegData' => $studentRegChartData ?? [],
+        'employeeRegData' => $employeeRegChartData ?? [],
+        'dtrLabels' => $dtrChartLabels ?? [],
+        'dtrEmployeeData' => $dtrEmployeeChartData ?? [],
+        'dtrStudentData' => $dtrStudentChartData ?? [],
+        'leaveEmployeeLabels' => $leaveRequestEmployeeLabels ?? [],
+        'leaveEmployeeData' => $leaveRequestEmployeeData ?? [],
+        'leaveStudentLabels' => $leaveRequestStudentLabels ?? [],
+        'leaveStudentData' => $leaveRequestStudentData ?? [],
+        'activityTypeLabels' => $activityTypeLabels ?? [],
+        'activityTypeData' => $activityTypeData ?? [],
+        'loginTimeLabels' => $loginTimeLabels ?? [],
+        'loginTimeData' => $loginTimeData ?? [],
+        'activityLogLabels' => $activityLogLabels ?? [],
+        'activityLogTotalData' => $activityLogTotalData ?? [],
+        'activityLogGuestTrafficData' => $activityLogGuestTrafficData ?? [],
+        'activityLogByTypeLabels' => $activityLogByTypeLabels ?? [],
+        'activityLogLoginData' => $activityLogLoginData ?? [],
+        'activityLogLogoutData' => $activityLogLogoutData ?? [],
+        'activityLogPageViewData' => $activityLogPageViewData ?? [],
+        'activityLogGuestPageViewData' => $activityLogGuestPageViewData ?? [],
+        'activityDataUrl' => route('admin.activity-data'),
+    ];
+@endphp
+<script type="application/json" id="dashboard-chart-payload">{!! json_encode($__dashboardCharts, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT | JSON_THROW_ON_ERROR) !!}</script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    // Chart data from server
-    const loginLabels = @json($loginChartLabels ?? []);
-    const loginData = @json($loginChartData ?? []);
-    const quizAttemptLabels = @json($quizAttemptChartLabels ?? []);
-    const quizAttemptData = @json($quizAttemptChartData ?? []);
-    const userRegLabels = @json($userRegChartLabels ?? []);
-    const userRegData = @json($userRegChartData ?? []);
-    const errorLogLabels = @json($errorLogChartLabels ?? []);
-    const errorLogData = @json($errorLogChartData ?? []);
-    const studentRegLabels = @json($studentRegChartLabels ?? []);
-    const studentRegData = @json($studentRegChartData ?? []);
-    const employeeRegData = @json($employeeRegChartData ?? []);
-    const dtrLabels = @json($dtrChartLabels ?? []);
-    const dtrEmployeeData = @json($dtrEmployeeChartData ?? []);
-    const dtrStudentData = @json($dtrStudentChartData ?? []);
-    const leaveEmployeeLabels = @json($leaveRequestEmployeeLabels ?? []);
-    const leaveEmployeeData = @json($leaveRequestEmployeeData ?? []);
-    const leaveStudentLabels = @json($leaveRequestStudentLabels ?? []);
-    const leaveStudentData = @json($leaveRequestStudentData ?? []);
-    const activityTypeLabels = @json($activityTypeLabels ?? []);
-    const activityTypeData = @json($activityTypeData ?? []);
-    const loginTimeLabels = @json($loginTimeLabels ?? []);
-    const loginTimeData = @json($loginTimeData ?? []);
-    const activityLogLabels = @json($activityLogLabels ?? []);
-    const activityLogTotalData = @json($activityLogTotalData ?? []);
-    const activityLogGuestTrafficData = @json($activityLogGuestTrafficData ?? []);
-    const activityLogByTypeLabels = @json($activityLogByTypeLabels ?? []);
-    const activityLogLoginData = @json($activityLogLoginData ?? []);
-    const activityLogLogoutData = @json($activityLogLogoutData ?? []);
-    const activityLogPageViewData = @json($activityLogPageViewData ?? []);
-    const activityLogGuestPageViewData = @json($activityLogGuestPageViewData ?? []);
+    let parsed = {};
+    try {
+        var payloadEl = document.getElementById('dashboard-chart-payload');
+        if (payloadEl && payloadEl.textContent.trim()) {
+            parsed = JSON.parse(payloadEl.textContent);
+        }
+    } catch (e) {
+        console.error('Dashboard chart payload parse error', e);
+    }
+
+    var activityDataUrl = typeof parsed.activityDataUrl === 'string' ? parsed.activityDataUrl : '';
+
+    var chartKeys = [
+        'loginLabels', 'loginData', 'quizAttemptLabels', 'quizAttemptData',
+        'userRegLabels', 'userRegData', 'errorLogLabels', 'errorLogData',
+        'studentRegLabels', 'studentRegData', 'employeeRegData',
+        'dtrLabels', 'dtrEmployeeData', 'dtrStudentData',
+        'leaveEmployeeLabels', 'leaveEmployeeData', 'leaveStudentLabels', 'leaveStudentData',
+        'activityTypeLabels', 'activityTypeData',
+        'loginTimeLabels', 'loginTimeData',
+        'activityLogLabels', 'activityLogTotalData', 'activityLogGuestTrafficData',
+        'activityLogByTypeLabels', 'activityLogLoginData', 'activityLogLogoutData',
+        'activityLogPageViewData', 'activityLogGuestPageViewData'
+    ];
+    var chartArrays = {};
+    chartKeys.forEach(function (key) {
+        var v = parsed[key];
+        chartArrays[key] = Array.isArray(v) ? v : [];
+    });
+
+    var loginLabels = chartArrays.loginLabels;
+    var loginData = chartArrays.loginData;
+    var quizAttemptLabels = chartArrays.quizAttemptLabels;
+    var quizAttemptData = chartArrays.quizAttemptData;
+    var userRegLabels = chartArrays.userRegLabels;
+    var userRegData = chartArrays.userRegData;
+    var errorLogLabels = chartArrays.errorLogLabels;
+    var errorLogData = chartArrays.errorLogData;
+    var studentRegLabels = chartArrays.studentRegLabels;
+    var studentRegData = chartArrays.studentRegData;
+    var employeeRegData = chartArrays.employeeRegData;
+    var dtrLabels = chartArrays.dtrLabels;
+    var dtrEmployeeData = chartArrays.dtrEmployeeData;
+    var dtrStudentData = chartArrays.dtrStudentData;
+    var leaveEmployeeLabels = chartArrays.leaveEmployeeLabels;
+    var leaveEmployeeData = chartArrays.leaveEmployeeData;
+    var leaveStudentLabels = chartArrays.leaveStudentLabels;
+    var leaveStudentData = chartArrays.leaveStudentData;
+    var activityTypeLabels = chartArrays.activityTypeLabels;
+    var activityTypeData = chartArrays.activityTypeData;
+    var loginTimeLabels = chartArrays.loginTimeLabels;
+    var loginTimeData = chartArrays.loginTimeData;
+    var activityLogLabels = chartArrays.activityLogLabels;
+    var activityLogTotalData = chartArrays.activityLogTotalData;
+    var activityLogGuestTrafficData = chartArrays.activityLogGuestTrafficData;
+    var activityLogByTypeLabels = chartArrays.activityLogByTypeLabels;
+    var activityLogLoginData = chartArrays.activityLogLoginData;
+    var activityLogLogoutData = chartArrays.activityLogLogoutData;
+    var activityLogPageViewData = chartArrays.activityLogPageViewData;
+    var activityLogGuestPageViewData = chartArrays.activityLogGuestPageViewData;
 
     // Activity Trends Chart (Logins + Quiz Attempts)
     if (document.getElementById('activityChart') && typeof Chart !== 'undefined') {
@@ -1685,7 +1775,10 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Real-time user activity updates
     function updateActivityData() {
-        fetch('{{ url('/admin/activity-data') }}')
+        if (!activityDataUrl) {
+            return;
+        }
+        fetch(activityDataUrl)
             .then(response => response.json())
             .then(data => {
                 // Update online count

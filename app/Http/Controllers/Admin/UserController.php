@@ -123,6 +123,7 @@ class UserController extends Controller
             ],
             'is_active' => 'boolean',
             'required_training_hours' => 'nullable|numeric|min:0',
+            'student_absence_allowance' => 'nullable|numeric|min:0|max:365',
             'leave_allowance' => 'nullable|numeric|min:0|max:365',
             'vacation_allowance' => 'nullable|numeric|min:0|max:365',
             'sick_allowance' => 'nullable|numeric|min:0|max:365',
@@ -157,6 +158,9 @@ class UserController extends Controller
             'department_id' => in_array($request->role, ['employee', 'student', 'teacher'], true) ? $request->department_id : null,
             'is_active' => $request->has('is_active'),
             'required_training_hours' => $request->required_training_hours,
+            'student_absence_allowance' => $request->role === 'student'
+                ? (float) ($request->input('student_absence_allowance', 0))
+                : 0,
         ]);
 
         // Handle leave balances for employees
@@ -396,6 +400,7 @@ class UserController extends Controller
             ],
             'is_active' => 'boolean',
             'required_training_hours' => 'nullable|numeric|min:0',
+            'student_absence_allowance' => 'nullable|numeric|min:0|max:365',
             'leave_allowance' => 'nullable|numeric|min:0|max:365',
             'vacation_allowance' => 'nullable|numeric|min:0|max:365',
             'sick_allowance' => 'nullable|numeric|min:0|max:365',
@@ -468,11 +473,15 @@ class UserController extends Controller
             $noticeMsg = trim((string) ($request->input('student_rules_notice_message') ?? ''));
             $data['student_rules_notice_message'] = $noticeMsg !== '' ? $noticeMsg : null;
             $data['student_terminated'] = $request->boolean('student_terminated');
+            $data['student_absence_allowance'] = $request->filled('student_absence_allowance')
+                ? (float) $request->student_absence_allowance
+                : 0;
         } else {
             $data['student_rules_warning'] = false;
             $data['student_rules_marquee_enabled'] = false;
             $data['student_rules_notice_message'] = null;
             $data['student_terminated'] = false;
+            $data['student_absence_allowance'] = 0;
         }
 
         $prevStudentRulesWarning = (bool) ($user->student_rules_warning ?? false);

@@ -11,7 +11,9 @@
                 @php
                     $statusLabel = $status === 'resubmission_requested' || ($status === 'pending' && $leaveRequest->reviewed_at)
                         ? 'Resubmission Required'
-                        : ucfirst($status);
+                        : ($status === 'for_more_verification'
+                            ? 'For More Verification'
+                            : ucfirst($status));
                 @endphp
                 <h1 style="margin: 0 0 4px 0; font-size: 20px; color: #111827;">
                     Request Status Update
@@ -54,6 +56,8 @@
                         ✅ Your {{ $leaveRequest->type_label }} request has been <strong>{{ $statusLabel }}</strong>. Please make sure to coordinate with your team regarding your absence.
                     @elseif($status === 'rejected')
                         ❌ Your {{ $leaveRequest->type_label }} request has been <strong>{{ $statusLabel }}</strong>. If you have any questions, please contact your supervisor or HR.
+                    @elseif($status === 'for_more_verification')
+                        🔎 Your {{ $leaveRequest->type_label }} request is now <strong>{{ $statusLabel }}</strong>. The reviewer needs additional checks or clarifications. Please review the notes above and wait for the next update.
                     @elseif($status === 'resubmission_requested' || ($status === 'pending' && $leaveRequest->reviewed_at))
                         ⚠️ Your {{ $leaveRequest->type_label }} request has been <strong>{{ $statusLabel }}</strong>. Please review the reviewer notes above (if any) and make the necessary corrections. You can edit your request from your leave requests page.
                     @endif

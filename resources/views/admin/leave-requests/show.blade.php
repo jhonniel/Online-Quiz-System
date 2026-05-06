@@ -709,7 +709,7 @@
             @endif
 
             <!-- Action Panel -->
-            @if($leaveRequest->isPending())
+            @if($leaveRequest->isPending() || $leaveRequest->status === 'for_more_verification')
                 <!-- Approve Form -->
                 @if($leaveRequest->type === 'offset' && isset($hasNegativeBalance) && $hasNegativeBalance)
                     <!-- Force Approve Form (for offset when duration exceeds overtime balance) -->
@@ -783,6 +783,38 @@
                     </div>
                 @endif
 
+                <!-- For More Verification Form -->
+                <div class="bg-white rounded-lg shadow border border-blue-200 p-4 sm:p-6">
+                    <h3 class="text-base sm:text-lg font-bold text-gray-900 mb-3 sm:mb-4">Mark as For More Verification</h3>
+                    <p class="text-xs sm:text-sm text-gray-600 mb-3 sm:mb-4">Use this when you need additional verification checks before final approval or rejection.</p>
+                    <form action="{{ url('/admin/leave-requests/' . $leaveRequest->id . '/verify') }}" method="POST" class="space-y-3 sm:space-y-4">
+                        @csrf
+                        <div>
+                            <label for="verify_notes" class="block text-xs sm:text-sm font-medium text-gray-700 mb-2">Verification Notes (Required)</label>
+                            <textarea name="admin_notes" id="verify_notes" rows="3"
+                                      placeholder="Explain what needs further verification..."
+                                      required
+                                      class="w-full px-3 sm:px-4 py-2 text-sm sm:text-base border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"></textarea>
+                        </div>
+                        <button type="submit" id="verify-btn"
+                                class="w-full px-4 py-2 text-sm sm:text-base bg-blue-600 text-white rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed">
+                            <span class="verify-content flex items-center justify-center">
+                                <svg class="h-4 w-4 sm:h-5 sm:w-5 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h11M9 21V3m3 8h9"></path>
+                                </svg>
+                                Set For More Verification
+                            </span>
+                            <span class="verify-loading hidden flex items-center justify-center">
+                                <svg class="animate-spin h-4 w-4 sm:h-5 sm:w-5 mr-2 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                </svg>
+                                Processing...
+                            </span>
+                        </button>
+                    </form>
+                </div>
+
                 <!-- Reject Form -->
                 <div class="bg-white rounded-lg shadow border border-gray-200 p-4 sm:p-6">
                     <h3 class="text-base sm:text-lg font-bold text-gray-900 mb-3 sm:mb-4">Reject Request</h3>
@@ -852,9 +884,9 @@
                             {{ $leaveRequest->display_status }}
                         </span>
                         <p class="text-xs sm:text-sm text-gray-500 mt-3 sm:mt-4">
-                            This request has already been {{ $leaveRequest->status }}.
+                            This request is currently marked as {{ $leaveRequest->display_status }}.
                         </p>
-                        @if($leaveRequest->isRejected() || $leaveRequest->isApproved())
+                        @if($leaveRequest->isRejected() || $leaveRequest->isApproved() || $leaveRequest->status === 'for_more_verification')
                             <form action="{{ url('/admin/leave-requests/' . $leaveRequest->id . '/resubmit') }}" method="POST" class="mt-3 sm:mt-4">
                                 @csrf
                                 <div class="mb-3 sm:mb-4">
@@ -920,6 +952,21 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
+    // Handle Verify form
+    const verifyForm = document.querySelector('form[action*="/verify"]');
+    if (verifyForm) {
+        verifyForm.addEventListener('submit', function(e) {
+            const btn = document.getElementById('verify-btn');
+            if (btn) {
+                btn.disabled = true;
+                const content = btn.querySelector('.verify-content');
+                const loading = btn.querySelector('.verify-loading');
+                if (content) content.classList.add('hidden');
+                if (loading) loading.classList.remove('hidden');
+            }
+        });
+    }
+
     // Handle Reject form
     const rejectForm = document.querySelector('form[action*="reject"]');
     if (rejectForm) {
@@ -960,11 +1007,11 @@ document.addEventListener('DOMContentLoaded', function() {
     @if($leaveRequest->logs && $leaveRequest->logs->count() > 0)
         <div class="space-y-4">
             @foreach($leaveRequest->logs as $log)
-                <div class="border-l-4 {{ $log->action === 'approved' ? 'border-green-500' : ($log->action === 'rejected' ? 'border-red-500' : ($log->action === 'resubmission_requested' ? 'border-yellow-500' : 'border-gray-400')) }} pl-4 py-2">
+                <div class="border-l-4 {{ $log->action === 'approved' ? 'border-green-500' : ($log->action === 'rejected' ? 'border-red-500' : ($log->action === 'resubmission_requested' ? 'border-yellow-500' : ($log->action === 'for_more_verification' ? 'border-blue-500' : 'border-gray-400'))) }} pl-4 py-2">
                     <div class="flex items-start justify-between">
                         <div class="flex-1">
                             <div class="flex items-center space-x-2">
-                                <span class="px-2 py-1 text-xs font-semibold rounded-full {{ $log->action === 'approved' ? 'bg-green-100 text-green-800' : ($log->action === 'rejected' ? 'bg-red-100 text-red-800' : ($log->action === 'resubmission_requested' ? 'bg-yellow-100 text-yellow-800' : 'bg-gray-100 text-gray-800')) }}">
+                                <span class="px-2 py-1 text-xs font-semibold rounded-full {{ $log->action === 'approved' ? 'bg-green-100 text-green-800' : ($log->action === 'rejected' ? 'bg-red-100 text-red-800' : ($log->action === 'resubmission_requested' ? 'bg-yellow-100 text-yellow-800' : ($log->action === 'for_more_verification' ? 'bg-blue-100 text-blue-800' : 'bg-gray-100 text-gray-800'))) }}">
                                     {{ $log->action_label }}
                                 </span>
                                 @if($log->status_before && $log->status_after)

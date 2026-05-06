@@ -145,6 +145,16 @@
                                    placeholder="e.g. 160">
                             <p class="mt-1 text-xs text-gray-500">For students: total hours needed via DTR.</p>
                             @error('required_training_hours') <p class="mt-1 text-sm text-red-600">{{ $message }}</p> @enderror
+
+                            <div class="mt-4">
+                                <label for="student_absence_allowance" class="block text-sm font-semibold text-gray-700 mb-1.5">Allowable Absences Balance (Days)</label>
+                                <input type="number" name="student_absence_allowance" id="student_absence_allowance" step="0.01" min="0" max="365"
+                                       value="{{ old('student_absence_allowance', (float) ($user->student_absence_allowance ?? 0)) }}"
+                                       class="block w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 text-sm"
+                                       placeholder="e.g. 5">
+                                <p class="mt-1 text-xs text-gray-500">Students cannot file <strong>Absent</strong> leave once this balance reaches 0.</p>
+                                @error('student_absence_allowance') <p class="mt-1 text-sm text-red-600">{{ $message }}</p> @enderror
+                            </div>
                         </div>
                     </div>
                 </div>

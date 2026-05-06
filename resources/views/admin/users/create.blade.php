@@ -297,6 +297,37 @@
                                 {{ $message }}
                             </p>
                         @enderror
+
+                        <div class="pt-2">
+                            <label for="student_absence_allowance" class="block text-sm font-semibold text-gray-700">
+                                Allowable Absences Balance (Days)
+                            </label>
+                            <div class="relative group">
+                                <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                                    <svg class="w-5 h-5 text-gray-400 group-focus-within:text-indigo-500 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                                    </svg>
+                                </div>
+                                <input type="number"
+                                       step="0.01"
+                                       min="0"
+                                       max="365"
+                                       name="student_absence_allowance"
+                                       id="student_absence_allowance"
+                                       value="{{ old('student_absence_allowance', 0) }}"
+                                       placeholder="e.g. 5"
+                                       class="block w-full pl-12 pr-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200 bg-gray-50 focus:bg-white @error('student_absence_allowance') border-red-300 focus:ring-red-500 focus:border-red-500 @enderror">
+                            </div>
+                            <p class="text-xs text-gray-500 mt-1">Students cannot file <strong>Absent</strong> leave once this balance reaches 0.</p>
+                            @error('student_absence_allowance')
+                                <p class="text-sm text-red-600 flex items-center mt-1">
+                                    <svg class="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                                        <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd"></path>
+                                    </svg>
+                                    {{ $message }}
+                                </p>
+                            @enderror
+                        </div>
                     </div>
 
                     <!-- Leave Balances (Employees Only) -->

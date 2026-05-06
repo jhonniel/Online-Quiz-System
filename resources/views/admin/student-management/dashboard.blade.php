@@ -22,49 +22,6 @@
                 </p>
             </div>
 
-            @php
-                $totalStudents = $students->count();
-                $totalRequired = $students->sum('required_hours');
-                $totalDtr = $students->sum('total_hours');
-                $avgCompletion = $totalRequired > 0 ? ($totalDtr / max($totalRequired, 0.01)) * 100 : 0;
-                $endingThisMonth = $studentsEndingThisMonth ?? 0;
-            @endphp
-
-            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 w-full md:w-auto">
-                <div class="bg-white/10 backdrop-blur-sm border border-white/20 rounded-xl px-4 py-3 sm:px-5 sm:py-4 text-indigo-50">
-                    <div class="text-[11px] sm:text-xs uppercase tracking-wide text-indigo-100/80">Total Students</div>
-                    <div class="mt-1 text-xl sm:text-2xl font-bold">{{ $totalStudents }}</div>
-                </div>
-                <div class="bg-white/10 backdrop-blur-sm border border-white/20 rounded-xl px-4 py-3 sm:px-5 sm:py-4 text-indigo-50">
-                    <div class="flex items-center justify-between">
-                        <div>
-                            <div class="text-[11px] sm:text-xs uppercase tracking-wide text-indigo-100/80">With Remaining Time</div>
-                            <div class="mt-1 text-xl sm:text-2xl font-bold text-rose-200">{{ $studentsWithRemainingTime ?? 0 }}</div>
-                        </div>
-                    </div>
-                    <div class="mt-2 text-[10px] text-indigo-100/70">
-                        <span class="font-semibold">{{ $endingThisMonth }}</span>
-                        may be able to finish by the end of this month.
-                    </div>
-                </div>
-                <div class="bg-white/10 backdrop-blur-sm border border-white/20 rounded-xl px-4 py-3 sm:px-5 sm:py-4 text-indigo-50">
-                    <div class="text-[11px] sm:text-xs uppercase tracking-wide text-indigo-100/80">Total Required Time</div>
-                    <div class="mt-1 text-xl sm:text-2xl font-bold">
-                        {{ sprintf('%02d:%02d', intdiv((int) round($totalRequired * 60), 60), (int) round($totalRequired * 60) % 60) }}
-                    </div>
-                </div>
-                <div class="bg-white/10 backdrop-blur-sm border border-white/20 rounded-xl px-4 py-3 sm:px-5 sm:py-4 text-indigo-50">
-                    <div class="flex items-center justify-between">
-                        <span class="text-[11px] sm:text-xs uppercase tracking-wide text-indigo-100/80">Avg. Completion</span>
-                    </div>
-                    <div class="mt-1 flex items-end space-x-2">
-                        <span class="text-xl sm:text-2xl font-bold">{{ number_format($avgCompletion, 1) }}%</span>
-                    </div>
-                    <div class="mt-2 w-full h-1.5 rounded-full bg-white/15 overflow-hidden">
-                        <div class="h-full bg-emerald-400 rounded-full" style="width: {{ max(0, min(100, $avgCompletion)) }}%;"></div>
-                    </div>
-                </div>
-            </div>
         </div>
     </div>
 

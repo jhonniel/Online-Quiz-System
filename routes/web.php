@@ -294,6 +294,7 @@ Route::prefix('admin')->middleware(['auth', 'admin'])->group(function () {
         Route::post('/leave-requests/create-for-employee', [App\Http\Controllers\Admin\LeaveRequestController::class, 'storeForEmployee'])->name('admin.leave-requests.store-for-employee');
         Route::get('/leave-requests/{leaveRequest}', [App\Http\Controllers\Admin\LeaveRequestController::class, 'show'])->name('admin.leave-requests.show');
         Route::post('/leave-requests/{leaveRequest}/approve', [App\Http\Controllers\Admin\LeaveRequestController::class, 'approve'])->name('admin.leave-requests.approve');
+        Route::post('/leave-requests/{leaveRequest}/verify', [App\Http\Controllers\Admin\LeaveRequestController::class, 'verify'])->name('admin.leave-requests.verify');
         Route::post('/leave-requests/{leaveRequest}/force-accept', [App\Http\Controllers\Admin\LeaveRequestController::class, 'forceAccept'])->name('admin.leave-requests.force-accept');
         Route::post('/leave-requests/{leaveRequest}/reject', [App\Http\Controllers\Admin\LeaveRequestController::class, 'reject'])->name('admin.leave-requests.reject');
         Route::post('/leave-requests/{leaveRequest}/resubmit', [App\Http\Controllers\Admin\LeaveRequestController::class, 'resubmit'])->name('admin.leave-requests.resubmit');
