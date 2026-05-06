@@ -38,6 +38,7 @@ class User extends Authenticatable
         'bio',
         'overtime_months_credited',
         'required_training_hours',
+        'ojt_target_end_date',
         'student_absence_allowance',
         'qr_code_id',
         'student_rules_warning',
@@ -80,6 +81,7 @@ class User extends Authenticatable
             'student_rules_marquee_enabled' => 'boolean',
             'student_terminated' => 'boolean',
             'student_absence_allowance' => 'float',
+            'ojt_target_end_date' => 'date',
             'ojt_requirement_met_at' => 'datetime',
             'ojt_completion_congratulations_sent_at' => 'datetime',
             'ojt_post_completion_grace_closed_at' => 'datetime',
@@ -126,8 +128,8 @@ class User extends Authenticatable
     public function assignedQuizzes()
     {
         return $this->belongsToMany(Quiz::class, 'quiz_assignments')
-                    ->withPivot(['assigned_at', 'due_date', 'is_completed'])
-                    ->withTimestamps();
+            ->withPivot(['assigned_at', 'due_date', 'is_completed'])
+            ->withTimestamps();
     }
 
     public function notifications()
@@ -213,7 +215,7 @@ class User extends Authenticatable
 
     public function getRoleLabel()
     {
-        return match($this->role) {
+        return match ($this->role) {
             'admin' => 'Administrator',
             'student' => 'Student',
             'employee' => 'Employee',
@@ -227,7 +229,7 @@ class User extends Authenticatable
 
     public function getRoleBadgeClass()
     {
-        return match($this->role) {
+        return match ($this->role) {
             'admin' => 'bg-purple-100 text-purple-800',
             'student' => 'bg-blue-100 text-blue-800',
             'employee' => 'bg-green-100 text-green-800',
@@ -308,7 +310,7 @@ class User extends Authenticatable
 
     public function getLastActivityText(): string
     {
-        if (!$this->last_activity) {
+        if (! $this->last_activity) {
             return 'Never';
         }
 
@@ -317,9 +319,9 @@ class User extends Authenticatable
         if ($diff < 1) {
             return 'Just now';
         } elseif ($diff < 60) {
-            return $diff . ' minutes ago';
+            return $diff.' minutes ago';
         } elseif ($diff < 1440) {
-            return floor($diff / 60) . ' hours ago';
+            return floor($diff / 60).' hours ago';
         } else {
             return \Carbon\Carbon::parse($this->last_activity)->format('M j, Y g:i A');
         }
@@ -329,17 +331,17 @@ class User extends Authenticatable
     public function getTotalScore(): int
     {
         // Cache the total score for 5 minutes to improve performance
-        return cache()->remember("user_total_score_{$this->id}", 300, function() {
+        return cache()->remember("user_total_score_{$this->id}", 300, function () {
             return $this->quizAttempts()
                 ->whereNotNull('completed_at')
                 ->sum('points_earned');
         });
     }
 
-    public function getRank(): int|null
+    public function getRank(): ?int
     {
         // Cache the rank calculation for 5 minutes to improve performance
-        return cache()->remember("user_rank_{$this->id}", 300, function() {
+        return cache()->remember("user_rank_{$this->id}", 300, function () {
             $totalScore = $this->getTotalScore();
 
             // If user has 0 points, they are unranked
@@ -351,12 +353,12 @@ class User extends Authenticatable
             $usersWithHigherScore = User::where('role', 'user')
                 ->where('is_active', true)
                 ->where('id', '!=', $this->id)
-                ->whereHas('quizAttempts', function($query) {
+                ->whereHas('quizAttempts', function ($query) {
                     $query->whereNotNull('completed_at');
                 })
                 ->withSum('quizAttempts', 'points_earned')
                 ->get()
-                ->filter(function($user) use ($totalScore) {
+                ->filter(function ($user) use ($totalScore) {
                     return ($user->quiz_attempts_sum_points_earned ?? 0) > $totalScore;
                 })
                 ->count();
@@ -449,7 +451,7 @@ class User extends Authenticatable
 
     protected function buildStorageUrl(?string $path): string
     {
-        if (!$path) {
+        if (! $path) {
             return '';
         }
 
@@ -479,7 +481,7 @@ class User extends Authenticatable
 
     public function hasCoverPhoto(): bool
     {
-        return !empty($this->cover_photo);
+        return ! empty($this->cover_photo);
     }
 
     public function getInitials(): string
@@ -487,10 +489,11 @@ class User extends Authenticatable
         $words = explode(' ', $this->name);
         $initials = '';
         foreach ($words as $word) {
-            if (!empty($word)) {
+            if (! empty($word)) {
                 $initials .= strtoupper(substr($word, 0, 1));
             }
         }
+
         return substr($initials, 0, 2);
     }
 
@@ -508,15 +511,15 @@ class User extends Authenticatable
     public function friends()
     {
         return $this->belongsToMany(User::class, 'friendships', 'user_id', 'friend_id')
-                    ->wherePivot('status', 'accepted')
-                    ->withTimestamps();
+            ->wherePivot('status', 'accepted')
+            ->withTimestamps();
     }
 
     public function acceptedFriends()
     {
         return $this->belongsToMany(User::class, 'friendships', 'friend_id', 'user_id')
-                    ->wherePivot('status', 'accepted')
-                    ->withTimestamps();
+            ->wherePivot('status', 'accepted')
+            ->withTimestamps();
     }
 
     public function pendingFriendRequests()
@@ -630,12 +633,12 @@ class User extends Authenticatable
     public function hasAdminPermission(string $permission): bool
     {
         // Load the relationship if not already loaded
-        if (!$this->relationLoaded('adminPermission')) {
+        if (! $this->relationLoaded('adminPermission')) {
             $this->load('adminPermission');
         }
 
         // If user is an admin, they have full access (super admin)
-        if ($this->isAdmin() && !$this->adminPermission) {
+        if ($this->isAdmin() && ! $this->adminPermission) {
             return true;
         }
 
@@ -687,19 +690,19 @@ class User extends Authenticatable
         }
 
         // If user doesn't have Employee Management permission, they can't manage any department
-        if (!$this->canAccessEmployeeManagement()) {
+        if (! $this->canAccessEmployeeManagement()) {
             return false;
         }
 
         // Load the relationship if not already loaded
-        if (!$this->relationLoaded('adminPermission')) {
+        if (! $this->relationLoaded('adminPermission')) {
             $this->load('adminPermission');
         }
 
         $adminPermission = $this->adminPermission;
 
         // If no permission record exists, return false (shouldn't happen if canAccessEmployeeManagement is true)
-        if (!$adminPermission) {
+        if (! $adminPermission) {
             return false;
         }
 
@@ -725,24 +728,25 @@ class User extends Authenticatable
         }
 
         // If user doesn't have Employee Management permission, return empty array
-        if (!$this->canAccessEmployeeManagement()) {
+        if (! $this->canAccessEmployeeManagement()) {
             return [];
         }
 
         // Load the relationship if not already loaded
-        if (!$this->relationLoaded('adminPermission')) {
+        if (! $this->relationLoaded('adminPermission')) {
             $this->load('adminPermission');
         }
 
         $adminPermission = $this->adminPermission;
 
         // If no permission record exists, return empty array
-        if (!$adminPermission) {
+        if (! $adminPermission) {
             return [];
         }
 
         // Prefer dedicated employee department restrictions. Fallback to legacy allowed_departments.
         $allowedDepartments = $adminPermission->allowed_employee_departments ?? $adminPermission->allowed_departments;
+
         return empty($allowedDepartments) ? null : $allowedDepartments;
     }
 
@@ -756,21 +760,22 @@ class User extends Authenticatable
             return null;
         }
 
-        if (!$this->canAccessStudentManagement()) {
+        if (! $this->canAccessStudentManagement()) {
             return [];
         }
 
-        if (!$this->relationLoaded('adminPermission')) {
+        if (! $this->relationLoaded('adminPermission')) {
             $this->load('adminPermission');
         }
 
         $adminPermission = $this->adminPermission;
-        if (!$adminPermission) {
+        if (! $adminPermission) {
             return [];
         }
 
         // Prefer dedicated student department restrictions. Fallback to legacy allowed_departments.
         $allowedDepartments = $adminPermission->allowed_student_departments ?? $adminPermission->allowed_departments;
+
         return empty($allowedDepartments) ? null : $allowedDepartments;
     }
 
@@ -786,24 +791,25 @@ class User extends Authenticatable
         }
 
         // If user doesn't have Hiring Process permission, return empty array
-        if (!$this->canAccessHiringProcess()) {
+        if (! $this->canAccessHiringProcess()) {
             return [];
         }
 
         // Load the relationship if not already loaded
-        if (!$this->relationLoaded('adminPermission')) {
+        if (! $this->relationLoaded('adminPermission')) {
             $this->load('adminPermission');
         }
 
         $adminPermission = $this->adminPermission;
 
         // If no permission record exists, return empty array
-        if (!$adminPermission) {
+        if (! $adminPermission) {
             return [];
         }
 
         // Return allowed_positions (null or empty means all positions)
         $allowedPositions = $adminPermission->allowed_positions;
+
         return empty($allowedPositions) ? null : $allowedPositions;
     }
 
@@ -894,7 +900,7 @@ class User extends Authenticatable
     {
         // Only admins without permission records are super admins
         // Employees without permission records are NOT super admins
-        return $this->isAdmin() && !$this->adminPermission;
+        return $this->isAdmin() && ! $this->adminPermission;
     }
 
     /**
@@ -904,14 +910,14 @@ class User extends Authenticatable
     public function hasAnyAdminPermission(): bool
     {
         // Load the relationship if not already loaded
-        if (!$this->relationLoaded('adminPermission')) {
+        if (! $this->relationLoaded('adminPermission')) {
             $this->load('adminPermission');
         }
 
         $adminPermission = $this->adminPermission;
 
         // If user is an admin without a permission record, they are a super admin with full access
-        if ($this->isAdmin() && !$adminPermission) {
+        if ($this->isAdmin() && ! $adminPermission) {
             return true; // Super admin has all permissions
         }
 
@@ -960,15 +966,15 @@ class User extends Authenticatable
     {
         // Get current prefix from settings (always fresh, not cached)
         // Clear cache to ensure we get the latest prefix value
-        \Illuminate\Support\Facades\Cache::forget("setting.qr_code_prefix");
+        \Illuminate\Support\Facades\Cache::forget('setting.qr_code_prefix');
         $prefix = \App\Models\Setting::get('qr_code_prefix', 'QR');
-        
+
         // Ensure prefix is not empty
         if (empty(trim($prefix))) {
             $prefix = 'QR';
         }
         $prefix = trim($prefix);
-        
+
         // Check if QR code exists and if it matches the current prefix
         if ($this->qr_code_id) {
             // Check if the current QR code starts with the current prefix
@@ -988,13 +994,13 @@ class User extends Authenticatable
 
         do {
             $number = str_pad($this->id, 6, '0', STR_PAD_LEFT);
-            $qrCodeId = $prefix . $number;
+            $qrCodeId = $prefix.$number;
             $attempt++;
         } while (self::where('qr_code_id', $qrCodeId)->where('id', '!=', $this->id)->exists() && $attempt < $maxAttempts);
 
         if ($attempt >= $maxAttempts) {
             // Fallback: use timestamp if all attempts failed
-            $qrCodeId = $prefix . time() . $this->id;
+            $qrCodeId = $prefix.time().$this->id;
         }
 
         $this->qr_code_id = $qrCodeId;
@@ -1012,20 +1018,21 @@ class User extends Authenticatable
         try {
             // Get or generate a token for this user (reuses existing unused token)
             $token = \App\Models\QrCodeToken::getOrGenerateForUser($this);
-            
+
             // Generate QR code URL - use url() helper as fallback if route() fails
             try {
                 $qrCodeUrl = route('qr.scan', ['token' => $token]);
             } catch (\Exception $routeException) {
                 // Fallback to url() if route helper fails
-                $qrCodeUrl = url('/qr/' . $token);
+                $qrCodeUrl = url('/qr/'.$token);
             }
-            
+
             // Use the QrCode facade with full namespace
             return \SimpleSoftwareIO\QrCode\Facades\QrCode::size($size)->generate($qrCodeUrl);
         } catch (\Exception $e) {
             // Log error for debugging
-            \Log::error('QR Code image generation failed: ' . $e->getMessage() . ' | Trace: ' . $e->getTraceAsString());
+            \Log::error('QR Code image generation failed: '.$e->getMessage().' | Trace: '.$e->getTraceAsString());
+
             return '';
         }
     }
@@ -1039,21 +1046,22 @@ class User extends Authenticatable
         try {
             // Get or generate a token for this user (reuses existing unused token)
             $token = \App\Models\QrCodeToken::getOrGenerateForUser($this);
-            
+
             // Generate QR code URL - use url() helper as fallback if route() fails
             try {
                 $qrCodeUrl = route('qr.scan', ['token' => $token]);
             } catch (\Exception $routeException) {
                 // Fallback to url() if route helper fails
-                $qrCodeUrl = url('/qr/' . $token);
+                $qrCodeUrl = url('/qr/'.$token);
             }
-            
+
             // Use the QrCode facade (SVG format, doesn't require imagick)
             return \SimpleSoftwareIO\QrCode\Facades\QrCode::size($size)->format('svg')->generate($qrCodeUrl);
         } catch (\Exception $e) {
             // Log error for debugging but don't expose it to user
-            \Log::error('QR Code generation failed: ' . $e->getMessage() . ' | Trace: ' . $e->getTraceAsString());
-            return '<svg width="' . $size . '" height="' . $size . '"><text x="50%" y="50%" text-anchor="middle" dy=".3em">QR Code Unavailable</text></svg>';
+            \Log::error('QR Code generation failed: '.$e->getMessage().' | Trace: '.$e->getTraceAsString());
+
+            return '<svg width="'.$size.'" height="'.$size.'"><text x="50%" y="50%" text-anchor="middle" dy=".3em">QR Code Unavailable</text></svg>';
         }
     }
 
@@ -1065,7 +1073,8 @@ class User extends Authenticatable
     {
         // Use getQrCodeSvg which already generates tokens
         $svg = $this->getQrCodeSvg($size);
+
         // Convert SVG to data URI
-        return 'data:image/svg+xml;base64,' . base64_encode($svg);
+        return 'data:image/svg+xml;base64,'.base64_encode($svg);
     }
 }

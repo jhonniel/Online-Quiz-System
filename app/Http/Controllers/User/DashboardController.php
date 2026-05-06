@@ -14,9 +14,9 @@ use App\Models\User;
 use App\Models\UserActivity;
 use App\Services\StudentOjtPostCompletionService;
 use Carbon\Carbon;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
 
@@ -80,18 +80,18 @@ class DashboardController extends Controller
                 'teacherCharts' => $teacherData['charts'],
             ]);
         }
-        
+
         // For applicants, only show assigned quizzes (not all available quizzes)
         if ($user->role === 'applicant') {
             // Get only assigned quizzes for applicants
             $assignedQuizzes = QuizAssignment::where('user_id', $user->id)
                 ->with(['quiz.creator'])
-                ->whereHas('quiz', function($query) {
+                ->whereHas('quiz', function ($query) {
                     $query->where('is_active', true);
                 })
                 ->get();
 
-            $allQuizzes = $assignedQuizzes->map(function($assignment) {
+            $allQuizzes = $assignedQuizzes->map(function ($assignment) {
                 return $assignment->quiz;
             });
 
@@ -108,7 +108,7 @@ class DashboardController extends Controller
         } else {
             // For other roles (student, employee), show all active quizzes
             $allQuizzes = \App\Models\Quiz::where('is_active', true)
-                ->with(['creator', 'assignments' => function($query) {
+                ->with(['creator', 'assignments' => function ($query) {
                     $query->where('user_id', auth()->id());
                 }])
                 ->get();
@@ -116,7 +116,7 @@ class DashboardController extends Controller
             // Get assigned quizzes for statistics
             $assignedQuizzes = QuizAssignment::where('user_id', $user->id)
                 ->with(['quiz.creator'])
-                ->whereHas('quiz', function($query) {
+                ->whereHas('quiz', function ($query) {
                     $query->where('is_active', true);
                 })
                 ->get();
@@ -143,13 +143,13 @@ class DashboardController extends Controller
             $loggedHours = (float) Dtr::query()->where('user_id', $user->id)->sum('total_hours');
             $activeEvaluationForm = EvaluationForm::query()->where('is_active', true)->latest('updated_at')->first();
 
-            $isForced = Schema::hasColumn('users', 'evaluation_forced_at') && !empty($user->evaluation_forced_at);
+            $isForced = Schema::hasColumn('users', 'evaluation_forced_at') && ! empty($user->evaluation_forced_at);
             if ($activeEvaluationForm && (($requiredHours > 0 && $loggedHours >= $requiredHours) || $isForced)) {
                 $submitted = EvaluationSubmission::query()
                     ->where('evaluation_form_id', $activeEvaluationForm->id)
                     ->where('user_id', $user->id)
                     ->exists();
-                $evaluationAvailable = !$submitted;
+                $evaluationAvailable = ! $submitted;
                 $evaluationFormTitle = $activeEvaluationForm->title;
             }
         }
@@ -173,7 +173,37 @@ class DashboardController extends Controller
             if ($remainingHours > 0) {
                 $dailyHoursForEstimate = $avgHoursPerActiveDay > 0 ? $avgHoursPerActiveDay : 8.0;
                 $neededDays = (int) ceil($remainingHours / $dailyHoursForEstimate);
-                $estimatedEndDate = now()->addWeekdays(max($neededDays, 1))->startOfDay();
+                $estimatedEndDate = now()->timezone(config('app.timezone'))->startOfDay()->addWeekdays(max($neededDays, 1));
+            }
+
+            $adminOjtTargetEnd = Schema::hasColumn('users', 'ojt_target_end_date')
+                ? $user->ojt_target_end_date
+                : null;
+
+            /**
+             * When admin never set ojt_target_end_date: required_training_hours at 8 h per weekday,
+             * counted from the calendar date of the student’s first DTR row (earliest `date` in DTR).
+             * No DTR rows yet: same idea from today using remaining hours (matches full requirement).
+             */
+            $possibleExitConferenceDate = null;
+            $possibleExitConferenceWeekdays = null;
+            if ($adminOjtTargetEnd === null && $requiredHours > 0 && $remainingHours > 0) {
+                $tz = config('app.timezone');
+                $weekdaysForFullRequirement = max(1, (int) ceil($requiredHours / 8.0));
+                $firstDtrDate = Dtr::query()
+                    ->where('user_id', $user->id)
+                    ->min('date');
+
+                if ($firstDtrDate !== null) {
+                    $anchor = Carbon::parse($firstDtrDate)->timezone($tz)->startOfDay();
+                    $possibleExitConferenceDate = $anchor->copy()->addWeekdays($weekdaysForFullRequirement);
+                    $possibleExitConferenceWeekdays = $weekdaysForFullRequirement;
+                } else {
+                    $todayStart = now()->timezone($tz)->startOfDay();
+                    $weekdaysForRemaining = max(1, (int) ceil($remainingHours / 8.0));
+                    $possibleExitConferenceDate = $todayStart->copy()->addWeekdays($weekdaysForRemaining);
+                    $possibleExitConferenceWeekdays = $weekdaysForRemaining;
+                }
             }
 
             $months = collect(range(5, 0))->map(fn ($index) => now()->subMonths($index)->startOfMonth());
@@ -201,6 +231,9 @@ class DashboardController extends Controller
                 'remaining_hours' => $remainingHours,
                 'progress_percent' => $requiredHours > 0 ? min(($loggedHours / $requiredHours) * 100, 100) : 0,
                 'estimated_end_date' => $estimatedEndDate,
+                'ojt_target_end_date' => $adminOjtTargetEnd,
+                'possible_exit_conference_date' => $possibleExitConferenceDate,
+                'possible_exit_conference_weekdays' => $possibleExitConferenceWeekdays,
             ];
 
             $studentTrainingCharts = [
@@ -237,11 +270,13 @@ class DashboardController extends Controller
                 ->where('type', 'absent')
                 ->get()
                 ->sum('days');
-            $allowableAbsences = (float) ($user->student_absence_allowance ?? 0);
+            $allowableAbsences = Schema::hasColumn('users', 'student_absence_allowance')
+                ? (float) ($user->student_absence_allowance ?? 0)
+                : 0.0;
 
             $studentLeaveBalanceSummary = [
                 'approved_leave_count' => $approvedLeaveCount,
-                'allowable_absences' => $allowableAbsences,
+                'allowable_absences' => round($allowableAbsences, 2),
                 'approved_absent_days' => round($approvedAbsentDays, 2),
                 'remaining_absence_balance' => round(max($allowableAbsences - $approvedAbsentDays, 0), 2),
             ];
@@ -355,7 +390,7 @@ class DashboardController extends Controller
 
     private function getTeacherSchoolData(User $teacher): array
     {
-        if (!$teacher->university_id) {
+        if (! $teacher->university_id) {
             return [
                 'totalStudents' => 0,
                 'activeStudents' => 0,

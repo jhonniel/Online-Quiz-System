@@ -143,8 +143,17 @@
                                    value="{{ old('required_training_hours', $user->required_training_hours) }}"
                                    class="block w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 text-sm"
                                    placeholder="e.g. 160">
-                            <p class="mt-1 text-xs text-gray-500">For students: total hours needed via DTR.</p>
+                            <p class="mt-1 text-xs text-gray-500">For students: total hours needed via DTR. Estimated completion from pace appears on their dashboard unless you set the target date below.</p>
                             @error('required_training_hours') <p class="mt-1 text-sm text-red-600">{{ $message }}</p> @enderror
+
+                            <div class="mt-4">
+                                <label for="ojt_target_end_date" class="block text-sm font-semibold text-gray-700 mb-1.5">OJT target end date / exit conference</label>
+                                <input type="date" name="ojt_target_end_date" id="ojt_target_end_date"
+                                       value="{{ old('ojt_target_end_date', $user->ojt_target_end_date?->format('Y-m-d')) }}"
+                                       class="block w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 text-sm">
+                                <p class="mt-1 text-xs text-gray-500">Optional. Shown on the student dashboard as the official OJT deadline (clear the date to remove).</p>
+                                @error('ojt_target_end_date') <p class="mt-1 text-sm text-red-600">{{ $message }}</p> @enderror
+                            </div>
 
                             <div class="mt-4">
                                 <label for="student_absence_allowance" class="block text-sm font-semibold text-gray-700 mb-1.5">Allowable Absences Balance (Days)</label>

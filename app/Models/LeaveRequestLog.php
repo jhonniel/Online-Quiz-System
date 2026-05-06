@@ -45,11 +45,16 @@ class LeaveRequestLog extends Model
      */
     public function getActionLabelAttribute(): string
     {
-        return match($this->action) {
+        return match ($this->action) {
             'approved' => 'Approved',
             'rejected' => 'Rejected',
             'for_more_verification' => 'For More Verification',
             'resubmission_requested' => 'Resubmission Requested',
+            'additional_time_reverted' => 'Additional time adjusted',
+            'leave_time_reverted' => 'Leave time adjusted',
+            'travel_time_reverted' => 'Travel time adjusted',
+            'filed_by_admin' => 'Filed by administrator',
+            'requester_resubmitted' => 'Submission updated by requester',
             'updated' => 'Updated',
             'created' => 'Created',
             default => ucfirst(str_replace('_', ' ', $this->action)),

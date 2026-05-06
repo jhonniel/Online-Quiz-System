@@ -37,6 +37,7 @@ class Kernel extends HttpKernel
             \Illuminate\View\Middleware\ShareErrorsFromSession::class,
             \App\Http\Middleware\VerifyCsrfToken::class,
             \Illuminate\Routing\Middleware\SubstituteBindings::class,
+            \App\Http\Middleware\ShareLeaveResubmissionModalPayload::class,
             \App\Http\Middleware\SystemHealthMetrics::class,
             \App\Http\Middleware\TrackUserActivity::class,
         ],
@@ -70,4 +71,3 @@ class Kernel extends HttpKernel
         'verified' => \Illuminate\Auth\Middleware\EnsureEmailIsVerified::class,
     ];
 }
-

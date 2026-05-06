@@ -35,6 +35,7 @@
             border-radius: 50% 50% 50% 50% / 60% 60% 40% 40%;
             animation: spider-crawl 15s linear infinite;
             z-index: 1000;
+            pointer-events: none !important;
         }
 
         .spider::before {
@@ -67,6 +68,7 @@
             border-radius: 50% 50% 50% 50% / 60% 60% 40% 40%;
             animation: bat-fly 12s linear infinite;
             z-index: 1000;
+            pointer-events: none !important;
         }
 
         .bat::before {

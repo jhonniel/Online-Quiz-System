@@ -3,20 +3,20 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
-use App\Models\User;
-use App\Models\University;
-use App\Models\Department;
-use App\Models\LeaveBalance;
 use App\Mail\StudentRulesNoticeMail;
 use App\Mail\UserCredentials;
+use App\Models\Department;
+use App\Models\LeaveBalance;
+use App\Models\University;
+use App\Models\User;
 use App\Services\MailConfigService;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Validation\Rule;
-use Carbon\Carbon;
 
 class UserController extends Controller
 {
@@ -26,7 +26,7 @@ class UserController extends Controller
         $dbDriver = DB::connection()->getDriverName();
         $idLikeSql = $dbDriver === 'pgsql' ? 'CAST(id AS TEXT) LIKE ?' : 'CAST(id AS CHAR) LIKE ?';
         $perPage = (int) $request->input('per_page', 10);
-        if (!in_array($perPage, [10, 25, 50, 100], true)) {
+        if (! in_array($perPage, [10, 25, 50, 100], true)) {
             $perPage = 10;
         }
 
@@ -86,6 +86,7 @@ class UserController extends Controller
 
             $users = $users->map(function ($user) use ($assignedUserIds) {
                 $user->is_assigned = in_array($user->id, $assignedUserIds);
+
                 return $user;
             });
         }
@@ -97,6 +98,7 @@ class UserController extends Controller
     {
         $universities = University::active()->orderBy('name')->get();
         $departments = Department::active()->orderBy('name')->get();
+
         return view('admin.users.create', compact('universities', 'departments'));
     }
 
@@ -123,6 +125,7 @@ class UserController extends Controller
             ],
             'is_active' => 'boolean',
             'required_training_hours' => 'nullable|numeric|min:0',
+            'ojt_target_end_date' => 'nullable|date',
             'student_absence_allowance' => 'nullable|numeric|min:0|max:365',
             'leave_allowance' => 'nullable|numeric|min:0|max:365',
             'vacation_allowance' => 'nullable|numeric|min:0|max:365',
@@ -130,7 +133,7 @@ class UserController extends Controller
         ]);
 
         // Custom validation for new university
-        if ($request->university_id === 'new' && !$request->filled('new_university_name')) {
+        if ($request->university_id === 'new' && ! $request->filled('new_university_name')) {
             return back()->withErrors(['new_university_name' => 'Please enter a university name when adding a new university.'])->withInput();
         }
 
@@ -158,6 +161,9 @@ class UserController extends Controller
             'department_id' => in_array($request->role, ['employee', 'student', 'teacher'], true) ? $request->department_id : null,
             'is_active' => $request->has('is_active'),
             'required_training_hours' => $request->required_training_hours,
+            'ojt_target_end_date' => $request->role === 'student' && $request->filled('ojt_target_end_date')
+                ? $request->ojt_target_end_date
+                : null,
             'student_absence_allowance' => $request->role === 'student'
                 ? (float) ($request->input('student_absence_allowance', 0))
                 : 0,
@@ -187,7 +193,7 @@ class UserController extends Controller
     {
         // Access is controlled by admin.permission:user_management middleware,
         // but we also guard here for safety to ensure user has user_management permission.
-        if (!auth()->check() || !auth()->user()->canAccessUserManagement()) {
+        if (! auth()->check() || ! auth()->user()->canAccessUserManagement()) {
             abort(403, 'You do not have permission to view user profiles.');
         }
 
@@ -331,7 +337,7 @@ class UserController extends Controller
             'overtime_months_credited' => $request->overtime_months_credited,
         ]);
 
-        return redirect('/admin/users/' . $user->id)
+        return redirect('/admin/users/'.$user->id)
             ->with('success', 'Overtime credited window updated for all employees.');
     }
 
@@ -366,7 +372,7 @@ class UserController extends Controller
             ]);
         }
 
-        return redirect('/admin/users/' . $user->id)
+        return redirect('/admin/users/'.$user->id)
             ->with('success', "Leave balances updated for {$year}.");
     }
 
@@ -374,6 +380,7 @@ class UserController extends Controller
     {
         $universities = University::active()->orderBy('name')->get();
         $departments = Department::active()->orderBy('name')->get();
+
         return view('admin.users.edit', compact('user', 'universities', 'departments'));
     }
 
@@ -400,6 +407,7 @@ class UserController extends Controller
             ],
             'is_active' => 'boolean',
             'required_training_hours' => 'nullable|numeric|min:0',
+            'ojt_target_end_date' => 'nullable|date',
             'student_absence_allowance' => 'nullable|numeric|min:0|max:365',
             'leave_allowance' => 'nullable|numeric|min:0|max:365',
             'vacation_allowance' => 'nullable|numeric|min:0|max:365',
@@ -419,7 +427,7 @@ class UserController extends Controller
         ]);
 
         // Custom validation for new university
-        if ($request->university_id === 'new' && !$request->filled('new_university_name')) {
+        if ($request->university_id === 'new' && ! $request->filled('new_university_name')) {
             return back()->withErrors(['new_university_name' => 'Please enter a university name when adding a new university.'])->withInput();
         }
 
@@ -476,12 +484,16 @@ class UserController extends Controller
             $data['student_absence_allowance'] = $request->filled('student_absence_allowance')
                 ? (float) $request->student_absence_allowance
                 : 0;
+            $data['ojt_target_end_date'] = $request->filled('ojt_target_end_date')
+                ? $request->ojt_target_end_date
+                : null;
         } else {
             $data['student_rules_warning'] = false;
             $data['student_rules_marquee_enabled'] = false;
             $data['student_rules_notice_message'] = null;
             $data['student_terminated'] = false;
             $data['student_absence_allowance'] = 0;
+            $data['ojt_target_end_date'] = null;
         }
 
         $prevStudentRulesWarning = (bool) ($user->student_rules_warning ?? false);
@@ -533,7 +545,7 @@ class UserController extends Controller
                 }
             }
 
-            if (!empty($updateData)) {
+            if (! empty($updateData)) {
                 $leaveBalance->update($updateData);
             }
         }
@@ -551,15 +563,17 @@ class UserController extends Controller
         }
 
         $user->delete();
+
         return redirect('/admin/users')
             ->with('success', 'User deleted successfully.');
     }
 
     public function toggleStatus(User $user)
     {
-        $user->update(['is_active' => !$user->is_active]);
+        $user->update(['is_active' => ! $user->is_active]);
 
         $status = $user->is_active ? 'activated' : 'deactivated';
+
         return redirect()->back()
             ->with('success', "User {$status} successfully.");
     }
@@ -601,6 +615,7 @@ class UserController extends Controller
         $adminUsers = User::whereIn('id', $userIds)->where('role', 'admin')->get();
         if ($adminUsers->count() > 0 && $role !== 'admin') {
             $adminNames = $adminUsers->pluck('name')->join(', ');
+
             return redirect()->back()
                 ->with('error', "Cannot change role of administrator user(s): {$adminNames}. Please deselect admin users or keep them as administrators.");
         }
@@ -620,7 +635,7 @@ class UserController extends Controller
         $updated = $query->update(['role' => $role]);
 
         if ($updated > 0) {
-            $roleLabel = match($role) {
+            $roleLabel = match ($role) {
                 'admin' => 'Administrator',
                 'student' => 'Student',
                 'employee' => 'Employee',
@@ -701,11 +716,11 @@ class UserController extends Controller
         } catch (\Exception $e) {
             Log::error('Failed to send credentials email', [
                 'error' => $e->getMessage(),
-                'user_id' => $user->id
+                'user_id' => $user->id,
             ]);
 
             return redirect()->back()
-                ->with('error', 'Failed to send credentials email: ' . $e->getMessage());
+                ->with('error', 'Failed to send credentials email: '.$e->getMessage());
         }
     }
 
@@ -748,25 +763,25 @@ class UserController extends Controller
                     Log::error('Failed to send credentials email to user', [
                         'error' => $e->getMessage(),
                         'user_id' => $user->id,
-                        'user_email' => $user->email
+                        'user_email' => $user->email,
                     ]);
                 }
             }
 
             $message = "Credentials email sent to {$successCount} user(s).";
             if ($failCount > 0) {
-                $message .= " Failed to send to {$failCount} user(s): " . implode(', ', $failedUsers);
+                $message .= " Failed to send to {$failCount} user(s): ".implode(', ', $failedUsers);
             }
 
             return redirect()->back()
                 ->with($failCount > 0 ? 'warning' : 'success', $message);
         } catch (\Exception $e) {
             Log::error('Failed to send bulk credentials emails', [
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ]);
 
             return redirect()->back()
-                ->with('error', 'Failed to send credentials emails: ' . $e->getMessage());
+                ->with('error', 'Failed to send credentials emails: '.$e->getMessage());
         }
     }
 }

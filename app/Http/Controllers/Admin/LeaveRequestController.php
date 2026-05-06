@@ -12,6 +12,8 @@ use App\Models\LeaveRequest;
 use App\Models\LeaveRequestLog;
 use App\Models\Setting;
 use App\Models\User;
+use App\Rules\ClickUpTasksUrlsOnly;
+use App\Services\LeaveRequestStaleResubmissionService;
 use App\Services\MailConfigService;
 use Carbon\Carbon;
 use Carbon\CarbonPeriod;
@@ -577,10 +579,10 @@ class LeaveRequestController extends Controller
             // Same structured fields as employee leave-requests/create
             'overtime_hours' => ['required_if:type,overtime', 'nullable', 'regex:/^\d{2}:\d{2}$/'],
             'overtime_dates' => ['required_if:type,overtime', 'nullable', 'string', 'max:255'],
-            'overtime_tasks' => ['required_if:type,overtime', 'nullable', 'string', 'max:2000'],
+            'overtime_tasks' => ['required_if:type,overtime', 'nullable', 'string', 'max:2000', new ClickUpTasksUrlsOnly],
             'wfh_mode' => ['required_if:type,work_from_home', 'nullable', 'in:working_remotely,request_to_be_excused'],
             'wfh_address' => ['required_if:type,work_from_home', 'nullable', 'string', 'max:255'],
-            'wfh_tasks' => ['required_if:type,work_from_home', 'nullable', 'string', 'max:2000'],
+            'wfh_tasks' => ['required_if:type,work_from_home', 'nullable', 'string', 'max:2000', new ClickUpTasksUrlsOnly],
             'offset_hours' => ['nullable', 'regex:/^\d{2}:\d{2}$/'],
         ]);
 
@@ -1044,36 +1046,12 @@ class LeaveRequestController extends Controller
             'performed_by' => Auth::id(),
         ]);
 
-        // Send email notification to employee
-        try {
-            MailConfigService::configure();
+        $leaveRequest->refresh();
 
-            Log::info('Sending leave request resubmission email to user', [
-                'user_email' => $leaveRequest->user->email,
-                'leave_request_id' => $leaveRequest->id,
-                'user_name' => $leaveRequest->user->name,
-            ]);
-
-            $resubmissionEmailNotes = $this->normalizedLeaveRequestMailNotes($request->admin_notes)
-                ?? $this->normalizedLeaveRequestMailNotes($leaveRequest->admin_notes);
-
-            Mail::to($leaveRequest->user->email)->send(
-                new LeaveRequestStatusUpdate($leaveRequest, 'resubmission_requested', $resubmissionEmailNotes)
-            );
-
-            Log::info('Leave request resubmission email sent successfully', [
-                'user_email' => $leaveRequest->user->email,
-                'leave_request_id' => $leaveRequest->id,
-            ]);
-        } catch (\Exception $e) {
-            Log::error('Failed to send leave request resubmission email', [
-                'user_email' => $leaveRequest->user->email ?? 'unknown',
-                'leave_request_id' => $leaveRequest->id,
-                'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString(),
-            ]);
-            // Don't fail the request if email fails
-        }
+        app(LeaveRequestStaleResubmissionService::class)->notifyUserResubmissionRequested(
+            $leaveRequest,
+            $this->normalizedLeaveRequestMailNotes($leaveRequest->admin_notes)
+        );
 
         return redirect('/admin/leave-requests/'.$leaveRequest->id)
             ->with('success', 'Leave request marked for resubmission. The employee will need to correct any errors.');

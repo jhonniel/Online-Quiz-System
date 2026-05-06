@@ -20,6 +20,10 @@ class Kernel extends ConsoleKernel
         $schedule->command('students:process-ojt-post-completion')
             ->dailyAt('06:30')
             ->withoutOverlapping();
+
+        $schedule->command('leave-requests:auto-reject-stale-resubmissions')
+            ->hourly()
+            ->withoutOverlapping();
     }
 
     /**
@@ -34,4 +38,3 @@ class Kernel extends ConsoleKernel
         }
     }
 }
-

@@ -246,10 +246,10 @@
                                 Tasks / ClickUp Links <span class="text-red-500">*</span>
                             </label>
                             <textarea name="overtime_tasks" id="overtime_tasks" rows="4"
-                                      placeholder="Strictly list down tasks listed in ClickUp for Devs via link..."
+                                      placeholder="https://app.clickup.com/... (URLs only; add more on separate lines or separated by spaces)"
                                       class="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">{{ old('overtime_tasks') }}</textarea>
                             <p class="mt-1 text-xs text-gray-500">
-                                List the tasks that justify this overtime, including any ClickUp or ticket links.
+                                Put <strong>http</strong> or <strong>https</strong> links only (e.g. ClickUp). No sentences, labels, or explanations here—use Additional Explanation if needed.
                             </p>
                             @error('overtime_tasks')
                                 <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
@@ -365,10 +365,10 @@
                                 Tasks / ClickUp Links <span class="text-red-500">*</span>
                             </label>
                             <textarea name="wfh_tasks" id="wfh_tasks" rows="4"
-                                      placeholder="Strictly list down tasks listed in ClickUp for Devs via link..."
+                                      placeholder="https://app.clickup.com/... (URLs only; add more on separate lines or separated by spaces)"
                                       class="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">{{ old('wfh_tasks') }}</textarea>
                             <p class="mt-1 text-xs text-gray-500">
-                                List the tasks you will work on while remote, including any ClickUp or ticket links.
+                                Put <strong>http</strong> or <strong>https</strong> links only (e.g. ClickUp). No sentences or explanations here—use Additional Explanation if needed.
                             </p>
                             @error('wfh_tasks')
                                 <p class="mt-1 text-sm text-red-600">{{ $message }}</p>

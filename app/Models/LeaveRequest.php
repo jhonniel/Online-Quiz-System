@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
@@ -87,7 +88,7 @@ class LeaveRequest extends Model
      */
     public function getTypeLabelAttribute(): string
     {
-        return match($this->type) {
+        return match ($this->type) {
             'leave' => 'Leave',
             'vacation_leave' => 'Vacation Leave',
             'sick_leave' => 'Sick Leave',
@@ -107,7 +108,7 @@ class LeaveRequest extends Model
      */
     public function getStatusBadgeClassAttribute(): string
     {
-        return match($this->status) {
+        return match ($this->status) {
             'pending' => 'bg-yellow-100 text-yellow-800',
             'approved' => 'bg-green-100 text-green-800',
             'rejected' => 'bg-red-100 text-red-800',
@@ -159,11 +160,23 @@ class LeaveRequest extends Model
     }
 
     /**
+     * Pending requests where the administrator asked the user to fix and resubmit.
+     */
+    public function scopeAwaitingUserResubmission(Builder $query): Builder
+    {
+        return $query->where('status', 'pending')
+            ->whereNotNull('reviewed_at')
+            ->whereHas('logs', function ($q): void {
+                $q->where('action', 'resubmission_requested');
+            });
+    }
+
+    /**
      * Get the number of days.
      */
     public function getDaysAttribute(): int
     {
-        if (!$this->end_date) {
+        if (! $this->end_date) {
             return 1;
         }
 
@@ -176,7 +189,7 @@ class LeaveRequest extends Model
     public function parseOffsetHoursToDeductMinutes(): ?int
     {
         $raw = (string) ($this->reason ?? '');
-        if (!preg_match('/Hours to Deduct:\s*(\d{1,4}):(\d{2})/', $raw, $m)) {
+        if (! preg_match('/Hours to Deduct:\s*(\d{1,4}):(\d{2})/', $raw, $m)) {
             return null;
         }
         $h = (int) $m[1];
@@ -198,7 +211,7 @@ class LeaveRequest extends Model
         if ($this->type !== 'offset') {
             $d = $this->days;
 
-            return $d . ' ' . ($d === 1 ? 'day' : 'days');
+            return $d.' '.($d === 1 ? 'day' : 'days');
         }
 
         $deductMins = $this->parseOffsetHoursToDeductMinutes();
@@ -210,16 +223,16 @@ class LeaveRequest extends Model
             $h = intdiv($deductMins, 60);
             $m = $deductMins % 60;
 
-            return sprintf('%d:%02d', $h, $m) . ' (hours to deduct)';
+            return sprintf('%d:%02d', $h, $m).' (hours to deduct)';
         }
 
         if ($deductMins === null) {
-            return $days . ' ' . ($days === 1 ? 'day' : 'days')
-                . ' — ' . $this->start_date->format('M j, Y') . ' to ' . $end->format('M j, Y');
+            return $days.' '.($days === 1 ? 'day' : 'days')
+                .' — '.$this->start_date->format('M j, Y').' to '.$end->format('M j, Y');
         }
 
-        return $days . ' ' . ($days === 1 ? 'day' : 'days')
-            . ' — ' . $this->start_date->format('M j, Y') . ' to ' . $end->format('M j, Y');
+        return $days.' '.($days === 1 ? 'day' : 'days')
+            .' — '.$this->start_date->format('M j, Y').' to '.$end->format('M j, Y');
     }
 
     /**

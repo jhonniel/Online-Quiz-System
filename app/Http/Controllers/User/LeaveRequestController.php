@@ -3,19 +3,19 @@
 namespace App\Http\Controllers\User;
 
 use App\Http\Controllers\Controller;
+use App\Mail\LeaveRequestNotification;
+use App\Models\Dtr;
+use App\Models\LeaveBalance;
 use App\Models\LeaveRequest;
 use App\Models\LeaveRequestLog;
-use App\Models\LeaveBalance;
-use App\Models\Dtr;
+use App\Rules\ClickUpTasksUrlsOnly;
 use App\Services\MailConfigService;
-use App\Mail\LeaveRequestNotification;
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Mail;
-use Illuminate\Support\Facades\Log;
-use Illuminate\Validation\Rule;
 use Carbon\Carbon;
 use Carbon\CarbonPeriod;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
 
 class LeaveRequestController extends Controller
 {
@@ -26,7 +26,7 @@ class LeaveRequestController extends Controller
     {
         // Allow employees and students to access
         $user = Auth::user();
-        if (!in_array($user->role, ['employee', 'student'])) {
+        if (! in_array($user->role, ['employee', 'student'])) {
             abort(403, 'Only employees and students can access leave requests.');
         }
 
@@ -123,7 +123,7 @@ class LeaveRequestController extends Controller
             foreach ($approvedOffsetRequests as $offsetRequest) {
                 $raw = $offsetRequest->reason ?? '';
                 if (preg_match('/Hours to Deduct:\s*([0-9]{2}):([0-9]{2})/', $raw, $m)) {
-                    $offsetMinutes += (int)$m[1] * 60 + (int)$m[2];
+                    $offsetMinutes += (int) $m[1] * 60 + (int) $m[2];
                 } else {
                     $offsetMinutes += (int) round(($offsetRequest->days * 8) * 60);
                 }
@@ -149,7 +149,7 @@ class LeaveRequestController extends Controller
             $absOvertimeMinutes = (int) round(abs($totalOvertimeHours) * 60);
             $overtimeHoursPart = intdiv($absOvertimeMinutes, 60);
             $overtimeMinutesPart = $absOvertimeMinutes % 60;
-            $overtimeFormatted = $sign . sprintf('%02d:%02d', $overtimeHoursPart, $overtimeMinutesPart);
+            $overtimeFormatted = $sign.sprintf('%02d:%02d', $overtimeHoursPart, $overtimeMinutesPart);
 
             // Build label for the overtime window
             if ($months === 12) {
@@ -170,7 +170,8 @@ class LeaveRequestController extends Controller
                 $minutes = (int) round(abs($decimal) * 60);
                 $h = intdiv($minutes, 60);
                 $m = $minutes % 60;
-                return $sign . sprintf('%02d:%02d', $h, $m);
+
+                return $sign.sprintf('%02d:%02d', $h, $m);
             };
 
             $studentTime = [
@@ -201,7 +202,7 @@ class LeaveRequestController extends Controller
     {
         // Only allow employees to access
         $user = Auth::user();
-        if (!in_array($user->role, ['employee', 'student'])) {
+        if (! in_array($user->role, ['employee', 'student'])) {
             abort(403, 'Only employees and students can create leave requests.');
         }
 
@@ -221,7 +222,7 @@ class LeaveRequestController extends Controller
         $user = Auth::user();
 
         // Allow employees and students to access
-        if (!in_array($user->role, ['employee', 'student'])) {
+        if (! in_array($user->role, ['employee', 'student'])) {
             abort(403, 'Only employees and students can create leave requests.');
         }
 
@@ -240,12 +241,12 @@ class LeaveRequestController extends Controller
         if ($typeInput === 'travel') {
             $startDateRules[] = 'before_or_equal:today';
             $endDateRules[] = 'before_or_equal:today';
-        } elseif (!($typeInput === 'overtime' || ($user->role === 'student' && $typeInput === 'additional_time'))) {
+        } elseif (! ($typeInput === 'overtime' || ($user->role === 'student' && $typeInput === 'additional_time'))) {
             $startDateRules[] = 'after_or_equal:today';
         }
 
         $validated = $request->validate([
-            'type' => ['required', 'in:' . implode(',', $allowedTypes)],
+            'type' => ['required', 'in:'.implode(',', $allowedTypes)],
             'start_date' => $startDateRules,
             'end_date' => $endDateRules,
             'additional_time_mode' => 'nullable|in:fixed_date,total_hours',
@@ -255,10 +256,10 @@ class LeaveRequestController extends Controller
             'supporting_document' => 'nullable|file|mimes:pdf,jpg,jpeg,png|max:5120',
             'overtime_hours' => 'required_if:type,overtime|nullable|regex:/^\\d{2}:\\d{2}$/',
             'overtime_dates' => 'required_if:type,overtime|nullable|string|max:255',
-            'overtime_tasks' => 'required_if:type,overtime|nullable|string|max:2000',
+            'overtime_tasks' => ['required_if:type,overtime', 'nullable', 'string', 'max:2000', new ClickUpTasksUrlsOnly],
             'wfh_mode' => 'required_if:type,work_from_home|nullable|in:working_remotely,request_to_be_excused',
             'wfh_address' => 'required_if:type,work_from_home|nullable|string|max:255',
-            'wfh_tasks' => 'required_if:type,work_from_home|nullable|string|max:2000',
+            'wfh_tasks' => ['required_if:type,work_from_home', 'nullable', 'string', 'max:2000', new ClickUpTasksUrlsOnly],
             'offset_hours' => 'nullable|regex:/^\\d{2}:\\d{2}$/',
             'travel_hours' => ['nullable', 'numeric', 'min:0', 'max:24'],
         ]);
@@ -293,7 +294,7 @@ class LeaveRequestController extends Controller
         // Student Additional Time: allow either explicit total hours OR fixed date(s) at 8h/day.
         if ($validated['type'] === 'additional_time' && $user->role === 'student') {
             $additionalMode = $validated['additional_time_mode'] ?? 'fixed_date';
-            if (!in_array($additionalMode, ['fixed_date', 'total_hours'], true)) {
+            if (! in_array($additionalMode, ['fixed_date', 'total_hours'], true)) {
                 return redirect()->back()
                     ->withErrors(['additional_time_mode' => 'Please choose how to submit Additional Time.'])
                     ->withInput();
@@ -317,12 +318,12 @@ class LeaveRequestController extends Controller
 
         if ($validated['type'] === 'overtime') {
             $details = "Overtime Request Details:\n";
-            $details .= "Total Overtime Hours: " . ($validated['overtime_hours'] ?? '') . "\n";
-            $details .= "Overtime Dates: " . ($validated['overtime_dates'] ?? '') . "\n";
-            $details .= "Tasks / ClickUp Links:\n" . ($validated['overtime_tasks'] ?? '') . "\n";
+            $details .= 'Total Overtime Hours: '.($validated['overtime_hours'] ?? '')."\n";
+            $details .= 'Overtime Dates: '.($validated['overtime_dates'] ?? '')."\n";
+            $details .= "Tasks / ClickUp Links:\n".($validated['overtime_tasks'] ?? '')."\n";
 
-            if (!empty($reasonToStore)) {
-                $details .= "\nAdditional Explanation:\n" . $reasonToStore;
+            if (! empty($reasonToStore)) {
+                $details .= "\nAdditional Explanation:\n".$reasonToStore;
             }
 
             $reasonToStore = $details;
@@ -332,13 +333,13 @@ class LeaveRequestController extends Controller
                 : 'Working remotely';
 
             $details = "Work From Home Request Details:\n";
-            $details .= "Mode: " . $modeLabel . "\n";
-            $details .= "Remote Address: " . ($validated['wfh_address'] ?? '') . "\n";
-            $details .= "Work Dates: " . ($validated['start_date'] ?? '') . ' to ' . ($validated['end_date'] ?? $validated['start_date']) . "\n";
-            $details .= "Tasks / ClickUp Links:\n" . ($validated['wfh_tasks'] ?? '') . "\n";
+            $details .= 'Mode: '.$modeLabel."\n";
+            $details .= 'Remote Address: '.($validated['wfh_address'] ?? '')."\n";
+            $details .= 'Work Dates: '.($validated['start_date'] ?? '').' to '.($validated['end_date'] ?? $validated['start_date'])."\n";
+            $details .= "Tasks / ClickUp Links:\n".($validated['wfh_tasks'] ?? '')."\n";
 
-            if (!empty($reasonToStore)) {
-                $details .= "\nAdditional Explanation:\n" . $reasonToStore;
+            if (! empty($reasonToStore)) {
+                $details .= "\nAdditional Explanation:\n".$reasonToStore;
             }
 
             $reasonToStore = $details;
@@ -360,30 +361,30 @@ class LeaveRequestController extends Controller
             }
 
             $details = "Offset Request Details:\n";
-            $details .= "Duration: " . $days . " " . ($days == 1 ? 'day' : 'days') . "\n";
-            $details .= "Hours to Deduct: " . $offsetHours . "\n";
+            $details .= 'Duration: '.$days.' '.($days == 1 ? 'day' : 'days')."\n";
+            $details .= 'Hours to Deduct: '.$offsetHours."\n";
 
-            if (!empty($reasonToStore)) {
-                $details .= "\nReason:\n" . $reasonToStore;
+            if (! empty($reasonToStore)) {
+                $details .= "\nReason:\n".$reasonToStore;
             }
 
             $reasonToStore = $details;
         } elseif ($validated['type'] === 'travel') {
-            $reasonToStore = 'Location of travel: ' . trim($validated['reason'] ?? '');
+            $reasonToStore = 'Location of travel: '.trim($validated['reason'] ?? '');
         } elseif ($validated['type'] === 'additional_time' && $user->role === 'student') {
             $additionalMode = $validated['additional_time_mode'] ?? 'fixed_date';
             if ($additionalMode === 'total_hours') {
                 $totalHoursText = trim((string) ($validated['additional_time_total_hours'] ?? ''));
                 $details = "Additional Time Input Mode: Total Hours\n";
                 $details .= "Additional Time Hours: {$totalHoursText}\n";
-                if (!empty($reasonToStore)) {
-                    $details .= "\nReason:\n" . $reasonToStore;
+                if (! empty($reasonToStore)) {
+                    $details .= "\nReason:\n".$reasonToStore;
                 }
                 $reasonToStore = $details;
             } else {
                 $details = "Additional Time Input Mode: Fixed Date (1 day = 8 hours)\n";
-                if (!empty($reasonToStore)) {
-                    $details .= "\nReason:\n" . $reasonToStore;
+                if (! empty($reasonToStore)) {
+                    $details .= "\nReason:\n".$reasonToStore;
                 }
                 $reasonToStore = $details;
             }
@@ -435,7 +436,8 @@ class LeaveRequestController extends Controller
                     $hoursFormatted = sprintf('%02d:%02d', $h, $m);
                     $requestedLabel = $offsetText !== ''
                         ? "{$offsetText} hour(s)."
-                        : "{$daysRequested} day(s) (" . ($daysRequested * 8) . " hours).";
+                        : "{$daysRequested} day(s) (".($daysRequested * 8).' hours).';
+
                     return redirect()->back()
                         ->withErrors(['end_date' => "You only have {$hoursFormatted} hours of overtime balance. You cannot request {$requestedLabel}"])
                         ->withInput();
@@ -448,12 +450,12 @@ class LeaveRequestController extends Controller
         if ($request->hasFile('supporting_document')) {
             $supportDir = 'leave-supporting-docs';
             $assetDisk = 'digitalocean';
-            $doConfigured = !empty(env('DIGITALOCEAN_SPACES_KEY') ?: env('DO_SPACES_KEY'))
-                && !empty(env('DIGITALOCEAN_SPACES_SECRET') ?: env('DO_SPACES_SECRET'))
-                && !empty(env('DIGITALOCEAN_SPACES_BUCKET') ?: env('DO_SPACES_BUCKET'));
+            $doConfigured = ! empty(env('DIGITALOCEAN_SPACES_KEY') ?: env('DO_SPACES_KEY'))
+                && ! empty(env('DIGITALOCEAN_SPACES_SECRET') ?: env('DO_SPACES_SECRET'))
+                && ! empty(env('DIGITALOCEAN_SPACES_BUCKET') ?: env('DO_SPACES_BUCKET'));
             if ($doConfigured) {
                 $assetRoot = trim(env('DIGITALOCEAN_SPACES_ROOT_PATH', ''), '/');
-                $supportDir = $assetRoot ? $assetRoot . '/' . $supportDir : $supportDir;
+                $supportDir = $assetRoot ? $assetRoot.'/'.$supportDir : $supportDir;
             }
             try {
                 $supportingPath = $request->file('supporting_document')->store(
@@ -496,10 +498,10 @@ class LeaveRequestController extends Controller
 
         Log::info('Leave request notification - checking admin emails', [
             'admin_emails_str' => $adminEmailsStr,
-            'leave_request_id' => $leaveRequest->id
+            'leave_request_id' => $leaveRequest->id,
         ]);
 
-        if (!empty($adminEmailsStr) && trim($adminEmailsStr) !== '') {
+        if (! empty($adminEmailsStr) && trim($adminEmailsStr) !== '') {
             $adminEmails = array_filter(array_map('trim', explode(',', $adminEmailsStr)));
             $validEmails = array_filter($adminEmails, function ($email) {
                 return filter_var($email, FILTER_VALIDATE_EMAIL);
@@ -508,10 +510,10 @@ class LeaveRequestController extends Controller
             Log::info('Leave request notification - parsed emails', [
                 'total_emails' => count($adminEmails),
                 'valid_emails' => count($validEmails),
-                'valid_emails_list' => $validEmails
+                'valid_emails_list' => $validEmails,
             ]);
 
-            if (!empty($validEmails)) {
+            if (! empty($validEmails)) {
                 try {
                     // Configure mail settings before sending
                     MailConfigService::configure();
@@ -520,7 +522,7 @@ class LeaveRequestController extends Controller
                     Log::info('Leave request notification - mail configuration', [
                         'mail_driver' => config('mail.default'),
                         'mail_from' => config('mail.from.address'),
-                        'valid_emails_count' => count($validEmails)
+                        'valid_emails_count' => count($validEmails),
                     ]);
 
                     $sentCount = 0;
@@ -532,7 +534,7 @@ class LeaveRequestController extends Controller
                             $sentCount++;
                             Log::info('Leave request notification email sent successfully', [
                                 'email' => $email,
-                                'leave_request_id' => $leaveRequest->id
+                                'leave_request_id' => $leaveRequest->id,
                             ]);
                         } catch (\Exception $emailException) {
                             $failedCount++;
@@ -540,7 +542,7 @@ class LeaveRequestController extends Controller
                                 'email' => $email,
                                 'error' => $emailException->getMessage(),
                                 'leave_request_id' => $leaveRequest->id,
-                                'trace' => $emailException->getTraceAsString()
+                                'trace' => $emailException->getTraceAsString(),
                             ]);
                             // Continue sending to other emails even if one fails
                         }
@@ -550,26 +552,26 @@ class LeaveRequestController extends Controller
                             'sent' => $sentCount,
                             'failed' => $failedCount,
                             'total' => count($validEmails),
-                            'leave_request_id' => $leaveRequest->id
+                            'leave_request_id' => $leaveRequest->id,
                         ]);
                     } else {
                         Log::warning('Leave request notification - no valid emails found after parsing', [
                             'admin_emails_str' => $adminEmailsStr,
                             'parsed_emails' => $adminEmails,
                             'valid_emails' => $validEmails,
-                            'leave_request_id' => $leaveRequest->id
+                            'leave_request_id' => $leaveRequest->id,
                         ]);
                     }
                 } catch (\Exception $e) {
-                    Log::error('Failed to configure mail or send leave request notification emails: ' . $e->getMessage(), [
+                    Log::error('Failed to configure mail or send leave request notification emails: '.$e->getMessage(), [
                         'leave_request_id' => $leaveRequest->id,
-                        'trace' => $e->getTraceAsString()
+                        'trace' => $e->getTraceAsString(),
                     ]);
                     // Don't fail the request if email fails
                 }
             } else {
                 Log::info('Leave request notification - no admin emails configured', [
-                    'leave_request_id' => $leaveRequest->id
+                    'leave_request_id' => $leaveRequest->id,
                 ]);
             }
         }
@@ -585,7 +587,7 @@ class LeaveRequestController extends Controller
     {
         // Allow employees and students to access
         $user = Auth::user();
-        if (!in_array($user->role, ['employee', 'student'])) {
+        if (! in_array($user->role, ['employee', 'student'])) {
             abort(403, 'Only employees and students can view leave requests.');
         }
 
@@ -614,7 +616,8 @@ class LeaveRequestController extends Controller
                 $minutes = (int) round(abs($decimal) * 60);
                 $h = intdiv($minutes, 60);
                 $m = $minutes % 60;
-                return $sign . sprintf('%02d:%02d', $h, $m);
+
+                return $sign.sprintf('%02d:%02d', $h, $m);
             };
 
             $studentTime = [
@@ -643,7 +646,9 @@ class LeaveRequestController extends Controller
             'cto' => \App\Models\Setting::get('leave_cto', 'NITISH KHEMANI'),
         ];
 
-        return view('user.leave-requests.show', compact('leaveRequest', 'signatories', 'studentTime'));
+        $leaveRequestActivityLogs = $this->leaveRequestActivityLogsForRequester($leaveRequest);
+
+        return view('user.leave-requests.show', compact('leaveRequest', 'signatories', 'studentTime', 'leaveRequestActivityLogs'));
     }
 
     /**
@@ -653,7 +658,7 @@ class LeaveRequestController extends Controller
     {
         // Only allow employees to access
         $user = Auth::user();
-        if (!in_array($user->role, ['employee', 'student'])) {
+        if (! in_array($user->role, ['employee', 'student'])) {
             abort(403, 'Only employees and students can edit leave requests.');
         }
 
@@ -663,8 +668,8 @@ class LeaveRequestController extends Controller
         }
 
         // Only allow editing of pending requests that were previously reviewed (resubmission)
-        if (!$leaveRequest->isPending() || !$leaveRequest->reviewed_at) {
-            return redirect('/leave-requests/' . $leaveRequest->id)
+        if (! $leaveRequest->isPending() || ! $leaveRequest->reviewed_at) {
+            return redirect('/leave-requests/'.$leaveRequest->id)
                 ->withErrors(['error' => 'You can only edit leave requests that have been requested for resubmission.']);
         }
 
@@ -740,7 +745,9 @@ class LeaveRequestController extends Controller
             $editData['reason'] = $raw;
         }
 
-        return view('user.leave-requests.edit', compact('leaveRequest', 'editData'));
+        $leaveRequestActivityLogs = $this->leaveRequestActivityLogsForRequester($leaveRequest);
+
+        return view('user.leave-requests.edit', compact('leaveRequest', 'editData', 'leaveRequestActivityLogs'));
     }
 
     /**
@@ -750,7 +757,7 @@ class LeaveRequestController extends Controller
     {
         // Only allow employees to access
         $user = Auth::user();
-        if (!in_array($user->role, ['employee', 'student'])) {
+        if (! in_array($user->role, ['employee', 'student'])) {
             abort(403, 'Only employees and students can update leave requests.');
         }
 
@@ -760,8 +767,8 @@ class LeaveRequestController extends Controller
         }
 
         // Only allow updating of pending requests that were previously reviewed (resubmission)
-        if (!$leaveRequest->isPending() || !$leaveRequest->reviewed_at) {
-            return redirect('/leave-requests/' . $leaveRequest->id)
+        if (! $leaveRequest->isPending() || ! $leaveRequest->reviewed_at) {
+            return redirect('/leave-requests/'.$leaveRequest->id)
                 ->withErrors(['error' => 'You can only update leave requests that have been requested for resubmission.']);
         }
 
@@ -780,12 +787,12 @@ class LeaveRequestController extends Controller
         if ($typeInput === 'travel') {
             $startDateRules[] = 'before_or_equal:today';
             $endDateRules[] = 'before_or_equal:today';
-        } elseif (!($typeInput === 'overtime' || ($user->role === 'student' && $typeInput === 'additional_time'))) {
+        } elseif (! ($typeInput === 'overtime' || ($user->role === 'student' && $typeInput === 'additional_time'))) {
             $startDateRules[] = 'after_or_equal:today';
         }
 
         $validated = $request->validate([
-            'type' => ['required', 'in:' . implode(',', $allowedTypes)],
+            'type' => ['required', 'in:'.implode(',', $allowedTypes)],
             'start_date' => $startDateRules,
             'end_date' => $endDateRules,
             'additional_time_mode' => 'nullable|in:fixed_date,total_hours',
@@ -794,10 +801,10 @@ class LeaveRequestController extends Controller
             'supporting_document' => 'nullable|file|mimes:pdf,jpg,jpeg,png|max:5120',
             'overtime_hours' => 'required_if:type,overtime|nullable|regex:/^\\d{2}:\\d{2}$/',
             'overtime_dates' => 'required_if:type,overtime|nullable|string|max:255',
-            'overtime_tasks' => 'required_if:type,overtime|nullable|string|max:2000',
+            'overtime_tasks' => ['required_if:type,overtime', 'nullable', 'string', 'max:2000', new ClickUpTasksUrlsOnly],
             'wfh_mode' => 'required_if:type,work_from_home|nullable|in:working_remotely,request_to_be_excused',
             'wfh_address' => 'required_if:type,work_from_home|nullable|string|max:255',
-            'wfh_tasks' => 'required_if:type,work_from_home|nullable|string|max:2000',
+            'wfh_tasks' => ['required_if:type,work_from_home', 'nullable', 'string', 'max:2000', new ClickUpTasksUrlsOnly],
             'offset_hours' => 'nullable|regex:/^\\d{2}:\\d{2}$/',
             'travel_hours' => ['nullable', 'numeric', 'min:0', 'max:24'],
         ]);
@@ -830,7 +837,7 @@ class LeaveRequestController extends Controller
 
         if ($validated['type'] === 'additional_time' && $user->role === 'student') {
             $additionalMode = $validated['additional_time_mode'] ?? 'fixed_date';
-            if (!in_array($additionalMode, ['fixed_date', 'total_hours'], true)) {
+            if (! in_array($additionalMode, ['fixed_date', 'total_hours'], true)) {
                 return redirect()->back()
                     ->withErrors(['additional_time_mode' => 'Please choose how to submit Additional Time.'])
                     ->withInput();
@@ -852,12 +859,12 @@ class LeaveRequestController extends Controller
 
         if ($validated['type'] === 'overtime') {
             $details = "Overtime Request Details:\n";
-            $details .= "Total Overtime Hours: " . ($validated['overtime_hours'] ?? '') . "\n";
-            $details .= "Overtime Dates: " . ($validated['overtime_dates'] ?? '') . "\n";
-            $details .= "Tasks / ClickUp Links:\n" . ($validated['overtime_tasks'] ?? '') . "\n";
+            $details .= 'Total Overtime Hours: '.($validated['overtime_hours'] ?? '')."\n";
+            $details .= 'Overtime Dates: '.($validated['overtime_dates'] ?? '')."\n";
+            $details .= "Tasks / ClickUp Links:\n".($validated['overtime_tasks'] ?? '')."\n";
 
-            if (!empty($reasonToStore)) {
-                $details .= "\nAdditional Explanation:\n" . $reasonToStore;
+            if (! empty($reasonToStore)) {
+                $details .= "\nAdditional Explanation:\n".$reasonToStore;
             }
 
             $reasonToStore = $details;
@@ -867,13 +874,13 @@ class LeaveRequestController extends Controller
                 : 'Working remotely';
 
             $details = "Work From Home Request Details:\n";
-            $details .= "Mode: " . $modeLabel . "\n";
-            $details .= "Remote Address: " . ($validated['wfh_address'] ?? '') . "\n";
-            $details .= "Work Dates: " . ($validated['start_date'] ?? '') . ' to ' . ($validated['end_date'] ?? $validated['start_date']) . "\n";
-            $details .= "Tasks / ClickUp Links:\n" . ($validated['wfh_tasks'] ?? '') . "\n";
+            $details .= 'Mode: '.$modeLabel."\n";
+            $details .= 'Remote Address: '.($validated['wfh_address'] ?? '')."\n";
+            $details .= 'Work Dates: '.($validated['start_date'] ?? '').' to '.($validated['end_date'] ?? $validated['start_date'])."\n";
+            $details .= "Tasks / ClickUp Links:\n".($validated['wfh_tasks'] ?? '')."\n";
 
-            if (!empty($reasonToStore)) {
-                $details .= "\nAdditional Explanation:\n" . $reasonToStore;
+            if (! empty($reasonToStore)) {
+                $details .= "\nAdditional Explanation:\n".$reasonToStore;
             }
 
             $reasonToStore = $details;
@@ -895,30 +902,30 @@ class LeaveRequestController extends Controller
             }
 
             $details = "Offset Request Details:\n";
-            $details .= "Duration: " . $days . " " . ($days == 1 ? 'day' : 'days') . "\n";
-            $details .= "Hours to Deduct: " . $offsetHours . "\n";
+            $details .= 'Duration: '.$days.' '.($days == 1 ? 'day' : 'days')."\n";
+            $details .= 'Hours to Deduct: '.$offsetHours."\n";
 
-            if (!empty($reasonToStore)) {
-                $details .= "\nReason:\n" . $reasonToStore;
+            if (! empty($reasonToStore)) {
+                $details .= "\nReason:\n".$reasonToStore;
             }
 
             $reasonToStore = $details;
         } elseif ($validated['type'] === 'travel') {
-            $reasonToStore = 'Location of travel: ' . trim($validated['reason'] ?? '');
+            $reasonToStore = 'Location of travel: '.trim($validated['reason'] ?? '');
         } elseif ($validated['type'] === 'additional_time' && $user->role === 'student') {
             $additionalMode = $validated['additional_time_mode'] ?? 'fixed_date';
             if ($additionalMode === 'total_hours') {
                 $totalHoursText = trim((string) ($validated['additional_time_total_hours'] ?? ''));
                 $details = "Additional Time Input Mode: Total Hours\n";
                 $details .= "Additional Time Hours: {$totalHoursText}\n";
-                if (!empty($reasonToStore)) {
-                    $details .= "\nReason:\n" . $reasonToStore;
+                if (! empty($reasonToStore)) {
+                    $details .= "\nReason:\n".$reasonToStore;
                 }
                 $reasonToStore = $details;
             } else {
                 $details = "Additional Time Input Mode: Fixed Date (1 day = 8 hours)\n";
-                if (!empty($reasonToStore)) {
-                    $details .= "\nReason:\n" . $reasonToStore;
+                if (! empty($reasonToStore)) {
+                    $details .= "\nReason:\n".$reasonToStore;
                 }
                 $reasonToStore = $details;
             }
@@ -941,6 +948,7 @@ class LeaveRequestController extends Controller
             }
             if ($daysRequested > ($bal['leave_remaining'] ?? 0)) {
                 $remaining = $bal['leave_remaining'] ?? 0;
+
                 return redirect()->back()
                     ->withErrors(['end_date' => "You only have {$remaining} day(s) of Leave Credits remaining. You cannot request {$daysRequested} day(s)."])
                     ->withInput();
@@ -952,7 +960,7 @@ class LeaveRequestController extends Controller
         if ($request->hasFile('supporting_document')) {
             $assetDisk = 'digitalocean';
             $assetRoot = trim(env('DIGITALOCEAN_SPACES_ROOT_PATH', ''), '/');
-            $supportDir = $assetRoot ? $assetRoot . '/leave-supporting-docs' : 'leave-supporting-docs';
+            $supportDir = $assetRoot ? $assetRoot.'/leave-supporting-docs' : 'leave-supporting-docs';
 
             if ($supportingPath) {
                 try {
@@ -966,7 +974,8 @@ class LeaveRequestController extends Controller
         }
 
         $travelHours = $validated['type'] === 'travel' ? (float) ($validated['travel_hours'] ?? 8.0) : null;
-        // Clear review information when resubmitting
+        $statusBeforeSubmit = $leaveRequest->status;
+        // Clear review information when resubmitting; keep admin_notes so the requester still sees prior reviewer feedback in the activity history and on file.
         $leaveRequest->update([
             'type' => $validated['type'],
             'start_date' => $validated['start_date'],
@@ -977,10 +986,18 @@ class LeaveRequestController extends Controller
             'status' => 'pending',
             'reviewed_by' => null,
             'reviewed_at' => null,
-            'admin_notes' => null,
         ]);
 
-        return redirect('/leave-requests/' . $leaveRequest->id)
+        LeaveRequestLog::create([
+            'leave_request_id' => $leaveRequest->id,
+            'action' => 'requester_resubmitted',
+            'status_before' => $statusBeforeSubmit,
+            'status_after' => 'pending',
+            'notes' => 'Requester revised and saved the request following a resubmission request (awaiting administrator review).',
+            'performed_by' => (int) Auth::id(),
+        ]);
+
+        return redirect('/leave-requests/'.$leaveRequest->id)
             ->with('success', 'Leave request updated successfully. It will be reviewed again by an administrator.');
     }
 
@@ -991,7 +1008,7 @@ class LeaveRequestController extends Controller
     {
         // Allow employees and students to access
         $user = Auth::user();
-        if (!in_array($user->role, ['employee', 'student'])) {
+        if (! in_array($user->role, ['employee', 'student'])) {
             abort(403, 'Only employees and students can delete leave requests.');
         }
 
@@ -1001,7 +1018,7 @@ class LeaveRequestController extends Controller
         }
 
         // Only allow deletion of pending requests
-        if (!$leaveRequest->isPending()) {
+        if (! $leaveRequest->isPending()) {
             return redirect()->back()
                 ->withErrors(['error' => 'You can only delete pending leave requests.']);
         }
@@ -1035,8 +1052,8 @@ class LeaveRequestController extends Controller
                 $dtr->overtime_hours = max($newTotal - 8.0, 0);
                 $existingRemarks = $dtr->remarks ?? '';
                 $travelRemark = "Travel Leave ({$hoursPerDay}h)";
-                if (!empty($existingRemarks) && strpos($existingRemarks, $travelRemark) === false) {
-                    $dtr->remarks = $existingRemarks . '; ' . $travelRemark;
+                if (! empty($existingRemarks) && strpos($existingRemarks, $travelRemark) === false) {
+                    $dtr->remarks = $existingRemarks.'; '.$travelRemark;
                 } elseif (empty($existingRemarks)) {
                     $dtr->remarks = $travelRemark;
                 }
@@ -1114,7 +1131,7 @@ class LeaveRequestController extends Controller
         foreach ($approvedOffsetRequests as $offsetRequest) {
             $raw = $offsetRequest->reason ?? '';
             if (preg_match('/Hours to Deduct:\s*([0-9]{2}):([0-9]{2})/', $raw, $m)) {
-                $offsetMinutes += (int)$m[1] * 60 + (int)$m[2];
+                $offsetMinutes += (int) $m[1] * 60 + (int) $m[2];
             } else {
                 // Fallback: use days * 8 hours when no explicit HH:MM is present
                 $offsetMinutes += (int) round(($offsetRequest->days * 8) * 60);
@@ -1205,7 +1222,7 @@ class LeaveRequestController extends Controller
                 ->whereDate('date', $date)
                 ->first();
 
-            if (!$dtr) {
+            if (! $dtr) {
                 return;
             }
 
@@ -1215,7 +1232,7 @@ class LeaveRequestController extends Controller
             $dtr->total_hours = $newTotal;
             $dtr->overtime_hours = max($newTotal - 8.0, 0);
             if ($existingRemarks !== '' && strpos($existingRemarks, $remarkToken) !== false) {
-                $dtr->remarks = trim(str_replace([$remarkToken . '; ', '; ' . $remarkToken, $remarkToken], '', $existingRemarks));
+                $dtr->remarks = trim(str_replace([$remarkToken.'; ', '; '.$remarkToken, $remarkToken], '', $existingRemarks));
             }
             $dtr->save();
             $didRevert = true;
@@ -1230,6 +1247,7 @@ class LeaveRequestController extends Controller
                     'performed_by' => Auth::id(),
                 ]);
             }
+
             return;
         }
 
@@ -1242,7 +1260,7 @@ class LeaveRequestController extends Controller
                 ->whereDate('date', $date->toDateString())
                 ->first();
 
-            if (!$dtr) {
+            if (! $dtr) {
                 continue;
             }
 
@@ -1277,7 +1295,7 @@ class LeaveRequestController extends Controller
     private function parseHourMinuteToMinutes(string $value): int
     {
         $value = trim($value);
-        if (!preg_match('/^(\d{1,3}):(\d{2})$/', $value, $m)) {
+        if (! preg_match('/^(\d{1,3}):(\d{2})$/', $value, $m)) {
             return 0;
         }
 
@@ -1330,10 +1348,12 @@ class LeaveRequestController extends Controller
         foreach ($requests as $request) {
             if ($request->type === 'travel') {
                 $total += ((float) ($request->travel_hours ?? 8.0)) * $request->days;
+
                 continue;
             }
             if (in_array($request->type, ['leave', 'vacation_leave', 'sick_leave'], true)) {
                 $total += 8.0 * $request->days;
+
                 continue;
             }
 
@@ -1343,6 +1363,7 @@ class LeaveRequestController extends Controller
                 $minutes = (int) $m[2];
                 if ($minutes >= 0 && $minutes <= 59) {
                     $total += $hours + ($minutes / 60);
+
                     continue;
                 }
             }
@@ -1350,5 +1371,19 @@ class LeaveRequestController extends Controller
         }
 
         return $total;
+    }
+
+    /**
+     * Activity log entries for the requester UI (oldest first).
+     *
+     * @return \Illuminate\Support\Collection<int, LeaveRequestLog>
+     */
+    private function leaveRequestActivityLogsForRequester(LeaveRequest $leaveRequest)
+    {
+        return LeaveRequestLog::query()
+            ->where('leave_request_id', $leaveRequest->id)
+            ->with('performer')
+            ->orderBy('created_at')
+            ->get();
     }
 }

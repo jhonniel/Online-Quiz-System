@@ -29,23 +29,12 @@
     <!-- Form -->
     <div class="flex-1 overflow-y-auto p-4">
         <div class="max-w-3xl mx-auto">
-            @if($leaveRequest->admin_notes)
-                <div class="bg-yellow-50 border-l-4 border-yellow-400 p-4 mb-6 rounded-lg">
-                    <div class="flex">
-                        <div class="flex-shrink-0">
-                            <svg class="h-5 w-5 text-yellow-400" fill="currentColor" viewBox="0 0 20 20">
-                                <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>
-                            </svg>
-                        </div>
-                        <div class="ml-3">
-                            <h3 class="text-sm font-medium text-yellow-800">Admin Feedback</h3>
-                            <div class="mt-2 text-sm text-yellow-700 whitespace-pre-line">
-                                {{ $leaveRequest->admin_notes }}
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            @endif
+            <div class="mb-6">
+                @include('user.leave-requests.partials.admin-feedback-for-requester', [
+                    'leaveRequest' => $leaveRequest,
+                    'leaveRequestActivityLogs' => $leaveRequestActivityLogs,
+                ])
+            </div>
 
             <div class="bg-white rounded-lg shadow border border-gray-200 p-6">
                 <form action="{{ url('/leave-requests/' . $leaveRequest->id) }}" method="POST" enctype="multipart/form-data" class="space-y-6">
@@ -281,10 +270,10 @@
                                 Tasks / ClickUp Links <span class="text-red-500">*</span>
                             </label>
                             <textarea name="overtime_tasks" id="overtime_tasks" rows="4"
-                                      placeholder="Strictly list down tasks listed in ClickUp for Devs via link..."
+                                      placeholder="https://app.clickup.com/... (URLs only)"
                                       class="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">{{ old('overtime_tasks', $editData['overtime_tasks']) }}</textarea>
                             <p class="mt-1 text-xs text-gray-500">
-                                List the tasks that justify this overtime, including any ClickUp or ticket links.
+                                Put <strong>http</strong> or <strong>https</strong> links only. No sentences in this box—use Additional Explanation if needed.
                             </p>
                             @error('overtime_tasks')
                                 <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
@@ -400,10 +389,10 @@
                                 Tasks / ClickUp Links <span class="text-red-500">*</span>
                             </label>
                             <textarea name="wfh_tasks" id="wfh_tasks" rows="4"
-                                      placeholder="Strictly list down tasks listed in ClickUp for Devs via link..."
+                                      placeholder="https://app.clickup.com/... (URLs only)"
                                       class="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">{{ old('wfh_tasks', $editData['wfh_tasks']) }}</textarea>
                             <p class="mt-1 text-xs text-gray-500">
-                                List the tasks you will work on while remote, including any ClickUp or ticket links.
+                                Put <strong>http</strong> or <strong>https</strong> links only. No sentences in this box—use Additional Explanation if needed.
                             </p>
                             @error('wfh_tasks')
                                 <p class="mt-1 text-sm text-red-600">{{ $message }}</p>

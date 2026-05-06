@@ -142,7 +142,7 @@
                         </div>
                         <div>
                             <label for="admin_overtime_tasks" class="block text-xs font-medium text-gray-700">Tasks / ClickUp <span class="text-red-500">*</span></label>
-                            <textarea name="overtime_tasks" id="admin_overtime_tasks" rows="2" class="w-full px-2.5 py-1.5 text-xs border border-gray-300 rounded-md focus:ring-2 focus:ring-indigo-500" placeholder="Tasks and links">{{ old('overtime_tasks') }}</textarea>
+                            <textarea name="overtime_tasks" id="admin_overtime_tasks" rows="2" class="w-full px-2.5 py-1.5 text-xs border border-gray-300 rounded-md focus:ring-2 focus:ring-indigo-500" placeholder="https://... URLs only">{{ old('overtime_tasks') }}</textarea>
                         </div>
                     </div>
 
@@ -173,7 +173,7 @@
                         </div>
                         <div>
                             <label for="admin_wfh_tasks" class="block text-xs font-medium text-gray-700">Tasks / ClickUp <span class="text-red-500">*</span></label>
-                            <textarea name="wfh_tasks" id="admin_wfh_tasks" rows="2" class="w-full px-2.5 py-1.5 text-xs border border-gray-300 rounded-md focus:ring-2 focus:ring-indigo-500" placeholder="Tasks and links">{{ old('wfh_tasks') }}</textarea>
+                            <textarea name="wfh_tasks" id="admin_wfh_tasks" rows="2" class="w-full px-2.5 py-1.5 text-xs border border-gray-300 rounded-md focus:ring-2 focus:ring-indigo-500" placeholder="https://... URLs only">{{ old('wfh_tasks') }}</textarea>
                         </div>
                     </div>
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">

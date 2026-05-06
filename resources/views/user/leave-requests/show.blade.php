@@ -509,15 +509,10 @@
                     </div>
                 @endif
 
-                <!-- Admin Notes -->
-                @if($leaveRequest->admin_notes)
-                    <div>
-                        <label class="block text-sm font-medium text-gray-500 mb-1">Admin Notes</label>
-                        <p class="text-sm text-gray-900 bg-blue-50 p-4 rounded-lg border border-blue-200">
-                            {{ $leaveRequest->admin_notes }}
-                        </p>
-                    </div>
-                @endif
+                @include('user.leave-requests.partials.admin-feedback-for-requester', [
+                    'leaveRequest' => $leaveRequest,
+                    'leaveRequestActivityLogs' => $leaveRequestActivityLogs,
+                ])
             </div>
         </div>
     </div>

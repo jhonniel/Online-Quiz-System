@@ -55,6 +55,36 @@
         </div>
     </div>
 
+    @if(auth()->user()->role === 'student' && !empty($studentLeaveBalanceSummary))
+    <div class="bg-sky-50 border-b border-sky-200 px-4 py-3 flex-shrink-0" role="region" aria-label="Absent request allowance">
+        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+            <div class="flex items-start gap-2 min-w-0">
+                <svg class="h-5 w-5 text-sky-600 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
+                </svg>
+                <div class="min-w-0">
+                    <p class="text-sm font-semibold text-sky-900">Absent-request allowance (set by administrator)</p>
+                    <p class="text-sm text-sky-800 mt-0.5">
+                        <span class="font-bold tabular-nums">{{ number_format((float) ($studentLeaveBalanceSummary['remaining_absence_balance'] ?? 0), 2) }}</span>
+                        day(s) still available
+                        <span class="text-sky-700">·</span>
+                        <span class="tabular-nums">{{ number_format((float) ($studentLeaveBalanceSummary['approved_absent_days'] ?? 0), 2) }}</span>
+                        day(s) used toward approved absences
+                        <span class="text-sky-700">·</span>
+                        allowance cap:
+                        <span class="tabular-nums">{{ number_format((float) ($studentLeaveBalanceSummary['allowable_absences'] ?? 0), 2) }}</span>
+                        day(s)
+                    </p>
+                </div>
+            </div>
+            <a href="{{ route('user.leave-requests.create') }}"
+               class="inline-flex items-center justify-center px-3 py-1.5 rounded-md text-sm font-medium text-sky-900 bg-white border border-sky-300 hover:bg-sky-100 shrink-0">
+                File leave / absence request
+            </a>
+        </div>
+    </div>
+    @endif
+
     <!-- Ongoing Quiz Alert -->
     @if($ongoingQuiz && $ongoingQuiz->isOngoing())
     <div class="bg-blue-50 border-b border-blue-200 p-4 flex-shrink-0">
@@ -158,27 +188,55 @@
     @if(auth()->user()->role === 'student' && !empty($studentTrainingStats))
     @php
         $estimatedEndDate = $studentTrainingStats['estimated_end_date'] ?? null;
+        $ojtTargetEndDate = $studentTrainingStats['ojt_target_end_date'] ?? null;
+        $possibleExitConferenceDate = $studentTrainingStats['possible_exit_conference_date'] ?? null;
+        $possibleExitWeekdays = (int) ($studentTrainingStats['possible_exit_conference_weekdays'] ?? 0);
+        $remainingTrainingHrs = (float) ($studentTrainingStats['remaining_hours'] ?? 0);
     @endphp
     <div class="p-4 pt-0 flex-shrink-0 space-y-3">
         <div class="bg-indigo-50 border border-indigo-200 rounded-lg p-4">
-            <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-                <div>
+            <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+                <div class="min-w-0 flex-1">
                     <h3 class="text-sm font-semibold text-indigo-900">Training Progress</h3>
                     <p class="text-xs text-indigo-700 mt-1">
                         Progress: {{ number_format((float) ($studentTrainingStats['progress_percent'] ?? 0), 1) }}%
                         ({{ number_format((float) ($studentTrainingStats['logged_hours'] ?? 0), 2) }}h logged /
                         {{ number_format((float) ($studentTrainingStats['required_hours'] ?? 0), 2) }}h required)
                     </p>
+                    @if($ojtTargetEndDate instanceof \Carbon\CarbonInterface && $estimatedEndDate instanceof \Carbon\CarbonInterface && $remainingTrainingHrs > 0 && $estimatedEndDate->copy()->startOfDay()->gt($ojtTargetEndDate->copy()->startOfDay()))
+                        <p class="mt-2 text-xs font-medium text-amber-900 bg-amber-100/80 border border-amber-200 rounded-md px-2 py-1.5">
+                            At your recent logging pace you may finish <strong>after</strong> the administrator’s OJT target date
+                            (<time datetime="{{ $ojtTargetEndDate->toDateString() }}">{{ $ojtTargetEndDate->timezone(config('app.timezone'))->format('F j, Y') }}</time>). Consider pacing up or confirming with your coordinator.
+                        </p>
+                    @endif
                 </div>
-                <div class="text-left sm:text-right">
-                    <p class="text-xs font-medium text-indigo-700 uppercase tracking-wide">Estimated End Date</p>
-                    <p class="text-sm font-semibold text-indigo-950">
-                        @if($estimatedEndDate instanceof \Carbon\Carbon)
-                            {{ $estimatedEndDate->timezone(config('app.timezone'))->format('F j, Y') }}
-                        @else
-                            —
-                        @endif
-                    </p>
+                <div class="flex flex-col gap-3 sm:text-right shrink-0 sm:min-w-[11rem]">
+                    @if($ojtTargetEndDate instanceof \Carbon\CarbonInterface)
+                        <div>
+                            <p class="text-xs font-medium text-indigo-700 uppercase tracking-wide">OJT target / exit conference</p>
+                            <p class="text-sm font-semibold text-indigo-950 tabular-nums">
+                                {{ $ojtTargetEndDate->timezone(config('app.timezone'))->format('F j, Y') }}
+                            </p>
+                            <p class="text-[11px] text-indigo-600 mt-0.5">Set by your administrator</p>
+                        </div>
+                    @elseif($possibleExitConferenceDate instanceof \Carbon\CarbonInterface && $possibleExitWeekdays > 0)
+                        <div>
+                            <p class="text-xs font-medium text-indigo-700 uppercase tracking-wide">Possible exit conference (estimate)</p>
+                            <p class="text-sm font-semibold text-indigo-950 tabular-nums">
+                                {{ $possibleExitConferenceDate->timezone(config('app.timezone'))->format('F j, Y') }}
+                            </p>
+                        </div>
+                    @endif
+                    <div>
+                        <p class="text-xs font-medium text-indigo-700 uppercase tracking-wide">Projected completion (recent pace)</p>
+                        <p class="text-sm font-semibold text-indigo-950 tabular-nums">
+                            @if($estimatedEndDate instanceof \Carbon\CarbonInterface)
+                                {{ $estimatedEndDate->timezone(config('app.timezone'))->format('F j, Y') }}
+                            @else
+                                —
+                            @endif
+                        </p>
+                    </div>
                 </div>
             </div>
         </div>
@@ -192,14 +250,18 @@
                 </p>
             </div>
             <div class="bg-white border border-gray-200 rounded-lg p-4 shadow-sm">
-                <p class="text-xs font-medium uppercase tracking-wide text-gray-500">Allowable Absences Balance</p>
-                <p class="mt-1 text-2xl font-bold text-gray-900">
-                    {{ number_format((float) ($studentLeaveBalanceSummary['remaining_absence_balance'] ?? 0), 2) }} day(s)
+                <p class="text-xs font-medium uppercase tracking-wide text-gray-500">Available absence balance</p>
+                <p class="mt-0.5 text-[11px] text-gray-500 leading-snug">Based on the absence allowance your administrator set (approved “Absent” requests consume this balance).</p>
+                <p class="mt-2 text-2xl font-bold text-gray-900 tabular-nums">
+                    {{ number_format((float) ($studentLeaveBalanceSummary['remaining_absence_balance'] ?? 0), 2) }}
+                    <span class="text-base font-semibold text-gray-600">days left</span>
                 </p>
                 <p class="text-xs text-gray-500 mt-1">
-                    Approved absent used:
+                    Used:
                     {{ number_format((float) ($studentLeaveBalanceSummary['approved_absent_days'] ?? 0), 2) }}
-                    / {{ number_format((float) ($studentLeaveBalanceSummary['allowable_absences'] ?? 0), 2) }} day(s)
+                    · Allowance:
+                    {{ number_format((float) ($studentLeaveBalanceSummary['allowable_absences'] ?? 0), 2) }}
+                    day(s)
                 </p>
             </div>
         </div>

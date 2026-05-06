@@ -42,12 +42,36 @@
                 </p>
 
                 @php
-                    $reviewerNotes = isset($adminNotes) ? trim((string) $adminNotes) : '';
+                    $passedNotes = isset($adminNotes) ? trim((string) $adminNotes) : '';
+                    $fullNotesOnRequest = trim((string) ($leaveRequest->admin_notes ?? ''));
+                    $isResubmissionStatus = ($status === 'resubmission_requested' || ($status === 'pending' && $leaveRequest->reviewed_at));
+                    $resubmitDeadline = null;
+                    if ($isResubmissionStatus && $leaveRequest->updated_at) {
+                        $resubmitDeadline = \Carbon\Carbon::parse($leaveRequest->updated_at)
+                            ->timezone(config('app.timezone'))
+                            ->copy()
+                            ->addDays(\App\Services\LeaveRequestStaleResubmissionService::RESPONSE_WINDOW_DAYS);
+                    }
                 @endphp
-                @if($reviewerNotes !== '')
+                @if($passedNotes !== '' && $fullNotesOnRequest !== '' && $passedNotes !== $fullNotesOnRequest)
+                    <h2 style="margin: 0 0 8px 0; font-size: 16px; color: #111827;">Latest message from reviewer</h2>
+                    <p style="margin: 0 0 12px 0; white-space: pre-line;">{{ $passedNotes }}</p>
+                    <h2 style="margin: 0 0 8px 0; font-size: 16px; color: #111827;">All notes on your request</h2>
+                    <p style="margin: 0 0 12px 0; white-space: pre-line;">{{ $fullNotesOnRequest }}</p>
+                @elseif($fullNotesOnRequest !== '')
                     <h2 style="margin: 0 0 8px 0; font-size: 16px; color: #111827;">Notes from reviewer</h2>
-                    <p style="margin: 0 0 12px 0; white-space: pre-line;">
-                        {{ $reviewerNotes }}
+                    <p style="margin: 0 0 12px 0; white-space: pre-line;">{{ $fullNotesOnRequest }}</p>
+                @elseif($passedNotes !== '')
+                    <h2 style="margin: 0 0 8px 0; font-size: 16px; color: #111827;">Notes from reviewer</h2>
+                    <p style="margin: 0 0 12px 0; white-space: pre-line;">{{ $passedNotes }}</p>
+                @endif
+
+                @if($isResubmissionStatus && $resubmitDeadline instanceof \Carbon\CarbonInterface)
+                    <p style="margin: 0 0 12px 0; padding: 12px 14px; background-color: #fffbeb; border: 1px solid #fcd34d; border-radius: 8px; color: #78350f; font-size: 13px; line-height: 1.5;">
+                        <strong>Action deadline:</strong>
+                        Update and resubmit within <strong>{{ \App\Services\LeaveRequestStaleResubmissionService::RESPONSE_WINDOW_DAYS }} calendar days</strong>
+                        from the request&rsquo;s last update (<strong>{{ $leaveRequest->updated_at->timezone(config('app.timezone'))->format('M j, Y g:i A') }}</strong>, {{ config('app.timezone') }}).
+                        If not updated by <strong>{{ $resubmitDeadline->format('M j, Y g:i A') }}</strong> {{ config('app.timezone') }}, the request may be automatically rejected.
                     </p>
                 @endif
 

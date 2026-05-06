@@ -126,6 +126,10 @@
         : ($studentRulesBannerRows === 1 ? ' pt-10 sm:pt-11' : '');
 @endphp
 <body class="font-sans antialiased bg-gray-50{{ $studentRulesBodyPad }}" x-data="{ sidebarOpen: false, sidebarCollapsed: false }">
+    @php
+        $layoutOffsetMobilePx = $studentRulesBannerRows === 2 ? 80 : ($studentRulesBannerRows === 1 ? 40 : 0);
+        $layoutOffsetDesktopPx = $studentRulesBannerRows === 2 ? 96 : ($studentRulesBannerRows === 1 ? 44 : 0);
+    @endphp
     @if($studentRulesBannerRows > 0)
         <div class="fixed top-0 left-0 right-0 z-[190] flex flex-col shadow-md" aria-label="Student notices">
             @if($studentRulesMarqueeActive)
@@ -161,7 +165,10 @@
             @endif
         </div>
     @endif
-    <div class="min-h-screen flex">
+    <div
+        class="flex overflow-hidden h-[calc(100vh-var(--layout-offset-mobile))] sm:h-[calc(100vh-var(--layout-offset-desktop))]"
+        style="--layout-offset-mobile: {{ $layoutOffsetMobilePx }}px; --layout-offset-desktop: {{ $layoutOffsetDesktopPx }}px;"
+    >
         <!-- Sidebar -->
         <div class="hidden lg:flex lg:flex-shrink-0">
             <div class="flex flex-col transition-all duration-300" :class="sidebarCollapsed ? 'w-16' : 'w-64'">
@@ -2095,6 +2102,12 @@
     @auth
         @if(auth()->user()->role === 'student' && session('student_rules_regulations_pending') === true)
             @include('components.student-rules-regulations-modal')
+        @endif
+    @endauth
+
+    @auth
+        @if(! empty($leaveResubmissionModalPayload))
+            <x-leave-resubmission-required-modal :items="$leaveResubmissionModalPayload" />
         @endif
     @endauth
 

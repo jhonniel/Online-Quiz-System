@@ -288,6 +288,7 @@
                         </div>
                         <p class="text-xs text-gray-500 mt-1">
                             Optional. For <span class="font-semibold">students</span>, this is the total hours they need to acquire via DTR.
+                            The dashboard also shows an <strong>estimated</strong> completion date from recent logging pace unless you set a target end date below.
                         </p>
                         @error('required_training_hours')
                             <p class="text-sm text-red-600 flex items-center mt-1">
@@ -297,6 +298,33 @@
                                 {{ $message }}
                             </p>
                         @enderror
+
+                        <div class="pt-3">
+                            <label for="ojt_target_end_date" class="block text-sm font-semibold text-gray-700">
+                                OJT target end date / exit conference
+                            </label>
+                            <div class="relative group mt-1">
+                                <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                                    <svg class="w-5 h-5 text-gray-400 group-focus-within:text-indigo-500 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                                    </svg>
+                                </div>
+                                <input type="date"
+                                       name="ojt_target_end_date"
+                                       id="ojt_target_end_date"
+                                       value="{{ old('ojt_target_end_date') }}"
+                                       class="block w-full pl-12 pr-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200 bg-gray-50 focus:bg-white @error('ojt_target_end_date') border-red-300 focus:ring-red-500 focus:border-red-500 @enderror">
+                            </div>
+                            <p class="text-xs text-gray-500 mt-1">
+                                Optional. Official last day of OJT, exit conference date, or other deadline shown to the student alongside hours-based projections.
+                            </p>
+                            @error('ojt_target_end_date')
+                                <p class="text-sm text-red-600 flex items-center mt-1">
+                                    <svg class="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd"></path></svg>
+                                    {{ $message }}
+                                </p>
+                            @enderror
+                        </div>
 
                         <div class="pt-2">
                             <label for="student_absence_allowance" class="block text-sm font-semibold text-gray-700">
