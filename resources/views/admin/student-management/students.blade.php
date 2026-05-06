@@ -43,9 +43,9 @@
             <p class="mt-1 text-xs text-gray-500">Reached required hours</p>
         </div>
         <div class="bg-white border border-gray-200 rounded-lg p-4 shadow-sm">
-            <p class="text-xs font-semibold uppercase tracking-wide text-gray-500">Ongoing, No Time Logged</p>
-            <p class="mt-2 text-2xl font-bold text-amber-700">{{ number_format((int) ($statsOngoingNoLoggedTime ?? 0)) }}</p>
-            <p class="mt-1 text-xs text-gray-500">Required hours set, zero DTR hours yet</p>
+            <p class="text-xs font-semibold uppercase tracking-wide text-gray-500">Ongoing (incomplete)</p>
+            <p class="mt-2 text-2xl font-bold text-amber-700">{{ number_format((int) ($statsOngoingIncomplete ?? 0)) }}</p>
+            <p class="mt-1 text-xs text-gray-500">Required hours set and logged hours still below required (Internship Ended shows Ongoing or — until complete)</p>
         </div>
         <div class="bg-white border border-gray-200 rounded-lg p-4 shadow-sm">
             <p class="text-xs font-semibold uppercase tracking-wide text-gray-500">Average Completion</p>
@@ -90,9 +90,10 @@
         <div class="px-4 py-3 border-b border-gray-200 bg-gray-50">
             <h3 class="text-sm font-semibold text-gray-900">Exit conference — closest to today (by school)</h3>
             <p class="mt-1 text-xs text-gray-500">
-                Each row is one school in your scope. The student listed has the exit-conference date nearest to today
-                (admin-set OJT target if present; otherwise estimated from required hours and first DTR date, matching the student dashboard rule).
-                This table uses <strong>all students in scope</strong>, not the search box below.
+                Only schools with at least one student still completing OJT (required hours not yet fully logged). For each school, the student shown is the ongoing one whose exit-conference date is nearest to today
+                (admin-set OJT target if present; otherwise estimated from required hours and first DTR date, matching the student dashboard).
+                <strong>Possible exit conference</strong> is the same weekday estimate shown on the student dashboard when no admin OJT target is set (otherwise em dash).
+                Rows are sorted by exit date (earliest first). Uses <strong>all students in scope</strong>, not the search box below.
             </p>
         </div>
         @include('admin.student-management.partials.exit-conference-closest-by-school-table', ['exitConferenceClosestBySchool' => $exitConferenceClosestBySchool ?? []])
@@ -155,7 +156,6 @@
                         <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Student</th>
                         <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">School / University</th>
                         <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Department</th>
-                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">OJT target / exit</th>
                         <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Internship Started</th>
                         <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Internship Ended</th>
                         <th scope="col" class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Hours</th>
@@ -190,13 +190,6 @@
                             </td>
                             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
                                 {{ optional($student->department)->name ?? '—' }}
-                            </td>
-                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
-                                @if($student->ojt_target_end_date)
-                                    <span class="tabular-nums">{{ $student->ojt_target_end_date->format('M j, Y') }}</span>
-                                @else
-                                    <span class="text-gray-400">—</span>
-                                @endif
                             </td>
                             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
                                 {{ $started ? $started->format('M j, Y') : '—' }}

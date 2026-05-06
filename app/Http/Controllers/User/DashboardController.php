@@ -111,14 +111,7 @@ class DashboardController extends Controller
                 ->with('quiz')
                 ->first();
         } else {
-            // For other roles (student, employee), show all active quizzes
-            $allQuizzes = \App\Models\Quiz::where('is_active', true)
-                ->with(['creator', 'assignments' => function ($query) {
-                    $query->where('user_id', auth()->id());
-                }])
-                ->get();
-
-            // Get assigned quizzes for statistics
+            // Students, employees, etc.: only active quizzes that have been assigned to this user
             $assignedQuizzes = QuizAssignment::where('user_id', $user->id)
                 ->with(['quiz.creator'])
                 ->whereHas('quiz', function ($query) {
@@ -126,9 +119,20 @@ class DashboardController extends Controller
                 })
                 ->get();
 
+            $allQuizzes = \App\Models\Quiz::query()
+                ->where('is_active', true)
+                ->whereHas('assignments', function ($query) use ($user) {
+                    $query->where('user_id', $user->id);
+                })
+                ->with(['creator', 'assignments' => function ($query) use ($user) {
+                    $query->where('user_id', $user->id);
+                }])
+                ->orderBy('title')
+                ->get();
+
             $completedQuizzes = $assignedQuizzes->where('is_completed', true)->count();
             $pendingQuizzes = $assignedQuizzes->where('is_completed', false)->count();
-            $totalQuizzes = $allQuizzes->count(); // Show total available quizzes
+            $totalQuizzes = $allQuizzes->count();
 
             // Get ongoing quiz (in progress)
             $ongoingQuiz = QuizAssignment::where('user_id', $user->id)

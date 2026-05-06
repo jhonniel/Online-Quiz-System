@@ -101,12 +101,12 @@ class StudentDashboardController extends Controller
         })->count();
         $statsOngoing = max($statsTotalStudents - $statsCompleted, 0);
 
-        // Ongoing (has a requirement) but zero DTR hours logged — internship not yet started on time records.
-        $statsOngoingNoLoggedTime = $studentsForStats->filter(function ($s) {
+        // Matches "Ongoing" / incomplete in the Internship Ended column: required hours set but not yet fully logged.
+        $statsOngoingIncomplete = $studentsForStats->filter(function ($s) {
             $required = (float) ($s->required_training_hours ?? 0);
             $total = (float) ($s->internship_total_hours ?? 0);
 
-            return $required > 0 && $total <= 0;
+            return $required > 0 && $total < $required;
         })->count();
 
         $completionPercents = $studentsForStats->map(function ($s) {
@@ -194,7 +194,7 @@ class StudentDashboardController extends Controller
             'statsWithLoggedTime',
             'statsCompleted',
             'statsOngoing',
-            'statsOngoingNoLoggedTime',
+            'statsOngoingIncomplete',
             'statsAvgCompletion',
             'statsTotalApprovedLeaveRequests',
             'statsTopLeaveRequester',
@@ -207,11 +207,11 @@ class StudentDashboardController extends Controller
     }
 
     /**
-     * One row per school in scope: the student whose effective exit-conference date is closest to today
-     * (smallest calendar distance). Uses admin OJT target when set, else same estimate as student dashboard.
+     * One row per school that has at least one student still completing OJT (required hours not yet met).
+     * Picks the ongoing student whose effective exit-conference date is closest to today, then sorts rows by that date (earliest first).
      *
      * @param  \Illuminate\Support\Collection<int, User>  $students
-     * @return list<array{school_name: string, student_id: ?int, student_name: ?string, student_email: ?string, exit_date: ?string, exit_date_formatted: ?string, source: ?string, signed_days_from_today: ?int}>
+     * @return list<array{school_name: string, student_id: ?int, student_name: ?string, student_email: ?string, exit_date: ?string, exit_date_formatted: ?string, source: ?string, signed_days_from_today: ?int, possible_exit_date: ?string, possible_exit_date_formatted: ?string, possible_exit_signed_days_from_today: ?int}>
      */
     private function buildExitConferenceClosestBySchoolRows($students): array
     {
@@ -221,39 +221,74 @@ class StudentDashboardController extends Controller
 
         $today = Carbon::today()->timezone((string) config('app.timezone'))->startOfDay();
 
-        $uniIds = $students->pluck('university_id')->filter()->unique()->sort()->values();
+        $uniIds = $students->filter(fn (User $s) => $this->studentIsOngoingOjt($s))
+            ->pluck('university_id')
+            ->filter()
+            ->unique()
+            ->sort()
+            ->values();
         $rows = [];
 
         foreach (University::query()->whereIn('id', $uniIds)->orderBy('name')->get() as $uni) {
-            $group = $students->where('university_id', $uni->id);
-            $rows[] = array_merge(['school_name' => (string) $uni->name], $this->pickStudentClosestExitConferenceRow($group, $today));
+            $group = $students->where('university_id', $uni->id)->filter(fn (User $s) => $this->studentIsOngoingOjt($s));
+            if ($group->isEmpty()) {
+                continue;
+            }
+            $picked = $this->pickStudentClosestExitConferenceRow($group, $today);
+            if (empty($picked['student_id'])) {
+                continue;
+            }
+            $rows[] = array_merge(['school_name' => (string) $uni->name], $picked);
         }
 
-        $noSchoolGroup = $students->filter(fn (User $s) => empty($s->university_id));
+        $noSchoolGroup = $students->filter(fn (User $s) => empty($s->university_id))->filter(fn (User $s) => $this->studentIsOngoingOjt($s));
         if ($noSchoolGroup->isNotEmpty()) {
-            $rows[] = array_merge(
-                ['school_name' => 'No school assigned'],
-                $this->pickStudentClosestExitConferenceRow($noSchoolGroup, $today)
-            );
+            $picked = $this->pickStudentClosestExitConferenceRow($noSchoolGroup, $today);
+            if (!empty($picked['student_id'])) {
+                $rows[] = array_merge(
+                    ['school_name' => 'No school assigned'],
+                    $picked
+                );
+            }
         }
 
         usort($rows, function (array $a, array $b): int {
-            if ($a['school_name'] === 'No school assigned') {
+            $dateA = (string) ($a['exit_date'] ?? '');
+            $dateB = (string) ($b['exit_date'] ?? '');
+            if ($dateA === '' && $dateB === '') {
+                return strcasecmp((string) ($a['school_name'] ?? ''), (string) ($b['school_name'] ?? ''));
+            }
+            if ($dateA === '') {
                 return 1;
             }
-            if ($b['school_name'] === 'No school assigned') {
+            if ($dateB === '') {
                 return -1;
             }
+            $byDate = strcmp($dateA, $dateB);
+            if ($byDate !== 0) {
+                return $byDate;
+            }
 
-            return strcasecmp((string) $a['school_name'], (string) $b['school_name']);
+            return strcasecmp((string) ($a['school_name'] ?? ''), (string) ($b['school_name'] ?? ''));
         });
 
         return $rows;
     }
 
     /**
+     * Student still has a training requirement and has not yet logged enough hours (active / ongoing OJT).
+     */
+    private function studentIsOngoingOjt(User $student): bool
+    {
+        $required = (float) ($student->required_training_hours ?? 0);
+        $total = (float) ($student->internship_total_hours ?? 0);
+
+        return $required > 0 && $total < $required;
+    }
+
+    /**
      * @param  \Illuminate\Support\Collection<int, User>|iterable<User>  $group
-     * @return array{student_name: ?string, student_id: ?int, student_email: ?string, exit_date: ?string, exit_date_formatted: ?string, source: ?string, signed_days_from_today: ?int}
+     * @return array{student_name: ?string, student_id: ?int, student_email: ?string, exit_date: ?string, exit_date_formatted: ?string, source: ?string, signed_days_from_today: ?int, possible_exit_date: ?string, possible_exit_date_formatted: ?string, possible_exit_signed_days_from_today: ?int}
      */
     private function pickStudentClosestExitConferenceRow(iterable $group, Carbon $today): array
     {
@@ -296,11 +331,22 @@ class StudentDashboardController extends Controller
                 'exit_date_formatted' => null,
                 'source' => null,
                 'signed_days_from_today' => null,
+                'possible_exit_date' => null,
+                'possible_exit_date_formatted' => null,
+                'possible_exit_signed_days_from_today' => null,
             ];
         }
 
         /** @var User $u */
         $u = $best['student'];
+        $possibleExit = $this->resolvePossibleExitConferenceDateForStudent($u);
+        $possibleFormatted = null;
+        $possibleSigned = null;
+        if ($possibleExit !== null) {
+            $possibleExit = $possibleExit->copy()->startOfDay()->timezone((string) config('app.timezone'));
+            $possibleFormatted = $possibleExit->format('M j, Y');
+            $possibleSigned = (int) $today->diffInDays($possibleExit, false);
+        }
 
         return [
             'student_name' => $u->name,
@@ -310,7 +356,40 @@ class StudentDashboardController extends Controller
             'exit_date_formatted' => $best['exit']->timezone((string) config('app.timezone'))->format('M j, Y'),
             'source' => $best['source'],
             'signed_days_from_today' => (int) $best['signed_days_from_today'],
+            'possible_exit_date' => $possibleExit?->toDateString(),
+            'possible_exit_date_formatted' => $possibleFormatted,
+            'possible_exit_signed_days_from_today' => $possibleSigned,
         ];
+    }
+
+    /**
+     * Hours-based weekday estimate from first DTR (or from today if no DTR), only when admin has not set OJT target.
+     * Same rules as the student dashboard "Possible exit conference (estimate)" when no admin OJT target is set.
+     */
+    private function resolvePossibleExitConferenceDateForStudent(User $student): ?Carbon
+    {
+        $tz = (string) config('app.timezone');
+        $requiredHours = (float) ($student->required_training_hours ?? 0);
+        $loggedHours = (float) ($student->internship_total_hours ?? 0);
+        $remainingHours = max($requiredHours - $loggedHours, 0);
+        $adminTarget = $student->ojt_target_end_date;
+
+        if ($adminTarget !== null || $requiredHours <= 0 || $remainingHours <= 0) {
+            return null;
+        }
+
+        $weekdaysForFullRequirement = max(1, (int) ceil($requiredHours / 8.0));
+        $firstDtrRaw = $student->internship_start ?? null;
+        if ($firstDtrRaw !== null && $firstDtrRaw !== '') {
+            $anchor = Carbon::parse($firstDtrRaw)->timezone($tz)->startOfDay();
+
+            return $anchor->copy()->addWeekdays($weekdaysForFullRequirement);
+        }
+
+        $todayStart = now()->timezone($tz)->startOfDay();
+        $weekdaysForRemaining = max(1, (int) ceil($remainingHours / 8.0));
+
+        return $todayStart->copy()->addWeekdays($weekdaysForRemaining);
     }
 
     /**
