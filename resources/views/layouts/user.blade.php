@@ -1307,8 +1307,8 @@
 
             <!-- Page content -->
             <main class="flex-1 min-h-0 overflow-y-auto bg-gray-50">
-                <div class="h-full">
-                    <div class="h-full">
+                <div class="min-h-full">
+                    <div>
                         @if(session('success'))
                             <div class="mb-4 bg-green-100 border border-green-400 text-green-700 px-4 py-3">
                                 {{ session('success') }}
