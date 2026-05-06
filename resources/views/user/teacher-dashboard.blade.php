@@ -24,7 +24,7 @@
         </div>
     </div>
 
-    <div class="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-2 sm:gap-3 px-3 sm:px-4 py-3 sm:py-4 flex-shrink-0">
+    <div class="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-2 sm:gap-3 px-3 sm:px-4 py-3 sm:py-4 flex-shrink-0">
         <div class="bg-white border border-gray-200 rounded-lg p-3 sm:p-4 shadow-sm min-w-0">
             <p class="text-xs sm:text-sm text-gray-500 leading-tight">Total Students</p>
             <p class="text-xl sm:text-2xl font-semibold text-gray-900 tabular-nums mt-1">{{ $totalStudents }}</p>
@@ -44,25 +44,6 @@
             <p class="text-xs sm:text-sm text-gray-500 leading-tight">Pending hiring applications</p>
             <p class="text-xl sm:text-2xl font-semibold text-amber-700 tabular-nums mt-1">{{ $pendingApplicationsCount ?? 0 }}</p>
         </a>
-        @php
-            $teacherOjtUsed = (int) ($ojtSlotsUsed ?? 0);
-            $teacherOjtTotal = (int) ($ojtTotalSlots ?? 0);
-            $teacherOjtOverCapacity = $teacherOjtTotal > 0 && $teacherOjtUsed > $teacherOjtTotal;
-        @endphp
-        <div class="rounded-lg p-3 sm:p-4 shadow-sm border min-w-0 {{ $teacherOjtOverCapacity ? 'bg-red-50 border-red-200' : 'bg-white border-gray-200' }}">
-            <p class="text-xs sm:text-sm text-gray-500 leading-tight">OJT Slots Available</p>
-            @if(($ojtTotalSlots ?? 0) > 0)
-                <p class="text-xl sm:text-2xl font-semibold tabular-nums mt-1 {{ $teacherOjtOverCapacity ? 'text-red-700' : 'text-fuchsia-700' }}">{{ $ojtSlotsUsed ?? 0 }} / {{ $ojtTotalSlots ?? 0 }}</p>
-                @if($teacherOjtOverCapacity)
-                    <p class="text-xs text-red-600 mt-1">Over capacity by {{ $teacherOjtUsed - $teacherOjtTotal }} slot(s)</p>
-                @else
-                    <p class="text-xs text-fuchsia-600 mt-1">{{ $ojtSlotsRemaining ?? 0 }} slot(s) available</p>
-                @endif
-            @else
-                <p class="text-xl sm:text-2xl font-semibold text-fuchsia-700 tabular-nums mt-1">{{ $ojtSlotsUsed ?? 0 }}</p>
-                <p class="text-xs text-fuchsia-600 mt-1">Total slots not configured</p>
-            @endif
-        </div>
         <div class="bg-white border border-gray-200 rounded-lg p-3 sm:p-4 shadow-sm min-w-0">
             <p class="text-xs sm:text-sm text-gray-500 leading-tight">Exit conference day</p>
             <p class="text-lg sm:text-2xl font-semibold tabular-nums text-slate-800 mt-1 break-words leading-tight">

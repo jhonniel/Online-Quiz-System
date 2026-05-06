@@ -87,9 +87,6 @@ class DashboardController extends Controller
                 'ongoingInternships' => $teacherData['ongoingInternships'],
                 'completedInternships' => $teacherData['completedInternships'],
                 'schoolName' => $teacherData['schoolName'],
-                'ojtSlotsUsed' => $teacherData['ojtSlotsUsed'],
-                'ojtTotalSlots' => $teacherData['ojtTotalSlots'],
-                'ojtSlotsRemaining' => $teacherData['ojtSlotsRemaining'],
                 'teacherCharts' => $teacherData['charts'],
                 'studentsApprovedAbsentRanking' => $teacherData['studentsApprovedAbsentRanking'],
                 'nextExitConferenceDate' => $teacherData['nextExitConferenceDate'],
@@ -736,8 +733,6 @@ class DashboardController extends Controller
     private function getTeacherSchoolData(User $teacher): array
     {
         if (! $teacher->university_id) {
-            $emptyOjtTotal = (int) Setting::get('ojt_total_slots', 0);
-
             return [
                 'totalStudents' => 0,
                 'activeStudents' => 0,
@@ -746,9 +741,6 @@ class DashboardController extends Controller
                 'students' => collect(),
                 'studentsApprovedAbsentRanking' => collect(),
                 'schoolName' => null,
-                'ojtSlotsUsed' => 0,
-                'ojtTotalSlots' => $emptyOjtTotal,
-                'ojtSlotsRemaining' => $emptyOjtTotal,
                 'nextExitConferenceDate' => null,
                 'pendingApplicationsCount' => 0,
                 'charts' => [
@@ -849,9 +841,6 @@ class DashboardController extends Controller
             return $required > 0 && $logged < $required;
         })->count();
         $completedInternships = max($totalStudents - $ongoingInternships, 0);
-        $ojtTotalSlots = (int) Setting::get('ojt_total_slots', 0);
-        $ojtSlotsUsed = $ongoingInternships;
-        $ojtSlotsRemaining = max($ojtTotalSlots - $ojtSlotsUsed, 0);
         $totalRequiredHours = (float) $students->sum(fn ($student) => (float) ($student->required_training_hours ?? 0));
         $totalLoggedHours = (float) $students->sum(fn ($student) => (float) ($student->logged_hours ?? 0));
         $totalRemainingHours = max($totalRequiredHours - $totalLoggedHours, 0);
@@ -938,9 +927,6 @@ class DashboardController extends Controller
             'activeStudents' => $activeStudents,
             'ongoingInternships' => $ongoingInternships,
             'completedInternships' => $completedInternships,
-            'ojtSlotsUsed' => $ojtSlotsUsed,
-            'ojtTotalSlots' => $ojtTotalSlots,
-            'ojtSlotsRemaining' => $ojtSlotsRemaining,
             'students' => $students,
             'studentsApprovedAbsentRanking' => $studentsApprovedAbsentRanking,
             'nextExitConferenceDate' => $nextExitConferenceDate,
