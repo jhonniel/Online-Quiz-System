@@ -14,6 +14,8 @@ class User extends Authenticatable
     /** @use HasFactory<\Database\Factories\UserFactory> */
     use HasFactory, Notifiable;
 
+    public const DEFAULT_STUDENT_ABSENCE_ALLOWANCE = 3.0;
+
     /**
      * The attributes that are mass assignable.
      *

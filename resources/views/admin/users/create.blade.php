@@ -342,7 +342,7 @@
                                        max="365"
                                        name="student_absence_allowance"
                                        id="student_absence_allowance"
-                                       value="{{ old('student_absence_allowance', 0) }}"
+                                       value="{{ old('student_absence_allowance', \App\Models\User::DEFAULT_STUDENT_ABSENCE_ALLOWANCE) }}"
                                        placeholder="e.g. 5"
                                        class="block w-full pl-12 pr-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200 bg-gray-50 focus:bg-white @error('student_absence_allowance') border-red-300 focus:ring-red-500 focus:border-red-500 @enderror">
                             </div>

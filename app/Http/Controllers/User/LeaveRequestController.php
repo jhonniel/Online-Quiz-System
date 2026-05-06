@@ -276,7 +276,10 @@ class LeaveRequestController extends Controller
                 (string) $validated['start_date'],
                 isset($validated['end_date']) ? (string) $validated['end_date'] : null
             );
-            $remainingAbsenceBalance = $this->getStudentRemainingAbsenceBalance((int) $user->id, (float) ($user->student_absence_allowance ?? 0));
+            $remainingAbsenceBalance = $this->getStudentRemainingAbsenceBalance(
+                (int) $user->id,
+                (float) ($user->student_absence_allowance ?? \App\Models\User::DEFAULT_STUDENT_ABSENCE_ALLOWANCE)
+            );
 
             if ($remainingAbsenceBalance <= 0) {
                 return redirect()->back()
@@ -820,7 +823,10 @@ class LeaveRequestController extends Controller
                 (string) $validated['start_date'],
                 isset($validated['end_date']) ? (string) $validated['end_date'] : null
             );
-            $remainingAbsenceBalance = $this->getStudentRemainingAbsenceBalance((int) $user->id, (float) ($user->student_absence_allowance ?? 0));
+            $remainingAbsenceBalance = $this->getStudentRemainingAbsenceBalance(
+                (int) $user->id,
+                (float) ($user->student_absence_allowance ?? \App\Models\User::DEFAULT_STUDENT_ABSENCE_ALLOWANCE)
+            );
 
             if ($remainingAbsenceBalance <= 0) {
                 return redirect()->back()
