@@ -183,6 +183,31 @@
             </div>
         </div>
 
+        <!-- OJT Slots -->
+        <a href="{{ route('admin.settings.index') }}" class="bg-gradient-to-r from-fuchsia-50 to-fuchsia-100 overflow-hidden shadow rounded-lg border border-fuchsia-200 block hover:border-fuchsia-300 hover:shadow-md transition-shadow">
+            <div class="p-4 sm:p-5">
+                <div class="flex items-center">
+                    <div class="flex-shrink-0">
+                        <svg class="h-5 w-5 sm:h-6 sm:w-6 text-fuchsia-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                        </svg>
+                    </div>
+                    <div class="ml-3 sm:ml-5 w-0 flex-1 min-w-0">
+                        <dl>
+                            <dt class="text-xs sm:text-sm font-medium text-fuchsia-700 truncate">OJT Slots Used</dt>
+                            @if(($ojtTotalSlots ?? 0) > 0)
+                                <dd class="text-base sm:text-lg font-medium text-fuchsia-900">{{ $ojtSlotsUsed ?? 0 }} / {{ $ojtTotalSlots ?? 0 }}</dd>
+                                <dd class="text-xs text-fuchsia-600 mt-1">{{ $ojtSlotsRemaining ?? 0 }} slots available</dd>
+                            @else
+                                <dd class="text-base sm:text-lg font-medium text-fuchsia-900">{{ $ojtSlotsUsed ?? 0 }} active students</dd>
+                                <dd class="text-xs text-fuchsia-600 mt-1">Set total slots in Admin Settings</dd>
+                            @endif
+                        </dl>
+                    </div>
+                </div>
+            </div>
+        </a>
+
         <!-- Pending Leave Requests -->
         <div class="bg-gradient-to-r from-yellow-50 to-yellow-100 overflow-hidden shadow rounded-lg border border-yellow-200">
             <div class="p-4 sm:p-5">

@@ -431,6 +431,24 @@
                                         in Leave Requests and profiles.
                                     </p>
                                 </div>
+                                <div>
+                                    <label for="ojt_total_slots" class="block text-sm font-medium text-gray-700 mb-2">
+                                        Total OJT Slots
+                                    </label>
+                                    @php
+                                        $ojtSlotsValue = isset($settings['ojt_total_slots']) ? (int) $settings['ojt_total_slots'] : 0;
+                                        if (old('ojt_total_slots') !== null) {
+                                            $ojtSlotsValue = (int) old('ojt_total_slots');
+                                        }
+                                    @endphp
+                                    <input type="number" id="ojt_total_slots" name="ojt_total_slots"
+                                           value="{{ $ojtSlotsValue }}"
+                                           min="0" max="1000000" step="1"
+                                           class="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                                    <p class="mt-2 text-xs text-gray-500">
+                                        Total student OJT capacity for dashboard tracking (set to 0 if not yet defined).
+                                    </p>
+                                </div>
                             </div>
                         </div>
 

@@ -19,6 +19,7 @@ use App\Models\University;
 use App\Models\User;
 use App\Models\UserActivity;
 use App\Models\UserSession;
+use App\Models\Setting;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -178,6 +179,9 @@ class DashboardController extends Controller
             $totalStudents = User::where('role', 'student')->count();
             $activeEmployees = User::where('role', 'employee')->where('is_active', true)->count();
             $activeStudents = User::where('role', 'student')->where('is_active', true)->count();
+            $ojtTotalSlots = (int) Setting::get('ojt_total_slots', 0);
+            $ojtSlotsUsed = $activeStudents;
+            $ojtSlotsRemaining = max($ojtTotalSlots - $ojtSlotsUsed, 0);
 
             // DTR Statistics - with error handling
             try {
@@ -638,6 +642,9 @@ class DashboardController extends Controller
                 'totalStudents',
                 'activeEmployees',
                 'activeStudents',
+                'ojtTotalSlots',
+                'ojtSlotsUsed',
+                'ojtSlotsRemaining',
                 'totalDtrRecords',
                 'employeeDtrRecords',
                 'studentDtrRecords',
@@ -724,6 +731,9 @@ class DashboardController extends Controller
                 'totalStudents' => 0,
                 'activeEmployees' => 0,
                 'activeStudents' => 0,
+                'ojtTotalSlots' => 0,
+                'ojtSlotsUsed' => 0,
+                'ojtSlotsRemaining' => 0,
                 'totalDtrRecords' => 0,
                 'employeeDtrRecords' => 0,
                 'studentDtrRecords' => 0,

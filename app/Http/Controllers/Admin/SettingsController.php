@@ -29,6 +29,7 @@ class SettingsController extends Controller
 
         // Overtime credited window (read from settings, default to 12 months)
         $settings['overtime_months_credited'] = (int) ($settings['overtime_months_credited'] ?? 12);
+        $settings['ojt_total_slots'] = (int) ($settings['ojt_total_slots'] ?? 0);
 
         // Default leave balances - ALWAYS reload directly from database to ensure latest values
         // This is critical - we must bypass any potential caching
@@ -535,6 +536,7 @@ class SettingsController extends Controller
             'privacy_policy_pdf' => 'nullable|file|mimes:pdf|max:10240',
             'file_storage_student_access' => 'nullable|string|in:enabled,disabled',
             'overtime_months_credited' => 'nullable|integer|in:12,9,6,3,1',
+            'ojt_total_slots' => 'nullable|integer|min:0|max:1000000',
             'leave_immediate_supervisor' => 'nullable|string|max:255',
             'leave_hr_admin' => 'nullable|string|max:255',
             'leave_cto' => 'nullable|string|max:255',
@@ -765,6 +767,13 @@ class SettingsController extends Controller
             ]);
         }
 
+        // Global OJT slot capacity (0 means not configured / unlimited display context).
+        $ojtTotalSlots = $request->input('ojt_total_slots');
+        $ojtTotalSlots = ($ojtTotalSlots !== null && $ojtTotalSlots !== '')
+            ? (int) $ojtTotalSlots
+            : 0;
+        Setting::set('ojt_total_slots', $ojtTotalSlots, 'number', 'Total available OJT slots for student capacity tracking');
+
         // Leave Request Signatories
         $leaveImmediateSupervisor = $request->leave_immediate_supervisor ?? 'CHARMAINE JOY ROSATACE';
         Setting::set('leave_immediate_supervisor', $leaveImmediateSupervisor, 'text', 'Name for Immediate Supervisor in leave request letters');
@@ -939,6 +948,7 @@ class SettingsController extends Controller
         // Explicitly clear cache for leave balance settings
         Cache::forget('setting.default_vacation_balance');
         Cache::forget('setting.default_sick_leave_balance');
+        Cache::forget('setting.ojt_total_slots');
         // Clear cache for contact information settings
         Cache::forget('setting.contact_email');
         Cache::forget('setting.contact_phone');
