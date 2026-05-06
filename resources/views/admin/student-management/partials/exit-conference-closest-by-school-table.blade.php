@@ -30,13 +30,14 @@
                             <span class="text-gray-400">—</span>
                         @endif
                     </td>
-                    <td class="px-4 py-3 text-sm text-gray-700 tabular-nums">
+                    <td class="px-4 py-3 text-sm tabular-nums">
                         @if(!empty($exitRow['possible_exit_date_formatted']))
-                            <div>{{ $exitRow['possible_exit_date_formatted'] }}</div>
                             @php
                                 $pd = $exitRow['possible_exit_signed_days_from_today'] ?? null;
+                                $possiblePast = $pd !== null && (int) $pd < 0;
                             @endphp
-                            <div class="text-xs text-gray-500 mt-0.5">
+                            <div class="{{ $possiblePast ? 'text-red-600 font-semibold' : 'text-gray-700' }}">{{ $exitRow['possible_exit_date_formatted'] }}</div>
+                            <div class="text-xs mt-0.5 {{ $possiblePast ? 'text-red-500' : 'text-gray-500' }}">
                                 @if($pd === null)
                                     —
                                 @elseif($pd === 0)
