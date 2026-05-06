@@ -30,10 +30,6 @@
             <p class="text-xl sm:text-2xl font-semibold text-gray-900 tabular-nums mt-1">{{ $totalStudents }}</p>
         </div>
         <div class="bg-white border border-gray-200 rounded-lg p-3 sm:p-4 shadow-sm min-w-0">
-            <p class="text-xs sm:text-sm text-gray-500 leading-tight">Active Students</p>
-            <p class="text-xl sm:text-2xl font-semibold text-green-700 tabular-nums mt-1">{{ $activeStudents }}</p>
-        </div>
-        <div class="bg-white border border-gray-200 rounded-lg p-3 sm:p-4 shadow-sm min-w-0">
             <p class="text-xs sm:text-sm text-gray-500 leading-tight">Ongoing Internships</p>
             <p class="text-xl sm:text-2xl font-semibold text-indigo-700 tabular-nums mt-1">{{ $ongoingInternships }}</p>
         </div>
@@ -41,12 +37,19 @@
             <p class="text-xs sm:text-sm text-gray-500 leading-tight">Completed Internships</p>
             <p class="text-xl sm:text-2xl font-semibold text-emerald-700 tabular-nums mt-1">{{ $completedInternships ?? 0 }}</p>
         </div>
+        <a
+            href="{{ url('/teacher/pending-applications') }}"
+            class="block bg-white border border-gray-200 rounded-lg p-3 sm:p-4 shadow-sm min-w-0 no-underline text-inherit transition-shadow hover:shadow-md hover:border-gray-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
+        >
+            <p class="text-xs sm:text-sm text-gray-500 leading-tight">Pending hiring applications</p>
+            <p class="text-xl sm:text-2xl font-semibold text-amber-700 tabular-nums mt-1">{{ $pendingApplicationsCount ?? 0 }}</p>
+        </a>
         @php
             $teacherOjtUsed = (int) ($ojtSlotsUsed ?? 0);
             $teacherOjtTotal = (int) ($ojtTotalSlots ?? 0);
             $teacherOjtOverCapacity = $teacherOjtTotal > 0 && $teacherOjtUsed > $teacherOjtTotal;
         @endphp
-        <div class="rounded-lg p-3 sm:p-4 shadow-sm border min-w-0 col-span-2 sm:col-span-1 xl:col-span-1 {{ $teacherOjtOverCapacity ? 'bg-red-50 border-red-200' : 'bg-white border-gray-200' }}">
+        <div class="rounded-lg p-3 sm:p-4 shadow-sm border min-w-0 {{ $teacherOjtOverCapacity ? 'bg-red-50 border-red-200' : 'bg-white border-gray-200' }}">
             <p class="text-xs sm:text-sm text-gray-500 leading-tight">OJT Slots Available</p>
             @if(($ojtTotalSlots ?? 0) > 0)
                 <p class="text-xl sm:text-2xl font-semibold tabular-nums mt-1 {{ $teacherOjtOverCapacity ? 'text-red-700' : 'text-fuchsia-700' }}">{{ $ojtSlotsUsed ?? 0 }} / {{ $ojtTotalSlots ?? 0 }}</p>
@@ -60,7 +63,7 @@
                 <p class="text-xs text-fuchsia-600 mt-1">Total slots not configured</p>
             @endif
         </div>
-        <div class="bg-white border border-gray-200 rounded-lg p-3 sm:p-4 shadow-sm min-w-0 col-span-2 sm:col-span-1 xl:col-span-1">
+        <div class="bg-white border border-gray-200 rounded-lg p-3 sm:p-4 shadow-sm min-w-0">
             <p class="text-xs sm:text-sm text-gray-500 leading-tight">Exit conference day</p>
             <p class="text-lg sm:text-2xl font-semibold tabular-nums text-slate-800 mt-1 break-words leading-tight">
                 @if(! empty($nextExitConferenceDate))
@@ -103,7 +106,7 @@
         @php
             $absentRanking = $studentsApprovedAbsentRanking ?? collect();
         @endphp
-        <div class="rounded-lg border border-gray-200 bg-white shadow-sm overflow-hidden mb-4 min-w-0">
+        <div class="rounded-lg border border-gray-200 bg-white shadow-sm overflow-hidden mb-4 min-w-0 w-full max-w-full">
             <div class="px-3 sm:px-4 py-3 border-b border-gray-100 bg-gray-50 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
                 <div class="min-w-0">
                     <h3 class="text-sm font-semibold text-gray-900 break-words">Approved student absences (ranked)</h3>
@@ -125,15 +128,15 @@
                     @endif
                 </div>
             @else
-                <div class="overflow-x-auto max-h-[26rem] overflow-y-auto -mx-px" style="-webkit-overflow-scrolling: touch;">
-                    <table class="min-w-[min(640px,100%)] divide-y divide-gray-200">
+                <div class="w-full max-w-full overflow-x-auto max-h-[26rem] overflow-y-auto" style="-webkit-overflow-scrolling: touch;">
+                    <table class="w-full border-collapse divide-y divide-gray-200">
                         <thead class="bg-gray-50 sticky top-0 z-10 shadow-sm">
                             <tr>
                                 <th scope="col" class="px-4 py-2.5 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-14">#</th>
                                 <th scope="col" class="px-4 py-2.5 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Student</th>
-                                <th scope="col" class="px-4 py-2.5 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden sm:table-cell">Status</th>
-                                <th scope="col" class="px-4 py-2.5 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden lg:table-cell">Est. end date</th>
-                                <th scope="col" class="px-4 py-2.5 text-right text-xs font-medium text-gray-500 uppercase tracking-wider w-28">Approved absences</th>
+                                <th scope="col" class="px-4 py-2.5 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden sm:table-cell whitespace-nowrap">Status</th>
+                                <th scope="col" class="px-4 py-2.5 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden lg:table-cell whitespace-nowrap">Est. end date</th>
+                                <th scope="col" class="px-4 py-2.5 text-right text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap w-32 lg:w-40">Approved absences</th>
                             </tr>
                         </thead>
                         <tbody class="divide-y divide-gray-100 bg-white">
@@ -145,8 +148,8 @@
                                 @endphp
                                 <tr class="hover:bg-gray-50/80">
                                     <td class="px-4 py-2.5 text-sm tabular-nums text-gray-500">{{ $loop->iteration }}</td>
-                                    <td class="px-4 py-2.5 text-sm">
-                                        <span class="font-medium text-gray-900">{{ $studentRow->name }}</span>
+                                    <td class="px-4 py-2.5 text-sm min-w-0">
+                                        <span class="font-medium text-gray-900 break-words">{{ $studentRow->name }}</span>
                                         <span class="block text-xs text-gray-500 break-all">{{ $studentRow->email }}</span>
                                         <span class="lg:hidden block text-[11px] text-gray-600 mt-1">
                                             <span class="text-gray-500">Est. end:</span>

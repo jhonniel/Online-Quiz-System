@@ -82,6 +82,13 @@ Route::prefix('admin')->middleware(['auth', 'admin'])->group(function () {
     Route::get('/activity-data', [DashboardController::class, 'getActivityData'])->name('admin.activity-data');
     Route::redirect('/teacher-invites', '/admin/teachers-management/invite-links');
 
+    /**
+     * Teacher invite links — registered here (auth + admin only) so route names always exist for
+     * redirects and caches. TeacherInviteController enforces admin.permission:user_management.
+     */
+    Route::get('teachers-management/invite-links', [TeacherInviteController::class, 'adminIndex'])->name('admin.teacher-invites.index');
+    Route::post('teachers-management/invite-links', [TeacherInviteController::class, 'adminStore'])->name('admin.teacher-invites.store');
+
     // System → Settings, Rules, health (register early so route names always resolve)
     Route::middleware(['admin.permission:system'])->group(function () {
         Route::get('/settings', [\App\Http\Controllers\Admin\SettingsController::class, 'index'])->name('admin.settings.index');
@@ -135,8 +142,6 @@ Route::prefix('admin')->middleware(['auth', 'admin'])->group(function () {
         Route::post('users/{user}/send-credentials', [AdminUserController::class, 'sendCredentials'])->name('admin.users.send-credentials');
         Route::post('users/send-bulk-credentials', [AdminUserController::class, 'sendBulkCredentials'])->name('admin.users.send-bulk-credentials');
         Route::get('teachers-management/teachers', [AdminUserController::class, 'teachersManagement'])->name('admin.teachers-management.teachers');
-        Route::get('teachers-management/invite-links', [TeacherInviteController::class, 'adminIndex'])->name('admin.teacher-invites.index');
-        Route::post('teachers-management/invite-links', [TeacherInviteController::class, 'adminStore'])->name('admin.teacher-invites.store');
         Route::get('teachers-management/moa', [AdminTeacherMoaController::class, 'index'])->name('admin.teacher-moa.index');
         Route::post('teachers-management/moa/{user}/allow-reupload', [AdminTeacherMoaController::class, 'allowReupload'])->name('admin.teacher-moa.allow-reupload');
         Route::get('teachers-management/moa/{user}/preview', [AdminTeacherMoaController::class, 'preview'])->name('admin.teacher-moa.preview');
@@ -509,6 +514,11 @@ Route::prefix('admin')->middleware(['auth', 'admin'])->group(function () {
 });
 
 // User Routes
+Route::middleware(['auth'])->group(function () {
+    // Teachers only; kept on `auth` alone so access is not coupled to student termination checks.
+    Route::get('/teacher/pending-applications', [UserDashboardController::class, 'teacherPendingApplications'])->name('user.teacher.pending-applications');
+});
+
 Route::middleware(['auth', 'student.not_terminated'])->group(function () {
     Route::get('/dashboard', [UserDashboardController::class, 'index'])->name('user.dashboard');
     Route::post('/dashboard/rules-regulations/acknowledge', [UserDashboardController::class, 'acknowledgeRulesRegulations'])->name('user.rules-regulations.acknowledge');

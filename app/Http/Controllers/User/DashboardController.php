@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Dtr;
 use App\Models\EvaluationForm;
 use App\Models\EvaluationSubmission;
+use App\Models\HiringApplication;
 use App\Models\LeaveBalance;
 use App\Models\LeaveRequest;
 use App\Models\LeaveRequestLog;
@@ -13,10 +14,12 @@ use App\Models\News;
 use App\Models\QuizAssignment;
 use App\Models\Setting;
 use App\Models\TicketReport;
+use App\Models\University;
 use App\Models\User;
 use App\Models\UserActivity;
 use App\Services\StudentOjtPostCompletionService;
 use Carbon\Carbon;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -81,7 +84,6 @@ class DashboardController extends Controller
 
             return view('user.teacher-dashboard', [
                 'totalStudents' => $teacherData['totalStudents'],
-                'activeStudents' => $teacherData['activeStudents'],
                 'ongoingInternships' => $teacherData['ongoingInternships'],
                 'completedInternships' => $teacherData['completedInternships'],
                 'schoolName' => $teacherData['schoolName'],
@@ -91,6 +93,7 @@ class DashboardController extends Controller
                 'teacherCharts' => $teacherData['charts'],
                 'studentsApprovedAbsentRanking' => $teacherData['studentsApprovedAbsentRanking'],
                 'nextExitConferenceDate' => $teacherData['nextExitConferenceDate'],
+                'pendingApplicationsCount' => $teacherData['pendingApplicationsCount'],
             ]);
         }
 
@@ -488,6 +491,65 @@ class DashboardController extends Controller
         ]);
     }
 
+    public function teacherPendingApplications()
+    {
+        $user = auth()->user();
+        abort_unless($user->role === 'teacher', 403);
+
+        $university = $user->university;
+
+        $applications = $this->hiringApplicationsPendingForTeacherSchoolQuery($user)
+            ->with(['hiringPosition'])
+            ->latest('created_at')
+            ->paginate(15)
+            ->withQueryString();
+
+        return view('user.teacher-pending-applications', [
+            'applications' => $applications,
+            'schoolName' => $university?->name,
+        ]);
+    }
+
+    /**
+     * Pending hiring applications whose school field matches the teacher's university (see apply).
+     */
+    private function hiringApplicationsPendingForTeacherSchoolQuery(User $teacher): Builder
+    {
+        $query = HiringApplication::query()->where('status', 'pending');
+        $this->applyTeacherSchoolToHiringApplicationsQuery($query, $teacher);
+
+        return $query;
+    }
+
+    private function applyTeacherSchoolToHiringApplicationsQuery(Builder $query, User $teacher): void
+    {
+        /** @var University|null $university */
+        $university = $teacher->university;
+
+        if (! $university instanceof University) {
+            $query->whereRaw('1 = 0');
+
+            return;
+        }
+
+        $fullName = $university->full_name;
+        $nameTrim = trim((string) $university->name);
+        $nameNorm = mb_strtolower($nameTrim);
+        $nameLike = $nameTrim !== ''
+            ? '%'.addcslashes($nameTrim, '%_\\').'%'
+            : null;
+
+        $query->where(function ($q) use ($fullName, $nameNorm, $nameLike): void {
+            $q->where('school', $fullName);
+            if ($nameNorm !== '') {
+                $q->orWhereRaw('LOWER(TRIM(COALESCE(school, ?))) = ?', ['', $nameNorm]);
+            }
+            if ($nameLike !== null) {
+                $q->orWhere('school', 'LIKE', $nameLike);
+            }
+        });
+    }
+
     public function teacherNews()
     {
         $user = auth()->user();
@@ -688,6 +750,7 @@ class DashboardController extends Controller
                 'ojtTotalSlots' => $emptyOjtTotal,
                 'ojtSlotsRemaining' => $emptyOjtTotal,
                 'nextExitConferenceDate' => null,
+                'pendingApplicationsCount' => 0,
                 'charts' => [
                     'studentStatus' => [
                         'labels' => ['Active', 'Inactive'],
@@ -841,6 +904,9 @@ class DashboardController extends Controller
             }
         }
 
+        $teacher->loadMissing('university');
+        $pendingApplicationsCount = $this->hiringApplicationsPendingForTeacherSchoolQuery($teacher)->count();
+
         $charts = [
             'studentStatus' => [
                 'labels' => ['Active', 'Inactive'],
@@ -878,6 +944,7 @@ class DashboardController extends Controller
             'students' => $students,
             'studentsApprovedAbsentRanking' => $studentsApprovedAbsentRanking,
             'nextExitConferenceDate' => $nextExitConferenceDate,
+            'pendingApplicationsCount' => $pendingApplicationsCount,
             'schoolName' => optional($teacher->university)->name,
             'charts' => $charts,
         ];

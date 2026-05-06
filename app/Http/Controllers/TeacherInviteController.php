@@ -11,6 +11,11 @@ use Illuminate\Support\Str;
 
 class TeacherInviteController extends Controller
 {
+    public function __construct()
+    {
+        $this->middleware('admin.permission:user_management')->only(['adminIndex', 'adminStore']);
+    }
+
     public function adminIndex()
     {
         $inviteLinks = TeacherInviteLink::query()
@@ -41,7 +46,7 @@ class TeacherInviteController extends Controller
 
         $inviteUrl = url('/teacher/invite/'.$invite->token);
 
-        return redirect()->route('admin.teacher-invites.index')
+        return redirect(url('/admin/teachers-management/invite-links'))
             ->with('success', 'Teacher invite link generated.')
             ->with('generated_invite_url', $inviteUrl);
     }
