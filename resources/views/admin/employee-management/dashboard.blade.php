@@ -95,7 +95,15 @@
         </div>
     </div>
 
-    <div class="bg-white border border-gray-200 rounded-2xl shadow-sm overflow-hidden" x-data="{ employeeViewMode: 'summary', employeesOpen: false }">
+    <div class="bg-white border border-gray-200 rounded-2xl shadow-sm overflow-hidden"
+         x-data="{
+             employeeViewMode: 'summary',
+             employeesOpen: JSON.parse(localStorage.getItem('admin.employeeDashboard.employeesOpen') ?? 'false'),
+             toggleEmployeesOpen() {
+                 this.employeesOpen = !this.employeesOpen;
+                 localStorage.setItem('admin.employeeDashboard.employeesOpen', JSON.stringify(this.employeesOpen));
+             }
+         }">
         <div class="px-6 py-4 border-b border-gray-100 bg-gray-50/70">
             <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                 <div>
@@ -118,7 +126,7 @@
                         </button>
                     </div>
                     <button type="button"
-                            @click="employeesOpen = !employeesOpen"
+                            @click="toggleEmployeesOpen()"
                             class="inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg border border-gray-200 bg-white text-gray-700 text-xs font-semibold hover:bg-gray-50">
                         <span x-text="employeesOpen ? 'Collapse' : 'Expand'"></span>
                         <svg class="h-4 w-4 transition-transform" :class="employeesOpen ? 'rotate-180' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
@@ -200,7 +208,14 @@
         </div>
     </div>
 
-    <div class="bg-white border border-gray-200 rounded-2xl shadow-sm overflow-hidden" x-data="{ leaveDaysOpen: false }">
+    <div class="bg-white border border-gray-200 rounded-2xl shadow-sm overflow-hidden"
+         x-data="{
+             leaveDaysOpen: JSON.parse(localStorage.getItem('admin.employeeDashboard.leaveDaysOpen') ?? 'false'),
+             toggleLeaveDaysOpen() {
+                 this.leaveDaysOpen = !this.leaveDaysOpen;
+                 localStorage.setItem('admin.employeeDashboard.leaveDaysOpen', JSON.stringify(this.leaveDaysOpen));
+             }
+         }">
         <div class="px-6 py-4 border-b border-gray-100 bg-gray-50/70">
             <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3">
                 <div>
@@ -235,7 +250,7 @@
                         </a>
                     </form>
                     <button type="button"
-                            @click="leaveDaysOpen = !leaveDaysOpen"
+                            @click="toggleLeaveDaysOpen()"
                             class="h-8 inline-flex items-center justify-center gap-1 px-2.5 rounded-md border border-gray-200 bg-white text-gray-700 text-xs font-semibold hover:bg-gray-50 shrink-0 self-end">
                         <span x-text="leaveDaysOpen ? 'Collapse' : 'Expand'"></span>
                         <svg class="h-4 w-4 transition-transform" :class="leaveDaysOpen ? 'rotate-180' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
