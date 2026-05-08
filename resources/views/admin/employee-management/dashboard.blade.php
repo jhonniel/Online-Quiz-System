@@ -189,6 +189,53 @@
             </table>
         </div>
     </div>
+
+    <div class="bg-white border border-gray-200 rounded-2xl shadow-sm overflow-hidden">
+        <div class="px-6 py-4 border-b border-gray-100 bg-gray-50/70">
+            <h2 class="text-base font-semibold text-gray-900">Leave Request Days by Employee</h2>
+            <p class="text-sm text-gray-500">Total leave-request days per employee, grouped by leave type.</p>
+        </div>
+        <div class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-gray-200">
+                <thead class="bg-gray-50">
+                    <tr>
+                        <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">Employee</th>
+                            @foreach($typeLabels as $typeLabel)
+                                <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-500 whitespace-nowrap">{{ $typeLabel }}</th>
+                            @endforeach
+                            <th class="px-4 py-3 text-right text-xs font-bold uppercase tracking-wide text-gray-700 whitespace-nowrap">Total</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-100 bg-white">
+                    @forelse($employees as $employee)
+                        @php
+                            $totalLeaveDays = collect($employeeLeaveDaysByType[$employee->id] ?? [])->sum();
+                        @endphp
+                        <tr class="hover:bg-gray-50/70 transition-colors">
+                            <td class="px-4 py-3 text-sm">
+                                <div class="font-medium text-gray-900">{{ $employee->name }}</div>
+                                <div class="text-xs text-gray-500">{{ $employee->email }}</div>
+                            </td>
+                            @foreach($typeLabels as $typeKey => $typeLabel)
+                                <td class="px-4 py-3 text-sm text-right font-semibold text-rose-700 whitespace-nowrap">
+                                    {{ (int) ($employeeLeaveDaysByType[$employee->id][$typeKey] ?? 0) }}
+                                </td>
+                            @endforeach
+                            <td class="px-4 py-3 text-sm text-right font-extrabold text-indigo-700 whitespace-nowrap">
+                                {{ (int) $totalLeaveDays }}
+                            </td>
+                        </tr>
+                    @empty
+                        <tr>
+                            <td colspan="{{ 2 + count($typeLabels) }}" class="px-4 py-10 text-center text-sm text-gray-500">
+                                No approved leave day data available.
+                            </td>
+                        </tr>
+                    @endforelse
+                </tbody>
+            </table>
+        </div>
+    </div>
 </div>
 @endsection
 

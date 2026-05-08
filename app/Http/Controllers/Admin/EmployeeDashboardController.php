@@ -132,6 +132,53 @@ class EmployeeDashboardController extends Controller
             ];
         });
 
+        // Approved leave totals by type, summed by request days.
+        $approvedDaysTotals = LeaveRequest::query()
+            ->whereIn('user_id', $employeeIds)
+            ->where('status', 'approved')
+            ->get(['type', 'start_date', 'end_date'])
+            ->groupBy('type')
+            ->map(function ($requests) {
+                return (int) $requests->sum(function ($request) {
+                    $start = Carbon::parse($request->start_date);
+                    $end = $request->end_date ? Carbon::parse($request->end_date) : $start;
+
+                    return $start->diffInDays($end) + 1;
+                });
+            });
+        $approvedDaysByType = collect(array_keys($typeLabels))->map(function ($type) use ($approvedDaysTotals) {
+            return (object) [
+                'type' => $type,
+                'approved_days' => (int) ($approvedDaysTotals[$type] ?? 0),
+            ];
+        });
+
+        // Per employee, leave-request days for each type (all statuses).
+        $leaveRequestsByEmployee = LeaveRequest::query()
+            ->whereIn('user_id', $employeeIds)
+            ->get(['user_id', 'type', 'start_date', 'end_date'])
+            ->groupBy('user_id');
+
+        $employeeLeaveDaysByType = [];
+        foreach ($employees as $employee) {
+            $requests = collect($leaveRequestsByEmployee->get($employee->id, []))
+                ->groupBy('type')
+                ->map(function ($typedRequests) {
+                    return (int) $typedRequests->sum(function ($request) {
+                        $start = Carbon::parse($request->start_date);
+                        $end = $request->end_date ? Carbon::parse($request->end_date) : $start;
+
+                        return $start->diffInDays($end) + 1;
+                    });
+                });
+
+            $employeeLeaveDaysByType[$employee->id] = collect(array_keys($typeLabels))
+                ->mapWithKeys(function ($type) use ($requests) {
+                    return [$type => (int) ($requests[$type] ?? 0)];
+                })
+                ->all();
+        }
+
         // Per employee, include all leave types with zero defaults.
         $employeeTypeCounts = [];
         foreach ($employees as $employee) {
@@ -219,6 +266,8 @@ class EmployeeDashboardController extends Controller
         return view('admin.employee-management.dashboard', [
             'stats' => $stats,
             'typeCounts' => $typeCounts,
+            'approvedDaysByType' => $approvedDaysByType,
+            'employeeLeaveDaysByType' => $employeeLeaveDaysByType,
             'typeLabels' => $typeLabels,
             'recentLeaveRequests' => $recentLeaveRequests,
             'employees' => $employees,
