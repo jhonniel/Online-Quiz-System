@@ -43,7 +43,7 @@
             <p class="mt-1 text-xs text-gray-500">Reached required hours</p>
         </div>
         <div class="bg-white border border-gray-200 rounded-lg p-4 shadow-sm">
-            <p class="text-xs font-semibold uppercase tracking-wide text-gray-500">Ongoing (incomplete)</p>
+            <p class="text-xs font-semibold uppercase tracking-wide text-gray-500">OJT Slots Used (Ongoing)</p>
             <p class="mt-2 text-2xl font-bold text-amber-700">{{ number_format((int) ($statsOngoingIncomplete ?? 0)) }}</p>
             <p class="mt-1 text-xs text-gray-500">Not yet at required training hours</p>
         </div>

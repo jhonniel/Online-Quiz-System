@@ -207,27 +207,36 @@
                     <h2 class="text-base font-semibold text-gray-900">Leave Request Days by Employee</h2>
                     <p class="text-sm text-gray-500">Total leave-request days per employee, grouped by leave type.</p>
                 </div>
-                <div class="flex flex-col sm:flex-row sm:items-center gap-2">
-                    <form method="GET" action="{{ url('/admin/employee-dashboard') }}" class="flex flex-wrap items-end gap-2">
+                <div class="flex flex-col sm:flex-row sm:items-center gap-1.5 w-full lg:w-auto">
+                    <form method="GET" action="{{ url('/admin/employee-dashboard') }}" class="w-full lg:w-auto grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-5 gap-1.5 items-end">
                         <input type="hidden" name="leave_days_filter" value="1">
-                        <div>
-                            <label for="leave_days_start_date" class="block text-[11px] text-gray-500 mb-1">From</label>
-                            <input id="leave_days_start_date" name="leave_days_start_date" type="date" value="{{ $leaveDaysStartDate ?? '' }}" class="rounded-md border-gray-300 text-sm focus:border-indigo-500 focus:ring-indigo-500">
+                        <div class="min-w-0">
+                            <label for="leave_days_start_date" class="block text-[10px] text-gray-500 mb-0.5">From</label>
+                            <input id="leave_days_start_date" name="leave_days_start_date" type="date" value="{{ $leaveDaysStartDate ?? '' }}" class="h-8 w-full rounded-md border-gray-300 text-xs focus:border-indigo-500 focus:ring-indigo-500">
                         </div>
-                        <div>
-                            <label for="leave_days_end_date" class="block text-[11px] text-gray-500 mb-1">To</label>
-                            <input id="leave_days_end_date" name="leave_days_end_date" type="date" value="{{ $leaveDaysEndDate ?? '' }}" class="rounded-md border-gray-300 text-sm focus:border-indigo-500 focus:ring-indigo-500">
+                        <div class="min-w-0">
+                            <label for="leave_days_end_date" class="block text-[10px] text-gray-500 mb-0.5">To</label>
+                            <input id="leave_days_end_date" name="leave_days_end_date" type="date" value="{{ $leaveDaysEndDate ?? '' }}" class="h-8 w-full rounded-md border-gray-300 text-xs focus:border-indigo-500 focus:ring-indigo-500">
                         </div>
-                        <button type="submit" class="inline-flex items-center justify-center px-3 py-1.5 rounded-lg bg-indigo-600 text-white text-xs font-semibold hover:bg-indigo-700">
+                        <div class="min-w-0">
+                            <label for="leave_days_sort" class="block text-[10px] text-gray-500 mb-0.5">Sort</label>
+                            <select id="leave_days_sort" name="leave_days_sort" class="h-8 w-full rounded-md border-gray-300 text-xs focus:border-indigo-500 focus:ring-indigo-500">
+                                <option value="total_desc" {{ ($leaveDaysSort ?? 'total_desc') === 'total_desc' ? 'selected' : '' }}>Highest total first</option>
+                                <option value="total_asc" {{ ($leaveDaysSort ?? 'total_desc') === 'total_asc' ? 'selected' : '' }}>Lowest total first</option>
+                                <option value="name_asc" {{ ($leaveDaysSort ?? 'total_desc') === 'name_asc' ? 'selected' : '' }}>Name A-Z</option>
+                                <option value="name_desc" {{ ($leaveDaysSort ?? 'total_desc') === 'name_desc' ? 'selected' : '' }}>Name Z-A</option>
+                            </select>
+                        </div>
+                        <button type="submit" class="h-8 inline-flex items-center justify-center px-2.5 rounded-md bg-indigo-600 text-white text-xs font-semibold hover:bg-indigo-700">
                             Apply
                         </button>
-                        <a href="{{ url('/admin/employee-dashboard') }}" class="inline-flex items-center justify-center px-3 py-1.5 rounded-lg border border-gray-200 bg-white text-gray-700 text-xs font-semibold hover:bg-gray-50">
+                        <a href="{{ url('/admin/employee-dashboard') }}" class="h-8 inline-flex items-center justify-center px-2.5 rounded-md border border-gray-200 bg-white text-gray-700 text-xs font-semibold hover:bg-gray-50">
                             Clear
                         </a>
                     </form>
                     <button type="button"
                             @click="leaveDaysOpen = !leaveDaysOpen"
-                            class="inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg border border-gray-200 bg-white text-gray-700 text-xs font-semibold hover:bg-gray-50">
+                            class="h-8 inline-flex items-center justify-center gap-1 px-2.5 rounded-md border border-gray-200 bg-white text-gray-700 text-xs font-semibold hover:bg-gray-50 shrink-0 self-end">
                         <span x-text="leaveDaysOpen ? 'Collapse' : 'Expand'"></span>
                         <svg class="h-4 w-4 transition-transform" :class="leaveDaysOpen ? 'rotate-180' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
@@ -248,9 +257,11 @@
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-gray-100 bg-white">
-                    @forelse($employees as $employee)
+                    @forelse(($leaveDaysEmployees ?? collect()) as $row)
                         @php
-                            $totalLeaveDays = collect($employeeLeaveDaysByType[$employee->id] ?? [])->sum();
+                            $employee = $row['employee'];
+                            $daysByType = $row['days_by_type'] ?? [];
+                            $totalLeaveDays = (int) ($row['total_days'] ?? 0);
                         @endphp
                         <tr class="hover:bg-gray-50/70 transition-colors">
                             <td class="px-4 py-3 text-sm">
@@ -259,7 +270,7 @@
                             </td>
                             @foreach($typeLabels as $typeKey => $typeLabel)
                                 <td class="px-4 py-3 text-sm text-right font-semibold text-rose-700 whitespace-nowrap">
-                                    {{ (int) ($employeeLeaveDaysByType[$employee->id][$typeKey] ?? 0) }}
+                                    {{ (int) ($daysByType[$typeKey] ?? 0) }}
                                 </td>
                             @endforeach
                             <td class="px-4 py-3 text-sm text-right font-extrabold text-indigo-700 whitespace-nowrap">

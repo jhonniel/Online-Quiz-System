@@ -36,6 +36,7 @@ class EmployeeDashboardController extends Controller
         $currentYear = now()->year;
         $leaveDaysStartDate = (string) $request->query('leave_days_start_date', '');
         $leaveDaysEndDate = (string) $request->query('leave_days_end_date', '');
+        $leaveDaysSort = (string) $request->query('leave_days_sort', 'total_desc');
 
         $leaveBaseQuery = LeaveRequest::query()
             ->whereIn('user_id', $employeeIds);
@@ -189,6 +190,40 @@ class EmployeeDashboardController extends Controller
                 ->all();
         }
 
+        $leaveDaysEmployees = $employees->map(function ($employee) use ($employeeLeaveDaysByType) {
+            $daysByType = $employeeLeaveDaysByType[$employee->id] ?? [];
+            $totalDays = (int) collect($daysByType)->sum();
+
+            return [
+                'employee' => $employee,
+                'days_by_type' => $daysByType,
+                'total_days' => $totalDays,
+            ];
+        });
+
+        if ($leaveDaysSort === 'total_asc') {
+            $leaveDaysEmployees = $leaveDaysEmployees
+                ->sortBy('total_days')
+                ->values();
+        } elseif ($leaveDaysSort === 'name_desc') {
+            $leaveDaysEmployees = $leaveDaysEmployees
+                ->sortByDesc(function ($row) {
+                    return strtolower((string) ($row['employee']->name ?? ''));
+                })
+                ->values();
+        } elseif ($leaveDaysSort === 'name_asc') {
+            $leaveDaysEmployees = $leaveDaysEmployees
+                ->sortBy(function ($row) {
+                    return strtolower((string) ($row['employee']->name ?? ''));
+                })
+                ->values();
+        } else {
+            // Default: highest total approved leave days first.
+            $leaveDaysEmployees = $leaveDaysEmployees
+                ->sortByDesc('total_days')
+                ->values();
+        }
+
         // Per employee, include all leave types with zero defaults.
         $employeeTypeCounts = [];
         foreach ($employees as $employee) {
@@ -286,6 +321,8 @@ class EmployeeDashboardController extends Controller
             'employeeBalances' => $employeeBalances,
             'leaveDaysStartDate' => $leaveDaysStartDate,
             'leaveDaysEndDate' => $leaveDaysEndDate,
+            'leaveDaysSort' => $leaveDaysSort,
+            'leaveDaysEmployees' => $leaveDaysEmployees,
         ]);
     }
 }
