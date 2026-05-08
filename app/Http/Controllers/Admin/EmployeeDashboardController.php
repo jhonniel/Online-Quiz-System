@@ -157,7 +157,8 @@ class EmployeeDashboardController extends Controller
 
         // Per employee, leave-request days for each type (all statuses).
         $leaveDaysQuery = LeaveRequest::query()
-            ->whereIn('user_id', $employeeIds);
+            ->whereIn('user_id', $employeeIds)
+            ->where('status', 'approved');
         if ($leaveDaysStartDate !== '') {
             $leaveDaysQuery->whereDate('start_date', '>=', $leaveDaysStartDate);
         }
