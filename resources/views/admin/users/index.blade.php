@@ -282,7 +282,7 @@
     </div>
 
     <!-- Users List: Cards on mobile, Table on desktop -->
-    <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden flex-1 flex flex-col min-h-0">
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-visible flex-1 flex flex-col min-h-0">
         @if($users->count() > 0)
             <form id="bulk-role-form" method="POST" action="{{ url('/admin/users/bulk-assign-role') }}">
                 @csrf
@@ -300,7 +300,7 @@
             </form>
 
             <!-- Mobile: Card list (visible below md) -->
-            <div class="md:hidden flex-1 overflow-y-auto">
+            <div class="md:hidden flex-1 overflow-visible pb-32">
                 <ul class="divide-y divide-gray-200 p-3 sm:p-4">
                     @foreach($users as $user)
                         <li class="py-4 first:pt-2">
@@ -330,45 +330,59 @@
                                         </div>
                                     </div>
                                 </a>
-                                <div class="relative flex-shrink-0" x-data="{ open: false }">
-                                    <button type="button" @click="open = !open" class="p-2 -m-2 text-gray-400 hover:text-gray-600 rounded-lg touch-manipulation"
+                                <div class="relative flex-shrink-0 z-[95]" x-data="{ open: false, menuStyle: '' }">
+                                    <button type="button"
+                                            x-ref="trigger"
+                                            @click="
+                                                open = !open;
+                                                if (open) {
+                                                    const rect = $refs.trigger.getBoundingClientRect();
+                                                    const menuWidth = 208;
+                                                    const left = Math.max(8, Math.min(window.innerWidth - menuWidth - 8, rect.right - menuWidth));
+                                                    menuStyle = `top: ${rect.bottom + 4}px; left: ${left}px; width: ${menuWidth}px;`;
+                                                }
+                                            "
+                                            class="p-2 -m-2 text-gray-400 hover:text-gray-600 rounded-lg touch-manipulation"
                                             aria-haspopup="true" :aria-expanded="open">
                                         <svg class="h-5 w-5" fill="currentColor" viewBox="0 0 20 20">
                                             <path d="M10 6a2 2 0 110-4 2 2 0 010 4zM10 12a2 2 0 110-4 2 2 0 010 4zM10 18a2 2 0 110-4 2 2 0 010 4z"></path>
                                         </svg>
                                     </button>
-                                    <div x-show="open" @click.away="open = false" x-cloak
-                                         x-transition
-                                         class="absolute right-0 mt-1 w-52 bg-white rounded-lg shadow-lg py-1 z-50 border border-gray-200">
-                                        <a href="{{ url('/admin/users/' . $user->id) }}" class="block px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50">View</a>
-                                        <a href="{{ url('/admin/users/' . $user->id . '/edit') }}" class="block px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50">Edit</a>
-                                        @if(!$user->is_approved)
-                                            <form method="POST" action="{{ url('/admin/users/' . $user->id . '/approve') }}" class="block">
+                                    <template x-teleport="body">
+                                        <div x-show="open" @click.away="open = false" x-cloak
+                                             x-transition
+                                             class="fixed bg-white rounded-lg shadow-lg py-1 z-[99999] border border-gray-200"
+                                             :style="menuStyle">
+                                            <a href="{{ url('/admin/users/' . $user->id) }}" class="block px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50">View</a>
+                                            <a href="{{ url('/admin/users/' . $user->id . '/edit') }}" class="block px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50">Edit</a>
+                                            @if(!$user->is_approved)
+                                                <form method="POST" action="{{ url('/admin/users/' . $user->id . '/approve') }}" class="block">
+                                                    @csrf
+                                                    @method('PATCH')
+                                                    <button type="submit" class="w-full text-left px-4 py-2.5 text-sm text-green-700 hover:bg-green-50" onclick="return confirmUserAction('approve', this)">Approve</button>
+                                                </form>
+                                            @else
+                                                <form method="POST" action="{{ url('/admin/users/' . $user->id . '/disapprove') }}" class="block">
+                                                    @csrf
+                                                    @method('PATCH')
+                                                    <button type="submit" class="w-full text-left px-4 py-2.5 text-sm text-amber-700 hover:bg-amber-50" onclick="return confirmUserAction('disapprove', this)">Disapprove</button>
+                                                </form>
+                                            @endif
+                                            <form method="POST" action="{{ url('/admin/users/' . $user->id . '/toggle-status') }}" class="block">
                                                 @csrf
                                                 @method('PATCH')
-                                                <button type="submit" class="w-full text-left px-4 py-2.5 text-sm text-green-700 hover:bg-green-50" onclick="return confirmUserAction('approve', this)">Approve</button>
+                                                <button type="submit" class="w-full text-left px-4 py-2.5 text-sm {{ $user->is_active ? 'text-red-700 hover:bg-red-50' : 'text-green-700 hover:bg-green-50' }}">{{ $user->is_active ? 'Disable' : 'Enable' }}</button>
                                             </form>
-                                        @else
-                                            <form method="POST" action="{{ url('/admin/users/' . $user->id . '/disapprove') }}" class="block">
+                                            <div class="border-t border-gray-100"></div>
+                                            <button type="button" data-send-credentials data-user-id="{{ $user->id }}" data-user-name="{{ e($user->name) }}" data-user-email="{{ e($user->email) }}" class="w-full text-left px-4 py-2.5 text-sm text-blue-700 hover:bg-blue-50">Send Credentials</button>
+                                            <div class="border-t border-gray-100"></div>
+                                            <form method="POST" action="{{ url('/admin/users/' . $user->id) }}" class="block" onsubmit="return confirmUserAction('delete', this)">
                                                 @csrf
-                                                @method('PATCH')
-                                                <button type="submit" class="w-full text-left px-4 py-2.5 text-sm text-amber-700 hover:bg-amber-50" onclick="return confirmUserAction('disapprove', this)">Disapprove</button>
+                                                @method('DELETE')
+                                                <button type="submit" class="w-full text-left px-4 py-2.5 text-sm text-red-700 hover:bg-red-50">Delete</button>
                                             </form>
-                                        @endif
-                                        <form method="POST" action="{{ url('/admin/users/' . $user->id . '/toggle-status') }}" class="block">
-                                            @csrf
-                                            @method('PATCH')
-                                            <button type="submit" class="w-full text-left px-4 py-2.5 text-sm {{ $user->is_active ? 'text-red-700 hover:bg-red-50' : 'text-green-700 hover:bg-green-50' }}">{{ $user->is_active ? 'Disable' : 'Enable' }}</button>
-                                        </form>
-                                        <div class="border-t border-gray-100"></div>
-                                        <button type="button" data-send-credentials data-user-id="{{ $user->id }}" data-user-name="{{ e($user->name) }}" data-user-email="{{ e($user->email) }}" class="w-full text-left px-4 py-2.5 text-sm text-blue-700 hover:bg-blue-50">Send Credentials</button>
-                                        <div class="border-t border-gray-100"></div>
-                                        <form method="POST" action="{{ url('/admin/users/' . $user->id) }}" class="block" onsubmit="return confirmUserAction('delete', this)">
-                                            @csrf
-                                            @method('DELETE')
-                                            <button type="submit" class="w-full text-left px-4 py-2.5 text-sm text-red-700 hover:bg-red-50">Delete</button>
-                                        </form>
-                                    </div>
+                                        </div>
+                                    </template>
                                 </div>
                             </div>
                         </li>
@@ -377,7 +391,7 @@
             </div>
 
             <!-- Desktop: Table (visible from md up) -->
-            <div class="hidden md:block overflow-x-auto flex-1 min-h-0">
+            <div class="hidden md:block overflow-x-auto overflow-y-visible flex-1 min-h-0 pb-24">
                 <table class="w-full min-w-[800px] border-collapse">
                     <thead class="bg-gray-50 border-b border-gray-200 sticky top-0 z-10">
                         <tr>
@@ -452,71 +466,85 @@
                                 </td>
                                 <td class="px-4 py-3 text-sm text-gray-500 hidden xl:table-cell">{{ $user->created_at->format('M d, Y') }}</td>
                                 <td class="px-4 py-3 text-right">
-                                    <div class="relative inline-block" x-data="{ open: false }">
-                                        <button type="button" @click="open = !open" class="p-1 text-gray-400 hover:text-gray-600 rounded"
+                                    <div class="relative inline-block z-[95]" x-data="{ open: false, menuStyle: '' }">
+                                        <button type="button"
+                                                x-ref="trigger"
+                                                @click="
+                                                    open = !open;
+                                                    if (open) {
+                                                        const rect = $refs.trigger.getBoundingClientRect();
+                                                        const menuWidth = 192;
+                                                        const left = Math.max(8, Math.min(window.innerWidth - menuWidth - 8, rect.right - menuWidth));
+                                                        menuStyle = `top: ${rect.bottom + 4}px; left: ${left}px; width: ${menuWidth}px;`;
+                                                    }
+                                                "
+                                                class="p-1 text-gray-400 hover:text-gray-600 rounded"
                                                 aria-haspopup="true" :aria-expanded="open">
                                             <svg class="h-5 w-5" fill="currentColor" viewBox="0 0 20 20">
                                                 <path d="M10 6a2 2 0 110-4 2 2 0 010 4zM10 12a2 2 0 110-4 2 2 0 010 4zM10 18a2 2 0 110-4 2 2 0 010 4z"></path>
                                             </svg>
                                         </button>
-                                        <div x-show="open" @click.away="open = false" x-cloak
-                                             x-transition
-                                             class="absolute right-0 mt-1 w-48 bg-white rounded-lg shadow-lg py-1 z-50 border border-gray-200">
-                                            <a href="{{ url('/admin/users/' . $user->id) }}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 flex items-center">
-                                                <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
-                                                View
-                                            </a>
-                                            <a href="{{ url('/admin/users/' . $user->id . '/edit') }}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 flex items-center">
-                                                <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
-                                                Edit
-                                            </a>
-                                            @if(!$user->is_approved)
-                                                <form method="POST" action="{{ url('/admin/users/' . $user->id . '/approve') }}" class="block">
+                                        <template x-teleport="body">
+                                            <div x-show="open" @click.away="open = false" x-cloak
+                                                 x-transition
+                                                 class="fixed bg-white rounded-lg shadow-lg py-1 z-[99999] border border-gray-200"
+                                                 :style="menuStyle">
+                                                <a href="{{ url('/admin/users/' . $user->id) }}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 flex items-center">
+                                                    <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
+                                                    View
+                                                </a>
+                                                <a href="{{ url('/admin/users/' . $user->id . '/edit') }}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 flex items-center">
+                                                    <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+                                                    Edit
+                                                </a>
+                                                @if(!$user->is_approved)
+                                                    <form method="POST" action="{{ url('/admin/users/' . $user->id . '/approve') }}" class="block">
+                                                        @csrf
+                                                        @method('PATCH')
+                                                        <button type="submit" class="w-full text-left px-4 py-2 text-sm text-green-700 hover:bg-green-50 flex items-center" onclick="return confirmUserAction('approve', this)">
+                                                            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                                                            Approve
+                                                        </button>
+                                                    </form>
+                                                @else
+                                                    <form method="POST" action="{{ url('/admin/users/' . $user->id . '/disapprove') }}" class="block">
+                                                        @csrf
+                                                        @method('PATCH')
+                                                        <button type="submit" class="w-full text-left px-4 py-2 text-sm text-amber-700 hover:bg-amber-50 flex items-center" onclick="return confirmUserAction('disapprove', this)">
+                                                            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                                                            Disapprove
+                                                        </button>
+                                                    </form>
+                                                @endif
+                                                <form method="POST" action="{{ url('/admin/users/' . $user->id . '/toggle-status') }}" class="block">
                                                     @csrf
                                                     @method('PATCH')
-                                                    <button type="submit" class="w-full text-left px-4 py-2 text-sm text-green-700 hover:bg-green-50 flex items-center" onclick="return confirmUserAction('approve', this)">
-                                                        <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-                                                        Approve
+                                                    <button type="submit" class="w-full text-left px-4 py-2 text-sm {{ $user->is_active ? 'text-red-700 hover:bg-red-50' : 'text-green-700 hover:bg-green-50' }} flex items-center">
+                                                        @if($user->is_active)
+                                                            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728L5.636 5.636m12.728 12.728L18.364 5.636M5.636 18.364l12.728-12.728"/></svg>
+                                                            Disable
+                                                        @else
+                                                            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                                                            Enable
+                                                        @endif
                                                     </button>
                                                 </form>
-                                            @else
-                                                <form method="POST" action="{{ url('/admin/users/' . $user->id . '/disapprove') }}" class="block">
+                                                <div class="border-t border-gray-100"></div>
+                                                <button type="button" data-send-credentials data-user-id="{{ $user->id }}" data-user-name="{{ e($user->name) }}" data-user-email="{{ e($user->email) }}" class="w-full text-left px-4 py-2 text-sm text-blue-700 hover:bg-blue-50 flex items-center">
+                                                    <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
+                                                    Send Credentials
+                                                </button>
+                                                <div class="border-t border-gray-100"></div>
+                                                <form method="POST" action="{{ url('/admin/users/' . $user->id) }}" class="block" onsubmit="return confirmUserAction('delete', this)">
                                                     @csrf
-                                                    @method('PATCH')
-                                                    <button type="submit" class="w-full text-left px-4 py-2 text-sm text-amber-700 hover:bg-amber-50 flex items-center" onclick="return confirmUserAction('disapprove', this)">
-                                                        <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-                                                        Disapprove
+                                                    @method('DELETE')
+                                                    <button type="submit" class="w-full text-left px-4 py-2 text-sm text-red-700 hover:bg-red-50 flex items-center">
+                                                        <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                                                        Delete
                                                     </button>
                                                 </form>
-                                            @endif
-                                            <form method="POST" action="{{ url('/admin/users/' . $user->id . '/toggle-status') }}" class="block">
-                                                @csrf
-                                                @method('PATCH')
-                                                <button type="submit" class="w-full text-left px-4 py-2 text-sm {{ $user->is_active ? 'text-red-700 hover:bg-red-50' : 'text-green-700 hover:bg-green-50' }} flex items-center">
-                                                    @if($user->is_active)
-                                                        <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728L5.636 5.636m12.728 12.728L18.364 5.636M5.636 18.364l12.728-12.728"/></svg>
-                                                        Disable
-                                                    @else
-                                                        <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-                                                        Enable
-                                                    @endif
-                                                </button>
-                                            </form>
-                                            <div class="border-t border-gray-100"></div>
-                                            <button type="button" data-send-credentials data-user-id="{{ $user->id }}" data-user-name="{{ e($user->name) }}" data-user-email="{{ e($user->email) }}" class="w-full text-left px-4 py-2 text-sm text-blue-700 hover:bg-blue-50 flex items-center">
-                                                <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
-                                                Send Credentials
-                                            </button>
-                                            <div class="border-t border-gray-100"></div>
-                                            <form method="POST" action="{{ url('/admin/users/' . $user->id) }}" class="block" onsubmit="return confirmUserAction('delete', this)">
-                                                @csrf
-                                                @method('DELETE')
-                                                <button type="submit" class="w-full text-left px-4 py-2 text-sm text-red-700 hover:bg-red-50 flex items-center">
-                                                    <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
-                                                    Delete
-                                                </button>
-                                            </form>
-                                        </div>
+                                            </div>
+                                        </template>
                                     </div>
                                 </td>
                             </tr>

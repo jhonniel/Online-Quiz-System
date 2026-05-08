@@ -494,10 +494,10 @@
 
     <!-- Available Quizzes -->
     @if(auth()->user()->role !== 'applicant')
-    <div class="bg-white shadow-sm border-t border-gray-200 overflow-hidden flex flex-col">
+    <div class="bg-white shadow-sm border-t border-gray-200 overflow-visible flex flex-col">
 
         @if($allQuizzes->count() > 0)
-            <div class="overflow-auto">
+            <div class="overflow-x-auto overflow-y-visible">
                 <table class="min-w-full divide-y divide-gray-200">
                     <thead class="bg-gray-50 sticky top-0 z-10">
                         <tr>

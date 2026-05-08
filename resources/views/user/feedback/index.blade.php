@@ -54,9 +54,9 @@
     </div>
 
     <!-- Feedback Table -->
-    <div class="bg-white shadow-sm border-t border-b border-gray-200 overflow-hidden flex-1 flex flex-col">
+    <div class="bg-white shadow-sm border-t border-b border-gray-200 overflow-visible flex-1 flex flex-col">
         @if($userFeedbacks->count() > 0)
-            <div class="overflow-x-auto flex-1">
+            <div class="overflow-x-auto overflow-y-visible flex-1">
                 <table class="min-w-full divide-y divide-gray-200">
                     <thead class="bg-gray-50 sticky top-0 z-10">
                         <tr>

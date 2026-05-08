@@ -38,7 +38,7 @@
         <!-- Remember Me -->
         <div class="block mt-4">
             <label for="remember_me" class="inline-flex items-center">
-                <input id="remember_me" type="checkbox" class="rounded border-gray-300 text-indigo-600 shadow-sm focus:ring-indigo-500" name="remember">
+                <input id="remember_me" type="checkbox" class="rounded border-gray-300 text-indigo-600 shadow-sm focus:ring-indigo-500" name="remember" {{ old('remember') ? 'checked' : '' }}>
                 <span class="ms-2 text-sm text-gray-600">{{ __('Remember me') }}</span>
             </label>
         </div>
@@ -96,46 +96,52 @@
 
             // Real-time email validation
             let emailValidationTimeout;
-            emailInput.addEventListener('input', function() {
-                clearTimeout(emailValidationTimeout);
-                emailValidationTimeout = setTimeout(() => {
-                    const email = this.value.trim();
-                    if (email.length > 0 && !validateEmail(email)) {
-                        ToastNotification.warning('Please enter a valid email address format.', 3000);
-                    }
-                }, 1000);
-            });
+            if (emailInput) {
+                emailInput.addEventListener('input', function() {
+                    clearTimeout(emailValidationTimeout);
+                    emailValidationTimeout = setTimeout(() => {
+                        const email = this.value.trim();
+                        if (email.length > 0 && !validateEmail(email)) {
+                            ToastNotification.warning('Please enter a valid email address format.', 3000);
+                        }
+                    }, 1000);
+                });
+            }
 
             // Real-time password validation
-            passwordInput.addEventListener('input', function() {
-                const password = this.value;
-                if (password.length > 0 && password.length < 6) {
-                    ToastNotification.warning('Password should be at least 6 characters long.', 3000);
-                }
-            });
+            if (passwordInput) {
+                passwordInput.addEventListener('input', function() {
+                    const password = this.value;
+                    if (password.length > 0 && password.length < 6) {
+                        ToastNotification.warning('Password should be at least 6 characters long.', 3000);
+                    }
+                });
+            }
 
             // Form submission validation
-            loginForm.addEventListener('submit', function(e) {
-                const email = emailInput.value.trim();
-                const password = passwordInput.value;
+            if (loginForm && emailInput && passwordInput) {
+                loginForm.addEventListener('submit', function(e) {
+                    const email = emailInput.value.trim();
+                    const password = passwordInput.value;
 
-                // Validate email format
-                if (!validateEmail(email)) {
-                    e.preventDefault();
-                    ToastNotification.error('Please enter a valid email address.', 4000);
-                    return false;
-                }
+                    // Validate email format
+                    if (!validateEmail(email)) {
+                        e.preventDefault();
+                        ToastNotification.error('Please enter a valid email address.', 4000);
+                        return false;
+                    }
 
-                // Validate password length
-                if (password.length < 6) {
-                    e.preventDefault();
-                    ToastNotification.error('Password must be at least 6 characters long.', 4000);
-                    return false;
-                }
+                    // Validate password length
+                    if (password.length < 6) {
+                        e.preventDefault();
+                        ToastNotification.error('Password must be at least 6 characters long.', 4000);
+                        return false;
+                    }
 
-                // Show loading toast
-                ToastNotification.info('Logging in...', 2000);
-            });
+                    // Show loading toast
+                    ToastNotification.info('Logging in...', 2000);
+                });
+            }
 
             // Check for validation errors and show appropriate toasts
             function checkForErrors() {
@@ -213,9 +219,8 @@
             });
 
             // Observe the form for changes
-            const form = document.querySelector('form');
-            if (form) {
-                observer.observe(form, {
+            if (loginForm) {
+                observer.observe(loginForm, {
                     childList: true,
                     subtree: true,
                     characterData: true

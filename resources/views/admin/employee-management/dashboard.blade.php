@@ -104,7 +104,7 @@
                  localStorage.setItem('admin.employeeDashboard.employeesOpen', JSON.stringify(this.employeesOpen));
              }
          }">
-        <div class="px-6 py-4 border-b border-gray-100 bg-gray-50/70">
+        <div class="px-6 py-4 border-b border-gray-100 bg-gray-50/70 relative z-30">
             <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                 <div>
                     <h2 class="text-base font-semibold text-gray-900">All Employees Data</h2>
@@ -208,7 +208,7 @@
         </div>
     </div>
 
-    <div class="bg-white border border-gray-200 rounded-2xl shadow-sm overflow-hidden"
+    <div class="bg-white border border-gray-200 rounded-2xl shadow-sm overflow-visible"
          x-data="{
              leaveDaysOpen: JSON.parse(localStorage.getItem('admin.employeeDashboard.leaveDaysOpen') ?? 'false'),
              toggleLeaveDaysOpen() {
@@ -242,14 +242,51 @@
                                 <option value="name_desc" {{ ($leaveDaysSort ?? 'total_desc') === 'name_desc' ? 'selected' : '' }}>Name Z-A</option>
                             </select>
                         </div>
-                        <div class="min-w-0">
-                            <label for="leave_days_type" class="block text-[10px] text-gray-500 mb-0.5">Leave Type</label>
-                            <select id="leave_days_type" name="leave_days_type" class="h-8 w-full rounded-md border-gray-300 text-xs focus:border-indigo-500 focus:ring-indigo-500">
-                                <option value="">All types</option>
+                        <div class="min-w-0 relative"
+                             x-data="{
+                                 leaveTypeOpen: false,
+                                 leaveTypeTop: 0,
+                                 leaveTypeLeft: 0,
+                                 leaveTypeWidth: 0,
+                                 toggleLeaveType() {
+                                     if (this.leaveTypeOpen) {
+                                         this.leaveTypeOpen = false;
+                                         return;
+                                     }
+                                     const r = this.$refs.leaveTypeTrigger.getBoundingClientRect();
+                                     this.leaveTypeTop = r.bottom + window.scrollY + 4;
+                                     this.leaveTypeLeft = r.left + window.scrollX;
+                                     this.leaveTypeWidth = r.width;
+                                     this.leaveTypeOpen = true;
+                                 }
+                             }">
+                            <label class="block text-[10px] text-gray-500 mb-0.5">Leave Type</label>
+                            <button type="button"
+                                    x-ref="leaveTypeTrigger"
+                                    @click="toggleLeaveType()"
+                                    class="h-8 w-full rounded-md border border-gray-300 bg-white px-2 text-xs text-gray-700 flex items-center justify-between">
+                                @php $selectedLeaveTypesCount = count((array) ($leaveDaysTypes ?? [])); @endphp
+                                <span>{{ $selectedLeaveTypesCount > 0 ? ($selectedLeaveTypesCount . ' selected') : 'All types' }}</span>
+                                <svg class="h-4 w-4 text-gray-500 transition-transform" :class="leaveTypeOpen ? 'rotate-180' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                                </svg>
+                            </button>
+                            <div x-show="leaveTypeOpen"
+                                 x-cloak
+                                 @click.outside="leaveTypeOpen = false"
+                                 class="fixed z-[120] rounded-md border border-gray-200 bg-white shadow-lg p-2 space-y-1 max-h-52 overflow-y-auto"
+                                 :style="`top:${leaveTypeTop}px; left:${leaveTypeLeft}px; width:${leaveTypeWidth}px;`">
                                 @foreach($typeLabels as $typeKey => $typeLabel)
-                                    <option value="{{ $typeKey }}" {{ ($leaveDaysType ?? '') === $typeKey ? 'selected' : '' }}>{{ $typeLabel }}</option>
+                                    <label class="flex items-center gap-2 text-xs text-gray-700">
+                                        <input type="checkbox"
+                                               name="leave_days_type[]"
+                                               value="{{ $typeKey }}"
+                                               {{ in_array($typeKey, (array) ($leaveDaysTypes ?? []), true) ? 'checked' : '' }}
+                                               class="h-3.5 w-3.5 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500">
+                                        <span>{{ $typeLabel }}</span>
+                                    </label>
                                 @endforeach
-                            </select>
+                            </div>
                         </div>
                         <button type="submit" class="h-8 inline-flex items-center justify-center px-2.5 rounded-md bg-indigo-600 text-white text-xs font-semibold hover:bg-indigo-700">
                             Apply
@@ -269,7 +306,7 @@
                 </div>
             </div>
         </div>
-        <div x-show="leaveDaysOpen" x-cloak class="overflow-x-auto">
+        <div x-show="leaveDaysOpen" x-cloak class="overflow-x-auto relative z-0">
             <table class="min-w-full divide-y divide-gray-200">
                 <thead class="bg-gray-50">
                     <tr>
