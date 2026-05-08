@@ -202,19 +202,38 @@
 
     <div class="bg-white border border-gray-200 rounded-2xl shadow-sm overflow-hidden" x-data="{ leaveDaysOpen: false }">
         <div class="px-6 py-4 border-b border-gray-100 bg-gray-50/70">
-            <div class="flex items-center justify-between gap-3">
+            <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3">
                 <div>
                     <h2 class="text-base font-semibold text-gray-900">Leave Request Days by Employee</h2>
                     <p class="text-sm text-gray-500">Total leave-request days per employee, grouped by leave type.</p>
                 </div>
-                <button type="button"
-                        @click="leaveDaysOpen = !leaveDaysOpen"
-                        class="inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg border border-gray-200 bg-white text-gray-700 text-xs font-semibold hover:bg-gray-50">
-                    <span x-text="leaveDaysOpen ? 'Collapse' : 'Expand'"></span>
-                    <svg class="h-4 w-4 transition-transform" :class="leaveDaysOpen ? 'rotate-180' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
-                    </svg>
-                </button>
+                <div class="flex flex-col sm:flex-row sm:items-center gap-2">
+                    <form method="GET" action="{{ url('/admin/employee-dashboard') }}" class="flex flex-wrap items-end gap-2">
+                        <input type="hidden" name="leave_days_filter" value="1">
+                        <div>
+                            <label for="leave_days_start_date" class="block text-[11px] text-gray-500 mb-1">From</label>
+                            <input id="leave_days_start_date" name="leave_days_start_date" type="date" value="{{ $leaveDaysStartDate ?? '' }}" class="rounded-md border-gray-300 text-sm focus:border-indigo-500 focus:ring-indigo-500">
+                        </div>
+                        <div>
+                            <label for="leave_days_end_date" class="block text-[11px] text-gray-500 mb-1">To</label>
+                            <input id="leave_days_end_date" name="leave_days_end_date" type="date" value="{{ $leaveDaysEndDate ?? '' }}" class="rounded-md border-gray-300 text-sm focus:border-indigo-500 focus:ring-indigo-500">
+                        </div>
+                        <button type="submit" class="inline-flex items-center justify-center px-3 py-1.5 rounded-lg bg-indigo-600 text-white text-xs font-semibold hover:bg-indigo-700">
+                            Apply
+                        </button>
+                        <a href="{{ url('/admin/employee-dashboard') }}" class="inline-flex items-center justify-center px-3 py-1.5 rounded-lg border border-gray-200 bg-white text-gray-700 text-xs font-semibold hover:bg-gray-50">
+                            Clear
+                        </a>
+                    </form>
+                    <button type="button"
+                            @click="leaveDaysOpen = !leaveDaysOpen"
+                            class="inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg border border-gray-200 bg-white text-gray-700 text-xs font-semibold hover:bg-gray-50">
+                        <span x-text="leaveDaysOpen ? 'Collapse' : 'Expand'"></span>
+                        <svg class="h-4 w-4 transition-transform" :class="leaveDaysOpen ? 'rotate-180' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                        </svg>
+                    </button>
+                </div>
             </div>
         </div>
         <div x-show="leaveDaysOpen" x-cloak class="overflow-x-auto">

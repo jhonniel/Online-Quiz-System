@@ -34,6 +34,8 @@ class EmployeeDashboardController extends Controller
 
         $employeeIds = $employeeQuery->pluck('id');
         $currentYear = now()->year;
+        $leaveDaysStartDate = (string) $request->query('leave_days_start_date', '');
+        $leaveDaysEndDate = (string) $request->query('leave_days_end_date', '');
 
         $leaveBaseQuery = LeaveRequest::query()
             ->whereIn('user_id', $employeeIds);
@@ -154,8 +156,15 @@ class EmployeeDashboardController extends Controller
         });
 
         // Per employee, leave-request days for each type (all statuses).
-        $leaveRequestsByEmployee = LeaveRequest::query()
-            ->whereIn('user_id', $employeeIds)
+        $leaveDaysQuery = LeaveRequest::query()
+            ->whereIn('user_id', $employeeIds);
+        if ($leaveDaysStartDate !== '') {
+            $leaveDaysQuery->whereDate('start_date', '>=', $leaveDaysStartDate);
+        }
+        if ($leaveDaysEndDate !== '') {
+            $leaveDaysQuery->whereDate('start_date', '<=', $leaveDaysEndDate);
+        }
+        $leaveRequestsByEmployee = $leaveDaysQuery
             ->get(['user_id', 'type', 'start_date', 'end_date'])
             ->groupBy('user_id');
 
@@ -274,6 +283,8 @@ class EmployeeDashboardController extends Controller
             'employeeLeaveStats' => $employeeLeaveStats,
             'employeeTypeCounts' => $employeeTypeCounts,
             'employeeBalances' => $employeeBalances,
+            'leaveDaysStartDate' => $leaveDaysStartDate,
+            'leaveDaysEndDate' => $leaveDaysEndDate,
         ]);
     }
 }
