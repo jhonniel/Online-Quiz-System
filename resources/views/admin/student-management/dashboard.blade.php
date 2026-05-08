@@ -138,7 +138,13 @@
                                 </td>
                                 @if($showApprovedLeaveRequests ?? false)
                                     <td class="px-3 sm:px-6 py-3 whitespace-nowrap text-xs sm:text-sm text-center text-gray-700">
-                                        <span class="inline-flex items-center justify-center min-w-[2.25rem] px-2.5 py-1 rounded-full border border-indigo-200 bg-indigo-50 text-indigo-700 text-[11px] font-semibold">
+                                        @php
+                                            $approvedAbsentDaysExceeded = (bool) ($row['approved_absent_days_exceeded'] ?? false);
+                                            $approvedAbsentDaysClass = $approvedAbsentDaysExceeded
+                                                ? 'border-red-200 bg-red-50 text-red-700'
+                                                : 'border-indigo-200 bg-indigo-50 text-indigo-700';
+                                        @endphp
+                                        <span class="inline-flex items-center justify-center min-w-[2.25rem] px-2.5 py-1 rounded-full border text-[11px] font-semibold {{ $approvedAbsentDaysClass }}">
                                             {{ (int) ($row['approved_leave_requests'] ?? 0) }}
                                         </span>
                                     </td>

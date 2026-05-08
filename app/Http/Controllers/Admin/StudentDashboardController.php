@@ -526,6 +526,9 @@ class StudentDashboardController extends Controller
                 $rollbackHours = $this->getPendingResubmissionRollbackHours((int) $student->id);
                 $total = max($totalRaw - $rollbackHours, 0);
                 $remaining = $required - $total; // can be negative
+                $approvedAbsentDays = (int) ($approvedAbsentDaysByStudent[$student->id] ?? 0);
+                $allowableAbsences = User::normalizedStudentAbsenceAllowance($student->student_absence_allowance ?? null);
+                $approvedAbsentDaysExceeded = $approvedAbsentDays > $allowableAbsences;
 
                 // Estimate internship end date based on remaining hours (8 hours per weekday)
                 $estimatedEndDate = null;
@@ -544,7 +547,9 @@ class StudentDashboardController extends Controller
                     'required_hours' => $required,
                     'total_hours' => $total,
                     'remaining_hours' => $remaining,
-                    'approved_leave_requests' => (int) ($approvedAbsentDaysByStudent[$student->id] ?? 0),
+                    'approved_leave_requests' => $approvedAbsentDays,
+                    'allowable_absences' => $allowableAbsences,
+                    'approved_absent_days_exceeded' => $approvedAbsentDaysExceeded,
                     'required_hours_formatted' => $this->formatHours($required),
                     'total_hours_formatted' => $this->formatHours($total),
                     'remaining_hours_formatted' => $this->formatHours($remaining),

@@ -905,7 +905,7 @@ class DashboardController extends Controller
                 'values' => [$activeStudents, max($totalStudents - $activeStudents, 0)],
             ],
             'internshipStatus' => [
-                'labels' => ['Ongoing', 'Completed / No Required Hours'],
+                'labels' => ['Ongoing', 'Completed'],
                 'values' => [$ongoingInternships, $completedInternships],
             ],
             'monthlyHours' => [

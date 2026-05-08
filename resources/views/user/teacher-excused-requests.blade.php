@@ -45,23 +45,13 @@
                 </div>
             @endif
 
-            <div class="rounded-xl border border-gray-200 bg-white p-4 shadow-sm flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+            <div class="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
                 <div class="flex items-start gap-2 text-sm text-gray-600">
                     <svg class="h-5 w-5 text-indigo-500 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                     </svg>
                     <span>Each submission creates a pending request for every selected student. An administrator will review and approve or reject each one.</span>
                 </div>
-                <button
-                    type="button"
-                    @click="formOpen = true"
-                    class="sm:shrink-0 inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-indigo-600 text-white text-sm font-semibold hover:bg-indigo-700 transition-colors"
-                >
-                    <svg class="h-4 w-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
-                    </svg>
-                    File excused request
-                </button>
             </div>
 
             <!-- Modal: filing form -->
@@ -332,16 +322,6 @@
                         <p class="text-xs sm:text-sm text-gray-500 mt-0.5">Past student excused requests and their latest status.</p>
                     </div>
                     <div class="flex flex-wrap items-center gap-3">
-                        <button
-                            type="button"
-                            @click="formOpen = true"
-                            class="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg border border-indigo-200 text-indigo-700 text-sm font-medium hover:bg-indigo-50 transition-colors"
-                        >
-                            <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
-                            </svg>
-                            File excused request
-                        </button>
                         <form method="GET" action="{{ url('/teacher/excused-requests') }}" class="flex items-center gap-2">
                             <label for="per_page" class="text-xs text-gray-500 whitespace-nowrap">Rows</label>
                             <select id="per_page" name="per_page" class="rounded-md border-gray-300 text-sm focus:border-indigo-500 focus:ring-indigo-500" onchange="this.form.submit()">
@@ -393,14 +373,7 @@
                         </div>
                     @empty
                         <div class="px-4 py-12 text-center">
-                            <p class="text-sm text-gray-500 mb-3">No requests filed yet.</p>
-                            <button
-                                type="button"
-                                @click="formOpen = true"
-                                class="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-indigo-600 text-white text-sm font-medium hover:bg-indigo-700"
-                            >
-                                File your first request
-                            </button>
+                            <p class="text-sm text-gray-500">No requests filed yet.</p>
                         </div>
                     @endforelse
                 </div>
@@ -453,14 +426,7 @@
                             @empty
                                 <tr>
                                     <td colspan="5" class="px-4 py-12 text-center">
-                                        <p class="text-sm text-gray-500 mb-3">No requests filed yet.</p>
-                                        <button
-                                            type="button"
-                                            @click="formOpen = true"
-                                            class="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-indigo-600 text-white text-sm font-medium hover:bg-indigo-700"
-                                        >
-                                            File your first request
-                                        </button>
+                                        <p class="text-sm text-gray-500">No requests filed yet.</p>
                                     </td>
                                 </tr>
                             @endforelse
