@@ -95,30 +95,40 @@
         </div>
     </div>
 
-    <div class="bg-white border border-gray-200 rounded-2xl shadow-sm overflow-hidden" x-data="{ employeeViewMode: 'summary' }">
+    <div class="bg-white border border-gray-200 rounded-2xl shadow-sm overflow-hidden" x-data="{ employeeViewMode: 'summary', employeesOpen: false }">
         <div class="px-6 py-4 border-b border-gray-100 bg-gray-50/70">
             <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                 <div>
                     <h2 class="text-base font-semibold text-gray-900">All Employees Data</h2>
                     <p class="text-sm text-gray-500">Complete employee list with status and leave request totals.</p>
                 </div>
-                <div class="inline-flex rounded-lg border border-gray-200 bg-white p-1 w-full sm:w-auto">
+                <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full sm:w-auto">
+                    <div class="inline-flex rounded-lg border border-gray-200 bg-white p-1 w-full sm:w-auto">
+                        <button type="button"
+                                @click="employeeViewMode = 'summary'"
+                                :class="employeeViewMode === 'summary' ? 'bg-indigo-600 text-white shadow-sm' : 'text-gray-700 hover:bg-gray-50'"
+                                class="px-3 py-1.5 text-xs font-semibold rounded-md transition-colors w-full sm:w-auto">
+                            Summary
+                        </button>
+                        <button type="button"
+                                @click="employeeViewMode = 'detailed'"
+                                :class="employeeViewMode === 'detailed' ? 'bg-indigo-600 text-white shadow-sm' : 'text-gray-700 hover:bg-gray-50'"
+                                class="px-3 py-1.5 text-xs font-semibold rounded-md transition-colors w-full sm:w-auto">
+                            Detailed per-type
+                        </button>
+                    </div>
                     <button type="button"
-                            @click="employeeViewMode = 'summary'"
-                            :class="employeeViewMode === 'summary' ? 'bg-indigo-600 text-white shadow-sm' : 'text-gray-700 hover:bg-gray-50'"
-                            class="px-3 py-1.5 text-xs font-semibold rounded-md transition-colors w-full sm:w-auto">
-                        Summary
-                    </button>
-                    <button type="button"
-                            @click="employeeViewMode = 'detailed'"
-                            :class="employeeViewMode === 'detailed' ? 'bg-indigo-600 text-white shadow-sm' : 'text-gray-700 hover:bg-gray-50'"
-                            class="px-3 py-1.5 text-xs font-semibold rounded-md transition-colors w-full sm:w-auto">
-                        Detailed per-type
+                            @click="employeesOpen = !employeesOpen"
+                            class="inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg border border-gray-200 bg-white text-gray-700 text-xs font-semibold hover:bg-gray-50">
+                        <span x-text="employeesOpen ? 'Collapse' : 'Expand'"></span>
+                        <svg class="h-4 w-4 transition-transform" :class="employeesOpen ? 'rotate-180' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                        </svg>
                     </button>
                 </div>
             </div>
         </div>
-        <div class="overflow-x-auto">
+        <div x-show="employeesOpen" x-cloak class="overflow-x-auto">
             <table class="min-w-full divide-y divide-gray-200">
                 <thead class="bg-gray-50">
                     <tr>
@@ -190,12 +200,24 @@
         </div>
     </div>
 
-    <div class="bg-white border border-gray-200 rounded-2xl shadow-sm overflow-hidden">
+    <div class="bg-white border border-gray-200 rounded-2xl shadow-sm overflow-hidden" x-data="{ leaveDaysOpen: false }">
         <div class="px-6 py-4 border-b border-gray-100 bg-gray-50/70">
-            <h2 class="text-base font-semibold text-gray-900">Leave Request Days by Employee</h2>
-            <p class="text-sm text-gray-500">Total leave-request days per employee, grouped by leave type.</p>
+            <div class="flex items-center justify-between gap-3">
+                <div>
+                    <h2 class="text-base font-semibold text-gray-900">Leave Request Days by Employee</h2>
+                    <p class="text-sm text-gray-500">Total leave-request days per employee, grouped by leave type.</p>
+                </div>
+                <button type="button"
+                        @click="leaveDaysOpen = !leaveDaysOpen"
+                        class="inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg border border-gray-200 bg-white text-gray-700 text-xs font-semibold hover:bg-gray-50">
+                    <span x-text="leaveDaysOpen ? 'Collapse' : 'Expand'"></span>
+                    <svg class="h-4 w-4 transition-transform" :class="leaveDaysOpen ? 'rotate-180' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                    </svg>
+                </button>
+            </div>
         </div>
-        <div class="overflow-x-auto">
+        <div x-show="leaveDaysOpen" x-cloak class="overflow-x-auto">
             <table class="min-w-full divide-y divide-gray-200">
                 <thead class="bg-gray-50">
                     <tr>
