@@ -124,6 +124,7 @@ class ApiMonitoringController extends Controller
     {
         $metrics = ApiEndpointMetric::query()->get()->keyBy('route_key');
         $pointsByRoute = ApiEndpointMetricPoint::query()
+            ->where('recorded_at', '>=', now()->subDay())
             ->orderByDesc('recorded_at')
             ->limit(4000)
             ->get()
