@@ -223,7 +223,7 @@
                     <p class="text-sm text-gray-500">Total leave-request days per employee, grouped by leave type.</p>
                 </div>
                 <div class="flex flex-col sm:flex-row sm:items-center gap-1.5 w-full lg:w-auto">
-                    <form method="GET" action="{{ url('/admin/employee-dashboard') }}" class="w-full lg:w-auto grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-5 gap-1.5 items-end">
+                    <form method="GET" action="{{ url('/admin/employee-dashboard') }}" class="w-full lg:w-auto grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-6 gap-1.5 items-end">
                         <input type="hidden" name="leave_days_filter" value="1">
                         <div class="min-w-0">
                             <label for="leave_days_start_date" class="block text-[10px] text-gray-500 mb-0.5">From</label>
@@ -240,6 +240,15 @@
                                 <option value="total_asc" {{ ($leaveDaysSort ?? 'total_desc') === 'total_asc' ? 'selected' : '' }}>Lowest total first</option>
                                 <option value="name_asc" {{ ($leaveDaysSort ?? 'total_desc') === 'name_asc' ? 'selected' : '' }}>Name A-Z</option>
                                 <option value="name_desc" {{ ($leaveDaysSort ?? 'total_desc') === 'name_desc' ? 'selected' : '' }}>Name Z-A</option>
+                            </select>
+                        </div>
+                        <div class="min-w-0">
+                            <label for="leave_days_type" class="block text-[10px] text-gray-500 mb-0.5">Leave Type</label>
+                            <select id="leave_days_type" name="leave_days_type" class="h-8 w-full rounded-md border-gray-300 text-xs focus:border-indigo-500 focus:ring-indigo-500">
+                                <option value="">All types</option>
+                                @foreach($typeLabels as $typeKey => $typeLabel)
+                                    <option value="{{ $typeKey }}" {{ ($leaveDaysType ?? '') === $typeKey ? 'selected' : '' }}>{{ $typeLabel }}</option>
+                                @endforeach
                             </select>
                         </div>
                         <button type="submit" class="h-8 inline-flex items-center justify-center px-2.5 rounded-md bg-indigo-600 text-white text-xs font-semibold hover:bg-indigo-700">

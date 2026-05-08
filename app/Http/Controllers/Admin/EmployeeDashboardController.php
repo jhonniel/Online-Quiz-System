@@ -37,6 +37,7 @@ class EmployeeDashboardController extends Controller
         $leaveDaysStartDate = (string) $request->query('leave_days_start_date', '');
         $leaveDaysEndDate = (string) $request->query('leave_days_end_date', '');
         $leaveDaysSort = (string) $request->query('leave_days_sort', 'total_desc');
+        $leaveDaysType = (string) $request->query('leave_days_type', '');
 
         $leaveBaseQuery = LeaveRequest::query()
             ->whereIn('user_id', $employeeIds);
@@ -165,6 +166,9 @@ class EmployeeDashboardController extends Controller
         }
         if ($leaveDaysEndDate !== '') {
             $leaveDaysQuery->whereDate('start_date', '<=', $leaveDaysEndDate);
+        }
+        if ($leaveDaysType !== '' && array_key_exists($leaveDaysType, $typeLabels)) {
+            $leaveDaysQuery->where('type', $leaveDaysType);
         }
         $leaveRequestsByEmployee = $leaveDaysQuery
             ->get(['user_id', 'type', 'start_date', 'end_date'])
@@ -322,6 +326,7 @@ class EmployeeDashboardController extends Controller
             'leaveDaysStartDate' => $leaveDaysStartDate,
             'leaveDaysEndDate' => $leaveDaysEndDate,
             'leaveDaysSort' => $leaveDaysSort,
+            'leaveDaysType' => $leaveDaysType,
             'leaveDaysEmployees' => $leaveDaysEmployees,
         ]);
     }

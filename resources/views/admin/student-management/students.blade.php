@@ -26,7 +26,7 @@
     </div>
 
     <!-- Students Analytics -->
-    <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-8 gap-4">
+    <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-7 gap-4">
         <div class="bg-white border border-gray-200 rounded-lg p-4 shadow-sm">
             <p class="text-xs font-semibold uppercase tracking-wide text-gray-500">Total Students</p>
             <p class="mt-2 text-2xl font-bold text-gray-900">{{ number_format($statsTotalStudents ?? 0) }}</p>
@@ -42,24 +42,36 @@
             <p class="mt-2 text-2xl font-bold text-emerald-700">{{ number_format($statsCompleted ?? 0) }}</p>
             <p class="mt-1 text-xs text-gray-500">Reached required hours</p>
         </div>
-        <div class="bg-white border border-gray-200 rounded-lg p-4 shadow-sm">
-            <p class="text-xs font-semibold uppercase tracking-wide text-gray-500">OJT Slots Used (Ongoing)</p>
-            <p class="mt-2 text-2xl font-bold text-amber-700">{{ number_format((int) ($statsOjtUsedSlots ?? 0)) }}</p>
-            <p class="mt-1 text-xs text-gray-500">
-                Admin slots:
-                @if((int) ($statsOjtTotalSlots ?? 0) > 0)
-                    {{ number_format((int) ($statsOjtTotalSlots ?? 0)) }}
-                @else
-                    Not set
-                @endif
-            </p>
-        </div>
-        <div class="bg-white border border-gray-200 rounded-lg p-4 shadow-sm">
-            <p class="text-xs font-semibold uppercase tracking-wide text-gray-500">Over Slot</p>
-            <p class="mt-2 text-2xl font-bold {{ ((int) ($statsOjtOverSlots ?? 0)) > 0 ? 'text-rose-700' : 'text-emerald-700' }}">
-                {{ number_format((int) ($statsOjtOverSlots ?? 0)) }}
-            </p>
-            <p class="mt-1 text-xs text-gray-500">Exceeded ongoing students vs admin OJT slots</p>
+        @php
+            $ojtOverSlots = (int) ($statsOjtOverSlots ?? 0);
+            $ojtCardClass = $ojtOverSlots > 0
+                ? 'bg-rose-50 border-rose-200'
+                : 'bg-white border-gray-200';
+            $ojtTitleClass = $ojtOverSlots > 0 ? 'text-rose-700' : 'text-gray-500';
+            $ojtValueClass = $ojtOverSlots > 0 ? 'text-rose-700' : 'text-gray-900';
+            $ojtIconClass = $ojtOverSlots > 0 ? 'text-rose-600' : 'text-indigo-600';
+        @endphp
+        <div class="border rounded-lg p-4 shadow-sm {{ $ojtCardClass }}">
+            <div class="flex items-center gap-3">
+                <div class="flex-shrink-0 {{ $ojtIconClass }}">
+                    <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                    </svg>
+                </div>
+                <div>
+                    <p class="text-2xl font-bold {{ $ojtValueClass }}">
+                        {{ number_format((int) ($statsOjtUsedSlots ?? 0)) }}
+                        /
+                        {{ number_format((int) ($statsOjtTotalSlots ?? 0)) }}
+                    </p>
+                    <p class="text-xs font-semibold uppercase tracking-wide mt-1 {{ $ojtTitleClass }}">OJT Slots Used (Ongoing)</p>
+                    @if((int) ($statsOjtOverSlots ?? 0) > 0)
+                        <p class="mt-1 text-xs text-rose-700">Over by {{ number_format((int) ($statsOjtOverSlots ?? 0)) }} slots</p>
+                    @else
+                        <p class="mt-1 text-xs text-gray-500">Within slot capacity</p>
+                    @endif
+                </div>
+            </div>
         </div>
         <div class="bg-white border border-gray-200 rounded-lg p-4 shadow-sm">
             <p class="text-xs font-semibold uppercase tracking-wide text-gray-500">Average Completion</p>
