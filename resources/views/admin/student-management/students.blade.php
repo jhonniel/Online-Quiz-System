@@ -26,7 +26,7 @@
     </div>
 
     <!-- Students Analytics -->
-    <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-7 gap-4">
+    <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-8 gap-4">
         <div class="bg-white border border-gray-200 rounded-lg p-4 shadow-sm">
             <p class="text-xs font-semibold uppercase tracking-wide text-gray-500">Total Students</p>
             <p class="mt-2 text-2xl font-bold text-gray-900">{{ number_format($statsTotalStudents ?? 0) }}</p>
@@ -44,8 +44,22 @@
         </div>
         <div class="bg-white border border-gray-200 rounded-lg p-4 shadow-sm">
             <p class="text-xs font-semibold uppercase tracking-wide text-gray-500">OJT Slots Used (Ongoing)</p>
-            <p class="mt-2 text-2xl font-bold text-amber-700">{{ number_format((int) ($statsOngoingIncomplete ?? 0)) }}</p>
-            <p class="mt-1 text-xs text-gray-500">Not yet at required training hours</p>
+            <p class="mt-2 text-2xl font-bold text-amber-700">{{ number_format((int) ($statsOjtUsedSlots ?? 0)) }}</p>
+            <p class="mt-1 text-xs text-gray-500">
+                Admin slots:
+                @if((int) ($statsOjtTotalSlots ?? 0) > 0)
+                    {{ number_format((int) ($statsOjtTotalSlots ?? 0)) }}
+                @else
+                    Not set
+                @endif
+            </p>
+        </div>
+        <div class="bg-white border border-gray-200 rounded-lg p-4 shadow-sm">
+            <p class="text-xs font-semibold uppercase tracking-wide text-gray-500">Over Slot</p>
+            <p class="mt-2 text-2xl font-bold {{ ((int) ($statsOjtOverSlots ?? 0)) > 0 ? 'text-rose-700' : 'text-emerald-700' }}">
+                {{ number_format((int) ($statsOjtOverSlots ?? 0)) }}
+            </p>
+            <p class="mt-1 text-xs text-gray-500">Exceeded ongoing students vs admin OJT slots</p>
         </div>
         <div class="bg-white border border-gray-200 rounded-lg p-4 shadow-sm">
             <p class="text-xs font-semibold uppercase tracking-wide text-gray-500">Average Completion</p>

@@ -119,6 +119,12 @@ class StudentDashboardController extends Controller
             return $required > 0 && $total < $required;
         })->count();
 
+        $statsOjtTotalSlots = (int) \App\Models\Setting::get('ojt_total_slots', 0);
+        $statsOjtUsedSlots = (int) $statsOngoingIncomplete;
+        $statsOjtOverSlots = $statsOjtTotalSlots > 0
+            ? max($statsOjtUsedSlots - $statsOjtTotalSlots, 0)
+            : 0;
+
         $completionPercents = $studentsForStats->map(function ($s) {
             $required = (float) ($s->required_training_hours ?? 0);
             $total = (float) ($s->internship_total_hours ?? 0);
@@ -205,6 +211,9 @@ class StudentDashboardController extends Controller
             'statsCompleted',
             'statsOngoing',
             'statsOngoingIncomplete',
+            'statsOjtTotalSlots',
+            'statsOjtUsedSlots',
+            'statsOjtOverSlots',
             'statsAvgCompletion',
             'statsTotalApprovedLeaveRequests',
             'statsTopLeaveRequester',
@@ -458,6 +467,7 @@ class StudentDashboardController extends Controller
         $showApprovedLeaveRequests = true;
         $sortBy = (string) $request->input('sort_by', 'remaining_hours');
         $sortDir = strtolower((string) $request->input('sort_dir', 'desc'));
+        $rankingSchool = trim((string) $request->input('ranking_school', ''));
 
         $allowedSortBy = [
             'school',
@@ -489,6 +499,8 @@ class StudentDashboardController extends Controller
         }
 
         $students = $students->get();
+
+        $rankingSchoolOptions = collect();
 
         if ($students->isEmpty()) {
             $ranked = collect();
@@ -559,6 +571,31 @@ class StudentDashboardController extends Controller
             })->filter(function ($row) {
                 return ($row['remaining_hours'] ?? 0) > 0;
             });
+
+            // School filter options should only include schools that currently appear in ranking.
+            $rankingSchoolOptions = $ranked
+                ->map(function ($row) {
+                    $school = optional($row['student']->university);
+                    if (!$school || empty($school->id)) {
+                        return null;
+                    }
+
+                    return [
+                        'id' => (string) $school->id,
+                        'name' => (string) $school->name,
+                    ];
+                })
+                ->filter()
+                ->unique('id')
+                ->sortBy('name', SORT_NATURAL | SORT_FLAG_CASE)
+                ->values();
+
+            // Filter ranking rows by selected school (if valid and present in options).
+            if ($rankingSchool !== '' && $rankingSchoolOptions->contains(fn ($opt) => $opt['id'] === $rankingSchool)) {
+                $ranked = $ranked->filter(function ($row) use ($rankingSchool) {
+                    return (string) optional($row['student']->university)->id === $rankingSchool;
+                })->values();
+            }
 
             $ranked = $ranked->sortBy(function ($row) use ($sortBy, $sortDescending) {
                 return match ($sortBy) {
@@ -687,6 +724,8 @@ class StudentDashboardController extends Controller
             'showApprovedLeaveRequests' => $showApprovedLeaveRequests,
             'sortBy' => $sortBy,
             'sortDir' => $sortDir,
+            'rankingSchool' => $rankingSchool,
+            'rankingSchoolOptions' => $rankingSchoolOptions,
         ]);
     }
 

@@ -57,6 +57,18 @@
                             </select>
                         </div>
 
+                        <div class="flex flex-col gap-1 min-w-[210px]">
+                            <label for="ranking_school" class="text-[11px] sm:text-xs text-gray-600 font-medium">School</label>
+                            <select id="ranking_school" name="ranking_school" class="h-10 w-full rounded-md border border-gray-300 bg-white px-3 text-xs sm:text-sm focus:border-indigo-500 focus:ring-indigo-500">
+                                <option value="">All schools in ranking</option>
+                                @foreach(($rankingSchoolOptions ?? collect()) as $schoolOption)
+                                    <option value="{{ $schoolOption['id'] }}" {{ ($rankingSchool ?? '') === $schoolOption['id'] ? 'selected' : '' }}>
+                                        {{ $schoolOption['name'] }}
+                                    </option>
+                                @endforeach
+                            </select>
+                        </div>
+
                         <button type="submit" class="h-10 inline-flex items-center justify-center px-4 rounded-md bg-indigo-600 text-white text-xs sm:text-sm font-medium hover:bg-indigo-700">
                             Apply
                         </button>
