@@ -57,7 +57,7 @@
                         $required = (float) ($student->required_training_hours ?? 0);
                         $logged = (float) ($student->logged_hours ?? 0);
                         $remaining = (float) ($student->remaining_hours ?? max($required - $logged, 0));
-                        $approvedAbsentCount = (int) ($student->approved_absent_count ?? 0);
+                        $approvedAbsentCount = (int) ($student->approved_absent_days ?? 0);
                     @endphp
                     <div class="p-4 space-y-2">
                         <div>
@@ -90,9 +90,9 @@
                                 </dd>
                             </div>
                             <div class="col-span-2">
-                                <dt class="text-gray-500">Approved absences</dt>
+                                <dt class="text-gray-500">Approved absent days</dt>
                                 <dd class="{{ $approvedAbsentCount > 0 ? 'text-amber-700 font-semibold' : 'text-gray-600' }}">
-                                    {{ $approvedAbsentCount }} {{ $approvedAbsentCount === 1 ? 'request' : 'requests' }}
+                                    {{ $approvedAbsentCount }} {{ $approvedAbsentCount === 1 ? 'day' : 'days' }}
                                 </dd>
                             </div>
                         </dl>
@@ -108,7 +108,7 @@
                             <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total Time from DTR</th>
                             <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Remaining Time Needed</th>
                             <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Estimated End Date</th>
-                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Approved Absences</th>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Approved Absent Days</th>
                         </tr>
                     </thead>
                     <tbody class="bg-white divide-y divide-gray-100">
@@ -145,13 +145,13 @@
                                 </td>
                                 <td class="px-4 py-3 text-sm text-gray-700">
                                     @php
-                                        $approvedAbsentCount = (int) ($student->approved_absent_count ?? 0);
+                                        $approvedAbsentCount = (int) ($student->approved_absent_days ?? 0);
                                     @endphp
                                     <span class="{{ $approvedAbsentCount > 0 ? 'text-amber-700 font-medium' : 'text-gray-500' }}">
                                         {{ $approvedAbsentCount }}
                                     </span>
                                     <span class="text-xs text-gray-500">
-                                        {{ $approvedAbsentCount === 1 ? 'request' : 'requests' }}
+                                        {{ $approvedAbsentCount === 1 ? 'day' : 'days' }}
                                     </span>
                                 </td>
                             </tr>

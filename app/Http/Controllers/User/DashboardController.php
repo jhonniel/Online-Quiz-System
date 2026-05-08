@@ -277,10 +277,6 @@ class DashboardController extends Controller
                 ->take(3)
                 ->get();
 
-            $approvedLeaveCount = (int) LeaveRequest::query()
-                ->where('user_id', $user->id)
-                ->where('status', 'approved')
-                ->count();
             $approvedAbsentDays = (float) LeaveRequest::query()
                 ->where('user_id', $user->id)
                 ->where('status', 'approved')
@@ -292,7 +288,6 @@ class DashboardController extends Controller
                 : User::DEFAULT_STUDENT_ABSENCE_ALLOWANCE;
 
             $studentLeaveBalanceSummary = [
-                'approved_leave_count' => $approvedLeaveCount,
                 'allowable_absences' => round($allowableAbsences, 2),
                 'approved_absent_days' => round($approvedAbsentDays, 2),
                 'remaining_absence_balance' => round(max($allowableAbsences - $approvedAbsentDays, 0), 2),
@@ -775,31 +770,38 @@ class DashboardController extends Controller
             ->selectRaw('user_id, COALESCE(SUM(total_hours), 0) as logged_hours')
             ->groupBy('user_id');
 
-        $approvedAbsentCounts = LeaveRequest::query()
-            ->selectRaw('user_id, COUNT(*) as approved_absent_count')
-            ->where('type', 'absent')
-            ->where('status', 'approved')
-            ->groupBy('user_id');
-
         $students = User::query()
             ->with(['department', 'university'])
             ->leftJoinSub($dtrTotals, 'dtr_totals', function ($join) {
                 $join->on('dtr_totals.user_id', '=', 'users.id');
-            })
-            ->leftJoinSub($approvedAbsentCounts, 'absent_counts', function ($join) {
-                $join->on('absent_counts.user_id', '=', 'users.id');
             })
             ->where('users.role', 'student')
             ->where('users.university_id', $teacher->university_id)
             ->select([
                 'users.*',
                 DB::raw('COALESCE(dtr_totals.logged_hours, 0) as logged_hours'),
-                DB::raw('COALESCE(absent_counts.approved_absent_count, 0) as approved_absent_count'),
             ])
             ->orderBy('users.name')
             ->get();
 
         $studentIds = $students->pluck('id')->filter()->values();
+        $approvedAbsentDaysByStudent = collect();
+        if ($studentIds->isNotEmpty()) {
+            $approvedAbsentDaysByStudent = LeaveRequest::query()
+                ->whereIn('user_id', $studentIds)
+                ->where('type', 'absent')
+                ->where('status', 'approved')
+                ->get(['user_id', 'start_date', 'end_date'])
+                ->groupBy('user_id')
+                ->map(function ($requests) {
+                    return (int) $requests->sum(function ($request) {
+                        $start = Carbon::parse($request->start_date);
+                        $end = $request->end_date ? Carbon::parse($request->end_date) : $start;
+
+                        return $start->diffInDays($end) + 1;
+                    });
+                });
+        }
 
         $recentDtrByStudent = collect();
         if ($studentIds->isNotEmpty()) {
@@ -811,7 +813,7 @@ class DashboardController extends Controller
                 ->groupBy('user_id');
         }
 
-        $students = $students->map(function ($student) use ($recentDtrByStudent) {
+        $students = $students->map(function ($student) use ($recentDtrByStudent, $approvedAbsentDaysByStudent) {
             $required = (float) ($student->required_training_hours ?? 0);
             $logged = (float) ($student->logged_hours ?? 0);
             $remaining = max($required - $logged, 0);
@@ -830,6 +832,7 @@ class DashboardController extends Controller
 
             $student->remaining_hours = $remaining;
             $student->estimated_end_date = $estimatedEndDate;
+            $student->approved_absent_days = (int) ($approvedAbsentDaysByStudent[$student->id] ?? 0);
 
             return $student;
         });
@@ -868,8 +871,8 @@ class DashboardController extends Controller
 
         $studentsApprovedAbsentRanking = $students
             ->sort(function (User $a, User $b) {
-                $ca = (int) ($a->approved_absent_count ?? 0);
-                $cb = (int) ($b->approved_absent_count ?? 0);
+                $ca = (int) ($a->approved_absent_days ?? 0);
+                $cb = (int) ($b->approved_absent_days ?? 0);
                 if ($ca !== $cb) {
                     return $cb <=> $ca;
                 }

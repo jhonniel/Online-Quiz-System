@@ -258,9 +258,9 @@
         @endphp
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div class="bg-white border border-gray-200 rounded-lg p-4 shadow-sm">
-                <p class="text-xs font-medium uppercase tracking-wide text-gray-500">Accumulated Approved Leave Requests</p>
+                <p class="text-xs font-medium uppercase tracking-wide text-gray-500">Accumulated Approved Absent Days</p>
                 <p class="mt-1 text-2xl font-bold text-gray-900">
-                    {{ number_format((int) ($studentLeaveBalanceSummary['approved_leave_count'] ?? 0)) }}
+                    {{ number_format((float) ($studentLeaveBalanceSummary['approved_absent_days'] ?? 0), 2) }}
                 </p>
             </div>
             <div class="rounded-lg p-4 shadow-sm border {{ $absenceBalanceExhausted ? 'bg-red-50 border-red-200' : 'bg-white border-gray-200' }}">

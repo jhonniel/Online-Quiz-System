@@ -90,9 +90,9 @@
         <div class="rounded-lg border border-gray-200 bg-white shadow-sm overflow-hidden mb-4 min-w-0 w-full max-w-full">
             <div class="px-3 sm:px-4 py-3 border-b border-gray-100 bg-gray-50 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
                 <div class="min-w-0">
-                    <h3 class="text-sm font-semibold text-gray-900 break-words">Approved student absences (ranked)</h3>
+                    <h3 class="text-sm font-semibold text-gray-900 break-words">Approved student absent days (ranked)</h3>
                     <p class="text-xs text-gray-500 mt-0.5 break-words">
-                        Leave requests marked <span class="font-medium text-gray-700">absent</span> and <span class="font-medium text-gray-700">approved</span>, ranked high to low.
+                        Total days from leave requests marked <span class="font-medium text-gray-700">absent</span> and <span class="font-medium text-gray-700">approved</span>, ranked high to low.
                         <span class="text-gray-600">Estimated end uses recent DTR pace (same as <span class="font-medium">My Students</span>). The soonest upcoming exit conference day is shown above.</span>
                     </p>
                 </div>
@@ -117,13 +117,13 @@
                                 <th scope="col" class="px-4 py-2.5 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Student</th>
                                 <th scope="col" class="px-4 py-2.5 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden sm:table-cell whitespace-nowrap">Status</th>
                                 <th scope="col" class="px-4 py-2.5 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden lg:table-cell whitespace-nowrap">Est. end date</th>
-                                <th scope="col" class="px-4 py-2.5 text-right text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap w-32 lg:w-40">Approved absences</th>
+                                <th scope="col" class="px-4 py-2.5 text-right text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap w-32 lg:w-40">Approved absent days</th>
                             </tr>
                         </thead>
                         <tbody class="divide-y divide-gray-100 bg-white">
                             @foreach($absentRanking as $studentRow)
                                 @php
-                                    $count = (int) ($studentRow->approved_absent_count ?? 0);
+                                    $count = (int) ($studentRow->approved_absent_days ?? 0);
                                     $requiredH = (float) ($studentRow->required_training_hours ?? 0);
                                     $remainingH = (float) ($studentRow->remaining_hours ?? 0);
                                 @endphp

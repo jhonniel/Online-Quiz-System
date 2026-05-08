@@ -194,6 +194,7 @@
                             class="px-3 py-2 border border-gray-300 rounded-md shadow-sm text-sm focus:ring-indigo-500 focus:border-indigo-500">
                         <option value="">All Status</option>
                         <option value="pending" {{ ($statusFilter ?? '') == 'pending' ? 'selected' : '' }}>Pending</option>
+                        <option value="accepted" {{ ($statusFilter ?? '') == 'accepted' ? 'selected' : '' }}>Accepted</option>
                         <option value="interview_scheduled" {{ ($statusFilter ?? '') == 'interview_scheduled' ? 'selected' : '' }}>Interview Scheduled</option>
                         <option value="done_interview" {{ ($statusFilter ?? '') == 'done_interview' ? 'selected' : '' }}>Interview Done</option>
                         <option value="rejected" {{ ($statusFilter ?? '') == 'rejected' ? 'selected' : '' }}>Rejected</option>

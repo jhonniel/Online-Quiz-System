@@ -44,7 +44,7 @@
                             <option value="required_hours" {{ ($sortBy ?? 'remaining_hours') === 'required_hours' ? 'selected' : '' }}>Time Needed</option>
                             <option value="total_hours" {{ ($sortBy ?? 'remaining_hours') === 'total_hours' ? 'selected' : '' }}>Total Time from DTR</option>
                             <option value="remaining_hours" {{ ($sortBy ?? 'remaining_hours') === 'remaining_hours' ? 'selected' : '' }}>Remaining Time Needed</option>
-                            <option value="approved_leave_requests" {{ ($sortBy ?? 'remaining_hours') === 'approved_leave_requests' ? 'selected' : '' }}>Approved Leave</option>
+                            <option value="approved_leave_requests" {{ ($sortBy ?? 'remaining_hours') === 'approved_leave_requests' ? 'selected' : '' }}>Approved Absent Days</option>
                             <option value="estimated_end_date" {{ ($sortBy ?? 'remaining_hours') === 'estimated_end_date' ? 'selected' : '' }}>Estimated End Date</option>
                             </select>
                         </div>
@@ -80,7 +80,7 @@
                             <th class="px-3 sm:px-6 py-3 text-right text-[11px] sm:text-xs font-semibold text-gray-500 uppercase tracking-wider">Total Time from DTR</th>
                             <th class="px-3 sm:px-6 py-3 text-right text-[11px] sm:text-xs font-semibold text-gray-500 uppercase tracking-wider">Remaining Time Needed</th>
                             @if($showApprovedLeaveRequests ?? false)
-                                <th class="px-3 sm:px-6 py-3 text-center text-[11px] sm:text-xs font-semibold text-gray-500 uppercase tracking-wider">Approved Leave Requests</th>
+                                <th class="px-3 sm:px-6 py-3 text-center text-[11px] sm:text-xs font-semibold text-gray-500 uppercase tracking-wider">Approved Absent Days</th>
                             @endif
                             <th class="px-3 sm:px-6 py-3 text-left text-[11px] sm:text-xs font-semibold text-gray-500 uppercase tracking-wider">Estimated End Date</th>
                         </tr>

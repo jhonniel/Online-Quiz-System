@@ -144,8 +144,20 @@ class HiringApplicationController extends Controller
         $perPage = $request->get('per_page', 20);
         $perPage = in_array($perPage, [10, 20, 50, 100]) ? $perPage : 20;
 
-        // Sort by Applied Date (created_at) latest first
-        $query->orderBy('created_at', 'desc');
+        // Sort by custom status order, then applicant name A-Z
+        $query->orderByRaw("
+            CASE status
+                WHEN 'pending' THEN 1
+                WHEN 'accepted' THEN 2
+                WHEN 'interview_scheduled' THEN 3
+                WHEN 'done_interview' THEN 4
+                WHEN 'rejected' THEN 5
+                ELSE 99
+            END ASC
+        ");
+        $query->orderByRaw('LOWER(last_name) ASC')
+            ->orderByRaw('LOWER(first_name) ASC')
+            ->orderBy('created_at', 'desc');
 
         $applications = $query->get();
         

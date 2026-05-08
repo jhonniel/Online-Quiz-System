@@ -502,17 +502,25 @@ class StudentDashboardController extends Controller
                 ->groupBy('user_id')
                 ->pluck('total_hours_sum', 'user_id');
 
-            $approvedLeaveRequestsByStudent = collect();
+            $approvedAbsentDaysByStudent = collect();
             if ($showApprovedLeaveRequests) {
-                // Count approved leave requests per student (all leave types)
-                $approvedLeaveRequestsByStudent = LeaveRequest::whereIn('user_id', $studentIds)
+                // Sum approved absent days per student (type=absent only)
+                $approvedAbsentDaysByStudent = LeaveRequest::whereIn('user_id', $studentIds)
+                    ->where('type', 'absent')
                     ->where('status', 'approved')
-                    ->selectRaw('user_id, COUNT(*) as approved_leave_count')
+                    ->get(['user_id', 'start_date', 'end_date'])
                     ->groupBy('user_id')
-                    ->pluck('approved_leave_count', 'user_id');
+                    ->map(function ($requests) {
+                        return (int) $requests->sum(function ($request) {
+                            $start = Carbon::parse($request->start_date);
+                            $end = $request->end_date ? Carbon::parse($request->end_date) : $start;
+
+                            return $start->diffInDays($end) + 1;
+                        });
+                    });
             }
 
-            $ranked = $students->map(function ($student) use ($totalsByStudent, $approvedLeaveRequestsByStudent) {
+            $ranked = $students->map(function ($student) use ($totalsByStudent, $approvedAbsentDaysByStudent) {
                 $required = (float) ($student->required_training_hours ?? 0);
                 $totalRaw = (float) ($totalsByStudent[$student->id] ?? 0);
                 $rollbackHours = $this->getPendingResubmissionRollbackHours((int) $student->id);
@@ -536,7 +544,7 @@ class StudentDashboardController extends Controller
                     'required_hours' => $required,
                     'total_hours' => $total,
                     'remaining_hours' => $remaining,
-                    'approved_leave_requests' => (int) ($approvedLeaveRequestsByStudent[$student->id] ?? 0),
+                    'approved_leave_requests' => (int) ($approvedAbsentDaysByStudent[$student->id] ?? 0),
                     'required_hours_formatted' => $this->formatHours($required),
                     'total_hours_formatted' => $this->formatHours($total),
                     'remaining_hours_formatted' => $this->formatHours($remaining),
