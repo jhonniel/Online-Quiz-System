@@ -243,27 +243,10 @@
                             </select>
                         </div>
                         <div class="min-w-0 relative"
-                             x-data="{
-                                 leaveTypeOpen: false,
-                                 leaveTypeTop: 0,
-                                 leaveTypeLeft: 0,
-                                 leaveTypeWidth: 0,
-                                 toggleLeaveType() {
-                                     if (this.leaveTypeOpen) {
-                                         this.leaveTypeOpen = false;
-                                         return;
-                                     }
-                                     const r = this.$refs.leaveTypeTrigger.getBoundingClientRect();
-                                     this.leaveTypeTop = r.bottom + window.scrollY + 4;
-                                     this.leaveTypeLeft = r.left + window.scrollX;
-                                     this.leaveTypeWidth = r.width;
-                                     this.leaveTypeOpen = true;
-                                 }
-                             }">
+                             x-data="{ leaveTypeOpen: false }">
                             <label class="block text-[10px] text-gray-500 mb-0.5">Leave Type</label>
                             <button type="button"
-                                    x-ref="leaveTypeTrigger"
-                                    @click="toggleLeaveType()"
+                                    @click="leaveTypeOpen = !leaveTypeOpen"
                                     class="h-8 w-full rounded-md border border-gray-300 bg-white px-2 text-xs text-gray-700 flex items-center justify-between">
                                 @php $selectedLeaveTypesCount = count((array) ($leaveDaysTypes ?? [])); @endphp
                                 <span>{{ $selectedLeaveTypesCount > 0 ? ($selectedLeaveTypesCount . ' selected') : 'All types' }}</span>
@@ -274,8 +257,7 @@
                             <div x-show="leaveTypeOpen"
                                  x-cloak
                                  @click.outside="leaveTypeOpen = false"
-                                 class="fixed z-[120] rounded-md border border-gray-200 bg-white shadow-lg p-2 space-y-1 max-h-52 overflow-y-auto"
-                                 :style="`top:${leaveTypeTop}px; left:${leaveTypeLeft}px; width:${leaveTypeWidth}px;`">
+                                 class="absolute top-full left-0 mt-1 w-full z-[120] rounded-md border border-gray-200 bg-white shadow-lg p-2 space-y-1 max-h-52 overflow-y-auto">
                                 @foreach($typeLabels as $typeKey => $typeLabel)
                                     <label class="flex items-center gap-2 text-xs text-gray-700">
                                         <input type="checkbox"
