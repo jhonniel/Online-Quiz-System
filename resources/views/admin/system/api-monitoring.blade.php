@@ -183,7 +183,7 @@
                             <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-500">Requests</th>
                             <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-500">Failures</th>
                             <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-500">Uptime</th>
-                            <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">Uptime Trend (24h)</th>
+                            <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">Uptime Monitor (24h)</th>
                             <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-500">Avg Response (ms)</th>
                             <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">Last Status</th>
                         </tr>
@@ -203,10 +203,11 @@
                                 <td class="px-4 py-3 text-sm text-right font-semibold text-gray-900" x-text="row.request_count"></td>
                                 <td class="px-4 py-3 text-sm text-right font-semibold text-rose-700" x-text="row.failure_count"></td>
                                 <td class="px-4 py-3 text-sm text-right font-semibold text-gray-800" x-text="row.uptime_percent === null ? '—' : (row.uptime_percent + '%')"></td>
-                                <td class="px-4 py-3">
-                                    <template x-if="row.uptime_points && row.uptime_points.length > 1">
+                                <td class="px-4 py-3 min-w-[140px]">
+                                    <template x-if="hasTrendPoints(row.uptime_points)">
                                         <div class="w-28 h-10">
                                             <svg class="w-full h-full" viewBox="0 0 112 40" preserveAspectRatio="none" aria-hidden="true">
+                                                <line x1="0" y1="20" x2="112" y2="20" stroke="#d1d5db" stroke-width="1"></line>
                                                 <polyline
                                                     :points="sparklinePoints(row.uptime_points)"
                                                     fill="none"
@@ -218,7 +219,7 @@
                                             </svg>
                                         </div>
                                     </template>
-                                    <template x-if="!row.uptime_points || row.uptime_points.length <= 1">
+                                    <template x-if="!hasTrendPoints(row.uptime_points)">
                                         <span class="text-xs text-gray-400">No trend yet</span>
                                     </template>
                                 </td>
@@ -291,18 +292,26 @@
             sparklinePoints(values) {
                 const width = 112;
                 const height = 40;
-                const count = values.length;
+                const validValues = (values || []).filter((value) => value !== null && value !== undefined);
+                const count = validValues.length;
                 if (count <= 1) {
                     return '';
                 }
 
                 const stepX = width / (count - 1);
-                return values.map((value, index) => {
+                const midY = height / 2;
+                const amplitude = 28;
+                return validValues.map((value, index) => {
                     const clamped = Math.max(0, Math.min(100, Number(value) || 0));
                     const x = (index * stepX).toFixed(2);
-                    const y = (height - ((clamped / 100) * (height - 4)) - 2).toFixed(2);
+                    // Monitor-style: 100% uptime stays on baseline, lower uptime spikes upward.
+                    const deviation = (100 - clamped) / 100;
+                    const y = Math.max(2, Math.min(height - 2, midY - (deviation * amplitude))).toFixed(2);
                     return `${x},${y}`;
                 }).join(' ');
+            },
+            hasTrendPoints(values) {
+                return (values || []).filter((value) => value !== null && value !== undefined).length > 1;
             }
         };
     }
