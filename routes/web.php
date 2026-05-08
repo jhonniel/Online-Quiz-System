@@ -98,6 +98,12 @@ Route::prefix('admin')->middleware(['auth', 'admin'])->group(function () {
         Route::post('/settings/test-email', [\App\Http\Controllers\Admin\SettingsController::class, 'testEmail'])->name('admin.settings.test-email');
         Route::get('/system/rules', [\App\Http\Controllers\Admin\SettingsController::class, 'rulesRegulations'])->name('admin.system.rules');
         Route::post('/system/rules', [\App\Http\Controllers\Admin\SettingsController::class, 'updateRulesRegulations'])->name('admin.system.rules.update');
+        Route::get('/system/api-monitoring', [\App\Http\Controllers\Admin\ApiMonitoringController::class, 'index'])->name('admin.system.api-monitoring.index');
+        Route::get('/system/api-monitoring/metrics', [\App\Http\Controllers\Admin\ApiMonitoringController::class, 'metrics'])->name('admin.system.api-monitoring.metrics');
+        Route::post('/system/api-monitoring/external-access', [\App\Http\Controllers\Admin\ApiMonitoringController::class, 'updateExternalAccess'])->name('admin.system.api-monitoring.external-access');
+        Route::post('/system/api-monitoring/external-allowed-apis', [\App\Http\Controllers\Admin\ApiMonitoringController::class, 'updateExternalAllowedApis'])->name('admin.system.api-monitoring.external-allowed-apis');
+        Route::post('/system/api-monitoring/keys', [\App\Http\Controllers\Admin\ApiMonitoringController::class, 'createApiKey'])->name('admin.system.api-monitoring.keys.store');
+        Route::post('/system/api-monitoring/keys/{key}/revoke', [\App\Http\Controllers\Admin\ApiMonitoringController::class, 'revokeApiKey'])->name('admin.system.api-monitoring.keys.revoke');
     });
 
     // Billing (requires billing permission or super admin)
