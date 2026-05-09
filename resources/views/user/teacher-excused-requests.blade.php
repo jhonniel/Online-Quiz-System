@@ -24,6 +24,16 @@
                 </p>
             </div>
             <div class="flex flex-wrap items-center gap-2 sm:justify-end sm:pt-0.5">
+                <button
+                    type="button"
+                    @click="formOpen = true"
+                    class="inline-flex items-center justify-center gap-2 px-3 py-2 rounded-lg bg-white text-indigo-700 text-sm font-semibold shadow-sm hover:bg-indigo-50 transition-colors"
+                >
+                    <svg class="h-4 w-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+                    </svg>
+                    Student Excused Requests
+                </button>
                 <a
                     href="{{ url('/teacher/students') }}"
                     class="inline-flex items-center justify-center gap-2 px-3 py-2 rounded-lg border border-white/40 text-white text-sm font-medium hover:bg-white/10 transition-colors"
@@ -322,6 +332,16 @@
                         <p class="text-xs sm:text-sm text-gray-500 mt-0.5">Past student excused requests and their latest status.</p>
                     </div>
                     <div class="flex flex-wrap items-center gap-3">
+                        <button
+                            type="button"
+                            @click="formOpen = true"
+                            class="inline-flex items-center justify-center gap-2 px-3 py-2 rounded-lg bg-indigo-600 text-white text-sm font-semibold shadow-sm hover:bg-indigo-700 transition-colors"
+                        >
+                            <svg class="h-4 w-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+                            </svg>
+                            Student Excused Requests
+                        </button>
                         <form method="GET" action="{{ url('/teacher/excused-requests') }}" class="flex items-center gap-2">
                             <label for="per_page" class="text-xs text-gray-500 whitespace-nowrap">Rows</label>
                             <select id="per_page" name="per_page" class="rounded-md border-gray-300 text-sm focus:border-indigo-500 focus:ring-indigo-500" onchange="this.form.submit()">

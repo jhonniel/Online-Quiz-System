@@ -490,9 +490,11 @@ class DashboardController extends Controller
 
         $university = $user->university;
 
-        $applications = $this->hiringApplicationsPendingForTeacherSchoolQuery($user)
+        $applications = $this->hiringApplicationsForTeacherSchoolListingQuery($user)
             ->with(['hiringPosition'])
-            ->latest('created_at')
+            ->orderByRaw("CASE status WHEN 'pending' THEN 1 WHEN 'accepted' THEN 2 WHEN 'interview_scheduled' THEN 3 ELSE 4 END")
+            ->orderByDesc('updated_at')
+            ->orderByDesc('created_at')
             ->paginate(15)
             ->withQueryString();
 
@@ -503,11 +505,16 @@ class DashboardController extends Controller
     }
 
     /**
-     * Pending hiring applications whose school field matches the teacher's university (see apply).
+     * Hiring applications visible on the teacher list: pending, accepted, or interview scheduled
+     * for applicants whose school field matches the teacher's university (see apply).
      */
-    private function hiringApplicationsPendingForTeacherSchoolQuery(User $teacher): Builder
+    private function hiringApplicationsForTeacherSchoolListingQuery(User $teacher): Builder
     {
-        $query = HiringApplication::query()->where('status', 'pending');
+        $query = HiringApplication::query()->whereIn('status', [
+            'pending',
+            'accepted',
+            'interview_scheduled',
+        ]);
         $this->applyTeacherSchoolToHiringApplicationsQuery($query, $teacher);
 
         return $query;
@@ -897,7 +904,7 @@ class DashboardController extends Controller
         }
 
         $teacher->loadMissing('university');
-        $pendingApplicationsCount = $this->hiringApplicationsPendingForTeacherSchoolQuery($teacher)->count();
+        $pendingApplicationsCount = $this->hiringApplicationsForTeacherSchoolListingQuery($teacher)->count();
 
         $charts = [
             'studentStatus' => [
