@@ -1,13 +1,13 @@
 @extends('layouts.user')
 
-@section('page-title', 'Hiring applications')
+@section('page-title', 'Student Application')
 
 @section('content')
 <div class="h-full flex flex-col min-h-0 min-w-0">
     <div class="bg-gradient-to-r from-indigo-500 to-indigo-600 shadow-sm p-3 sm:p-4 flex-shrink-0">
-        <h1 class="text-lg sm:text-xl lg:text-2xl font-bold text-white break-words">Hiring applications</h1>
+        <h1 class="text-lg sm:text-xl lg:text-2xl font-bold text-white break-words">Student Application</h1>
         <p class="text-indigo-100 text-sm mt-0.5 break-words leading-snug">
-            Read-only list of <span class="font-semibold text-white">pending</span>, <span class="font-semibold text-white">accepted</span>, and <span class="font-semibold text-white">interview-scheduled</span> applicants from your school. Admins handle review.
+            Read-only list of <span class="font-semibold text-white">pending</span>, <span class="font-semibold text-white">accepted</span>, and <span class="font-semibold text-white">interview-scheduled</span> student applications from your school. Admins handle review.
             @if($schoolName)
                 <span class="block mt-1 opacity-95">{{ $schoolName }}</span>
             @else
@@ -20,9 +20,9 @@
         @if($applications->total() === 0)
             <div class="p-8 text-center text-gray-500">
                 @if(! $schoolName)
-                    Assign a school on your profile to match applicants&apos; school selection on the hiring form.
+                    Assign a school on your profile to match students&apos; school selection on their application form.
                 @else
-                    No hiring applications in pending, accepted, or interview-scheduled status for your school right now.
+                    No student applications in pending, accepted, or interview-scheduled status for your school right now.
                 @endif
             </div>
         @else

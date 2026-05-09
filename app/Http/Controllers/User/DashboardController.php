@@ -505,7 +505,7 @@ class DashboardController extends Controller
     }
 
     /**
-     * Hiring applications visible on the teacher list: pending, accepted, or interview scheduled
+     * Student applications visible on the teacher list: pending, accepted, or interview scheduled
      * for applicants whose school field matches the teacher's university (see apply).
      */
     private function hiringApplicationsForTeacherSchoolListingQuery(User $teacher): Builder

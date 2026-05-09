@@ -41,7 +41,7 @@
             href="{{ url('/teacher/pending-applications') }}"
             class="block bg-white border border-gray-200 rounded-lg p-3 sm:p-4 shadow-sm min-w-0 no-underline text-inherit transition-shadow hover:shadow-md hover:border-gray-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
         >
-            <p class="text-xs sm:text-sm text-gray-500 leading-tight">School hiring applications</p>
+            <p class="text-xs sm:text-sm text-gray-500 leading-tight">Student Application</p>
             <p class="text-xl sm:text-2xl font-semibold text-amber-700 tabular-nums mt-1">{{ $pendingApplicationsCount ?? 0 }}</p>
         </a>
         <div class="bg-white border border-gray-200 rounded-lg p-3 sm:p-4 shadow-sm min-w-0">
