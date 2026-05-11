@@ -11,7 +11,7 @@ namespace App\Helpers;
  * Supports patterns like:
  * - 1h, 1hr, 1 hour
  * - 1h30m, 2h 15m, 1hr 30min, 1 hour 30 minutes
- * - 1:30, 01:30 (H:MM or HH:MM)
+ * - 1:30, 01:30, 2:45, 4:30 (H:MM as duration; hour must be 0–4 — 5:00+ is treated as clock time, not duration)
  * - 90 min, 90 minutes, 90m, 45m
  * - 1.5 hours, 1.5h
  * - 30 mins, 2 hrs
@@ -123,11 +123,20 @@ class TimeExtraction
             }
         }
 
-        // 2. Hours:minutes colon format (e.g. 1:30, 01:45)
+        // 2. Hours:minutes colon format (e.g. 1:30, 01:45, 2:18 as duration).
+        // Values like 9:20 ("abot 9:20") or 5:00 ("until 5:00") are clock times, not durations.
+        // Only treat H:MM as a duration when H is 0–4 (e.g. 1:30 = 90m, 4:15 = 4h15m). Use "5h",
+        // "5 hours", or "5hr 30m" for five or more hours.
         if (preg_match_all('/\b(\d{1,2}):(\d{1,2})\b/', $text, $matches, PREG_SET_ORDER)) {
             foreach ($matches as $m) {
                 $h = (int) $m[1];
                 $min = (int) $m[2];
+                if ($min > 59) {
+                    continue;
+                }
+                if ($h >= 5) {
+                    continue;
+                }
                 $totalMinutes += $h * 60 + $min;
                 $matched[] = $m[0];
             }
@@ -216,10 +225,29 @@ class TimeExtraction
     private static function alreadyMatched(string $needle, array $matched): bool
     {
         foreach ($matched as $m) {
-            if (str_contains($m, $needle) || str_contains($needle, $m)) {
+            // Same literal can appear twice in remarks (e.g. two "5 minutes"); do not dedupe on equality.
+            if ($m === $needle) {
+                continue;
+            }
+            // Avoid false positives: "5 minutes" is a substring of "50 minutes" but is a separate mention.
+            if (str_contains($m, $needle)) {
+                $pos = strpos($m, $needle);
+                if ($pos !== false && $pos > 0 && ctype_digit($m[$pos - 1]) && ctype_digit($needle[0])) {
+                    continue;
+                }
+
+                return true;
+            }
+            if (str_contains($needle, $m)) {
+                $pos = strpos($needle, $m);
+                if ($pos !== false && $pos > 0 && ctype_digit($needle[$pos - 1]) && ctype_digit($m[0])) {
+                    continue;
+                }
+
                 return true;
             }
         }
+
         return false;
     }
 
