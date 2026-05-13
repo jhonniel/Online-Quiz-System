@@ -18,6 +18,8 @@
         'hiring_application_url' => 'hiring/apply',
     ], $settings);
 
+    $schoolOptions = $schoolOptions ?? session('schoolOptions', []);
+
     // Get errors - Laravel should automatically share $errors with all views via ShareErrorsFromSession middleware
     // But we'll also check session as fallback
     if (!isset($errors)) {
@@ -248,6 +250,22 @@
             <form id="hiring-application-form" action="{{ isset($position) && $position ? url('/' . ltrim($settings['hiring_application_url'] ?? 'hiring/apply', '/') . '/' . $position->slug) : url('/' . ltrim($settings['hiring_application_url'] ?? 'hiring/apply', '/')) }}" method="POST" enctype="multipart/form-data" class="space-y-6">
                 @csrf
 
+                @if($formErrors->has('error'))
+                    <div class="rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800" role="alert">
+                        {{ $formErrors->first('error') }}
+                    </div>
+                @endif
+
+                <div class="rounded-md border border-gray-200 bg-gray-50 px-4 py-3 text-xs text-gray-600">
+                    <p class="font-medium text-gray-800">If something fails to submit</p>
+                    <ul class="mt-2 list-disc list-inside space-y-1">
+                        <li>Confirm <strong>Admin → Settings → Hiring → Public hiring applications</strong> is enabled and the role is still open (deadline).</li>
+                        <li>Resume: PDF, Word, or JPG/PNG, <strong>5 MB max</strong>. Longer phone numbers with country codes are OK.</li>
+                        <li><strong>Internships:</strong> pick your school or <strong>Other</strong> and type the name. If the school list is empty, choose <strong>Other</strong>.</li>
+                        <li>If you see a “page expired” or CSRF error, refresh the page and try again.</li>
+                    </ul>
+                </div>
+
                 <!-- Name Fields -->
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
@@ -350,6 +368,9 @@
                                 <p class="mt-1 text-sm text-red-600">{{ $formErrors->first('school_other') }}</p>
                             @endif
                         </div>
+                        @if(empty($schoolOptions))
+                            <p class="mt-2 text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded px-2 py-1">No schools are listed yet—choose <strong>Other</strong> and enter your school name.</p>
+                        @endif
                         <p class="mt-1 text-sm text-gray-500">Required for internship applicants.</p>
                     </div>
                 @endif

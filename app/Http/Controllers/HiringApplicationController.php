@@ -9,6 +9,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
 
 class HiringApplicationController extends Controller
 {
@@ -17,11 +18,23 @@ class HiringApplicationController extends Controller
      */
     public function show($slug = null)
     {
-        // Check if public access to hiring applications is enabled
         $publicAccessEnabled = Setting::get('hiring_application_public_access', 'disabled');
+        $disabledSettings = [
+            'system_name' => Setting::get('system_name', config('app.name', 'Careers')),
+            'hiring_application_url' => Setting::get('hiring_application_url', 'hiring/apply') ?? 'hiring/apply',
+        ];
 
         if ($publicAccessEnabled !== 'enabled') {
-            abort(404, 'Hiring applications are currently not accepting new submissions.');
+            $positionTitle = null;
+            if ($slug) {
+                $positionTitle = \App\Models\HiringPosition::where('slug', $slug)->value('title');
+            }
+
+            return response()
+                ->view('hiring.apply-disabled', [
+                    'settings' => $disabledSettings,
+                    'positionTitle' => $positionTitle,
+                ], 503);
         }
 
         // If no slug provided, show list of available positions
@@ -53,7 +66,12 @@ class HiringApplicationController extends Controller
 
         // Check if position is accepting applications
         if (! $position->isAcceptingApplications()) {
-            abort(404, 'This position is no longer accepting applications.');
+            return response()
+                ->view('hiring.apply-disabled', [
+                    'settings' => $disabledSettings,
+                    'positionTitle' => $position->title,
+                    'closedReason' => 'deadline_or_inactive',
+                ], 503);
         }
 
         $settings = [
@@ -126,7 +144,11 @@ class HiringApplicationController extends Controller
         if ($publicAccessEnabled !== 'enabled') {
             Log::warning('Public access disabled');
 
-            return back()->withErrors(['error' => 'Hiring applications are currently not accepting new submissions.'])->withInput()->with('settings', $settings);
+            return back()
+                ->withErrors(['error' => 'Hiring applications are currently not accepting new submissions.'])
+                ->withInput()
+                ->with('settings', $settings)
+                ->with('schoolOptions', $schoolOptions);
         }
 
         // Get slug from route parameter or request
@@ -156,7 +178,11 @@ class HiringApplicationController extends Controller
         if (! $position->isAcceptingApplications()) {
             Log::warning('Position not accepting applications', ['position_id' => $position->id]);
 
-            return back()->withErrors(['error' => 'This position is no longer accepting applications.'])->withInput()->with('settings', $settings);
+            return back()
+                ->withErrors(['error' => 'This position is no longer accepting applications.'])
+                ->withInput()
+                ->with('settings', $settings)
+                ->with('schoolOptions', $schoolOptions);
         }
 
         try {
@@ -164,24 +190,24 @@ class HiringApplicationController extends Controller
                 'first_name' => 'required|string|max:255',
                 'last_name' => 'required|string|max:255',
                 'email' => 'required|email|max:255',
-                'phone' => 'required|string|max:20',
+                'phone' => 'required|string|max:40',
                 'birth_date' => 'nullable|date|before:today',
                 'address' => 'nullable|string|max:1000',
                 'school' => [
                     'nullable',
                     'string',
                     'max:255',
-                    \Illuminate\Validation\Rule::requiredIf(function () use ($position, $request) {
+                    Rule::requiredIf(function () use ($position, $request) {
                         return strcasecmp($position->employment_type ?? '', 'Internship') === 0
                             && ! $request->filled('school_other');
                     }),
-                    \Illuminate\Validation\Rule::in(array_merge($schoolOptions, ['__other'])),
+                    Rule::in(array_merge($schoolOptions, ['__other'])),
                 ],
                 'school_other' => [
                     'nullable',
                     'string',
                     'max:255',
-                    \Illuminate\Validation\Rule::requiredIf(function () use ($position, $request) {
+                    Rule::requiredIf(function () use ($position, $request) {
                         return strcasecmp($position->employment_type ?? '', 'Internship') === 0
                             && $request->input('school') === '__other';
                     }),
@@ -189,10 +215,18 @@ class HiringApplicationController extends Controller
                 'cover_letter' => 'nullable|string|max:5000',
                 'resume_file' => 'required|file|mimes:pdf,doc,docx,jpg,jpeg,png|max:5120',
             ], [
+                'first_name.required' => 'Please enter your first name.',
+                'last_name.required' => 'Please enter your last name.',
+                'email.required' => 'Please enter a valid email address.',
+                'email.email' => 'Please enter a valid email address.',
                 'phone.required' => 'Phone number is required.',
+                'phone.max' => 'Phone number is too long (maximum 40 characters).',
                 'birth_date.before' => 'Birth date must be in the past.',
                 'resume_file.required' => 'Please upload your resume.',
-                'school.required' => 'Please select your school.',
+                'resume_file.mimes' => 'Resume must be a PDF, Word document, or image (JPG/PNG).',
+                'resume_file.max' => 'Resume must be 5 MB or smaller.',
+                'school.required' => 'Please select your school or choose Other.',
+                'school.in' => 'Please select a school from the list, or choose Other and enter your school name.',
                 'school_other.required' => 'Please enter your school name.',
             ]);
 
@@ -233,7 +267,8 @@ class HiringApplicationController extends Controller
             return redirect()->back()
                 ->withErrors(['email' => $errorMessage])
                 ->withInput($request->all())
-                ->with('settings', $settings);
+                ->with('settings', $settings)
+                ->with('schoolOptions', $schoolOptions);
         }
 
         try {
@@ -435,7 +470,11 @@ class HiringApplicationController extends Controller
                 'trace' => $e->getTraceAsString(),
             ]);
 
-            return back()->withErrors(['error' => 'An error occurred while submitting your application: '.$e->getMessage()])->withInput()->with('settings', $settings);
+            return back()
+                ->withErrors(['error' => 'An error occurred while submitting your application: '.$e->getMessage()])
+                ->withInput()
+                ->with('settings', $settings)
+                ->with('schoolOptions', $schoolOptions);
         }
     }
 

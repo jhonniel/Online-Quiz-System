@@ -124,13 +124,12 @@ class AppServiceProvider extends ServiceProvider
             }
 
             $customPath = Setting::get('hiring_application_url', 'hiring/apply');
-            $publicAccess = Setting::get('hiring_application_public_access', 'disabled');
 
-            if ($publicAccess === 'enabled' && $customPath) {
+            if ($customPath) {
                 // Clean the path - remove leading slash and ensure it's valid
                 $basePath = ltrim($customPath, '/');
 
-                // Only register if path is not empty and doesn't conflict with existing routes
+                // Register whenever path is valid so URLs resolve; controller enforces public access & deadlines.
                 if (! empty($basePath) && $basePath !== 'admin' && $basePath !== 'api') {
                     // Register PUBLIC routes (no authentication required)
                     // These routes are accessible to anyone, even without logging in
