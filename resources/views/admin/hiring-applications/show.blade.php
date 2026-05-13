@@ -133,6 +133,52 @@
                     </div>
                 </div>
             @endif
+
+            <!-- Resume (compact links; full preview stays in section below when a file exists) -->
+            <div class="bg-white shadow-sm rounded-lg border border-gray-200 overflow-hidden">
+                <div class="px-6 py-4 border-b border-gray-200">
+                    <h2 class="text-lg font-medium text-gray-900">Resume</h2>
+                </div>
+                <div class="px-6 py-6 space-y-2">
+                    @if($application->resume_path)
+                        @php
+                            $appResumeExtMain = strtolower(pathinfo($application->resume_path, PATHINFO_EXTENSION));
+                        @endphp
+                        <p class="text-sm text-gray-900">
+                            Uploaded file
+                            @if($appResumeExtMain)
+                                <span class="text-gray-500">(.{{ $appResumeExtMain }})</span>
+                            @endif
+                        </p>
+                        <div class="flex flex-wrap gap-2">
+                            <a href="{{ url('/admin/hiring-applications/' . $application->id . '/view-resume') }}"
+                               target="_blank"
+                               rel="noopener noreferrer"
+                               class="inline-flex items-center px-3 py-1.5 border border-gray-300 rounded-md shadow-sm text-xs font-medium text-indigo-700 bg-indigo-50 hover:bg-indigo-100">
+                                View
+                            </a>
+                            <a href="{{ url('/admin/hiring-applications/' . $application->id . '/download-resume') }}"
+                               class="inline-flex items-center px-3 py-1.5 border border-gray-300 rounded-md shadow-sm text-xs font-medium text-gray-700 bg-white hover:bg-gray-50">
+                                Download
+                            </a>
+                        </div>
+                    @endif
+                    @if($application->resume_link)
+                        <div>
+                            <a href="{{ $application->resume_link }}"
+                               target="_blank"
+                               rel="noopener noreferrer"
+                               class="inline-flex items-center text-sm font-medium text-indigo-600 hover:text-indigo-800 break-all">
+                                External resume link
+                                <svg class="w-4 h-4 ml-1 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path></svg>
+                            </a>
+                        </div>
+                    @endif
+                    @if(! $application->resume_path && ! $application->resume_link)
+                        <p class="text-sm text-gray-500">No resume or link on file.</p>
+                    @endif
+                </div>
+            </div>
         </div>
 
         <!-- Sidebar -->
@@ -251,11 +297,19 @@
             </div>
 
             @if(!empty($showInternQuizPanel))
-            <div class="bg-white shadow-sm rounded-lg border border-indigo-200 overflow-hidden">
-                <div class="px-6 py-4 border-b border-gray-200 bg-indigo-50/60">
-                    <h2 class="text-lg font-medium text-gray-900">Intern quiz</h2>
-                    <p class="mt-1 text-sm text-gray-600">After <strong>acceptance</strong>, select quizzes below (interview optional). Optional due date applies to this batch only.</p>
-                </div>
+            <details
+                class="bg-white shadow-sm rounded-lg border border-indigo-200 overflow-hidden"
+                @if($errors->has('quiz_ids') || $errors->has('quiz_ids.*') || $errors->has('due_date')) open @endif
+            >
+                <summary class="px-6 py-4 cursor-pointer list-none bg-indigo-50/60 border-b border-gray-200 [&::-webkit-details-marker]:hidden flex items-start justify-between gap-3">
+                    <div class="min-w-0">
+                        <h2 class="text-lg font-medium text-gray-900">Intern quiz</h2>
+                        <p class="mt-1 text-sm text-gray-600">After <strong>acceptance</strong>, select quizzes below (interview optional). Optional due date applies to this batch only.</p>
+                    </div>
+                    <svg class="w-5 h-5 shrink-0 text-gray-500 mt-1 opacity-70" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                        <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd" />
+                    </svg>
+                </summary>
                 <div class="px-6 py-6 space-y-4">
                     @if(isset($assignableQuizzes) && $assignableQuizzes->isNotEmpty())
                         <form method="post" action="{{ url('/admin/hiring-applications/'.$application->id.'/assign-intern-quiz') }}" class="space-y-3">
@@ -399,7 +453,7 @@
                         </div>
                     @endif
                 </div>
-            </div>
+            </details>
             @endif
 
             <!-- Application Details -->
@@ -424,48 +478,6 @@
                             </div>
                         @endif
                     @endif
-                    <div>
-                        <label class="text-sm font-medium text-gray-500">Resume</label>
-                        <div class="mt-1 space-y-2">
-                            @if($application->resume_path)
-                                @php
-                                    $appResumeExt = strtolower(pathinfo($application->resume_path, PATHINFO_EXTENSION));
-                                @endphp
-                                <p class="text-sm text-gray-900">
-                                    Uploaded file
-                                    @if($appResumeExt)
-                                        <span class="text-gray-500">(.{{ $appResumeExt }})</span>
-                                    @endif
-                                </p>
-                                <div class="flex flex-wrap gap-2">
-                                    <a href="{{ url('/admin/hiring-applications/' . $application->id . '/view-resume') }}"
-                                       target="_blank"
-                                       rel="noopener noreferrer"
-                                       class="inline-flex items-center px-3 py-1.5 border border-gray-300 rounded-md shadow-sm text-xs font-medium text-indigo-700 bg-indigo-50 hover:bg-indigo-100">
-                                        View
-                                    </a>
-                                    <a href="{{ url('/admin/hiring-applications/' . $application->id . '/download-resume') }}"
-                                       class="inline-flex items-center px-3 py-1.5 border border-gray-300 rounded-md shadow-sm text-xs font-medium text-gray-700 bg-white hover:bg-gray-50">
-                                        Download
-                                    </a>
-                                </div>
-                            @endif
-                            @if($application->resume_link)
-                                <div>
-                                    <a href="{{ $application->resume_link }}"
-                                       target="_blank"
-                                       rel="noopener noreferrer"
-                                       class="inline-flex items-center text-sm font-medium text-indigo-600 hover:text-indigo-800 break-all">
-                                        External resume link
-                                        <svg class="w-4 h-4 ml-1 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path></svg>
-                                    </a>
-                                </div>
-                            @endif
-                            @if(! $application->resume_path && ! $application->resume_link)
-                                <p class="text-sm text-gray-500">No resume or link on file.</p>
-                            @endif
-                        </div>
-                    </div>
                 </div>
             </div>
 
