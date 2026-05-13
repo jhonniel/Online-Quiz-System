@@ -246,7 +246,7 @@ class LeaveRequestController extends Controller
             $startDateRules[] = 'after_or_equal:'.now()->subDays(7)->toDateString();
             $startDateRules[] = 'before_or_equal:today';
             $endDateRules = ['required', 'date', 'after_or_equal:start_date', 'before_or_equal:today'];
-        } elseif (! ($typeInput === 'overtime' || ($user->role === 'student' && $typeInput === 'additional_time'))) {
+        } elseif (! ($typeInput === 'overtime' || $typeInput === 'sick_leave' || ($user->role === 'student' && $typeInput === 'additional_time'))) {
             $startDateRules[] = 'after_or_equal:today';
         }
 
@@ -817,7 +817,7 @@ class LeaveRequestController extends Controller
             $startDateRules[] = 'after_or_equal:'.now()->subDays(7)->toDateString();
             $startDateRules[] = 'before_or_equal:today';
             $endDateRules = ['required', 'date', 'after_or_equal:start_date', 'before_or_equal:today'];
-        } elseif (! ($typeInput === 'overtime' || ($user->role === 'student' && $typeInput === 'additional_time'))) {
+        } elseif (! ($typeInput === 'overtime' || $typeInput === 'sick_leave' || ($user->role === 'student' && $typeInput === 'additional_time'))) {
             $startDateRules[] = 'after_or_equal:today';
         }
 

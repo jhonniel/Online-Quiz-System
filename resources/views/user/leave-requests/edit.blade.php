@@ -566,6 +566,15 @@
             const overtimeMinText = overtimeMin.toISOString().split('T')[0];
             if (startDateInput) { startDateInput.setAttribute('min', overtimeMinText); startDateInput.setAttribute('max', today); }
             if (endDateInput) endDateInput.setAttribute('max', today);
+        } else if (typeSelect.value === 'sick_leave') {
+            if (startDateInput) {
+                startDateInput.removeAttribute('min');
+                startDateInput.removeAttribute('max');
+            }
+            if (endDateInput) {
+                endDateInput.removeAttribute('min');
+                endDateInput.removeAttribute('max');
+            }
         } else {
             if (startDateInput) startDateInput.removeAttribute('max');
             if (endDateInput) endDateInput.removeAttribute('max');

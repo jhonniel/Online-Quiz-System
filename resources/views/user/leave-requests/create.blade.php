@@ -569,7 +569,7 @@
         } else if (typeSelect.value === 'overtime') {
             endDateInput.min = startDate || today;
             endDateInput.setAttribute('max', today);
-        } else if (typeSelect.value === 'additional_time') {
+        } else if (typeSelect.value === 'additional_time' || typeSelect.value === 'sick_leave') {
             endDateInput.removeAttribute('min');
             endDateInput.removeAttribute('max');
         } else if (startDate) {
@@ -640,10 +640,13 @@
             startDateInput.setAttribute('min', overtimeMinText);
             startDateInput.setAttribute('max', today);
             if (endDateInput) endDateInput.setAttribute('max', today);
-        } else if (typeSelect.value === 'additional_time') {
+        } else if (typeSelect.value === 'additional_time' || typeSelect.value === 'sick_leave') {
             startDateInput.removeAttribute('min');
             startDateInput.removeAttribute('max');
-            if (endDateInput) endDateInput.removeAttribute('max');
+            if (endDateInput) {
+                endDateInput.removeAttribute('min');
+                endDateInput.removeAttribute('max');
+            }
         } else {
             startDateInput.setAttribute('min', today);
             startDateInput.removeAttribute('max');
@@ -721,7 +724,7 @@
 
     // Initialize on page load (for validation errors / old input)
     const oldType = '{{ old("type") }}';
-    if (oldType !== 'overtime' && oldType !== 'additional_time' && oldType !== 'travel') {
+    if (oldType !== 'overtime' && oldType !== 'additional_time' && oldType !== 'travel' && oldType !== 'sick_leave') {
         startDateInput.setAttribute('min', today);
     }
     updateRequestTypeSections();
