@@ -237,10 +237,12 @@ class HiringApplicationController extends Controller
             return back()->withErrors($e->errors())->withInput()->with('settings', $settings)->with('schoolOptions', $schoolOptions);
         }
 
-        // Check if email already applied to this position (case-insensitive)
+        // Check if email already applied to this position (case-insensitive).
+        // Include trashed rows so we can clear stale unique-index rows before insert.
         $email = strtolower(trim($request->email));
 
-        $existingApplication = HiringApplication::whereRaw('LOWER(TRIM(email)) = ?', [$email])
+        $existingApplication = HiringApplication::withTrashed()
+            ->whereRaw('LOWER(TRIM(email)) = ?', [$email])
             ->where('hiring_position_id', $position->id)
             ->first();
 
@@ -250,9 +252,10 @@ class HiringApplicationController extends Controller
             'position_id' => $position->id,
             'existing_found' => $existingApplication ? 'yes' : 'no',
             'existing_id' => $existingApplication?->id,
+            'existing_trashed' => $existingApplication?->trashed() ? 'yes' : 'no',
         ]);
 
-        if ($existingApplication) {
+        if ($existingApplication && ! $existingApplication->trashed()) {
             Log::warning('Duplicate application attempt blocked', [
                 'email' => $email,
                 'position_id' => $position->id,
@@ -269,6 +272,11 @@ class HiringApplicationController extends Controller
                 ->withInput($request->all())
                 ->with('settings', $settings)
                 ->with('schoolOptions', $schoolOptions);
+        }
+
+        if ($existingApplication && $existingApplication->trashed()) {
+            // Unique (email, hiring_position_id) still counts soft-deleted rows in MySQL.
+            $existingApplication->forceDelete();
         }
 
         try {
@@ -291,10 +299,15 @@ class HiringApplicationController extends Controller
                     ->first();
 
                 if (! $university) {
+                    $slugForCode = Str::slug($customSchoolName);
+                    $code = $slugForCode !== ''
+                        ? Str::upper(Str::limit($slugForCode, 10, ''))
+                        : null;
+
                     // Create new university
                     $university = University::create([
                         'name' => $customSchoolName,
-                        'code' => Str::upper(Str::limit(Str::slug($customSchoolName), 10, '')),
+                        'code' => $code,
                         'is_active' => true,
                     ]);
                     Log::info('New university created from application', [
@@ -460,8 +473,14 @@ class HiringApplicationController extends Controller
                 'position_title' => $position->title,
             ]);
 
-            // Redirect to success page with application ID and position title
-            return redirect('/hiring/application/success?'.http_build_query(['application_id' => $application->id, 'position_title' => $position->title]))->with('application_id', $application->id)
+            // Use the current request host (not only APP_URL) so local/staging redirects stay on the same site.
+            $successUrl = rtrim($request->root(), '/').'/hiring/application/success?'.http_build_query([
+                'application_id' => $application->id,
+                'position_title' => $position->title,
+            ]);
+
+            return redirect()->to($successUrl)
+                ->with('application_id', $application->id)
                 ->with('position_title', $position->title)
                 ->with('success', true);
         } catch (\Exception $e) {

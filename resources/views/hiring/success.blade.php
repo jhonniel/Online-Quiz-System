@@ -1,5 +1,41 @@
 @extends('layouts.landing')
 
+@section('title', 'Application submitted')
+
+@section('styles')
+<style>
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(-20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes slide-up {
+    from {
+        opacity: 0;
+        transform: translateY(30px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.animate-fade-in {
+    animation: fadeIn 0.6s ease-out;
+}
+
+.animate-slide-up {
+    animation: slide-up 0.8s ease-out;
+}
+</style>
+@endsection
+
 @section('content')
 <div class="min-h-screen bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
     <div class="max-w-3xl mx-auto">
@@ -28,7 +64,11 @@
                     <p class="text-lg text-gray-800 mb-4 leading-relaxed">
                         Your application has been successfully submitted and received by our team.
                     </p>
-                    
+
+                    @if(!empty($position_title))
+                        <p class="text-sm text-gray-600 mb-4">Position: <span class="font-semibold text-gray-900">{{ $position_title }}</span></p>
+                    @endif
+
                     <!-- Next Steps -->
                     <div class="text-left space-y-4 mt-6">
                         <div class="flex items-start space-x-3">
@@ -87,7 +127,7 @@
 
                 <!-- Back to Home Button -->
                 <div class="mt-6">
-                    <a href="{{ url('/') }}" 
+                    <a href="{{ url('/') }}"
                        class="inline-flex items-center px-6 py-3 border border-transparent text-base font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
                         Return to Home
                     </a>
@@ -98,13 +138,13 @@
         <canvas id="confetti-canvas" class="fixed top-0 left-0 w-full h-full pointer-events-none z-50" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 9999;"></canvas>
     </div>
 </div>
+@endsection
 
 @section('scripts')
 <!-- Canvas Confetti Library -->
 <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.2/dist/confetti.browser.min.js"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    // Trigger confetti animation
     const duration = 3000;
     const animationEnd = Date.now() + duration;
     const defaults = { startVelocity: 30, spread: 360, ticks: 60, zIndex: 9999 };
@@ -121,15 +161,13 @@ document.addEventListener('DOMContentLoaded', function() {
         }
 
         const particleCount = 50 * (timeLeft / duration);
-        
-        // Launch confetti from left
+
         confetti({
             ...defaults,
             particleCount,
             origin: { x: randomInRange(0.1, 0.3), y: Math.random() - 0.2 }
         });
-        
-        // Launch confetti from right
+
         confetti({
             ...defaults,
             particleCount,
@@ -137,7 +175,6 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }, 250);
 
-    // Big burst at the start
     setTimeout(() => {
         confetti({
             particleCount: 100,
@@ -147,7 +184,6 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }, 100);
 
-    // Success message animation
     const successMessage = document.getElementById('success-message');
     if (successMessage) {
         successMessage.style.opacity = '0';
@@ -161,37 +197,3 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 </script>
 @endsection
-
-<style>
-@keyframes fadeIn {
-    from {
-        opacity: 0;
-        transform: translateY(-20px);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
-}
-
-@keyframes slide-up {
-    from {
-        opacity: 0;
-        transform: translateY(30px);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
-}
-
-.animate-fade-in {
-    animation: fadeIn 0.6s ease-out;
-}
-
-.animate-slide-up {
-    animation: slide-up 0.8s ease-out;
-}
-</style>
-@endsection
-

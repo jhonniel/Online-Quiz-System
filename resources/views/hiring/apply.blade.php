@@ -247,7 +247,11 @@
         @if(!session('success'))
         <!-- Application Form -->
         <div id="application-form-container" class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-            <form id="hiring-application-form" action="{{ isset($position) && $position ? url('/' . ltrim($settings['hiring_application_url'] ?? 'hiring/apply', '/') . '/' . $position->slug) : url('/' . ltrim($settings['hiring_application_url'] ?? 'hiring/apply', '/')) }}" method="POST" enctype="multipart/form-data" class="space-y-6">
+            @php
+                $_hiringPath = ltrim($settings['hiring_application_url'] ?? 'hiring/apply', '/');
+                $hiringFormAction = '/' . $_hiringPath . (isset($position) && $position ? '/' . $position->slug : '');
+            @endphp
+            <form id="hiring-application-form" action="{{ $hiringFormAction }}" method="POST" enctype="multipart/form-data" class="space-y-6">
                 @csrf
 
                 @if($formErrors->has('error'))
@@ -624,16 +628,18 @@ document.addEventListener('DOMContentLoaded', function() {
 
             isSubmitting = true;
 
-            // Show loading state on button immediately
-            if (submitBtn) {
-                submitBtn.disabled = true;
-                if (submitText) submitText.classList.add('hidden');
-                if (submitLoading) submitLoading.classList.remove('hidden');
-            }
-
-            // Let form submit normally - button will show loading state
-            // When page reloads with success, success message will be displayed
-            // If there are errors, button will reset on page reload
+            // Do not disable the submit button synchronously here — in many browsers that
+            // cancels the default form submit. Defer UI updates until after this handler returns.
+            window.setTimeout(function() {
+                if (submitBtn) {
+                    submitBtn.disabled = true;
+                    if (submitText) submitText.classList.add('hidden');
+                    if (submitLoading) submitLoading.classList.remove('hidden');
+                }
+                if (loadingOverlay) {
+                    loadingOverlay.classList.remove('hidden');
+                }
+            }, 0);
         });
     }
 

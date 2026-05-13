@@ -123,30 +123,26 @@ class AppServiceProvider extends ServiceProvider
                 return;
             }
 
-            $customPath = Setting::get('hiring_application_url', 'hiring/apply');
+            $customPath = trim((string) (Setting::get('hiring_application_url', 'hiring/apply') ?: '')) ?: 'hiring/apply';
+            $basePath = ltrim($customPath, '/');
 
-            if ($customPath) {
-                // Clean the path - remove leading slash and ensure it's valid
-                $basePath = ltrim($customPath, '/');
+            // Register whenever path is valid so URLs resolve; controller enforces public access & deadlines.
+            if (! empty($basePath) && $basePath !== 'admin' && $basePath !== 'api') {
+                // Register PUBLIC routes (no authentication required)
+                // These routes are accessible to anyone, even without logging in
+                // Register base route (shows list of positions)
+                Route::get($basePath, [\App\Http\Controllers\HiringApplicationController::class, 'show'])
+                    ->name('hiring.apply');
 
-                // Register whenever path is valid so URLs resolve; controller enforces public access & deadlines.
-                if (! empty($basePath) && $basePath !== 'admin' && $basePath !== 'api') {
-                    // Register PUBLIC routes (no authentication required)
-                    // These routes are accessible to anyone, even without logging in
-                    // Register base route (shows list of positions)
-                    Route::get($basePath, [\App\Http\Controllers\HiringApplicationController::class, 'show'])
-                        ->name('hiring.apply');
+                // Register catch-all route for position-specific forms
+                // This will handle any slug dynamically
+                Route::get($basePath.'/{slug}', [\App\Http\Controllers\HiringApplicationController::class, 'show'])
+                    ->where('slug', '[a-z0-9\-]+')
+                    ->name('hiring.apply.position');
 
-                    // Register catch-all route for position-specific forms
-                    // This will handle any slug dynamically
-                    Route::get($basePath.'/{slug}', [\App\Http\Controllers\HiringApplicationController::class, 'show'])
-                        ->where('slug', '[a-z0-9\-]+')
-                        ->name('hiring.apply.position');
-
-                    Route::post($basePath.'/{slug}', [\App\Http\Controllers\HiringApplicationController::class, 'store'])
-                        ->where('slug', '[a-z0-9\-]+')
-                        ->name('hiring.apply.position.store');
-                }
+                Route::post($basePath.'/{slug}', [\App\Http\Controllers\HiringApplicationController::class, 'store'])
+                    ->where('slug', '[a-z0-9\-]+')
+                    ->name('hiring.apply.position.store');
             }
         } catch (\Exception $e) {
             // If settings table doesn't exist yet or any other error, just continue
