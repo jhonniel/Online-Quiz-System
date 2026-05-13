@@ -62,10 +62,6 @@
         </div>
     @endif
 
-    @php
-        $hasResume = (bool) ($application->resume_path || $application->resume_link);
-    @endphp
-
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <!-- Main Content -->
         <div class="lg:col-span-2 space-y-6">
@@ -143,31 +139,6 @@
                 }
             @endphp
 
-            @if($application->resume_path && $__resumeCanEmbed)
-                <div class="bg-white shadow-sm rounded-lg border border-gray-200 overflow-hidden">
-                    <div class="px-6 py-3 border-b border-gray-100 bg-gray-50/80">
-                        <p class="text-xs font-semibold uppercase tracking-wide text-gray-500">Resume preview</p>
-                    </div>
-                    <div class="p-4 sm:p-6">
-                        <div class="border border-gray-300 rounded-lg overflow-hidden bg-gray-50">
-                            <iframe src="{{ url('/admin/hiring-applications/' . $application->id . '/view-resume') }}"
-                                    class="w-full border-0"
-                                    style="min-height: 280px; height: 50vh; max-height: 640px;"
-                                    title="Resume preview">
-                            </iframe>
-                        </div>
-                        <p class="mt-2 text-xs text-gray-500">
-                            @if($application->cover_letter)
-                                Placed directly under the cover letter. If blank, use <strong>View</strong> or <strong>Download</strong> in <strong>Resume</strong> below.
-                            @else
-                                If this is blank, use <strong>View</strong> or <strong>Download</strong> in <strong>Resume</strong> below.
-                            @endif
-                        </p>
-                    </div>
-                </div>
-            @endif
-
-            <!-- Resume: actions, file details, non-embed notice, external link -->
             <div class="bg-white shadow-sm rounded-lg border border-gray-200 overflow-hidden">
                 <div class="px-6 py-4 border-b border-gray-200 flex flex-wrap items-center justify-between gap-3">
                     <h2 class="text-lg font-medium text-gray-900">Resume</h2>
@@ -194,7 +165,22 @@
                                 <span class="text-gray-500">(.{{ $__resumeExt }})</span>
                             @endif
                         </p>
-                        @if(! $__resumeCanEmbed)
+                        @if($__resumeCanEmbed)
+                            <div class="border border-gray-300 rounded-lg overflow-hidden bg-gray-50">
+                                <iframe src="{{ url('/admin/hiring-applications/' . $application->id . '/view-resume') }}"
+                                        class="w-full border-0"
+                                        style="min-height: 280px; height: 50vh; max-height: 640px;"
+                                        title="Resume preview">
+                                </iframe>
+                            </div>
+                            <p class="text-xs text-gray-500">
+                                @if($application->cover_letter)
+                                    Placed under your cover letter. If the preview is blank, use <strong>View</strong> or <strong>Download</strong> above.
+                                @else
+                                    If the preview is blank, use <strong>View</strong> or <strong>Download</strong> above.
+                                @endif
+                            </p>
+                        @else
                             <div class="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
                                 <p class="font-medium">No inline preview for .{{ $__resumeExt ?: 'file' }}</p>
                                 <p class="mt-1 text-amber-800">Open the file with <strong>View</strong> or <strong>Download</strong> above.</p>
@@ -521,7 +507,6 @@
                 </div>
             </div>
 
-            @unless($hasResume)
             <!-- Admin Notes -->
             <div class="bg-white shadow-sm rounded-lg border border-gray-200 overflow-hidden">
                 <div class="px-6 py-4 border-b border-gray-200">
@@ -553,51 +538,10 @@
                     </form>
                 </div>
             </div>
-            @endunless
 
-            @unless($hasResume)
-                @include('admin.hiring-applications.partials.application-actions-panel')
-            @endunless
+            @include('admin.hiring-applications.partials.application-actions-panel')
         </div>
     </div>
-
-    @if($hasResume)
-        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mt-6">
-            <div class="lg:col-span-2 bg-white shadow-sm rounded-lg border border-gray-200 overflow-hidden">
-                <div class="px-6 py-4 border-b border-gray-200">
-                    <h2 class="text-lg font-medium text-gray-900">Admin Notes</h2>
-                </div>
-                <div class="px-6 py-6">
-                    <form action="{{ url('/admin/hiring-applications/' . $application->id . '/admin-notes') }}" method="POST">
-                        @csrf
-                        @method('PATCH')
-                        <textarea name="admin_notes"
-                                  id="admin_notes_resume_layout"
-                                  rows="6"
-                                  placeholder="Add notes about this application..."
-                                  class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">{{ old('admin_notes', $application->admin_notes) }}</textarea>
-                        @error('admin_notes')
-                            <p class="mt-1 text-xs text-red-600">{{ $message }}</p>
-                        @enderror
-                        <div class="mt-3">
-                            <button type="submit" class="action-button inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed" data-loading-text="Saving...">
-                                <span class="button-text">Save Notes</span>
-                                <span class="button-spinner hidden ml-2">
-                                    <svg class="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                                    </svg>
-                                </span>
-                            </button>
-                        </div>
-                    </form>
-                </div>
-            </div>
-            <div class="min-w-0">
-                @include('admin.hiring-applications.partials.application-actions-panel')
-            </div>
-        </div>
-    @endif
 
     <!-- Activity Logs -->
     <div class="bg-white rounded-lg shadow border border-gray-200 p-4 sm:p-6 mt-6">
