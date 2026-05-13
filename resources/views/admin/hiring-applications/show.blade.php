@@ -312,16 +312,33 @@
                                     @php
                                         $rankInfo = $internQuizRankMeta[$asg->id] ?? null;
                                         $totalQ = (int) ($asg->quiz->total_questions ?? 0);
+                                        $best = (int) ($asg->best_score ?? 0);
                                     @endphp
                                     <li class="flex flex-col gap-2 border border-gray-100 rounded-md px-3 py-3 bg-gray-50">
                                         <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2">
-                                            <div>
+                                            <div class="min-w-0">
                                                 <span class="font-medium text-gray-900">{{ $asg->quiz->title ?? 'Quiz' }}</span>
                                                 @if($asg->quiz && $asg->quiz->quiz_code)
                                                     <span class="text-xs text-gray-500"> · Code <span class="font-mono text-gray-800">{{ $asg->quiz->quiz_code }}</span></span>
                                                 @endif
                                             </div>
-                                            <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium {{ $asg->getStatusBadgeClass() }}">{{ $asg->getStatusText() }}</span>
+                                            <div class="flex flex-wrap items-center gap-2 sm:justify-end sm:shrink-0">
+                                                <span class="text-sm tabular-nums">
+                                                    <span class="text-gray-500">Score</span>
+                                                    <span class="ml-1 font-semibold text-gray-900">
+                                                        @if($totalQ > 0)
+                                                            @if($asg->status === 'assigned' && ! $asg->started_at)
+                                                                <span class="text-gray-400 font-normal">—</span><span class="text-gray-400 font-medium">/</span>{{ $totalQ }}
+                                                            @else
+                                                                {{ $best }}<span class="text-gray-400 font-medium">/</span>{{ $totalQ }}
+                                                            @endif
+                                                        @else
+                                                            {{ $best > 0 ? $best : '—' }}
+                                                        @endif
+                                                    </span>
+                                                </span>
+                                                <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium {{ $asg->getStatusBadgeClass() }}">{{ $asg->getStatusText() }}</span>
+                                            </div>
                                         </div>
                                         <div class="text-xs text-gray-600 space-y-1">
                                             @if($asg->due_date)
@@ -333,16 +350,11 @@
                                             @if($asg->is_completed && $asg->last_attempt_at)
                                                 <div><span class="font-medium text-gray-700">Last submitted:</span> {{ $asg->last_attempt_at->format('M j, Y g:i A') }}</div>
                                             @endif
-                                            @if($asg->is_completed && $totalQ > 0)
+                                            @if($asg->is_completed && $rankInfo)
                                                 <div>
-                                                    <span class="font-medium text-gray-700">Best score:</span>
-                                                    {{ (int) ($asg->best_score ?? 0) }} / {{ $totalQ }}
-                                                    @if($rankInfo)
-                                                        <span class="text-gray-500"> · Rank {{ $rankInfo['rank'] }} of {{ $rankInfo['of'] }} (this quiz)</span>
-                                                    @endif
+                                                    <span class="font-medium text-gray-700">Rank:</span>
+                                                    {{ $rankInfo['rank'] }} of {{ $rankInfo['of'] }} (this quiz)
                                                 </div>
-                                            @elseif($asg->is_completed)
-                                                <div><span class="font-medium text-gray-700">Best score:</span> {{ (int) ($asg->best_score ?? 0) }}</div>
                                             @endif
                                         </div>
                                         @php
@@ -376,9 +388,9 @@
                                             <p class="text-[10px] text-gray-500 mt-1">Showing up to 5 most recent attempts.</p>
                                         @endif
                                         <div class="mt-2 flex flex-wrap gap-x-3 gap-y-1">
-                                            <a href="{{ route('admin.hiring-applications.intern-quiz-attempts', [$application, $asg]) }}" class="text-xs font-medium text-indigo-600 hover:text-indigo-800">Open full attempt list</a>
+                                            <a href="{{ url('/admin/hiring-applications/' . $application->getKey() . '/quiz-assignments/' . $asg->getKey() . '/attempts') }}" class="text-xs font-medium text-indigo-600 hover:text-indigo-800">Open full attempt list</a>
                                             @if(auth()->user()->canAccessContentManagement())
-                                                <a href="{{ route('admin.quiz-assignments.history', $asg) }}" class="text-xs font-medium text-gray-600 hover:text-gray-800">Q&amp;A detail (quizzes admin)</a>
+                                                <a href="{{ url('/admin/quiz-assignments/' . $asg->getKey() . '/history') }}" class="text-xs font-medium text-indigo-600 hover:text-indigo-800">Q&amp;A detail (quizzes admin)</a>
                                             @endif
                                         </div>
                                     </li>

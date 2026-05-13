@@ -391,18 +391,16 @@ class HiringApplicationController extends Controller
 
         $userIds = collect($applications->items())->pluck('user_id')->filter()->unique()->values();
         $internQuizAssignmentsPage = collect();
-        $internQuizRankMeta = [];
         if ($userIds->isNotEmpty()) {
             $internQuizAssignmentsPage = QuizAssignment::query()
                 ->whereIn('user_id', $userIds)
-                ->with(['quiz:id,title,total_questions,quiz_code'])
+                ->select(['id', 'user_id', 'is_completed'])
                 ->orderByDesc('assigned_at')
                 ->get();
-            $internQuizRankMeta = $this->quizAssignmentRankMeta($internQuizAssignmentsPage);
         }
         $internQuizByUserId = $internQuizAssignmentsPage->groupBy('user_id');
 
-        return view('admin.hiring-applications.index', compact('applications', 'stats', 'positions', 'positionFilter', 'statusFilter', 'perPage', 'search', 'internQuizByUserId', 'internQuizRankMeta'));
+        return view('admin.hiring-applications.index', compact('applications', 'stats', 'positions', 'positionFilter', 'statusFilter', 'perPage', 'search', 'internQuizByUserId'));
     }
 
     public function calendar(Request $request)

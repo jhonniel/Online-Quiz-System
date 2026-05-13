@@ -233,7 +233,7 @@
                         <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                             Status
                         </th>
-                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[11rem]">
+                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">
                             Intern quiz
                         </th>
                         <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -322,31 +322,11 @@
                                     @if($iqRows->isEmpty())
                                         <span class="text-xs text-gray-500">None assigned</span>
                                     @else
-                                        <ul class="space-y-2 max-w-xs">
-                                            @foreach($iqRows as $asg)
-                                                @php
-                                                    $r = ($internQuizRankMeta ?? [])[$asg->id] ?? null;
-                                                    $tq = (int) ($asg->quiz->total_questions ?? 0);
-                                                @endphp
-                                                <li class="text-xs border-l-2 border-indigo-200 pl-2">
-                                                    <div class="font-medium text-gray-900 truncate" title="{{ $asg->quiz->title ?? 'Quiz' }}">{{ Str::limit($asg->quiz->title ?? 'Quiz', 28) }}</div>
-                                                    <div class="text-gray-600 mt-0.5">{{ $asg->getStatusText() }}</div>
-                                                    @if($asg->is_completed)
-                                                        <div class="text-gray-700 mt-0.5">
-                                                            Score {{ (int) ($asg->best_score ?? 0) }}{{ $tq > 0 ? ' / '.$tq : '' }}
-                                                            @if($r)
-                                                                <span class="text-gray-500"> · #{{ $r['rank'] }}/{{ $r['of'] }}</span>
-                                                            @endif
-                                                        </div>
-                                                        @if($asg->last_attempt_at)
-                                                            <div class="text-gray-500 mt-0.5">Taken {{ $asg->last_attempt_at->format('M j, Y') }}</div>
-                                                        @endif
-                                                    @elseif($asg->started_at)
-                                                        <div class="text-gray-500 mt-0.5">Started {{ $asg->started_at->format('M j, Y') }}</div>
-                                                    @endif
-                                                </li>
-                                            @endforeach
-                                        </ul>
+                                        @php
+                                            $iqAssigned = $iqRows->count();
+                                            $iqCompleted = $iqRows->where('is_completed', true)->count();
+                                        @endphp
+                                        <span class="tabular-nums text-sm font-semibold text-gray-900" title="Completed / assigned (intern quizzes)" aria-label="{{ $iqCompleted }} of {{ $iqAssigned }} intern quizzes completed">{{ $iqCompleted }}/{{ $iqAssigned }}</span>
                                     @endif
                                 @endif
                             </td>
