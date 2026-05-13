@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Support\Str;
 
 class UserActivity extends Model
 {
@@ -47,13 +48,16 @@ class UserActivity extends Model
      */
     public static function logActivity(?User $user, string $activityType, ?string $action = null, array $metadata = []): self
     {
+        $url = (string) request()->fullUrl();
+        $ua = (string) (request()->userAgent() ?? '');
+
         return self::create([
             'user_id' => $user?->id,
-            'activity_type' => $activityType,
-            'action' => $action,
-            'page_url' => request()->fullUrl(),
-            'ip_address' => request()->ip(),
-            'user_agent' => request()->userAgent(),
+            'activity_type' => Str::limit($activityType, 255, ''),
+            'action' => $action !== null ? Str::limit($action, 255, '') : null,
+            'page_url' => $url !== '' ? Str::limit($url, 255, '') : null,
+            'ip_address' => request()->ip() !== null ? Str::limit((string) request()->ip(), 255, '') : null,
+            'user_agent' => $ua !== '' ? Str::limit($ua, 255, '') : null,
             'metadata' => $metadata,
         ]);
     }

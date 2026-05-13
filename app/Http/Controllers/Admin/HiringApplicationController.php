@@ -3,17 +3,21 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Mail\InternQuizAssignment;
 use App\Models\HiringApplication;
+use App\Models\Quiz;
+use App\Models\QuizAssignment;
+use App\Models\QuizAttemptHistory;
 use App\Models\UserActivity;
 use App\Services\MailConfigService;
 use Carbon\Carbon;
-use Carbon\CarbonPeriod;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Storage;
 
 class HiringApplicationController extends Controller
 {
@@ -45,7 +49,7 @@ class HiringApplicationController extends Controller
 
         // If user has position restrictions, filter by allowed positions
         if ($allowedPositionIds !== null) {
-            if (!empty($allowedPositionIds)) {
+            if (! empty($allowedPositionIds)) {
                 $query->whereIn('hiring_position_id', $allowedPositionIds);
             } else {
                 // Empty array means no access
@@ -77,6 +81,153 @@ class HiringApplicationController extends Controller
 
         // Check if position is in allowed list
         return in_array($positionId, $allowedPositionIds);
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function resumeStorageDisks(): array
+    {
+        return ['digitalocean', 'spaces', 'public', 'local'];
+    }
+
+    /**
+     * Stored path may omit or duplicate DIGITALOCEAN_SPACES_ROOT_PATH; try variants for object storage.
+     *
+     * @return list<string>
+     */
+    private function resumePathVariants(string $storedPath): array
+    {
+        $storedPath = ltrim($storedPath, '/');
+        if ($storedPath === '') {
+            return [];
+        }
+
+        $variants = [$storedPath];
+        $root = trim((string) env('DIGITALOCEAN_SPACES_ROOT_PATH', ''), '/');
+        if ($root !== '') {
+            if (str_starts_with($storedPath, $root.'/')) {
+                $variants[] = substr($storedPath, strlen($root) + 1);
+            } else {
+                $variants[] = $root.'/'.$storedPath;
+            }
+        }
+
+        return array_values(array_unique(array_filter($variants)));
+    }
+
+    /**
+     * @return array{disk: string, path: string}|null
+     */
+    private function findResumeOnStorage(HiringApplication $application): ?array
+    {
+        if (! $application->resume_path) {
+            return null;
+        }
+
+        foreach ($this->resumeStorageDisks() as $disk) {
+            try {
+                $storage = Storage::disk($disk);
+                foreach ($this->resumePathVariants($application->resume_path) as $variant) {
+                    if ($storage->exists($variant)) {
+                        return ['disk' => $disk, 'path' => $variant];
+                    }
+                }
+            } catch (\Throwable $e) {
+                continue;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Explicit Content-Type helps browsers render PDFs/images inside an iframe.
+     *
+     * @return array<string, string>
+     */
+    private function resumeInlineResponseHeaders(string $path): array
+    {
+        $ext = strtolower(pathinfo($path, PATHINFO_EXTENSION));
+
+        $contentType = match ($ext) {
+            'pdf' => 'application/pdf',
+            'png' => 'image/png',
+            'jpg', 'jpeg' => 'image/jpeg',
+            'gif' => 'image/gif',
+            'webp' => 'image/webp',
+            default => 'application/octet-stream',
+        };
+
+        $filename = basename($path);
+
+        return [
+            'Content-Type' => $contentType,
+            'Content-Disposition' => 'inline; filename="'.$filename.'"',
+        ];
+    }
+
+    /**
+     * Internship applications in these statuses have a linked user and may receive intern quizzes.
+     *
+     * @return list<string>
+     */
+    private function internStatusesEligibleForInternQuiz(): array
+    {
+        return ['accepted', 'interview_scheduled', 'done_interview', 'hired'];
+    }
+
+    private function shouldShowInternQuizPanel(HiringApplication $application): bool
+    {
+        if (! $application->hiringPosition || ! $application->user_id) {
+            return false;
+        }
+
+        if (strcasecmp((string) ($application->hiringPosition->employment_type ?? ''), 'Internship') !== 0) {
+            return false;
+        }
+
+        return in_array($application->status, $this->internStatusesEligibleForInternQuiz(), true);
+    }
+
+    /**
+     * Rank among completed assignments for the same quiz (best score desc, then earlier last_attempt_at).
+     *
+     * @param  Collection<int, QuizAssignment>  $assignments
+     * @return array<int, array{rank: int, of: int}>
+     */
+    private function quizAssignmentRankMeta(Collection $assignments): array
+    {
+        if ($assignments->isEmpty()) {
+            return [];
+        }
+
+        $meta = [];
+
+        foreach ($assignments->groupBy('quiz_id') as $quizId => $group) {
+            $orderedIds = QuizAssignment::query()
+                ->where('quiz_id', $quizId)
+                ->where('is_completed', true)
+                ->orderByDesc('best_score')
+                ->orderBy('last_attempt_at')
+                ->pluck('id')
+                ->values();
+
+            $of = $orderedIds->count();
+
+            foreach ($group as $asg) {
+                if (! $asg->is_completed) {
+                    continue;
+                }
+
+                $idx = $orderedIds->search(fn ($id) => (int) $id === (int) $asg->id);
+                if ($idx !== false) {
+                    $meta[$asg->id] = ['rank' => (int) $idx + 1, 'of' => $of];
+                }
+            }
+        }
+
+        return $meta;
     }
 
     public function index(Request $request)
@@ -160,7 +311,7 @@ class HiringApplicationController extends Controller
             ->orderBy('created_at', 'desc');
 
         $applications = $query->get();
-        
+
         // Paginate manually
         $currentPage = \Illuminate\Pagination\LengthAwarePaginator::resolveCurrentPage();
         $perPage = $perPage;
@@ -173,12 +324,12 @@ class HiringApplicationController extends Controller
 
         $positionFilter = $request->position;
         $statusFilter = $request->status;
-        
+
         // Filter positions dropdown to only show allowed positions
         $user = Auth::user();
         $allowedPositionIds = $user->getAllowedPositionIds();
         if ($allowedPositionIds !== null) {
-            if (!empty($allowedPositionIds)) {
+            if (! empty($allowedPositionIds)) {
                 $positions = \App\Models\HiringPosition::whereIn('id', $allowedPositionIds)->orderBy('title')->get();
             } else {
                 $positions = collect(); // No positions available
@@ -238,7 +389,20 @@ class HiringApplicationController extends Controller
             'done_interview' => (clone $baseQuery)->where('status', 'done_interview')->count(),
         ];
 
-        return view('admin.hiring-applications.index', compact('applications', 'stats', 'positions', 'positionFilter', 'statusFilter', 'perPage', 'search'));
+        $userIds = collect($applications->items())->pluck('user_id')->filter()->unique()->values();
+        $internQuizAssignmentsPage = collect();
+        $internQuizRankMeta = [];
+        if ($userIds->isNotEmpty()) {
+            $internQuizAssignmentsPage = QuizAssignment::query()
+                ->whereIn('user_id', $userIds)
+                ->with(['quiz:id,title,total_questions,quiz_code'])
+                ->orderByDesc('assigned_at')
+                ->get();
+            $internQuizRankMeta = $this->quizAssignmentRankMeta($internQuizAssignmentsPage);
+        }
+        $internQuizByUserId = $internQuizAssignmentsPage->groupBy('user_id');
+
+        return view('admin.hiring-applications.index', compact('applications', 'stats', 'positions', 'positionFilter', 'statusFilter', 'perPage', 'search', 'internQuizByUserId', 'internQuizRankMeta'));
     }
 
     public function calendar(Request $request)
@@ -251,8 +415,8 @@ class HiringApplicationController extends Controller
             // Parse the month parameter - ensure it's in Y-m format
             // Add '-01' to make it a complete date for parsing
             if (preg_match('/^(\d{4})-(\d{2})$/', $monthParam, $matches)) {
-                $year = (int)$matches[1];
-                $month = (int)$matches[2];
+                $year = (int) $matches[1];
+                $month = (int) $matches[2];
                 // Validate month is between 1-12
                 if ($month >= 1 && $month <= 12) {
                     $currentMonth = Carbon::create($year, $month, 1, 0, 0, 0, 'Asia/Manila');
@@ -279,7 +443,7 @@ class HiringApplicationController extends Controller
             ->whereNotNull('interview_date')
             ->whereDate('interview_date', '>=', $startOfCalendar->toDateString())
             ->whereDate('interview_date', '<=', $endOfCalendar->toDateString());
-        
+
         // Apply position-based filtering
         $scheduledQuery = $this->applyPositionFilter($scheduledQuery);
         $scheduledApplications = $scheduledQuery->get();
@@ -287,20 +451,20 @@ class HiringApplicationController extends Controller
         // Get all accepted applications in the calendar range (use reviewed_at or created_at as the date)
         $acceptedQuery = HiringApplication::with(['hiringPosition', 'user'])
             ->where('status', 'accepted')
-            ->where(function($query) use ($startOfCalendar, $endOfCalendar) {
-                $query->where(function($q) use ($startOfCalendar, $endOfCalendar) {
+            ->where(function ($query) use ($startOfCalendar, $endOfCalendar) {
+                $query->where(function ($q) use ($startOfCalendar, $endOfCalendar) {
                     // If reviewed_at exists, use it
                     $q->whereNotNull('reviewed_at')
-                      ->whereDate('reviewed_at', '>=', $startOfCalendar->toDateString())
-                      ->whereDate('reviewed_at', '<=', $endOfCalendar->toDateString());
-                })->orWhere(function($q) use ($startOfCalendar, $endOfCalendar) {
+                        ->whereDate('reviewed_at', '>=', $startOfCalendar->toDateString())
+                        ->whereDate('reviewed_at', '<=', $endOfCalendar->toDateString());
+                })->orWhere(function ($q) use ($startOfCalendar, $endOfCalendar) {
                     // Otherwise use created_at
                     $q->whereNull('reviewed_at')
-                      ->whereDate('created_at', '>=', $startOfCalendar->toDateString())
-                      ->whereDate('created_at', '<=', $endOfCalendar->toDateString());
+                        ->whereDate('created_at', '>=', $startOfCalendar->toDateString())
+                        ->whereDate('created_at', '<=', $endOfCalendar->toDateString());
                 });
             });
-        
+
         // Apply position-based filtering
         $acceptedQuery = $this->applyPositionFilter($acceptedQuery);
         $acceptedApplications = $acceptedQuery->get();
@@ -311,7 +475,7 @@ class HiringApplicationController extends Controller
         // Prepare map of day => interview entries
         // Use ordered array to ensure all days are included
         $days = [];
-        
+
         // Manually create all days from start to end (inclusive) to ensure nothing is missed
         $currentDate = $startOfCalendar->copy();
         while ($currentDate <= $endOfCalendar) {
@@ -345,7 +509,7 @@ class HiringApplicationController extends Controller
             // Use reviewed_at if available, otherwise use created_at
             $acceptanceDate = $application->reviewed_at ? $application->reviewed_at : $application->created_at;
             $dateKey = $acceptanceDate->toDateString();
-            
+
             if (isset($days[$dateKey])) {
                 $days[$dateKey]['interviews'][] = [
                     'id' => $application->id,
@@ -363,30 +527,30 @@ class HiringApplicationController extends Controller
         $weeks = [];
         $week = [];
         $currentDate = $startOfCalendar->copy();
-        
+
         // Iterate through all dates from start to end (inclusive)
         while ($currentDate <= $endOfCalendar) {
             $key = $currentDate->toDateString();
-            
+
             // Ensure day exists in days array (create if missing)
-            if (!isset($days[$key])) {
+            if (! isset($days[$key])) {
                 $days[$key] = [
                     'date' => $currentDate->copy(),
                     'interviews' => [],
                 ];
             }
-            
+
             $week[] = $days[$key];
-            
+
             // When we have 7 days, start a new week
             if (count($week) === 7) {
                 $weeks[] = $week;
                 $week = [];
             }
-            
+
             $currentDate->addDay();
         }
-        
+
         // Add remaining days if any (final partial week - should be exactly 0 or 7, but handle edge cases)
         if (count($week) > 0) {
             $weeks[] = $week;
@@ -409,11 +573,42 @@ class HiringApplicationController extends Controller
     public function show(HiringApplication $application)
     {
         // Check if user can access this application's position
-        if (!$this->canAccessPosition($application->hiring_position_id)) {
+        if (! $this->canAccessPosition($application->hiring_position_id)) {
             abort(403, 'Access denied. You do not have permission to view applications for this position.');
         }
 
         $application->load(['reviewer', 'user', 'hiringPosition']);
+
+        $assignableQuizzes = collect();
+        $internQuizAssignments = collect();
+        $internQuizRankMeta = [];
+        $internQuizRecentAttempts = [];
+        $showInternQuizPanel = $this->shouldShowInternQuizPanel($application);
+
+        if ($showInternQuizPanel) {
+            $assignableQuizzes = Quiz::query()
+                ->where('is_active', true)
+                ->orderBy('title')
+                ->get(['id', 'title', 'quiz_code']);
+        }
+
+        if ($application->user_id && $showInternQuizPanel) {
+            $internQuizAssignments = QuizAssignment::query()
+                ->where('user_id', $application->user_id)
+                ->with(['quiz:id,title,quiz_code,total_questions'])
+                ->orderByDesc('assigned_at')
+                ->get();
+            $internQuizRankMeta = $this->quizAssignmentRankMeta(collect($internQuizAssignments));
+
+            foreach ($internQuizAssignments as $asg) {
+                $internQuizRecentAttempts[$asg->id] = QuizAttemptHistory::query()
+                    ->where('quiz_id', $asg->quiz_id)
+                    ->where('user_id', $asg->user_id)
+                    ->orderByDesc('attempt_number')
+                    ->limit(5)
+                    ->get();
+            }
+        }
 
         // Get activity logs for this application
         // Query all hiring application actions, then filter by application_id in metadata
@@ -428,13 +623,186 @@ class HiringApplicationController extends Controller
             })
             ->values(); // Re-index the collection
 
-        return view('admin.hiring-applications.show', compact('application', 'activityLogs'));
+        return view('admin.hiring-applications.show', compact(
+            'application',
+            'activityLogs',
+            'assignableQuizzes',
+            'internQuizAssignments',
+            'internQuizRankMeta',
+            'internQuizRecentAttempts',
+            'showInternQuizPanel',
+        ));
+    }
+
+    /**
+     * Full attempt list for an applicant's quiz assignment (hiring permission only; no Content management required).
+     */
+    public function showInternQuizAssignmentAttempts(HiringApplication $application, QuizAssignment $assignment)
+    {
+        if (! $this->canAccessPosition($application->hiring_position_id)) {
+            abort(403, 'Access denied.');
+        }
+
+        $application->loadMissing('hiringPosition');
+
+        if (! $this->shouldShowInternQuizPanel($application)) {
+            abort(404);
+        }
+
+        if (! $application->user_id || (int) $assignment->user_id !== (int) $application->user_id) {
+            abort(404);
+        }
+
+        $assignment->load(['quiz', 'user']);
+
+        $attemptHistory = QuizAttemptHistory::query()
+            ->where('quiz_id', $assignment->quiz_id)
+            ->where('user_id', $assignment->user_id)
+            ->orderByDesc('attempt_number')
+            ->get();
+
+        return view('admin.hiring-applications.quiz-assignment-attempts', compact(
+            'application',
+            'assignment',
+            'attemptHistory',
+        ));
+    }
+
+    /**
+     * Assign one or more active quizzes to an internship applicant (from accepted onward); emails one message per quiz when enabled.
+     */
+    public function assignInternQuiz(Request $request, HiringApplication $application)
+    {
+        if (! $this->canAccessPosition($application->hiring_position_id)) {
+            abort(403, 'Access denied.');
+        }
+
+        $validated = $request->validate([
+            'quiz_ids' => ['required', 'array', 'min:1'],
+            'quiz_ids.*' => ['integer', 'distinct', 'exists:quizzes,id'],
+            'due_date' => ['nullable', 'date', 'after_or_equal:today'],
+        ]);
+
+        $quizIds = array_values(array_unique(array_map('intval', $validated['quiz_ids'])));
+
+        $isInternship = $application->hiringPosition
+            && strcasecmp((string) ($application->hiringPosition->employment_type ?? ''), 'Internship') === 0;
+
+        $allowedStatuses = $this->internStatusesEligibleForInternQuiz();
+
+        if (! $isInternship || ! in_array($application->status, $allowedStatuses, true) || ! $application->user_id) {
+            return redirect('/admin/hiring-applications/'.$application->id)
+                ->withErrors(['error' => 'Quiz assignment is only available for internship applications that are accepted (or later in the pipeline) and have an applicant user account.']);
+        }
+
+        $user = $application->user;
+        if (! $user || ! in_array($user->role, ['student', 'applicant'], true)) {
+            return redirect('/admin/hiring-applications/'.$application->id)
+                ->withErrors(['error' => 'Applicant must have a user account with student access to assign a quiz.']);
+        }
+
+        $dueDate = ! empty($validated['due_date'])
+            ? Carbon::parse($validated['due_date'])->endOfDay()
+            : null;
+
+        $assignedTitles = [];
+        $emailNotificationsEnabled = \App\Models\Setting::get('hiring_email_notifications', 'enabled');
+        $emailFailures = 0;
+
+        foreach ($quizIds as $quizId) {
+            $quiz = Quiz::query()
+                ->where('id', $quizId)
+                ->where('is_active', true)
+                ->first();
+
+            if (! $quiz) {
+                continue;
+            }
+
+            $assignment = QuizAssignment::firstOrNew([
+                'quiz_id' => $quiz->id,
+                'user_id' => $user->id,
+            ]);
+
+            if (! $assignment->exists) {
+                $assignment->assigned_at = now();
+                $assignment->status = 'assigned';
+                $assignment->is_completed = false;
+            }
+
+            if ($dueDate) {
+                $assignment->due_date = $dueDate;
+            }
+
+            $assignment->save();
+            $assignedTitles[] = $quiz->title;
+
+            UserActivity::logActivity(
+                Auth::user(),
+                'action',
+                'hiring_application_intern_quiz_assigned',
+                [
+                    'application_id' => $application->id,
+                    'applicant_name' => $application->full_name,
+                    'applicant_email' => $application->email,
+                    'quiz_id' => $quiz->id,
+                    'quiz_title' => $quiz->title,
+                    'due_date' => $dueDate?->toIso8601String(),
+                ]
+            );
+
+            if ($emailNotificationsEnabled === 'enabled') {
+                try {
+                    MailConfigService::configure();
+                    Mail::to($application->email)->send(new InternQuizAssignment(
+                        $application,
+                        $user,
+                        $quiz,
+                        $dueDate
+                    ));
+                } catch (\Throwable $e) {
+                    Log::error('Failed to send intern quiz assignment email', [
+                        'error' => $e->getMessage(),
+                        'application_id' => $application->id,
+                        'quiz_id' => $quiz->id,
+                    ]);
+                    report($e);
+                    $emailFailures++;
+                }
+            }
+        }
+
+        if ($assignedTitles === []) {
+            return redirect('/admin/hiring-applications/'.$application->id)
+                ->withErrors(['error' => 'No valid active quizzes were selected.']);
+        }
+
+        $count = count($assignedTitles);
+        $titlesList = implode(', ', $assignedTitles);
+        $successCore = $count === 1
+            ? 'Quiz "'.$assignedTitles[0].'" saved for '.$application->full_name.'.'
+            : $count.' quizzes saved for '.$application->full_name.': '.$titlesList.'.';
+
+        if ($emailNotificationsEnabled === 'enabled') {
+            if ($emailFailures === 0) {
+                $success = $successCore.' A separate email was sent for each quiz (title and code).';
+            } elseif ($emailFailures < $count) {
+                $success = $successCore.' Some notification emails could not be sent; check mail settings.';
+            } else {
+                return redirect('/admin/hiring-applications/'.$application->id)
+                    ->with('success', $successCore.' Notification emails could not be sent; check mail settings.');
+            }
+        } else {
+            $success = $successCore.' Email notifications are disabled in settings; the applicant was not emailed.';
+        }
+
+        return redirect('/admin/hiring-applications/'.$application->id)->with('success', $success);
     }
 
     public function accept(Request $request, HiringApplication $application)
     {
         // Check if user can access this application's position
-        if (!$this->canAccessPosition($application->hiring_position_id)) {
+        if (! $this->canAccessPosition($application->hiring_position_id)) {
             abort(403, 'Access denied. You do not have permission to accept applications for this position.');
         }
 
@@ -451,7 +819,7 @@ class HiringApplicationController extends Controller
         if ($application->school) {
             // Try to match by full_name first (includes location), then by name
             // PostgreSQL-compatible concatenation
-            $university = \App\Models\University::where(function($query) use ($application) {
+            $university = \App\Models\University::where(function ($query) use ($application) {
                 $query->whereRaw(
                     "name || CASE WHEN location IS NOT NULL AND location <> '' THEN ' (' || location || ')' ELSE '' END = ?",
                     [$application->school]
@@ -466,7 +834,7 @@ class HiringApplicationController extends Controller
         // Check if user already exists with this email
         $user = \App\Models\User::where('email', $application->email)->first();
 
-        if (!$user) {
+        if (! $user) {
             // Create new user account with role 'applicant'
             $userData = [
                 'name' => $application->full_name,
@@ -552,19 +920,19 @@ class HiringApplicationController extends Controller
             } catch (\Exception $e) {
                 Log::error('Failed to send credentials email', [
                     'error' => $e->getMessage(),
-                    'application_id' => $application->id
+                    'application_id' => $application->id,
                 ]);
             }
         }
 
-        return redirect('/admin/hiring-applications/' . $application->id)
+        return redirect('/admin/hiring-applications/'.$application->id)
             ->with('success', 'Application accepted. User account created and credentials sent via email.');
     }
 
     public function reject(Request $request, HiringApplication $application)
     {
         // Check if user can access this application's position
-        if (!$this->canAccessPosition($application->hiring_position_id)) {
+        if (! $this->canAccessPosition($application->hiring_position_id)) {
             abort(403, 'Access denied. You do not have permission to reject applications for this position.');
         }
 
@@ -612,30 +980,30 @@ class HiringApplicationController extends Controller
             } catch (\Exception $e) {
                 Log::error('Failed to send rejection email', [
                     'error' => $e->getMessage(),
-                    'application_id' => $application->id
+                    'application_id' => $application->id,
                 ]);
             }
         }
 
-        return redirect('/admin/hiring-applications/' . $application->id)
+        return redirect('/admin/hiring-applications/'.$application->id)
             ->with('success', 'Application rejected.');
     }
 
     public function reconsider(Request $request, HiringApplication $application)
     {
         // Check if user can access this application's position
-        if (!$this->canAccessPosition($application->hiring_position_id)) {
+        if (! $this->canAccessPosition($application->hiring_position_id)) {
             abort(403, 'Access denied. You do not have permission to reconsider applications for this position.');
         }
 
         // Only allow full admins (not employees with limited access) to reconsider applications
-        if (!Auth::user()->isAdmin()) {
+        if (! Auth::user()->isAdmin()) {
             abort(403, 'Only full administrators can reconsider applications.');
         }
 
         // Only allow reconsideration if application is rejected
         if ($application->status !== 'rejected') {
-            return redirect('/admin/hiring-applications/' . $application->id)
+            return redirect('/admin/hiring-applications/'.$application->id)
                 ->with('error', 'Only rejected applications can be reconsidered.');
         }
 
@@ -652,7 +1020,7 @@ class HiringApplicationController extends Controller
         if ($application->school) {
             // Try to match by full_name first (includes location), then by name
             // PostgreSQL-compatible concatenation
-            $university = \App\Models\University::where(function($query) use ($application) {
+            $university = \App\Models\University::where(function ($query) use ($application) {
                 $query->whereRaw(
                     "name || CASE WHEN location IS NOT NULL AND location <> '' THEN ' (' || location || ')' ELSE '' END = ?",
                     [$application->school]
@@ -667,7 +1035,7 @@ class HiringApplicationController extends Controller
         // Check if user already exists with this email
         $user = \App\Models\User::where('email', $application->email)->first();
 
-        if (!$user) {
+        if (! $user) {
             // Create new user account with role 'applicant'
             $userData = [
                 'name' => $application->full_name,
@@ -755,19 +1123,19 @@ class HiringApplicationController extends Controller
             } catch (\Exception $e) {
                 Log::error('Failed to send reconsideration email', [
                     'error' => $e->getMessage(),
-                    'application_id' => $application->id
+                    'application_id' => $application->id,
                 ]);
             }
         }
 
-        return redirect('/admin/hiring-applications/' . $application->id)
+        return redirect('/admin/hiring-applications/'.$application->id)
             ->with('success', 'Application reconsidered and accepted. User account created and credentials sent via email.');
     }
 
     public function scheduleInterview(Request $request, HiringApplication $application)
     {
         // Check if user can access this application's position
-        if (!$this->canAccessPosition($application->hiring_position_id)) {
+        if (! $this->canAccessPosition($application->hiring_position_id)) {
             abort(403, 'Access denied. You do not have permission to schedule interviews for this position.');
         }
 
@@ -853,56 +1221,43 @@ class HiringApplicationController extends Controller
                         $meetingLink
                     ));
 
-                Log::info('Interview ' . ($isReschedule ? 'rescheduled' : 'scheduled') . ' email sent successfully', [
+                Log::info('Interview '.($isReschedule ? 'rescheduled' : 'scheduled').' email sent successfully', [
                     'application_id' => $application->id,
                     'email' => $application->email,
                     'interview_date' => $request->interview_date,
-                    'is_reschedule' => $isReschedule
+                    'is_reschedule' => $isReschedule,
                 ]);
             } catch (\Exception $e) {
-                Log::error('Failed to send interview ' . ($isReschedule ? 'reschedule' : 'schedule') . ' email', [
+                Log::error('Failed to send interview '.($isReschedule ? 'reschedule' : 'schedule').' email', [
                     'error' => $e->getMessage(),
                     'application_id' => $application->id,
-                    'email' => $application->email
+                    'email' => $application->email,
                 ]);
             }
         }
 
         $successMessage = $isReschedule ? 'Interview rescheduled. Email notification sent to applicant.' : 'Interview scheduled. Email notification sent to applicant.';
 
-        return redirect('/admin/hiring-applications/' . $application->id)
+        return redirect('/admin/hiring-applications/'.$application->id)
             ->with('success', $successMessage);
     }
 
     public function downloadResume(HiringApplication $application)
     {
         // Check if user can access this application's position
-        if (!$this->canAccessPosition($application->hiring_position_id)) {
+        if (! $this->canAccessPosition($application->hiring_position_id)) {
             abort(403, 'Access denied. You do not have permission to download resumes for this position.');
         }
 
-        if (!$application->resume_path) {
+        if (! $application->resume_path) {
             abort(404, 'Resume not found.');
         }
 
-        // Try digitalocean disk first
-        try {
-            if (Storage::disk('digitalocean')->exists($application->resume_path)) {
-                return Storage::disk('digitalocean')->download(
-                    $application->resume_path,
-                    $application->full_name . '_resume.' . pathinfo($application->resume_path, PATHINFO_EXTENSION)
-                );
-            }
-        } catch (\Throwable $e) {
-            // Fallback to public disk
-        }
+        $downloadName = $application->full_name.'_resume.'.pathinfo($application->resume_path, PATHINFO_EXTENSION);
 
-        // Fallback to public disk
-        if (Storage::disk('public')->exists($application->resume_path)) {
-            return Storage::disk('public')->download(
-                $application->resume_path,
-                $application->full_name . '_resume.' . pathinfo($application->resume_path, PATHINFO_EXTENSION)
-            );
+        $hit = $this->findResumeOnStorage($application);
+        if ($hit) {
+            return Storage::disk($hit['disk'])->download($hit['path'], $downloadName);
         }
 
         abort(404, 'Resume not found.');
@@ -911,61 +1266,48 @@ class HiringApplicationController extends Controller
     public function viewResume(HiringApplication $application)
     {
         // Check if user can access this application's position
-        if (!$this->canAccessPosition($application->hiring_position_id)) {
+        if (! $this->canAccessPosition($application->hiring_position_id)) {
             abort(403, 'Access denied. You do not have permission to view resumes for this position.');
         }
 
-        if (!$application->resume_path) {
+        if (! $application->resume_path) {
             abort(404, 'Resume not found.');
         }
 
-        // Try digitalocean disk first
-        try {
-            if (Storage::disk('digitalocean')->exists($application->resume_path)) {
-                $url = Storage::disk('digitalocean')->temporaryUrl(
-                    $application->resume_path,
-                    now()->addMinutes(30),
-                    ['ResponseContentDisposition' => 'inline']
-                );
-                return redirect($url);
-            }
-        } catch (\Throwable $e) {
-            // Fallback to public disk
+        $hit = $this->findResumeOnStorage($application);
+        if (! $hit) {
+            abort(404, 'Resume not found.');
         }
 
-        // Fallback to public disk
-        if (Storage::disk('public')->exists($application->resume_path)) {
-            return Storage::disk('public')->response(
-                $application->resume_path,
-                null,
-                ['Content-Disposition' => 'inline']
-            );
-        }
-
-        abort(404, 'Resume not found.');
+        // Same-origin stream with explicit Content-Type so PDFs/images render inside an admin iframe
+        return Storage::disk($hit['disk'])->response(
+            $hit['path'],
+            basename($hit['path']),
+            $this->resumeInlineResponseHeaders($hit['path'])
+        );
     }
 
     public function sendFollowUpEmail(Request $request, HiringApplication $application)
     {
         // Check if user can access this application's position
-        if (!$this->canAccessPosition($application->hiring_position_id)) {
+        if (! $this->canAccessPosition($application->hiring_position_id)) {
             abort(403, 'Access denied. You do not have permission to send follow-up emails for this position.');
         }
 
         // Only allow sending follow-up for scheduled interviews
         if ($application->status !== 'interview_scheduled') {
-            return redirect('/admin/hiring-applications/' . $application->id)
+            return redirect('/admin/hiring-applications/'.$application->id)
                 ->withErrors(['error' => 'Follow-up email can only be sent for scheduled interviews.']);
         }
 
-        if (!$application->interview_date) {
-            return redirect('/admin/hiring-applications/' . $application->id)
+        if (! $application->interview_date) {
+            return redirect('/admin/hiring-applications/'.$application->id)
                 ->withErrors(['error' => 'Interview date must be set before sending follow-up email.']);
         }
 
         // Only allow sending follow-up for past interviews (beyond today's date)
         if ($application->interview_date->gte(now())) {
-            return redirect('/admin/hiring-applications/' . $application->id)
+            return redirect('/admin/hiring-applications/'.$application->id)
                 ->withErrors(['error' => 'Follow-up email can only be sent for past interviews.']);
         }
 
@@ -997,11 +1339,12 @@ class HiringApplicationController extends Controller
                 ]
             );
 
-            return redirect('/admin/hiring-applications/' . $application->id)
+            return redirect('/admin/hiring-applications/'.$application->id)
                 ->with('success', 'Follow-up email sent successfully.');
         } catch (\Exception $e) {
-            Log::error('Failed to send follow-up email: ' . $e->getMessage());
-            return redirect('/admin/hiring-applications/' . $application->id)
+            Log::error('Failed to send follow-up email: '.$e->getMessage());
+
+            return redirect('/admin/hiring-applications/'.$application->id)
                 ->withErrors(['error' => 'Failed to send follow-up email. Please try again.']);
         }
     }
@@ -1009,13 +1352,13 @@ class HiringApplicationController extends Controller
     public function markInterviewDone(Request $request, HiringApplication $application)
     {
         // Check if user can access this application's position
-        if (!$this->canAccessPosition($application->hiring_position_id)) {
+        if (! $this->canAccessPosition($application->hiring_position_id)) {
             abort(403, 'Access denied. You do not have permission to mark interviews as done for this position.');
         }
 
         // Only allow marking interview as done if interview was scheduled
         if ($application->status !== 'interview_scheduled') {
-            return redirect('/admin/hiring-applications/' . $application->id)
+            return redirect('/admin/hiring-applications/'.$application->id)
                 ->withErrors(['error' => 'Can only mark interview as done if interview is scheduled.']);
         }
 
@@ -1054,46 +1397,46 @@ class HiringApplicationController extends Controller
             ]
         );
 
-        return redirect('/admin/hiring-applications/' . $application->id)
+        return redirect('/admin/hiring-applications/'.$application->id)
             ->with('success', 'Interview marked as done.');
     }
 
     public function markAsHired(Request $request, HiringApplication $application)
     {
         // Check if user can access this application's position
-        if (!$this->canAccessPosition($application->hiring_position_id)) {
+        if (! $this->canAccessPosition($application->hiring_position_id)) {
             abort(403, 'Access denied. You do not have permission to mark applicants as hired for this position.');
         }
 
         // Only super admins can mark applicants as hired
-        if (!Auth::user()->isSuperAdmin()) {
+        if (! Auth::user()->isSuperAdmin()) {
             abort(403, 'Access denied. Only super administrators can mark applicants as hired.');
         }
 
         // Check if this is an internship position - if so, redirect to accept intern
-        $isInternship = $application->hiringPosition && 
+        $isInternship = $application->hiringPosition &&
                         strcasecmp($application->hiringPosition->employment_type ?? '', 'Internship') === 0;
-        
+
         if ($isInternship) {
-            return redirect('/admin/hiring-applications/' . $application->id)
+            return redirect('/admin/hiring-applications/'.$application->id)
                 ->withErrors(['error' => 'Please use "Accept Intern" button for internship positions.']);
         }
 
         // Only allow marking as hired if interview is done, interview was scheduled, or application was accepted
         if ($application->status !== 'done_interview' && $application->status !== 'interview_scheduled' && $application->status !== 'accepted') {
-            return redirect('/admin/hiring-applications/' . $application->id)
+            return redirect('/admin/hiring-applications/'.$application->id)
                 ->withErrors(['error' => 'Can only mark as hired after interview is done, interview is scheduled, or application is accepted.']);
         }
 
         // Ensure user account exists
-        if (!$application->user_id) {
-            return redirect('/admin/hiring-applications/' . $application->id)
+        if (! $application->user_id) {
+            return redirect('/admin/hiring-applications/'.$application->id)
                 ->withErrors(['error' => 'User account must be created first. Please accept the application first.']);
         }
 
         $user = $application->user;
-        if (!$user) {
-            return redirect('/admin/hiring-applications/' . $application->id)
+        if (! $user) {
+            return redirect('/admin/hiring-applications/'.$application->id)
                 ->withErrors(['error' => 'User account not found.']);
         }
 
@@ -1164,51 +1507,51 @@ class HiringApplicationController extends Controller
             } catch (\Exception $e) {
                 Log::error('Failed to send hired email', [
                     'error' => $e->getMessage(),
-                    'application_id' => $application->id
+                    'application_id' => $application->id,
                 ]);
             }
         }
 
-        return redirect('/admin/hiring-applications/' . $application->id)
+        return redirect('/admin/hiring-applications/'.$application->id)
             ->with('success', 'Application marked as hired. User account is now active and can login.');
     }
 
     public function acceptIntern(Request $request, HiringApplication $application)
     {
         // Check if user can access this application's position
-        if (!$this->canAccessPosition($application->hiring_position_id)) {
+        if (! $this->canAccessPosition($application->hiring_position_id)) {
             abort(403, 'Access denied. You do not have permission to accept interns for this position.');
         }
 
         // Only super admins can accept interns
-        if (!Auth::user()->isSuperAdmin()) {
+        if (! Auth::user()->isSuperAdmin()) {
             abort(403, 'Access denied. Only super administrators can accept interns.');
         }
 
         // Check if this is an internship position
-        $isInternship = $application->hiringPosition && 
+        $isInternship = $application->hiringPosition &&
                         strcasecmp($application->hiringPosition->employment_type ?? '', 'Internship') === 0;
-        
-        if (!$isInternship) {
-            return redirect('/admin/hiring-applications/' . $application->id)
+
+        if (! $isInternship) {
+            return redirect('/admin/hiring-applications/'.$application->id)
                 ->withErrors(['error' => 'This action is only available for internship positions.']);
         }
 
         // Only allow accepting intern if interview is done, interview was scheduled, or application was accepted
         if ($application->status !== 'done_interview' && $application->status !== 'interview_scheduled' && $application->status !== 'accepted') {
-            return redirect('/admin/hiring-applications/' . $application->id)
+            return redirect('/admin/hiring-applications/'.$application->id)
                 ->withErrors(['error' => 'Can only accept intern after interview is done, interview is scheduled, or application is accepted.']);
         }
 
         // Ensure user account exists
-        if (!$application->user_id) {
-            return redirect('/admin/hiring-applications/' . $application->id)
+        if (! $application->user_id) {
+            return redirect('/admin/hiring-applications/'.$application->id)
                 ->withErrors(['error' => 'User account must be created first. Please accept the application first.']);
         }
 
         $user = $application->user;
-        if (!$user) {
-            return redirect('/admin/hiring-applications/' . $application->id)
+        if (! $user) {
+            return redirect('/admin/hiring-applications/'.$application->id)
                 ->withErrors(['error' => 'User account not found.']);
         }
 
@@ -1224,7 +1567,7 @@ class HiringApplicationController extends Controller
             $projectedUsedSlots = $currentUsedSlots + ($willConsumeNewSlot ? 1 : 0);
 
             if ($projectedUsedSlots > $ojtTotalSlots) {
-                return redirect('/admin/hiring-applications/' . $application->id)
+                return redirect('/admin/hiring-applications/'.$application->id)
                     ->withErrors([
                         'error' => "Cannot accept intern: OJT capacity would be exceeded ({$projectedUsedSlots}/{$ojtTotalSlots}). Increase total OJT slots in Admin Settings first.",
                     ]);
@@ -1302,7 +1645,7 @@ class HiringApplicationController extends Controller
             } catch (\Exception $e) {
                 Log::error('Failed to send intern acceptance email', [
                     'error' => $e->getMessage(),
-                    'application_id' => $application->id
+                    'application_id' => $application->id,
                 ]);
             }
         }
@@ -1316,32 +1659,32 @@ class HiringApplicationController extends Controller
             }
         }
 
-        return redirect('/admin/hiring-applications/' . $application->id)
+        return redirect('/admin/hiring-applications/'.$application->id)
             ->with('success', $successMessage);
     }
 
     public function cancelHired(Request $request, HiringApplication $application)
     {
         // Check if user can access this application's position
-        if (!$this->canAccessPosition($application->hiring_position_id)) {
+        if (! $this->canAccessPosition($application->hiring_position_id)) {
             abort(403, 'Access denied. You do not have permission to cancel hired status for this position.');
         }
 
         // Only allow canceling if application is hired
         if ($application->status !== 'hired') {
-            return redirect('/admin/hiring-applications/' . $application->id)
+            return redirect('/admin/hiring-applications/'.$application->id)
                 ->withErrors(['error' => 'Can only cancel hired applications.']);
         }
 
         // Ensure user account exists
-        if (!$application->user_id) {
-            return redirect('/admin/hiring-applications/' . $application->id)
+        if (! $application->user_id) {
+            return redirect('/admin/hiring-applications/'.$application->id)
                 ->withErrors(['error' => 'User account not found.']);
         }
 
         $user = $application->user;
-        if (!$user) {
-            return redirect('/admin/hiring-applications/' . $application->id)
+        if (! $user) {
+            return redirect('/admin/hiring-applications/'.$application->id)
                 ->withErrors(['error' => 'User account not found.']);
         }
 
@@ -1397,19 +1740,19 @@ class HiringApplicationController extends Controller
             } catch (\Exception $e) {
                 Log::error('Failed to send hired cancellation email', [
                     'error' => $e->getMessage(),
-                    'application_id' => $application->id
+                    'application_id' => $application->id,
                 ]);
             }
         }
 
-        return redirect('/admin/hiring-applications/' . $application->id)
+        return redirect('/admin/hiring-applications/'.$application->id)
             ->with('success', 'Hired status cancelled. User account has been deactivated.');
     }
 
     public function updateAdminNotes(Request $request, HiringApplication $application)
     {
         // Check if user can access this application's position
-        if (!$this->canAccessPosition($application->hiring_position_id)) {
+        if (! $this->canAccessPosition($application->hiring_position_id)) {
             abort(403, 'Access denied. You do not have permission to update admin notes for this position.');
         }
 
@@ -1421,19 +1764,19 @@ class HiringApplicationController extends Controller
             'admin_notes' => $request->admin_notes,
         ]);
 
-        return redirect('/admin/hiring-applications/' . $application->id)
+        return redirect('/admin/hiring-applications/'.$application->id)
             ->with('success', 'Admin notes updated successfully.');
     }
 
     public function destroy(HiringApplication $application)
     {
         // Check if user can access this application's position
-        if (!$this->canAccessPosition($application->hiring_position_id)) {
+        if (! $this->canAccessPosition($application->hiring_position_id)) {
             abort(403, 'Access denied. You do not have permission to delete applications for this position.');
         }
 
         // Only allow full admins (not employees with limited access) to delete applications
-        if (!Auth::user()->isAdmin()) {
+        if (! Auth::user()->isAdmin()) {
             abort(403, 'Only full administrators can delete applications.');
         }
 

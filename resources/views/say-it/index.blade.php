@@ -149,60 +149,121 @@
     }
 </script>
 
-<div class="max-w-2xl mx-auto lg:max-w-none">
+<div class="max-w-2xl mx-auto lg:max-w-none w-full min-w-0">
     {{-- Composer: Create post --}}
     <section id="create" class="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden mb-6 scroll-mt-24">
-        <form id="say-it-form" action="{{ url('/Say-it') }}" method="POST" enctype="multipart/form-data" class="p-4 sm:p-5">
+        <form id="say-it-form" action="{{ url('/Say-it') }}" method="POST" enctype="multipart/form-data" class="p-3 sm:p-5 max-w-full min-w-0">
             @csrf
-            <div class="flex gap-3">
-                <div class="w-10 h-10 rounded-full flex-shrink-0 flex items-center justify-center {{ \App\Helpers\SayItHelper::avatarColorClassesForCodename('anon') }}" aria-hidden="true">
+            <div class="flex gap-2 sm:gap-3 min-w-0">
+                <div class="w-9 h-9 sm:w-10 sm:h-10 rounded-full flex-shrink-0 flex items-center justify-center {{ \App\Helpers\SayItHelper::avatarColorClassesForCodename('anon') }}" aria-hidden="true">
                     <i class="fas fa-paw text-sm"></i>
                 </div>
                 <div class="flex-1 min-w-0">
-                    <textarea name="content" id="content" rows="3" class="w-full rounded-xl border border-gray-200 bg-gray-50/50 px-4 py-3 text-[15px] text-gray-900 placeholder-gray-400 focus:bg-white focus:border-violet-500 focus:ring-2 focus:ring-violet-500/20 outline-none transition resize-none min-h-[88px] touch-manipulation" placeholder="What's on your mind? Share anonymously...">{{ old('content') }}</textarea>
-                    <div id="image-preview-wrap" class="mt-3 rounded-xl overflow-hidden bg-gray-50 border border-gray-200 hidden">
-                        <div class="relative inline-block">
-                            <img id="image-preview" src="" alt="Preview" class="max-h-64 rounded-lg object-contain">
+                    @php
+                        $sayItCardBgOptions = \App\Helpers\SayItHelper::cardBackgroundFormOptions();
+                        $sayItDefaultCardBg = $sayItCardBgOptions[0]['key'] ?? 'white';
+                        $sayItComposerMeshInline = old('card_background_mode', 'pick') === 'random' ? \App\Helpers\SayItHelper::randomMeshBackgroundStyle() : '';
+                    @endphp
+                    <textarea
+                        name="content"
+                        id="content"
+                        rows="3"
+                        class="w-full max-w-full rounded-xl border border-gray-200 px-3 sm:px-4 py-2.5 sm:py-3 text-base sm:text-[15px] text-gray-900 placeholder-gray-600/85 placeholder:text-[10px] placeholder:leading-snug sm:placeholder:text-xs sm:placeholder:leading-normal focus:border-violet-500 focus:ring-2 focus:ring-violet-500/20 outline-none transition-[background,background-color,background-image] duration-200 resize-none min-h-[76px] sm:min-h-[88px] touch-manipulation bg-white"
+                        @if($sayItComposerMeshInline !== '') style="{!! $sayItComposerMeshInline !!}" @endif
+                        placeholder="What's on your mind? Anonymous — with a photo, this text is your AI image prompt."
+                    >{{ old('content') }}</textarea>
+                    <div id="image-preview-wrap" class="mt-3 rounded-xl overflow-hidden bg-gray-50 border border-gray-200 hidden max-w-full">
+                        <div class="relative inline-block max-w-full">
+                            <img id="image-preview" src="" alt="Preview" class="max-h-64 max-w-full rounded-lg object-contain">
                             <button type="button" id="image-preview-remove" class="absolute top-2 right-2 w-8 h-8 rounded-full bg-black/50 hover:bg-black/70 text-white flex items-center justify-center transition" aria-label="Remove photo">
                                 <i class="fas fa-times text-sm"></i>
                             </button>
                         </div>
                     </div>
-                    {{-- One line: Photo (first), Topic, Text size --}}
-                    <div class="mt-3 flex flex-wrap items-center gap-x-3 gap-y-2">
-                        <label class="flex items-center gap-1.5 text-gray-500 hover:text-violet-600 cursor-pointer text-xs font-medium transition-colors shrink-0 rounded-lg px-2 py-1.5 -ml-2">
-                            <i class="fas fa-image text-sm"></i>
-                            <span>Photo</span>
-                            <input type="file" name="image" id="image" accept="image/jpeg,image/png,image/gif,image/webp,.jpg,.jpeg,.png,.gif,.webp" class="sr-only">
-                        </label>
-                        <div class="flex items-center gap-x-2 shrink-0">
-                            <label for="topic_id" class="text-xs font-medium text-gray-500 shrink-0">Topic <span class="text-red-500">*</span></label>
-                            <select name="topic_id" id="topic_id" class="rounded-lg border border-gray-200 bg-white px-2.5 py-1.5 text-xs text-gray-800 focus:border-violet-500 focus:ring-1 focus:ring-violet-500/30 outline-none shrink-0 max-w-[130px]">
-                                <option value="">Select...</option>
-                                @foreach($topics ?? [] as $t)
-                                    <option value="{{ $t->id }}" {{ old('topic_id') == $t->id ? 'selected' : '' }}>{{ Str::limit($t->name, 16) }} ({{ $t->posts_count }})</option>
-                                @endforeach
-                            </select>
-                            <span class="text-xs text-gray-300 shrink-0">or</span>
-                            <input type="text" name="topic_name" id="topic_name" value="{{ old('topic_name') }}" placeholder="New topic" maxlength="100" class="rounded-lg border border-gray-200 bg-white px-2.5 py-1.5 text-xs text-gray-800 placeholder-gray-400 focus:border-violet-500 focus:ring-1 focus:ring-violet-500/30 outline-none w-24 sm:w-28 shrink-0">
-                        </div>
-                        <div class="flex items-center gap-2 shrink-0">
-                            <span class="text-xs font-medium text-gray-500 shrink-0">Text size</span>
-                            <div class="inline-flex rounded-lg border border-gray-200 bg-gray-100/80 p-0.5" role="group" aria-label="Text size">
-                                <input type="radio" name="text_size" value="normal" id="text_size_normal" {{ old('text_size', 'normal') === 'normal' ? 'checked' : '' }} class="sr-only">
-                                <input type="radio" name="text_size" value="medium" id="text_size_medium" {{ old('text_size') === 'medium' ? 'checked' : '' }} class="sr-only">
-                                <input type="radio" name="text_size" value="large" id="text_size_large" {{ old('text_size') === 'large' ? 'checked' : '' }} class="sr-only">
-                                <label for="text_size_normal" class="text-size-segmented-label px-3 py-1.5 text-xs font-medium text-gray-600 rounded-md cursor-pointer transition-colors hover:text-gray-900 select-none">Normal</label>
-                                <label for="text_size_medium" class="text-size-segmented-label px-3 py-1.5 text-xs font-medium text-gray-600 rounded-md cursor-pointer transition-colors hover:text-gray-900 select-none">Medium</label>
-                                <label for="text_size_large" class="text-size-segmented-label px-3 py-1.5 text-xs font-medium text-gray-600 rounded-md cursor-pointer transition-colors hover:text-gray-900 select-none">Large</label>
+                    <textarea name="ai_generated_image_dataurl" id="ai_generated_image_dataurl" class="sr-only" rows="1" autocomplete="off">{{ old('ai_generated_image_dataurl') }}</textarea>
+                    @error('ai_generated_image_dataurl')<p class="text-xs text-red-600 mt-1">{{ $message }}</p>@enderror
+                    <script type="application/json" id="say-it-bg-class-map">{!! json_encode(collect($sayItCardBgOptions)->map(fn ($o) => ['key' => $o['key'], 'classes' => $o['classes']])->values()) !!}</script>
+                    {{-- Composer options: Post background left; Topic + Text size right on lg --}}
+                    <div class="mt-3 w-full min-w-0 space-y-3">
+                        <div class="flex flex-col gap-4 min-w-0 lg:flex-row lg:items-start lg:justify-between lg:gap-8">
+                            <div class="min-w-0 space-y-2 lg:flex-none lg:max-w-fit lg:self-start">
+                                <p class="text-xs font-medium text-gray-500">Post background</p>
+                                <div class="flex flex-wrap gap-x-4 gap-y-2 items-center w-full">
+                                    <label class="inline-flex items-center gap-1.5 text-xs text-gray-700 cursor-pointer select-none touch-manipulation">
+                                        <input type="radio" name="card_background_mode" value="random" id="card_bg_mode_random" class="rounded-full border-gray-300 text-violet-600 focus:ring-violet-500 shrink-0" {{ old('card_background_mode', 'pick') === 'random' ? 'checked' : '' }}>
+                                        <span>Gradient</span>
+                                    </label>
+                                    <label class="inline-flex items-center gap-1.5 text-xs text-gray-700 cursor-pointer select-none touch-manipulation">
+                                        <input type="radio" name="card_background_mode" value="pick" id="card_bg_mode_pick" class="rounded-full border-gray-300 text-violet-600 focus:ring-violet-500 shrink-0" {{ old('card_background_mode', 'pick') === 'pick' ? 'checked' : '' }}>
+                                        <span>Pick a color</span>
+                                    </label>
+                                </div>
+                                <input type="hidden" name="card_background" id="card_background" value="{{ old('card_background', $sayItDefaultCardBg) }}">
+                                <div id="card-bg-swatches" class="grid w-fit max-w-full grid-cols-5 sm:grid-cols-6 lg:grid-cols-11 gap-2 justify-items-start content-start {{ old('card_background_mode', 'pick') === 'pick' ? '' : 'hidden' }}" role="group" aria-label="Background colors">
+                                    @foreach($sayItCardBgOptions as $opt)
+                                        <button type="button" class="card-bg-swatch h-9 w-9 shrink-0 rounded-lg border-2 border-transparent ring-offset-0 transition hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-violet-500 {{ $opt['classes'] }} {{ ($opt['key'] ?? '') === 'white' ? 'border-gray-200' : '' }}" data-card-bg-key="{{ $opt['key'] }}" data-card-bg-classes="{{ $opt['classes'] }}" title="{{ $opt['label'] }}" aria-label="{{ $opt['label'] }}"></button>
+                                    @endforeach
+                                </div>
+                                <div class="pt-1">
+                                    <label for="image" class="inline-flex items-center gap-2 cursor-pointer touch-manipulation rounded-lg border border-violet-200 bg-violet-50 px-3 py-2 text-xs font-semibold text-violet-800 shadow-sm transition hover:bg-violet-100 hover:border-violet-300 focus-within:ring-2 focus-within:ring-violet-400 focus-within:ring-offset-1">
+                                        <i class="fas fa-image text-sm shrink-0 text-violet-600" aria-hidden="true"></i>
+                                        <span>Photo</span>
+                                        <input type="file" name="image" id="image" accept="image/jpeg,image/png,image/gif,image/webp,.jpg,.jpeg,.png,.gif,.webp" class="sr-only">
+                                    </label>
+                                </div>
+                                @error('card_background_mode')<p class="w-full text-xs text-red-600">{{ $message }}</p>@enderror
+                                @error('card_background')<p class="w-full text-xs text-red-600">{{ $message }}</p>@enderror
+                            </div>
+
+                            <div class="flex flex-col gap-3 min-w-0 w-full lg:w-auto lg:max-w-sm lg:flex-none lg:items-start lg:pt-0.5">
+                                <div class="flex flex-col gap-1.5 min-w-0 w-full lg:max-w-full">
+                                    <label for="topic_id" class="text-xs font-medium text-gray-500">Topic <span class="text-red-500">*</span></label>
+                                    <div class="flex flex-wrap items-center gap-2 min-w-0 w-full">
+                                        <select name="topic_id" id="topic_id" class="rounded-lg border border-gray-200 bg-white px-2.5 py-2 sm:py-1.5 text-xs text-gray-800 focus:border-violet-500 focus:ring-1 focus:ring-violet-500/30 outline-none min-w-0 w-full sm:w-[11rem] sm:shrink-0 max-w-full touch-manipulation">
+                                            <option value="">Select...</option>
+                                            @foreach($topics ?? [] as $t)
+                                                <option value="{{ $t->id }}" {{ old('topic_id') == $t->id ? 'selected' : '' }}>{{ Str::limit($t->name, 16) }} ({{ $t->posts_count }})</option>
+                                            @endforeach
+                                        </select>
+                                        <span class="text-xs text-gray-400 shrink-0">or</span>
+                                        <input type="text" name="topic_name" id="topic_name" value="{{ old('topic_name') }}" placeholder="New topic" maxlength="100" class="rounded-lg border border-gray-200 bg-white px-2.5 py-2 sm:py-1.5 text-xs text-gray-800 placeholder-gray-400 focus:border-violet-500 focus:ring-1 focus:ring-violet-500/30 outline-none min-w-0 w-full sm:w-36 sm:shrink-0 max-w-full touch-manipulation">
+                                    </div>
+                                </div>
+                                <div class="flex flex-col gap-1.5 min-w-0 w-full lg:max-w-full">
+                                    <span class="text-xs font-medium text-gray-500">Text size</span>
+                                    <div class="inline-flex rounded-lg border border-gray-200 bg-gray-100/80 p-0.5 gap-0.5 w-fit max-w-full self-start" role="group" aria-label="Text size">
+                                        <input type="radio" name="text_size" value="normal" id="text_size_normal" {{ old('text_size', 'normal') === 'normal' ? 'checked' : '' }} class="sr-only">
+                                        <input type="radio" name="text_size" value="medium" id="text_size_medium" {{ old('text_size') === 'medium' ? 'checked' : '' }} class="sr-only">
+                                        <input type="radio" name="text_size" value="large" id="text_size_large" {{ old('text_size') === 'large' ? 'checked' : '' }} class="sr-only">
+                                        <label for="text_size_normal" class="text-size-segmented-label px-3 py-2 sm:py-1.5 text-xs font-medium text-gray-600 rounded-md cursor-pointer transition-colors hover:text-gray-900 select-none touch-manipulation min-h-10 sm:min-h-0 flex items-center justify-center shrink-0">Normal</label>
+                                        <label for="text_size_medium" class="text-size-segmented-label px-3 py-2 sm:py-1.5 text-xs font-medium text-gray-600 rounded-md cursor-pointer transition-colors hover:text-gray-900 select-none touch-manipulation min-h-10 sm:min-h-0 flex items-center justify-center shrink-0">Medium</label>
+                                        <label for="text_size_large" class="text-size-segmented-label px-3 py-2 sm:py-1.5 text-xs font-medium text-gray-600 rounded-md cursor-pointer transition-colors hover:text-gray-900 select-none touch-manipulation min-h-10 sm:min-h-0 flex items-center justify-center shrink-0">Large</label>
+                                    </div>
+                                </div>
                             </div>
                         </div>
-                        @error('topic')<p class="w-full text-xs text-red-600 mt-0.5">{{ $message }}</p>@enderror
-                        @error('topic_id')<p class="w-full text-xs text-red-600 mt-0.5">{{ $message }}</p>@enderror
-                        @error('topic_name')<p class="w-full text-xs text-red-600 mt-0.5">{{ $message }}</p>@enderror
-                        <button type="submit" class="ml-auto px-5 py-2.5 bg-violet-600 text-white rounded-full font-semibold text-sm hover:bg-violet-700 active:scale-[0.98] transition shadow-sm shrink-0 touch-manipulation">
-                            Post
-                        </button>
+
+                        @error('topic')<p class="w-full text-xs text-red-600">{{ $message }}</p>@enderror
+                        @error('topic_id')<p class="w-full text-xs text-red-600">{{ $message }}</p>@enderror
+                        @error('topic_name')<p class="w-full text-xs text-red-600">{{ $message }}</p>@enderror
+                        <p id="say-it-ai-gen-error" class="w-full text-xs text-red-600 hidden sm:text-left"></p>
+                        @unless(\App\Services\SayItImageGeneration\SayItImageGenerator::isConfigured())
+                        <p class="w-full text-[11px] text-amber-900 bg-amber-50 border border-amber-200 rounded-lg px-2.5 py-2 leading-snug break-words">AI images: enable in <strong>Admin → Settings → Say-it</strong> or <code class="text-[10px] bg-amber-100 px-1 rounded break-all">.env</code>.</p>
+                        @endunless
+                        <div class="flex flex-col gap-2 w-full pt-1 sm:flex-row sm:flex-wrap sm:items-center sm:justify-end">
+                            @if(!empty($sayItAiImageConfigured))
+                            <div id="say-it-generate-wrap" class="hidden flex-col gap-2 sm:flex-row sm:items-center" data-ai-configured="1">
+                                <button type="button" id="say-it-ai-generate-btn" class="inline-flex items-center justify-center gap-1.5 w-full sm:w-auto min-h-11 px-3 py-2.5 rounded-full border border-violet-300 bg-violet-50 text-violet-800 text-xs font-semibold hover:bg-violet-100 disabled:opacity-50 disabled:cursor-not-allowed touch-manipulation">
+                                    <i class="fas fa-wand-magic-sparkles text-sm"></i>
+                                    <span>Generate image</span>
+                                </button>
+                                <span id="say-it-ai-gen-loading" class="text-xs text-violet-600 hidden text-center sm:text-left whitespace-nowrap"><i class="fas fa-spinner fa-spin mr-1"></i> Generating…</span>
+                            </div>
+                            @endif
+                            <button type="submit" class="w-full sm:w-auto min-h-11 px-5 py-2.5 bg-violet-600 text-white rounded-full font-semibold text-sm hover:bg-violet-700 active:scale-[0.98] transition shadow-sm touch-manipulation">
+                                Post
+                            </button>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -330,10 +391,11 @@
     var content = document.getElementById('content');
     if (form && content) {
         content.addEventListener('keydown', function(e) {
-            if (e.key === 'Enter' && !e.shiftKey) {
-                e.preventDefault();
-                form.submit();
-            }
+            if (e.key !== 'Enter' || e.shiftKey) return;
+            // On small screens, Enter inserts a new line; use Post button to submit.
+            if (typeof window.matchMedia === 'function' && window.matchMedia('(max-width: 639px)').matches) return;
+            e.preventDefault();
+            form.submit();
         });
     }
 })();
@@ -360,23 +422,130 @@
     updateTextSizeSegment();
 })();
 (function() {
+    var modeRandom = document.getElementById('card_bg_mode_random');
+    var modePick = document.getElementById('card_bg_mode_pick');
+    var swatchesWrap = document.getElementById('card-bg-swatches');
+    var hiddenBg = document.getElementById('card_background');
+    var contentTa = document.getElementById('content');
+    var mapEl = document.getElementById('say-it-bg-class-map');
+    if (!modeRandom || !modePick || !swatchesWrap || !hiddenBg || !contentTa) return;
+
+    var meshPreviewUrl = @json(url('/Say-it/composer-mesh-preview'));
+    var bgMap = [];
+    if (mapEl) {
+        try { bgMap = JSON.parse(mapEl.textContent || '[]'); } catch (e) { bgMap = []; }
+    }
+
+    var swatches = swatchesWrap.querySelectorAll('.card-bg-swatch');
+    var bgClassTokens = [];
+    bgMap.forEach(function(o) {
+        (o.classes || '').split(/\s+/).forEach(function(c) {
+            if (c && bgClassTokens.indexOf(c) === -1) bgClassTokens.push(c);
+        });
+    });
+
+    function stripPickBgClasses() {
+        bgClassTokens.forEach(function(c) { contentTa.classList.remove(c); });
+    }
+
+    function applyPickToTextarea(key) {
+        stripPickBgClasses();
+        contentTa.style.cssText = '';
+        var entry = null;
+        for (var i = 0; i < bgMap.length; i++) {
+            if (bgMap[i].key === key) { entry = bgMap[i]; break; }
+        }
+        var cls = entry ? entry.classes : '';
+        if (cls) {
+            cls.split(/\s+/).forEach(function(c) { if (c) contentTa.classList.add(c); });
+        } else {
+            contentTa.classList.add('bg-white');
+        }
+    }
+
+    function fetchMeshForTextarea() {
+        stripPickBgClasses();
+        fetch(meshPreviewUrl, { headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' } })
+            .then(function(r) { return r.json(); })
+            .then(function(j) {
+                if (j && j.style) contentTa.style.cssText = j.style;
+            })
+            .catch(function() {
+                contentTa.style.cssText = 'background-color:#fafafa;background-image:linear-gradient(135deg,#f5f3ff 0%,#ecfeff 50%,#fdf4ff 100%);background-repeat:no-repeat;background-size:100% 100%;';
+            });
+    }
+
+    /** @param {boolean} userToggledMode - true when radio changed (fetch new mesh for Gradient) */
+    function syncComposerTextareaBackground(userToggledMode) {
+        if (modePick.checked) {
+            applyPickToTextarea(hiddenBg.value);
+            return;
+        }
+        stripPickBgClasses();
+        var existing = (contentTa.getAttribute('style') || '').trim();
+        if (userToggledMode || !existing) {
+            fetchMeshForTextarea();
+        }
+    }
+
+    function syncSwatchSelection() {
+        var v = hiddenBg.value;
+        swatches.forEach(function(btn) {
+            var on = btn.getAttribute('data-card-bg-key') === v;
+            btn.classList.toggle('border-violet-600', on);
+            btn.classList.toggle('ring-2', on);
+            btn.classList.toggle('ring-violet-400', on);
+        });
+    }
+
+    function syncModeUI() {
+        var pick = modePick.checked;
+        swatchesWrap.classList.toggle('hidden', !pick);
+        if (pick) syncSwatchSelection();
+    }
+
+    modeRandom.addEventListener('change', function() {
+        syncModeUI();
+        syncComposerTextareaBackground(true);
+    });
+    modePick.addEventListener('change', function() {
+        syncModeUI();
+        syncComposerTextareaBackground(true);
+    });
+
+    swatches.forEach(function(btn) {
+        btn.addEventListener('click', function() {
+            hiddenBg.value = this.getAttribute('data-card-bg-key') || '';
+            syncSwatchSelection();
+            if (modePick.checked) applyPickToTextarea(hiddenBg.value);
+        });
+    });
+
+    syncModeUI();
+    syncComposerTextareaBackground(false);
+})();
+(function() {
     var imageInput = document.getElementById('image');
     var previewWrap = document.getElementById('image-preview-wrap');
     var previewImg = document.getElementById('image-preview');
     var removeBtn = document.getElementById('image-preview-remove');
+    var aiData = document.getElementById('ai_generated_image_dataurl');
     if (!imageInput || !previewWrap || !previewImg) return;
 
     imageInput.addEventListener('change', function() {
+        if (aiData) aiData.value = '';
         var file = this.files && this.files[0];
         if (!file || !file.type.match(/^image\/(jpeg|png|gif|webp)$/)) {
             previewWrap.classList.add('hidden');
             previewImg.removeAttribute('src');
+            if (typeof window.sayItUpdateGenerateVisibility === 'function') window.sayItUpdateGenerateVisibility();
             return;
         }
         var reader = new FileReader();
         reader.onload = function(e) {
             previewImg.src = e.target.result;
             previewWrap.classList.remove('hidden');
+            if (typeof window.sayItUpdateGenerateVisibility === 'function') window.sayItUpdateGenerateVisibility();
         };
         reader.readAsDataURL(file);
     });
@@ -386,7 +555,121 @@
             imageInput.value = '';
             previewImg.removeAttribute('src');
             previewWrap.classList.add('hidden');
+            if (aiData) aiData.value = '';
+            if (typeof window.sayItUpdateGenerateVisibility === 'function') window.sayItUpdateGenerateVisibility();
         });
+    }
+})();
+(function() {
+    function updateSayItGenerateVisibility() {
+        var wrap = document.getElementById('say-it-generate-wrap');
+        var ce = document.getElementById('content');
+        var imgIn = document.getElementById('image');
+        if (!wrap) return;
+        var configured = wrap.getAttribute('data-ai-configured') === '1';
+        var hasFile = imgIn && imgIn.files && imgIn.files.length > 0;
+        var len = ce ? (ce.value || '').trim().length : 0;
+        var show = configured && hasFile && len >= 3;
+        wrap.classList.toggle('hidden', !show);
+        wrap.classList.toggle('flex', show);
+    }
+    window.sayItUpdateGenerateVisibility = updateSayItGenerateVisibility;
+
+    var btn = document.getElementById('say-it-ai-generate-btn');
+    var contentEl = document.getElementById('content');
+    var errEl = document.getElementById('say-it-ai-gen-error');
+    var loadEl = document.getElementById('say-it-ai-gen-loading');
+    var aiData = document.getElementById('ai_generated_image_dataurl');
+    var imageInput = document.getElementById('image');
+    var previewWrap = document.getElementById('image-preview-wrap');
+    var previewImg = document.getElementById('image-preview');
+    if (!btn || !contentEl || !aiData || !previewWrap || !previewImg) return;
+
+    var removePreviewBtn = document.getElementById('image-preview-remove');
+
+    if (contentEl) {
+        contentEl.addEventListener('input', updateSayItGenerateVisibility);
+        contentEl.addEventListener('change', updateSayItGenerateVisibility);
+    }
+    if (imageInput) {
+        imageInput.addEventListener('change', function() {
+            updateSayItGenerateVisibility();
+        });
+    }
+    if (removePreviewBtn) {
+        removePreviewBtn.addEventListener('click', function() {
+            setTimeout(updateSayItGenerateVisibility, 0);
+        });
+    }
+
+    function showErr(msg) {
+        if (!errEl) return;
+        errEl.textContent = msg || '';
+        errEl.classList.toggle('hidden', !msg);
+    }
+
+    function buildImagePrompt() {
+        var post = (contentEl.value || '').trim();
+        if (post.length > 2000) {
+            post = post.slice(0, 2000);
+        }
+        return post;
+    }
+
+    btn.addEventListener('click', function() {
+        var wrap = document.getElementById('say-it-generate-wrap');
+        if (wrap && wrap.getAttribute('data-ai-configured') !== '1') {
+            showErr('AI image generation is not configured. Ask an admin: Admin → Settings → Say-it (Image generation).');
+            return;
+        }
+        var p = buildImagePrompt();
+        if (p.length < 3) {
+            showErr('Write at least 3 characters in your post above — that text becomes the image prompt.');
+            return;
+        }
+        if (!imageInput || !imageInput.files || imageInput.files.length === 0) {
+            showErr('Attach a photo first — it is used as the base for Generate image.');
+            return;
+        }
+        showErr('');
+        btn.disabled = true;
+        if (loadEl) loadEl.classList.remove('hidden');
+        fetch('{{ url("/Say-it/generate-image") }}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+                'Accept': 'application/json',
+            },
+            body: JSON.stringify({ prompt: p })
+        }).then(function(r) {
+            return r.json().catch(function() { return {}; }).then(function(j) {
+                return { ok: r.ok, body: j };
+            });
+        })
+        .then(function(res) {
+            if (!res.body || !res.body.ok) {
+                showErr((res.body && res.body.message) ? res.body.message : 'Could not generate image.');
+                return;
+            }
+            aiData.value = res.body.data_url || '';
+            previewImg.src = res.body.data_url;
+            previewWrap.classList.remove('hidden');
+            if (imageInput) imageInput.value = '';
+        }).catch(function() {
+            showErr('Network error while generating image.');
+        }).then(function() {
+            btn.disabled = false;
+            if (loadEl) loadEl.classList.add('hidden');
+            updateSayItGenerateVisibility();
+        });
+    });
+
+    updateSayItGenerateVisibility();
+
+    if (aiData && aiData.value && aiData.value.indexOf('data:image/') === 0) {
+        previewImg.src = aiData.value;
+        previewWrap.classList.remove('hidden');
     }
 })();
 

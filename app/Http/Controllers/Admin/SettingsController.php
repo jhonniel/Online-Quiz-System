@@ -7,13 +7,11 @@ use App\Models\Setting;
 use App\Models\User;
 use App\Services\MailConfigService;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Storage;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Cache;
-use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\View;
-use Illuminate\Support\Str;
 
 class SettingsController extends Controller
 {
@@ -287,7 +285,7 @@ class SettingsController extends Controller
             'sick_is_empty' => $sickSetting && ($sickSetting->value === null || trim($sickSetting->value) === '') ? 'yes' : 'no',
             'settings_array_keys' => array_keys($settings),
             'vacation_in_array' => isset($settings['default_vacation_balance']) ? 'YES' : 'NO',
-            'sick_in_array' => isset($settings['default_sick_leave_balance']) ? 'YES' : 'NO'
+            'sick_in_array' => isset($settings['default_sick_leave_balance']) ? 'YES' : 'NO',
         ]);
 
         // Get system health information
@@ -296,7 +294,7 @@ class SettingsController extends Controller
         // Pass settings to view - ensure it's passed correctly
         return view('admin.settings.index', [
             'settings' => $settings,
-            'health' => $health
+            'health' => $health,
         ]);
     }
 
@@ -384,7 +382,7 @@ class SettingsController extends Controller
         $health['server']['ram_used_percent'] = null;
 
         $ramStats = $this->getSystemRamUsage();
-        if (!empty($ramStats)) {
+        if (! empty($ramStats)) {
             $health['server']['ram_current_usage'] = $ramStats['used'];
             $health['server']['ram_total'] = $ramStats['total'];
             $health['server']['ram_used_percent'] = $ramStats['used_percent'];
@@ -439,7 +437,7 @@ class SettingsController extends Controller
             $bytes /= 1024;
         }
 
-        return round($bytes, $precision) . ' ' . $units[$i];
+        return round($bytes, $precision).' '.$units[$i];
     }
 
     /**
@@ -460,7 +458,7 @@ class SettingsController extends Controller
                         }
                     }
 
-                    if (!empty($mem['MemTotal']) && !empty($mem['MemAvailable'])) {
+                    if (! empty($mem['MemTotal']) && ! empty($mem['MemAvailable'])) {
                         $total = (float) $mem['MemTotal'];
                         $used = max($total - (float) $mem['MemAvailable'], 0.0);
                         $percent = $total > 0 ? round(($used / $total) * 100, 2) : null;
@@ -485,7 +483,7 @@ class SettingsController extends Controller
 
                         $freePages = 0;
                         foreach (['Pages free', 'Pages inactive', 'Pages speculative'] as $label) {
-                            if (preg_match('/' . preg_quote($label, '/') . ':\s+(\d+)\./', $vmStatRaw, $m)) {
+                            if (preg_match('/'.preg_quote($label, '/').':\s+(\d+)\./', $vmStatRaw, $m)) {
                                 $freePages += (int) $m[1];
                             }
                         }
@@ -584,6 +582,18 @@ class SettingsController extends Controller
             'mailgun_endpoint' => 'nullable|string|max:255',
             'qr_code_prefix' => 'nullable|string|max:20',
             'app_timezone' => 'nullable|string|max:50',
+            // Say-it image generation (Stable Diffusion Web UI / ComfyUI)
+            'sayit_image_driver' => 'nullable|string|in:disabled,sdwebui,comfyui',
+            'sayit_composer_ai_image_enabled' => 'nullable|string|in:enabled,disabled',
+            'sayit_sd_webui_base_url' => 'nullable|string|max:512',
+            'sayit_sd_webui_internal_base_url' => 'nullable|string|max:512',
+            'sayit_sd_webui_verify_ssl' => 'nullable|string|in:enabled,disabled',
+            'sayit_image_http_timeout' => 'nullable|integer|min:30|max:600',
+            'sayit_comfyui_base_url' => 'nullable|string|max:512',
+            'sayit_comfyui_internal_base_url' => 'nullable|string|max:512',
+            'sayit_comfyui_workflow_path' => 'nullable|string|max:1024',
+            'sayit_comfyui_prompt_placeholder' => 'nullable|string|max:120',
+            'sayit_comfyui_verify_ssl' => 'nullable|string|in:enabled,disabled',
         ]);
 
         // Update system name
@@ -598,9 +608,9 @@ class SettingsController extends Controller
             $qrCodePrefix = 'QR';
         }
         Setting::set('qr_code_prefix', $qrCodePrefix, 'text', 'QR code prefix for user IDs');
-        
+
         // Clear cache to ensure new QR codes use the updated prefix immediately
-        \Illuminate\Support\Facades\Cache::forget("setting.qr_code_prefix");
+        \Illuminate\Support\Facades\Cache::forget('setting.qr_code_prefix');
 
         // Update colors
         if ($request->primary_color) {
@@ -612,14 +622,14 @@ class SettingsController extends Controller
 
         // Use DigitalOcean if configured; otherwise fallback to public disk.
         $digitaloceanConfig = config('filesystems.disks.digitalocean', []);
-        $isDigitaloceanConfigured = !empty($digitaloceanConfig['bucket'])
-            && !empty($digitaloceanConfig['key'])
-            && !empty($digitaloceanConfig['secret'])
-            && !empty($digitaloceanConfig['endpoint']);
+        $isDigitaloceanConfigured = ! empty($digitaloceanConfig['bucket'])
+            && ! empty($digitaloceanConfig['key'])
+            && ! empty($digitaloceanConfig['secret'])
+            && ! empty($digitaloceanConfig['endpoint']);
         $assetDisk = $isDigitaloceanConfigured ? 'digitalocean' : 'public';
         $assetRoot = $isDigitaloceanConfigured ? trim(env('DIGITALOCEAN_SPACES_ROOT_PATH', ''), '/') : '';
-        $logoDir = $assetRoot ? $assetRoot . '/logos' : 'logos';
-        $iconDir = $assetRoot ? $assetRoot . '/icons' : 'icons';
+        $logoDir = $assetRoot ? $assetRoot.'/logos' : 'logos';
+        $iconDir = $assetRoot ? $assetRoot.'/icons' : 'icons';
 
         // Handle logo upload
         if ($request->hasFile('system_logo')) {
@@ -712,14 +722,14 @@ class SettingsController extends Controller
         Setting::set('hiring_application_url', $hiringApplicationUrl !== '' ? $hiringApplicationUrl : 'hiring/apply', 'text', 'Custom URL path for hiring application form (e.g., careers, jobs, apply)');
 
         // Handle TOR PDF upload
-        $torDir = $assetRoot ? $assetRoot . '/hiring/tor' : 'hiring/tor';
+        $torDir = $assetRoot ? $assetRoot.'/hiring/tor' : 'hiring/tor';
 
         if ($request->hasFile('hiring_tor_pdf')) {
             $spacesConfig = config('filesystems.disks.spaces', []);
-            $isSpacesConfigured = !empty($spacesConfig['bucket'])
-                && !empty($spacesConfig['key'])
-                && !empty($spacesConfig['secret'])
-                && !empty($spacesConfig['endpoint']);
+            $isSpacesConfigured = ! empty($spacesConfig['bucket'])
+                && ! empty($spacesConfig['key'])
+                && ! empty($spacesConfig['secret'])
+                && ! empty($spacesConfig['endpoint']);
             $torDisk = $isSpacesConfigured ? 'spaces' : $assetDisk;
 
             // Delete old TOR PDF if exists
@@ -742,7 +752,7 @@ class SettingsController extends Controller
         }
 
         // Handle Privacy Policy PDF upload
-        $privacyPolicyDir = $assetRoot ? $assetRoot . '/privacy-policy' : 'privacy-policy';
+        $privacyPolicyDir = $assetRoot ? $assetRoot.'/privacy-policy' : 'privacy-policy';
 
         if ($request->hasFile('privacy_policy_pdf')) {
             // Delete old Privacy Policy PDF if exists
@@ -788,14 +798,14 @@ class SettingsController extends Controller
         $adminEmails = $request->leave_admin_notification_email ?? [];
         $adminEmails = is_array($adminEmails) ? $adminEmails : [$adminEmails];
         $adminEmails = array_filter(array_map('trim', $adminEmails)); // Remove empty values and trim
-        $leaveAdminNotificationEmail = !empty($adminEmails) ? implode(',', $adminEmails) : '';
+        $leaveAdminNotificationEmail = ! empty($adminEmails) ? implode(',', $adminEmails) : '';
         Setting::set('leave_admin_notification_email', $leaveAdminNotificationEmail, 'text', 'Email addresses (comma-separated) to receive notifications when employees submit leave requests');
 
         // Handle multiple admin notification emails for hiring applications
         $hiringAdminEmails = $request->hiring_admin_notification_email ?? [];
         $hiringAdminEmails = is_array($hiringAdminEmails) ? $hiringAdminEmails : [$hiringAdminEmails];
         $hiringAdminEmails = array_filter(array_map('trim', $hiringAdminEmails)); // Remove empty values and trim
-        $hiringAdminNotificationEmail = !empty($hiringAdminEmails) ? implode(',', $hiringAdminEmails) : '';
+        $hiringAdminNotificationEmail = ! empty($hiringAdminEmails) ? implode(',', $hiringAdminEmails) : '';
         Setting::set('hiring_admin_notification_email', $hiringAdminNotificationEmail, 'text', 'Email addresses (comma-separated) to receive notifications when hiring applications are submitted');
 
         // Default Leave Balances
@@ -921,6 +931,68 @@ class SettingsController extends Controller
         $interviewRescheduleSocialMediaLink = $request->interview_reschedule_social_media_link ?? '';
         Setting::set('interview_reschedule_social_media_link', $interviewRescheduleSocialMediaLink, 'text', 'Social media link for interview reschedule requests');
 
+        // Say-it (confession board) — AI image generation
+        $sayitDriver = $request->sayit_image_driver ?? 'disabled';
+        Setting::set('sayit_image_driver', $sayitDriver, 'text', 'Say-it image driver: disabled, sdwebui, or comfyui');
+
+        $sayitComposerAiImage = $request->sayit_composer_ai_image_enabled ?? 'enabled';
+        if (! in_array($sayitComposerAiImage, ['enabled', 'disabled'], true)) {
+            $sayitComposerAiImage = 'enabled';
+        }
+        Setting::set(
+            'sayit_composer_ai_image_enabled',
+            $sayitComposerAiImage,
+            'text',
+            'Say-it: show Generate image on composer (enabled/disabled)'
+        );
+
+        $sayitSdUrl = trim((string) ($request->sayit_sd_webui_base_url ?? ''));
+        Setting::set('sayit_sd_webui_base_url', $sayitSdUrl, 'text', 'Say-it: Stable Diffusion Web UI base URL (no trailing slash)');
+
+        $sayitSdInternal = trim((string) ($request->sayit_sd_webui_internal_base_url ?? ''));
+        Setting::set(
+            'sayit_sd_webui_internal_base_url',
+            $sayitSdInternal,
+            'text',
+            'Say-it: SD Web UI internal API URL (used for HTTP when set; e.g. http://127.0.0.1:7860)'
+        );
+
+        $sayitSdVerify = $request->sayit_sd_webui_verify_ssl ?? 'enabled';
+        Setting::set('sayit_sd_webui_verify_ssl', $sayitSdVerify, 'text', 'Say-it: verify SSL for SD Web UI (enabled/disabled)');
+
+        $sayitTimeout = $request->sayit_image_http_timeout;
+        Setting::set(
+            'sayit_image_http_timeout',
+            $sayitTimeout !== null && $sayitTimeout !== '' ? (string) max(30, min(600, (int) $sayitTimeout)) : '',
+            'text',
+            'Say-it: HTTP timeout seconds for image generation APIs'
+        );
+
+        $sayitComfyUrl = trim((string) ($request->sayit_comfyui_base_url ?? ''));
+        Setting::set('sayit_comfyui_base_url', $sayitComfyUrl, 'text', 'Say-it: ComfyUI base URL (no trailing slash)');
+
+        $sayitComfyInternal = trim((string) ($request->sayit_comfyui_internal_base_url ?? ''));
+        Setting::set(
+            'sayit_comfyui_internal_base_url',
+            $sayitComfyInternal,
+            'text',
+            'Say-it: ComfyUI internal API URL (used for HTTP when set)'
+        );
+
+        $sayitComfyWorkflow = trim((string) ($request->sayit_comfyui_workflow_path ?? ''));
+        Setting::set('sayit_comfyui_workflow_path', $sayitComfyWorkflow, 'text', 'Say-it: ComfyUI API workflow JSON path (absolute or relative to project root)');
+
+        $sayitComfyPlaceholder = trim((string) ($request->sayit_comfyui_prompt_placeholder ?? '__SAYIT_PROMPT__'));
+        Setting::set(
+            'sayit_comfyui_prompt_placeholder',
+            $sayitComfyPlaceholder !== '' ? $sayitComfyPlaceholder : '__SAYIT_PROMPT__',
+            'text',
+            'Say-it: placeholder string in ComfyUI workflow JSON for prompt injection'
+        );
+
+        $sayitComfyVerify = $request->sayit_comfyui_verify_ssl ?? 'enabled';
+        Setting::set('sayit_comfyui_verify_ssl', $sayitComfyVerify, 'text', 'Say-it: verify SSL for ComfyUI (enabled/disabled)');
+
         // Update Application Timezone
         if ($request->filled('app_timezone')) {
             $timezone = $request->app_timezone;
@@ -940,7 +1012,7 @@ class SettingsController extends Controller
                 // Clear config cache
                 \Artisan::call('config:clear');
             } catch (\Exception $e) {
-                \Log::error('Invalid timezone provided: ' . $timezone);
+                \Log::error('Invalid timezone provided: '.$timezone);
             }
         }
 
@@ -1000,6 +1072,21 @@ class SettingsController extends Controller
         Cache::forget('setting.hiring_tor_pdf');
         Cache::forget('setting.privacy_policy_pdf');
         Cache::forget('setting.file_storage_student_access');
+        foreach ([
+            'sayit_image_driver',
+            'sayit_composer_ai_image_enabled',
+            'sayit_sd_webui_base_url',
+            'sayit_sd_webui_internal_base_url',
+            'sayit_sd_webui_verify_ssl',
+            'sayit_image_http_timeout',
+            'sayit_comfyui_base_url',
+            'sayit_comfyui_internal_base_url',
+            'sayit_comfyui_workflow_path',
+            'sayit_comfyui_prompt_placeholder',
+            'sayit_comfyui_verify_ssl',
+        ] as $sayitKey) {
+            Cache::forget("setting.{$sayitKey}");
+        }
         Setting::clearCache();
 
         return redirect('/admin/settings')
@@ -1046,6 +1133,7 @@ class SettingsController extends Controller
     public function getHealth()
     {
         $health = $this->getSystemHealth();
+
         return response()->json($health);
     }
 
@@ -1057,7 +1145,7 @@ class SettingsController extends Controller
     public function getHealthMetrics()
     {
         $buckets = Cache::get('syshealth:recent_buckets', []);
-        if (!is_array($buckets)) {
+        if (! is_array($buckets)) {
             $buckets = [];
         }
 
@@ -1135,7 +1223,7 @@ class SettingsController extends Controller
 
     private function mergeCountMaps(array $base, $incoming): array
     {
-        if (!is_array($incoming)) {
+        if (! is_array($incoming)) {
             return $base;
         }
 
@@ -1174,7 +1262,7 @@ class SettingsController extends Controller
             if ($mailer === 'log' || $mailer === 'array') {
                 return response()->json([
                     'success' => false,
-                    'message' => 'Test email cannot send with the "log" or "array" driver. Save Mail settings with Mailer set to "smtp" or "mailgun", configure the required fields, and try again.'
+                    'message' => 'Test email cannot send with the "log" or "array" driver. Save Mail settings with Mailer set to "smtp" or "mailgun", configure the required fields, and try again.',
                 ], 422);
             }
 
@@ -1188,7 +1276,7 @@ class SettingsController extends Controller
                 if (empty($host) || empty($port) || empty($username) || empty($password) || empty($fromAddress)) {
                     return response()->json([
                         'success' => false,
-                        'message' => 'SMTP configuration is incomplete. Please set Mailer to "smtp", then fill Host, Port, Username, Password, and From Address, save, and try again.'
+                        'message' => 'SMTP configuration is incomplete. Please set Mailer to "smtp", then fill Host, Port, Username, Password, and From Address, save, and try again.',
                     ], 422);
                 }
             }
@@ -1201,7 +1289,7 @@ class SettingsController extends Controller
                 if (empty($mailgunDomain) || empty($mailgunSecret) || empty($fromAddress)) {
                     return response()->json([
                         'success' => false,
-                        'message' => 'Mailgun configuration is incomplete. Please set Mailer to "mailgun", then fill Mailgun Domain, Mailgun Secret Key, and From Address, save, and try again.'
+                        'message' => 'Mailgun configuration is incomplete. Please set Mailer to "mailgun", then fill Mailgun Domain, Mailgun Secret Key, and From Address, save, and try again.',
                     ], 422);
                 }
             }
@@ -1219,10 +1307,10 @@ class SettingsController extends Controller
             $fromAddress = config('mail.from.address');
             $fromName = config('mail.from.name');
             if (! $fromAddress) {
-                $fromAddress = 'noreply@' . (parse_url(config('app.url', 'http://localhost'), PHP_URL_HOST) ?: 'localhost');
+                $fromAddress = 'noreply@'.(parse_url(config('app.url', 'http://localhost'), PHP_URL_HOST) ?: 'localhost');
                 $fromName = $fromName ?: config('app.name', 'Laravel');
             }
-            Mail::to($testEmail)->send((new \App\Mail\TestEmail())->from($fromAddress, $fromName));
+            Mail::to($testEmail)->send((new \App\Mail\TestEmail)->from($fromAddress, $fromName));
 
             // If the underlying mailer exposes failures, check them as an extra safety net
             try {
@@ -1231,9 +1319,10 @@ class SettingsController extends Controller
                     $failures = $mailerInstance->failures();
                     if (! empty($failures)) {
                         Log::error('Test email reported transport failures', ['failures' => $failures]);
+
                         return response()->json([
                             'success' => false,
-                            'message' => 'The mailer reported a delivery problem for: ' . implode(', ', $failures) . '. Check credentials and try again.'
+                            'message' => 'The mailer reported a delivery problem for: '.implode(', ', $failures).'. Check credentials and try again.',
                         ], 500);
                     }
                 }
@@ -1249,7 +1338,7 @@ class SettingsController extends Controller
 
             return response()->json([
                 'success' => true,
-                'message' => 'Test email was sent successfully to ' . $testEmail . '. If the recipient does not see it: check the Spam/Junk folder, confirm the address is correct, and ensure your sending domain (From address) has SPF and DKIM set up in DNS.'
+                'message' => 'Test email was sent successfully to '.$testEmail.'. If the recipient does not see it: check the Spam/Junk folder, confirm the address is correct, and ensure your sending domain (From address) has SPF and DKIM set up in DNS.',
             ]);
         } catch (\Illuminate\Validation\ValidationException $e) {
             throw $e;
@@ -1264,7 +1353,7 @@ class SettingsController extends Controller
 
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to send test email: ' . $e->getMessage() . ' (Check logs for details)'
+                'message' => 'Failed to send test email: '.$e->getMessage().' (Check logs for details)',
             ], 500);
         }
     }

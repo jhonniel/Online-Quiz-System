@@ -39,7 +39,7 @@
                     </span>
                 @elseif($application->status == 'hired')
                     @php
-                        $isInternship = $application->hiringPosition && $application->hiringPosition->employment_type === 'Internship';
+                        $isInternship = $application->hiringPosition && strcasecmp((string) ($application->hiringPosition->employment_type ?? ''), 'Internship') === 0;
                         $statusLabel = $isInternship ? 'Internship Accepted' : 'Hired';
                     @endphp
                     <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800">
@@ -53,6 +53,12 @@
     @if(session('success'))
         <div class="bg-green-50 border border-green-200 rounded-lg p-4">
             <p class="text-sm font-medium text-green-800">{{ session('success') }}</p>
+        </div>
+    @endif
+
+    @if($errors->has('error'))
+        <div class="bg-red-50 border border-red-200 rounded-lg p-4">
+            <p class="text-sm font-medium text-red-800">{{ $errors->first('error') }}</p>
         </div>
     @endif
 
@@ -145,10 +151,9 @@
                         <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800">
                             Accepted
                         </span>
-                        @if($application->interview_date)
-                            <div class="mt-3">
-                                <label class="text-sm font-medium text-gray-500">Interview Date & Time</label>
-                                <p class="mt-1 text-sm text-gray-900">{{ $application->interview_date->format('F j, Y g:i A') }}</p>
+                        @if($application->hiringPosition && strcasecmp((string) ($application->hiringPosition->employment_type ?? ''), 'Internship') === 0)
+                            <div class="mt-3 text-sm text-gray-600">
+                                <p>Use <strong>Intern quiz</strong> below to assign quizzes (no interview required first).</p>
                             </div>
                         @endif
                     @elseif($application->status == 'rejected')
@@ -215,7 +220,7 @@
                         </div>
                 @elseif($application->status == 'hired')
                         @php
-                            $isInternship = $application->hiringPosition && $application->hiringPosition->employment_type === 'Internship';
+                            $isInternship = $application->hiringPosition && strcasecmp((string) ($application->hiringPosition->employment_type ?? ''), 'Internship') === 0;
                             $statusLabel = $isInternship ? 'Internship Accepted' : 'Hired';
                         @endphp
                         <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800">
@@ -245,6 +250,146 @@
                 </div>
             </div>
 
+            @if(!empty($showInternQuizPanel))
+            <div class="bg-white shadow-sm rounded-lg border border-indigo-200 overflow-hidden">
+                <div class="px-6 py-4 border-b border-gray-200 bg-indigo-50/60">
+                    <h2 class="text-lg font-medium text-gray-900">Intern quiz</h2>
+                    <p class="mt-1 text-sm text-gray-600">After <strong>acceptance</strong>, select quizzes below (interview optional). Optional due date applies to this batch only.</p>
+                </div>
+                <div class="px-6 py-6 space-y-4">
+                    @if(isset($assignableQuizzes) && $assignableQuizzes->isNotEmpty())
+                        <form method="post" action="{{ url('/admin/hiring-applications/'.$application->id.'/assign-intern-quiz') }}" class="space-y-3">
+                            @csrf
+                            <fieldset>
+                                <legend class="block text-sm font-medium text-gray-700 mb-2">Quizzes</legend>
+                                @php $oldQuizIds = array_map('intval', (array) old('quiz_ids', [])); @endphp
+                                <div class="max-h-64 overflow-y-auto rounded-md border border-gray-300 bg-white divide-y divide-gray-100">
+                                    @foreach($assignableQuizzes as $q)
+                                        <label class="flex items-start gap-3 px-3 py-2.5 hover:bg-gray-50 cursor-pointer text-left">
+                                            <input type="checkbox"
+                                                   name="quiz_ids[]"
+                                                   value="{{ $q->id }}"
+                                                   class="mt-0.5 h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                                                   @checked(in_array((int) $q->id, $oldQuizIds, true))>
+                                            <span class="text-sm text-gray-900 leading-snug">
+                                                <span class="font-medium">{{ $q->title }}</span>
+                                                @if($q->quiz_code)
+                                                    <span class="text-gray-500"> · Code <span class="font-mono text-gray-800">{{ $q->quiz_code }}</span></span>
+                                                @endif
+                                            </span>
+                                        </label>
+                                    @endforeach
+                                </div>
+                                @error('quiz_ids')
+                                    <p class="mt-1 text-xs text-red-600">{{ $message }}</p>
+                                @enderror
+                                @error('quiz_ids.*')
+                                    <p class="mt-1 text-xs text-red-600">{{ $message }}</p>
+                                @enderror
+                                <p class="mt-1 text-xs text-gray-500">Re-assigning the same quiz only updates the due date.</p>
+                            </fieldset>
+                            <div>
+                                <label for="intern_quiz_due" class="block text-sm font-medium text-gray-700 mb-1">Due date <span class="text-gray-400 font-normal">(optional, applies to all selected)</span></label>
+                                <input type="date" name="due_date" id="intern_quiz_due" value="{{ old('due_date') }}" min="{{ now()->format('Y-m-d') }}"
+                                    class="block w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:ring-indigo-500 focus:border-indigo-500">
+                                @error('due_date')
+                                    <p class="mt-1 text-xs text-red-600">{{ $message }}</p>
+                                @enderror
+                            </div>
+                            <button type="submit" class="w-full inline-flex justify-center items-center px-4 py-2.5 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700">
+                                Assign selected quiz(es) &amp; send email(s)
+                            </button>
+                        </form>
+                    @else
+                        <p class="text-sm text-amber-800 bg-amber-50 border border-amber-200 rounded-md px-3 py-2">No active quizzes are available. Create and activate a quiz under <strong>Admin → Quizzes</strong> first.</p>
+                    @endif
+
+                    @if(isset($internQuizAssignments) && $internQuizAssignments->isNotEmpty())
+                        <div class="pt-2 border-t border-gray-100">
+                            <h3 class="text-sm font-semibold text-gray-900 mb-2">Quiz assignments</h3>
+                            <ul class="space-y-3 text-sm text-gray-700">
+                                @foreach($internQuizAssignments as $asg)
+                                    @php
+                                        $rankInfo = $internQuizRankMeta[$asg->id] ?? null;
+                                        $totalQ = (int) ($asg->quiz->total_questions ?? 0);
+                                    @endphp
+                                    <li class="flex flex-col gap-2 border border-gray-100 rounded-md px-3 py-3 bg-gray-50">
+                                        <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2">
+                                            <div>
+                                                <span class="font-medium text-gray-900">{{ $asg->quiz->title ?? 'Quiz' }}</span>
+                                                @if($asg->quiz && $asg->quiz->quiz_code)
+                                                    <span class="text-xs text-gray-500"> · Code <span class="font-mono text-gray-800">{{ $asg->quiz->quiz_code }}</span></span>
+                                                @endif
+                                            </div>
+                                            <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium {{ $asg->getStatusBadgeClass() }}">{{ $asg->getStatusText() }}</span>
+                                        </div>
+                                        <div class="text-xs text-gray-600 space-y-1">
+                                            @if($asg->due_date)
+                                                <div><span class="font-medium text-gray-700">Due:</span> {{ $asg->due_date->format('M j, Y') }}</div>
+                                            @endif
+                                            @if($asg->started_at)
+                                                <div><span class="font-medium text-gray-700">Started:</span> {{ $asg->started_at->format('M j, Y g:i A') }}</div>
+                                            @endif
+                                            @if($asg->is_completed && $asg->last_attempt_at)
+                                                <div><span class="font-medium text-gray-700">Last submitted:</span> {{ $asg->last_attempt_at->format('M j, Y g:i A') }}</div>
+                                            @endif
+                                            @if($asg->is_completed && $totalQ > 0)
+                                                <div>
+                                                    <span class="font-medium text-gray-700">Best score:</span>
+                                                    {{ (int) ($asg->best_score ?? 0) }} / {{ $totalQ }}
+                                                    @if($rankInfo)
+                                                        <span class="text-gray-500"> · Rank {{ $rankInfo['rank'] }} of {{ $rankInfo['of'] }} (this quiz)</span>
+                                                    @endif
+                                                </div>
+                                            @elseif($asg->is_completed)
+                                                <div><span class="font-medium text-gray-700">Best score:</span> {{ (int) ($asg->best_score ?? 0) }}</div>
+                                            @endif
+                                        </div>
+                                        @php
+                                            $recentAttempts = ($internQuizRecentAttempts ?? [])[$asg->id] ?? collect();
+                                        @endphp
+                                        @if($recentAttempts->isNotEmpty())
+                                            <div class="mt-2 overflow-x-auto rounded border border-gray-200 bg-white">
+                                                <table class="min-w-full text-xs">
+                                                    <thead class="bg-gray-100 text-gray-600">
+                                                        <tr>
+                                                            <th class="px-2 py-1.5 text-left font-medium">#</th>
+                                                            <th class="px-2 py-1.5 text-left font-medium">Score</th>
+                                                            <th class="px-2 py-1.5 text-left font-medium">%</th>
+                                                            <th class="px-2 py-1.5 text-left font-medium">Status</th>
+                                                            <th class="px-2 py-1.5 text-left font-medium">Completed</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody class="divide-y divide-gray-100">
+                                                        @foreach($recentAttempts as $att)
+                                                            <tr>
+                                                                <td class="px-2 py-1.5 text-gray-900">{{ $att->attempt_number }}</td>
+                                                                <td class="px-2 py-1.5 text-gray-800">{{ (int) $att->correct_answers }}/{{ (int) $att->total_questions }}</td>
+                                                                <td class="px-2 py-1.5 text-gray-700">{{ $att->percentage }}%</td>
+                                                                <td class="px-2 py-1.5"><span class="inline-flex px-1.5 py-0.5 rounded text-[10px] font-medium {{ $att->getStatusBadgeClass() }}">{{ $att->getStatusText() }}</span></td>
+                                                                <td class="px-2 py-1.5 text-gray-600 whitespace-nowrap">{{ $att->completed_at ? $att->completed_at->format('M j, g:i A') : '—' }}</td>
+                                                            </tr>
+                                                        @endforeach
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                            <p class="text-[10px] text-gray-500 mt-1">Showing up to 5 most recent attempts.</p>
+                                        @endif
+                                        <div class="mt-2 flex flex-wrap gap-x-3 gap-y-1">
+                                            <a href="{{ route('admin.hiring-applications.intern-quiz-attempts', [$application, $asg]) }}" class="text-xs font-medium text-indigo-600 hover:text-indigo-800">Open full attempt list</a>
+                                            @if(auth()->user()->canAccessContentManagement())
+                                                <a href="{{ route('admin.quiz-assignments.history', $asg) }}" class="text-xs font-medium text-gray-600 hover:text-gray-800">Q&amp;A detail (quizzes admin)</a>
+                                            @endif
+                                        </div>
+                                    </li>
+                                @endforeach
+                            </ul>
+                        </div>
+                    @endif
+                </div>
+            </div>
+            @endif
+
             <!-- Application Details -->
             <div class="bg-white shadow-sm rounded-lg border border-gray-200 overflow-hidden">
                 <div class="px-6 py-4 border-b border-gray-200">
@@ -267,6 +412,48 @@
                             </div>
                         @endif
                     @endif
+                    <div>
+                        <label class="text-sm font-medium text-gray-500">Resume</label>
+                        <div class="mt-1 space-y-2">
+                            @if($application->resume_path)
+                                @php
+                                    $appResumeExt = strtolower(pathinfo($application->resume_path, PATHINFO_EXTENSION));
+                                @endphp
+                                <p class="text-sm text-gray-900">
+                                    Uploaded file
+                                    @if($appResumeExt)
+                                        <span class="text-gray-500">(.{{ $appResumeExt }})</span>
+                                    @endif
+                                </p>
+                                <div class="flex flex-wrap gap-2">
+                                    <a href="{{ url('/admin/hiring-applications/' . $application->id . '/view-resume') }}"
+                                       target="_blank"
+                                       rel="noopener noreferrer"
+                                       class="inline-flex items-center px-3 py-1.5 border border-gray-300 rounded-md shadow-sm text-xs font-medium text-indigo-700 bg-indigo-50 hover:bg-indigo-100">
+                                        View
+                                    </a>
+                                    <a href="{{ url('/admin/hiring-applications/' . $application->id . '/download-resume') }}"
+                                       class="inline-flex items-center px-3 py-1.5 border border-gray-300 rounded-md shadow-sm text-xs font-medium text-gray-700 bg-white hover:bg-gray-50">
+                                        Download
+                                    </a>
+                                </div>
+                            @endif
+                            @if($application->resume_link)
+                                <div>
+                                    <a href="{{ $application->resume_link }}"
+                                       target="_blank"
+                                       rel="noopener noreferrer"
+                                       class="inline-flex items-center text-sm font-medium text-indigo-600 hover:text-indigo-800 break-all">
+                                        External resume link
+                                        <svg class="w-4 h-4 ml-1 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path></svg>
+                                    </a>
+                                </div>
+                            @endif
+                            @if(! $application->resume_path && ! $application->resume_link)
+                                <p class="text-sm text-gray-500">No resume or link on file.</p>
+                            @endif
+                        </div>
+                    </div>
                 </div>
             </div>
 
@@ -329,15 +516,27 @@
                     </div>
                     <div class="px-6 py-6 flex-1 flex flex-col min-h-0 space-y-4">
                         @if($application->resume_path)
+                            @php
+                                $resumeExt = strtolower(pathinfo($application->resume_path, PATHINFO_EXTENSION));
+                                $resumeCanEmbed = in_array($resumeExt, ['pdf', 'png', 'jpg', 'jpeg', 'gif', 'webp'], true);
+                            @endphp
                             <div class="flex flex-col flex-1 min-h-0">
                                 <label class="text-sm font-medium text-gray-500 block mb-2 flex-shrink-0">Uploaded Resume</label>
-                                <div class="border border-gray-300 rounded-lg overflow-hidden bg-gray-50 flex-1 flex flex-col min-h-0">
-                                    <iframe src="{{ url('/admin/hiring-applications/' . $application->id . '/view-resume') }}"
-                                            class="w-full flex-1 min-h-[180px] border-0"
-                                            title="Resume Preview">
-                                    </iframe>
-                                </div>
-                                <p class="mt-2 text-xs text-gray-500 flex-shrink-0">If the resume doesn't display, you can download it using the button above.</p>
+                                @if($resumeCanEmbed)
+                                    <div class="border border-gray-300 rounded-lg overflow-hidden bg-gray-50" style="min-height: 420px;">
+                                        <iframe src="{{ url('/admin/hiring-applications/' . $application->id . '/view-resume') }}"
+                                                class="w-full border-0"
+                                                style="height: 65vh; max-height: 900px; min-height: 400px;"
+                                                title="Resume Preview">
+                                        </iframe>
+                                    </div>
+                                    <p class="mt-2 text-xs text-gray-500 flex-shrink-0">If the preview stays blank, open <strong>Download</strong> above (some browsers block embedded PDFs; Word documents cannot preview here).</p>
+                                @else
+                                    <div class="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+                                        <p class="font-medium">No inline preview for .{{ $resumeExt ?: 'file' }} documents</p>
+                                        <p class="mt-1 text-amber-800">Browsers cannot show Word or other office files inside the page. Use <strong>Download</strong> above to open the file.</p>
+                                    </div>
+                                @endif
                             </div>
                         @endif
                         @if($application->resume_link)
@@ -414,13 +613,14 @@
                             'hiring_application_interview_done' => 'Interview Done',
                             'hiring_application_hired' => 'Marked as Hired',
                             'hiring_application_intern_accepted' => 'Intern Accepted',
+                            'hiring_application_intern_quiz_assigned' => 'Intern Quiz Assigned',
                             'hiring_application_hired_cancelled' => 'Hired Status Cancelled',
                             'hiring_application_deleted' => 'Application Deleted',
                             'hiring_application_updated' => 'Record Updated',
                             default => ucfirst(str_replace('_', ' ', str_replace('hiring_application_', '', $log->action))),
                         };
                         $borderColor = match($log->action) {
-                            'hiring_application_accepted', 'hiring_application_reconsidered', 'hiring_application_hired', 'hiring_application_intern_accepted' => 'border-green-500',
+                            'hiring_application_accepted', 'hiring_application_reconsidered', 'hiring_application_hired', 'hiring_application_intern_accepted', 'hiring_application_intern_quiz_assigned' => 'border-green-500',
                             'hiring_application_rejected', 'hiring_application_hired_cancelled' => 'border-red-500',
                             'hiring_application_interview_scheduled', 'hiring_application_interview_rescheduled', 'hiring_application_follow_up_sent' => 'border-blue-500',
                             'hiring_application_interview_done' => 'border-purple-500',
@@ -429,7 +629,7 @@
                             default => 'border-gray-400',
                         };
                         $badgeColor = match($log->action) {
-                            'hiring_application_accepted', 'hiring_application_reconsidered', 'hiring_application_hired', 'hiring_application_intern_accepted' => 'bg-green-100 text-green-800',
+                            'hiring_application_accepted', 'hiring_application_reconsidered', 'hiring_application_hired', 'hiring_application_intern_accepted', 'hiring_application_intern_quiz_assigned' => 'bg-green-100 text-green-800',
                             'hiring_application_rejected', 'hiring_application_hired_cancelled' => 'bg-red-100 text-red-800',
                             'hiring_application_interview_scheduled', 'hiring_application_interview_rescheduled', 'hiring_application_follow_up_sent' => 'bg-blue-100 text-blue-800',
                             'hiring_application_interview_done' => 'bg-purple-100 text-purple-800',

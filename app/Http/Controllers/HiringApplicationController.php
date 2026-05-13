@@ -6,9 +6,8 @@ use App\Models\HiringApplication;
 use App\Models\Setting;
 use App\Models\University;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Storage;
-use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
 
 class HiringApplicationController extends Controller
@@ -26,11 +25,11 @@ class HiringApplicationController extends Controller
         }
 
         // If no slug provided, show list of available positions
-        if (!$slug) {
+        if (! $slug) {
             $positions = \App\Models\HiringPosition::where('is_active', true)
-                ->where(function($query) {
+                ->where(function ($query) {
                     $query->whereNull('application_deadline')
-                          ->orWhere('application_deadline', '>=', now());
+                        ->orWhere('application_deadline', '>=', now());
                 })
                 ->orderBy('title')
                 ->get();
@@ -44,7 +43,7 @@ class HiringApplicationController extends Controller
                 'privacy_policy_pdf' => Setting::get('privacy_policy_pdf') ?? null,
             ];
 
-        return view('hiring.positions', compact('positions', 'settings'));
+            return view('hiring.positions', compact('positions', 'settings'));
         }
 
         // Find position by slug
@@ -53,7 +52,7 @@ class HiringApplicationController extends Controller
             ->firstOrFail();
 
         // Check if position is accepting applications
-        if (!$position->isAcceptingApplications()) {
+        if (! $position->isAcceptingApplications()) {
             abort(404, 'This position is no longer accepting applications.');
         }
 
@@ -69,8 +68,8 @@ class HiringApplicationController extends Controller
         // Ensure errors variable is available in the view
         // Laravel automatically shares $errors with views, but we'll ensure it's set
         $errors = session()->get('errors');
-        if (!$errors) {
-            $errors = new \Illuminate\Support\ViewErrorBag();
+        if (! $errors) {
+            $errors = new \Illuminate\Support\ViewErrorBag;
         }
 
         // School options for internship applicants pulled from universities table
@@ -126,6 +125,7 @@ class HiringApplicationController extends Controller
 
         if ($publicAccessEnabled !== 'enabled') {
             Log::warning('Public access disabled');
+
             return back()->withErrors(['error' => 'Hiring applications are currently not accepting new submissions.'])->withInput()->with('settings', $settings);
         }
 
@@ -134,8 +134,9 @@ class HiringApplicationController extends Controller
 
         Log::info('Slug resolved', ['slug' => $slug]);
 
-        if (!$slug) {
+        if (! $slug) {
             Log::warning('No slug found');
+
             return back()->withErrors(['error' => 'Invalid position.'])->withInput()->with('settings', $settings)->with('schoolOptions', $schoolOptions);
         }
 
@@ -146,13 +147,15 @@ class HiringApplicationController extends Controller
 
         Log::info('Position lookup', ['position_found' => $position ? 'yes' : 'no', 'position_id' => $position?->id]);
 
-        if (!$position) {
+        if (! $position) {
             Log::warning('Position not found', ['slug' => $slug]);
+
             return back()->withErrors(['error' => 'Position not found or is no longer available.'])->withInput()->with('settings', $settings)->with('schoolOptions', $schoolOptions);
         }
 
-        if (!$position->isAcceptingApplications()) {
+        if (! $position->isAcceptingApplications()) {
             Log::warning('Position not accepting applications', ['position_id' => $position->id]);
+
             return back()->withErrors(['error' => 'This position is no longer accepting applications.'])->withInput()->with('settings', $settings);
         }
 
@@ -170,7 +173,7 @@ class HiringApplicationController extends Controller
                     'max:255',
                     \Illuminate\Validation\Rule::requiredIf(function () use ($position, $request) {
                         return strcasecmp($position->employment_type ?? '', 'Internship') === 0
-                            && !$request->filled('school_other');
+                            && ! $request->filled('school_other');
                     }),
                     \Illuminate\Validation\Rule::in(array_merge($schoolOptions, ['__other'])),
                 ],
@@ -196,6 +199,7 @@ class HiringApplicationController extends Controller
             Log::info('Validation passed', ['validated_data' => $validated]);
         } catch (\Illuminate\Validation\ValidationException $e) {
             Log::error('Validation failed', ['errors' => $e->errors()]);
+
             return back()->withErrors($e->errors())->withInput()->with('settings', $settings)->with('schoolOptions', $schoolOptions);
         }
 
@@ -211,7 +215,7 @@ class HiringApplicationController extends Controller
             'normalized_email' => $email,
             'position_id' => $position->id,
             'existing_found' => $existingApplication ? 'yes' : 'no',
-            'existing_id' => $existingApplication?->id
+            'existing_id' => $existingApplication?->id,
         ]);
 
         if ($existingApplication) {
@@ -219,7 +223,7 @@ class HiringApplicationController extends Controller
                 'email' => $email,
                 'position_id' => $position->id,
                 'existing_application_id' => $existingApplication->id,
-                'existing_email' => $existingApplication->email
+                'existing_email' => $existingApplication->email,
             ]);
 
             // Redirect back with error message and preserve all input
@@ -233,10 +237,10 @@ class HiringApplicationController extends Controller
         }
 
         try {
-            // Handle file uploads to DigitalOcean with root path
-            $assetDisk = 'digitalocean';
+            // Store on Spaces when configured; otherwise public disk so admin preview/download works locally
+            $assetDisk = $this->isDigitalOceanSpacesConfiguredForHiring() ? 'digitalocean' : 'public';
             $assetRoot = trim(env('DIGITALOCEAN_SPACES_ROOT_PATH', ''), '/');
-            $resumeDir = $assetRoot ? $assetRoot . '/hiring/resumes' : 'hiring/resumes';
+            $resumeDir = $assetRoot ? $assetRoot.'/hiring/resumes' : 'hiring/resumes';
 
             $resumePath = null;
             if ($request->hasFile('resume_file')) {
@@ -251,7 +255,7 @@ class HiringApplicationController extends Controller
                 $university = University::whereRaw('LOWER(TRIM(name)) = ?', [strtolower($customSchoolName)])
                     ->first();
 
-                if (!$university) {
+                if (! $university) {
                     // Create new university
                     $university = University::create([
                         'name' => $customSchoolName,
@@ -311,7 +315,7 @@ class HiringApplicationController extends Controller
 
                     Log::info('Hiring application notification - checking admin emails', [
                         'hiring_admin_emails' => $adminEmailsStr,
-                        'application_id' => $application->id
+                        'application_id' => $application->id,
                     ]);
 
                     // If no hiring-specific admin emails, try leave admin notification emails as fallback
@@ -324,7 +328,7 @@ class HiringApplicationController extends Controller
                         }
                         Log::info('Hiring application notification - using leave admin emails as fallback', [
                             'leave_admin_emails' => $adminEmailsStr,
-                            'application_id' => $application->id
+                            'application_id' => $application->id,
                         ]);
                     }
 
@@ -333,11 +337,11 @@ class HiringApplicationController extends Controller
                         $adminEmailsStr = \App\Models\Setting::get('mail_from_address', config('mail.from.address'));
                         Log::info('Hiring application notification - using system default email', [
                             'default_email' => $adminEmailsStr,
-                            'application_id' => $application->id
+                            'application_id' => $application->id,
                         ]);
                     }
 
-                    if (!empty($adminEmailsStr) && trim($adminEmailsStr) !== '') {
+                    if (! empty($adminEmailsStr) && trim($adminEmailsStr) !== '') {
                         // Parse comma-separated emails
                         $adminEmails = array_filter(array_map('trim', explode(',', $adminEmailsStr)));
                         $validEmails = array_filter($adminEmails, function ($email) {
@@ -348,10 +352,10 @@ class HiringApplicationController extends Controller
                             'total_emails' => count($adminEmails),
                             'valid_emails' => count($validEmails),
                             'valid_emails_list' => $validEmails,
-                            'application_id' => $application->id
+                            'application_id' => $application->id,
                         ]);
 
-                        if (!empty($validEmails)) {
+                        if (! empty($validEmails)) {
                             // Configure mail settings before sending
                             \App\Services\MailConfigService::configure();
 
@@ -359,7 +363,7 @@ class HiringApplicationController extends Controller
                             Log::info('Hiring application notification - mail configuration', [
                                 'mail_driver' => config('mail.default'),
                                 'mail_from' => config('mail.from.address'),
-                                'valid_emails_count' => count($validEmails)
+                                'valid_emails_count' => count($validEmails),
                             ]);
 
                             $sentCount = 0;
@@ -372,7 +376,7 @@ class HiringApplicationController extends Controller
                                     $sentCount++;
                                     Log::info('Hiring application notification email sent successfully', [
                                         'email' => $email,
-                                        'application_id' => $application->id
+                                        'application_id' => $application->id,
                                     ]);
                                 } catch (\Exception $emailException) {
                                     $failedCount++;
@@ -380,7 +384,7 @@ class HiringApplicationController extends Controller
                                         'email' => $email,
                                         'error' => $emailException->getMessage(),
                                         'application_id' => $application->id,
-                                        'trace' => $emailException->getTraceAsString()
+                                        'trace' => $emailException->getTraceAsString(),
                                     ]);
                                     // Continue sending to other emails even if one fails
                                 }
@@ -390,20 +394,20 @@ class HiringApplicationController extends Controller
                                     'sent' => $sentCount,
                                     'failed' => $failedCount,
                                     'total' => count($validEmails),
-                                    'application_id' => $application->id
+                                    'application_id' => $application->id,
                                 ]);
                             } else {
                                 Log::warning('Hiring application notification - no valid emails found after parsing', [
                                     'admin_emails_str' => $adminEmailsStr,
                                     'parsed_emails' => $adminEmails,
                                     'valid_emails' => $validEmails,
-                                    'application_id' => $application->id
+                                    'application_id' => $application->id,
                                 ]);
                             }
                         } else {
                             Log::info('Hiring application notification - no admin emails found in settings', [
                                 'admin_emails_str' => $adminEmailsStr,
-                                'application_id' => $application->id
+                                'application_id' => $application->id,
                             ]);
                         }
                     }
@@ -411,26 +415,27 @@ class HiringApplicationController extends Controller
                     Log::error('Failed to send admin notification email', [
                         'error' => $e->getMessage(),
                         'application_id' => $application->id,
-                        'trace' => $e->getTraceAsString()
+                        'trace' => $e->getTraceAsString(),
                     ]);
                 }
             }
 
             Log::info('Application created successfully, redirecting to success page', [
                 'application_id' => $application->id,
-                'position_title' => $position->title
+                'position_title' => $position->title,
             ]);
 
             // Redirect to success page with application ID and position title
-            return redirect('/hiring/application/success?' . http_build_query(['application_id' => $application->id, 'position_title' => $position->title]))->with('application_id', $application->id)
-              ->with('position_title', $position->title)
-              ->with('success', true);
+            return redirect('/hiring/application/success?'.http_build_query(['application_id' => $application->id, 'position_title' => $position->title]))->with('application_id', $application->id)
+                ->with('position_title', $position->title)
+                ->with('success', true);
         } catch (\Exception $e) {
             Log::error('Error creating hiring application', [
                 'message' => $e->getMessage(),
                 'trace' => $e->getTraceAsString(),
             ]);
-            return back()->withErrors(['error' => 'An error occurred while submitting your application: ' . $e->getMessage()])->withInput()->with('settings', $settings);
+
+            return back()->withErrors(['error' => 'An error occurred while submitting your application: '.$e->getMessage()])->withInput()->with('settings', $settings);
         }
     }
 
@@ -449,15 +454,25 @@ class HiringApplicationController extends Controller
             'session_has_application_id' => session()->has('application_id'),
             'request_has_application_id' => $request->has('application_id'),
             'all_session_keys' => array_keys(session()->all()),
-            'request_all' => $request->all()
+            'request_all' => $request->all(),
         ]);
 
         // Always show success page - don't redirect to home
         // The success page will display regardless of whether we have the application ID
         return view('hiring.success', [
             'application_id' => $applicationId,
-            'position_title' => $positionTitle
+            'position_title' => $positionTitle,
         ]);
+    }
+
+    private function isDigitalOceanSpacesConfiguredForHiring(): bool
+    {
+        $d = config('filesystems.disks.digitalocean', []);
+
+        return ! empty($d['bucket'])
+            && ! empty($d['key'])
+            && ! empty($d['secret'])
+            && ! empty($d['endpoint']);
     }
 
     public function acceptWithToken($token)
@@ -466,7 +481,7 @@ class HiringApplicationController extends Controller
             ->where('status', 'accepted')
             ->first();
 
-        if (!$application || !$application->isTokenValid()) {
+        if (! $application || ! $application->isTokenValid()) {
             abort(404, 'Invalid or expired acceptance link.');
         }
 

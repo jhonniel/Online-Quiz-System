@@ -9,15 +9,16 @@ use App\Models\TicketReportLog;
 use App\Models\TicketReportNote;
 use App\Models\User;
 use Illuminate\Http\Request;
-use Illuminate\Validation\Rule;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Validator;
+use Illuminate\Validation\Rule;
 
 class TicketReportController extends Controller
 {
-    public function dashboard()
+    public function dashboard(Request $request)
     {
         $total = TicketReport::count();
         $open = TicketReport::whereIn('status', [
@@ -31,16 +32,69 @@ class TicketReportController extends Controller
         ])->count();
         $recent = TicketReport::orderByDesc('created_at')->take(10)->get();
 
-        return view('admin.tickets.dashboard', compact('total', 'open', 'closed', 'recent'));
+        $dateFromInput = $request->old('date_from', $request->query('date_from'));
+        $dateToInput = $request->old('date_to', $request->query('date_to'));
+        $paymentDateErrors = null;
+        $dateFrom = null;
+        $dateTo = null;
+
+        if (filled($dateFromInput) || filled($dateToInput)) {
+            $validator = Validator::make(
+                [
+                    'date_from' => $dateFromInput,
+                    'date_to' => $dateToInput,
+                ],
+                [
+                    'date_from' => ['nullable', 'date'],
+                    'date_to' => ['nullable', 'date', 'after_or_equal:date_from'],
+                ]
+            );
+            if ($validator->fails()) {
+                $paymentDateErrors = $validator->errors();
+            } else {
+                $validated = $validator->validated();
+                $dateFrom = $validated['date_from'] ?? null;
+                $dateTo = $validated['date_to'] ?? null;
+            }
+        }
+
+        $paymentsBase = function () use ($dateFrom, $dateTo) {
+            $q = TicketReport::query()
+                ->where('payment_status', TicketReport::PAYMENT_STATUS_PAID)
+                ->whereNotNull('paid_at');
+            if ($dateFrom) {
+                $q->whereDate('paid_at', '>=', $dateFrom);
+            }
+            if ($dateTo) {
+                $q->whereDate('paid_at', '<=', $dateTo);
+            }
+
+            return $q;
+        };
+
+        $paymentsCount = $paymentsBase()->count();
+        $paymentsTotal = $paymentsBase()->sum('amount_paid');
+
+        return view('admin.tickets.dashboard', [
+            'total' => $total,
+            'open' => $open,
+            'closed' => $closed,
+            'recent' => $recent,
+            'paymentsCount' => $paymentsCount,
+            'paymentsTotal' => (float) $paymentsTotal,
+            'dateFrom' => $dateFrom,
+            'dateTo' => $dateTo,
+            'paymentDateErrors' => $paymentDateErrors,
+        ]);
     }
 
     public function open()
     {
         $tickets = TicketReport::whereIn('status', [
-                TicketReport::STATUS_OPEN,
-                TicketReport::STATUS_PROCESSING,
-                TicketReport::STATUS_NEEDS_INVESTIGATION,
-            ])
+            TicketReport::STATUS_OPEN,
+            TicketReport::STATUS_PROCESSING,
+            TicketReport::STATUS_NEEDS_INVESTIGATION,
+        ])
             ->with(['latestLog.user', 'assignedTo'])
             ->orderByDesc('created_at')
             ->paginate(20);
@@ -51,9 +105,9 @@ class TicketReportController extends Controller
     public function closed()
     {
         $tickets = TicketReport::whereIn('status', [
-                TicketReport::STATUS_RESOLVED,
-                TicketReport::STATUS_CLOSED,
-            ])
+            TicketReport::STATUS_RESOLVED,
+            TicketReport::STATUS_CLOSED,
+        ])
             ->with(['latestLog.user', 'assignedTo'])
             ->orderByDesc('updated_at')
             ->paginate(20);
@@ -83,10 +137,10 @@ class TicketReportController extends Controller
     public function update(Request $request, TicketReport $ticket_report)
     {
         $request->validate([
-            'status' => 'sometimes|in:' . implode(',', TicketReport::adminStatuses()),
+            'status' => 'sometimes|in:'.implode(',', TicketReport::adminStatuses()),
             'admin_notes' => 'nullable|string|max:10000',
             'admin_attachment' => 'nullable|file|max:10240|mimes:pdf,doc,docx,xls,xlsx,csv,ppt,pptx,txt,jpg,jpeg,png,zip,rar',
-            'payment_status' => 'sometimes|in:' . implode(',', TicketReport::paymentStatuses()),
+            'payment_status' => 'sometimes|in:'.implode(',', TicketReport::paymentStatuses()),
             'amount_paid' => 'nullable|numeric|min:0|max:999999999.99',
             'assigned_to_user_id' => [
                 'nullable',
@@ -107,6 +161,11 @@ class TicketReportController extends Controller
         if ($request->has('payment_status') && $request->payment_status !== $ticket_report->payment_status) {
             $data['payment_status'] = $request->payment_status;
             $paymentChanged = true;
+            if ($request->payment_status === TicketReport::PAYMENT_STATUS_PAID) {
+                $data['paid_at'] = now();
+            } else {
+                $data['paid_at'] = null;
+            }
         }
         if (array_key_exists('amount_paid', $request->all())) {
             $incomingAmount = $request->filled('amount_paid') ? (float) $request->input('amount_paid') : null;
@@ -125,7 +184,7 @@ class TicketReportController extends Controller
         if ($request->hasFile('admin_attachment')) {
             $file = $request->file('admin_attachment');
             $safeName = preg_replace('/[^a-zA-Z0-9._-]/', '', (string) $file->getClientOriginalName());
-            $path = 'ticket-reports/admin-attachments/' . now()->format('Y/m/d') . '/' . uniqid('', true) . '_' . $safeName;
+            $path = 'ticket-reports/admin-attachments/'.now()->format('Y/m/d').'/'.uniqid('', true).'_'.$safeName;
             Storage::disk('digitalocean')->put($path, file_get_contents($file->getRealPath()), 'public');
             $data['admin_attachment_path'] = $path;
             $attachmentChanged = true;
@@ -198,7 +257,7 @@ class TicketReportController extends Controller
                     'action' => 'assigned',
                     'from_status' => $ticket_report->status,
                     'to_status' => $ticket_report->status,
-                    'meta' => 'assigned_to:' . ($data['assigned_to_user_id'] ?? 'none'),
+                    'meta' => 'assigned_to:'.($data['assigned_to_user_id'] ?? 'none'),
                 ]);
             }
         }
@@ -211,7 +270,7 @@ class TicketReportController extends Controller
                     Mail::to($ticket_report->email)->send(new TicketClosedNotification($ticket_report->fresh()));
                     Log::info('Ticket closed notification sent', ['ticket' => $ticket_report->ticket_number, 'to' => $ticket_report->email]);
                 } catch (\Throwable $e) {
-                    Log::warning('Ticket closed notification failed: ' . $e->getMessage(), [
+                    Log::warning('Ticket closed notification failed: '.$e->getMessage(), [
                         'ticket' => $ticket_report->ticket_number,
                         'to' => $ticket_report->email,
                         'exception' => $e,
@@ -261,7 +320,7 @@ class TicketReportController extends Controller
             'action' => 'note_posted',
             'from_status' => $ticket_report->status,
             'to_status' => $ticket_report->status,
-            'meta' => 'note_id:' . $note->id,
+            'meta' => 'note_id:'.$note->id,
         ]);
 
         return redirect()->back()->with('success', 'Comment posted.');
@@ -285,7 +344,7 @@ class TicketReportController extends Controller
             'action' => 'note_deleted',
             'from_status' => $ticket_report->status,
             'to_status' => $ticket_report->status,
-            'meta' => 'note_id:' . $noteId,
+            'meta' => 'note_id:'.$noteId,
         ]);
 
         return redirect()->back()->with('success', 'Comment deleted.');

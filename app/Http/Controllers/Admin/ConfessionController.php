@@ -9,8 +9,6 @@ use App\Models\ConfessionTopic;
 use App\Models\Setting;
 use App\Models\User;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Storage;
 
 class ConfessionController extends Controller
 {
@@ -33,7 +31,7 @@ class ConfessionController extends Controller
             ->values();
 
         $selectedAnonSources = Setting::get('confession_anon_name_sources', ['default_codename']);
-        if (!is_array($selectedAnonSources)) {
+        if (! is_array($selectedAnonSources)) {
             $selectedAnonSources = ['default_codename'];
         }
 
@@ -57,7 +55,7 @@ class ConfessionController extends Controller
             ->all();
 
         $allowedSources = collect(['default_codename'])
-            ->merge(collect($roleOptions)->map(fn ($role) => 'role_' . $role))
+            ->merge(collect($roleOptions)->map(fn ($role) => 'role_'.$role))
             ->values()
             ->all();
 
@@ -93,13 +91,6 @@ class ConfessionController extends Controller
         $duePosts = ConfessionPost::eligibleForAutoDelete()->get();
         $autoDeletedCount = 0;
         foreach ($duePosts as $post) {
-            if (!empty($post->image_path)) {
-                try {
-                    Storage::disk('digitalocean')->delete($post->image_path);
-                } catch (\Throwable $e) {
-                    // Ignore image cleanup issues; post record deletion should still proceed
-                }
-            }
             $post->delete();
             $autoDeletedCount++;
         }
@@ -119,13 +110,14 @@ class ConfessionController extends Controller
                 'total' => $postCount + $commentCount,
             ];
         }
-        usort($ipLogs, fn($a, $b) => $b['total'] <=> $a['total']);
+        usort($ipLogs, fn ($a, $b) => $b['total'] <=> $a['total']);
 
         // Trending: most engagement (comments + likes)
         $trending = ConfessionPost::withCount('allComments')
             ->get()
             ->map(function ($post) {
                 $post->engagement = ($post->all_comments_count ?? 0) + $post->upvotes_count + $post->downvotes_count;
+
                 return $post;
             })
             ->sortByDesc('engagement')
@@ -150,6 +142,7 @@ class ConfessionController extends Controller
     public function topics()
     {
         $topics = ConfessionTopic::orderByDesc('posts_count')->orderBy('name')->get();
+
         return view('admin.confession.topics', compact('topics'));
     }
 
@@ -171,7 +164,7 @@ class ConfessionController extends Controller
 
         $slug = \Illuminate\Support\Str::slug($name);
         if (empty($slug)) {
-            $slug = 'topic-' . \Illuminate\Support\Str::random(6);
+            $slug = 'topic-'.\Illuminate\Support\Str::random(6);
         }
 
         // If slug changed, ensure it's unique

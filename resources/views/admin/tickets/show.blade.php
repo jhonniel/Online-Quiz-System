@@ -252,6 +252,9 @@
                                     —
                                 @endif
                             </p>
+                            @if($isPaid && $ticket->paid_at)
+                                <p class="mt-1 text-xs text-gray-500">Paid recorded: {{ $ticket->paid_at->format('M j, Y g:i A') }}</p>
+                            @endif
                         </div>
                         <div>
                             <p class="text-xs font-medium text-gray-500 uppercase tracking-wider">Category</p>

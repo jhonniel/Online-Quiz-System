@@ -2,7 +2,7 @@
 @php
     $sessionCodename = $sessionCodename ?? session('sayit_codename');
 @endphp
-<div class="say-it-featured-fire-wrapper mb-6">
+<div class="say-it-featured-fire-wrapper mb-6 min-w-0 max-w-full">
     <div class="say-it-featured-fire-inner relative z-0">
         <div class="flex items-center gap-2 mb-3">
             <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-gradient-to-r from-amber-500/20 to-orange-600/20 text-amber-800 text-xs font-bold uppercase tracking-wide border border-amber-400/50">
@@ -13,7 +13,8 @@
         {{-- Fire only on the rounded border of the post card --}}
         <div class="say-it-fire-border-wrap" aria-hidden="true">
             <article class="say-it-featured-card-inner bg-white rounded-2xl shadow-sm overflow-hidden border border-gray-200">
-                <div class="p-4 sm:p-5">
+                @php $sayItMesh = $post->card_background_mesh ?? ''; @endphp
+                <div class="p-4 sm:p-5 @if($sayItMesh === ''){{ \App\Helpers\SayItHelper::cardContentBackgroundClasses($post->card_background) }}@endif" @if($sayItMesh !== '') style="{{ $sayItMesh }}" @endif>
                     <div class="flex flex-wrap items-center gap-x-2 gap-y-1 mb-1.5">
                         <span class="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 {{ \App\Helpers\SayItHelper::avatarColorClassesForCodename($post->codename) }}" title="{{ $post->codename }}">
                             <i class="{{ \App\Helpers\SayItHelper::animalIconForCodename($post->codename) }} text-sm"></i>
@@ -31,7 +32,7 @@
                     @endif
                     @if($post->image_url)
                         <div class="mt-3 rounded-xl overflow-hidden bg-gray-50 border border-gray-100">
-                            <img src="{{ $post->image_url }}" alt="Post image" class="w-full max-h-80 object-contain">
+                            <img src="{{ $post->image_url }}" alt="Post image" class="w-full max-w-full max-h-80 object-contain h-auto">
                         </div>
                     @endif
                     @if($post->relationLoaded('latestComment') && $post->latestComment)

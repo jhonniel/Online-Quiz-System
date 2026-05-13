@@ -233,6 +233,9 @@
                         <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                             Status
                         </th>
+                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[11rem]">
+                            Intern quiz
+                        </th>
                         <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                             Applied Date
                         </th>
@@ -304,6 +307,49 @@
                                     </span>
                                 @endif
                             </td>
+                            <td class="px-6 py-4 align-top text-sm text-gray-600">
+                                @php
+                                    $isInternshipRow = $application->hiringPosition && strcasecmp((string) ($application->hiringPosition->employment_type ?? ''), 'Internship') === 0;
+                                @endphp
+                                @if(! $isInternshipRow)
+                                    <span class="text-gray-400">—</span>
+                                @elseif(! $application->user_id)
+                                    <span class="text-xs text-gray-500">After accept</span>
+                                @else
+                                    @php
+                                        $iqRows = ($internQuizByUserId ?? collect())->get($application->user_id, collect());
+                                    @endphp
+                                    @if($iqRows->isEmpty())
+                                        <span class="text-xs text-gray-500">None assigned</span>
+                                    @else
+                                        <ul class="space-y-2 max-w-xs">
+                                            @foreach($iqRows as $asg)
+                                                @php
+                                                    $r = ($internQuizRankMeta ?? [])[$asg->id] ?? null;
+                                                    $tq = (int) ($asg->quiz->total_questions ?? 0);
+                                                @endphp
+                                                <li class="text-xs border-l-2 border-indigo-200 pl-2">
+                                                    <div class="font-medium text-gray-900 truncate" title="{{ $asg->quiz->title ?? 'Quiz' }}">{{ Str::limit($asg->quiz->title ?? 'Quiz', 28) }}</div>
+                                                    <div class="text-gray-600 mt-0.5">{{ $asg->getStatusText() }}</div>
+                                                    @if($asg->is_completed)
+                                                        <div class="text-gray-700 mt-0.5">
+                                                            Score {{ (int) ($asg->best_score ?? 0) }}{{ $tq > 0 ? ' / '.$tq : '' }}
+                                                            @if($r)
+                                                                <span class="text-gray-500"> · #{{ $r['rank'] }}/{{ $r['of'] }}</span>
+                                                            @endif
+                                                        </div>
+                                                        @if($asg->last_attempt_at)
+                                                            <div class="text-gray-500 mt-0.5">Taken {{ $asg->last_attempt_at->format('M j, Y') }}</div>
+                                                        @endif
+                                                    @elseif($asg->started_at)
+                                                        <div class="text-gray-500 mt-0.5">Started {{ $asg->started_at->format('M j, Y') }}</div>
+                                                    @endif
+                                                </li>
+                                            @endforeach
+                                        </ul>
+                                    @endif
+                                @endif
+                            </td>
                             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                                 {{ $application->created_at->format('M j, Y') }}
                             </td>
@@ -315,7 +361,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="5" class="px-6 py-12 text-center text-sm text-gray-500">
+                            <td colspan="6" class="px-6 py-12 text-center text-sm text-gray-500">
                                 <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
                                 </svg>

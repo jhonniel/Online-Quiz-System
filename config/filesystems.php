@@ -2,6 +2,8 @@
 
 return [
     'default' => env('FILESYSTEM_DISK', 'local'),
+    /** Disk for Say-it images: digitalocean, spaces, s3, public, or local. Local/testing auto-falls back to public if remote disk has no credentials. */
+    'confessions_storage_disk' => env('CONFESSIONS_STORAGE_DISK', 'digitalocean'),
     'disks' => [
         'local' => [
             'driver' => 'local',
@@ -17,10 +19,10 @@ return [
         ],
         's3' => [
             'driver' => 's3',
-            'key' => env('AWS_ACCESS_KEY_ID'),
-            'secret' => env('AWS_SECRET_ACCESS_KEY'),
-            'region' => env('AWS_DEFAULT_REGION'),
-            'bucket' => env('AWS_BUCKET'),
+            'key' => env('AWS_ACCESS_KEY_ID') ?: '',
+            'secret' => env('AWS_SECRET_ACCESS_KEY') ?: '',
+            'region' => env('AWS_DEFAULT_REGION') ?: 'us-east-1',
+            'bucket' => env('AWS_BUCKET') ?: '',
             'url' => env('AWS_URL'),
             'endpoint' => env('AWS_ENDPOINT'),
             'use_path_style_endpoint' => env('AWS_USE_PATH_STYLE_ENDPOINT', false),
@@ -28,21 +30,21 @@ return [
         ],
         'spaces' => [
             'driver' => 's3',
-            'key' => env('DO_SPACES_KEY'),
-            'secret' => env('DO_SPACES_SECRET'),
-            'endpoint' => env('DO_SPACES_ENDPOINT'),
-            'region' => env('DO_SPACES_REGION'),
-            'bucket' => env('DO_SPACES_BUCKET'),
+            'key' => env('DO_SPACES_KEY') ?: '',
+            'secret' => env('DO_SPACES_SECRET') ?: '',
+            'endpoint' => env('DO_SPACES_ENDPOINT') ?: '',
+            'region' => env('DO_SPACES_REGION') ?: 'us-east-1',
+            'bucket' => env('DO_SPACES_BUCKET') ?: '',
             'url' => env('DO_SPACES_URL'),
             'visibility' => 'public',
         ],
         'digitalocean' => [
             'driver' => 's3',
-            'key' => env('DIGITALOCEAN_SPACES_KEY') ?: env('DO_SPACES_KEY'),
-            'secret' => env('DIGITALOCEAN_SPACES_SECRET') ?: env('DO_SPACES_SECRET'),
-            'endpoint' => env('DIGITALOCEAN_SPACES_ENDPOINT') ?: env('DO_SPACES_ENDPOINT'),
+            'key' => env('DIGITALOCEAN_SPACES_KEY') ?: env('DO_SPACES_KEY') ?: '',
+            'secret' => env('DIGITALOCEAN_SPACES_SECRET') ?: env('DO_SPACES_SECRET') ?: '',
+            'endpoint' => env('DIGITALOCEAN_SPACES_ENDPOINT') ?: env('DO_SPACES_ENDPOINT') ?: '',
             'region' => env('DIGITALOCEAN_SPACES_REGION') ?: env('DO_SPACES_REGION', 'us-east-1'),
-            'bucket' => env('DIGITALOCEAN_SPACES_BUCKET') ?: env('DO_SPACES_BUCKET'),
+            'bucket' => env('DIGITALOCEAN_SPACES_BUCKET') ?: env('DO_SPACES_BUCKET') ?: '',
             'url' => env('DIGITALOCEAN_SPACES_URL') ?: env('DO_SPACES_URL'),
             'visibility' => 'public',
         ],

@@ -110,6 +110,14 @@
                         <span>Contact</span>
                     </div>
                 </button>
+                <button type="button" onclick="if(window.showTab) window.showTab('say-it'); return false;" id="tab-say-it" class="settings-tab" data-tab="say-it">
+                    <div class="flex items-center space-x-2">
+                        <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                        </svg>
+                        <span>Say-it</span>
+                    </div>
+                </button>
                 <button type="button" onclick="if(window.showTab) window.showTab('health'); return false;" id="tab-health" class="settings-tab" data-tab="health">
                     <div class="flex items-center space-x-2">
                         <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1457,6 +1465,149 @@
                                                    class="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
                                         </div>
                                     </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Say-it: Image generation Tab -->
+                <div id="content-say-it" class="tab-content hidden">
+                    <div class="space-y-8">
+                        <div class="form-section">
+                            <div class="flex items-center space-x-3 mb-6">
+                                <div class="flex-shrink-0 bg-violet-100 rounded-lg p-2">
+                                    <svg class="h-6 w-6 text-violet-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                                    </svg>
+                                </div>
+                                <div>
+                                    <h3 class="text-lg font-semibold text-gray-900">Say-it — Image generation</h3>
+                                    <p class="text-sm text-gray-500">Optional AI images for anonymous posts (Stable Diffusion Web UI or ComfyUI). Settings here override <code class="text-xs bg-gray-100 px-1 rounded">.env</code> when saved.</p>
+                                </div>
+                            </div>
+
+                            @php
+                                $sayitDriver = old('sayit_image_driver', $settings['sayit_image_driver'] ?? config('sayit_image.driver', 'disabled'));
+                                $sayitComposerAiEnabled = old('sayit_composer_ai_image_enabled', $settings['sayit_composer_ai_image_enabled'] ?? (config('sayit_image.composer_ai_image_enabled', true) ? 'enabled' : 'disabled'));
+                                $sayitSdUrl = old('sayit_sd_webui_base_url', $settings['sayit_sd_webui_base_url'] ?? config('sayit_image.sd_webui.base_url', ''));
+                                $sayitSdInternal = old('sayit_sd_webui_internal_base_url', $settings['sayit_sd_webui_internal_base_url'] ?? config('sayit_image.sd_webui.internal_base_url', ''));
+                                $sayitSdVerify = old('sayit_sd_webui_verify_ssl', $settings['sayit_sd_webui_verify_ssl'] ?? (config('sayit_image.sd_webui.verify', true) ? 'enabled' : 'disabled'));
+                                $sayitTimeout = old('sayit_image_http_timeout', $settings['sayit_image_http_timeout'] ?? config('sayit_image.sd_webui.timeout', 180));
+                                $sayitComfyUrl = old('sayit_comfyui_base_url', $settings['sayit_comfyui_base_url'] ?? config('sayit_image.comfyui.base_url', ''));
+                                $sayitComfyInternal = old('sayit_comfyui_internal_base_url', $settings['sayit_comfyui_internal_base_url'] ?? config('sayit_image.comfyui.internal_base_url', ''));
+                                $sayitComfyWorkflow = old('sayit_comfyui_workflow_path', $settings['sayit_comfyui_workflow_path'] ?? '');
+                                $sayitComfyPh = old('sayit_comfyui_prompt_placeholder', $settings['sayit_comfyui_prompt_placeholder'] ?? config('sayit_image.comfyui.prompt_placeholder', '__SAYIT_PROMPT__'));
+                                $sayitComfyVerify = old('sayit_comfyui_verify_ssl', $settings['sayit_comfyui_verify_ssl'] ?? (config('sayit_image.comfyui.verify', true) ? 'enabled' : 'disabled'));
+                            @endphp
+
+                            <div class="space-y-6 max-w-3xl">
+                                <div>
+                                    <label for="sayit_composer_ai_image_enabled" class="block text-sm font-medium text-gray-700 mb-2">Say-it composer: Generate image</label>
+                                    <select name="sayit_composer_ai_image_enabled" id="sayit_composer_ai_image_enabled"
+                                            class="w-full max-w-md px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                                        <option value="enabled" {{ $sayitComposerAiEnabled === 'enabled' ? 'selected' : '' }}>Enabled (button shows when backend is configured)</option>
+                                        <option value="disabled" {{ $sayitComposerAiEnabled === 'disabled' ? 'selected' : '' }}>Disabled (hide Generate image)</option>
+                                    </select>
+                                    <p class="mt-1 text-xs text-gray-500">When disabled, users do not see “Generate image” and cannot submit AI-generated images, even if ComfyUI or SD Web UI is configured below.</p>
+                                </div>
+
+                                <div>
+                                    <label for="sayit_image_driver" class="block text-sm font-medium text-gray-700 mb-2">Backend</label>
+                                    <select name="sayit_image_driver" id="sayit_image_driver"
+                                            class="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                                        <option value="disabled" {{ $sayitDriver === 'disabled' ? 'selected' : '' }}>Disabled</option>
+                                        <option value="sdwebui" {{ $sayitDriver === 'sdwebui' ? 'selected' : '' }}>Stable Diffusion Web UI (AUTOMATIC1111 API)</option>
+                                        <option value="comfyui" {{ $sayitDriver === 'comfyui' ? 'selected' : '' }}>ComfyUI</option>
+                                    </select>
+                                    <p class="mt-2 text-xs text-gray-500">SD Web UI must be started with API enabled. ComfyUI needs an exported API workflow JSON on the server.</p>
+                                </div>
+
+                                <div class="border-t border-gray-200 pt-6">
+                                    <h4 class="text-sm font-semibold text-gray-900 mb-4">Stable Diffusion Web UI</h4>
+                                    <div class="space-y-4">
+                                        <div>
+                                            <label for="sayit_sd_webui_internal_base_url" class="block text-sm font-medium text-gray-700 mb-2">Internal API URL <span class="text-gray-400 font-normal">(recommended)</span></label>
+                                            <input type="text" name="sayit_sd_webui_internal_base_url" id="sayit_sd_webui_internal_base_url"
+                                                   value="{{ $sayitSdInternal }}"
+                                                   placeholder="http://127.0.0.1:7860"
+                                                   class="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 font-mono text-sm">
+                                            <p class="mt-1 text-xs text-gray-500">Where Automatic1111 actually listens (e.g. <code class="bg-gray-100 px-1 rounded">http://127.0.0.1:7860</code>). This server connects here when proxying or when no public Base URL is used.</p>
+                                            <p class="mt-1 text-xs text-amber-900 bg-amber-50 border border-amber-100 rounded px-2 py-2">To use your <strong>public</strong> site as Base URL (e.g. <code class="bg-white px-1 rounded">https://infosoft.poolreno.com</code>), set <strong>both</strong> Base URL (public HTTPS) and Internal API URL (e.g. <code class="bg-white px-1 rounded">http://127.0.0.1:7860</code>). This app proxies <code class="bg-white px-1 rounded">/sdapi/</code> using a secret derived from <code class="bg-white px-1 rounded">APP_KEY</code>. Optional: set <code class="bg-white px-1 rounded">SD_WEBUI_PROXY_SECRET</code> in <code class="bg-white px-1 rounded">.env</code> to override that secret.</p>
+                                        </div>
+                                        <div>
+                                            <label for="sayit_sd_webui_base_url" class="block text-sm font-medium text-gray-700 mb-2">Base URL</label>
+                                            <input type="text" name="sayit_sd_webui_base_url" id="sayit_sd_webui_base_url"
+                                                   value="{{ $sayitSdUrl }}"
+                                                   placeholder="https://your-domain.com or http://127.0.0.1:7860"
+                                                   class="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 font-mono text-sm">
+                                            <p class="mt-1 text-xs text-gray-500">If this differs from Internal API URL, outbound calls use this public URL and the built-in <code class="bg-gray-100 px-1 rounded">/sdapi/</code> proxy. If it matches Internal, or Internal is empty, calls go to Base URL directly.</p>
+                                        </div>
+                                        <div>
+                                            <label for="sayit_sd_webui_verify_ssl" class="block text-sm font-medium text-gray-700 mb-2">Verify SSL</label>
+                                            <select name="sayit_sd_webui_verify_ssl" id="sayit_sd_webui_verify_ssl"
+                                                    class="w-full max-w-xs px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                                                <option value="enabled" {{ $sayitSdVerify === 'enabled' ? 'selected' : '' }}>Enabled</option>
+                                                <option value="disabled" {{ $sayitSdVerify === 'disabled' ? 'selected' : '' }}>Disabled (local HTTPS / self-signed)</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="border-t border-gray-200 pt-6">
+                                    <h4 class="text-sm font-semibold text-gray-900 mb-4">ComfyUI</h4>
+                                    <div class="space-y-4">
+                                        <div>
+                                            <label for="sayit_comfyui_internal_base_url" class="block text-sm font-medium text-gray-700 mb-2">Internal API URL <span class="text-gray-400 font-normal">(recommended)</span></label>
+                                            <input type="text" name="sayit_comfyui_internal_base_url" id="sayit_comfyui_internal_base_url"
+                                                   value="{{ $sayitComfyInternal }}"
+                                                   placeholder="http://127.0.0.1:8188"
+                                                   class="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 font-mono text-sm">
+                                            <p class="mt-1 text-xs text-gray-500">Where ComfyUI listens. Required with a public Base URL so this app can proxy <code class="bg-gray-100 px-1 rounded">/comfyui/prompt</code>, <code class="bg-gray-100 px-1 rounded">/comfyui/history</code>, etc.</p>
+                                            <p class="mt-2 text-xs text-amber-900 bg-amber-50 border border-amber-100 rounded px-2 py-2">If Say-it still cannot connect: open this URL in a browser <strong>on the same computer that runs <code class="bg-white px-1 rounded">php artisan serve</code></strong>. If it does not load, start ComfyUI from its folder (<code class="bg-white px-1 rounded">python main.py</code>) first—changing Laravel settings alone does not start ComfyUI. From the project root run <code class="bg-white px-1 rounded">php artisan sayit:comfyui-diagnose</code> (same terminal/VM as PHP) to verify what URL Laravel uses and whether it can connect.</p>
+                                        </div>
+                                        <div>
+                                            <label for="sayit_comfyui_base_url" class="block text-sm font-medium text-gray-700 mb-2">Base URL</label>
+                                            <input type="text" name="sayit_comfyui_base_url" id="sayit_comfyui_base_url"
+                                                   value="{{ $sayitComfyUrl }}"
+                                                   placeholder="https://your-site.com or http://127.0.0.1:8188"
+                                                   class="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 font-mono text-sm">
+                                            <p class="mt-1 text-xs text-gray-500">If this differs from Internal API URL, outbound calls use this site and the built-in <code class="bg-gray-100 px-1 rounded">/comfyui/</code> proxy (same secret as SD Web UI). Otherwise calls go directly to Internal or Base.</p>
+                                        </div>
+                                        <div>
+                                            <label for="sayit_comfyui_workflow_path" class="block text-sm font-medium text-gray-700 mb-2">Workflow JSON path</label>
+                                            <input type="text" name="sayit_comfyui_workflow_path" id="sayit_comfyui_workflow_path"
+                                                   value="{{ $sayitComfyWorkflow }}"
+                                                   placeholder="storage/app/comfyui/sayit_workflow_api.json"
+                                                   class="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 font-mono text-sm">
+                                            <p class="mt-1 text-xs text-gray-500">Absolute path, or relative to the project root. File must contain the prompt placeholder as a JSON string value (see below).</p>
+                                        </div>
+                                        <div>
+                                            <label for="sayit_comfyui_prompt_placeholder" class="block text-sm font-medium text-gray-700 mb-2">Prompt placeholder token</label>
+                                            <input type="text" name="sayit_comfyui_prompt_placeholder" id="sayit_comfyui_prompt_placeholder"
+                                                   value="{{ $sayitComfyPh }}"
+                                                   maxlength="120"
+                                                   class="w-full max-w-md px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 font-mono text-sm">
+                                            <p class="mt-1 text-xs text-gray-500">Must appear in the workflow as <code class="bg-gray-100 px-1 rounded">"__SAYIT_PROMPT__"</code> (exact quotes in JSON) so the user prompt can be injected.</p>
+                                        </div>
+                                        <div>
+                                            <label for="sayit_comfyui_verify_ssl" class="block text-sm font-medium text-gray-700 mb-2">Verify SSL</label>
+                                            <select name="sayit_comfyui_verify_ssl" id="sayit_comfyui_verify_ssl"
+                                                    class="w-full max-w-xs px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                                                <option value="enabled" {{ $sayitComfyVerify === 'enabled' ? 'selected' : '' }}>Enabled</option>
+                                                <option value="disabled" {{ $sayitComfyVerify === 'disabled' ? 'selected' : '' }}>Disabled</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="border-t border-gray-200 pt-6">
+                                    <label for="sayit_image_http_timeout" class="block text-sm font-medium text-gray-700 mb-2">HTTP timeout (seconds)</label>
+                                    <input type="number" name="sayit_image_http_timeout" id="sayit_image_http_timeout"
+                                           value="{{ $sayitTimeout }}"
+                                           min="30" max="600" step="1"
+                                           class="w-full max-w-xs px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                                    <p class="mt-1 text-xs text-gray-500">Applies to both SD Web UI and ComfyUI requests (generation can take minutes).</p>
                                 </div>
                             </div>
                         </div>

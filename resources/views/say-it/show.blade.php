@@ -3,7 +3,7 @@
 @section('title', 'Say it – Post')
 
 @section('content')
-<div class="max-w-2xl mx-auto lg:max-w-none">
+<div class="max-w-2xl mx-auto lg:max-w-none w-full min-w-0">
     <a href="{{ url('/Say-it') }}" class="inline-flex items-center gap-2 text-sm font-medium text-gray-500 hover:text-violet-600 transition mb-4 min-h-[44px] items-center touch-manipulation">
         <i class="fas fa-arrow-left"></i>
         Back to feed
@@ -11,7 +11,8 @@
 
     {{-- Post card --}}
     <article class="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden mb-6">
-        <div class="p-4 sm:p-5">
+        @php $sayItMesh = $post->card_background_mesh ?? ''; @endphp
+        <div class="p-4 sm:p-5 @if($sayItMesh === ''){{ \App\Helpers\SayItHelper::cardContentBackgroundClasses($post->card_background) }}@endif" @if($sayItMesh !== '') style="{{ $sayItMesh }}" @endif>
             <div class="flex flex-wrap items-center gap-x-2 gap-y-1 mb-1.5">
                 <span class="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 {{ \App\Helpers\SayItHelper::avatarColorClassesForCodename($post->codename) }}" title="{{ $post->codename }}">
                     <i class="{{ \App\Helpers\SayItHelper::animalIconForCodename($post->codename) }} text-sm"></i>
@@ -29,7 +30,7 @@
             @endif
             @if($post->image_url)
                 <div class="mt-3 rounded-xl overflow-hidden bg-gray-50 border border-gray-100">
-                    <img src="{{ $post->image_url }}" alt="Post image" class="w-full max-h-[28rem] object-contain">
+                    <img src="{{ $post->image_url }}" alt="Post image" class="w-full max-w-full max-h-[28rem] object-contain h-auto">
                 </div>
             @endif
         </div>

@@ -2,7 +2,10 @@
 
 namespace App\Providers;
 
+use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Foundation\Support\Providers\RouteServiceProvider as ServiceProvider;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\Route;
 
 class RouteServiceProvider extends ServiceProvider
@@ -31,11 +34,11 @@ class RouteServiceProvider extends ServiceProvider
     {
         // Load routes FIRST before anything else
         $this->mapWebRoutes();
-        
+
         if (file_exists(base_path('routes/api.php'))) {
             $this->mapApiRoutes();
         }
-        
+
         $this->configureRateLimiting();
     }
 
@@ -63,6 +66,8 @@ class RouteServiceProvider extends ServiceProvider
      */
     protected function configureRateLimiting(): void
     {
-        // Rate limiting configuration if needed
+        RateLimiter::for('say-it-ai-image', function (Request $request) {
+            return Limit::perMinute(8)->by($request->ip());
+        });
     }
 }

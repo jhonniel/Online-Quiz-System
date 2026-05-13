@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Helpers\SayItHelper;
 use App\Models\ConfessionComment;
 use App\Models\ConfessionCommentVote;
 use App\Models\ConfessionHashtag;
@@ -10,10 +11,16 @@ use App\Models\ConfessionPostVote;
 use App\Models\ConfessionTopic;
 use App\Models\Setting;
 use App\Services\ConfessionCodenameService;
+use App\Services\SayItImageGeneration\SayItImageBinaryValidator;
+use App\Services\SayItImageGeneration\SayItImageGenerationException;
+use App\Services\SayItImageGeneration\SayItImageGenerator;
+use App\Services\SayItImageGeneration\SayItImageSettings;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 
 class SayItController extends Controller
 {
@@ -41,7 +48,7 @@ class SayItController extends Controller
         $mostPopularPost = ConfessionPost::withCount('allComments')
             ->with(['latestComment', 'topic'])
             ->orderByRaw(
-                '(confession_posts.upvotes_count - confession_posts.downvotes_count) + ' .
+                '(confession_posts.upvotes_count - confession_posts.downvotes_count) + '.
                 '(SELECT COUNT(*) FROM confession_comments WHERE confession_comments.confession_post_id = confession_posts.id) DESC'
             )
             ->orderByDesc('created_at')
@@ -49,7 +56,7 @@ class SayItController extends Controller
 
         if ($sort === 'popular') {
             $query->orderByRaw(
-                '(confession_posts.upvotes_count - confession_posts.downvotes_count) + ' .
+                '(confession_posts.upvotes_count - confession_posts.downvotes_count) + '.
                 '(SELECT COUNT(*) FROM confession_comments WHERE confession_comments.confession_post_id = confession_posts.id) DESC'
             )->orderByDesc('created_at');
         } else {
@@ -74,6 +81,7 @@ class SayItController extends Controller
         if ($request->get('lazy') || $request->ajax()) {
             $sessionCodename = self::codenameForSession($request);
             $html = view('say-it.partials.post-cards', ['posts' => $posts, 'sessionCodename' => $sessionCodename])->render();
+
             return response()->json([
                 'html' => $html,
                 'next_page_url' => $posts->hasMorePages() ? $posts->nextPageUrl() : null,
@@ -82,16 +90,26 @@ class SayItController extends Controller
         }
 
         $sessionCodename = self::codenameForSession($request);
-        return view('say-it.index', compact('posts', 'recentPosts', 'sort', 'topics', 'topTopics', 'topHashtags', 'topicSlug', 'hashtagSlug', 'sessionCodename', 'mostPopularPost'));
+        $sayItAiImageConfigured = SayItImageGenerator::isComposerGenerateImageAvailable();
+
+        return view('say-it.index', compact('posts', 'recentPosts', 'sort', 'topics', 'topTopics', 'topHashtags', 'topicSlug', 'hashtagSlug', 'sessionCodename', 'mostPopularPost', 'sayItAiImageConfigured'));
     }
 
     public function storePost(Request $request)
     {
+        $bgKeys = SayItHelper::cardBackgroundKeys();
+
         $validated = $request->validate([
             'topic_id' => 'nullable|exists:confession_topics,id',
             'topic_name' => 'nullable|string|max:100',
             'content' => 'nullable|string|max:10000',
             'text_size' => 'nullable|in:normal,medium,large',
+            'card_background_mode' => ['nullable', Rule::in(['random', 'pick'])],
+            'card_background' => [
+                'exclude_unless:card_background_mode,pick',
+                'required',
+                Rule::in($bgKeys),
+            ],
             'image' => [
                 'nullable',
                 'file',
@@ -99,12 +117,14 @@ class SayItController extends Controller
                 'mimes:jpeg,jpg,png,gif,webp',
                 'mimetypes:image/jpeg,image/png,image/gif,image/webp',
             ],
+            'ai_generated_image_dataurl' => ['nullable', 'string', 'max:8000000'],
         ], [
             'content.required_without' => 'Please write something or attach an image.',
             'image.image' => 'The photo must be an image (JPEG, PNG, GIF, or WebP).',
             'image.mimes' => 'The photo must be an image (JPEG, PNG, GIF, or WebP).',
             'image.mimetypes' => 'The photo must be an image (JPEG, PNG, GIF, or WebP).',
             'image.max' => 'The photo may not be larger than 5 MB.',
+            'ai_generated_image_dataurl.max' => 'The AI image payload is too large.',
         ]);
 
         $topicId = $request->input('topic_id');
@@ -119,29 +139,78 @@ class SayItController extends Controller
             $topic = ConfessionTopic::findOrFail($topicId);
         }
 
-        if (empty(trim($validated['content'] ?? '')) && !$request->hasFile('image')) {
-            return back()->withInput()->withErrors(['content' => 'Please write something or attach an image.']);
+        $aiDataUrl = (string) ($validated['ai_generated_image_dataurl'] ?? '');
+        $hasAiPayload = trim($aiDataUrl) !== '';
+
+        if ($hasAiPayload && ! SayItImageSettings::isComposerGenerateImageFeatureEnabled()) {
+            return back()->withInput()->withErrors(['ai_generated_image_dataurl' => 'AI-generated images are disabled for this site.']);
+        }
+
+        if (empty(trim($validated['content'] ?? '')) && ! $request->hasFile('image') && ! $hasAiPayload) {
+            return back()->withInput()->withErrors(['content' => 'Please write something, attach a photo, or attach an AI-generated image.']);
+        }
+
+        if ($request->hasFile('image') && $hasAiPayload) {
+            return back()->withInput()->withErrors([
+                'image' => 'Choose either an uploaded photo or an AI-generated image, not both.',
+            ]);
         }
 
         $imagePath = null;
+        $confessDisk = SayItHelper::confessionStorageDisk();
+        $confessDir = SayItHelper::confessionsStoragePathPrefix();
+
         if ($request->hasFile('image')) {
             $file = $request->file('image');
-            if (! config('filesystems.disks.digitalocean.key') || ! config('filesystems.disks.digitalocean.secret')) {
-                return back()->withInput()->withErrors(['image' => 'Photo upload is not configured. Please contact the administrator.']);
+            if (! SayItHelper::isConfessionImageStorageConfigured()) {
+                return back()->withInput()->withErrors(['image' => 'Image storage is not configured. Set Spaces/S3 credentials, or for local dev use CONFESSIONS_STORAGE_DISK=public and php artisan storage:link.']);
             }
             try {
-                $imagePath = $file->store('confessions', 'digitalocean');
+                $imagePath = $file->store($confessDir, $confessDisk);
+                try {
+                    Storage::disk($confessDisk)->setVisibility($imagePath, 'public');
+                } catch (\Throwable $e) {
+                    // local disks may not support visibility; Spaces/S3 should succeed
+                }
             } catch (\Throwable $e) {
                 return back()->withInput()->withErrors(['image' => 'Photo could not be uploaded to storage. Please try again.']);
+            }
+        } elseif ($hasAiPayload) {
+            if (! SayItHelper::isConfessionImageStorageConfigured()) {
+                return back()->withInput()->withErrors(['ai_generated_image_dataurl' => 'Image storage is not configured. Set Spaces/S3 credentials, or for local dev use CONFESSIONS_STORAGE_DISK=public and php artisan storage:link.']);
+            }
+            try {
+                $binary = $this->decodeAiGeneratedImageDataUrl($aiDataUrl);
+                $ext = $this->guessImageExtensionFromBinary($binary);
+                $path = $confessDir.'/ai-'.date('Y/m').'/'.Str::uuid()->toString().'.'.$ext;
+                Storage::disk($confessDisk)->put($path, $binary, 'public');
+                $imagePath = $path;
+            } catch (ValidationException $e) {
+                return back()->withInput()->withErrors($e->errors());
+            } catch (\Throwable $e) {
+                Log::warning('Say-it AI image upload failed: '.$e->getMessage());
+
+                return back()->withInput()->withErrors(['ai_generated_image_dataurl' => 'The AI image could not be stored. Please try again.']);
             }
         }
 
         $codename = self::codenameForSession($request);
 
+        $mode = $validated['card_background_mode'] ?? 'pick';
+        $meshStyle = null;
+        $cardBackground = null;
+        if ($mode === 'pick') {
+            $cardBackground = $validated['card_background'] ?? 'white';
+        } else {
+            $meshStyle = SayItHelper::randomMeshBackgroundStyle();
+        }
+
         $post = ConfessionPost::create([
             'confession_topic_id' => $topic->id,
             'content' => $validated['content'] ?? '',
             'text_size' => $validated['text_size'] ?? 'normal',
+            'card_background' => $cardBackground,
+            'card_background_mesh' => $meshStyle,
             'image_path' => $imagePath,
             'codename' => $codename,
             'ip_address' => $request->ip(),
@@ -160,7 +229,119 @@ class SayItController extends Controller
         }
         $post->hashtags()->sync(array_keys($hashtagIds));
 
-        return redirect(url('/Say-it'))->with('success', 'Your confession was posted. You are ' . $codename . '.');
+        return redirect(url('/Say-it'))->with('success', 'Your confession was posted. You are '.$codename.'.');
+    }
+
+    /**
+     * JSON endpoint: generate an image from a prompt (SD Web UI or ComfyUI), for Say-it composer preview.
+     */
+    public function generateImage(Request $request)
+    {
+        if (! SayItImageSettings::isComposerGenerateImageFeatureEnabled()) {
+            return response()->json([
+                'ok' => false,
+                'message' => 'AI image generation is disabled. An administrator can enable it under Admin → Settings → Say-it.',
+            ], 403);
+        }
+
+        if (! SayItImageGenerator::isConfigured()) {
+            return response()->json([
+                'ok' => false,
+                'message' => 'AI image generation is not configured. Open Admin → Settings → Say-it, choose a backend, and set Internal API URL (or Base URL) to an address this server can reach.',
+            ], 503);
+        }
+
+        $validated = $request->validate([
+            'prompt' => ['required', 'string', 'min:3', 'max:2000'],
+        ]);
+
+        try {
+            $binary = SayItImageGenerator::make()->generate(trim($validated['prompt']));
+        } catch (SayItImageGenerationException $e) {
+            return response()->json(['ok' => false, 'message' => $e->getMessage()], 422);
+        } catch (\Throwable $e) {
+            Log::error('Say-it generateImage: '.$e->getMessage(), ['exception' => $e]);
+
+            $message = 'Image generation failed unexpectedly.';
+            if (config('app.debug')) {
+                $message .= ' '.$e->getMessage();
+            }
+
+            return response()->json(['ok' => false, 'message' => $message], 500);
+        }
+
+        $mime = 'image/png';
+        if (str_starts_with($binary, "\xff\xd8\xff")) {
+            $mime = 'image/jpeg';
+        } elseif (strlen($binary) > 12 && str_starts_with($binary, 'RIFF') && substr($binary, 8, 4) === 'WEBP') {
+            $mime = 'image/webp';
+        }
+
+        $dataUrl = 'data:'.$mime.';base64,'.base64_encode($binary);
+
+        return response()->json([
+            'ok' => true,
+            'mime' => $mime,
+            'data_url' => $dataUrl,
+        ]);
+    }
+
+    /**
+     * JSON: random mesh CSS for the Say-it composer textarea (matches posted card gradient).
+     */
+    public function composerMeshPreview()
+    {
+        return response()->json([
+            'style' => SayItHelper::randomMeshBackgroundStyle(),
+        ])->header('Cache-Control', 'no-store');
+    }
+
+    /**
+     * @throws ValidationException
+     */
+    protected function decodeAiGeneratedImageDataUrl(string $dataUrl): string
+    {
+        $dataUrl = trim($dataUrl);
+        if (! preg_match('#^data:image/(png|jpeg|jpg|webp);base64,(.+)$#is', $dataUrl, $m)) {
+            throw ValidationException::withMessages([
+                'ai_generated_image_dataurl' => 'Invalid AI image format.',
+            ]);
+        }
+
+        $raw = base64_decode($m[2], true);
+        if ($raw === false || strlen($raw) < 32) {
+            throw ValidationException::withMessages([
+                'ai_generated_image_dataurl' => 'Could not decode the AI image.',
+            ]);
+        }
+
+        if (strlen($raw) > 5 * 1024 * 1024) {
+            throw ValidationException::withMessages([
+                'ai_generated_image_dataurl' => 'AI image is too large (max 5 MB).',
+            ]);
+        }
+
+        try {
+            SayItImageBinaryValidator::assertPngJpegWebp($raw);
+        } catch (SayItImageGenerationException $e) {
+            throw ValidationException::withMessages([
+                'ai_generated_image_dataurl' => $e->getMessage(),
+            ]);
+        }
+
+        return $raw;
+    }
+
+    protected function guessImageExtensionFromBinary(string $binary): string
+    {
+        if (str_starts_with($binary, "\xff\xd8\xff")) {
+            return 'jpg';
+        }
+        if (strlen($binary) > 12 && str_starts_with($binary, 'RIFF') && substr($binary, 8, 4) === 'WEBP') {
+            return 'webp';
+        }
+
+        return 'png';
     }
 
     public function show(ConfessionPost $post)
@@ -192,7 +373,7 @@ class SayItController extends Controller
             'user_agent' => $request->userAgent(),
         ]);
 
-        return redirect()->to(url('/Say-it/' . $validated['confession_post_id']) . '#comments')->with('success', 'Comment posted as ' . $codename . '.');
+        return redirect()->to(url('/Say-it/'.$validated['confession_post_id']).'#comments')->with('success', 'Comment posted as '.$codename.'.');
     }
 
     public function vote(Request $request)
@@ -226,6 +407,7 @@ class SayItController extends Controller
                 ]);
                 $post->increment($voteValue === 1 ? 'upvotes_count' : 'downvotes_count');
             }
+
             return response()->json(['score' => $post->fresh()->upvotes_count - $post->fresh()->downvotes_count]);
         }
 
@@ -248,6 +430,7 @@ class SayItController extends Controller
             ]);
             $comment->increment($voteValue === 1 ? 'upvotes_count' : 'downvotes_count');
         }
+
         return response()->json(['score' => $comment->fresh()->upvotes_count - $comment->fresh()->downvotes_count]);
     }
 
@@ -262,7 +445,7 @@ class SayItController extends Controller
         if ($secondsSinceCreation > 50) {
             return response()->json([
                 'success' => false,
-                'message' => 'You can only delete your post within 50 seconds of posting.'
+                'message' => 'You can only delete your post within 50 seconds of posting.',
             ], 403);
         }
 
@@ -273,18 +456,8 @@ class SayItController extends Controller
         if ($post->codename !== $sessionCodename || $post->ip_address !== $requestIp) {
             return response()->json([
                 'success' => false,
-                'message' => 'You can only delete your own posts.'
+                'message' => 'You can only delete your own posts.',
             ], 403);
-        }
-
-        // Delete associated image if exists
-        if ($post->image_path) {
-            try {
-                Storage::disk('digitalocean')->delete($post->image_path);
-            } catch (\Exception $e) {
-                // Log but don't fail deletion
-                Log::warning('Failed to delete confession post image: ' . $e->getMessage());
-            }
         }
 
         // Decrement topic count
@@ -303,7 +476,7 @@ class SayItController extends Controller
 
         return response()->json([
             'success' => true,
-            'message' => 'Post deleted successfully.'
+            'message' => 'Post deleted successfully.',
         ]);
     }
 

@@ -4,7 +4,6 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Storage;
-use Illuminate\Support\Str;
 
 class TicketReport extends Model
 {
@@ -24,21 +23,27 @@ class TicketReport extends Model
         'admin_attachment_path',
         'payment_status',
         'amount_paid',
+        'paid_at',
     ];
 
     protected $casts = [
         'amount_paid' => 'decimal:2',
+        'paid_at' => 'datetime',
     ];
 
     public const STATUS_OPEN = 'open';
+
     public const STATUS_PROCESSING = 'processing';
+
     public const STATUS_NEEDS_INVESTIGATION = 'needs_investigation';
+
     public const STATUS_RESOLVED = 'resolved';
 
     // Legacy value kept for backward compatibility
     public const STATUS_CLOSED = 'closed';
 
     public const PAYMENT_STATUS_PENDING = 'pending_for_payment';
+
     public const PAYMENT_STATUS_PAID = 'paid';
 
     public static function adminStatuses(): array
@@ -62,9 +67,10 @@ class TicketReport extends Model
 
     public static function generateTicketNumber(): string
     {
-        $prefix = 'TR-' . now()->format('Ymd');
-        $max = static::where('ticket_number', 'like', $prefix . '-%')->count();
-        return $prefix . '-' . str_pad((string) ($max + 1), 4, '0', STR_PAD_LEFT);
+        $prefix = 'TR-'.now()->format('Ymd');
+        $max = static::where('ticket_number', 'like', $prefix.'-%')->count();
+
+        return $prefix.'-'.str_pad((string) ($max + 1), 4, '0', STR_PAD_LEFT);
     }
 
     public function isOpen(): bool
@@ -108,6 +114,7 @@ class TicketReport extends Model
         if (Storage::disk('public')->exists($this->image_path)) {
             return Storage::disk('public')->url($this->image_path);
         }
+
         return null;
     }
 
@@ -122,6 +129,7 @@ class TicketReport extends Model
         if (Storage::disk('public')->exists($this->admin_attachment_path)) {
             return Storage::disk('public')->url($this->admin_attachment_path);
         }
+
         return null;
     }
 
@@ -135,6 +143,7 @@ class TicketReport extends Model
     public function getTypeLabelAttribute(): string
     {
         $type = \App\Models\TicketProblemType::where('slug', $this->type)->first();
+
         return $type ? $type->label : $this->type;
     }
 }

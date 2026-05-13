@@ -17,13 +17,28 @@ use App\Http\Controllers\Auth\RoleLoginController;
 use App\Http\Controllers\ChatController;
 use App\Http\Controllers\LandingController;
 use App\Http\Controllers\RedirectController;
+use App\Http\Controllers\SayItComfyUiProxyController;
+use App\Http\Controllers\SayItSdWebUiProxyController;
 use App\Http\Controllers\StatusController;
 use App\Http\Controllers\TeacherInviteController;
 use App\Http\Controllers\User\DashboardController as UserDashboardController;
 use App\Http\Controllers\User\FileController as UserFileController;
 use App\Http\Controllers\User\QuizController as UserQuizController;
 use App\Http\Controllers\User\TeacherMoaController as UserTeacherMoaController;
+use App\Http\Middleware\VerifySayItComfyUiProxySecret;
+use App\Http\Middleware\VerifySayItSdWebUiProxySecret;
 use Illuminate\Support\Facades\Route;
+
+// Proxies (public Base URL + Internal API URL): X-SayIt-Image-Proxy-Secret or legacy X-SayIt-Sd-Proxy-Secret.
+Route::middleware(['web', VerifySayItSdWebUiProxySecret::class, 'throttle:60,1'])
+    ->any('/sdapi/{path?}', [SayItSdWebUiProxyController::class, 'forward'])
+    ->where('path', '.*')
+    ->name('sayit.sd.webui.proxy');
+
+Route::middleware(['web', VerifySayItComfyUiProxySecret::class, 'throttle:60,1'])
+    ->any('/comfyui/{path?}', [SayItComfyUiProxyController::class, 'forward'])
+    ->where('path', '.*')
+    ->name('sayit.comfyui.proxy');
 
 // Landing Page Routes
 Route::get('/', [LandingController::class, 'index'])->name('landing.index');
@@ -42,6 +57,10 @@ Route::get('/tor-pdf', [LandingController::class, 'torPdf'])->name('landing.tor-
 // Say-it: Anonymous confession board (no login, /Say-it only)
 Route::get('/Say-it', [App\Http\Controllers\SayItController::class, 'index']);
 Route::post('/Say-it', [App\Http\Controllers\SayItController::class, 'storePost']);
+Route::post('/Say-it/generate-image', [App\Http\Controllers\SayItController::class, 'generateImage'])
+    ->middleware('throttle:say-it-ai-image');
+Route::get('/Say-it/composer-mesh-preview', [App\Http\Controllers\SayItController::class, 'composerMeshPreview'])
+    ->middleware('throttle:60,1');
 Route::get('/Say-it/{post}', [App\Http\Controllers\SayItController::class, 'show'])->where('post', '[0-9]+');
 Route::post('/Say-it/comment', [App\Http\Controllers\SayItController::class, 'storeComment']);
 Route::post('/Say-it/vote', [App\Http\Controllers\SayItController::class, 'vote']);
@@ -371,6 +390,7 @@ Route::prefix('admin')->middleware(['auth', 'admin'])->group(function () {
         // Hiring Applications Management
         Route::get('/hiring-applications', [App\Http\Controllers\Admin\HiringApplicationController::class, 'index'])->name('admin.hiring-applications.index');
         Route::get('/hiring-applications/calendar', [App\Http\Controllers\Admin\HiringApplicationController::class, 'calendar'])->name('admin.hiring-applications.calendar');
+        Route::get('/hiring-applications/{application}/quiz-assignments/{assignment}/attempts', [App\Http\Controllers\Admin\HiringApplicationController::class, 'showInternQuizAssignmentAttempts'])->name('admin.hiring-applications.intern-quiz-attempts');
         Route::get('/hiring-applications/{application}', [App\Http\Controllers\Admin\HiringApplicationController::class, 'show'])->name('admin.hiring-applications.show');
         Route::post('/hiring-applications/{application}/accept', [App\Http\Controllers\Admin\HiringApplicationController::class, 'accept'])->name('admin.hiring-applications.accept');
         Route::post('/hiring-applications/{application}/reject', [App\Http\Controllers\Admin\HiringApplicationController::class, 'reject'])->name('admin.hiring-applications.reject');
@@ -380,6 +400,7 @@ Route::prefix('admin')->middleware(['auth', 'admin'])->group(function () {
         Route::post('/hiring-applications/{application}/send-follow-up', [App\Http\Controllers\Admin\HiringApplicationController::class, 'sendFollowUpEmail'])->name('admin.hiring-applications.send-follow-up');
         Route::post('/hiring-applications/{application}/mark-hired', [App\Http\Controllers\Admin\HiringApplicationController::class, 'markAsHired'])->name('admin.hiring-applications.mark-hired');
         Route::post('/hiring-applications/{application}/accept-intern', [App\Http\Controllers\Admin\HiringApplicationController::class, 'acceptIntern'])->name('admin.hiring-applications.accept-intern');
+        Route::post('/hiring-applications/{application}/assign-intern-quiz', [App\Http\Controllers\Admin\HiringApplicationController::class, 'assignInternQuiz'])->name('admin.hiring-applications.assign-intern-quiz');
         Route::post('/hiring-applications/{application}/cancel-hired', [App\Http\Controllers\Admin\HiringApplicationController::class, 'cancelHired'])->name('admin.hiring-applications.cancel-hired');
         Route::get('/hiring-applications/{application}/download-resume', [App\Http\Controllers\Admin\HiringApplicationController::class, 'downloadResume'])->name('admin.hiring-applications.download-resume');
         Route::get('/hiring-applications/{application}/view-resume', [App\Http\Controllers\Admin\HiringApplicationController::class, 'viewResume'])->name('admin.hiring-applications.view-resume');

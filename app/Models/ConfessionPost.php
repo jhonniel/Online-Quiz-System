@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Helpers\SayItHelper;
 use App\Services\ConfessionCensorService;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
@@ -20,6 +21,8 @@ class ConfessionPost extends Model
         'confession_topic_id',
         'content',
         'text_size',
+        'card_background',
+        'card_background_mesh',
         'image_path',
         'codename',
         'ip_address',
@@ -75,6 +78,28 @@ class ConfessionPost extends Model
         return $this->hasMany(ConfessionPostVote::class);
     }
 
+    protected static function booted(): void
+    {
+        static::deleting(function (ConfessionPost $post) {
+            if (empty($post->image_path)) {
+                return;
+            }
+            $path = $post->image_path;
+            foreach (array_unique([SayItHelper::confessionStorageDisk(), 'digitalocean', 'spaces', 's3', 'public', 'local']) as $disk) {
+                if (! is_array(config("filesystems.disks.{$disk}"))) {
+                    continue;
+                }
+                try {
+                    if (Storage::disk($disk)->exists($path)) {
+                        Storage::disk($disk)->delete($path);
+                    }
+                } catch (\Throwable $e) {
+                    // ignore cleanup errors
+                }
+            }
+        });
+    }
+
     public function getScoreAttribute(): int
     {
         return $this->upvotes_count - $this->downvotes_count;
@@ -120,12 +145,20 @@ class ConfessionPost extends Model
         if (! $this->image_path) {
             return null;
         }
-        if (Storage::disk('digitalocean')->exists($this->image_path)) {
-            return Storage::disk('digitalocean')->url($this->image_path);
+        $primary = SayItHelper::confessionStorageDisk();
+        foreach (array_unique([$primary, 'digitalocean', 'spaces', 's3', 'public', 'local']) as $disk) {
+            if (! is_array(config("filesystems.disks.{$disk}"))) {
+                continue;
+            }
+            try {
+                if (Storage::disk($disk)->exists($this->image_path)) {
+                    return Storage::disk($disk)->url($this->image_path);
+                }
+            } catch (\Throwable $e) {
+                continue;
+            }
         }
-        if (Storage::disk('public')->exists($this->image_path)) {
-            return Storage::disk('public')->url($this->image_path);
-        }
+
         return null;
     }
 
@@ -145,6 +178,7 @@ class ConfessionPost extends Model
         if ($key !== null && $key !== '') {
             return $this->hasGetMutator($key);
         }
+
         return false;
     }
 }

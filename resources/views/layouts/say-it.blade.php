@@ -2,7 +2,7 @@
 <html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
 <head>
     <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>@yield('title', 'Say it')</title>
     <script src="https://cdn.tailwindcss.com"></script>
@@ -10,44 +10,56 @@
     <link href="https://fonts.bunny.net/css?family=outfit:400,500,600,700&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" crossorigin="anonymous" />
     <style>
-        html, body { font-family: 'Outfit', sans-serif; height: 100%; overflow: hidden; }
+        html { font-family: 'Outfit', sans-serif; height: 100%; overflow: hidden; }
+        /* dvh avoids mobile browser chrome clipping; flex column keeps main as the scroll region */
+        body {
+            font-family: 'Outfit', sans-serif;
+            min-height: 100%;
+            min-height: 100dvh;
+            height: 100%;
+            height: 100dvh;
+            max-height: 100dvh;
+            overflow: hidden;
+            -webkit-tap-highlight-color: transparent;
+        }
         .say-it-feed { max-width: 36rem; }
         /* Hide scrollbar but keep scroll */
         .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
         .scrollbar-hide::-webkit-scrollbar { display: none; }
+        #say-it-main { -webkit-overflow-scrolling: touch; overscroll-behavior-y: contain; }
     </style>
     @stack('styles')
 </head>
-<body class="bg-[#f0f2f5] h-screen flex flex-col antialiased text-gray-900 overflow-hidden">
+<body class="bg-[#f0f2f5] min-h-0 h-[100dvh] max-h-[100dvh] flex flex-col antialiased text-gray-900 overflow-hidden">
     {{-- Top bar --}}
-    <header class="flex-shrink-0 z-30 bg-white border-b border-gray-200 shadow-sm">
-        <div class="w-full px-3 sm:px-4 lg:px-6 h-12 sm:h-14 flex items-center justify-between gap-2">
-            <div class="flex items-center gap-2 sm:gap-4 min-w-0">
-                <button type="button" id="sidebar-toggle" class="lg:hidden flex items-center justify-center w-10 h-10 rounded-lg text-gray-500 hover:bg-gray-100 transition" aria-label="Open menu">
+    <header class="flex-shrink-0 z-30 bg-white border-b border-gray-200 shadow-sm pt-[env(safe-area-inset-top,0px)]">
+        <div class="w-full px-2.5 sm:px-4 lg:px-6 min-h-12 sm:min-h-14 flex items-center justify-between gap-1.5 sm:gap-2">
+            <div class="flex items-center gap-1.5 sm:gap-4 min-w-0 flex-1">
+                <button type="button" id="sidebar-toggle" class="lg:hidden flex items-center justify-center w-10 h-10 shrink-0 rounded-lg text-gray-500 hover:bg-gray-100 transition touch-manipulation" aria-label="Open menu">
                     <i class="fas fa-bars text-lg"></i>
                 </button>
-                <a href="{{ url('/Say-it') }}" class="flex items-center gap-2 text-gray-900 no-underline min-w-0">
+                <a href="{{ url('/Say-it') }}" class="flex items-center gap-1.5 sm:gap-2 text-gray-900 no-underline min-w-0">
                     <span class="flex items-center justify-center w-8 h-8 sm:w-9 sm:h-9 rounded-lg bg-violet-600 text-white flex-shrink-0">
                         <i class="fas fa-circle-question text-sm sm:text-base"></i>
                     </span>
-                    <span class="text-lg sm:text-xl font-bold tracking-tight truncate">Say it</span>
+                    <span class="text-base sm:text-xl font-bold tracking-tight truncate">Say it</span>
                 </a>
             </div>
-            <div class="hidden sm:block flex-1 max-w-xl mx-4">
-                <div class="rounded-full bg-gray-100 border border-gray-200 px-4 py-2 flex items-center gap-2 text-gray-400 text-sm">
+            <div class="hidden md:flex flex-1 max-w-xl mx-2 lg:mx-4 min-w-0">
+                <div class="rounded-full bg-gray-100 border border-gray-200 px-4 py-2 flex items-center gap-2 text-gray-400 text-sm w-full">
                     <i class="fas fa-search flex-shrink-0"></i>
-                    <span>Search posts...</span>
+                    <span class="truncate">Search posts...</span>
                 </div>
             </div>
-            <div class="flex items-center gap-1 sm:gap-2 flex-shrink-0">
-                <a href="{{ url('/Say-it') }}#create" class="inline-flex items-center gap-1.5 px-3 py-2 sm:px-4 sm:py-2.5 bg-violet-600 text-white rounded-full text-sm font-semibold hover:bg-violet-700 active:scale-[0.98] transition shadow-sm">
-                    <i class="fas fa-plus text-xs"></i>
-                    <span class="hidden xs:inline">Create</span>
+            <div class="flex items-center gap-0.5 sm:gap-2 flex-shrink-0">
+                <a href="{{ url('/Say-it') }}#create" class="inline-flex items-center justify-center gap-1.5 min-h-10 min-w-10 sm:min-w-0 px-2.5 sm:px-4 py-2 sm:py-2.5 bg-violet-600 text-white rounded-full text-xs sm:text-sm font-semibold hover:bg-violet-700 active:scale-[0.98] transition shadow-sm touch-manipulation">
+                    <i class="fas fa-plus text-xs shrink-0"></i>
+                    <span class="hidden sm:inline">Create</span>
                 </a>
-                <a href="{{ url('/Say-it') }}" class="flex items-center justify-center w-9 h-9 rounded-full text-gray-500 hover:bg-gray-100 transition" aria-label="Home">
+                <a href="{{ url('/Say-it') }}" class="hidden sm:flex items-center justify-center w-9 h-9 rounded-full text-gray-500 hover:bg-gray-100 transition touch-manipulation" aria-label="Home">
                     <i class="fas fa-home"></i>
                 </a>
-                <a href="{{ url('/Say-it') }}" class="flex items-center justify-center w-9 h-9 rounded-full text-gray-500 hover:bg-gray-100 transition" aria-label="Comments">
+                <a href="{{ url('/Say-it') }}" class="hidden sm:flex items-center justify-center w-9 h-9 rounded-full text-gray-500 hover:bg-gray-100 transition touch-manipulation" aria-label="Feed">
                     <i class="fas fa-comment"></i>
                 </a>
             </div>
@@ -115,7 +127,7 @@
 
         {{-- Mobile sidebar overlay --}}
         <div id="sidebar-overlay" class="fixed inset-0 bg-black/50 z-40 lg:hidden hidden" aria-hidden="true"></div>
-        <aside id="mobile-sidebar" class="fixed top-0 left-0 w-64 h-full bg-white border-r border-gray-200 z-50 transform -translate-x-full transition-transform duration-200 ease-out lg:hidden overflow-y-auto scrollbar-hide">
+        <aside id="mobile-sidebar" class="fixed top-0 left-0 w-[min(100vw-2rem,16rem)] max-w-[85vw] h-full bg-white border-r border-gray-200 z-50 transform -translate-x-full transition-transform duration-200 ease-out lg:hidden overflow-y-auto scrollbar-hide pt-[env(safe-area-inset-top,0px)] pb-[env(safe-area-inset-bottom,0px)]">
             <div class="p-4 border-b border-gray-100 flex items-center justify-between">
                 <span class="font-bold text-lg">Menu</span>
                 <button type="button" id="sidebar-close" class="w-10 h-10 rounded-lg text-gray-500 hover:bg-gray-100 flex items-center justify-center" aria-label="Close menu">
@@ -173,7 +185,7 @@
         </aside>
 
         {{-- Main content: only this area scrolls (scrollbar hidden) --}}
-        <main id="say-it-main" class="flex-1 min-w-0 min-h-0 overflow-y-auto scrollbar-hide py-4 sm:py-6 px-3 sm:px-6 lg:px-8">
+        <main id="say-it-main" class="flex-1 min-w-0 min-h-0 overflow-y-auto overflow-x-hidden scrollbar-hide py-3 sm:py-6 px-2.5 sm:px-6 lg:px-8 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
             @if(session('success'))
                 <div class="mb-4 py-3 px-4 rounded-xl bg-emerald-50 text-emerald-800 text-sm font-medium border border-emerald-200">{{ session('success') }}</div>
             @endif
