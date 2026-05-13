@@ -251,7 +251,7 @@
                 $_hiringPath = ltrim($settings['hiring_application_url'] ?? 'hiring/apply', '/');
                 $hiringFormAction = '/' . $_hiringPath . (isset($position) && $position ? '/' . $position->slug : '');
             @endphp
-            <form id="hiring-application-form" action="{{ $hiringFormAction }}" method="POST" enctype="multipart/form-data" class="space-y-6">
+            <form id="hiring-application-form" action="{{ $hiringFormAction }}" method="POST" enctype="multipart/form-data" class="space-y-6" autocomplete="off">
                 @csrf
 
                 @if($formErrors->has('error'))
@@ -259,16 +259,6 @@
                         {{ $formErrors->first('error') }}
                     </div>
                 @endif
-
-                <div class="rounded-md border border-gray-200 bg-gray-50 px-4 py-3 text-xs text-gray-600">
-                    <p class="font-medium text-gray-800">If something fails to submit</p>
-                    <ul class="mt-2 list-disc list-inside space-y-1">
-                        <li>Confirm <strong>Admin → Settings → Hiring → Public hiring applications</strong> is enabled and the role is still open (deadline).</li>
-                        <li>Resume: PDF, Word, or JPG/PNG, <strong>5 MB max</strong>. Longer phone numbers with country codes are OK.</li>
-                        <li><strong>Internships:</strong> pick your school or <strong>Other</strong> and type the name. If the school list is empty, choose <strong>Other</strong>.</li>
-                        <li>If you see a “page expired” or CSRF error, refresh the page and try again.</li>
-                    </ul>
-                </div>
 
                 <!-- Name Fields -->
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -324,24 +314,31 @@
                 <!-- Birth Date -->
                 <div>
                     <label for="birth_date" class="block text-sm font-medium text-gray-700 mb-2">
-                        Date of Birth
+                        Date of Birth <span class="text-red-500">*</span>
                     </label>
-                    <input type="date" name="birth_date" id="birth_date"
+                    <input type="date" name="birth_date" id="birth_date" required
+                           min="1900-01-01"
+                           max="{{ now()->subYears(18)->format('Y-m-d') }}"
                            value="{{ old('birth_date') }}"
-                           max="{{ date('Y-m-d', strtotime('-18 years')) }}"
-                           class="w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500">
-                    <p class="mt-1 text-sm text-gray-500">Optional: Your date of birth</p>
+                           class="w-full px-4 py-2 border {{ $formErrors && $formErrors->has('birth_date') ? 'border-red-500' : 'border-gray-300' }} rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500">
+                    @if($formErrors && $formErrors->has('birth_date'))
+                        <p class="mt-1 text-sm text-red-600">{{ $formErrors->first('birth_date') }}</p>
+                    @endif
+                    <p class="mt-1 text-sm text-gray-500">You must be at least 18 years old.</p>
                 </div>
 
                 <!-- Address -->
                 <div>
                     <label for="address" class="block text-sm font-medium text-gray-700 mb-2">
-                        Address
+                        Address <span class="text-red-500">*</span>
                     </label>
-                    <textarea name="address" id="address" rows="3"
+                    <textarea name="address" id="address" rows="3" required minlength="10" maxlength="1000"
                               placeholder="Enter your full address..."
-                              class="w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500">{{ old('address') }}</textarea>
-                    <p class="mt-1 text-sm text-gray-500">Optional: Your complete address</p>
+                              class="w-full px-4 py-2 border {{ $formErrors && $formErrors->has('address') ? 'border-red-500' : 'border-gray-300' }} rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500">{{ old('address') }}</textarea>
+                    @if($formErrors && $formErrors->has('address'))
+                        <p class="mt-1 text-sm text-red-600">{{ $formErrors->first('address') }}</p>
+                    @endif
+                    <p class="mt-1 text-sm text-gray-500">Street, city, region, and postal code if applicable.</p>
                 </div>
 
                 @if(isset($position) && $position && strcasecmp($position->employment_type, 'Internship') === 0)
@@ -349,7 +346,7 @@
                         <label for="school" class="block text-sm font-medium text-gray-700 mb-2">
                             School <span class="text-red-500">*</span>
                         </label>
-                        <select name="school" id="school"
+                        <select name="school" id="school" required autocomplete="off"
                                 class="w-full px-4 py-2 border {{ $formErrors && $formErrors->has('school') ? 'border-red-500' : 'border-gray-300' }} rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500">
                             <option value="">Select your school</option>
                             @foreach(($schoolOptions ?? []) as $school)
@@ -363,9 +360,9 @@
 
                         <div id="school-other-wrap" class="mt-3 {{ old('school') === '__other' ? '' : 'hidden' }}">
                             <label for="school_other" class="block text-sm font-medium text-gray-700 mb-2">
-                                Enter your school
+                                Enter your school <span class="text-red-500">*</span>
                             </label>
-                            <input type="text" name="school_other" id="school_other"
+                            <input type="text" name="school_other" id="school_other" autocomplete="off"
                                    value="{{ old('school_other') }}"
                                    class="w-full px-4 py-2 border {{ $formErrors && $formErrors->has('school_other') ? 'border-red-500' : 'border-gray-300' }} rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500">
                             @if($formErrors && $formErrors->has('school_other'))
@@ -383,9 +380,9 @@
                     <!-- Position -->
                     <div>
                         <label for="position_applied" class="block text-sm font-medium text-gray-700 mb-2">
-                            Position Applied For
+                            Position Applied For <span class="text-red-500">*</span>
                         </label>
-                        <input type="text" name="position_applied" id="position_applied"
+                        <input type="text" name="position_applied" id="position_applied" required
                                value="{{ old('position_applied') }}"
                                placeholder="e.g., Software Developer, Data Analyst, etc."
                                class="w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500">
@@ -397,12 +394,15 @@
                 <!-- Cover Letter -->
                 <div>
                     <label for="cover_letter" class="block text-sm font-medium text-gray-700 mb-2">
-                        Cover Letter
+                        Cover Letter <span class="text-red-500">*</span>
                     </label>
-                    <textarea name="cover_letter" id="cover_letter" rows="6"
+                    <textarea name="cover_letter" id="cover_letter" rows="6" required minlength="40" maxlength="5000"
                               placeholder="Tell us why you're interested in joining our team..."
-                              class="w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500">{{ old('cover_letter') }}</textarea>
-                    <p class="mt-1 text-sm text-gray-500">Optional: Share your motivation and why you'd be a great fit.</p>
+                              class="w-full px-4 py-2 border {{ $formErrors && $formErrors->has('cover_letter') ? 'border-red-500' : 'border-gray-300' }} rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500">{{ old('cover_letter') }}</textarea>
+                    @if($formErrors && $formErrors->has('cover_letter'))
+                        <p class="mt-1 text-sm text-red-600">{{ $formErrors->first('cover_letter') }}</p>
+                    @endif
+                    <p class="mt-1 text-sm text-gray-500">At least 40 characters. Explain your interest and fit for this role.</p>
                 </div>
 
                 <!-- Resume Upload (Required) -->
@@ -617,19 +617,9 @@ document.addEventListener('DOMContentLoaded', function() {
     const uploadStatus = document.getElementById('upload-status');
 
     if (form) {
-        let isSubmitting = false;
-
-        form.addEventListener('submit', function(e) {
-            // Prevent double submission
-            if (isSubmitting) {
-                e.preventDefault();
-                return false;
-            }
-
-            isSubmitting = true;
-
-            // Do not disable the submit button synchronously here — in many browsers that
-            // cancels the default form submit. Defer UI updates until after this handler returns.
+        // Defer disabling the submit button so the browser always starts the POST first.
+        // Do not use preventDefault() for "double-submit" guard — a second submit event can cancel the first.
+        form.addEventListener('submit', function() {
             window.setTimeout(function() {
                 if (submitBtn) {
                     submitBtn.disabled = true;

@@ -16,6 +16,27 @@
         </div>
     </div>
 
+    {{-- Shown only in admin Error Logs: hiring form hints for correlating with guest errors (not on public apply page) --}}
+    <div class="px-4 sm:px-6">
+        <details class="bg-amber-50 border border-amber-200 rounded-xl shadow-sm overflow-hidden">
+            <summary class="px-4 py-3 cursor-pointer list-none text-sm font-semibold text-amber-900 flex items-center justify-between gap-2 [&::-webkit-details-marker]:hidden">
+                <span>Public hiring applications — troubleshooting checklist</span>
+                <svg class="w-5 h-5 shrink-0 text-amber-700 opacity-80" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                    <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd" />
+                </svg>
+            </summary>
+            <div class="px-4 pb-4 pt-0 border-t border-amber-200/80 text-sm text-amber-950">
+                <p class="mt-3 text-xs text-amber-800">Use when paths or messages mention <code class="font-mono text-xs bg-white/70 px-1 py-0.5 rounded border border-amber-200">hiring/apply</code>, validation, uploads, or CSRF. Detailed traces: <code class="font-mono text-xs bg-white/70 px-1 py-0.5 rounded border border-amber-200">storage/logs/laravel.log</code>.</p>
+                <ul class="mt-3 list-disc list-inside space-y-2 text-sm text-amber-950">
+                    <li>Confirm <strong>Admin → Settings → Hiring → Public hiring applications</strong> is enabled and the role is still open (deadline).</li>
+                    <li><strong>All fields marked with *</strong> are required on the public form, including date of birth (18+), full address, cover letter (40+ characters), and resume (PDF/Word/image, 5 MB max).</li>
+                    <li><strong>Internships:</strong> applicant must pick a school or <strong>Other</strong> and enter the name. If the school list is empty, they must choose <strong>Other</strong>.</li>
+                    <li><strong>Page expired / CSRF:</strong> have them refresh and submit again; check session and <code class="font-mono text-xs">APP_URL</code> vs the URL they use.</li>
+                </ul>
+            </div>
+        </details>
+    </div>
+
     <!-- Stats -->
     <div class="px-4 sm:px-6">
         <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">

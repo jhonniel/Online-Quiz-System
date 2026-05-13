@@ -667,7 +667,7 @@ class HiringApplicationController extends Controller
     }
 
     /**
-     * Assign one or more active quizzes to an internship applicant (from accepted onward); emails one message per quiz when enabled.
+     * Assign one or more active quizzes to an internship applicant (from accepted onward); sends one email listing all selected quizzes when enabled.
      */
     public function assignInternQuiz(Request $request, HiringApplication $application)
     {
@@ -704,8 +704,9 @@ class HiringApplicationController extends Controller
             : null;
 
         $assignedTitles = [];
+        $assignedQuizzes = collect();
         $emailNotificationsEnabled = \App\Models\Setting::get('hiring_email_notifications', 'enabled');
-        $emailFailures = 0;
+        $emailFailure = false;
 
         foreach ($quizIds as $quizId) {
             $quiz = Quiz::query()
@@ -734,6 +735,7 @@ class HiringApplicationController extends Controller
 
             $assignment->save();
             $assignedTitles[] = $quiz->title;
+            $assignedQuizzes->push($quiz);
 
             UserActivity::logActivity(
                 Auth::user(),
@@ -748,25 +750,25 @@ class HiringApplicationController extends Controller
                     'due_date' => $dueDate?->toIso8601String(),
                 ]
             );
+        }
 
-            if ($emailNotificationsEnabled === 'enabled') {
-                try {
-                    MailConfigService::configure();
-                    Mail::to($application->email)->send(new InternQuizAssignment(
-                        $application,
-                        $user,
-                        $quiz,
-                        $dueDate
-                    ));
-                } catch (\Throwable $e) {
-                    Log::error('Failed to send intern quiz assignment email', [
-                        'error' => $e->getMessage(),
-                        'application_id' => $application->id,
-                        'quiz_id' => $quiz->id,
-                    ]);
-                    report($e);
-                    $emailFailures++;
-                }
+        if ($emailNotificationsEnabled === 'enabled' && $assignedQuizzes->isNotEmpty()) {
+            try {
+                MailConfigService::configure();
+                Mail::to($application->email)->send(new InternQuizAssignment(
+                    $application,
+                    $user,
+                    $assignedQuizzes,
+                    $dueDate
+                ));
+            } catch (\Throwable $e) {
+                Log::error('Failed to send intern quiz assignment email', [
+                    'error' => $e->getMessage(),
+                    'application_id' => $application->id,
+                    'quiz_ids' => $assignedQuizzes->pluck('id')->all(),
+                ]);
+                report($e);
+                $emailFailure = true;
             }
         }
 
@@ -782,13 +784,11 @@ class HiringApplicationController extends Controller
             : $count.' quizzes saved for '.$application->full_name.': '.$titlesList.'.';
 
         if ($emailNotificationsEnabled === 'enabled') {
-            if ($emailFailures === 0) {
-                $success = $successCore.' A separate email was sent for each quiz (title and code).';
-            } elseif ($emailFailures < $count) {
-                $success = $successCore.' Some notification emails could not be sent; check mail settings.';
+            if (! $emailFailure) {
+                $success = $successCore.' An email was sent listing all assigned quizzes with titles and quiz codes.';
             } else {
                 return redirect('/admin/hiring-applications/'.$application->id)
-                    ->with('success', $successCore.' Notification emails could not be sent; check mail settings.');
+                    ->with('success', $successCore.' The notification email could not be sent; check mail settings.');
             }
         } else {
             $success = $successCore.' Email notifications are disabled in settings; the applicant was not emailed.';

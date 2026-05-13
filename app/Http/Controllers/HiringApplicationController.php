@@ -185,43 +185,62 @@ class HiringApplicationController extends Controller
                 ->with('schoolOptions', $schoolOptions);
         }
 
+        $isInternship = strcasecmp($position->employment_type ?? '', 'Internship') === 0;
+        $maxBirthDate = now()->subYears(18)->format('Y-m-d');
+
+        $rules = [
+            'first_name' => 'required|string|max:255',
+            'last_name' => 'required|string|max:255',
+            'email' => 'required|email|max:255',
+            'phone' => 'required|string|max:40',
+            'birth_date' => [
+                'required',
+                'date',
+                'after:1900-01-01',
+                'before_or_equal:'.$maxBirthDate,
+            ],
+            'address' => 'required|string|min:10|max:1000',
+            'cover_letter' => 'required|string|min:40|max:5000',
+            'resume_file' => 'required|file|mimes:pdf,doc,docx,jpg,jpeg,png|max:5120',
+        ];
+
+        // Only internship posts need school in the allowed list; avoids stray/autofill values breaking non-internship applies.
+        if ($isInternship) {
+            $rules['school'] = [
+                'nullable',
+                'string',
+                'max:255',
+                Rule::requiredIf(function () use ($request) {
+                    return ! $request->filled('school_other');
+                }),
+                Rule::in(array_merge($schoolOptions, ['__other'])),
+            ];
+            $rules['school_other'] = [
+                'nullable',
+                'string',
+                'max:255',
+                Rule::requiredIf(function () use ($request) {
+                    return $request->input('school') === '__other';
+                }),
+            ];
+        }
+
         try {
-            $validated = $request->validate([
-                'first_name' => 'required|string|max:255',
-                'last_name' => 'required|string|max:255',
-                'email' => 'required|email|max:255',
-                'phone' => 'required|string|max:40',
-                'birth_date' => 'nullable|date|before:today',
-                'address' => 'nullable|string|max:1000',
-                'school' => [
-                    'nullable',
-                    'string',
-                    'max:255',
-                    Rule::requiredIf(function () use ($position, $request) {
-                        return strcasecmp($position->employment_type ?? '', 'Internship') === 0
-                            && ! $request->filled('school_other');
-                    }),
-                    Rule::in(array_merge($schoolOptions, ['__other'])),
-                ],
-                'school_other' => [
-                    'nullable',
-                    'string',
-                    'max:255',
-                    Rule::requiredIf(function () use ($position, $request) {
-                        return strcasecmp($position->employment_type ?? '', 'Internship') === 0
-                            && $request->input('school') === '__other';
-                    }),
-                ],
-                'cover_letter' => 'nullable|string|max:5000',
-                'resume_file' => 'required|file|mimes:pdf,doc,docx,jpg,jpeg,png|max:5120',
-            ], [
+            $validated = $request->validate($rules, [
                 'first_name.required' => 'Please enter your first name.',
                 'last_name.required' => 'Please enter your last name.',
                 'email.required' => 'Please enter a valid email address.',
                 'email.email' => 'Please enter a valid email address.',
                 'phone.required' => 'Phone number is required.',
                 'phone.max' => 'Phone number is too long (maximum 40 characters).',
-                'birth_date.before' => 'Birth date must be in the past.',
+                'birth_date.required' => 'Please enter your date of birth.',
+                'birth_date.before_or_equal' => 'You must be at least 18 years old to apply.',
+                'birth_date.after' => 'Please enter a valid date of birth.',
+                'address.required' => 'Please enter your address.',
+                'address.min' => 'Please enter a complete address (at least 10 characters).',
+                'cover_letter.required' => 'Please write a cover letter.',
+                'cover_letter.min' => 'Cover letter must be at least 40 characters.',
+                'cover_letter.max' => 'Cover letter may not exceed 5000 characters.',
                 'resume_file.required' => 'Please upload your resume.',
                 'resume_file.mimes' => 'Resume must be a PDF, Word document, or image (JPG/PNG).',
                 'resume_file.max' => 'Resume must be 5 MB or smaller.',
@@ -288,6 +307,13 @@ class HiringApplicationController extends Controller
             $resumePath = null;
             if ($request->hasFile('resume_file')) {
                 $resumePath = $request->file('resume_file')->store($resumeDir, $assetDisk);
+                if ($resumePath === false) {
+                    return back()
+                        ->withErrors(['resume_file' => 'We could not save your resume. Please try again or use a smaller file.'])
+                        ->withInput($request->except('resume_file'))
+                        ->with('settings', $settings)
+                        ->with('schoolOptions', $schoolOptions);
+                }
             }
 
             // Handle school selection - if "Other", create or find university
@@ -339,151 +365,29 @@ class HiringApplicationController extends Controller
                 'status' => 'pending',
             ]);
 
-            Log::info('Application created successfully', ['application_id' => $application->id]);
-
             // Update position application count
             $position->increment('application_count');
 
-            // Send notification email to admin(s) if email notifications are enabled
-            $emailNotificationsEnabled = \App\Models\Setting::get('hiring_email_notifications', 'enabled');
-            if ($emailNotificationsEnabled === 'enabled') {
-                try {
-                    // Clear cache first to ensure we get the latest settings
-                    \Illuminate\Support\Facades\Cache::forget('setting.hiring_admin_notification_email');
-                    \Illuminate\Support\Facades\Cache::forget('setting.leave_admin_notification_email');
-
-                    // Get admin notification emails (comma-separated) or fallback to single admin email
-                    $adminEmailsStr = \App\Models\Setting::get('hiring_admin_notification_email', '');
-
-                    // Also try direct database query as fallback
-                    if (empty($adminEmailsStr)) {
-                        $setting = \App\Models\Setting::where('key', 'hiring_admin_notification_email')->first();
-                        $adminEmailsStr = $setting ? $setting->value : '';
-                    }
-
-                    Log::info('Hiring application notification - checking admin emails', [
-                        'hiring_admin_emails' => $adminEmailsStr,
-                        'application_id' => $application->id,
-                    ]);
-
-                    // If no hiring-specific admin emails, try leave admin notification emails as fallback
-                    if (empty($adminEmailsStr) || trim($adminEmailsStr) === '') {
-                        $adminEmailsStr = \App\Models\Setting::get('leave_admin_notification_email', '');
-                        // Also try direct database query as fallback
-                        if (empty($adminEmailsStr)) {
-                            $setting = \App\Models\Setting::where('key', 'leave_admin_notification_email')->first();
-                            $adminEmailsStr = $setting ? $setting->value : '';
-                        }
-                        Log::info('Hiring application notification - using leave admin emails as fallback', [
-                            'leave_admin_emails' => $adminEmailsStr,
-                            'application_id' => $application->id,
-                        ]);
-                    }
-
-                    // If still empty, use system default email
-                    if (empty($adminEmailsStr) || trim($adminEmailsStr) === '') {
-                        $adminEmailsStr = \App\Models\Setting::get('mail_from_address', config('mail.from.address'));
-                        Log::info('Hiring application notification - using system default email', [
-                            'default_email' => $adminEmailsStr,
-                            'application_id' => $application->id,
-                        ]);
-                    }
-
-                    if (! empty($adminEmailsStr) && trim($adminEmailsStr) !== '') {
-                        // Parse comma-separated emails
-                        $adminEmails = array_filter(array_map('trim', explode(',', $adminEmailsStr)));
-                        $validEmails = array_filter($adminEmails, function ($email) {
-                            return filter_var($email, FILTER_VALIDATE_EMAIL);
-                        });
-
-                        Log::info('Hiring application notification - parsed emails', [
-                            'total_emails' => count($adminEmails),
-                            'valid_emails' => count($validEmails),
-                            'valid_emails_list' => $validEmails,
-                            'application_id' => $application->id,
-                        ]);
-
-                        if (! empty($validEmails)) {
-                            // Configure mail settings before sending
-                            \App\Services\MailConfigService::configure();
-
-                            // Log mail configuration for debugging
-                            Log::info('Hiring application notification - mail configuration', [
-                                'mail_driver' => config('mail.default'),
-                                'mail_from' => config('mail.from.address'),
-                                'valid_emails_count' => count($validEmails),
-                            ]);
-
-                            $sentCount = 0;
-                            $failedCount = 0;
-                            foreach ($validEmails as $email) {
-                                try {
-                                    // Send email synchronously (not queued) to ensure immediate delivery
-                                    \Illuminate\Support\Facades\Mail::to($email)
-                                        ->send(new \App\Mail\HiringApplicationReceived($application, $position));
-                                    $sentCount++;
-                                    Log::info('Hiring application notification email sent successfully', [
-                                        'email' => $email,
-                                        'application_id' => $application->id,
-                                    ]);
-                                } catch (\Exception $emailException) {
-                                    $failedCount++;
-                                    Log::error('Failed to send hiring application notification email to individual admin', [
-                                        'email' => $email,
-                                        'error' => $emailException->getMessage(),
-                                        'application_id' => $application->id,
-                                        'trace' => $emailException->getTraceAsString(),
-                                    ]);
-                                    // Continue sending to other emails even if one fails
-                                }
-                            }
-                            if ($sentCount > 0) {
-                                Log::info('Hiring application notification emails sent', [
-                                    'sent' => $sentCount,
-                                    'failed' => $failedCount,
-                                    'total' => count($validEmails),
-                                    'application_id' => $application->id,
-                                ]);
-                            } else {
-                                Log::warning('Hiring application notification - no valid emails found after parsing', [
-                                    'admin_emails_str' => $adminEmailsStr,
-                                    'parsed_emails' => $adminEmails,
-                                    'valid_emails' => $validEmails,
-                                    'application_id' => $application->id,
-                                ]);
-                            }
-                        } else {
-                            Log::info('Hiring application notification - no admin emails found in settings', [
-                                'admin_emails_str' => $adminEmailsStr,
-                                'application_id' => $application->id,
-                            ]);
-                        }
-                    }
-                } catch (\Exception $e) {
-                    Log::error('Failed to send admin notification email', [
-                        'error' => $e->getMessage(),
-                        'application_id' => $application->id,
-                        'trace' => $e->getTraceAsString(),
-                    ]);
-                }
-            }
+            // Queue admin notification after the redirect so slow/failing SMTP never blocks the applicant.
+            dispatch(fn () => static::notifyAdminsOfNewHiringApplication($application, $position))
+                ->afterResponse();
 
             Log::info('Application created successfully, redirecting to success page', [
                 'application_id' => $application->id,
                 'position_title' => $position->title,
             ]);
 
-            // Use the current request host (not only APP_URL) so local/staging redirects stay on the same site.
-            $successUrl = rtrim($request->root(), '/').'/hiring/application/success?'.http_build_query([
+            $successQuery = http_build_query([
                 'application_id' => $application->id,
                 'position_title' => $position->title,
             ]);
 
-            return redirect()->to($successUrl)
+            // Use away() so Location stays a same-origin path (redirect()->to() would prepend APP_URL).
+            return redirect()->away('/hiring/application/success?'.$successQuery)
                 ->with('application_id', $application->id)
                 ->with('position_title', $position->title)
                 ->with('success', true);
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             Log::error('Error creating hiring application', [
                 'message' => $e->getMessage(),
                 'trace' => $e->getTraceAsString(),
@@ -494,6 +398,128 @@ class HiringApplicationController extends Controller
                 ->withInput()
                 ->with('settings', $settings)
                 ->with('schoolOptions', $schoolOptions);
+        }
+    }
+
+    /**
+     * Notify admins of a new hiring application. Dispatched after the HTTP response so slow or failing mail cannot block the applicant redirect.
+     */
+    private static function notifyAdminsOfNewHiringApplication(HiringApplication $application, \App\Models\HiringPosition $position): void
+    {
+        $emailNotificationsEnabled = Setting::get('hiring_email_notifications', 'enabled');
+        if ($emailNotificationsEnabled !== 'enabled') {
+            return;
+        }
+
+        try {
+            \Illuminate\Support\Facades\Cache::forget('setting.hiring_admin_notification_email');
+            \Illuminate\Support\Facades\Cache::forget('setting.leave_admin_notification_email');
+
+            $adminEmailsStr = Setting::get('hiring_admin_notification_email', '');
+
+            if (empty($adminEmailsStr)) {
+                $setting = Setting::where('key', 'hiring_admin_notification_email')->first();
+                $adminEmailsStr = $setting ? $setting->value : '';
+            }
+
+            Log::info('Hiring application notification - checking admin emails', [
+                'hiring_admin_emails' => $adminEmailsStr,
+                'application_id' => $application->id,
+            ]);
+
+            if (empty($adminEmailsStr) || trim($adminEmailsStr) === '') {
+                $adminEmailsStr = Setting::get('leave_admin_notification_email', '');
+                if (empty($adminEmailsStr)) {
+                    $setting = Setting::where('key', 'leave_admin_notification_email')->first();
+                    $adminEmailsStr = $setting ? $setting->value : '';
+                }
+                Log::info('Hiring application notification - using leave admin emails as fallback', [
+                    'leave_admin_emails' => $adminEmailsStr,
+                    'application_id' => $application->id,
+                ]);
+            }
+
+            if (empty($adminEmailsStr) || trim($adminEmailsStr) === '') {
+                $adminEmailsStr = Setting::get('mail_from_address', config('mail.from.address'));
+                Log::info('Hiring application notification - using system default email', [
+                    'default_email' => $adminEmailsStr,
+                    'application_id' => $application->id,
+                ]);
+            }
+
+            if (empty($adminEmailsStr) || trim($adminEmailsStr) === '') {
+                return;
+            }
+
+            $adminEmails = array_filter(array_map('trim', explode(',', $adminEmailsStr)));
+            $validEmails = array_filter($adminEmails, function ($email) {
+                return filter_var($email, FILTER_VALIDATE_EMAIL);
+            });
+
+            Log::info('Hiring application notification - parsed emails', [
+                'total_emails' => count($adminEmails),
+                'valid_emails' => count($validEmails),
+                'valid_emails_list' => $validEmails,
+                'application_id' => $application->id,
+            ]);
+
+            if (empty($validEmails)) {
+                Log::info('Hiring application notification - no admin emails found in settings', [
+                    'admin_emails_str' => $adminEmailsStr,
+                    'application_id' => $application->id,
+                ]);
+
+                return;
+            }
+
+            \App\Services\MailConfigService::configure();
+
+            Log::info('Hiring application notification - mail configuration', [
+                'mail_driver' => config('mail.default'),
+                'mail_from' => config('mail.from.address'),
+                'valid_emails_count' => count($validEmails),
+            ]);
+
+            $sentCount = 0;
+            $failedCount = 0;
+            foreach ($validEmails as $email) {
+                try {
+                    Mail::to($email)->send(new \App\Mail\HiringApplicationReceived($application, $position));
+                    $sentCount++;
+                    Log::info('Hiring application notification email sent successfully', [
+                        'email' => $email,
+                        'application_id' => $application->id,
+                    ]);
+                } catch (\Throwable $emailException) {
+                    $failedCount++;
+                    Log::error('Failed to send hiring application notification email to individual admin', [
+                        'email' => $email,
+                        'error' => $emailException->getMessage(),
+                        'application_id' => $application->id,
+                        'trace' => $emailException->getTraceAsString(),
+                    ]);
+                }
+            }
+
+            if ($sentCount > 0) {
+                Log::info('Hiring application notification emails sent', [
+                    'sent' => $sentCount,
+                    'failed' => $failedCount,
+                    'total' => count($validEmails),
+                    'application_id' => $application->id,
+                ]);
+            } else {
+                Log::warning('Hiring application notification - no emails sent successfully', [
+                    'admin_emails_str' => $adminEmailsStr,
+                    'application_id' => $application->id,
+                ]);
+            }
+        } catch (\Throwable $e) {
+            Log::error('Failed to send admin notification email', [
+                'error' => $e->getMessage(),
+                'application_id' => $application->id,
+                'trace' => $e->getTraceAsString(),
+            ]);
         }
     }
 
