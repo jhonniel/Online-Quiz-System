@@ -36,6 +36,12 @@
                 <!-- Session Status -->
                 <x-auth-session-status class="mb-6 p-4 bg-green-50 border border-green-200 rounded-xl text-green-800" :status="session('status')" />
 
+                @if (session('mail_driver_notice'))
+                    <div class="mb-6 p-4 bg-amber-50 border border-amber-200 rounded-xl text-amber-900 text-sm" role="alert">
+                        {{ session('mail_driver_notice') }}
+                    </div>
+                @endif
+
                 <form method="POST" action="{{ url('/forgot-password') }}" class="space-y-6">
                     @csrf
 

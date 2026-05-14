@@ -963,7 +963,7 @@
                                 <div>
                                     <label for="mail_mailer" class="block text-sm font-medium text-gray-700 mb-2">Mail Driver</label>
                                     @php
-                                        $mailMailerValue = isset($settings['mail_mailer']) ? $settings['mail_mailer'] : 'log';
+                                        $mailMailerValue = isset($settings['mail_mailer']) ? $settings['mail_mailer'] : (string) env('MAIL_MAILER', 'smtp');
                                         if (old('mail_mailer') !== null) {
                                             $mailMailerValue = old('mail_mailer');
                                         }

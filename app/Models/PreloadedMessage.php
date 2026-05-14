@@ -14,12 +14,9 @@ class PreloadedMessage extends Model
         'sort_order',
     ];
 
-    protected function casts(): array
-    {
-        return [
-            'is_active' => 'boolean',
-        ];
-    }
+    protected $casts = [
+        'is_active' => 'boolean',
+    ];
 
     public function scopeActive($query)
     {

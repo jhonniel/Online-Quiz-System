@@ -21,14 +21,11 @@ class ChatMessage extends Model
         'close_reason',
     ];
 
-    protected function casts(): array
-    {
-        return [
-            'is_read' => 'boolean',
-            'read_at' => 'datetime',
-            'closed_at' => 'datetime',
-        ];
-    }
+    protected $casts = [
+        'is_read' => 'boolean',
+        'read_at' => 'datetime',
+        'closed_at' => 'datetime',
+    ];
 
     public function user(): BelongsTo
     {

@@ -101,12 +101,17 @@ class MailConfigService
      */
     protected static function normalizeString($value, string $default): string
     {
-        if (is_string($value) && $value !== '') {
-            return $value;
+        if (is_string($value)) {
+            $value = trim($value);
+
+            return $value !== '' ? $value : $default;
         }
         if (is_scalar($value)) {
-            return (string) $value;
+            $trimmed = trim((string) $value);
+
+            return $trimmed !== '' ? $trimmed : $default;
         }
+
         return $default;
     }
 }

@@ -88,7 +88,16 @@ class PasswordResetLinkController extends Controller
         }
 
         if ($status === Password::RESET_LINK_SENT) {
-            return back()->with('status', 'We have emailed your password reset link. Please check your inbox.');
+            $mailer = (string) config('mail.default', 'smtp');
+            $response = back()->with('status', 'We have emailed your password reset link. Please check your inbox.');
+            if (in_array($mailer, ['log', 'array'], true)) {
+                $response->with(
+                    'mail_driver_notice',
+                    'Mail is configured to use the "'.$mailer.'" driver, so messages are not delivered to real inboxes. An administrator should set Admin → Settings → Mail Driver to SMTP (or your provider) and configure credentials. With the log driver, the message is written to storage/logs/laravel.log.'
+                );
+            }
+
+            return $response;
         }
 
         // If user requests again too quickly, keep UX successful and ask them to check inbox.

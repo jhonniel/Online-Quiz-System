@@ -16,12 +16,9 @@ class Answer extends Model
         'order',
     ];
 
-    protected function casts(): array
-    {
-        return [
-            'is_correct' => 'boolean',
-        ];
-    }
+    protected $casts = [
+        'is_correct' => 'boolean',
+    ];
 
     // Relationships
     public function question()

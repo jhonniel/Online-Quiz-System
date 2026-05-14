@@ -25,14 +25,11 @@ class QuizAttemptHistory extends Model
         'answers',
     ];
 
-    protected function casts(): array
-    {
-        return [
-            'started_at' => 'datetime',
-            'completed_at' => 'datetime',
-            'answers' => 'array',
-        ];
-    }
+    protected $casts = [
+        'started_at' => 'datetime',
+        'completed_at' => 'datetime',
+        'answers' => 'array',
+    ];
 
     /**
      * Ensure answers is always stored as JSON string (avoids "Array to string conversion" on SQLite).

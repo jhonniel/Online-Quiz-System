@@ -26,18 +26,15 @@ class QuizAssignment extends Model
         'progress_answers',
     ];
 
-    protected function casts(): array
-    {
-        return [
-            'assigned_at' => 'datetime',
-            'started_at' => 'datetime',
-            'due_date' => 'datetime',
-            'is_completed' => 'boolean',
-            'last_attempt_at' => 'datetime',
-            'can_retake' => 'boolean',
-            'progress_answers' => 'array',
-        ];
-    }
+    protected $casts = [
+        'assigned_at' => 'datetime',
+        'started_at' => 'datetime',
+        'due_date' => 'datetime',
+        'is_completed' => 'boolean',
+        'last_attempt_at' => 'datetime',
+        'can_retake' => 'boolean',
+        'progress_answers' => 'array',
+    ];
 
     // Relationships
     public function quiz()

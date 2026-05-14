@@ -24,13 +24,10 @@ class ChatTicket extends Model
         'reopen_reason',
     ];
 
-    protected function casts(): array
-    {
-        return [
-            'closed_at' => 'datetime',
-            'reopened_at' => 'datetime',
-        ];
-    }
+    protected $casts = [
+        'closed_at' => 'datetime',
+        'reopened_at' => 'datetime',
+    ];
 
     protected static function boot()
     {

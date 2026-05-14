@@ -181,7 +181,7 @@ class SettingsController extends Controller
         if ($mailMailerSetting && $mailMailerSetting->value !== null && $mailMailerSetting->value !== '' && trim($mailMailerSetting->value) !== '') {
             $settings['mail_mailer'] = $mailMailerSetting->value;
         } else {
-            $settings['mail_mailer'] = 'log';
+            $settings['mail_mailer'] = (string) env('MAIL_MAILER', 'smtp');
         }
 
         if ($mailHostSetting && $mailHostSetting->value !== null && $mailHostSetting->value !== '' && trim($mailHostSetting->value) !== '') {
@@ -827,7 +827,7 @@ class SettingsController extends Controller
         Setting::set('default_sick_leave_balance', $sickValue, 'number', 'Default sick leave balance in days for new employees');
 
         // Email Configuration Settings
-        $mailMailer = $request->mail_mailer ?? 'log';
+        $mailMailer = $request->input('mail_mailer', (string) env('MAIL_MAILER', 'smtp'));
         Setting::set('mail_mailer', $mailMailer, 'text', 'Email mailer driver (smtp, sendmail, mailgun, ses, postmark, resend, log, array)');
 
         $mailHost = $request->mail_host ?? '';

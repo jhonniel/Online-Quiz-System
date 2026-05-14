@@ -16,13 +16,10 @@ class TypingIndicator extends Model
         'last_activity_at',
     ];
 
-    protected function casts(): array
-    {
-        return [
-            'started_typing_at' => 'datetime',
-            'last_activity_at' => 'datetime',
-        ];
-    }
+    protected $casts = [
+        'started_typing_at' => 'datetime',
+        'last_activity_at' => 'datetime',
+    ];
 
     public function user(): BelongsTo
     {
