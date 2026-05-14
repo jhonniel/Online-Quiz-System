@@ -478,10 +478,28 @@
                                             </div>
                                             <p class="text-[10px] text-gray-500 mt-1">Showing up to 5 most recent attempts.</p>
                                         @endif
-                                        <div class="mt-2 flex flex-wrap gap-x-3 gap-y-1">
+                                        <div class="mt-2 flex flex-wrap items-center gap-x-3 gap-y-2">
                                             <a href="{{ url('/admin/hiring-applications/' . $application->getKey() . '/quiz-assignments/' . $asg->getKey() . '/attempts') }}" class="text-xs font-medium text-indigo-600 hover:text-indigo-800">Open full attempt list</a>
                                             @if(auth()->user()->canAccessContentManagement())
                                                 <a href="{{ url('/admin/quiz-assignments/' . $asg->getKey() . '/history') }}" class="text-xs font-medium text-indigo-600 hover:text-indigo-800">Q&amp;A detail (quizzes admin)</a>
+                                            @endif
+                                            @if($asg->quiz)
+                                                <form method="post" action="{{ url('/admin/hiring-applications/'.$application->id.'/resend-intern-quiz-email') }}" class="inline-flex items-center">
+                                                    @csrf
+                                                    <input type="hidden" name="resend_quiz_ids[]" value="{{ $asg->quiz_id }}">
+                                                    <button type="submit"
+                                                        class="action-button inline-flex items-center px-2.5 py-1 rounded-md border text-xs font-medium focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed {{ $asg->quiz->is_active ? 'border-emerald-300 bg-emerald-50 text-emerald-800 hover:bg-emerald-100' : 'border-gray-200 bg-gray-100 text-gray-400 cursor-not-allowed' }}"
+                                                        data-loading-text="Sending…"
+                                                        @if(! $asg->quiz->is_active) disabled title="Activate this quiz under Admin → Quizzes to resend" @endif>
+                                                        <span class="button-text">Resend assignment email</span>
+                                                        <span class="button-spinner hidden ml-1.5">
+                                                            <svg class="animate-spin h-3.5 w-3.5 {{ $asg->quiz->is_active ? 'text-emerald-700' : 'text-gray-400' }}" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" aria-hidden="true">
+                                                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                                                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                                            </svg>
+                                                        </span>
+                                                    </button>
+                                                </form>
                                             @endif
                                         </div>
                                     </li>

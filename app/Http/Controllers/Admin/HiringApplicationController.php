@@ -593,7 +593,7 @@ class HiringApplicationController extends Controller
         if ($application->user_id && $showInternQuizPanel) {
             $internQuizAssignments = QuizAssignment::query()
                 ->where('user_id', $application->user_id)
-                ->with(['quiz:id,title,quiz_code,total_questions'])
+                ->with(['quiz:id,title,quiz_code,total_questions,is_active'])
                 ->orderByDesc('assigned_at')
                 ->get();
             $internQuizRankMeta = $this->quizAssignmentRankMeta(collect($internQuizAssignments));
