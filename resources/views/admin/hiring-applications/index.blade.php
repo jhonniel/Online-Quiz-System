@@ -201,6 +201,14 @@
                     </select>
                 </div>
                 <div class="flex items-center space-x-2">
+                    <label for="sort" class="text-sm font-medium text-gray-700">Sort by date:</label>
+                    <select name="sort" id="sort" onchange="this.form.submit()"
+                            class="px-3 py-2 border border-gray-300 rounded-md shadow-sm text-sm focus:ring-indigo-500 focus:border-indigo-500">
+                        <option value="latest" {{ ($sort ?? 'latest') === 'latest' ? 'selected' : '' }}>Latest → Oldest</option>
+                        <option value="oldest" {{ ($sort ?? 'latest') === 'oldest' ? 'selected' : '' }}>Oldest → Latest</option>
+                    </select>
+                </div>
+                <div class="flex items-center space-x-2">
                     <label for="per_page" class="text-sm font-medium text-gray-700">Show:</label>
                     <select name="per_page" id="per_page" onchange="this.form.submit()"
                             class="px-3 py-2 border border-gray-300 rounded-md shadow-sm text-sm focus:ring-indigo-500 focus:border-indigo-500">
