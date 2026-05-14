@@ -26,6 +26,9 @@
                 <p style="margin: 0 0 12px 0;">
                     As part of your internship program, please complete the following quiz{{ $quizCount === 1 ? '' : 'zes' }} in the system. Each row shows the quiz title and the <strong>quiz code</strong> to use if prompted.
                 </p>
+                <p style="margin: 0 0 16px 0; padding: 14px 16px; background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; font-size: 14px; color: #14532d; line-height: 1.55;">
+                    <strong>Important:</strong> Completing {{ $quizCount === 1 ? 'this quiz' : 'these quizzes' }} is a required step in your internship process so you can move forward. After you have finished {{ $quizCount === 1 ? 'it' : 'them' }}, our team will send you a <strong>schedule for your interview</strong> by email.
+                </p>
                 <table cellpadding="0" cellspacing="0" width="100%" style="margin: 16px 0; border: 1px solid #e5e7eb; border-radius: 8px; overflow: hidden;">
                     <thead>
                         <tr style="background: #f3f4f6;">
@@ -53,7 +56,8 @@
                 <ol style="margin: 0 0 16px 0; padding-left: 20px;">
                     <li style="margin-bottom: 8px;">Log in with your account email: <strong>{{ $user->email }}</strong></li>
                     <li style="margin-bottom: 8px;">Open <strong>Quizzes</strong> from your dashboard, or use the button below.</li>
-                    <li>If your quiz uses a code entry screen, use the <strong>Quiz code</strong> from the table above for that quiz.</li>
+                    <li style="margin-bottom: 8px;">If your quiz uses a code entry screen, use the <strong>Quiz code</strong> from the table above for that quiz.</li>
+                    <li style="margin-bottom: 0;">Complete every assigned quiz—this is part of moving forward with your internship. Once you are done, we will email you with your <strong>interview schedule</strong>.</li>
                 </ol>
                 <p style="margin: 0 0 12px 0;">
                     <a href="{{ $loginUrl }}" style="display: inline-block; padding: 10px 18px; background-color: #4f46e5; color: #ffffff; text-decoration: none; border-radius: 9999px; font-weight: 600; font-size: 14px;">Log in</a>

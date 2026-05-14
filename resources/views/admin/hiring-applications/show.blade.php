@@ -323,9 +323,12 @@
             </div>
 
             @if(!empty($showInternQuizPanel))
+            @php
+                $noInternQuizAssignmentsYet = ! isset($internQuizAssignments) || $internQuizAssignments->isEmpty();
+            @endphp
             <details
-                class="bg-white shadow-sm rounded-lg border border-indigo-200 overflow-hidden"
-                @if($errors->has('quiz_ids') || $errors->has('quiz_ids.*') || $errors->has('due_date')) open @endif
+                class="bg-white shadow-sm rounded-lg overflow-hidden {{ $noInternQuizAssignmentsYet ? 'border-2 border-emerald-400 shadow-[0_0_0_1px_rgba(52,211,153,0.5),0_0_20px_rgba(16,185,129,0.45),0_0_40px_rgba(5,150,105,0.2)]' : 'border border-indigo-200' }}"
+                @if($errors->has('quiz_ids') || $errors->has('quiz_ids.*') || $errors->has('due_date') || $errors->has('resend_quiz_ids') || $errors->has('resend_quiz_ids.*')) open @endif
             >
                 <summary class="px-6 py-4 cursor-pointer list-none bg-indigo-50/60 border-b border-gray-200 [&::-webkit-details-marker]:hidden flex items-start justify-between gap-3">
                     <div class="min-w-0">
@@ -484,6 +487,62 @@
                                     </li>
                                 @endforeach
                             </ul>
+
+                            @php
+                                $defaultResendQuizIds = $internQuizAssignments
+                                    ->filter(fn ($a) => $a->quiz && $a->quiz->is_active)
+                                    ->pluck('quiz_id')
+                                    ->map(fn ($id) => (int) $id)
+                                    ->values()
+                                    ->all();
+                                $resendOldIds = array_map('intval', (array) old('resend_quiz_ids', $defaultResendQuizIds));
+                                $hasActiveAssignedQuiz = $internQuizAssignments->contains(fn ($a) => $a->quiz && $a->quiz->is_active);
+                            @endphp
+                            @if($hasActiveAssignedQuiz)
+                            <form method="post" action="{{ url('/admin/hiring-applications/'.$application->id.'/resend-intern-quiz-email') }}" class="mt-4 pt-4 border-t border-gray-200 space-y-3">
+                                @csrf
+                                <div>
+                                    <p class="text-sm font-medium text-gray-900">Resend assignment email</p>
+                                    <p class="mt-1 text-xs text-gray-600">Sends the same quiz list email to <strong>{{ $application->email }}</strong>. Uncheck any quiz you do not want included.</p>
+                                </div>
+                                <div class="flex flex-wrap gap-x-4 gap-y-2">
+                                    @foreach($internQuizAssignments as $asg)
+                                        @if($asg->quiz)
+                                            <label class="inline-flex items-center gap-2 text-sm text-gray-800 {{ $asg->quiz->is_active ? '' : 'opacity-60' }}">
+                                                <input type="checkbox"
+                                                       name="resend_quiz_ids[]"
+                                                       value="{{ $asg->quiz_id }}"
+                                                       class="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                                                       @checked(in_array((int) $asg->quiz_id, $resendOldIds, true))
+                                                       @if(! $asg->quiz->is_active) disabled title="Quiz is inactive — enable it to include in email" @endif>
+                                                <span class="max-w-[220px] truncate" title="{{ $asg->quiz->title }}">{{ $asg->quiz->title }}</span>
+                                            </label>
+                                        @endif
+                                    @endforeach
+                                </div>
+                                @error('resend_quiz_ids')
+                                    <p class="text-xs text-red-600">{{ $message }}</p>
+                                @enderror
+                                @error('resend_quiz_ids.*')
+                                    <p class="text-xs text-red-600">{{ $message }}</p>
+                                @enderror
+                                <button type="submit"
+                                    class="action-button inline-flex justify-center items-center px-4 py-2 border border-indigo-300 rounded-md shadow-sm text-sm font-medium text-indigo-700 bg-white hover:bg-indigo-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                                    data-loading-text="Sending…">
+                                    <span class="button-text">Resend quiz email to applicant</span>
+                                    <span class="button-spinner hidden ml-2">
+                                        <svg class="animate-spin h-5 w-5 text-indigo-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" aria-hidden="true">
+                                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                        </svg>
+                                    </span>
+                                </button>
+                            </form>
+                            @else
+                                <div class="mt-4 pt-4 border-t border-gray-200">
+                                    <p class="text-xs text-amber-800 bg-amber-50 border border-amber-200 rounded-md px-3 py-2">There are no <strong>active</strong> quizzes in the assignments above. Activate the quiz in <strong>Admin → Quizzes</strong> to resend the assignment email.</p>
+                                </div>
+                            @endif
                         </div>
                     @endif
                 </div>

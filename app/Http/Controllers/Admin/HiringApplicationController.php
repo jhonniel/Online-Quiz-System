@@ -797,6 +797,113 @@ class HiringApplicationController extends Controller
         return redirect('/admin/hiring-applications/'.$application->id)->with('success', $success);
     }
 
+    /**
+     * Resend the intern quiz assignment email to the applicant for quizzes already assigned to their account.
+     */
+    public function resendInternQuizEmail(Request $request, HiringApplication $application)
+    {
+        if (! $this->canAccessPosition($application->hiring_position_id)) {
+            abort(403, 'Access denied.');
+        }
+
+        $validated = $request->validate([
+            'resend_quiz_ids' => ['required', 'array', 'min:1'],
+            'resend_quiz_ids.*' => ['integer', 'distinct'],
+        ]);
+
+        $application->loadMissing(['user', 'hiringPosition']);
+
+        $isInternship = $application->hiringPosition
+            && strcasecmp((string) ($application->hiringPosition->employment_type ?? ''), 'Internship') === 0;
+
+        $allowedStatuses = $this->internStatusesEligibleForInternQuiz();
+
+        if (! $isInternship || ! in_array($application->status, $allowedStatuses, true) || ! $application->user_id) {
+            return redirect('/admin/hiring-applications/'.$application->id)
+                ->withErrors(['error' => 'Resend is only available for internship applications that are accepted (or later) and have an applicant user account.']);
+        }
+
+        $user = $application->user;
+        if (! $user || ! in_array($user->role, ['student', 'applicant'], true)) {
+            return redirect('/admin/hiring-applications/'.$application->id)
+                ->withErrors(['error' => 'Applicant must have a user account with student access.']);
+        }
+
+        $quizIds = array_values(array_unique(array_map('intval', $validated['resend_quiz_ids'])));
+
+        $assignments = QuizAssignment::query()
+            ->where('user_id', $user->id)
+            ->whereIn('quiz_id', $quizIds)
+            ->with(['quiz' => function ($q) {
+                $q->select('id', 'title', 'quiz_code', 'is_active', 'total_questions');
+            }])
+            ->get();
+
+        if ($assignments->count() !== count($quizIds)) {
+            return redirect('/admin/hiring-applications/'.$application->id)
+                ->withErrors(['resend_quiz_ids' => 'One or more selected quizzes are not assigned to this applicant.'])
+                ->withInput();
+        }
+
+        $quizzesForEmail = $assignments->map->quiz->filter()->filter(fn ($quiz) => $quiz->is_active)->unique('id')->values();
+
+        if ($quizzesForEmail->isEmpty()) {
+            return redirect('/admin/hiring-applications/'.$application->id)
+                ->withErrors(['resend_quiz_ids' => 'None of the selected quizzes are active; enable the quiz or choose other assignments.'])
+                ->withInput();
+        }
+
+        $dueDates = $assignments->pluck('due_date')->filter();
+        $dueDate = $dueDates->isEmpty() ? null : Carbon::parse($dueDates->max());
+
+        $emailNotificationsEnabled = \App\Models\Setting::get('hiring_email_notifications', 'enabled');
+        if ($emailNotificationsEnabled !== 'enabled') {
+            return redirect('/admin/hiring-applications/'.$application->id)
+                ->withErrors(['error' => 'Hiring email notifications are disabled in settings; the applicant was not emailed.']);
+        }
+
+        try {
+            MailConfigService::configure();
+            Mail::to($application->email)->send(new InternQuizAssignment(
+                $application,
+                $user,
+                $quizzesForEmail,
+                $dueDate
+            ));
+        } catch (\Throwable $e) {
+            Log::error('Failed to resend intern quiz assignment email', [
+                'error' => $e->getMessage(),
+                'application_id' => $application->id,
+                'quiz_ids' => $quizzesForEmail->pluck('id')->all(),
+            ]);
+            report($e);
+
+            return redirect('/admin/hiring-applications/'.$application->id)
+                ->withErrors(['error' => 'Could not send email: '.$e->getMessage()]);
+        }
+
+        UserActivity::logActivity(
+            Auth::user(),
+            'action',
+            'hiring_application_intern_quiz_email_resent',
+            [
+                'application_id' => $application->id,
+                'applicant_name' => $application->full_name,
+                'applicant_email' => $application->email,
+                'quiz_ids' => $quizzesForEmail->pluck('id')->all(),
+                'due_date' => $dueDate?->toIso8601String(),
+            ]
+        );
+
+        $skipped = count($quizIds) - $quizzesForEmail->count();
+        $msg = 'Quiz assignment email resent to '.$application->email.'.';
+        if ($skipped > 0) {
+            $msg .= ' ('.$skipped.' inactive '.($skipped === 1 ? 'quiz was' : 'quizzes were').' omitted from the email.)';
+        }
+
+        return redirect('/admin/hiring-applications/'.$application->id)->with('success', $msg);
+    }
+
     public function accept(Request $request, HiringApplication $application)
     {
         // Check if user can access this application's position
