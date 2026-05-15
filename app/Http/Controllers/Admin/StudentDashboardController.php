@@ -230,7 +230,7 @@ class StudentDashboardController extends Controller
      * Picks the ongoing student whose effective exit-conference date is closest to today, then sorts rows by that date (earliest first).
      *
      * @param  \Illuminate\Support\Collection<int, User>  $students
-     * @return list<array{school_name: string, student_id: ?int, student_name: ?string, student_email: ?string, exit_date: ?string, exit_date_formatted: ?string, source: ?string, signed_days_from_today: ?int, possible_exit_date: ?string, possible_exit_date_formatted: ?string, possible_exit_signed_days_from_today: ?int}>
+     * @return list<array{school_name: string, student_id: ?int, student_name: ?string, student_email: ?string, exit_date: ?string, exit_date_formatted: ?string, source: ?string, signed_days_from_today: ?int}>
      */
     private function buildExitConferenceClosestBySchoolRows($students): array
     {
@@ -307,7 +307,7 @@ class StudentDashboardController extends Controller
 
     /**
      * @param  \Illuminate\Support\Collection<int, User>|iterable<User>  $group
-     * @return array{student_name: ?string, student_id: ?int, student_email: ?string, exit_date: ?string, exit_date_formatted: ?string, source: ?string, signed_days_from_today: ?int, possible_exit_date: ?string, possible_exit_date_formatted: ?string, possible_exit_signed_days_from_today: ?int}
+     * @return array{student_name: ?string, student_id: ?int, student_email: ?string, exit_date: ?string, exit_date_formatted: ?string, source: ?string, signed_days_from_today: ?int}
      */
     private function pickStudentClosestExitConferenceRow(iterable $group, Carbon $today): array
     {
@@ -350,22 +350,11 @@ class StudentDashboardController extends Controller
                 'exit_date_formatted' => null,
                 'source' => null,
                 'signed_days_from_today' => null,
-                'possible_exit_date' => null,
-                'possible_exit_date_formatted' => null,
-                'possible_exit_signed_days_from_today' => null,
             ];
         }
 
         /** @var User $u */
         $u = $best['student'];
-        $possibleExit = $this->resolvePossibleExitConferenceDateForStudent($u);
-        $possibleFormatted = null;
-        $possibleSigned = null;
-        if ($possibleExit !== null) {
-            $possibleExit = $possibleExit->copy()->startOfDay()->timezone((string) config('app.timezone'));
-            $possibleFormatted = $possibleExit->format('M j, Y');
-            $possibleSigned = (int) $today->diffInDays($possibleExit, false);
-        }
 
         return [
             'student_name' => $u->name,
@@ -375,40 +364,7 @@ class StudentDashboardController extends Controller
             'exit_date_formatted' => $best['exit']->timezone((string) config('app.timezone'))->format('M j, Y'),
             'source' => $best['source'],
             'signed_days_from_today' => (int) $best['signed_days_from_today'],
-            'possible_exit_date' => $possibleExit?->toDateString(),
-            'possible_exit_date_formatted' => $possibleFormatted,
-            'possible_exit_signed_days_from_today' => $possibleSigned,
         ];
-    }
-
-    /**
-     * Hours-based weekday estimate from first DTR (or from today if no DTR), only when admin has not set OJT target.
-     * Same rules as the student dashboard "Possible exit conference (estimate)" when no admin OJT target is set.
-     */
-    private function resolvePossibleExitConferenceDateForStudent(User $student): ?Carbon
-    {
-        $tz = (string) config('app.timezone');
-        $requiredHours = (float) ($student->required_training_hours ?? 0);
-        $loggedHours = (float) ($student->internship_total_hours ?? 0);
-        $remainingHours = max($requiredHours - $loggedHours, 0);
-        $adminTarget = $student->ojt_target_end_date;
-
-        if ($adminTarget !== null || $requiredHours <= 0 || $remainingHours <= 0) {
-            return null;
-        }
-
-        $weekdaysForFullRequirement = max(1, (int) ceil($requiredHours / 8.0));
-        $firstDtrRaw = $student->internship_start ?? null;
-        if ($firstDtrRaw !== null && $firstDtrRaw !== '') {
-            $anchor = Carbon::parse($firstDtrRaw)->timezone($tz)->startOfDay();
-
-            return $anchor->copy()->addWeekdays($weekdaysForFullRequirement);
-        }
-
-        $todayStart = now()->timezone($tz)->startOfDay();
-        $weekdaysForRemaining = max(1, (int) ceil($remainingHours / 8.0));
-
-        return $todayStart->copy()->addWeekdays($weekdaysForRemaining);
     }
 
     /**

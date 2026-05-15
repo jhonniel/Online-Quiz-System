@@ -118,7 +118,6 @@
             <p class="mt-1 text-xs text-gray-500">
                 Only schools with at least one student still completing OJT (required hours not yet fully logged). For each school, the student shown is the ongoing one whose exit-conference date is nearest to today
                 (admin-set OJT target if present; otherwise estimated from required hours and first DTR date, matching the student dashboard).
-                <strong>Possible exit conference</strong> is the same weekday estimate shown on the student dashboard when no admin OJT target is set (otherwise em dash).
                 Rows are sorted by exit date (earliest first). Uses <strong>all students in scope</strong>, not the search box below.
             </p>
         </div>

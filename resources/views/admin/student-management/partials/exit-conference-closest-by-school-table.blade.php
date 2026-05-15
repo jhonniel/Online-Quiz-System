@@ -6,7 +6,6 @@
                 <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">School</th>
                 <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Closest student</th>
                 <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Exit date</th>
-                <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Possible exit conference</th>
                 <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Source</th>
                 <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">vs today</th>
             </tr>
@@ -26,32 +25,6 @@
                     <td class="px-4 py-3 text-sm text-gray-700 tabular-nums">
                         @if(!empty($exitRow['exit_date_formatted']))
                             {{ $exitRow['exit_date_formatted'] }}
-                        @else
-                            <span class="text-gray-400">—</span>
-                        @endif
-                    </td>
-                    <td class="px-4 py-3 text-sm tabular-nums">
-                        @if(!empty($exitRow['possible_exit_date_formatted']))
-                            @php
-                                $pd = $exitRow['possible_exit_signed_days_from_today'] ?? null;
-                                $possiblePast = $pd !== null && (int) $pd < 0;
-                            @endphp
-                            <div class="{{ $possiblePast ? 'text-red-600 font-semibold' : 'text-gray-700' }}">{{ $exitRow['possible_exit_date_formatted'] }}</div>
-                            <div class="text-xs mt-0.5 {{ $possiblePast ? 'text-red-500' : 'text-gray-500' }}">
-                                @if($pd === null)
-                                    —
-                                @elseif($pd === 0)
-                                    Today
-                                @elseif($pd > 0)
-                                    @php $pad = abs((int) $pd); @endphp
-                                    In {{ number_format($pad) }} {{ $pad === 1 ? 'day' : 'days' }}
-                                @else
-                                    @php $pbd = abs((int) $pd); @endphp
-                                    {{ number_format($pbd) }} {{ $pbd === 1 ? 'day' : 'days' }} ago
-                                @endif
-                            </div>
-                        @elseif(($exitRow['source'] ?? '') === 'admin')
-                            <span class="text-gray-400" title="Student dashboard only shows this estimate when no admin OJT target is set">—</span>
                         @else
                             <span class="text-gray-400">—</span>
                         @endif
@@ -84,7 +57,7 @@
                 </tr>
             @empty
                 <tr>
-                    <td colspan="6" class="px-4 py-8 text-center text-sm text-gray-500">
+                    <td colspan="5" class="px-4 py-8 text-center text-sm text-gray-500">
                         No schools with students still completing OJT in your current department scope.
                     </td>
                 </tr>

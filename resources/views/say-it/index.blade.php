@@ -247,9 +247,6 @@
                         @error('topic_id')<p class="w-full text-xs text-red-600">{{ $message }}</p>@enderror
                         @error('topic_name')<p class="w-full text-xs text-red-600">{{ $message }}</p>@enderror
                         <p id="say-it-ai-gen-error" class="w-full text-xs text-red-600 hidden sm:text-left"></p>
-                        @unless(\App\Services\SayItImageGeneration\SayItImageGenerator::isConfigured())
-                        <p class="w-full text-[11px] text-amber-900 bg-amber-50 border border-amber-200 rounded-lg px-2.5 py-2 leading-snug break-words">AI images: enable in <strong>Admin → Settings → Say-it</strong> or <code class="text-[10px] bg-amber-100 px-1 rounded break-all">.env</code>.</p>
-                        @endunless
                         <div class="flex flex-col gap-2 w-full pt-1 sm:flex-row sm:flex-wrap sm:items-center sm:justify-end">
                             @if(!empty($sayItAiImageConfigured))
                             <div id="say-it-generate-wrap" class="hidden flex-col gap-2 sm:flex-row sm:items-center" data-ai-configured="1">
