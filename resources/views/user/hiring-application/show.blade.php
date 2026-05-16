@@ -184,6 +184,33 @@
                     </div>
                 </div>
 
+                @if($application->qualifiesForInternQuizPortal())
+                    <div class="bg-indigo-50 shadow-sm rounded-lg border border-indigo-200 overflow-hidden">
+                        <div class="px-6 py-4 border-b border-indigo-200 bg-indigo-100/50">
+                            <h2 class="text-lg font-medium text-indigo-900">Internship Quizzes</h2>
+                        </div>
+                        <div class="px-6 py-6 space-y-4">
+                            <p class="text-sm text-indigo-800">
+                                You have access to the quiz portal for your internship. Only quizzes assigned by an administrator will appear in your list.
+                            </p>
+                            @if(($assignedQuizCount ?? 0) > 0)
+                                <p class="text-sm text-indigo-900">
+                                    <span class="font-semibold">{{ $assignedQuizCount }}</span>
+                                    {{ $assignedQuizCount === 1 ? 'quiz is' : 'quizzes are' }} ready for you.
+                                </p>
+                                <a href="{{ url('/quizzes') }}"
+                                   class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700">
+                                    View My Quizzes
+                                </a>
+                            @else
+                                <p class="text-sm text-indigo-800">
+                                    No quizzes have been assigned yet. They will show on your dashboard and here once an administrator assigns them.
+                                </p>
+                            @endif
+                        </div>
+                    </div>
+                @endif
+
                 <!-- Admin Notes -->
                 @if($application->admin_notes)
                     <div class="bg-white shadow-sm rounded-lg border border-gray-200 overflow-hidden">

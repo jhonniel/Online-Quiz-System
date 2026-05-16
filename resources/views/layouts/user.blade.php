@@ -268,7 +268,7 @@
                             </a>
                         @endif
 
-                        @if(!in_array(auth()->user()->role, ['technician', 'teacher'], true))
+                        @if(auth()->user()->canViewAssignedQuizzes())
                             <!-- Quizzes -->
                             <a href="{{ url('/quizzes') }}"
                                class="group flex items-center px-2 py-2 text-sm font-medium rounded-md transition-colors duration-200 {{ request()->routeIs('user.quizzes.*') ? 'bg-indigo-700 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white' }}"
@@ -935,7 +935,7 @@
                         </div>
                         @endif
 
-                        @if(!in_array(auth()->user()->role, ['technician', 'teacher'], true))
+                        @if(auth()->user()->canViewAssignedQuizzes())
                             <a href="{{ url('/quizzes') }}"
                                @click="sidebarOpen = false"
                                class="group flex items-center px-2 py-2 text-sm font-medium rounded-md transition-colors duration-200 {{ request()->routeIs('user.quizzes.*') ? 'bg-indigo-700 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white' }}">

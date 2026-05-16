@@ -100,6 +100,36 @@ class HiringApplication extends Model
         return $this->status === 'done_interview';
     }
 
+    /**
+     * Application statuses where an internship applicant may use the quiz portal.
+     *
+     * @return list<string>
+     */
+    public static function internQuizPortalStatuses(): array
+    {
+        return ['accepted', 'interview_scheduled', 'done_interview', 'hired'];
+    }
+
+    public function isInternshipPosition(): bool
+    {
+        return strcasecmp((string) ($this->hiringPosition?->employment_type ?? ''), 'Internship') === 0;
+    }
+
+    public function qualifiesForInternQuizPortal(): bool
+    {
+        if (! $this->user_id) {
+            return false;
+        }
+
+        $this->loadMissing('hiringPosition');
+
+        if (! $this->isInternshipPosition()) {
+            return false;
+        }
+
+        return in_array($this->status, self::internQuizPortalStatuses(), true);
+    }
+
     public function generateAcceptanceToken()
     {
         $this->acceptance_token = Str::random(64);

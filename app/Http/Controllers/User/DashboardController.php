@@ -94,32 +94,15 @@ class DashboardController extends Controller
             ]);
         }
 
-        // For applicants, only show assigned quizzes (not all available quizzes)
-        if ($user->role === 'applicant') {
-            // Get only assigned quizzes for applicants
-            $assignedQuizzes = QuizAssignment::where('user_id', $user->id)
-                ->with(['quiz.creator'])
-                ->whereHas('quiz', function ($query) {
-                    $query->where('is_active', true);
-                })
-                ->get();
+        $canViewAssignedQuizzes = $user->canViewAssignedQuizzes();
+        $assignedQuizzes = collect();
+        $allQuizzes = collect();
+        $completedQuizzes = 0;
+        $pendingQuizzes = 0;
+        $totalQuizzes = 0;
+        $ongoingQuiz = null;
 
-            $allQuizzes = $assignedQuizzes->map(function ($assignment) {
-                return $assignment->quiz;
-            });
-
-            $completedQuizzes = $assignedQuizzes->where('is_completed', true)->count();
-            $pendingQuizzes = $assignedQuizzes->where('is_completed', false)->count();
-            $totalQuizzes = $assignedQuizzes->count(); // Only count assigned quizzes
-
-            // Get ongoing quiz (in progress)
-            $ongoingQuiz = QuizAssignment::where('user_id', $user->id)
-                ->where('status', 'in_progress')
-                ->where('is_completed', false)
-                ->with('quiz')
-                ->first();
-        } else {
-            // Students, employees, etc.: only active quizzes that have been assigned to this user
+        if ($canViewAssignedQuizzes) {
             $assignedQuizzes = QuizAssignment::where('user_id', $user->id)
                 ->with(['quiz.creator'])
                 ->whereHas('quiz', function ($query) {
@@ -142,7 +125,6 @@ class DashboardController extends Controller
             $pendingQuizzes = $assignedQuizzes->where('is_completed', false)->count();
             $totalQuizzes = $allQuizzes->count();
 
-            // Get ongoing quiz (in progress)
             $ongoingQuiz = QuizAssignment::where('user_id', $user->id)
                 ->where('status', 'in_progress')
                 ->where('is_completed', false)
@@ -403,6 +385,7 @@ class DashboardController extends Controller
         }
 
         return view('user.dashboard', compact(
+            'canViewAssignedQuizzes',
             'allQuizzes',
             'assignedQuizzes',
             'completedQuizzes',

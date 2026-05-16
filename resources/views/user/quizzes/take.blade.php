@@ -254,10 +254,13 @@ document.addEventListener('DOMContentLoaded', function() {
             // Add event listeners to save answers immediately when selected
             const inputs = container.querySelectorAll('input[name*="answers["], textarea[name*="answers["]');
             inputs.forEach(input => {
-                input.addEventListener('change', function() {
+                const persistAnswer = function() {
                     saveAnswer();
-                    console.log('Answer saved:', question.id, '=', this.value);
-                });
+                };
+                input.addEventListener('change', persistAnswer);
+                if (input.tagName === 'TEXTAREA' || input.type === 'text') {
+                    input.addEventListener('input', persistAnswer);
+                }
             });
 
             // Add enter animation
@@ -344,21 +347,41 @@ document.addEventListener('DOMContentLoaded', function() {
         return '';
     }
 
+    function hasAnswerValue(value) {
+        return value !== undefined && value !== null && String(value).trim() !== '';
+    }
+
+    function countAnsweredQuestions() {
+        return Object.values(userAnswers).filter(hasAnswerValue).length;
+    }
+
     // Save current answer
     function saveAnswer() {
         const question = questions[currentQuestionIndex];
+        if (!question) {
+            return;
+        }
+
         const inputs = document.querySelectorAll(`input[name="answers[${question.id}]"], textarea[name="answers[${question.id}]"]`);
 
         if (inputs.length === 1) {
-            // Text input
-            userAnswers[question.id] = inputs[0].value;
+            const value = inputs[0].value;
+            if (hasAnswerValue(value)) {
+                userAnswers[question.id] = value;
+            } else {
+                delete userAnswers[question.id];
+            }
         } else {
-            // Radio buttons
+            let selected = false;
             inputs.forEach(input => {
                 if (input.checked) {
                     userAnswers[question.id] = input.value;
+                    selected = true;
                 }
             });
+            if (!selected) {
+                delete userAnswers[question.id];
+            }
         }
     }
 
@@ -450,126 +473,133 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 
+    function resetSubmitButton() {
+        const submitBtn = document.getElementById('submit-btn');
+        const submitIcon = document.getElementById('submit-icon');
+        const submitText = document.getElementById('submit-text');
+        if (submitBtn) {
+            submitBtn.disabled = false;
+        }
+        if (submitIcon) {
+            submitIcon.outerHTML = '<svg id="submit-icon" class="w-4 h-4 sm:mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>';
+        }
+        if (submitText) {
+            submitText.textContent = 'Submit Quiz';
+        }
+    }
+
+    function setSubmitButtonLoading(isLoading) {
+        const submitBtn = document.getElementById('submit-btn');
+        const submitIcon = document.getElementById('submit-icon');
+        const submitText = document.getElementById('submit-text');
+        if (!submitBtn || !submitIcon || !submitText) {
+            return;
+        }
+        submitBtn.disabled = isLoading;
+        if (isLoading) {
+            submitIcon.outerHTML = '<svg id="submit-icon" class="animate-spin w-4 h-4 sm:mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>';
+            submitText.textContent = 'Submitting...';
+        } else {
+            resetSubmitButton();
+        }
+    }
+
+    async function parseJsonResponse(response) {
+        const contentType = response.headers.get('content-type') || '';
+        if (contentType.includes('application/json')) {
+            return response.json();
+        }
+
+        const text = await response.text();
+        throw new Error(JSON.stringify({
+            message: 'Unexpected server response. Please refresh the page and try again.',
+            debug: text.slice(0, 200),
+        }));
+    }
+
     // Form submission
     document.getElementById('quiz-form').addEventListener('submit', function(e) {
         e.preventDefault();
 
-        // Save current answer before submitting
         saveAnswer();
 
-        // Save all answers from all questions before submitting
-        for (let i = 0; i < totalQuestions; i++) {
-            const question = questions[i];
-            const inputs = document.querySelectorAll(`input[name="answers[${question.id}]"], textarea[name="answers[${question.id}]"]`);
-
-            if (inputs.length === 1) {
-                // Text input
-                userAnswers[question.id] = inputs[0].value;
-            } else {
-                // Radio buttons
-                inputs.forEach(input => {
-                    if (input.checked) {
-                        userAnswers[question.id] = input.value;
-                    }
-                });
-            }
-        }
-
-        // Check if we have any answers
-        const answerCount = Object.keys(userAnswers).length;
+        const answerCount = countAnsweredQuestions();
         if (answerCount === 0) {
             ToastNotification.error('Please answer at least one question before submitting.');
             return;
         }
 
-        // Show confirmation dialog only for manual submissions, skip for auto-submit
         const shouldSubmit = isAutoSubmit || confirm(`Are you sure you want to submit this quiz? You have answered ${answerCount} out of ${totalQuestions} questions. You cannot change your answers after submission.`);
-        
-        if (shouldSubmit) {
-            // Reset auto-submit flag after using it
-            isAutoSubmit = false;
-            // Show loading state
-            const submitBtn = document.getElementById('submit-btn');
-            const submitIcon = document.getElementById('submit-icon');
-            const submitText = document.getElementById('submit-text');
-            submitBtn.disabled = true;
-            submitIcon.outerHTML = '<svg id="submit-icon" class="animate-spin w-4 h-4 sm:mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>';
-            submitText.textContent = 'Submitting...';
 
-            // Get CSRF token
-            const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+        if (!shouldSubmit) {
+            return;
+        }
 
-            // Prepare form data
-            const formData = new FormData();
-            formData.append('_token', csrfToken);
+        isAutoSubmit = false;
 
-            // Add all answers to form data
-            Object.keys(userAnswers).forEach(questionId => {
-                formData.append(`answers[${questionId}]`, userAnswers[questionId]);
-            });
+        const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+        if (!csrfToken) {
+            ToastNotification.error('Security token missing. Please refresh the page and try again.');
+            return;
+        }
 
-            // Debug: Log what we're sending
-            console.log('Submitting answers:', userAnswers);
-            console.log('Answer count:', Object.keys(userAnswers).length);
+        const formData = new FormData();
+        formData.append('_token', csrfToken);
+        Object.entries(userAnswers).forEach(([questionId, value]) => {
+            if (hasAnswerValue(value)) {
+                formData.append(`answers[${questionId}]`, value);
+            }
+        });
 
-            // Submit via AJAX
-            fetch('{{ url("/quizzes/" . $quiz->id . "/submit") }}', {
-                method: 'POST',
-                headers: {
-                    'X-Requested-With': 'XMLHttpRequest',
-                    'X-CSRF-TOKEN': csrfToken
-                },
-                body: formData
-            })
-            .then(response => {
-                if (!response.ok) {
-                    return response.json().then(errorData => {
-                        throw new Error(JSON.stringify(errorData));
-                    });
-                }
-                return response.json();
-            })
-            .then(data => {
-                if (data.success) {
-                    ToastNotification.success(data.message);
-                    setTimeout(() => {
-                        window.location.href = data.redirect_url;
-                    }, 1000);
+        setSubmitButtonLoading(true);
+
+        fetch('/quizzes/{{ $quiz->id }}/submit', {
+            method: 'POST',
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest',
+                'X-CSRF-TOKEN': csrfToken,
+                'Accept': 'application/json',
+            },
+            body: formData,
+            credentials: 'same-origin',
+        })
+        .then(async response => {
+            const data = await parseJsonResponse(response);
+            if (!response.ok) {
+                throw new Error(JSON.stringify(data));
+            }
+            return data;
+        })
+        .then(data => {
+            if (data.success) {
+                ToastNotification.success(data.message);
+                setTimeout(() => {
+                    window.location.href = data.redirect_url || '/quizzes/{{ $quiz->id }}/result';
+                }, 1000);
+            } else {
+                ToastNotification.error(data.message || 'Unable to submit the quiz.');
+                resetSubmitButton();
+            }
+        })
+        .catch(error => {
+            console.error('Quiz submit error:', error);
+
+            try {
+                const errorData = JSON.parse(error.message);
+                if (errorData.errors) {
+                    const errorMessages = Object.values(errorData.errors).flat();
+                    ToastNotification.error('Validation error: ' + errorMessages.join(', '));
+                } else if (errorData.message) {
+                    ToastNotification.error(errorData.message);
                 } else {
-                    ToastNotification.error(data.message);
-                    submitBtn.disabled = false;
-                    const submitIcon = document.getElementById('submit-icon');
-                    const submitText = document.getElementById('submit-text');
-                    submitIcon.outerHTML = '<svg id="submit-icon" class="w-4 h-4 sm:mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>';
-                    submitText.textContent = 'Submit Quiz';
-                }
-            })
-            .catch(error => {
-                console.error('Error:', error);
-
-                // Try to parse error message
-                try {
-                    const errorData = JSON.parse(error.message);
-                    if (errorData.errors) {
-                        // Show validation errors
-                        const errorMessages = Object.values(errorData.errors).flat();
-                        ToastNotification.error('Validation Error: ' + errorMessages.join(', '));
-                    } else if (errorData.message) {
-                        ToastNotification.error(errorData.message);
-                    } else {
-                        ToastNotification.error('An error occurred while submitting the quiz. Please try again.');
-                    }
-                } catch (parseError) {
                     ToastNotification.error('An error occurred while submitting the quiz. Please try again.');
                 }
+            } catch (parseError) {
+                ToastNotification.error('An error occurred while submitting the quiz. Please try again.');
+            }
 
-                submitBtn.disabled = false;
-                const submitIcon = document.getElementById('submit-icon');
-                const submitText = document.getElementById('submit-text');
-                submitIcon.outerHTML = '<svg id="submit-icon" class="w-4 h-4 sm:mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>';
-                submitText.textContent = 'Submit Quiz';
-            });
-        }
+            resetSubmitButton();
+        });
     });
 
     // Cancel quiz functionality

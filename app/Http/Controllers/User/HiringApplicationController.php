@@ -4,6 +4,7 @@ namespace App\Http\Controllers\User;
 
 use App\Http\Controllers\Controller;
 use App\Models\HiringApplication;
+use App\Models\QuizAssignment;
 use Illuminate\Http\Request;
 
 class HiringApplicationController extends Controller
@@ -29,10 +30,19 @@ class HiringApplicationController extends Controller
         if (!$application) {
             return view('user.hiring-application.show', [
                 'application' => null,
-                'message' => 'No application found. Please contact the administrator if you believe this is an error.'
+                'assignedQuizCount' => 0,
+                'message' => 'No application found. Please contact the administrator if you believe this is an error.',
             ]);
         }
 
-        return view('user.hiring-application.show', compact('application'));
+        $assignedQuizCount = 0;
+        if ($user->hasInternshipQuizPortalAccess()) {
+            $assignedQuizCount = QuizAssignment::query()
+                ->where('user_id', $user->id)
+                ->whereHas('quiz', fn ($query) => $query->where('is_active', true))
+                ->count();
+        }
+
+        return view('user.hiring-application.show', compact('application', 'assignedQuizCount'));
     }
 }

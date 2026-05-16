@@ -650,6 +650,47 @@ class User extends Authenticatable
     }
 
     /**
+     * Internship hiring application that grants access to the assigned-quizzes portal.
+     */
+    public function internshipApplicationForQuizPortal(): ?HiringApplication
+    {
+        if (! $this->isApplicant()) {
+            return null;
+        }
+
+        return HiringApplication::query()
+            ->where('user_id', $this->id)
+            ->whereIn('status', HiringApplication::internQuizPortalStatuses())
+            ->whereHas('hiringPosition', function ($query) {
+                $query->whereRaw('LOWER(employment_type) = ?', ['internship']);
+            })
+            ->with('hiringPosition')
+            ->latest('reviewed_at')
+            ->first();
+    }
+
+    public function hasInternshipQuizPortalAccess(): bool
+    {
+        return $this->internshipApplicationForQuizPortal() !== null;
+    }
+
+    /**
+     * Whether the user may open the quizzes area (only admin-assigned quizzes are listed).
+     */
+    public function canViewAssignedQuizzes(): bool
+    {
+        if (in_array($this->role, ['technician', 'teacher'], true)) {
+            return false;
+        }
+
+        if ($this->isApplicant()) {
+            return $this->hasInternshipQuizPortalAccess();
+        }
+
+        return true;
+    }
+
+    /**
      * Check if user has access to a specific admin feature.
      * Super admins (admins without permission records) have access to all features.
      * Employees must have explicit permission records with the specific permission enabled.

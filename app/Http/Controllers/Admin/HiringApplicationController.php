@@ -174,7 +174,7 @@ class HiringApplicationController extends Controller
      */
     private function internStatusesEligibleForInternQuiz(): array
     {
-        return ['accepted', 'interview_scheduled', 'done_interview', 'hired'];
+        return HiringApplication::internQuizPortalStatuses();
     }
 
     private function shouldShowInternQuizPanel(HiringApplication $application): bool
@@ -1040,8 +1040,13 @@ class HiringApplicationController extends Controller
             }
         }
 
+        $successMessage = 'Application accepted. User account created and credentials sent via email.';
+        if ($application->hiringPosition && strcasecmp((string) ($application->hiringPosition->employment_type ?? ''), 'Internship') === 0) {
+            $successMessage .= ' The applicant can use the quiz portal once you assign internship quizzes (quizzes are not visible until assigned).';
+        }
+
         return redirect('/admin/hiring-applications/'.$application->id)
-            ->with('success', 'Application accepted. User account created and credentials sent via email.');
+            ->with('success', $successMessage);
     }
 
     public function reject(Request $request, HiringApplication $application)

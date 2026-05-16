@@ -11,9 +11,22 @@ use App\Models\Question;
 use App\Models\Answer;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 class QuizController extends Controller
 {
+    public function __construct()
+    {
+        $this->middleware(function ($request, $next) {
+            $user = $request->user();
+            if (! $user || ! $user->canViewAssignedQuizzes()) {
+                abort(403, 'You do not have access to quizzes.');
+            }
+
+            return $next($request);
+        });
+    }
+
     public function index()
     {
         $assignedQuizzes = QuizAssignment::where('user_id', auth()->id())
@@ -154,6 +167,7 @@ class QuizController extends Controller
         // Check if user is assigned to this quiz
         $assignment = QuizAssignment::where('quiz_id', $quiz->id)
             ->where('user_id', auth()->id())
+            ->with('quiz')
             ->first();
 
         if (!$assignment || $assignment->is_completed) {
@@ -204,6 +218,7 @@ class QuizController extends Controller
         // Check if user is assigned to this quiz
         $assignment = QuizAssignment::where('quiz_id', $quiz->id)
             ->where('user_id', auth()->id())
+            ->with('quiz')
             ->first();
 
         if (!$assignment || $assignment->is_completed) {
@@ -231,15 +246,7 @@ class QuizController extends Controller
         // Get all questions
         $allQuestions = $quiz->questions;
 
-        // If questions_to_show is set, randomly select that many questions
-        // Otherwise, show all questions
-        if ($quiz->questions_to_show && $quiz->questions_to_show > 0 && $quiz->questions_to_show < $allQuestions->count()) {
-            // Randomly select the specified number of questions
-            $questions = $allQuestions->shuffle()->take($quiz->questions_to_show);
-        } else {
-            // Show all questions (shuffled)
-            $questions = $allQuestions->shuffle();
-        }
+        $questions = $this->resolveQuizQuestionsForAttempt($quiz, $allQuestions);
 
         // Randomize answer choices for each question and create randomized options
         $questions->each(function ($question) {
@@ -348,17 +355,35 @@ class QuizController extends Controller
     public function submit(Request $request, Quiz $quiz)
     {
         $request->validate([
-            'answers' => 'required|array',
+            'answers' => 'required|array|min:1',
             'answers.*' => 'nullable', // allow empty for text/fill_blank
         ]);
+
+        $submittedAnswers = collect($request->answers)
+            ->filter(fn ($answer) => filled($answer))
+            ->all();
+
+        if ($submittedAnswers === []) {
+            if ($this->wantsJsonResponse($request)) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Please answer at least one question before submitting.',
+                    'type' => 'error',
+                ], 422);
+            }
+
+            return redirect()->back()
+                ->withErrors(['error' => 'Please answer at least one question before submitting.']);
+        }
 
         // Check if user is assigned to this quiz
         $assignment = QuizAssignment::where('quiz_id', $quiz->id)
             ->where('user_id', auth()->id())
+            ->with('quiz')
             ->first();
 
         if (!$assignment) {
-            if ($request->ajax()) {
+            if ($this->wantsJsonResponse($request)) {
                 return response()->json([
                     'success' => false,
                     'message' => 'You are not assigned to this quiz. Please contact your instructor.',
@@ -369,7 +394,7 @@ class QuizController extends Controller
         }
 
         if ($assignment->is_completed) {
-            if ($request->ajax()) {
+            if ($this->wantsJsonResponse($request)) {
                 return response()->json([
                     'success' => false,
                     'message' => 'You have already completed this quiz.',
@@ -384,7 +409,7 @@ class QuizController extends Controller
         // For AJAX submissions (including auto-submit when timer ends), allow the submission
         // so that answers are still recorded for review.
         $timeExpired = $assignment->isTimeExpired();
-        if ($timeExpired && !$request->ajax()) {
+        if ($timeExpired && !$this->wantsJsonResponse($request)) {
             abort(408, 'Time has expired.');
         }
 
@@ -393,9 +418,15 @@ class QuizController extends Controller
             $totalPoints = 0;
             $correctAnswers = 0;
             $hasTextQuestions = false;
+            $processedAnswers = 0;
 
-            foreach ($request->answers as $questionId => $userAnswer) {
-                $question = Question::where('quiz_id', $quiz->id)->findOrFail($questionId);
+            foreach ($submittedAnswers as $questionId => $userAnswer) {
+                $question = Question::where('quiz_id', $quiz->id)->find($questionId);
+                if (!$question) {
+                    continue;
+                }
+
+                $processedAnswers++;
                 $pointsEarned = 0;
                 $isCorrect = false;
                 $userAnswerValue = is_array($userAnswer) ? json_encode($userAnswer) : (string) $userAnswer;
@@ -440,9 +471,24 @@ class QuizController extends Controller
                 $totalPoints += $pointsEarned;
             }
 
+            if ($processedAnswers === 0) {
+                DB::rollBack();
+
+                if ($this->wantsJsonResponse($request)) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'No valid answers were found for this quiz. Please refresh and try again.',
+                        'type' => 'error',
+                    ], 422);
+                }
+
+                return redirect()->back()
+                    ->withErrors(['error' => 'No valid answers were found for this quiz. Please refresh and try again.']);
+            }
+
             // Save attempt to history
             $status = $hasTextQuestions ? 'partial' : 'completed';
-            $this->saveAttemptToHistory($assignment, $totalPoints, $correctAnswers, $quiz->total_questions, $request->answers, $status);
+            $this->saveAttemptToHistory($assignment, $totalPoints, $correctAnswers, $quiz->total_questions, $submittedAnswers, $status);
 
             // Mark assignment as completed and clear saved progress
             $assignment->update([
@@ -451,18 +497,20 @@ class QuizController extends Controller
                 'progress_answers' => null,
             ]);
 
+            $this->clearQuizQuestionSession($quiz);
+
             DB::commit();
 
             $message = $hasTextQuestions
                 ? 'Quiz submitted successfully! Your score is partial and will be updated after manual review of text answers.'
                 : 'Quiz submitted successfully! Redirecting to results...';
 
-            if ($request->ajax()) {
+            if ($this->wantsJsonResponse($request)) {
                 return response()->json([
                     'success' => true,
                     'message' => $message,
                     'type' => 'success',
-                    'redirect_url' => url('/quizzes/' . $quiz->id . '/result')
+                    'redirect_url' => '/quizzes/' . $quiz->id . '/result',
                 ]);
             }
 
@@ -474,7 +522,7 @@ class QuizController extends Controller
         } catch (\Exception $e) {
             DB::rollback();
 
-            \Log::error('Quiz submission error: ' . $e->getMessage(), [
+            Log::error('Quiz submission error: ' . $e->getMessage(), [
                 'quiz_id' => $quiz->id,
                 'user_id' => auth()->id(),
                 'exception' => $e,
@@ -486,7 +534,7 @@ class QuizController extends Controller
                 $message .= ' ' . $e->getMessage();
             }
 
-            if ($request->ajax()) {
+            if ($this->wantsJsonResponse($request)) {
                 return response()->json([
                     'success' => false,
                     'message' => $message,
@@ -531,8 +579,11 @@ class QuizController extends Controller
         // Reset the started_at timestamp and mark as cancelled to allow restart
         $assignment->update([
             'started_at' => null,
-            'status' => 'cancelled'
+            'status' => 'cancelled',
+            'progress_answers' => null,
         ]);
+
+        $this->clearQuizQuestionSession($quiz);
 
         if ($request->ajax()) {
             return response()->json([
@@ -605,6 +656,52 @@ class QuizController extends Controller
             'hasManualGradingQuestions',
             'isPartialScore'
         ));
+    }
+
+    private function wantsJsonResponse(Request $request): bool
+    {
+        return $request->ajax() || $request->expectsJson() || $request->wantsJson();
+    }
+
+    private function quizQuestionSessionKey(Quiz $quiz): string
+    {
+        return 'quiz_question_ids.' . $quiz->id . '.' . auth()->id();
+    }
+
+    private function clearQuizQuestionSession(Quiz $quiz): void
+    {
+        session()->forget($this->quizQuestionSessionKey($quiz));
+    }
+
+    /**
+     * Keep the same question set for an in-progress attempt (do not reshuffle on every API call).
+     */
+    private function resolveQuizQuestionsForAttempt(Quiz $quiz, $allQuestions)
+    {
+        $sessionKey = $this->quizQuestionSessionKey($quiz);
+        $storedIds = session($sessionKey);
+
+        if (is_array($storedIds) && $storedIds !== []) {
+            $ordered = collect($storedIds)
+                ->map(fn ($id) => $allQuestions->firstWhere('id', (int) $id))
+                ->filter();
+
+            if ($ordered->isNotEmpty()) {
+                return $ordered->values();
+            }
+        }
+
+        if ($quiz->questions_to_show && $quiz->questions_to_show > 0 && $quiz->questions_to_show < $allQuestions->count()) {
+            $questions = $allQuestions->shuffle()->take($quiz->questions_to_show);
+        } else {
+            $questions = $allQuestions->shuffle();
+        }
+
+        session([
+            $sessionKey => $questions->pluck('id')->values()->all(),
+        ]);
+
+        return $questions->values();
     }
 
     private function saveAttemptToHistory($assignment, $totalScore, $correctAnswers, $totalQuestions, $userAnswers = [], $status = 'completed')

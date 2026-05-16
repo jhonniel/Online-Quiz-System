@@ -3,7 +3,7 @@
 @section('content')
 <div class="min-h-full flex flex-col">
     <!-- Search and Filter Bar -->
-    @if(auth()->user()->role !== 'applicant')
+    @if(($canViewAssignedQuizzes ?? auth()->user()->canViewAssignedQuizzes()))
     <div class="bg-white shadow-sm border-b border-gray-200 p-4 flex-shrink-0">
         <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
             <!-- Search -->
@@ -86,7 +86,7 @@
     @endif
 
     <!-- Ongoing Quiz Alert -->
-    @if($ongoingQuiz && $ongoingQuiz->isOngoing())
+    @if(($canViewAssignedQuizzes ?? auth()->user()->canViewAssignedQuizzes()) && $ongoingQuiz && $ongoingQuiz->isOngoing())
     <div class="bg-blue-50 border-b border-blue-200 p-4 flex-shrink-0">
         <div class="flex items-start">
             <div class="flex-shrink-0">
@@ -431,7 +431,7 @@
     @endif
 
     <!-- Stats Cards -->
-    @if(auth()->user()->role !== 'applicant')
+    @if(($canViewAssignedQuizzes ?? auth()->user()->canViewAssignedQuizzes()))
     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 sm:gap-3 lg:gap-4 flex-shrink-0 p-4">
         <!-- Total Quizzes -->
         <div class="bg-white overflow-hidden shadow-sm rounded-lg border border-gray-200">
@@ -493,7 +493,7 @@
     @endif
 
     <!-- Available Quizzes -->
-    @if(auth()->user()->role !== 'applicant')
+    @if(($canViewAssignedQuizzes ?? auth()->user()->canViewAssignedQuizzes()))
     <div class="bg-white shadow-sm border-t border-gray-200 overflow-visible flex flex-col">
 
         @if($allQuizzes->count() > 0)
@@ -598,19 +598,19 @@
                                                         Continue Quiz
                                                     </a>
                                                 @elseif($isAssigned && $assignment->status === 'cancelled')
-                                                    <button onclick="openQuizCodeModal()" class="flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
+                                                    <a href="{{ url('/quizzes/' . $quiz->id . '/take') }}" class="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
                                                         <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
                                                         </svg>
                                                         Restart Quiz
-                                                    </button>
-                                                @else
-                                                    <button onclick="openQuizCodeModal()" class="flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
+                                                    </a>
+                                                @elseif($isAssigned)
+                                                    <a href="{{ url('/quizzes/' . $quiz->id . '/take') }}" class="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
                                                         <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1721 9z"></path>
                                                         </svg>
                                                         Take Quiz
-                                                    </button>
+                                                    </a>
                                                 @endif
                                             </div>
                                         </div>
@@ -627,7 +627,13 @@
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                     </svg>
                     <h3 class="mt-2 text-sm font-medium text-gray-900">No quizzes assigned</h3>
-                    <p class="mt-1 text-sm text-gray-500">You do not have any active quizzes assigned yet. Use Enter Quiz Code if you received a code from your administrator.</p>
+                    <p class="mt-1 text-sm text-gray-500">
+                        @if(auth()->user()->isApplicant())
+                            You do not have any quizzes assigned yet. Your administrator will assign internship quizzes to you; they will appear here when ready.
+                        @else
+                            You do not have any active quizzes assigned yet. Use Enter Quiz Code if you received a code from your administrator.
+                        @endif
+                    </p>
                 </div>
             @endif
         </div>
