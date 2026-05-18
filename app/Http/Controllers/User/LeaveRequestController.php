@@ -1637,7 +1637,8 @@ class LeaveRequestController extends Controller
         return LeaveRequestLog::query()
             ->where('leave_request_id', $leaveRequest->id)
             ->with('performer')
-            ->orderBy('created_at')
+            ->orderByDesc('created_at')
+            ->orderByDesc('id')
             ->get();
     }
 }

@@ -102,6 +102,7 @@
                 @endif
             </div>
 
+            @if($user->canAccessQrCode())
             <!-- QR Code Section -->
             <div class="bg-gradient-to-r from-indigo-50 to-purple-50 rounded-lg p-6 mb-6 border border-indigo-200">
                 <div class="flex flex-col sm:flex-row items-center sm:items-start gap-6">
@@ -130,6 +131,7 @@
                     </div>
                 </div>
             </div>
+            @endif
 
             <!-- Stats Section -->
             <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">

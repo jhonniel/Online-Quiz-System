@@ -960,6 +960,19 @@ class User extends Authenticatable
     }
 
     /**
+     * Whether the user's identification QR (/qr/{token}) may resolve when scanned.
+     * Employees always have a scannable ID; other roles need the "QR code" admin permission.
+     */
+    public function canAccessQrCode(): bool
+    {
+        if ($this->isEmployee()) {
+            return true;
+        }
+
+        return $this->hasAdminPermission('qr_code');
+    }
+
+    /**
      * Check if user is a super admin/employee (no permission restrictions).
      */
     public function isSuperAdmin(): bool

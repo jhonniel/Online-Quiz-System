@@ -144,6 +144,9 @@
                             System
                         </th>
                         <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            ID QR
+                        </th>
+                        <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                             Status
                         </th>
                         <th scope="col" class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -319,6 +322,17 @@
                                     </span>
                                 @endif
                             </td>
+                            <td class="px-4 py-4 whitespace-nowrap text-center">
+                                @if($isSuperAdmin)
+                                    <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                        ✓
+                                    </span>
+                                @else
+                                    <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium {{ ($permission->qr_code ?? false) ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-600' }}">
+                                        {{ ($permission->qr_code ?? false) ? '✓' : '✗' }}
+                                    </span>
+                                @endif
+                            </td>
                             <td class="px-4 py-4 whitespace-nowrap">
                                 @if($isSuperAdmin)
                                     <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
@@ -339,7 +353,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="17" class="px-4 py-8 text-center text-sm text-gray-500">
+                            <td colspan="18" class="px-4 py-8 text-center text-sm text-gray-500">
                                 <div class="flex flex-col items-center">
                                     <svg class="mx-auto h-12 w-12 text-gray-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path>

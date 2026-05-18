@@ -34,6 +34,39 @@ class Handler extends ExceptionHandler
     }
 
     /**
+     * Report exceptions without attaching huge context that can trigger a second OOM while logging.
+     */
+    public function report(Throwable $e): void
+    {
+        if ($this->shouldntReport($e)) {
+            return;
+        }
+
+        if ($this->isMemoryExhaustion($e)) {
+            try {
+                Log::error('Memory limit exceeded', [
+                    'exception' => $e::class,
+                    'message' => substr($e->getMessage(), 0, 500),
+                    'file' => $e->getFile(),
+                    'line' => $e->getLine(),
+                ]);
+            } catch (Throwable) {
+                // Avoid cascading failures while already out of memory.
+            }
+
+            return;
+        }
+
+        parent::report($e);
+    }
+
+    private function isMemoryExhaustion(Throwable $e): bool
+    {
+        return str_contains($e->getMessage(), 'Allowed memory size')
+            || ($e instanceof \Error && str_contains($e->getMessage(), 'memory'));
+    }
+
+    /**
      * Handle TokenMismatchException (419): redirect back to form with message so user gets a fresh CSRF token.
      */
     public function render($request, Throwable $e)

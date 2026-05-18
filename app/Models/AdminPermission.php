@@ -26,6 +26,7 @@ class AdminPermission extends Model
         'feedback',
         'user_management',
         'system',
+        'qr_code',
     ];
 
     protected $casts = [
@@ -46,6 +47,7 @@ class AdminPermission extends Model
         'feedback' => 'boolean',
         'user_management' => 'boolean',
         'system' => 'boolean',
+        'qr_code' => 'boolean',
     ];
 
     /**

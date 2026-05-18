@@ -29,13 +29,6 @@
     <!-- Form -->
     <div class="flex-1 overflow-y-auto p-4">
         <div class="max-w-3xl mx-auto">
-            <div class="mb-6">
-                @include('user.leave-requests.partials.admin-feedback-for-requester', [
-                    'leaveRequest' => $leaveRequest,
-                    'leaveRequestActivityLogs' => $leaveRequestActivityLogs,
-                ])
-            </div>
-
             <div class="bg-white rounded-lg shadow border border-gray-200 p-6">
                 <form action="{{ url('/leave-requests/' . $leaveRequest->id) }}" method="POST" enctype="multipart/form-data" class="space-y-6">
                     @csrf
@@ -425,6 +418,13 @@
                         </button>
                     </div>
                 </form>
+            </div>
+
+            <div class="mt-6">
+                @include('user.leave-requests.partials.admin-feedback-for-requester', [
+                    'leaveRequest' => $leaveRequest,
+                    'leaveRequestActivityLogs' => $leaveRequestActivityLogs,
+                ])
             </div>
         </div>
     </div>

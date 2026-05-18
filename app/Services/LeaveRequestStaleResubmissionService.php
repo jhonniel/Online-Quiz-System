@@ -107,7 +107,7 @@ class LeaveRequestStaleResubmissionService
                 'user_email' => $email,
                 'leave_request_id' => $leaveRequest->id,
                 'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString(),
+                'exception' => $e::class,
             ]);
         }
     }

@@ -2,7 +2,7 @@
     <div class="border border-slate-200 rounded-xl bg-slate-50/80 overflow-hidden shadow-sm">
         <div class="bg-slate-100/90 border-b border-slate-200 px-4 py-3">
             <h3 class="text-sm font-semibold text-slate-900">Reviewer notes &amp; actions</h3>
-            <p class="text-xs text-slate-600 mt-1">Everything your reviewer recorded for this request, in order. Use this while updating or fixing your submission.</p>
+            <p class="text-xs text-slate-600 mt-1">Everything your reviewer recorded for this request, newest first. Use this while updating or fixing your submission.</p>
         </div>
         <ul class="divide-y divide-slate-200 px-4 py-2 space-y-0">
             @foreach($leaveRequestActivityLogs as $log)

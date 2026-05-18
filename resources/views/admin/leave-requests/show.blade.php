@@ -44,6 +44,22 @@
         </div>
     @endif
 
+    @if(session('info'))
+        <div class="bg-blue-50 border-l-4 border-blue-400 p-4 rounded-lg">
+            <p class="text-sm text-blue-700">{{ session('info') }}</p>
+        </div>
+    @endif
+
+    @if($errors->any())
+        <div class="bg-red-50 border-l-4 border-red-400 p-4 rounded-lg">
+            <ul class="list-disc list-inside text-sm text-red-700">
+                @foreach($errors->all() as $error)
+                    <li>{{ $error }}</li>
+                @endforeach
+            </ul>
+        </div>
+    @endif
+
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
         <!-- Main Details -->
         <div class="lg:col-span-2 space-y-4 sm:space-y-6">
@@ -58,9 +74,42 @@
                         <p class="text-xs text-gray-500">{{ $leaveRequest->user->email }}</p>
                     </div>
 
-                    <div>
+                    <div class="md:col-span-2">
                         <label class="block text-sm font-medium text-gray-500 mb-1">Request Type</label>
-                        <p class="text-sm font-semibold text-gray-900">{{ $leaveRequest->type_label }}</p>
+                        <form action="{{ url('/admin/leave-requests/' . $leaveRequest->id . '/type') }}" method="POST"
+                              class="flex flex-col sm:flex-row sm:items-end gap-3"
+                              onsubmit="return confirmLeaveTypeChange(this);">
+                            @csrf
+                            @method('PATCH')
+                            <div class="flex-1 min-w-0">
+                                <select name="type" id="leave-request-type"
+                                        class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white">
+                                    @foreach($leaveTypeOptions ?? [] as $option)
+                                        <option value="{{ $option['value'] }}"
+                                            {{ $leaveRequest->type === $option['value'] ? 'selected' : '' }}>
+                                            {{ $option['label'] }}
+                                        </option>
+                                    @endforeach
+                                </select>
+                                @error('type')
+                                    <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                                @enderror
+                            </div>
+                            <div class="flex-1 min-w-0">
+                                <label for="type-change-notes" class="sr-only">Note (optional)</label>
+                                <input type="text" name="admin_notes" id="type-change-notes"
+                                       value="{{ old('admin_notes') }}"
+                                       placeholder="Optional note for activity log"
+                                       class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                            </div>
+                            <button type="submit"
+                                    class="inline-flex items-center justify-center px-4 py-2 text-sm font-medium text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 whitespace-nowrap">
+                                Update Type
+                            </button>
+                        </form>
+                        @if($leaveRequest->isApproved())
+                            <p class="mt-2 text-xs text-amber-700">This request is approved. Changing the type will adjust DTR credits to match the new type.</p>
+                        @endif
                     </div>
 
                     <div>
@@ -925,7 +974,28 @@
 </div>
 
 <script>
+function confirmLeaveTypeChange(form) {
+    const select = form.querySelector('#leave-request-type');
+    if (!select) {
+        return true;
+    }
+    const selected = select.options[select.selectedIndex];
+    const current = select.getAttribute('data-current-type');
+    if (current && selected.value === current) {
+        return false;
+    }
+    let message = 'Change request type to "' + selected.text + '"?';
+    @if($leaveRequest->isApproved())
+        message += '\n\nThis request is approved. DTR credits will be recalculated for the new type.';
+    @endif
+    return window.confirm(message);
+}
+
 document.addEventListener('DOMContentLoaded', function() {
+    const typeSelect = document.getElementById('leave-request-type');
+    if (typeSelect) {
+        typeSelect.setAttribute('data-current-type', typeSelect.value);
+    }
     // Handle Force Approve form
     const forceApproveForm = document.querySelector('form[action*="force-accept"]');
     if (forceApproveForm) {
@@ -1011,11 +1081,11 @@ document.addEventListener('DOMContentLoaded', function() {
     @if($leaveRequest->logs && $leaveRequest->logs->count() > 0)
         <div class="space-y-4">
             @foreach($leaveRequest->logs as $log)
-                <div class="border-l-4 {{ $log->action === 'approved' ? 'border-green-500' : ($log->action === 'rejected' ? 'border-red-500' : ($log->action === 'resubmission_requested' ? 'border-yellow-500' : ($log->action === 'for_more_verification' ? 'border-blue-500' : ($log->action === 'requester_resubmitted' ? 'border-indigo-500' : 'border-gray-400')))) }} pl-4 py-2">
+                <div class="border-l-4 {{ $log->action === 'approved' ? 'border-green-500' : ($log->action === 'rejected' ? 'border-red-500' : ($log->action === 'resubmission_requested' ? 'border-yellow-500' : ($log->action === 'for_more_verification' ? 'border-blue-500' : ($log->action === 'type_changed' ? 'border-purple-500' : ($log->action === 'requester_resubmitted' ? 'border-indigo-500' : 'border-gray-400'))))) }} pl-4 py-2">
                     <div class="flex items-start justify-between">
                         <div class="flex-1">
                             <div class="flex items-center space-x-2">
-                                <span class="px-2 py-1 text-xs font-semibold rounded-full {{ $log->action === 'approved' ? 'bg-green-100 text-green-800' : ($log->action === 'rejected' ? 'bg-red-100 text-red-800' : ($log->action === 'resubmission_requested' ? 'bg-yellow-100 text-yellow-800' : ($log->action === 'for_more_verification' ? 'bg-blue-100 text-blue-800' : ($log->action === 'requester_resubmitted' ? 'bg-indigo-100 text-indigo-900' : 'bg-gray-100 text-gray-800')))) }}">
+                                <span class="px-2 py-1 text-xs font-semibold rounded-full {{ $log->action === 'approved' ? 'bg-green-100 text-green-800' : ($log->action === 'rejected' ? 'bg-red-100 text-red-800' : ($log->action === 'resubmission_requested' ? 'bg-yellow-100 text-yellow-800' : ($log->action === 'for_more_verification' ? 'bg-blue-100 text-blue-800' : ($log->action === 'type_changed' ? 'bg-purple-100 text-purple-800' : ($log->action === 'requester_resubmitted' ? 'bg-indigo-100 text-indigo-900' : 'bg-gray-100 text-gray-800'))))) }}">
                                     {{ $log->action_label }}
                                 </span>
                                 @if($log->status_before && $log->status_after)

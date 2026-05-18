@@ -78,6 +78,7 @@
                     ['key' => 'feedback', 'label' => 'Feedback', 'desc' => 'Feedback management and assignment'],
                     ['key' => 'user_management', 'label' => 'User Management', 'desc' => 'User management and administration'],
                     ['key' => 'system', 'label' => 'System', 'desc' => 'Settings, error logs, and user activity'],
+                    ['key' => 'qr_code', 'label' => 'Identification QR code', 'desc' => 'Profile QR and scannable ID for non-employees (employees always have this)'],
                 ];
             @endphp
 

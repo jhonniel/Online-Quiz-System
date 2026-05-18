@@ -127,20 +127,24 @@
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z"></path>
                     </svg>
                 </div>
-                <div class="flex flex-col items-center">
-                    @php
-                        $user->generateQrCodeId();
-                    @endphp
-                    <div class="bg-gray-50 p-3 sm:p-4 rounded-lg border-2 border-indigo-200 mb-3 sm:mb-4 w-full max-w-[220px] sm:max-w-none mx-auto">
-                        <div class="aspect-square max-w-[180px] sm:w-48 sm:h-48 mx-auto flex items-center justify-center">
-                            {!! $user->getQrCodeSvg(200) !!}
+                @if($user->canAccessQrCode())
+                    <div class="flex flex-col items-center">
+                        @php
+                            $user->generateQrCodeId();
+                        @endphp
+                        <div class="bg-gray-50 p-3 sm:p-4 rounded-lg border-2 border-indigo-200 mb-3 sm:mb-4 w-full max-w-[220px] sm:max-w-none mx-auto">
+                            <div class="aspect-square max-w-[180px] sm:w-48 sm:h-48 mx-auto flex items-center justify-center">
+                                {!! $user->getQrCodeSvg(200) !!}
+                            </div>
+                        </div>
+                        <div class="bg-indigo-50 rounded-lg p-3 border border-indigo-200 w-full text-center">
+                            <p class="text-xs text-gray-500 mb-1">QR Code ID</p>
+                            <p class="text-sm sm:text-lg font-mono font-bold text-indigo-600 break-all">{{ $user->qr_code_id }}</p>
                         </div>
                     </div>
-                    <div class="bg-indigo-50 rounded-lg p-3 border border-indigo-200 w-full text-center">
-                        <p class="text-xs text-gray-500 mb-1">QR Code ID</p>
-                        <p class="text-sm sm:text-lg font-mono font-bold text-indigo-600 break-all">{{ $user->qr_code_id }}</p>
-                    </div>
-                </div>
+                @else
+                    <p class="text-sm text-gray-600">Scans are disabled for this user until an administrator enables <span class="font-medium">Identification QR code</span> in Admin Permissions (employees always have an active ID QR).</p>
+                @endif
             </div>
 
             <!-- Leave balances & overtime (employees only) -->

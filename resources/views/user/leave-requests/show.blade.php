@@ -512,6 +512,9 @@
                     </div>
                 @endif
 
+            </div>
+
+            <div class="mt-6">
                 @include('user.leave-requests.partials.admin-feedback-for-requester', [
                     'leaveRequest' => $leaveRequest,
                     'leaveRequestActivityLogs' => $leaveRequestActivityLogs,

@@ -26,6 +26,9 @@ use Illuminate\Validation\Rule;
 
 class LeaveRequestController extends Controller
 {
+    /** Max inclusive days processed per leave request when syncing DTR (prevents memory exhaustion). */
+    private const MAX_LEAVE_DTR_DAYS_PER_REQUEST = 366;
+
     /**
      * Display a listing of all leave requests.
      */
@@ -40,7 +43,14 @@ class LeaveRequestController extends Controller
             $perPage = 20;
         }
 
-        $query = LeaveRequest::with(['user', 'reviewer', 'approvedBy.performer', 'rejectedBy.performer', 'resubmissionRequestedBy.performer', 'logs'])
+        $query = LeaveRequest::with([
+            'user',
+            'reviewer',
+            'approvedBy.performer',
+            'rejectedBy.performer',
+            'resubmissionRequestedBy.performer',
+            'logs' => fn ($q) => $q->where('action', 'filed_by_admin')->latest('id')->limit(1),
+        ])
             ->whereHas('user', function ($q) {
                 $q->where('role', 'employee');
             });
@@ -219,26 +229,9 @@ class LeaveRequestController extends Controller
                 (float) $defaultSick
             );
 
-            $usedVacation = LeaveRequest::where('user_id', $user->id)
-                ->where('type', 'vacation_leave')
-                ->where('status', 'approved')
-                ->whereYear('start_date', $currentYear)
-                ->get()
-                ->sum->days;
-
-            $usedSick = LeaveRequest::where('user_id', $user->id)
-                ->where('type', 'sick_leave')
-                ->where('status', 'approved')
-                ->whereYear('start_date', $currentYear)
-                ->get()
-                ->sum->days;
-
-            $usedLeaveCredits = LeaveRequest::where('user_id', $user->id)
-                ->whereIn('type', ['vacation_leave', 'sick_leave'])
-                ->where('status', 'approved')
-                ->whereYear('start_date', $currentYear)
-                ->get()
-                ->sum->days;
+            $usedVacation = $this->sumApprovedLeaveDaysForUser($user->id, 'vacation_leave', $currentYear);
+            $usedSick = $this->sumApprovedLeaveDaysForUser($user->id, 'sick_leave', $currentYear);
+            $usedLeaveCredits = $this->sumApprovedLeaveDaysForUser($user->id, ['vacation_leave', 'sick_leave'], $currentYear);
 
             $combinedAllowance = (float) $leaveBalance->vacation_allowance + (float) $leaveBalance->sick_allowance;
 
@@ -376,10 +369,102 @@ class LeaveRequestController extends Controller
             'cto' => \App\Models\Setting::get('leave_cto', 'NITISH KHEMANI'),
         ];
 
-        // Load logs with performer relationship
-        $leaveRequest->load(['logs.performer']);
+        // Load recent activity only (avoid loading unbounded log history into memory)
+        $leaveRequest->load([
+            'logs' => fn ($q) => $q->with('performer')->orderByDesc('created_at')->limit(200),
+        ]);
 
-        return view('admin.leave-requests.show', compact('leaveRequest', 'balances', 'overtimeFormatted', 'signatories', 'studentTime', 'hasNegativeBalance'));
+        $leaveTypeOptions = collect(LeaveRequest::adminSelectableTypesForRole($user->role))
+            ->map(fn (string $type) => [
+                'value' => $type,
+                'label' => LeaveRequest::labelForType($type),
+            ])
+            ->all();
+
+        return view('admin.leave-requests.show', compact(
+            'leaveRequest',
+            'balances',
+            'overtimeFormatted',
+            'signatories',
+            'studentTime',
+            'hasNegativeBalance',
+            'leaveTypeOptions'
+        ));
+    }
+
+    /**
+     * Change the request type from the admin details page.
+     */
+    public function updateType(Request $request, LeaveRequest $leaveRequest)
+    {
+        $leaveRequest->load('user');
+        $this->assertCanManageLeaveRequestSubject($leaveRequest);
+
+        $allowedTypes = LeaveRequest::adminSelectableTypesForRole($leaveRequest->user->role);
+
+        $validated = $request->validate([
+            'type' => ['required', Rule::in($allowedTypes)],
+            'admin_notes' => ['nullable', 'string', 'max:1000'],
+        ]);
+
+        $newType = $validated['type'];
+        $oldType = $leaveRequest->type;
+
+        if ($oldType === $newType) {
+            return redirect('/admin/leave-requests/'.$leaveRequest->id)
+                ->with('info', 'Request type is already set to '.LeaveRequest::labelForType($newType).'.');
+        }
+
+        $wasApproved = $leaveRequest->status === 'approved';
+
+        if ($wasApproved && $this->leaveRequestInclusiveDayCount($leaveRequest) > self::MAX_LEAVE_DTR_DAYS_PER_REQUEST) {
+            return redirect('/admin/leave-requests/'.$leaveRequest->id)
+                ->withErrors([
+                    'type' => 'This request spans more than '.self::MAX_LEAVE_DTR_DAYS_PER_REQUEST.' days. Shorten the date range before changing type on an approved request.',
+                ]);
+        }
+
+        if ($wasApproved) {
+            $this->revertApprovedCreditOnResubmission($leaveRequest, true);
+        }
+
+        $leaveRequest->update(['type' => $newType]);
+
+        if ($wasApproved) {
+            $this->applyApprovedCreditsForType($leaveRequest);
+        }
+
+        $logNotes = trim((string) ($validated['admin_notes'] ?? ''));
+        if ($logNotes === '') {
+            $logNotes = sprintf(
+                'Changed from %s to %s.',
+                LeaveRequest::labelForType($oldType),
+                LeaveRequest::labelForType($newType)
+            );
+        }
+
+        LeaveRequestLog::create([
+            'leave_request_id' => $leaveRequest->id,
+            'action' => 'type_changed',
+            'status_before' => $leaveRequest->status,
+            'status_after' => $leaveRequest->status,
+            'notes' => $logNotes,
+            'performed_by' => Auth::id(),
+            'changes' => [
+                'type' => [
+                    'from' => $oldType,
+                    'to' => $newType,
+                ],
+            ],
+        ]);
+
+        $message = 'Request type updated to '.LeaveRequest::labelForType($newType).'.';
+        if ($wasApproved) {
+            $message .= ' DTR credits were adjusted for the new type.';
+        }
+
+        return redirect('/admin/leave-requests/'.$leaveRequest->id)
+            ->with('success', $message);
     }
 
     /**
@@ -747,20 +832,7 @@ class LeaveRequestController extends Controller
             'performed_by' => Auth::id(),
         ]);
 
-        // If Additional Time, credit 1 day = 8 hours to DTR per date
-        if ($leaveRequest->type === 'additional_time') {
-            $this->applyAdditionalTimeToDtr($leaveRequest);
-        }
-
-        // If Vacation Leave or Sick Leave, automatically add 8 hours per day to DTR
-        if (in_array($leaveRequest->type, ['leave', 'vacation_leave', 'sick_leave'])) {
-            $this->applyLeaveTimeToDtr($leaveRequest);
-        }
-
-        // If Travel, add requested hours per day to DTR (uses employee's travel_hours or default 8.0)
-        if ($leaveRequest->type === 'travel') {
-            $this->applyTravelTimeToDtr($leaveRequest, (float) ($leaveRequest->travel_hours ?? 8.0));
-        }
+        $this->applyApprovedCreditsForType($leaveRequest);
 
         // Send email notification to employee
         try {
@@ -789,7 +861,7 @@ class LeaveRequestController extends Controller
                 'user_email' => $leaveRequest->user->email ?? 'unknown',
                 'leave_request_id' => $leaveRequest->id,
                 'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString(),
+                'exception' => $e::class,
             ]);
             // Don't fail the request if email fails
         }
@@ -869,7 +941,7 @@ class LeaveRequestController extends Controller
                 'user_email' => $leaveRequest->user->email ?? 'unknown',
                 'leave_request_id' => $leaveRequest->id,
                 'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString(),
+                'exception' => $e::class,
             ]);
             // Don't fail the request if email fails
         }
@@ -936,7 +1008,7 @@ class LeaveRequestController extends Controller
                 'user_email' => $leaveRequest->user->email ?? 'unknown',
                 'leave_request_id' => $leaveRequest->id,
                 'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString(),
+                'exception' => $e::class,
             ]);
             // Don't fail the request if email fails
         }
@@ -999,7 +1071,7 @@ class LeaveRequestController extends Controller
                 'user_email' => $leaveRequest->user->email ?? 'unknown',
                 'leave_request_id' => $leaveRequest->id,
                 'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString(),
+                'exception' => $e::class,
             ]);
             // Don't fail the request if email fails
         }
@@ -1461,11 +1533,7 @@ class LeaveRequestController extends Controller
             }
         }
 
-        $start = Carbon::parse($leaveRequest->start_date);
-        $end = $leaveRequest->end_date ? Carbon::parse($leaveRequest->end_date) : $start;
-        $period = CarbonPeriod::create($start, $end);
-
-        foreach ($period as $date) {
+        foreach ($this->iterateLeaveRequestDates($leaveRequest) as $date) {
             $dtr = $this->findOrCreateDtrRecord(
                 (int) $leaveRequest->user_id,
                 $date->toDateString(),
@@ -1544,11 +1612,7 @@ class LeaveRequestController extends Controller
             }
         }
 
-        $start = Carbon::parse($leaveRequest->start_date);
-        $end = $leaveRequest->end_date ? Carbon::parse($leaveRequest->end_date) : $start;
-        $period = CarbonPeriod::create($start, $end);
-
-        foreach ($period as $date) {
+        foreach ($this->iterateLeaveRequestDates($leaveRequest) as $date) {
             $dtr = Dtr::where('user_id', $leaveRequest->user_id)
                 ->whereDate('date', $date->toDateString())
                 ->first();
@@ -1587,7 +1651,9 @@ class LeaveRequestController extends Controller
      */
     private function reconcilePendingAdditionalTimeRollbacks(): void
     {
-        $pending = LeaveRequest::whereIn('type', ['additional_time', 'leave', 'vacation_leave', 'sick_leave', 'travel'])
+        LeaveRequest::query()
+            ->select(['id', 'user_id', 'type', 'status', 'start_date', 'end_date', 'reason', 'travel_hours'])
+            ->whereIn('type', ['additional_time', 'leave', 'vacation_leave', 'sick_leave', 'travel'])
             ->where('status', 'pending')
             ->whereHas('logs', function ($q) {
                 $q->where('action', 'approved');
@@ -1598,11 +1664,20 @@ class LeaveRequestController extends Controller
             ->whereDoesntHave('logs', function ($q) {
                 $q->whereIn('action', ['additional_time_reverted', 'leave_time_reverted', 'travel_time_reverted']);
             })
-            ->get();
+            ->orderBy('id')
+            ->chunkById(25, function ($pending): void {
+                foreach ($pending as $leaveRequest) {
+                    if ($this->leaveRequestInclusiveDayCount($leaveRequest) > self::MAX_LEAVE_DTR_DAYS_PER_REQUEST) {
+                        Log::warning('Skipped leave DTR reconciliation: date span too large', [
+                            'leave_request_id' => $leaveRequest->id,
+                        ]);
 
-        foreach ($pending as $leaveRequest) {
-            $this->revertApprovedCreditOnResubmission($leaveRequest);
-        }
+                        continue;
+                    }
+
+                    $this->revertApprovedCreditOnResubmission($leaveRequest);
+                }
+            });
     }
 
     private function revertApprovedCreditOnResubmission(LeaveRequest $leaveRequest, bool $force = false): void
@@ -1624,6 +1699,57 @@ class LeaveRequestController extends Controller
         }
     }
 
+    /**
+     * Apply DTR credits for an already-approved request based on its current type.
+     */
+    private function applyApprovedCreditsForType(LeaveRequest $leaveRequest): void
+    {
+        if ($leaveRequest->type === 'additional_time') {
+            $this->applyAdditionalTimeToDtr($leaveRequest);
+
+            return;
+        }
+
+        if (in_array($leaveRequest->type, ['leave', 'vacation_leave', 'sick_leave'], true)) {
+            $this->applyLeaveTimeToDtr($leaveRequest);
+
+            return;
+        }
+
+        if ($leaveRequest->type === 'travel') {
+            $this->applyTravelTimeToDtr($leaveRequest, (float) ($leaveRequest->travel_hours ?? 8.0));
+        }
+    }
+
+    /**
+     * Ensure the authenticated admin may manage this leave request's subject user.
+     */
+    private function assertCanManageLeaveRequestSubject(LeaveRequest $leaveRequest): void
+    {
+        $authUser = $this->requireAuthUser();
+        $subject = $leaveRequest->user;
+
+        if (! $subject) {
+            abort(404, 'Leave request user not found.');
+        }
+
+        if ($subject->role === 'employee' && $authUser->canAccessEmployeeManagement()) {
+            $allowedDepartmentIds = $authUser->getAllowedDepartmentIds();
+            if ($allowedDepartmentIds !== null && ! in_array($subject->department_id, $allowedDepartmentIds, true)) {
+                abort(403, 'You do not have permission to manage leave requests for this department.');
+            }
+
+            return;
+        }
+
+        if ($subject->role === 'student' && $authUser->canAccessStudentManagement()) {
+            $allowedDepartmentIds = $authUser->getAllowedStudentDepartmentIds();
+            if ($allowedDepartmentIds !== null && ! in_array($subject->department_id, $allowedDepartmentIds, true)) {
+                abort(403, 'You do not have permission to manage leave requests for this department.');
+            }
+        }
+    }
+
     private function revertLeaveTimeFromDtr(LeaveRequest $leaveRequest, bool $force = false): void
     {
         $alreadyReverted = LeaveRequestLog::where('leave_request_id', $leaveRequest->id)
@@ -1634,12 +1760,9 @@ class LeaveRequestController extends Controller
         }
 
         $hoursPerDay = 8.0;
-        $start = Carbon::parse($leaveRequest->start_date);
-        $end = $leaveRequest->end_date ? Carbon::parse($leaveRequest->end_date) : $start;
-        $period = CarbonPeriod::create($start, $end);
 
         $didRevert = false;
-        foreach ($period as $date) {
+        foreach ($this->iterateLeaveRequestDates($leaveRequest) as $date) {
             $dtr = Dtr::where('user_id', $leaveRequest->user_id)
                 ->whereDate('date', $date->toDateString())
                 ->first();
@@ -1677,12 +1800,8 @@ class LeaveRequestController extends Controller
             return;
         }
 
-        $start = Carbon::parse($leaveRequest->start_date);
-        $end = $leaveRequest->end_date ? Carbon::parse($leaveRequest->end_date) : $start;
-        $period = CarbonPeriod::create($start, $end);
-
         $didRevert = false;
-        foreach ($period as $date) {
+        foreach ($this->iterateLeaveRequestDates($leaveRequest) as $date) {
             $dtr = Dtr::where('user_id', $leaveRequest->user_id)
                 ->whereDate('date', $date->toDateString())
                 ->first();
@@ -1717,11 +1836,7 @@ class LeaveRequestController extends Controller
      */
     private function applyTravelTimeToDtr(LeaveRequest $leaveRequest, float $hoursPerDay = 8.0): void
     {
-        $start = Carbon::parse($leaveRequest->start_date);
-        $end = $leaveRequest->end_date ? Carbon::parse($leaveRequest->end_date) : $start;
-        $period = CarbonPeriod::create($start, $end);
-
-        foreach ($period as $date) {
+        foreach ($this->iterateLeaveRequestDates($leaveRequest) as $date) {
             $dtr = $this->findOrCreateDtrRecord(
                 (int) $leaveRequest->user_id,
                 $date->toDateString(),
@@ -1757,15 +1872,11 @@ class LeaveRequestController extends Controller
      */
     private function applyLeaveTimeToDtr(LeaveRequest $leaveRequest): void
     {
-        $start = Carbon::parse($leaveRequest->start_date);
-        $end = $leaveRequest->end_date ? Carbon::parse($leaveRequest->end_date) : $start;
-        $period = CarbonPeriod::create($start, $end);
-
         $leaveTypeLabel = $leaveRequest->type === 'vacation_leave'
             ? 'Vacation Leave'
             : ($leaveRequest->type === 'sick_leave' ? 'Sick Leave' : 'Leave');
 
-        foreach ($period as $date) {
+        foreach ($this->iterateLeaveRequestDates($leaveRequest) as $date) {
             $dtr = $this->findOrCreateDtrRecord(
                 (int) $leaveRequest->user_id,
                 $date->toDateString(),
@@ -2035,6 +2146,74 @@ class LeaveRequestController extends Controller
         $trimmed = trim((string) ($notes ?? ''));
 
         return $trimmed === '' ? null : $trimmed;
+    }
+
+    /**
+     * Inclusive day count for a leave request (start through end).
+     */
+    private function leaveRequestInclusiveDayCount(LeaveRequest $leaveRequest): int
+    {
+        $start = Carbon::parse($leaveRequest->start_date)->startOfDay();
+        $end = $leaveRequest->end_date
+            ? Carbon::parse($leaveRequest->end_date)->startOfDay()
+            : $start->copy();
+
+        if ($end->lt($start)) {
+            $end = $start->copy();
+        }
+
+        return (int) $start->diffInDays($end) + 1;
+    }
+
+    /**
+     * Iterate each calendar day in a leave request, capped to avoid memory exhaustion.
+     *
+     * @return \Generator<int, Carbon>
+     */
+    private function iterateLeaveRequestDates(LeaveRequest $leaveRequest): \Generator
+    {
+        $start = Carbon::parse($leaveRequest->start_date)->startOfDay();
+        $end = $leaveRequest->end_date
+            ? Carbon::parse($leaveRequest->end_date)->startOfDay()
+            : $start->copy();
+
+        if ($end->lt($start)) {
+            [$start, $end] = [$end->copy(), $start];
+        }
+
+        if ($this->leaveRequestInclusiveDayCount($leaveRequest) > self::MAX_LEAVE_DTR_DAYS_PER_REQUEST) {
+            Log::warning('Leave request date span exceeds DTR processing limit; capping days processed.', [
+                'leave_request_id' => $leaveRequest->id,
+                'start' => $start->toDateString(),
+                'end' => $end->toDateString(),
+            ]);
+            $end = $start->copy()->addDays(self::MAX_LEAVE_DTR_DAYS_PER_REQUEST - 1);
+        }
+
+        foreach (CarbonPeriod::create($start, $end) as $date) {
+            yield $date;
+        }
+    }
+
+    /**
+     * Sum approved leave days for balance display without loading full models.
+     *
+     * @param  string|list<string>  $types
+     */
+    private function sumApprovedLeaveDaysForUser(int $userId, string|array $types, int $year): int
+    {
+        $types = is_array($types) ? $types : [$types];
+
+        return (int) LeaveRequest::query()
+            ->where('user_id', $userId)
+            ->whereIn('type', $types)
+            ->where('status', 'approved')
+            ->whereYear('start_date', $year)
+            ->get(['start_date', 'end_date'])
+            ->sum(fn (LeaveRequest $request) => min(
+                $this->leaveRequestInclusiveDayCount($request),
+                self::MAX_LEAVE_DTR_DAYS_PER_REQUEST
+            ));
     }
 
     /**

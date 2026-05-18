@@ -107,11 +107,56 @@ class LeaveRequest extends Model
     }
 
     /**
+     * Leave types an admin may assign when correcting a request (by requester role).
+     *
+     * @return list<string>
+     */
+    public static function adminSelectableTypesForRole(string $role): array
+    {
+        if ($role === 'student') {
+            return ['additional_time', 'absent', 'other'];
+        }
+
+        return [
+            'leave',
+            'vacation_leave',
+            'sick_leave',
+            'work_from_home',
+            'absent',
+            'overtime',
+            'offset',
+            'additional_time',
+            'travel',
+            'other',
+        ];
+    }
+
+    /**
+     * Human-readable label for a stored type value.
+     */
+    public static function labelForType(?string $type): string
+    {
+        if ($type === null || $type === '') {
+            return 'Unknown';
+        }
+
+        return self::typeLabelMap()[$type] ?? ucfirst(str_replace('_', ' ', $type));
+    }
+
+    /**
      * Get the type label.
      */
     public function getTypeLabelAttribute(): string
     {
-        return match ($this->type) {
+        return self::labelForType($this->type);
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    private static function typeLabelMap(): array
+    {
+        return [
             'leave' => 'Leave',
             'vacation_leave' => 'Vacation Leave',
             'sick_leave' => 'Sick Leave',
@@ -122,8 +167,7 @@ class LeaveRequest extends Model
             'additional_time' => 'Additional Time',
             'travel' => 'Travel',
             'other' => 'Other',
-            default => ucfirst(str_replace('_', ' ', $this->type)),
-        };
+        ];
     }
 
     /**

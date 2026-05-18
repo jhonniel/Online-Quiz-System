@@ -57,6 +57,7 @@ class LeaveRequestLog extends Model
             'filed_by_teacher' => 'Filed by teacher',
             'requester_resubmitted' => 'Submission updated by requester',
             'updated' => 'Updated',
+            'type_changed' => 'Request type changed',
             'created' => 'Created',
             default => ucfirst(str_replace('_', ' ', $this->action)),
         };

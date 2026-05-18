@@ -371,6 +371,22 @@
                             <p class="mt-1 text-sm text-gray-500">Access to settings, error logs, and user activity</p>
                         </div>
                     </div>
+
+                    <!-- Identification QR -->
+                    <div class="flex items-start space-x-3 p-4 border border-gray-200 rounded-lg hover:bg-gray-50">
+                        <input type="checkbox"
+                               name="qr_code"
+                               id="qr_code"
+                               value="1"
+                               {{ ($permission && ($permission->qr_code ?? false)) ? 'checked' : '' }}
+                               class="mt-1 h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded">
+                        <div class="flex-1">
+                            <label for="qr_code" class="block text-sm font-medium text-gray-900 cursor-pointer">
+                                Identification QR code
+                            </label>
+                            <p class="mt-1 text-sm text-gray-500">Allows non-employees to show their profile QR and be identified when their code is scanned (employees always have this)</p>
+                        </div>
+                    </div>
                 </div>
             </div>
 

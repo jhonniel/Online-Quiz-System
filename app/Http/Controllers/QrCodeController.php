@@ -2,11 +2,9 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\User;
-use App\Models\Setting;
-use App\Models\QrCodeToken;
 use App\Models\LeaveRequest;
-use Illuminate\Http\Request;
+use App\Models\QrCodeToken;
+use App\Models\Setting;
 
 class QrCodeController extends Controller
 {
@@ -23,32 +21,19 @@ class QrCodeController extends Controller
         $qrToken = QrCodeToken::where('token', $token)->first();
 
         // If token not found, show not found message
-        if (!$qrToken) {
+        if (! $qrToken) {
             return view('qr.not-found', ['qrCodeId' => null, 'settings' => $settings]);
         }
 
         // Get user with relationships
-        $user = $qrToken->user()->with(['department', 'university', 'adminPermission'])->first();
+        $user = $qrToken->user()->with(['department', 'university'])->first();
 
         // If user not found, show error
-        if (!$user) {
+        if (! $user) {
             return view('qr.not-found', ['qrCodeId' => null, 'settings' => $settings]);
         }
 
-        // Check if user has permission to have QR code scanned
-        // Employees can always have their QR code scanned
-        // Other users can have QR code scanned if they have an adminPermission record (admin granted permission)
-        $canAccessQrCode = false;
-        
-        if ($user->role === 'employee') {
-            // Employees can always access
-            $canAccessQrCode = true;
-        } elseif ($user->adminPermission) {
-            // Non-employees can access if they have an adminPermission record (admin granted permission)
-            $canAccessQrCode = true;
-        }
-
-        if (!$canAccessQrCode) {
+        if (! $user->canAccessQrCode()) {
             return view('qr.not-available', compact('settings', 'user'));
         }
 
@@ -66,12 +51,12 @@ class QrCodeController extends Controller
                 $q->where(function ($q2) use ($today) {
                     $q2->whereNull('end_date')->whereDate('start_date', $today);
                 })
-                ->orWhere(function ($q2) use ($today) {
-                    // Multi-day: today must be between start_date and end_date (inclusive)
-                    $q2->whereNotNull('end_date')
-                        ->whereDate('start_date', '<=', $today)
-                        ->whereDate('end_date', '>=', $today);
-                });
+                    ->orWhere(function ($q2) use ($today) {
+                        // Multi-day: today must be between start_date and end_date (inclusive)
+                        $q2->whereNotNull('end_date')
+                            ->whereDate('start_date', '<=', $today)
+                            ->whereDate('end_date', '>=', $today);
+                    });
             })
             ->orderBy('start_date', 'desc')
             ->get();
