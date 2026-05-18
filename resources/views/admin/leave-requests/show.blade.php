@@ -112,20 +112,48 @@
                         @endif
                     </div>
 
-                    <div>
-                        <label class="block text-sm font-medium text-gray-500 mb-1">Start Date</label>
-                        <p class="text-sm font-semibold text-gray-900">{{ $leaveRequest->start_date->format('F d, Y') }}</p>
-                    </div>
-
-                    <div>
-                        <label class="block text-sm font-medium text-gray-500 mb-1">End Date</label>
-                        <p class="text-sm font-semibold text-gray-900">
-                            @if($leaveRequest->end_date)
-                                {{ $leaveRequest->end_date->format('F d, Y') }}
-                            @else
-                                <span class="text-gray-400">Same day</span>
-                            @endif
-                        </p>
+                    <div class="md:col-span-2">
+                        <label class="block text-sm font-medium text-gray-500 mb-1">Date range</label>
+                        <form action="{{ url('/admin/leave-requests/' . $leaveRequest->id . '/dates') }}" method="POST"
+                              class="flex flex-col sm:flex-row sm:flex-wrap sm:items-end gap-3"
+                              onsubmit="return confirmLeaveDateChange(this);">
+                            @csrf
+                            @method('PATCH')
+                            <div class="flex-1 min-w-[10rem]">
+                                <label for="leave-request-start-date" class="sr-only">Start date</label>
+                                <input type="date" name="start_date" id="leave-request-start-date"
+                                       value="{{ old('start_date', $leaveRequest->start_date->format('Y-m-d')) }}"
+                                       required
+                                       class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white">
+                                @error('start_date')
+                                    <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                                @enderror
+                            </div>
+                            <div class="flex-1 min-w-[10rem]">
+                                <label for="leave-request-end-date" class="sr-only">End date</label>
+                                <input type="date" name="end_date" id="leave-request-end-date"
+                                       value="{{ old('end_date', ($leaveRequest->end_date ?? $leaveRequest->start_date)->format('Y-m-d')) }}"
+                                       class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white">
+                                @error('end_date')
+                                    <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                                @enderror
+                            </div>
+                            <div class="flex-1 min-w-0 sm:min-w-[12rem]">
+                                <label for="date-change-notes" class="sr-only">Note (optional)</label>
+                                <input type="text" name="admin_notes" id="date-change-notes"
+                                       value="{{ old('admin_notes') }}"
+                                       placeholder="Optional note for activity log"
+                                       class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                            </div>
+                            <button type="submit"
+                                    class="inline-flex items-center justify-center px-4 py-2 text-sm font-medium text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 whitespace-nowrap">
+                                Update Dates
+                            </button>
+                        </form>
+                        <p class="mt-2 text-xs text-gray-500">Admins may set any date, including past dates. Use the same start and end date for a single day.</p>
+                        @if($leaveRequest->isApproved())
+                            <p class="mt-1 text-xs text-amber-700">This request is approved. Changing dates will adjust DTR credits to match the new range.</p>
+                        @endif
                     </div>
 
                     <div>
@@ -991,10 +1019,37 @@ function confirmLeaveTypeChange(form) {
     return window.confirm(message);
 }
 
+function confirmLeaveDateChange(form) {
+    const startInput = form.querySelector('#leave-request-start-date');
+    const endInput = form.querySelector('#leave-request-end-date');
+    if (!startInput) {
+        return true;
+    }
+    const currentStart = startInput.getAttribute('data-current-start');
+    const currentEnd = endInput ? endInput.getAttribute('data-current-end') : null;
+    const newEnd = endInput && endInput.value ? endInput.value : startInput.value;
+    if (currentStart && startInput.value === currentStart && currentEnd && newEnd === currentEnd) {
+        return false;
+    }
+    let message = 'Change request dates to ' + startInput.value + ' – ' + newEnd + '?';
+    @if($leaveRequest->isApproved())
+        message += '\n\nThis request is approved. DTR credits will be recalculated for the new date range.';
+    @endif
+    return window.confirm(message);
+}
+
 document.addEventListener('DOMContentLoaded', function() {
     const typeSelect = document.getElementById('leave-request-type');
     if (typeSelect) {
         typeSelect.setAttribute('data-current-type', typeSelect.value);
+    }
+    const startDateInput = document.getElementById('leave-request-start-date');
+    const endDateInput = document.getElementById('leave-request-end-date');
+    if (startDateInput) {
+        startDateInput.setAttribute('data-current-start', startDateInput.value);
+    }
+    if (endDateInput) {
+        endDateInput.setAttribute('data-current-end', endDateInput.value);
     }
     // Handle Force Approve form
     const forceApproveForm = document.querySelector('form[action*="force-accept"]');
@@ -1081,11 +1136,11 @@ document.addEventListener('DOMContentLoaded', function() {
     @if($leaveRequest->logs && $leaveRequest->logs->count() > 0)
         <div class="space-y-4">
             @foreach($leaveRequest->logs as $log)
-                <div class="border-l-4 {{ $log->action === 'approved' ? 'border-green-500' : ($log->action === 'rejected' ? 'border-red-500' : ($log->action === 'resubmission_requested' ? 'border-yellow-500' : ($log->action === 'for_more_verification' ? 'border-blue-500' : ($log->action === 'type_changed' ? 'border-purple-500' : ($log->action === 'requester_resubmitted' ? 'border-indigo-500' : 'border-gray-400'))))) }} pl-4 py-2">
+                <div class="border-l-4 {{ $log->action === 'approved' ? 'border-green-500' : ($log->action === 'rejected' ? 'border-red-500' : ($log->action === 'resubmission_requested' ? 'border-yellow-500' : ($log->action === 'for_more_verification' ? 'border-blue-500' : (in_array($log->action, ['type_changed', 'dates_changed'], true) ? 'border-purple-500' : ($log->action === 'requester_resubmitted' ? 'border-indigo-500' : 'border-gray-400'))))) }} pl-4 py-2">
                     <div class="flex items-start justify-between">
                         <div class="flex-1">
                             <div class="flex items-center space-x-2">
-                                <span class="px-2 py-1 text-xs font-semibold rounded-full {{ $log->action === 'approved' ? 'bg-green-100 text-green-800' : ($log->action === 'rejected' ? 'bg-red-100 text-red-800' : ($log->action === 'resubmission_requested' ? 'bg-yellow-100 text-yellow-800' : ($log->action === 'for_more_verification' ? 'bg-blue-100 text-blue-800' : ($log->action === 'type_changed' ? 'bg-purple-100 text-purple-800' : ($log->action === 'requester_resubmitted' ? 'bg-indigo-100 text-indigo-900' : 'bg-gray-100 text-gray-800'))))) }}">
+                                <span class="px-2 py-1 text-xs font-semibold rounded-full {{ $log->action === 'approved' ? 'bg-green-100 text-green-800' : ($log->action === 'rejected' ? 'bg-red-100 text-red-800' : ($log->action === 'resubmission_requested' ? 'bg-yellow-100 text-yellow-800' : ($log->action === 'for_more_verification' ? 'bg-blue-100 text-blue-800' : (in_array($log->action, ['type_changed', 'dates_changed'], true) ? 'bg-purple-100 text-purple-800' : ($log->action === 'requester_resubmitted' ? 'bg-indigo-100 text-indigo-900' : 'bg-gray-100 text-gray-800'))))) }}">
                                     {{ $log->action_label }}
                                 </span>
                                 @if($log->status_before && $log->status_after)

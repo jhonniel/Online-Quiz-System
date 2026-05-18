@@ -468,6 +468,102 @@ class LeaveRequestController extends Controller
     }
 
     /**
+     * Change start/end dates from the admin details page (any date, including past).
+     */
+    public function updateDates(Request $request, LeaveRequest $leaveRequest)
+    {
+        $leaveRequest->load('user');
+        $this->assertCanManageLeaveRequestSubject($leaveRequest);
+
+        $validated = $request->validate([
+            'start_date' => ['required', 'date'],
+            'end_date' => ['nullable', 'date', 'after_or_equal:start_date'],
+            'admin_notes' => ['nullable', 'string', 'max:1000'],
+        ]);
+
+        $newStart = Carbon::parse($validated['start_date'])->startOfDay();
+        $newEnd = ! empty($validated['end_date'])
+            ? Carbon::parse($validated['end_date'])->startOfDay()
+            : $newStart->copy();
+
+        $oldStart = $leaveRequest->start_date->copy()->startOfDay();
+        $oldEnd = ($leaveRequest->end_date ?? $leaveRequest->start_date)->copy()->startOfDay();
+
+        if ($oldStart->toDateString() === $newStart->toDateString()
+            && $oldEnd->toDateString() === $newEnd->toDateString()) {
+            return redirect('/admin/leave-requests/'.$leaveRequest->id)
+                ->with('info', 'Dates are already set to the selected range.');
+        }
+
+        $wasApproved = $leaveRequest->status === 'approved';
+        $newDayCount = (int) $newStart->diffInDays($newEnd) + 1;
+
+        if ($wasApproved && $newDayCount > self::MAX_LEAVE_DTR_DAYS_PER_REQUEST) {
+            return redirect('/admin/leave-requests/'.$leaveRequest->id)
+                ->withErrors([
+                    'end_date' => 'The new date range spans more than '.self::MAX_LEAVE_DTR_DAYS_PER_REQUEST.' days. Shorten the range before updating an approved request.',
+                ])
+                ->withInput();
+        }
+
+        if ($wasApproved) {
+            $this->revertApprovedCreditOnResubmission($leaveRequest, true);
+        }
+
+        $leaveRequest->update([
+            'start_date' => $newStart->toDateString(),
+            'end_date' => $newEnd->toDateString(),
+        ]);
+        $leaveRequest->refresh();
+
+        if ($wasApproved) {
+            $this->applyApprovedCreditsForType($leaveRequest);
+        }
+
+        $logNotes = trim((string) ($validated['admin_notes'] ?? ''));
+        if ($logNotes === '') {
+            $logNotes = sprintf(
+                'Changed dates from %s – %s to %s – %s.',
+                $this->formatLeaveDateForAdminLog($oldStart),
+                $this->formatLeaveDateForAdminLog($oldEnd),
+                $this->formatLeaveDateForAdminLog($newStart),
+                $this->formatLeaveDateForAdminLog($newEnd)
+            );
+        }
+
+        LeaveRequestLog::create([
+            'leave_request_id' => $leaveRequest->id,
+            'action' => 'dates_changed',
+            'status_before' => $leaveRequest->status,
+            'status_after' => $leaveRequest->status,
+            'notes' => $logNotes,
+            'performed_by' => Auth::id(),
+            'changes' => [
+                'start_date' => [
+                    'from' => $oldStart->toDateString(),
+                    'to' => $newStart->toDateString(),
+                ],
+                'end_date' => [
+                    'from' => $oldEnd->toDateString(),
+                    'to' => $newEnd->toDateString(),
+                ],
+            ],
+        ]);
+
+        $message = 'Request dates updated to '
+            .$this->formatLeaveDateForAdminLog($newStart)
+            .' – '
+            .$this->formatLeaveDateForAdminLog($newEnd)
+            .'.';
+        if ($wasApproved) {
+            $message .= ' DTR credits were adjusted for the new date range.';
+        }
+
+        return redirect('/admin/leave-requests/'.$leaveRequest->id)
+            ->with('success', $message);
+    }
+
+    /**
      * Calendar view of leave requests for easier tracking.
      */
     public function calendar(Request $request)
@@ -2136,6 +2232,11 @@ class LeaveRequestController extends Controller
         }
 
         return [$paths, $paths[0] ?? null];
+    }
+
+    private function formatLeaveDateForAdminLog(Carbon $date): string
+    {
+        return $date->format('M j, Y');
     }
 
     /**

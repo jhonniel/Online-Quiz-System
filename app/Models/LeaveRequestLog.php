@@ -58,6 +58,7 @@ class LeaveRequestLog extends Model
             'requester_resubmitted' => 'Submission updated by requester',
             'updated' => 'Updated',
             'type_changed' => 'Request type changed',
+            'dates_changed' => 'Request dates changed',
             'created' => 'Created',
             default => ucfirst(str_replace('_', ' ', $this->action)),
         };
