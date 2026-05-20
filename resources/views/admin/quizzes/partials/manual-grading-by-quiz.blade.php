@@ -1,35 +1,36 @@
-<div class="flex flex-col lg:flex-row flex-1 min-h-0 min-h-[32rem] lg:min-h-[calc(100vh-14rem)]"
+@php
+    $mgBaseUrl = url('/admin/manual-grading');
+@endphp
+<div class="flex flex-col lg:flex-row flex-1 min-h-0 h-full max-h-full overflow-hidden"
      id="manual-grading-by-quiz"
      x-data="{
          selectedQuizId: {{ $selectedQuizId ?? 'null' }},
          selectedUserId: {{ $selectedUserId ?? 'null' }},
          quizSearch: '',
+         mgUrl(params) {
+             const q = params.toString();
+             return q ? '{{ $mgBaseUrl }}?' + q : '{{ $mgBaseUrl }}?view=quiz';
+         },
          selectQuiz(quizId) {
-             this.selectedQuizId = quizId;
-             this.selectedUserId = null;
-             this.syncUrl();
-         },
-         selectStudent(userId) {
-             this.selectedUserId = userId;
-             this.syncUrl();
-         },
-         backToQuizzes() {
-             this.selectedQuizId = null;
-             this.selectedUserId = null;
-             this.syncUrl();
-         },
-         backToStudents() {
-             this.selectedUserId = null;
-             this.syncUrl();
-         },
-         syncUrl() {
              const params = new URLSearchParams(window.location.search);
              params.set('view', 'quiz');
-             if (this.selectedQuizId) params.set('quiz_id', this.selectedQuizId);
-             else params.delete('quiz_id');
-             if (this.selectedUserId) params.set('user_id', this.selectedUserId);
-             else params.delete('user_id');
-             history.replaceState(null, '', params.toString() ? '?' + params.toString() : '{{ url('/admin/manual-grading') }}?view=quiz');
+             params.set('quiz_id', quizId);
+             params.delete('user_id');
+             window.location.href = this.mgUrl(params);
+         },
+         selectStudent(userId) {
+             const params = new URLSearchParams(window.location.search);
+             params.set('view', 'quiz');
+             params.set('user_id', userId);
+             window.location.href = this.mgUrl(params);
+         },
+         backToQuizzes() {
+             window.location.href = '{{ $mgBaseUrl }}?view=quiz';
+         },
+         backToStudents() {
+             const params = new URLSearchParams(window.location.search);
+             params.delete('user_id');
+             window.location.href = this.mgUrl(params);
          },
          quizVisible(title, studentNames) {
              const q = this.quizSearch.trim().toLowerCase();
@@ -39,7 +40,7 @@
      }"
      @manual-grading-quiz-complete.window="backToStudents()">
 
-    <aside class="w-full lg:w-80 xl:w-96 shrink-0 flex flex-col border-b lg:border-b-0 lg:border-r border-gray-200 bg-slate-50/90">
+    <aside class="w-full lg:w-80 xl:w-96 shrink-0 flex flex-col min-h-0 max-h-[45vh] lg:max-h-full lg:h-full overflow-hidden border-b lg:border-b-0 lg:border-r border-gray-200 bg-slate-50/90">
         <div class="shrink-0 px-4 py-4 border-b border-gray-200 bg-white/80">
             <div class="flex items-center gap-2">
                 <span class="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-600 text-white">
@@ -61,7 +62,7 @@
             </div>
         </div>
 
-        <div class="flex-1 overflow-y-auto mg-sidebar-scroll p-3 space-y-2 min-h-[12rem] lg:min-h-0">
+        <div class="flex-1 min-h-0 overflow-y-auto mg-sidebar-scroll p-3 space-y-2">
             @foreach($groupsByQuiz as $quizGroup)
                 @php
                     $quiz = $quizGroup['quiz'];
@@ -90,28 +91,25 @@
         </div>
     </aside>
 
-    <div class="flex-1 flex flex-col min-w-0 min-h-[20rem] lg:min-h-0 bg-gradient-to-br from-slate-50 to-gray-100/80">
-        <div class="flex-1 overflow-y-auto mg-workspace-scroll p-4 sm:p-6 lg:p-8">
+    <div class="flex-1 flex flex-col min-w-0 min-h-0 overflow-hidden bg-gradient-to-br from-slate-50 to-gray-100/80">
+        <div class="flex-1 min-h-0 overflow-y-auto mg-workspace-scroll p-4 sm:p-6 lg:p-8">
 
-            <div x-show="!selectedQuizId" x-cloak class="h-full min-h-[18rem] flex flex-col items-center justify-center text-center px-6">
-                <div class="rounded-2xl border-2 border-dashed border-gray-300 bg-white/60 px-8 py-12 max-w-lg w-full">
-                    <div class="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-blue-100 text-blue-600">
-                        <svg class="h-7 w-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path></svg>
+            @if(!$selectedQuizId)
+                <div class="h-full min-h-[18rem] flex flex-col items-center justify-center text-center px-6">
+                    <div class="rounded-2xl border-2 border-dashed border-gray-300 bg-white/60 px-8 py-12 max-w-lg w-full">
+                        <div class="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-blue-100 text-blue-600">
+                            <svg class="h-7 w-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path></svg>
+                        </div>
+                        <h3 class="mt-4 text-lg font-semibold text-gray-900">Select a quiz</h3>
+                        <p class="mt-2 text-sm text-gray-500 leading-relaxed">Choose a quiz from the list to see which students need grading.</p>
                     </div>
-                    <h3 class="mt-4 text-lg font-semibold text-gray-900">Select a quiz</h3>
-                    <p class="mt-2 text-sm text-gray-500 leading-relaxed">Choose a quiz from the list to see which students need grading.</p>
                 </div>
-            </div>
-
-            @foreach($groupsByQuiz as $quizGroup)
+            @elseif($selectedQuizGroup && !$selectedUserId)
                 @php
-                    $quiz = $quizGroup['quiz'];
+                    $quiz = $selectedQuizGroup['quiz'];
                     $quizTitle = $quiz->title ?? 'Quiz';
                 @endphp
-
-                <div x-show="selectedQuizId === {{ (int) $quiz->id }} && !selectedUserId"
-                     x-cloak
-                     class="max-w-6xl mx-auto w-full space-y-6">
+                <div class="max-w-6xl mx-auto w-full space-y-6">
                     <nav class="flex flex-wrap items-center gap-2 rounded-xl bg-white border border-gray-200 px-4 py-3 shadow-sm">
                         <button type="button" @click="backToQuizzes()" class="text-sm font-medium text-blue-600 hover:text-blue-800">← Quizzes</button>
                         <span class="text-gray-300">/</span>
@@ -120,7 +118,7 @@
                     </nav>
 
                     <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-                        @foreach($quizGroup['students'] as $studentGroup)
+                        @foreach($selectedQuizGroup['students'] as $studentGroup)
                             @php
                                 $student = $studentGroup['user'];
                                 $studentName = $student->name ?? 'Unknown';
@@ -146,15 +144,17 @@
                         @endforeach
                     </div>
                 </div>
-
-                @foreach($quizGroup['students'] as $studentGroup)
-                    @php
-                        $student = $studentGroup['user'];
-                        $studentName = $student->name ?? 'Unknown';
-                    @endphp
-                    <div x-show="selectedQuizId === {{ (int) $quiz->id }} && selectedUserId === {{ (int) $student->id }}"
-                         x-cloak
-                         class="max-w-6xl mx-auto w-full space-y-5"
+            @elseif($selectedQuizGroup && $selectedUserId)
+                @php
+                    $quiz = $selectedQuizGroup['quiz'];
+                    $quizTitle = $quiz->title ?? 'Quiz';
+                    $studentGroup = $selectedQuizGroup['students']->first(fn ($g) => (int) $g['user']->id === (int) $selectedUserId);
+                    $student = $studentGroup['user'] ?? null;
+                    $studentName = $student->name ?? 'Unknown';
+                    $pendingLeft = $studentGroup['pending_count'] ?? $gradingAttempts->count();
+                @endphp
+                @if($student)
+                    <div class="max-w-6xl mx-auto w-full space-y-5"
                          data-quiz-grading-panel
                          data-user-id="{{ (int) $student->id }}"
                          data-quiz-id="{{ (int) $quiz->id }}">
@@ -165,12 +165,12 @@
                             <span class="text-gray-300">/</span>
                             <span class="text-sm font-bold text-gray-900">{{ $studentName }}</span>
                             <span class="ml-auto text-xs font-semibold text-white bg-indigo-600 px-2.5 py-1 rounded-full">
-                                {{ $studentGroup['pending_count'] }} left
+                                {{ $pendingLeft }} left
                             </span>
                         </nav>
 
                         <div class="space-y-4" data-grading-attempts>
-                            @foreach($studentGroup['attempts'] as $attempt)
+                            @foreach($gradingAttempts as $attempt)
                                 @include('admin.quizzes.partials.manual-grading-attempt-card', [
                                     'attempt' => $attempt,
                                     'compactHeader' => true,
@@ -178,8 +178,8 @@
                             @endforeach
                         </div>
                     </div>
-                @endforeach
-            @endforeach
+                @endif
+            @endif
         </div>
     </div>
 </div>

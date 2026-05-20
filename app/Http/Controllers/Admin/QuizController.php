@@ -831,17 +831,9 @@ class QuizController extends Controller
             $viewMode = 'student';
         }
 
-        $attempts = QuizAttempt::whereHas('question', function ($query) {
-            $query->whereIn('question_type', ['fill_blank', 'text']);
-        })
-            ->whereNull('graded_at')
-            ->with(['question', 'user', 'quiz'])
-            ->orderBy('created_at', 'desc')
-            ->get();
-
-        $groupsByStudent = $this->buildManualGradingGroupsByStudent($attempts);
-        $groupsByQuiz = $this->buildManualGradingGroupsByQuiz($attempts);
-        $totalPending = $attempts->count();
+        $groupsByStudent = $this->buildManualGradingGroupsByStudent();
+        $groupsByQuiz = $this->buildManualGradingGroupsByQuiz();
+        $totalPending = (int) $this->pendingManualGradingQuery()->count();
 
         [$selectedUserId, $selectedQuizId] = $this->resolveManualGradingSelection(
             $request,
@@ -850,15 +842,56 @@ class QuizController extends Controller
             $groupsByQuiz
         );
 
+        $gradingAttempts = collect();
+        $selectedStudentGroup = null;
+        $selectedQuizGroup = null;
+
+        if ($viewMode === 'student') {
+            $selectedStudentGroup = collect($groupsByStudent)->first(
+                fn (array $group) => (int) $group['user']->id === $selectedUserId
+            );
+            if ($selectedUserId && $selectedQuizId) {
+                $gradingAttempts = $this->loadPendingManualGradingAttempts($selectedUserId, $selectedQuizId);
+            }
+        } else {
+            $selectedQuizGroup = collect($groupsByQuiz)->first(
+                fn (array $group) => (int) $group['quiz']->id === $selectedQuizId
+            );
+            if ($selectedUserId && $selectedQuizId) {
+                $gradingAttempts = $this->loadPendingManualGradingAttempts($selectedUserId, $selectedQuizId);
+            }
+        }
+
         return view('admin.quizzes.manual-grading', compact(
-            'attempts',
             'groupsByStudent',
             'groupsByQuiz',
             'viewMode',
             'totalPending',
             'selectedUserId',
-            'selectedQuizId'
+            'selectedQuizId',
+            'gradingAttempts',
+            'selectedStudentGroup',
+            'selectedQuizGroup'
         ));
+    }
+
+    private function pendingManualGradingQuery()
+    {
+        return QuizAttempt::query()
+            ->whereNull('graded_at')
+            ->whereHas('question', function ($query) {
+                $query->whereIn('question_type', ['fill_blank', 'text']);
+            });
+    }
+
+    private function loadPendingManualGradingAttempts(int $userId, int $quizId)
+    {
+        return $this->pendingManualGradingQuery()
+            ->where('user_id', $userId)
+            ->where('quiz_id', $quizId)
+            ->with(['question', 'user', 'quiz'])
+            ->orderByDesc('created_at')
+            ->get();
     }
 
     /**
@@ -911,29 +944,60 @@ class QuizController extends Controller
     }
 
     /**
+     * Sidebar index only (counts + ids) — no attempt payloads.
+     *
      * @return list<array{user: \App\Models\User, pending_count: int, quizzes: \Illuminate\Support\Collection}>
      */
-    private function buildManualGradingGroupsByStudent($attempts): array
+    private function buildManualGradingGroupsByStudent(): array
     {
-        return $attempts->groupBy('user_id')
-            ->map(function ($userAttempts) {
-                $user = $userAttempts->first()->user;
+        $aggregates = $this->pendingManualGradingQuery()
+            ->selectRaw('user_id, quiz_id, COUNT(*) as pending_count')
+            ->groupBy('user_id', 'quiz_id')
+            ->get();
+
+        if ($aggregates->isEmpty()) {
+            return [];
+        }
+
+        $users = User::query()
+            ->whereIn('id', $aggregates->pluck('user_id')->unique())
+            ->get(['id', 'name', 'email'])
+            ->keyBy('id');
+
+        $quizzes = Quiz::query()
+            ->whereIn('id', $aggregates->pluck('quiz_id')->unique())
+            ->get(['id', 'title'])
+            ->keyBy('id');
+
+        return $aggregates
+            ->groupBy('user_id')
+            ->map(function ($rows, $userId) use ($users, $quizzes) {
+                $user = $users->get($userId);
+                if (! $user) {
+                    return null;
+                }
 
                 return [
                     'user' => $user,
-                    'pending_count' => $userAttempts->count(),
-                    'quizzes' => $userAttempts->groupBy('quiz_id')
-                        ->map(function ($quizAttempts) {
+                    'pending_count' => (int) $rows->sum('pending_count'),
+                    'quizzes' => $rows
+                        ->map(function ($row) use ($quizzes) {
+                            $quiz = $quizzes->get($row->quiz_id);
+                            if (! $quiz) {
+                                return null;
+                            }
+
                             return [
-                                'quiz' => $quizAttempts->first()->quiz,
-                                'pending_count' => $quizAttempts->count(),
-                                'attempts' => $quizAttempts->sortByDesc('created_at')->values(),
+                                'quiz' => $quiz,
+                                'pending_count' => (int) $row->pending_count,
                             ];
                         })
+                        ->filter()
                         ->sortBy(fn (array $group) => $group['quiz']->title ?? '')
                         ->values(),
                 ];
             })
+            ->filter()
             ->sortBy(fn (array $group) => $group['user']->name ?? '')
             ->values()
             ->all();
@@ -942,27 +1006,56 @@ class QuizController extends Controller
     /**
      * @return list<array{quiz: \App\Models\Quiz, pending_count: int, students: \Illuminate\Support\Collection}>
      */
-    private function buildManualGradingGroupsByQuiz($attempts): array
+    private function buildManualGradingGroupsByQuiz(): array
     {
-        return $attempts->groupBy('quiz_id')
-            ->map(function ($quizAttempts) {
-                $quiz = $quizAttempts->first()->quiz;
+        $aggregates = $this->pendingManualGradingQuery()
+            ->selectRaw('user_id, quiz_id, COUNT(*) as pending_count')
+            ->groupBy('user_id', 'quiz_id')
+            ->get();
+
+        if ($aggregates->isEmpty()) {
+            return [];
+        }
+
+        $users = User::query()
+            ->whereIn('id', $aggregates->pluck('user_id')->unique())
+            ->get(['id', 'name', 'email'])
+            ->keyBy('id');
+
+        $quizzes = Quiz::query()
+            ->whereIn('id', $aggregates->pluck('quiz_id')->unique())
+            ->get(['id', 'title'])
+            ->keyBy('id');
+
+        return $aggregates
+            ->groupBy('quiz_id')
+            ->map(function ($rows, $quizId) use ($users, $quizzes) {
+                $quiz = $quizzes->get($quizId);
+                if (! $quiz) {
+                    return null;
+                }
 
                 return [
                     'quiz' => $quiz,
-                    'pending_count' => $quizAttempts->count(),
-                    'students' => $quizAttempts->groupBy('user_id')
-                        ->map(function ($studentAttempts) {
+                    'pending_count' => (int) $rows->sum('pending_count'),
+                    'students' => $rows
+                        ->map(function ($row) use ($users) {
+                            $user = $users->get($row->user_id);
+                            if (! $user) {
+                                return null;
+                            }
+
                             return [
-                                'user' => $studentAttempts->first()->user,
-                                'pending_count' => $studentAttempts->count(),
-                                'attempts' => $studentAttempts->sortByDesc('created_at')->values(),
+                                'user' => $user,
+                                'pending_count' => (int) $row->pending_count,
                             ];
                         })
+                        ->filter()
                         ->sortBy(fn (array $group) => $group['user']->name ?? '')
                         ->values(),
                 ];
             })
+            ->filter()
             ->sortBy(fn (array $group) => $group['quiz']->title ?? '')
             ->values()
             ->all();

@@ -85,7 +85,7 @@
 
     @if($totalPending > 0)
         <div class="flex-1 flex flex-col min-h-0 px-4 sm:px-6 lg:px-8 py-5">
-            <div class="flex-1 flex flex-col min-h-0 rounded-2xl border border-gray-200 bg-white shadow-sm overflow-hidden">
+            <div class="flex-1 flex flex-col min-h-0 h-[calc(100vh-15rem)] max-h-[calc(100vh-15rem)] rounded-2xl border border-gray-200 bg-white shadow-sm overflow-hidden">
                 @if($viewMode === 'student')
                     @include('admin.quizzes.partials.manual-grading-by-student')
                 @else
