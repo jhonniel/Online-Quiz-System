@@ -112,16 +112,28 @@
     [x-cloak] { display: none !important; }
     .manual-grading-page .mg-sidebar-scroll {
         scrollbar-width: thin;
-        scrollbar-color: #cbd5e1 transparent;
+        scrollbar-color: #94a3b8 #f1f5f9;
     }
-    .manual-grading-page .mg-sidebar-scroll::-webkit-scrollbar { width: 6px; }
-    .manual-grading-page .mg-sidebar-scroll::-webkit-scrollbar-thumb {
-        background-color: #cbd5e1;
+    .manual-grading-page .mg-sidebar-scroll::-webkit-scrollbar { width: 8px; }
+    .manual-grading-page .mg-sidebar-scroll::-webkit-scrollbar-track {
+        background: #f1f5f9;
         border-radius: 9999px;
+    }
+    .manual-grading-page .mg-sidebar-scroll::-webkit-scrollbar-thumb {
+        background-color: #94a3b8;
+        border-radius: 9999px;
+    }
+    .manual-grading-page .mg-sidebar-scroll::-webkit-scrollbar-thumb:hover {
+        background-color: #64748b;
     }
     .manual-grading-page .mg-workspace-scroll {
         scrollbar-width: thin;
         scrollbar-color: #cbd5e1 #f8fafc;
+    }
+    .manual-grading-page .mg-grading-breadcrumb {
+        position: relative;
+        z-index: 20;
+        margin-bottom: 0;
     }
 </style>
 

@@ -951,7 +951,7 @@ class QuizController extends Controller
     private function buildManualGradingGroupsByStudent(): array
     {
         $aggregates = $this->pendingManualGradingQuery()
-            ->selectRaw('user_id, quiz_id, COUNT(*) as pending_count')
+            ->selectRaw('user_id, quiz_id, COUNT(*) as pending_count, MAX(created_at) as latest_attempt_at')
             ->groupBy('user_id', 'quiz_id')
             ->get();
 
@@ -980,6 +980,7 @@ class QuizController extends Controller
                 return [
                     'user' => $user,
                     'pending_count' => (int) $rows->sum('pending_count'),
+                    'latest_attempt_at' => $rows->max('latest_attempt_at'),
                     'quizzes' => $rows
                         ->map(function ($row) use ($quizzes) {
                             $quiz = $quizzes->get($row->quiz_id);
@@ -990,15 +991,14 @@ class QuizController extends Controller
                             return [
                                 'quiz' => $quiz,
                                 'pending_count' => (int) $row->pending_count,
+                                'latest_attempt_at' => $row->latest_attempt_at,
                             ];
                         })
                         ->filter()
-                        ->sortBy(fn (array $group) => $group['quiz']->title ?? '')
                         ->values(),
                 ];
             })
             ->filter()
-            ->sortBy(fn (array $group) => $group['user']->name ?? '')
             ->values()
             ->all();
     }
@@ -1009,7 +1009,7 @@ class QuizController extends Controller
     private function buildManualGradingGroupsByQuiz(): array
     {
         $aggregates = $this->pendingManualGradingQuery()
-            ->selectRaw('user_id, quiz_id, COUNT(*) as pending_count')
+            ->selectRaw('user_id, quiz_id, COUNT(*) as pending_count, MAX(created_at) as latest_attempt_at')
             ->groupBy('user_id', 'quiz_id')
             ->get();
 
@@ -1038,6 +1038,7 @@ class QuizController extends Controller
                 return [
                     'quiz' => $quiz,
                     'pending_count' => (int) $rows->sum('pending_count'),
+                    'latest_attempt_at' => $rows->max('latest_attempt_at'),
                     'students' => $rows
                         ->map(function ($row) use ($users) {
                             $user = $users->get($row->user_id);
@@ -1048,15 +1049,14 @@ class QuizController extends Controller
                             return [
                                 'user' => $user,
                                 'pending_count' => (int) $row->pending_count,
+                                'latest_attempt_at' => $row->latest_attempt_at,
                             ];
                         })
                         ->filter()
-                        ->sortBy(fn (array $group) => $group['user']->name ?? '')
                         ->values(),
                 ];
             })
             ->filter()
-            ->sortBy(fn (array $group) => $group['quiz']->title ?? '')
             ->values()
             ->all();
     }
