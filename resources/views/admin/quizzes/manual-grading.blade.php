@@ -110,6 +110,41 @@
 
 <style>
     [x-cloak] { display: none !important; }
+    .manual-grading-page #manual-grading-by-student,
+    .manual-grading-page #manual-grading-by-quiz {
+        min-height: 0;
+        height: 100%;
+    }
+    .manual-grading-page .mg-sidebar-panel {
+        display: flex;
+        flex-direction: column;
+        min-height: 0;
+        overflow: hidden;
+    }
+    @media (min-width: 1024px) {
+        .manual-grading-page .mg-sidebar-panel {
+            height: 100%;
+            max-height: 100%;
+        }
+    }
+    .manual-grading-page .mg-student-list-panel {
+        flex: 1 1 auto;
+        min-height: 0;
+        overflow-x: hidden;
+        overflow-y: auto;
+        overscroll-behavior: contain;
+        -webkit-overflow-scrolling: touch;
+    }
+    @media (max-width: 1023px) {
+        .manual-grading-page .mg-student-list-panel {
+            max-height: min(50vh, 26rem);
+        }
+    }
+    @media (min-width: 1024px) {
+        .manual-grading-page .mg-student-list-panel {
+            max-height: 100%;
+        }
+    }
     .manual-grading-page .mg-sidebar-scroll {
         scrollbar-width: thin;
         scrollbar-color: #94a3b8 #f1f5f9;

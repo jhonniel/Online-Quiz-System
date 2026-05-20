@@ -34,7 +34,7 @@
      x-data="mgByStudent()"
      @manual-grading-quiz-complete.window="backToQuizzes()">
 
-    <aside class="w-full lg:w-80 xl:w-96 shrink-0 flex flex-col min-h-0 overflow-hidden border-b lg:border-b-0 lg:border-r border-gray-200 bg-slate-50/90 lg:h-full">
+    <aside class="mg-sidebar-panel w-full lg:w-80 xl:w-96 shrink-0 border-b lg:border-b-0 lg:border-r border-gray-200 bg-slate-50/90">
         <div class="shrink-0 px-4 py-4 border-b border-gray-200 bg-white/80">
             <div class="flex items-center gap-2">
                 <span class="flex h-8 w-8 items-center justify-center rounded-lg bg-indigo-600 text-white">
@@ -70,7 +70,7 @@
             </label>
         </div>
 
-        <div class="flex-1 min-h-0 h-0 overflow-y-scroll overscroll-contain mg-sidebar-scroll p-3 space-y-2 max-h-[min(52vh,32rem)] lg:max-h-none">
+        <div class="mg-student-list-panel mg-sidebar-scroll p-3 space-y-2">
             <template x-if="filteredSortedStudents.length === 0">
                 <p class="text-center text-sm text-gray-500 py-8">No students match your search.</p>
             </template>
