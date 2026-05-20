@@ -367,17 +367,9 @@ class DashboardController extends Controller
                 $quizPopularity = collect();
             }
 
-            // Quiz Performance Ranking - with error handling
+            // Quiz Performance Ranking — avg of each student's best quiz score (attempt history, incl. manual grading)
             try {
-                $quizPerformance = Quiz::select('quizzes.*',
-                    DB::raw('COUNT(DISTINCT quiz_attempts.user_id) as student_count'),
-                    DB::raw('COALESCE(AVG(quiz_attempts.points_earned), 0) as average_score'),
-                    DB::raw('COALESCE(MAX(quiz_attempts.points_earned), 0) as highest_score')
-                )
-                    ->leftJoin('quiz_attempts', 'quizzes.id', '=', 'quiz_attempts.quiz_id')
-                    ->groupBy('quizzes.id')
-                    ->orderBy('average_score', 'desc')
-                    ->get();
+                $quizPerformance = Quiz::performanceRanking();
             } catch (\Exception $e) {
                 Log::warning('Quiz performance error: '.$e->getMessage());
                 $quizPerformance = collect();

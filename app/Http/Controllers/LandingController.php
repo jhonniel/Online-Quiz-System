@@ -74,18 +74,8 @@ class LandingController extends Controller
             ->take(5)
             ->get();
 
-        // Quiz Performance Ranking (public version - only show top 5)
-        $quizPerformance = Quiz::where('is_active', true)
-            ->select('quizzes.*',
-                DB::raw('COUNT(DISTINCT quiz_attempts.user_id) as student_count'),
-                DB::raw('COALESCE(AVG(quiz_attempts.points_earned), 0) as average_score'),
-                DB::raw('COALESCE(MAX(quiz_attempts.points_earned), 0) as highest_score')
-            )
-            ->leftJoin('quiz_attempts', 'quizzes.id', '=', 'quiz_attempts.quiz_id')
-            ->groupBy('quizzes.id')
-            ->orderBy('average_score', 'desc')
-            ->take(5)
-            ->get();
+        // Quiz Performance Ranking (public version - top 5 by avg best score per student)
+        $quizPerformance = Quiz::performanceRanking(activeOnly: true, limit: 5);
 
         // Helper function to get image URL (using proxy to avoid CORS)
         $getImageUrl = function($imagePath) {

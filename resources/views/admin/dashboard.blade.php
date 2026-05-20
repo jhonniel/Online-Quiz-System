@@ -1032,7 +1032,7 @@
                         <p class="text-xs sm:text-sm font-medium truncate">Best Performance</p>
                         <p class="text-base sm:text-lg font-bold truncate">
                             @if($quizPerformance->count() > 0)
-                                {{ number_format($quizPerformance->first()->average_score, 1) }} avg
+                                {{ number_format($quizPerformance->first()->average_score, 1) }}/{{ $quizPerformance->first()->max_points ?? 0 }} pts
                             @else
                                 N/A
                             @endif
@@ -1326,8 +1326,14 @@
                                     </div>
                                 </div>
                                 <div class="text-right">
-                                    <p class="text-lg font-bold text-purple-600">{{ number_format($quiz->average_score, 1) }} avg</p>
-                                    <p class="text-xs text-gray-500">{{ $quiz->highest_score }} max</p>
+                                    <p class="text-lg font-bold text-purple-600">
+                                        {{ number_format($quiz->average_score, 1) }}
+                                        <span class="text-sm font-semibold text-purple-500">/ {{ $quiz->max_points ?? 0 }} pts</span>
+                                    </p>
+                                    <p class="text-xs text-gray-500">
+                                        {{ $quiz->average_percent ?? 0 }}% avg
+                                        · best {{ $quiz->highest_score }}/{{ $quiz->max_points ?? 0 }}
+                                    </p>
                                 </div>
                             </div>
                         @empty

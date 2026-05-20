@@ -39,7 +39,7 @@
                 Student Performance Analytics
             </h2>
             <p class="mt-1 text-sm text-gray-500">
-                Track overall student performance and identify top performers across all quizzes
+                Track overall student performance across all quizzes. Scores use attempt history and include manual grading.
             </p>
         </div>
     </div>
@@ -92,8 +92,11 @@
                     </div>
                     <div class="ml-5 w-0 flex-1">
                         <dl>
-                            <dt class="text-sm font-medium text-gray-500 truncate">Average Total Score</dt>
-                            <dd class="text-lg font-medium text-gray-900">{{ $studentStats['average_total_score'] }}</dd>
+                            <dt class="text-sm font-medium text-gray-500 truncate">Avg Score per Attempt</dt>
+                            <dd class="text-lg font-medium text-gray-900">{{ $studentStats['average_per_attempt'] ?? 0 }} <span class="text-sm font-normal text-gray-500">pts</span></dd>
+                            @if(($studentStats['total_quiz_attempts'] ?? 0) > 0 && ($studentStats['average_per_attempt'] ?? 0) == 0)
+                                <dd class="text-xs text-amber-600 mt-0.5">{{ $studentStats['total_quiz_attempts'] }} attempt(s); grading may be pending</dd>
+                            @endif
                         </dl>
                     </div>
                 </div>
@@ -110,8 +113,8 @@
                     </div>
                     <div class="ml-5 w-0 flex-1">
                         <dl>
-                            <dt class="text-sm font-medium text-gray-500 truncate">Highest Total Score</dt>
-                            <dd class="text-lg font-medium text-gray-900">{{ $studentStats['highest_total_score'] }}</dd>
+                            <dt class="text-sm font-medium text-gray-500 truncate">Best Single Attempt</dt>
+                            <dd class="text-lg font-medium text-gray-900">{{ $studentStats['highest_total_score'] }} <span class="text-sm font-normal text-gray-500">pts</span></dd>
                         </dl>
                     </div>
                 </div>
@@ -133,7 +136,7 @@
                 <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
                     @foreach($topicPerformance as $topicData)
                         <div class="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow cursor-pointer"
-                             onclick="openTopicDetailsModal('{{ $topicData['topic'] }}')">
+                             onclick="openTopicDetailsModal(@js($topicData['topic']))">
                             <div class="flex items-center justify-between mb-4">
                                 <h4 class="text-lg font-semibold text-gray-900">{{ $topicData['topic'] }}</h4>
                                 <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
@@ -177,7 +180,7 @@
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.746 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
                     </svg>
                     <h3 class="mt-2 text-sm font-medium text-gray-900">No topic data available</h3>
-                    <p class="mt-1 text-sm text-gray-500">Quizzes need to be assigned topics to show performance data.</p>
+                    <p class="mt-1 text-sm text-gray-500">Topic stats appear after students complete at least one active quiz (topics are optional; attempts without a topic appear as Uncategorized).</p>
                 </div>
             @endif
         </div>
@@ -277,7 +280,7 @@
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                     </svg>
                     <h3 class="mt-2 text-sm font-medium text-gray-900">No topic strengths data</h3>
-                    <p class="mt-1 text-sm text-gray-500">Students need to complete quizzes with topics to show strengths.</p>
+                    <p class="mt-1 text-sm text-gray-500">Learners need scorable quiz attempts. Assign a topic on each quiz, or they appear under Uncategorized.</p>
                 </div>
             @endif
         </div>
@@ -290,7 +293,7 @@
                 🏆 Top Performers (Overall Score)
             </h3>
             <p class="text-sm text-gray-500 mb-6">
-                Students ranked by their total accumulated score across all quizzes
+                Students ranked by total points across all quiz attempts (includes manually graded questions)
                 <span class="ml-2 inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
                     {{ $topPerformers->count() }} users
                 </span>
@@ -539,6 +542,7 @@
     <div class="bg-white shadow rounded-lg">
         <div class="px-4 py-5 sm:p-6">
             <h3 class="text-lg leading-6 font-medium text-gray-900 mb-4">Top Performers by Quiz</h3>
+            <p class="text-sm text-gray-500 mb-6">One row per student per quiz (their best score). Retakes are not listed separately.</p>
 
             @if($topPerformersByQuiz->count() > 0)
                 <div class="space-y-6">
@@ -548,10 +552,11 @@
                                 <div>
                                     <h4 class="text-lg font-medium text-gray-900">{{ $quizData['quiz']->title }}</h4>
                                     <p class="text-sm text-gray-500">{{ $quizData['quiz']->description }}</p>
-                                    <div class="mt-2 flex space-x-4 text-sm text-gray-600">
-                                        <span>Total Attempts: {{ $quizData['total_attempts'] }}</span>
-                                        <span>Average Score: {{ number_format($quizData['average_score'], 2) }} pts</span>
-                                        <span>Highest Score: {{ $quizData['highest_score'] }} pts</span>
+                                    <div class="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-sm text-gray-600">
+                                        <span>{{ $quizData['student_count'] }} students</span>
+                                        <span>{{ $quizData['total_attempts'] }} attempts</span>
+                                        <span>Avg best: {{ number_format($quizData['average_score'], 1) }} / {{ $quizData['max_points'] ?? 0 }} pts</span>
+                                        <span>Top: {{ $quizData['highest_score'] }} pts</span>
                                     </div>
                                 </div>
                                 <button onclick="showQuizDetails({{ $quizData['quiz']->id }})"
@@ -568,8 +573,8 @@
                                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Rank</th>
                                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Student</th>
                                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">University</th>
-                                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Score</th>
-                                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Completed</th>
+                                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Best Score</th>
+                                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Last Attempt</th>
                                             </tr>
                                         </thead>
                                         <tbody class="bg-white divide-y divide-gray-200">
@@ -647,6 +652,7 @@
     <div class="bg-white shadow rounded-lg">
         <div class="px-4 py-5 sm:p-6">
             <h3 class="text-lg leading-6 font-medium text-gray-900 mb-4">Recent High Scores</h3>
+            <p class="text-sm text-gray-500 mb-4">Latest activity by quiz — each student appears once per quiz with their best score.</p>
 
             @if($recentHighScores->count() > 0)
                 <div class="overflow-hidden">
@@ -786,11 +792,15 @@ function showQuizDetails(quizId) {
                         <p class="text-sm text-gray-600 mt-1">${data.quiz.description || 'No description'}</p>
                         <div class="mt-3 grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
                             <div>
-                                <span class="font-medium text-gray-700">Total Attempts:</span>
+                                <span class="font-medium text-gray-700">Students:</span>
+                                <span class="ml-1 text-gray-900">${data.student_count ?? 0}</span>
+                            </div>
+                            <div>
+                                <span class="font-medium text-gray-700">Attempts:</span>
                                 <span class="ml-1 text-gray-900">${data.total_attempts}</span>
                             </div>
                             <div>
-                                <span class="font-medium text-gray-700">Average Score:</span>
+                                <span class="font-medium text-gray-700">Avg Best Score:</span>
                                 <span class="ml-1 text-gray-900">${data.average_score} pts</span>
                             </div>
                             <div>

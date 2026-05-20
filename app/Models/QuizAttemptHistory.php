@@ -39,6 +39,14 @@ class QuizAttemptHistory extends Model
         $this->attributes['answers'] = is_array($value) ? json_encode($value) : $value;
     }
 
+    /** Statuses that count toward analytics (includes partial scores updated after manual grading). */
+    public const SCORABLE_STATUSES = ['completed', 'partial', 'time_expired'];
+
+    public function scopeScorable($query)
+    {
+        return $query->whereIn('status', self::SCORABLE_STATUSES);
+    }
+
     // Relationships
     public function quiz()
     {

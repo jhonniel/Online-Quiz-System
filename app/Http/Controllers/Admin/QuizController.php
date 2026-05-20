@@ -348,12 +348,90 @@ class QuizController extends Controller
 
     public function results(Quiz $quiz)
     {
-        $attempts = $quiz->attempts()
-            ->with(['user', 'question', 'answer'])
-            ->get()
-            ->groupBy('user_id');
+        $maxPoints = (int) $quiz->questions()->sum('points');
 
-        return view('admin.quizzes.results', compact('quiz', 'attempts'));
+        $histories = QuizAttemptHistory::where('quiz_id', $quiz->id)
+            ->with(['user.university'])
+            ->orderByDesc('completed_at')
+            ->orderByDesc('created_at')
+            ->get();
+
+        $pendingManualByUser = QuizAttempt::query()
+            ->where('quiz_id', $quiz->id)
+            ->whereNull('graded_at')
+            ->whereHas('question', fn ($q) => $q->whereIn('question_type', ['text', 'fill_blank']))
+            ->pluck('user_id')
+            ->unique()
+            ->flip();
+
+        $studentResults = $histories
+            ->groupBy('user_id')
+            ->map(function ($userHistories) use ($maxPoints, $pendingManualByUser) {
+                $user = $userHistories->first()->user;
+                $latestHistory = $userHistories->sortByDesc(fn ($h) => $h->completed_at ?? $h->created_at)->first();
+
+                $scoredAttempts = $userHistories->map(fn ($h) => [
+                    'history' => $h,
+                    'score' => $this->scoreForAttemptHistory($h),
+                ]);
+
+                $bestEntry = $scoredAttempts->sortByDesc('score')->first();
+                $latestScore = $this->scoreForAttemptHistory($latestHistory);
+                $bestScore = (int) ($bestEntry['score'] ?? $latestScore);
+                $hasPendingManual = $pendingManualByUser->has($user->id)
+                    || $latestHistory->status === 'partial';
+
+                return [
+                    'user' => $user,
+                    'latest_score' => $latestScore,
+                    'best_score' => $bestScore,
+                    'latest_percent' => $maxPoints > 0 ? round(($latestScore / $maxPoints) * 100, 1) : 0,
+                    'best_percent' => $maxPoints > 0 ? round(($bestScore / $maxPoints) * 100, 1) : 0,
+                    'attempt_count' => $userHistories->count(),
+                    'last_attempt_at' => $latestHistory->completed_at ?? $latestHistory->created_at,
+                    'status' => $latestHistory->status,
+                    'has_pending_manual' => $hasPendingManual,
+                ];
+            })
+            ->sortBy(fn ($row) => $row['user']->name ?? '')
+            ->values();
+
+        $bestScores = $studentResults->pluck('best_score')->filter(fn ($s) => $s > 0);
+        $summary = [
+            'total_students' => $studentResults->count(),
+            'average_best_score' => $bestScores->isNotEmpty() ? round($bestScores->avg(), 1) : 0,
+            'average_best_percent' => $maxPoints > 0 && $bestScores->isNotEmpty()
+                ? round($bestScores->avg() / $maxPoints * 100, 1)
+                : 0,
+            'highest_score' => $bestScores->isNotEmpty() ? (int) $bestScores->max() : 0,
+            'highest_percent' => $maxPoints > 0 && $bestScores->isNotEmpty()
+                ? round($bestScores->max() / $maxPoints * 100, 1)
+                : 0,
+            'pending_review_count' => $studentResults->where('has_pending_manual', true)->count(),
+        ];
+
+        return view('admin.quizzes.results', compact('quiz', 'studentResults', 'maxPoints', 'summary'));
+    }
+
+    /**
+     * Sum points for one quiz submission, including manual grades on text/fill_blank.
+     */
+    private function scoreForAttemptHistory(QuizAttemptHistory $history): int
+    {
+        $completedAt = $history->completed_at ?? $history->created_at;
+        if (!$completedAt) {
+            return (int) $history->score;
+        }
+
+        $start = $completedAt->copy()->subMinutes(15);
+        $end = $completedAt->copy()->addMinute();
+
+        $liveScore = (int) QuizAttempt::where('quiz_id', $history->quiz_id)
+            ->where('user_id', $history->user_id)
+            ->whereBetween('created_at', [$start, $end])
+            ->sum('points_earned');
+
+        return $liveScore > 0 ? $liveScore : (int) $history->score;
     }
 
     public function exportQuizHistoryPdf(Quiz $quiz)
@@ -746,32 +824,180 @@ class QuizController extends Controller
         $attempts->each->delete();
     }
 
-    public function manualGrading()
+    public function manualGrading(Request $request)
     {
-        // Get all quiz attempts that need manual grading (fill-in-the-blank and text questions)
-        $attempts = QuizAttempt::whereHas('question', function($query) {
+        $viewMode = $request->input('view', 'student');
+        if (! in_array($viewMode, ['student', 'quiz'], true)) {
+            $viewMode = 'student';
+        }
+
+        $attempts = QuizAttempt::whereHas('question', function ($query) {
             $query->whereIn('question_type', ['fill_blank', 'text']);
         })
-        // Only show attempts that haven't been graded yet
-        ->whereNull('graded_at')
-        ->with(['question', 'user', 'quiz'])
-        ->orderBy('created_at', 'desc')
-        ->paginate(20);
+            ->whereNull('graded_at')
+            ->with(['question', 'user', 'quiz'])
+            ->orderBy('created_at', 'desc')
+            ->get();
 
-        return view('admin.quizzes.manual-grading', compact('attempts'));
+        $groupsByStudent = $this->buildManualGradingGroupsByStudent($attempts);
+        $groupsByQuiz = $this->buildManualGradingGroupsByQuiz($attempts);
+        $totalPending = $attempts->count();
+
+        [$selectedUserId, $selectedQuizId] = $this->resolveManualGradingSelection(
+            $request,
+            $viewMode,
+            $groupsByStudent,
+            $groupsByQuiz
+        );
+
+        return view('admin.quizzes.manual-grading', compact(
+            'attempts',
+            'groupsByStudent',
+            'groupsByQuiz',
+            'viewMode',
+            'totalPending',
+            'selectedUserId',
+            'selectedQuizId'
+        ));
     }
 
-    public function allTextAttempts()
-    {
-        // Get all text attempts (both graded and ungraded) for admin review
-        $attempts = QuizAttempt::whereHas('question', function($query) {
-            $query->where('question_type', 'text');
-        })
-        ->with(['question', 'user', 'quiz'])
-        ->orderBy('created_at', 'desc')
-        ->paginate(20);
+    /**
+     * Validate URL selection for the manual grading drill-down (student → quiz → questions).
+     *
+     * @param  list<array{user: \App\Models\User, pending_count: int, quizzes: \Illuminate\Support\Collection}>  $groupsByStudent
+     * @param  list<array{quiz: \App\Models\Quiz, pending_count: int, students: \Illuminate\Support\Collection}>  $groupsByQuiz
+     * @return array{0: ?int, 1: ?int}
+     */
+    private function resolveManualGradingSelection(
+        Request $request,
+        string $viewMode,
+        array $groupsByStudent,
+        array $groupsByQuiz
+    ): array {
+        $userId = $request->filled('user_id') ? (int) $request->input('user_id') : null;
+        $quizId = $request->filled('quiz_id') ? (int) $request->input('quiz_id') : null;
 
-        return view('admin.quizzes.all-text-attempts', compact('attempts'));
+        if ($viewMode === 'student') {
+            $studentGroup = collect($groupsByStudent)->first(
+                fn (array $group) => (int) $group['user']->id === $userId
+            );
+            if (! $studentGroup) {
+                return [null, null];
+            }
+            if ($quizId === null) {
+                return [$userId, null];
+            }
+            $quizExists = $studentGroup['quizzes']->contains(
+                fn (array $quizGroup) => (int) $quizGroup['quiz']->id === $quizId
+            );
+
+            return $quizExists ? [$userId, $quizId] : [$userId, null];
+        }
+
+        $quizGroup = collect($groupsByQuiz)->first(
+            fn (array $group) => (int) $group['quiz']->id === $quizId
+        );
+        if (! $quizGroup) {
+            return [null, null];
+        }
+        if ($userId === null) {
+            return [null, $quizId];
+        }
+        $studentExists = $quizGroup['students']->contains(
+            fn (array $studentGroup) => (int) $studentGroup['user']->id === $userId
+        );
+
+        return $studentExists ? [$userId, $quizId] : [null, $quizId];
+    }
+
+    /**
+     * @return list<array{user: \App\Models\User, pending_count: int, quizzes: \Illuminate\Support\Collection}>
+     */
+    private function buildManualGradingGroupsByStudent($attempts): array
+    {
+        return $attempts->groupBy('user_id')
+            ->map(function ($userAttempts) {
+                $user = $userAttempts->first()->user;
+
+                return [
+                    'user' => $user,
+                    'pending_count' => $userAttempts->count(),
+                    'quizzes' => $userAttempts->groupBy('quiz_id')
+                        ->map(function ($quizAttempts) {
+                            return [
+                                'quiz' => $quizAttempts->first()->quiz,
+                                'pending_count' => $quizAttempts->count(),
+                                'attempts' => $quizAttempts->sortByDesc('created_at')->values(),
+                            ];
+                        })
+                        ->sortBy(fn (array $group) => $group['quiz']->title ?? '')
+                        ->values(),
+                ];
+            })
+            ->sortBy(fn (array $group) => $group['user']->name ?? '')
+            ->values()
+            ->all();
+    }
+
+    /**
+     * @return list<array{quiz: \App\Models\Quiz, pending_count: int, students: \Illuminate\Support\Collection}>
+     */
+    private function buildManualGradingGroupsByQuiz($attempts): array
+    {
+        return $attempts->groupBy('quiz_id')
+            ->map(function ($quizAttempts) {
+                $quiz = $quizAttempts->first()->quiz;
+
+                return [
+                    'quiz' => $quiz,
+                    'pending_count' => $quizAttempts->count(),
+                    'students' => $quizAttempts->groupBy('user_id')
+                        ->map(function ($studentAttempts) {
+                            return [
+                                'user' => $studentAttempts->first()->user,
+                                'pending_count' => $studentAttempts->count(),
+                                'attempts' => $studentAttempts->sortByDesc('created_at')->values(),
+                            ];
+                        })
+                        ->sortBy(fn (array $group) => $group['user']->name ?? '')
+                        ->values(),
+                ];
+            })
+            ->sortBy(fn (array $group) => $group['quiz']->title ?? '')
+            ->values()
+            ->all();
+    }
+
+    public function allTextAttempts(Request $request)
+    {
+        $status = $request->input('status', 'all');
+        if (! in_array($status, ['all', 'pending', 'graded'], true)) {
+            $status = 'all';
+        }
+
+        $baseQuery = QuizAttempt::whereHas('question', function ($query) {
+            $query->whereIn('question_type', ['text', 'fill_blank']);
+        });
+
+        $stats = [
+            'total' => (clone $baseQuery)->count(),
+            'pending' => (clone $baseQuery)->whereNull('graded_at')->count(),
+            'graded' => (clone $baseQuery)->whereNotNull('graded_at')->count(),
+        ];
+
+        $attemptsQuery = $baseQuery
+            ->with(['question', 'user.university', 'quiz'])
+            ->orderByDesc('created_at');
+
+        if ($status === 'pending') {
+            $attemptsQuery->whereNull('graded_at');
+        } elseif ($status === 'graded') {
+            $attemptsQuery->whereNotNull('graded_at');
+        }
+
+        $attempts = $attemptsQuery->paginate(20)->withQueryString();
+
+        return view('admin.quizzes.all-text-attempts', compact('attempts', 'stats', 'status'));
     }
 
     public function gradeAttempt(Request $request, QuizAttempt $attempt)
@@ -840,38 +1066,54 @@ class QuizController extends Controller
 
     private function updateUserScore(QuizAttempt $attempt)
     {
-        // Get all attempts for this user and quiz
-        $allAttempts = QuizAttempt::where('quiz_id', $attempt->quiz_id)
+        $histories = QuizAttemptHistory::where('quiz_id', $attempt->quiz_id)
             ->where('user_id', $attempt->user_id)
+            ->orderByDesc('completed_at')
+            ->orderByDesc('created_at')
             ->get();
 
-        $totalScore = $allAttempts->sum('points_earned');
-        $correctAnswers = $allAttempts->where('is_correct', true)->count();
+        $bestScore = 0;
 
-        // Update the quiz attempt history
-        $history = QuizAttemptHistory::where('quiz_id', $attempt->quiz_id)
-            ->where('user_id', $attempt->user_id)
-            ->latest()
-            ->first();
+        foreach ($histories as $history) {
+            $sessionScore = $this->scoreForAttemptHistory($history);
+            $sessionCorrect = $this->correctAnswersForAttemptHistory($history);
 
-        if ($history) {
             $history->update([
-                'score' => $totalScore,
-                'correct_answers' => $correctAnswers,
+                'score' => $sessionScore,
+                'correct_answers' => $sessionCorrect,
             ]);
+
+            $bestScore = max($bestScore, $sessionScore);
         }
 
-        // Update the quiz assignment
         $assignment = QuizAssignment::where('quiz_id', $attempt->quiz_id)
             ->where('user_id', $attempt->user_id)
             ->first();
 
         if ($assignment) {
             $assignment->update([
-                'total_score' => $totalScore,
-                'best_score' => max($assignment->best_score ?? 0, $totalScore),
+                'best_score' => max((int) ($assignment->best_score ?? 0), $bestScore),
             ]);
         }
+    }
+
+    private function correctAnswersForAttemptHistory(QuizAttemptHistory $history): int
+    {
+        $completedAt = $history->completed_at ?? $history->created_at;
+        if (!$completedAt) {
+            return (int) $history->correct_answers;
+        }
+
+        $start = $completedAt->copy()->subMinutes(15);
+        $end = $completedAt->copy()->addMinute();
+
+        $liveCount = QuizAttempt::where('quiz_id', $history->quiz_id)
+            ->where('user_id', $history->user_id)
+            ->whereBetween('created_at', [$start, $end])
+            ->where('is_correct', true)
+            ->count();
+
+        return $liveCount > 0 ? $liveCount : (int) $history->correct_answers;
     }
 
     private function generateQuizCode()
