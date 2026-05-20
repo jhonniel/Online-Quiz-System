@@ -22,7 +22,7 @@
 @endsection
 
 @section('content')
-<div class="manual-grading-page -mx-3 sm:-mx-4 lg:-mx-8 w-[calc(100%+1.5rem)] sm:w-[calc(100%+2rem)] lg:w-[calc(100%+4rem)] flex flex-col min-h-[calc(100vh-10rem)]">
+<div class="manual-grading-page -mx-3 sm:-mx-4 lg:-mx-8 w-[calc(100%+1.5rem)] sm:w-[calc(100%+2rem)] lg:w-[calc(100%+4rem)] flex flex-col h-[calc(100dvh-7rem)] max-h-[calc(100dvh-7rem)] min-h-0 overflow-hidden">
 
     {{-- Top bar --}}
     <div class="shrink-0 border-b border-gray-200 bg-white px-4 sm:px-6 lg:px-8 py-5">
@@ -84,8 +84,8 @@
     </div>
 
     @if($totalPending > 0)
-        <div class="flex-1 flex flex-col min-h-0 px-4 sm:px-6 lg:px-8 py-5">
-            <div class="flex-1 flex flex-col min-h-0 h-[calc(100vh-15rem)] max-h-[calc(100vh-15rem)] rounded-2xl border border-gray-200 bg-white shadow-sm overflow-hidden">
+        <div class="flex-1 flex flex-col min-h-0 min-w-0 px-4 sm:px-6 lg:px-8 py-4 overflow-hidden">
+            <div class="flex-1 flex flex-col min-h-0 min-w-0 rounded-2xl border border-gray-200 bg-white shadow-sm overflow-hidden">
                 @if($viewMode === 'student')
                     @include('admin.quizzes.partials.manual-grading-by-student')
                 @else
@@ -110,39 +110,61 @@
 
 <style>
     [x-cloak] { display: none !important; }
+    /* Keep scroll inside the student/quiz list, not the admin main area */
+    main:has(.manual-grading-page) {
+        overflow: hidden !important;
+        display: flex;
+        flex-direction: column;
+        min-height: 0;
+    }
+    main:has(.manual-grading-page) .manual-grading-page {
+        flex: 1 1 auto;
+        min-height: 0;
+    }
     .manual-grading-page #manual-grading-by-student,
     .manual-grading-page #manual-grading-by-quiz {
+        display: flex;
+        flex: 1 1 auto;
         min-height: 0;
         height: 100%;
+        max-height: 100%;
+        overflow: hidden;
     }
     .manual-grading-page .mg-sidebar-panel {
         display: flex;
         flex-direction: column;
+        flex-shrink: 0;
         min-height: 0;
+        height: 100%;
+        max-height: 100%;
         overflow: hidden;
     }
-    @media (min-width: 1024px) {
-        .manual-grading-page .mg-sidebar-panel {
-            height: 100%;
-            max-height: 100%;
-        }
-    }
     .manual-grading-page .mg-student-list-panel {
-        flex: 1 1 auto;
+        flex: 1 1 0;
+        height: 0;
         min-height: 0;
         overflow-x: hidden;
-        overflow-y: auto;
+        overflow-y: scroll;
         overscroll-behavior: contain;
         -webkit-overflow-scrolling: touch;
+        touch-action: pan-y;
     }
     @media (max-width: 1023px) {
-        .manual-grading-page .mg-student-list-panel {
-            max-height: min(50vh, 26rem);
+        .manual-grading-page #manual-grading-by-student,
+        .manual-grading-page #manual-grading-by-quiz {
+            flex-direction: column;
+            height: 100%;
         }
-    }
-    @media (min-width: 1024px) {
+        .manual-grading-page .mg-sidebar-panel {
+            height: auto;
+            max-height: none;
+            flex: 0 0 auto;
+        }
         .manual-grading-page .mg-student-list-panel {
-            max-height: 100%;
+            flex: 0 0 auto;
+            height: auto;
+            max-height: min(42vh, 22rem);
+            min-height: 12rem;
         }
     }
     .manual-grading-page .mg-sidebar-scroll {

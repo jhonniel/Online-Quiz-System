@@ -29,7 +29,7 @@
         })->values()
         : collect();
 @endphp
-<div class="flex flex-col lg:flex-row flex-1 min-h-0 h-full max-h-full overflow-hidden"
+<div class="flex flex-col lg:flex-row flex-1 min-h-0 h-full overflow-hidden"
      id="manual-grading-by-student"
      x-data="mgByStudent()"
      @manual-grading-quiz-complete.window="backToQuizzes()">
@@ -70,7 +70,8 @@
             </label>
         </div>
 
-        <div class="mg-student-list-panel mg-sidebar-scroll p-3 space-y-2">
+        <div class="mg-student-list-panel mg-sidebar-scroll" role="list" aria-label="Students pending manual grading">
+            <div class="p-3 space-y-2 min-h-0">
             <template x-if="filteredSortedStudents.length === 0">
                 <p class="text-center text-sm text-gray-500 py-8">No students match your search.</p>
             </template>
@@ -97,6 +98,7 @@
                     </div>
                 </button>
             </template>
+            </div>
         </div>
     </aside>
 
