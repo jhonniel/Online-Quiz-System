@@ -15,6 +15,8 @@
             'roleBadgeClass' => $user->getRoleBadgeClass(),
             'initial' => strtoupper(substr($name, 0, 1)),
             'quizCount' => $g['quizzes']->count(),
+            'quizzesTaken' => (int) ($g['quizzes_taken'] ?? 0),
+            'quizzesAssigned' => (int) ($g['quizzes_assigned'] ?? 0),
             'pending' => (int) $g['pending_count'],
             'latestTs' => $latest ? \Illuminate\Support\Carbon::parse($latest)->timestamp : 0,
             'searchText' => strtolower($name.' '.($user->email ?? '').' '.($user->role ?? '').' '.$g['quizzes']->map(fn ($q) => $q['quiz']->title ?? '')->implode(' ')),
@@ -101,15 +103,30 @@
                                       x-text="student.roleLabel"></span>
                             </div>
                             <p class="text-xs truncate opacity-80" x-text="student.email"></p>
-                            <p class="text-xs mt-0.5 opacity-70">
+                            <p class="text-xs mt-0.5 tabular-nums"
+                               :class="selectedUserId === student.id ? 'text-indigo-100' : 'text-gray-600'">
+                                <span class="font-semibold" x-text="student.quizzesTaken + '/' + student.quizzesAssigned"></span>
+                                <span class="opacity-80"> quizzes taken</span>
+                            </p>
+                            <p class="text-xs opacity-70">
                                 <span x-text="student.pending + ' to grade'"></span>
-                                <span x-show="student.pending === 0" class="text-green-600 font-medium"> · all graded</span>
+                                <span x-show="student.pending === 0" class="font-medium"
+                                      :class="selectedUserId === student.id ? 'text-emerald-200' : 'text-green-600'"> · all graded</span>
                             </p>
                         </div>
-                        <span class="shrink-0 min-w-[1.75rem] text-center rounded-full px-2 py-0.5 text-xs font-bold tabular-nums"
-                              :class="selectedUserId === student.id ? 'bg-white/25 text-white' : 'bg-amber-100 text-amber-900'"
-                              :data-pending-badge="'student-' + student.id"
-                              x-text="student.pending"></span>
+                        <div class="shrink-0 flex flex-col items-end gap-1">
+                            <span class="min-w-[2.5rem] text-center rounded-md px-2 py-0.5 text-xs font-bold tabular-nums border"
+                                  :class="selectedUserId === student.id
+                                      ? 'border-white/30 bg-white/15 text-white'
+                                      : 'border-slate-200 bg-slate-50 text-slate-700'"
+                                  x-text="student.quizzesTaken + '/' + student.quizzesAssigned"
+                                  title="Quizzes taken / assigned"></span>
+                            <span class="min-w-[1.75rem] text-center rounded-full px-2 py-0.5 text-xs font-bold tabular-nums"
+                                  :class="selectedUserId === student.id ? 'bg-white/25 text-white' : 'bg-amber-100 text-amber-900'"
+                                  :data-pending-badge="'student-' + student.id"
+                                  x-text="student.pending"
+                                  title="Answers pending grading"></span>
+                        </div>
                     </div>
                 </button>
             </template>
@@ -169,13 +186,18 @@
                 @php
                     $student = $selectedStudentGroup['user'];
                     $studentName = $student->name ?? 'Unknown';
+                    $takerTaken = (int) ($selectedStudentGroup['quizzes_taken'] ?? 0);
+                    $takerAssigned = (int) ($selectedStudentGroup['quizzes_assigned'] ?? 0);
                 @endphp
                 <div class="max-w-6xl mx-auto w-full space-y-4 flex flex-col min-h-0 max-h-full">
                     <nav class="shrink-0 flex flex-wrap items-center gap-2 rounded-xl bg-white border border-gray-200 px-4 py-3 shadow-sm">
                         <button type="button" @click="backToStudents()" class="text-sm font-medium text-indigo-600 hover:text-indigo-800">← Takers</button>
                         <span class="text-gray-300">/</span>
                         <span class="text-sm font-semibold text-gray-900">{{ $studentName }}</span>
-                        <span class="ml-auto text-xs font-medium text-indigo-700 bg-indigo-50 px-2.5 py-1 rounded-full">Step 2 — pick a quiz</span>
+                        <span class="ml-auto inline-flex items-center gap-2">
+                            <span class="text-xs font-semibold tabular-nums text-slate-700 bg-slate-100 border border-slate-200 px-2.5 py-1 rounded-full">{{ $takerTaken }}/{{ $takerAssigned }} quizzes taken</span>
+                            <span class="text-xs font-medium text-indigo-700 bg-indigo-50 px-2.5 py-1 rounded-full">Step 2 — pick a quiz</span>
+                        </span>
                     </nav>
 
                     <div class="shrink-0 flex flex-wrap items-center gap-2">

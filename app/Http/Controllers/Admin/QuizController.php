@@ -1160,6 +1160,74 @@ class QuizController extends Controller
     }
 
     /**
+     * Per user: how many manual-capable quizzes are assigned vs taken (completed).
+     *
+     * @return \Illuminate\Support\Collection<int, array{assigned: int, taken: int}>
+     */
+    private function manualGradingQuizProgressForUsers(Collection $userIds): Collection
+    {
+        if ($userIds->isEmpty()) {
+            return collect();
+        }
+
+        $quizIds = $this->quizIdsWithManualGradingQuestions();
+        if ($quizIds->isEmpty()) {
+            return $userIds->mapWithKeys(fn ($id) => [(int) $id => ['assigned' => 0, 'taken' => 0]]);
+        }
+
+        $assignedByUser = QuizAssignment::query()
+            ->whereIn('user_id', $userIds)
+            ->whereIn('quiz_id', $quizIds)
+            ->selectRaw('user_id, COUNT(*) as assigned_count')
+            ->groupBy('user_id')
+            ->pluck('assigned_count', 'user_id');
+
+        $takenFromAssignments = QuizAssignment::query()
+            ->whereIn('user_id', $userIds)
+            ->whereIn('quiz_id', $quizIds)
+            ->where(function ($query) {
+                $query->where('is_completed', true)
+                    ->orWhere('status', 'completed');
+            })
+            ->selectRaw('user_id, COUNT(*) as taken_count')
+            ->groupBy('user_id')
+            ->pluck('taken_count', 'user_id');
+
+        $takenFromHistory = QuizAttemptHistory::query()
+            ->whereIn('user_id', $userIds)
+            ->whereIn('quiz_id', $quizIds)
+            ->where(function ($query) {
+                $query->scorable()
+                    ->orWhereIn('status', ['partial', 'completed', 'time_expired']);
+            })
+            ->selectRaw('user_id, COUNT(DISTINCT quiz_id) as taken_count')
+            ->groupBy('user_id')
+            ->pluck('taken_count', 'user_id');
+
+        return $userIds->mapWithKeys(function ($userId) use ($assignedByUser, $takenFromAssignments, $takenFromHistory) {
+            $userId = (int) $userId;
+            $assigned = (int) ($assignedByUser[$userId] ?? 0);
+            $taken = max(
+                (int) ($takenFromAssignments[$userId] ?? 0),
+                (int) ($takenFromHistory[$userId] ?? 0)
+            );
+
+            if ($assigned === 0 && $taken > 0) {
+                $assigned = $taken;
+            }
+
+            if ($taken > $assigned) {
+                $taken = $assigned;
+            }
+
+            return [$userId => [
+                'assigned' => $assigned,
+                'taken' => $taken,
+            ]];
+        });
+    }
+
+    /**
      * @return \Illuminate\Support\Collection<string, object{user_id: int, quiz_id: int, pending_count: int, latest_attempt_at: ?string}>
      */
     private function pendingManualGradingAggregates(): Collection
@@ -1263,13 +1331,16 @@ class QuizController extends Controller
             ->keyBy('id');
 
         $participantsByKey = $participants->keyBy(fn ($row) => $row->user_id.'_'.$row->quiz_id);
+        $quizProgressByUser = $this->manualGradingQuizProgressForUsers($userIds);
 
         return $userIds
-            ->map(function ($userId) use ($pairKeys, $users, $quizzes, $pendingByPair, $participantsByKey) {
+            ->map(function ($userId) use ($pairKeys, $users, $quizzes, $pendingByPair, $participantsByKey, $quizProgressByUser) {
                 $user = $users->get($userId);
                 if (! $user) {
                     return null;
                 }
+
+                $progress = $quizProgressByUser->get((int) $userId, ['assigned' => 0, 'taken' => 0]);
 
                 $quizRows = $pairKeys
                     ->filter(fn ($key) => (int) explode('_', $key, 2)[0] === (int) $userId)
@@ -1303,6 +1374,8 @@ class QuizController extends Controller
                     'user' => $user,
                     'pending_count' => (int) $quizRows->sum('pending_count'),
                     'latest_attempt_at' => $quizRows->max('latest_attempt_at'),
+                    'quizzes_assigned' => (int) ($progress['assigned'] ?? 0),
+                    'quizzes_taken' => (int) ($progress['taken'] ?? 0),
                     'quizzes' => $quizRows,
                 ];
             })
