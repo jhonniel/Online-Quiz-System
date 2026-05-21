@@ -30,7 +30,7 @@
             <div class="min-w-0">
                 <h1 class="text-2xl sm:text-3xl font-bold tracking-tight text-gray-900">Manual Grading</h1>
                 <p class="mt-1 text-sm text-gray-600 max-w-3xl">
-                    Lists everyone who took a quiz with text or fill-in-the-blank questions. The badge is how many answers still need grading. Select a {{ $viewMode === 'student' ? 'taker, then a quiz' : 'quiz, then a taker' }} to review every pending response.
+                    Lists everyone who took a quiz with text or fill-in-the-blank questions—including students, applicants, and internship candidates. The badge is how many answers still need grading. Select a {{ $viewMode === 'student' ? 'taker, then a quiz' : 'quiz, then a taker' }} to review every pending response.
                 </p>
             </div>
             <div class="flex flex-wrap items-center gap-3">

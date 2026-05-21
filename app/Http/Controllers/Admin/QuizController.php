@@ -879,6 +879,16 @@ class QuizController extends Controller
         ));
     }
 
+    /**
+     * Roles that may appear as takers on manual grading (students, applicants, interns, etc.).
+     *
+     * @return list<string>
+     */
+    private function manualGradingTakerRoles(): array
+    {
+        return ['student', 'user', 'applicant', 'employee', 'teacher'];
+    }
+
     /** Questions that require admin manual grading. */
     private function applyManualGradingQuestionScope($query): void
     {
@@ -976,23 +986,110 @@ class QuizController extends Controller
                     continue;
                 }
 
-                QuizAttempt::create([
-                    'quiz_id' => $history->quiz_id,
-                    'user_id' => $history->user_id,
-                    'question_id' => $questionId,
-                    'answer_id' => null,
-                    'user_answer' => (string) ($row['user_answer'] ?? ''),
-                    'is_correct' => (bool) ($row['is_correct'] ?? false),
-                    'points_earned' => (int) ($row['points_earned'] ?? 0),
-                    'started_at' => $history->started_at ?? $history->completed_at ?? now(),
-                    'completed_at' => $history->completed_at ?? now(),
-                ]);
+                $this->createPendingManualGradingAttempt(
+                    $history->quiz_id,
+                    $history->user_id,
+                    $questionId,
+                    (string) ($row['user_answer'] ?? ''),
+                    (bool) ($row['is_correct'] ?? false),
+                    (int) ($row['points_earned'] ?? 0),
+                    $history->started_at ?? $history->completed_at,
+                    $history->completed_at
+                );
             }
+
+            $this->syncManualAttemptsFromAssignment(
+                $history->quiz_id,
+                $history->user_id,
+                $manualQuestionsByQuiz->get($history->quiz_id, collect())->pluck('id')
+            );
+        }
+    }
+
+    private function createPendingManualGradingAttempt(
+        int $quizId,
+        int $userId,
+        int $questionId,
+        string $userAnswer,
+        bool $isCorrect,
+        int $pointsEarned,
+        $startedAt,
+        $completedAt
+    ): void {
+        QuizAttempt::create([
+            'quiz_id' => $quizId,
+            'user_id' => $userId,
+            'question_id' => $questionId,
+            'answer_id' => null,
+            'user_answer' => $userAnswer,
+            'is_correct' => $isCorrect,
+            'points_earned' => $pointsEarned,
+            'started_at' => $startedAt ?? now(),
+            'completed_at' => $completedAt ?? now(),
+        ]);
+    }
+
+    private function syncManualAttemptsFromAssignment(int $quizId, int $userId, Collection $manualQuestionIds): void
+    {
+        if ($manualQuestionIds->isEmpty()) {
+            return;
+        }
+
+        $assignment = QuizAssignment::query()
+            ->where('quiz_id', $quizId)
+            ->where('user_id', $userId)
+            ->where(function ($query) {
+                $query->where('is_completed', true)
+                    ->orWhereIn('status', ['completed', 'in_progress']);
+            })
+            ->first();
+
+        if (! $assignment || ! is_array($assignment->progress_answers) || $assignment->progress_answers === []) {
+            return;
+        }
+
+        foreach ($assignment->progress_answers as $questionId => $answer) {
+            $questionId = (int) $questionId;
+            if ($questionId <= 0 || ! $manualQuestionIds->contains($questionId)) {
+                continue;
+            }
+
+            $hasUngraded = QuizAttempt::query()
+                ->where('quiz_id', $quizId)
+                ->where('user_id', $userId)
+                ->where('question_id', $questionId)
+                ->whereNull('graded_at')
+                ->exists();
+
+            if ($hasUngraded) {
+                continue;
+            }
+
+            if (QuizAttempt::query()
+                ->where('quiz_id', $quizId)
+                ->where('user_id', $userId)
+                ->where('question_id', $questionId)
+                ->exists()) {
+                continue;
+            }
+
+            $userAnswer = is_array($answer) ? json_encode($answer) : (string) $answer;
+
+            $this->createPendingManualGradingAttempt(
+                $quizId,
+                $userId,
+                $questionId,
+                $userAnswer,
+                false,
+                0,
+                $assignment->started_at ?? $assignment->last_attempt_at,
+                $assignment->last_attempt_at
+            );
         }
     }
 
     /**
-     * Every user–quiz pair from scorable history on quizzes that include manual-grading questions.
+     * All user–quiz pairs that need manual grading visibility (history, pending attempts, assignments).
      */
     private function manualGradingParticipantPairs(): Collection
     {
@@ -1001,12 +1098,65 @@ class QuizController extends Controller
             return collect();
         }
 
-        return QuizAttemptHistory::query()
-            ->scorable()
+        $pairs = collect();
+
+        $putPair = function (int $userId, int $quizId, $latestAttemptAt) use (&$pairs) {
+            $key = $userId.'_'.$quizId;
+            $incoming = $latestAttemptAt ? strtotime((string) $latestAttemptAt) : 0;
+            $existing = $pairs->get($key);
+            $existingTs = $existing && $existing->latest_attempt_at
+                ? strtotime((string) $existing->latest_attempt_at)
+                : 0;
+
+            if (! $existing || $incoming >= $existingTs) {
+                $pairs->put($key, (object) [
+                    'user_id' => $userId,
+                    'quiz_id' => $quizId,
+                    'latest_attempt_at' => $latestAttemptAt,
+                ]);
+            }
+        };
+
+        QuizAttemptHistory::query()
             ->whereIn('quiz_id', $quizIds)
+            ->where(function ($query) {
+                $query->scorable()
+                    ->orWhereIn('status', ['partial', 'completed', 'time_expired']);
+            })
             ->selectRaw('user_id, quiz_id, MAX(COALESCE(completed_at, created_at)) as latest_attempt_at')
             ->groupBy('user_id', 'quiz_id')
-            ->get();
+            ->get()
+            ->each(fn ($row) => $putPair((int) $row->user_id, (int) $row->quiz_id, $row->latest_attempt_at));
+
+        $this->pendingManualGradingQuery()
+            ->selectRaw('user_id, quiz_id, MAX(created_at) as latest_attempt_at')
+            ->groupBy('user_id', 'quiz_id')
+            ->get()
+            ->each(fn ($row) => $putPair((int) $row->user_id, (int) $row->quiz_id, $row->latest_attempt_at));
+
+        QuizAssignment::query()
+            ->whereIn('quiz_id', $quizIds)
+            ->where(function ($query) {
+                $query->where('is_completed', true)
+                    ->orWhereIn('status', ['completed', 'in_progress']);
+            })
+            ->selectRaw('user_id, quiz_id, MAX(COALESCE(last_attempt_at, started_at, assigned_at)) as latest_attempt_at')
+            ->groupBy('user_id', 'quiz_id')
+            ->get()
+            ->each(fn ($row) => $putPair((int) $row->user_id, (int) $row->quiz_id, $row->latest_attempt_at));
+
+        return $pairs->values();
+    }
+
+    private function loadManualGradingUsers(Collection $userIds)
+    {
+        if ($userIds->isEmpty()) {
+            return collect();
+        }
+
+        return User::query()
+            ->whereIn('id', $userIds)
+            ->get(['id', 'name', 'email', 'role']);
     }
 
     /**
@@ -1105,10 +1255,7 @@ class QuizController extends Controller
         $userIds = $pairKeys->map(fn ($key) => (int) explode('_', $key, 2)[0])->unique();
         $quizIds = $pairKeys->map(fn ($key) => (int) explode('_', $key, 2)[1])->unique();
 
-        $users = User::query()
-            ->whereIn('id', $userIds)
-            ->get(['id', 'name', 'email'])
-            ->keyBy('id');
+        $users = $this->loadManualGradingUsers($userIds)->keyBy('id');
 
         $quizzes = Quiz::query()
             ->whereIn('id', $quizIds)
@@ -1192,10 +1339,7 @@ class QuizController extends Controller
         $quizIds = $pairKeys->map(fn ($key) => (int) explode('_', $key, 2)[1])->unique();
         $userIds = $pairKeys->map(fn ($key) => (int) explode('_', $key, 2)[0])->unique();
 
-        $users = User::query()
-            ->whereIn('id', $userIds)
-            ->get(['id', 'name', 'email'])
-            ->keyBy('id');
+        $users = $this->loadManualGradingUsers($userIds)->keyBy('id');
 
         $quizzes = Quiz::query()
             ->whereIn('id', $quizIds)

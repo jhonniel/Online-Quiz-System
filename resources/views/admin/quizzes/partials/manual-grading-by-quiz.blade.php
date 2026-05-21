@@ -20,10 +20,15 @@
             $name = $g['user']->name ?? 'Unknown';
             $latest = $g['latest_attempt_at'] ?? null;
 
+            $user = $g['user'];
+
             return [
-                'id' => (int) $g['user']->id,
+                'id' => (int) $user->id,
                 'name' => $name,
-                'email' => $g['user']->email ?? '',
+                'email' => $user->email ?? '',
+                'role' => $user->role ?? '',
+                'roleLabel' => $user->getRoleLabel(),
+                'roleBadgeClass' => $user->getRoleBadgeClass(),
                 'initial' => strtoupper(substr($name, 0, 1)),
                 'pending' => (int) $g['pending_count'],
                 'latestTs' => $latest ? \Illuminate\Support\Carbon::parse($latest)->timestamp : 0,
@@ -189,7 +194,12 @@
                                             <span class="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-indigo-100 text-indigo-700 font-bold group-hover:bg-indigo-600 group-hover:text-white transition-colors"
                                                   x-text="student.initial"></span>
                                             <div class="min-w-0">
-                                                <h3 class="text-sm font-bold text-gray-900 truncate" x-text="student.name"></h3>
+                                                <div class="flex flex-wrap items-center gap-1.5">
+                                                    <h3 class="text-sm font-bold text-gray-900 truncate" x-text="student.name"></h3>
+                                                    <span class="shrink-0 inline-flex rounded px-1.5 py-0.5 text-[10px] font-semibold leading-none"
+                                                          :class="student.roleBadgeClass"
+                                                          x-text="student.roleLabel"></span>
+                                                </div>
                                                 <p class="text-xs text-gray-500 truncate" x-text="student.email"></p>
                                             </div>
                                         </div>

@@ -4,15 +4,20 @@
         $name = $g['user']->name ?? 'Unknown';
         $latest = $g['latest_attempt_at'] ?? null;
 
+        $user = $g['user'];
+
         return [
-            'id' => (int) $g['user']->id,
+            'id' => (int) $user->id,
             'name' => $name,
-            'email' => $g['user']->email ?? '',
+            'email' => $user->email ?? '',
+            'role' => $user->role ?? '',
+            'roleLabel' => $user->getRoleLabel(),
+            'roleBadgeClass' => $user->getRoleBadgeClass(),
             'initial' => strtoupper(substr($name, 0, 1)),
             'quizCount' => $g['quizzes']->count(),
             'pending' => (int) $g['pending_count'],
             'latestTs' => $latest ? \Illuminate\Support\Carbon::parse($latest)->timestamp : 0,
-            'searchText' => strtolower($name.' '.($g['user']->email ?? '').' '.$g['quizzes']->map(fn ($q) => $q['quiz']->title ?? '')->implode(' ')),
+            'searchText' => strtolower($name.' '.($user->email ?? '').' '.($user->role ?? '').' '.$g['quizzes']->map(fn ($q) => $q['quiz']->title ?? '')->implode(' ')),
         ];
     })->values();
     $mgQuizzesForSelected = $selectedStudentGroup
@@ -89,7 +94,12 @@
                               :class="selectedUserId === student.id ? 'bg-white/20 text-white' : 'bg-indigo-100 text-indigo-700'"
                               x-text="student.initial"></span>
                         <div class="min-w-0 flex-1">
-                            <p class="text-sm font-semibold truncate" x-text="student.name"></p>
+                            <div class="flex flex-wrap items-center gap-1.5">
+                                <p class="text-sm font-semibold truncate" x-text="student.name"></p>
+                                <span class="shrink-0 inline-flex rounded px-1.5 py-0.5 text-[10px] font-semibold leading-none"
+                                      :class="student.roleBadgeClass"
+                                      x-text="student.roleLabel"></span>
+                            </div>
                             <p class="text-xs truncate opacity-80" x-text="student.email"></p>
                             <p class="text-xs mt-0.5 opacity-70">
                                 <span x-text="student.pending + ' to grade'"></span>
