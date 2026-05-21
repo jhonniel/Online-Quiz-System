@@ -259,6 +259,15 @@
                                                     @endif
                                                 </div>
                                             </div>
+                                        @elseif($question->question_type === 'text' && $question->hasReferenceAnswer())
+                                            <div class="mt-2 rounded-lg border border-emerald-100 bg-emerald-50/60 px-3 py-2">
+                                                <p class="text-xs font-semibold text-emerald-800 mb-1">Reference answer <span class="font-normal text-emerald-700">(admin only — hidden from takers)</span></p>
+                                                <p class="text-sm text-gray-800 whitespace-pre-wrap">{{ $question->referenceAnswer() }}</p>
+                                            </div>
+                                        @elseif($question->question_type === 'fill_blank' && $question->correct_answer)
+                                            <div class="mt-2 text-sm text-gray-600">
+                                                <span class="font-medium">Acceptable answer:</span> {{ $question->correct_answer }}
+                                            </div>
                                         @endif
                                     </div>
                                 </div>

@@ -158,8 +158,13 @@
                                 </td>
                                 <td class="px-4 sm:px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                                     <div class="flex items-center justify-end gap-2">
+                                        @php
+                                            $modalReference = $attempt->question->question_type === 'text'
+                                                ? $attempt->question->referenceAnswer()
+                                                : (string) ($attempt->question->correct_answer ?? '');
+                                        @endphp
                                         <button type="button"
-                                                onclick="openAnswerModal(@js($attempt->user->name), @js($attempt->quiz->title), @js($attempt->question->question_text), @js($attempt->question->question_type), @js($attempt->user_answer), @js($attempt->question->correct_answer), @js($attempt->question->points), {{ (int) $attempt->points_earned }}, {{ $isGraded ? 'true' : 'false' }}, @js($isGraded ? \Carbon\Carbon::parse($attempt->graded_at)->format('M j, Y g:i A') : null), @js($attempt->feedback))"
+                                                onclick="openAnswerModal(@js($attempt->user->name), @js($attempt->quiz->title), @js($attempt->question->question_text), @js($attempt->question->question_type), @js($attempt->user_answer), @js($modalReference ?: null), @js($attempt->question->points), {{ (int) $attempt->points_earned }}, {{ $isGraded ? 'true' : 'false' }}, @js($isGraded ? \Carbon\Carbon::parse($attempt->graded_at)->format('M j, Y g:i A') : null), @js($attempt->feedback))"
                                                 class="inline-flex items-center px-2.5 py-1.5 rounded-md text-xs font-medium text-gray-700 bg-white border border-gray-300 hover:bg-gray-50">
                                             View
                                         </button>
@@ -293,13 +298,21 @@ function openAnswerModal(studentName, quizTitle, questionText, questionType, use
 
     const refWrap = document.getElementById('modalReferenceWrap');
     const refEl = document.getElementById('modalReference');
-    if (referenceAnswer) {
+    refEl.classList.remove('text-amber-900');
+    if (questionType === 'text') {
         refWrap.classList.remove('hidden');
-        refEl.textContent = referenceAnswer;
+        if (referenceAnswer) {
+            refEl.textContent = referenceAnswer;
+            refEl.classList.add('whitespace-pre-wrap');
+        } else {
+            refEl.textContent = 'No reference answers set — grade on accuracy and completeness.';
+            refEl.classList.add('text-amber-900');
+        }
+    } else if (referenceAnswer) {
+        refWrap.classList.remove('hidden');
+        refEl.textContent = 'Acceptable: ' + referenceAnswer;
     } else {
-        refWrap.classList.remove('hidden');
-        refEl.textContent = 'No fixed answer key — grade on accuracy and completeness.';
-        refEl.classList.add('text-amber-900');
+        refWrap.classList.add('hidden');
     }
 
     document.getElementById('modalScore').textContent = pointsEarned + ' / ' + maxPoints + ' pts';

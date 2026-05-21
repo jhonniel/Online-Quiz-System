@@ -9,7 +9,11 @@ How **roles**, **`admin` middleware**, and **`admin_permissions`** flags combine
 | Flag | Admin routes / features | Sidebar helper |
 |------|-------------------------|----------------|
 | `content_management` | Quizzes, forum, news, evaluations, manual grading, import, universities, **tasks** (full module) | `canAccessContentManagement()` |
-| `analytics_reports` | Analytics, error logs (analytics), evaluation reviews | `canAccessAnalyticsReports()` |
+| `analytics_reports` | Parent for Analytics & Reports (use sub-features below) | `canAccessAnalyticsReports()` |
+| *(sub)* `analytics` | Student Performance Analytics (`/admin/analytics`) | `canAccessAnalyticsFeature('analytics')` |
+| *(sub)* `error_logs` | Error Logs | `canAccessAnalyticsFeature('error_logs')` |
+| *(sub)* `user_activity` | User Activity (also allowed via `system`) | `canAccessAnalyticsFeature('user_activity')` |
+| *(sub)* `students_review` | Students Review | `canAccessAnalyticsFeature('students_review')` |
 | `employee_management` | Employee dashboard, admin DTR, time report, admin leave (employees); optional **employee department** scope | `canAccessEmployeeManagement()` |
 | `student_management` | Student dashboard, student DTR/leave, time requests; optional **student department** scope | `canAccessStudentManagement()` |
 | `hiring_process` | Hiring process, positions, applications; optional **allowed positions** | `canAccessHiringProcess()` |

@@ -183,6 +183,8 @@ class AdminPermissionController extends Controller
             'hiring_process' => 'boolean',
             'allowed_positions' => 'nullable|array',
             'allowed_positions.*' => 'exists:hiring_positions,id',
+            'allowed_analytics_features' => 'nullable|array',
+            'allowed_analytics_features.*' => 'in:'.implode(',', array_keys(AdminPermission::ANALYTICS_FEATURES)),
             'communication' => 'boolean',
             'linked_accounts' => 'boolean',
             'billing' => 'boolean',
@@ -258,6 +260,14 @@ class AdminPermissionController extends Controller
         } else {
             // If hiring_process is disabled, clear allowed_positions
             $permissions['allowed_positions'] = null;
+        }
+
+        if (Schema::hasColumn('admin_permissions', 'allowed_analytics_features')) {
+            if ($request->has('analytics_reports')) {
+                $permissions['allowed_analytics_features'] = $request->input('allowed_analytics_features', []);
+            } else {
+                $permissions['allowed_analytics_features'] = null;
+            }
         }
 
         // Update or create permission record

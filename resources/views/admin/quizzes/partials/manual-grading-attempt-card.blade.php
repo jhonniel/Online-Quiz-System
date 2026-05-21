@@ -42,10 +42,20 @@
                 <p class="text-sm text-gray-900 leading-relaxed rounded-lg bg-sky-50 border border-sky-200 px-4 py-3 whitespace-pre-wrap">{{ $attempt->user_answer }}</p>
             </div>
 
-            <div>
-                <p class="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-2">Reference answer(s)</p>
-                @if(in_array($attempt->question->question_type, ['text', 'fill_blank']) &&
-                    ($attempt->question->correct_answer || $attempt->question->alternative_answer_1 || $attempt->question->alternative_answer_2 || $attempt->question->alternative_answer_3))
+            @if($attempt->question->question_type === 'text')
+                <div>
+                    <p class="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-2">Reference answer</p>
+                    @if($attempt->question->hasReferenceAnswer())
+                        <p class="text-sm text-gray-800 whitespace-pre-wrap rounded-lg border border-emerald-100 bg-emerald-50/50 px-4 py-3">{{ $attempt->question->referenceAnswer() }}</p>
+                    @else
+                        <p class="text-sm text-amber-900 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3">
+                            No reference answer set — grade on accuracy and completeness.
+                        </p>
+                    @endif
+                </div>
+            @elseif($attempt->question->question_type === 'fill_blank' && ($attempt->question->correct_answer || $attempt->question->alternative_answer_1))
+                <div>
+                    <p class="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-2">Acceptable answer(s)</p>
                     <div class="space-y-2 rounded-lg border border-emerald-100 bg-emerald-50/50 px-4 py-3">
                         @if($attempt->question->correct_answer)
                             <p class="text-sm text-gray-800"><span class="font-semibold text-emerald-800">Main:</span> {{ $attempt->question->correct_answer }}</p>
@@ -56,12 +66,8 @@
                             @endif
                         @endforeach
                     </div>
-                @else
-                    <p class="text-sm text-amber-900 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3">
-                        No fixed answer key — grade on accuracy and completeness.
-                    </p>
-                @endif
-            </div>
+                </div>
+            @endif
 
             <form class="grade-form border-t border-gray-100 pt-5" data-attempt-id="{{ $attempt->id }}">
                 @csrf

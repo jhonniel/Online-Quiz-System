@@ -280,14 +280,9 @@ document.addEventListener('DOMContentLoaded', function() {
         const questionType = select.value;
 
         if (questionType === 'text') {
-            answersContainer.style.display = 'none';
-            // Remove required attribute from all form inputs when hidden
-            const allInputs = answersContainer.querySelectorAll('input[required]');
-            allInputs.forEach(input => {
-                input.removeAttribute('required');
-            });
+            answersContainer.style.display = 'block';
+            updateAnswersContainerForText(answersContainer, select);
 
-            // Add a hidden input to indicate manual grading is required
             const questionDiv = select.closest('.space-y-4');
             let manualGradingInput = questionDiv.querySelector('input[name*="[requires_manual_grading]"]');
             if (!manualGradingInput) {
@@ -339,6 +334,14 @@ document.addEventListener('DOMContentLoaded', function() {
                 manualGradingInput.value = '0'; // Multiple choice/true-false don't require manual grading
             }
         }
+    }
+
+    function updateAnswersContainerForText(container, select) {
+        const questionIndex = select.name.match(/\[(\d+)\]/)[1];
+        container.innerHTML =
+            '<label for="reference_answer_' + questionIndex + '" class="block text-sm font-medium text-gray-700">Reference answer</label>' +
+            '<p class="mt-1 text-sm text-gray-500"><strong>Admin only.</strong> Not shown to quiz takers. Shown in manual grading when reviewing this text question.</p>' +
+            '<textarea name="questions[' + questionIndex + '][correct_answer]" id="reference_answer_' + questionIndex + '" rows="3" placeholder="Optional reference for graders (e.g. key points or sample answer)" class="mt-2 block w-full shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm border-gray-300 rounded-md"></textarea>';
     }
 
     function updateAnswersContainerForFillBlank(container, select) {

@@ -90,18 +90,43 @@
                     </div>
 
                     <!-- Analytics & Reports -->
-                    <div class="flex items-start space-x-3 p-4 border border-gray-200 rounded-lg hover:bg-gray-50">
-                        <input type="checkbox"
-                               name="analytics_reports"
-                               id="analytics_reports"
-                               value="1"
-                               {{ ($permission && $permission->analytics_reports) ? 'checked' : '' }}
-                               class="mt-1 h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded">
-                        <div class="flex-1">
-                            <label for="analytics_reports" class="block text-sm font-medium text-gray-900 cursor-pointer">
-                                Analytics & Reports
-                            </label>
-                            <p class="mt-1 text-sm text-gray-500">Access to analytics dashboard and reports</p>
+                    <div class="md:col-span-2">
+                        <div class="flex items-start space-x-3 p-4 border border-gray-200 rounded-lg hover:bg-gray-50">
+                            <input type="checkbox"
+                                   name="analytics_reports"
+                                   id="analytics_reports"
+                                   value="1"
+                                   {{ ($permission && $permission->analytics_reports) ? 'checked' : '' }}
+                                   class="mt-1 h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
+                                   onchange="toggleAnalyticsFeatureSelection()">
+                            <div class="flex-1">
+                                <label for="analytics_reports" class="block text-sm font-medium text-gray-900 cursor-pointer">
+                                    Analytics & Reports
+                                </label>
+                                <p class="mt-1 text-sm text-gray-500">Choose which areas under Analytics & Reports this user can open</p>
+
+                                <div id="analytics-feature-selection" class="mt-4 {{ ($permission && $permission->analytics_reports) ? '' : 'hidden' }}">
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                                        Allowed areas
+                                        <span class="text-xs text-gray-500 font-normal">(Leave empty to allow all areas below)</span>
+                                    </label>
+                                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 p-3 bg-gray-50 rounded-md border border-gray-200">
+                                        @foreach(\App\Models\AdminPermission::ANALYTICS_FEATURES as $featureKey => $featureLabel)
+                                            <div class="flex items-start">
+                                                <input type="checkbox"
+                                                       name="allowed_analytics_features[]"
+                                                       id="analytics_feature_{{ $featureKey }}"
+                                                       value="{{ $featureKey }}"
+                                                       {{ ($permission && $permission->analytics_reports && (($permission->allowed_analytics_features === null) || in_array($featureKey, $permission->allowed_analytics_features ?? [], true))) ? 'checked' : '' }}
+                                                       class="mt-0.5 h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded">
+                                                <label for="analytics_feature_{{ $featureKey }}" class="ml-2 text-sm text-gray-700 cursor-pointer">
+                                                    {{ $featureLabel }}
+                                                </label>
+                                            </div>
+                                        @endforeach
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
 
@@ -452,6 +477,22 @@ function toggleDepartmentSelection() {
     }
 }
 
+function toggleAnalyticsFeatureSelection() {
+    const analyticsCheckbox = document.getElementById('analytics_reports');
+    const featureSelection = document.getElementById('analytics-feature-selection');
+
+    if (analyticsCheckbox && featureSelection) {
+        if (analyticsCheckbox.checked) {
+            featureSelection.classList.remove('hidden');
+        } else {
+            featureSelection.classList.add('hidden');
+            featureSelection.querySelectorAll('input[type="checkbox"]').forEach((checkbox) => {
+                checkbox.checked = false;
+            });
+        }
+    }
+}
+
 function togglePositionSelection() {
     const hiringProcessCheckbox = document.getElementById('hiring_process');
     const positionSelection = document.getElementById('position-selection');
@@ -474,6 +515,7 @@ function togglePositionSelection() {
 document.addEventListener('DOMContentLoaded', function() {
     toggleDepartmentSelection();
     togglePositionSelection();
+    toggleAnalyticsFeatureSelection();
 });
 </script>
 @endsection

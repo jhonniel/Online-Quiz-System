@@ -124,6 +124,17 @@
                                 @php $posNames = $hiringPositions->whereIn('id', $permission->allowed_positions)->pluck('title'); @endphp
                                 <p class="mt-2 text-xs text-gray-600">Allowed positions: {{ $posNames->join(', ') }}</p>
                             @endif
+                            @if($item['key'] === 'analytics_reports' && $permission && $permission->analytics_reports)
+                                @php
+                                    $allowedAnalytics = $permission->allowed_analytics_features;
+                                    $analyticsLabels = empty($allowedAnalytics)
+                                        ? collect(\App\Models\AdminPermission::ANALYTICS_FEATURES)->values()
+                                        : collect($allowedAnalytics)->map(fn ($k) => \App\Models\AdminPermission::ANALYTICS_FEATURES[$k] ?? $k);
+                                @endphp
+                                <p class="mt-2 text-xs text-gray-600">
+                                    Allowed areas: {{ empty($allowedAnalytics) ? 'All' : $analyticsLabels->join(', ') }}
+                                </p>
+                            @endif
                         </div>
                     </div>
                 @endforeach

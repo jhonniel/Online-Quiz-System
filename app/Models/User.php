@@ -726,11 +726,105 @@ class User extends Authenticatable
     }
 
     /**
-     * Check if user has access to Analytics & Reports.
+     * Check if user has access to Analytics & Reports (parent permission).
      */
     public function canAccessAnalyticsReports(): bool
     {
         return $this->hasAdminPermission('analytics_reports');
+    }
+
+    /**
+     * Whether the user can open any Analytics & Reports sub-area (for sidebar group visibility).
+     */
+    public function canAccessAnyAnalyticsFeature(): bool
+    {
+        if ($this->isSuperAdmin()) {
+            return true;
+        }
+
+        if (! $this->canAccessAnalyticsReports()) {
+            return $this->canAccessAnalyticsFeature('user_activity');
+        }
+
+        if (! $this->relationLoaded('adminPermission')) {
+            $this->load('adminPermission');
+        }
+
+        $adminPermission = $this->adminPermission;
+        if (! $adminPermission) {
+            return false;
+        }
+
+        $allowed = $adminPermission->allowed_analytics_features;
+        if (empty($allowed)) {
+            return true;
+        }
+
+        return count(array_intersect($allowed, array_keys(AdminPermission::ANALYTICS_FEATURES))) > 0;
+    }
+
+    /**
+     * Check access to a specific Analytics & Reports sub-area.
+     *
+     * @param  string  $feature  analytics|error_logs|user_activity|students_review
+     */
+    public function canAccessAnalyticsFeature(string $feature): bool
+    {
+        if (! array_key_exists($feature, AdminPermission::ANALYTICS_FEATURES)) {
+            return false;
+        }
+
+        if ($this->isSuperAdmin()) {
+            return true;
+        }
+
+        if ($feature === 'user_activity' && $this->canAccessSystem()) {
+            return true;
+        }
+
+        if (! $this->canAccessAnalyticsReports()) {
+            return false;
+        }
+
+        if (! $this->relationLoaded('adminPermission')) {
+            $this->load('adminPermission');
+        }
+
+        $adminPermission = $this->adminPermission;
+        if (! $adminPermission) {
+            return false;
+        }
+
+        $allowed = $adminPermission->allowed_analytics_features;
+        if (empty($allowed)) {
+            return true;
+        }
+
+        return in_array($feature, $allowed, true);
+    }
+
+    /**
+     * Allowed Analytics & Reports sub-area keys, or null for all when parent is enabled.
+     *
+     * @return array<string>|null
+     */
+    public function getAllowedAnalyticsFeatures(): ?array
+    {
+        if ($this->isSuperAdmin()) {
+            return null;
+        }
+
+        if (! $this->canAccessAnalyticsReports()) {
+            return [];
+        }
+
+        if (! $this->relationLoaded('adminPermission')) {
+            $this->load('adminPermission');
+        }
+
+        $allowed = $this->adminPermission?->allowed_analytics_features;
+
+        return empty($allowed) ? null : $allowed;
     }
 
     /**

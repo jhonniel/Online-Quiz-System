@@ -300,14 +300,28 @@ Route::prefix('admin')->middleware(['auth', 'admin'])->group(function () {
         Route::post('evaluations/force-send', [App\Http\Controllers\Admin\EvaluationController::class, 'forceSend'])->name('admin.evaluations.force-send');
     });
 
-    // Analytics & Reports
+    // Analytics & Reports (parent: analytics_reports; sub-areas: admin.analytics:{feature})
     Route::middleware(['admin.permission:analytics_reports'])->group(function () {
-        Route::get('analytics', [App\Http\Controllers\Admin\AnalyticsController::class, 'index'])->name('admin.analytics.index');
-        Route::get('analytics/quiz/{quizId}', [App\Http\Controllers\Admin\AnalyticsController::class, 'getQuizDetails'])->name('admin.analytics.quiz-details');
-        Route::get('analytics/student/{userId}', [App\Http\Controllers\Admin\AnalyticsController::class, 'getStudentDetails'])->name('admin.analytics.student-details');
-        Route::get('analytics/topic/{topic}', [App\Http\Controllers\Admin\AnalyticsController::class, 'getTopicDetails'])->name('admin.analytics.topic-details')->where('topic', '.*');
-        Route::get('analytics/error-logs', [ErrorLogController::class, 'index'])->name('admin.analytics.error-logs');
-        Route::get('analytics/students-review', [App\Http\Controllers\Admin\EvaluationController::class, 'reviews'])->name('admin.evaluations.reviews');
+        Route::middleware(['admin.analytics:analytics'])->group(function () {
+            Route::get('analytics', [App\Http\Controllers\Admin\AnalyticsController::class, 'index'])->name('admin.analytics.index');
+            Route::get('analytics/quiz/{quizId}', [App\Http\Controllers\Admin\AnalyticsController::class, 'getQuizDetails'])->name('admin.analytics.quiz-details');
+            Route::get('analytics/student/{userId}', [App\Http\Controllers\Admin\AnalyticsController::class, 'getStudentDetails'])->name('admin.analytics.student-details');
+            Route::get('analytics/topic/{topic}', [App\Http\Controllers\Admin\AnalyticsController::class, 'getTopicDetails'])->name('admin.analytics.topic-details')->where('topic', '.*');
+        });
+        Route::middleware(['admin.analytics:error_logs'])->group(function () {
+            Route::get('analytics/error-logs', [ErrorLogController::class, 'index'])->name('admin.analytics.error-logs');
+        });
+        Route::middleware(['admin.analytics:students_review'])->group(function () {
+            Route::get('analytics/students-review', [App\Http\Controllers\Admin\EvaluationController::class, 'reviews'])->name('admin.evaluations.reviews');
+        });
+    });
+
+    // User Activity: analytics sub-permission or legacy System permission
+    Route::middleware(['admin.analytics:user_activity'])->group(function () {
+        Route::get('user-activity', [App\Http\Controllers\Admin\UserActivityController::class, 'index'])->name('admin.user-activity.index');
+        Route::get('user-activity/sessions', [App\Http\Controllers\Admin\UserActivityController::class, 'sessions'])->name('admin.user-activity.sessions');
+        Route::get('user-activity/statistics', [App\Http\Controllers\Admin\UserActivityController::class, 'statistics'])->name('admin.user-activity.statistics');
+        Route::post('user-activity/cleanup', [App\Http\Controllers\Admin\UserActivityController::class, 'cleanup'])->name('admin.user-activity.cleanup');
     });
 
     // Key Performance Indicator (KPI) - Only for super admins
@@ -520,12 +534,6 @@ Route::prefix('admin')->middleware(['auth', 'admin'])->group(function () {
 
         // Stacks Management
         Route::resource('stacks', \App\Http\Controllers\Admin\StackController::class)->names('admin.stacks');
-
-        // User Activity Management
-        Route::get('user-activity', [App\Http\Controllers\Admin\UserActivityController::class, 'index'])->name('admin.user-activity.index');
-        Route::get('user-activity/sessions', [App\Http\Controllers\Admin\UserActivityController::class, 'sessions'])->name('admin.user-activity.sessions');
-        Route::get('user-activity/statistics', [App\Http\Controllers\Admin\UserActivityController::class, 'statistics'])->name('admin.user-activity.statistics');
-        Route::post('user-activity/cleanup', [App\Http\Controllers\Admin\UserActivityController::class, 'cleanup'])->name('admin.user-activity.cleanup');
 
         // Status Management
         Route::get('status/online-users', [StatusController::class, 'getOnlineUsers'])->name('status.online-users');

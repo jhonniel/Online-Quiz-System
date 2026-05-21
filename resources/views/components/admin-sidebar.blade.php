@@ -264,7 +264,7 @@
         @endif
 
         <!-- Analytics & Reports -->
-        @if(auth()->user()->canAccessAnalyticsReports())
+        @if(auth()->user()->canAccessAnyAnalyticsFeature())
         <div class="mb-6" x-data="{
             open: (localStorage.getItem('nav-analytics-reports') || 'true') === 'true',
             toggle() {
@@ -281,6 +281,7 @@
                 </svg>
             </button>
             <div class="space-y-1" x-show="sidebarCollapsed ? true : open" x-transition:enter="transition ease-out duration-100" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100" x-transition:leave="transition ease-in duration-75" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0">
+                @if(auth()->user()->canAccessAnalyticsFeature('analytics'))
                 <a href="{{ url('/admin/analytics') }}"
                    class="flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors duration-200 {{ request()->routeIs('admin.analytics.index') ? 'bg-indigo-700 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white' }}"
                    :class="sidebarCollapsed ? 'justify-center' : ''"
@@ -292,6 +293,8 @@
                         Analytics
                     </span>
                 </a>
+                @endif
+                @if(auth()->user()->canAccessAnalyticsFeature('error_logs'))
                 <a href="{{ url('/admin/analytics/error-logs') }}"
                    class="flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors duration-200 {{ request()->routeIs('admin.analytics.error-logs') ? 'bg-indigo-700 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white' }}"
                    :class="sidebarCollapsed ? 'justify-center' : ''"
@@ -303,6 +306,8 @@
                         Error Logs
                     </span>
                 </a>
+                @endif
+                @if(auth()->user()->canAccessAnalyticsFeature('user_activity'))
                 <a href="{{ url('/admin/user-activity') }}"
                    class="flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors duration-200 {{ request()->routeIs('admin.user-activity.*') ? 'bg-indigo-700 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white' }}"
                    :class="sidebarCollapsed ? 'justify-center' : ''"
@@ -315,6 +320,8 @@
                         User Activity
                     </span>
                 </a>
+                @endif
+                @if(auth()->user()->canAccessAnalyticsFeature('students_review'))
                 <a href="{{ url('/admin/analytics/students-review') }}"
                    class="flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors duration-200 {{ request()->routeIs('admin.evaluations.reviews') ? 'bg-indigo-700 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white' }}"
                    :class="sidebarCollapsed ? 'justify-center' : ''"
@@ -326,6 +333,7 @@
                         Students Review
                     </span>
                 </a>
+                @endif
             </div>
         </div>
         @endif

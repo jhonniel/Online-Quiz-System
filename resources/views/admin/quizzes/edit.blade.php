@@ -212,8 +212,10 @@
                                             </div>
                                         </div>
 
-                                        <div class="answers-container" style="{{ $question->question_type == 'text' ? 'display: none;' : '' }}">
-                                            @if($question->question_type == 'fill_blank')
+                                        <div class="answers-container" style="{{ $question->question_type === 'text' ? '' : ($question->question_type === 'fill_blank' || $question->question_type === 'multiple_choice' || $question->question_type === 'true_false' ? '' : 'display: none;') }}">
+                                            @if($question->question_type === 'text')
+                                                @include('admin.quizzes.partials.reference-answers-fields', ['index' => $index, 'question' => $question])
+                                            @elseif($question->question_type == 'fill_blank')
                                                 <label class="block text-sm font-medium text-gray-700">Correct Answer(s)</label>
                                                 <div class="mt-2 space-y-2">
                                                     <div class="flex items-center space-x-2">
@@ -433,14 +435,9 @@ document.addEventListener('DOMContentLoaded', function() {
         const questionType = select.value;
 
         if (questionType === 'text') {
-            answersContainer.style.display = 'none';
-            // Remove required attribute from all form inputs when hidden
-            const allInputs = answersContainer.querySelectorAll('input[required]');
-            allInputs.forEach(input => {
-                input.removeAttribute('required');
-            });
+            answersContainer.style.display = 'block';
+            updateAnswersContainerForText(answersContainer, select);
 
-            // Add a hidden input to indicate manual grading is required
             const questionDiv = select.closest('.space-y-4');
             let manualGradingInput = questionDiv.querySelector('input[name*="[requires_manual_grading]"]');
             if (!manualGradingInput) {
@@ -496,6 +493,16 @@ document.addEventListener('DOMContentLoaded', function() {
                 manualGradingInput.value = '0';
             }
         }
+    }
+
+    function updateAnswersContainerForText(container, select) {
+        const questionIndex = select.name.match(/\[(\d+)\]/)[1];
+        const existing = select.closest('.space-y-4')?.querySelector('textarea[name="questions[' + questionIndex + '][correct_answer]"]');
+        const savedValue = existing ? existing.value.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;') : '';
+        container.innerHTML =
+            '<label for="reference_answer_' + questionIndex + '" class="block text-sm font-medium text-gray-700">Reference answer</label>' +
+            '<p class="mt-1 text-sm text-gray-500"><strong>Admin only.</strong> Not shown to quiz takers. Shown in manual grading when reviewing this text question.</p>' +
+            '<textarea name="questions[' + questionIndex + '][correct_answer]" id="reference_answer_' + questionIndex + '" rows="3" placeholder="Optional reference for graders (e.g. key points or sample answer)" class="mt-2 block w-full shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm border-gray-300 rounded-md">' + savedValue + '</textarea>';
     }
 
     function updateAnswersContainerForFillBlank(container, select) {

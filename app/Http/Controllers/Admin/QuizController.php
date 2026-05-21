@@ -24,6 +24,75 @@ use Barryvdh\DomPDF\Facade\Pdf;
 
 class QuizController extends Controller
 {
+    /**
+     * @return array<string, mixed>
+     */
+    private function questionValidationRules(): array
+    {
+        return [
+            'questions.*.question_text' => 'required|string',
+            'questions.*.question_type' => 'required|in:multiple_choice,true_false,text,fill_blank',
+            'questions.*.points' => 'required|integer|min:1',
+            'questions.*.option_a' => 'required_if:questions.*.question_type,multiple_choice|nullable|string',
+            'questions.*.option_b' => 'required_if:questions.*.question_type,multiple_choice|nullable|string',
+            'questions.*.option_c' => 'required_if:questions.*.question_type,multiple_choice|nullable|string',
+            'questions.*.option_d' => 'required_if:questions.*.question_type,multiple_choice|nullable|string',
+            'questions.*.correct_answer' => 'nullable|string|max:10000',
+            'questions.*.alternative_answer_1' => 'nullable|string|max:10000',
+            'questions.*.alternative_answer_2' => 'nullable|string|max:10000',
+            'questions.*.alternative_answer_3' => 'nullable|string|max:10000',
+        ];
+    }
+
+    /**
+     * @param  array<string, mixed>  $questionData
+     * @return array<string, mixed>
+     */
+    private function normalizeQuestionPayload(array $questionData): array
+    {
+        $type = $questionData['question_type'] ?? '';
+
+        if ($type === 'text') {
+            $questionData['correct_answer'] = filled($questionData['correct_answer'] ?? null)
+                ? trim((string) $questionData['correct_answer'])
+                : null;
+            $questionData['alternative_answer_1'] = null;
+            $questionData['alternative_answer_2'] = null;
+            $questionData['alternative_answer_3'] = null;
+        }
+
+        return $questionData;
+    }
+
+    /**
+     * @param  array<int, array<string, mixed>>|null  $questions
+     */
+    private function validateQuestionAnswerKeys(?array $questions): void
+    {
+        if (! $questions) {
+            return;
+        }
+
+        foreach ($questions as $index => $questionData) {
+            $type = $questionData['question_type'] ?? '';
+            $key = $questionData['correct_answer'] ?? null;
+
+            if (in_array($type, ['multiple_choice', 'true_false'], true)) {
+                if (! in_array($key, ['A', 'B', 'C', 'D'], true)) {
+                    throw \Illuminate\Validation\ValidationException::withMessages([
+                        "questions.{$index}.correct_answer" => 'Select a valid correct option (A–D).',
+                    ]);
+                }
+            }
+
+            if ($type === 'fill_blank' && ! filled($key)) {
+                throw \Illuminate\Validation\ValidationException::withMessages([
+                    "questions.{$index}.correct_answer" => 'Fill-in-the-blank questions require a main acceptable answer.',
+                ]);
+            }
+        }
+    }
+
     public function index(Request $request)
     {
         $search = trim((string) $request->input('search', ''));
@@ -93,15 +162,9 @@ class QuizController extends Controller
             'questions_to_show' => 'nullable|integer|min:1',
             'is_active' => 'required|in:0,1',
             'questions' => 'required|array|min:1',
-            'questions.*.question_text' => 'required|string',
-            'questions.*.question_type' => 'required|in:multiple_choice,true_false,text',
-            'questions.*.points' => 'required|integer|min:1',
-            'questions.*.option_a' => 'required_if:questions.*.question_type,multiple_choice|nullable|string',
-            'questions.*.option_b' => 'required_if:questions.*.question_type,multiple_choice|nullable|string',
-            'questions.*.option_c' => 'required_if:questions.*.question_type,multiple_choice|nullable|string',
-            'questions.*.option_d' => 'required_if:questions.*.question_type,multiple_choice|nullable|string',
-            'questions.*.correct_answer' => 'required_if:questions.*.question_type,multiple_choice|nullable|in:A,B,C,D',
-        ]);
+        ] + $this->questionValidationRules());
+
+        $this->validateQuestionAnswerKeys($request->questions);
 
         // Validate questions_to_show doesn't exceed total questions
         $totalQuestions = count($request->questions);
@@ -124,6 +187,8 @@ class QuizController extends Controller
         ]);
 
         foreach ($request->questions as $index => $questionData) {
+            $questionData = $this->normalizeQuestionPayload($questionData);
+
             Question::create([
                 'quiz_id' => $quiz->id,
                 'question_text' => $questionData['question_text'],
@@ -168,15 +233,9 @@ class QuizController extends Controller
             'questions_to_show' => 'nullable|integer|min:1',
             'is_active' => 'required|in:0,1',
             'questions' => 'nullable|array',
-            'questions.*.question_text' => 'required|string',
-            'questions.*.question_type' => 'required|in:multiple_choice,true_false,text',
-            'questions.*.points' => 'required|integer|min:1',
-            'questions.*.option_a' => 'required_if:questions.*.question_type,multiple_choice|nullable|string',
-            'questions.*.option_b' => 'required_if:questions.*.question_type,multiple_choice|nullable|string',
-            'questions.*.option_c' => 'required_if:questions.*.question_type,multiple_choice|nullable|string',
-            'questions.*.option_d' => 'required_if:questions.*.question_type,multiple_choice|nullable|string',
-            'questions.*.correct_answer' => 'required_if:questions.*.question_type,multiple_choice|nullable|in:A,B,C,D',
-        ]);
+        ] + $this->questionValidationRules());
+
+        $this->validateQuestionAnswerKeys($request->questions);
 
         // Validate questions_to_show doesn't exceed total questions
         $totalQuestions = $quiz->questions()->count();
@@ -202,6 +261,7 @@ class QuizController extends Controller
 
             // Update existing questions or create new ones
             foreach ($request->questions as $index => $questionData) {
+                $questionData = $this->normalizeQuestionPayload($questionData);
                 $questionId = $questionData['id'] ?? null;
 
                 if ($questionId && $existingQuestions->has($questionId)) {

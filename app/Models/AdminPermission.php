@@ -7,10 +7,19 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class AdminPermission extends Model
 {
+    /** Sub-areas under Analytics & Reports (sidebar + route gates). */
+    public const ANALYTICS_FEATURES = [
+        'analytics' => 'Student Performance Analytics',
+        'error_logs' => 'Error Logs',
+        'user_activity' => 'User Activity',
+        'students_review' => 'Students Review',
+    ];
+
     protected $fillable = [
         'user_id',
         'content_management',
         'analytics_reports',
+        'allowed_analytics_features',
         'employee_management',
         'allowed_employee_departments',
         'allowed_student_departments',
@@ -32,6 +41,7 @@ class AdminPermission extends Model
     protected $casts = [
         'content_management' => 'boolean',
         'analytics_reports' => 'boolean',
+        'allowed_analytics_features' => 'array',
         'employee_management' => 'boolean',
         'allowed_employee_departments' => 'array',
         'allowed_student_departments' => 'array',

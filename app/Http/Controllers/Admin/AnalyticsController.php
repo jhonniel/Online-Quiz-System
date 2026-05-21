@@ -38,28 +38,108 @@ class AnalyticsController extends Controller
     }
 
     /**
+     * Points earned for a history row (sums live quiz_attempts after manual grading).
+     */
+    private function effectiveHistoryScore(QuizAttemptHistory $history): int
+    {
+        $completedAt = $history->completed_at ?? $history->created_at;
+        if (! $completedAt) {
+            return (int) $history->score;
+        }
+
+        $start = $completedAt->copy()->subMinutes(15);
+        $end = $completedAt->copy()->addMinute();
+
+        $liveScore = (int) QuizAttempt::query()
+            ->where('quiz_id', $history->quiz_id)
+            ->where('user_id', $history->user_id)
+            ->whereBetween('created_at', [$start, $end])
+            ->sum('points_earned');
+
+        return $liveScore > 0 ? $liveScore : (int) $history->score;
+    }
+
+    private function historyMaxPoints(QuizAttemptHistory $history): int
+    {
+        $history->loadMissing('quiz.questions');
+
+        return (int) ($history->quiz?->questions?->sum('points') ?? 0);
+    }
+
+    /**
+     * @param  \Illuminate\Support\Collection<int, QuizAttemptHistory>  $attempts
+     * @return \Illuminate\Support\Collection<int, QuizAttemptHistory>
+     */
+    private function enrichAttemptScores(Collection $attempts): Collection
+    {
+        return $attempts->map(function (QuizAttemptHistory $attempt) {
+            $maxPoints = $this->historyMaxPoints($attempt);
+            $effectiveScore = $this->effectiveHistoryScore($attempt);
+            $percent = $maxPoints > 0
+                ? round($effectiveScore / $maxPoints * 100, 1)
+                : 0.0;
+            $gradingPending = $attempt->status === 'partial'
+                && $effectiveScore === 0
+                && QuizAttempt::query()
+                    ->where('quiz_id', $attempt->quiz_id)
+                    ->where('user_id', $attempt->user_id)
+                    ->whereNull('graded_at')
+                    ->whereHas('question', function ($q) {
+                        $q->whereIn('question_type', ['text', 'fill_blank'])
+                            ->orWhere('requires_manual_grading', true);
+                    })
+                    ->exists();
+
+            $attempt->setAttribute('effective_score', $effectiveScore);
+            $attempt->setAttribute('max_points', $maxPoints);
+            $attempt->setAttribute('score_percent', $percent);
+            $attempt->setAttribute('grading_pending', $gradingPending);
+
+            return $attempt;
+        });
+    }
+
+    public static function scoreBadgeClass(float $percent, bool $gradingPending = false): string
+    {
+        if ($gradingPending) {
+            return 'bg-amber-100 text-amber-800';
+        }
+        if ($percent >= 90) {
+            return 'bg-green-100 text-green-800';
+        }
+        if ($percent >= 70) {
+            return 'bg-yellow-100 text-yellow-800';
+        }
+
+        return 'bg-red-100 text-red-800';
+    }
+
+    /**
      * One row per student: their best-scoring attempt for the given history set.
      */
     private function bestScorePerStudent($attempts)
     {
-        return $attempts
+        return $this->enrichAttemptScores($attempts)
             ->groupBy('user_id')
-            ->map(fn ($userAttempts) => $userAttempts->sortByDesc('score')->first())
+            ->map(fn ($userAttempts) => $userAttempts->sortByDesc('effective_score')->first())
             ->values();
     }
 
     /**
-     * @return array{total_attempts: int, student_count: int, average_score: float, highest_score: int}
+     * @return array{total_attempts: int, student_count: int, average_score: float, average_percent: float, highest_score: int, max_points: int}
      */
     private function quizLeaderboardStats($attempts): array
     {
         $bests = $this->bestScorePerStudent($attempts);
+        $maxPoints = (int) ($bests->first()->max_points ?? 0);
 
         return [
             'total_attempts' => $attempts->count(),
             'student_count' => $bests->count(),
-            'average_score' => $bests->isNotEmpty() ? round($bests->avg('score'), 1) : 0,
-            'highest_score' => (int) ($bests->max('score') ?? 0),
+            'max_points' => $maxPoints,
+            'average_score' => $bests->isNotEmpty() ? round($bests->avg('effective_score'), 1) : 0,
+            'average_percent' => $bests->isNotEmpty() ? round($bests->avg('score_percent'), 1) : 0,
+            'highest_score' => (int) ($bests->max('effective_score') ?? 0),
         ];
     }
 
@@ -101,6 +181,7 @@ class AnalyticsController extends Controller
             'average_total_score' => 0,
             'highest_total_score' => 0,
             'average_per_attempt' => 0,
+            'average_percent_per_attempt' => 0,
             'total_quiz_attempts' => 0,
             'unranked_students' => 0,
         ];
@@ -138,40 +219,42 @@ class AnalyticsController extends Controller
     {
         return $this->usersWithQuizAttempts()
             ->with(['university', 'quizAttemptHistory' => function ($query) {
-                $this->scorableAttemptHistory($query);
-            }])
-            ->withSum(['quizAttemptHistory' => function ($query) {
-                $this->scorableAttemptHistory($query);
-            }], 'score')
-            ->withCount(['quizAttemptHistory' => function ($query) {
-                $this->scorableAttemptHistory($query);
+                $this->scorableAttemptHistory($query)->with('quiz.questions');
             }])
             ->get()
-            ->filter(fn ($user) => ($user->quiz_attempt_history_count ?? 0) > 0)
+            ->map(function ($user) {
+                $attempts = $this->enrichAttemptScores($user->quizAttemptHistory);
+                $user->setAttribute('analytics_total_score', (int) $attempts->sum('effective_score'));
+                $user->setAttribute('analytics_attempt_count', $attempts->count());
+                $user->setAttribute('analytics_avg_percent', $attempts->isNotEmpty()
+                    ? round($attempts->avg('score_percent'), 1)
+                    : 0);
+
+                return $user;
+            })
+            ->filter(fn ($user) => ($user->analytics_attempt_count ?? 0) > 0)
             ->sort(function ($a, $b) {
-                $scoreCmp = ($b->quiz_attempt_history_sum_score ?? 0) <=> ($a->quiz_attempt_history_sum_score ?? 0);
+                $scoreCmp = ($b->analytics_total_score ?? 0) <=> ($a->analytics_total_score ?? 0);
                 if ($scoreCmp !== 0) {
                     return $scoreCmp;
                 }
 
-                return ($b->quiz_attempt_history_count ?? 0) <=> ($a->quiz_attempt_history_count ?? 0);
+                return ($b->analytics_attempt_count ?? 0) <=> ($a->analytics_attempt_count ?? 0);
             })
             ->take(50)
             ->values()
-            ->map(function($user, $index) {
-                $totalScore = $user->quiz_attempt_history_sum_score ?? 0;
-                $totalAttempts = $user->quiz_attempt_history_count ?? 0;
-                $averageScore = $totalAttempts > 0 ? round($totalScore / $totalAttempts, 1) : 0;
+            ->map(function ($user, $index) {
+                $totalAttempts = (int) ($user->analytics_attempt_count ?? 0);
 
                 return [
                     'rank' => $index + 1,
                     'user' => $user,
-                    'total_score' => (int) $totalScore,
+                    'total_score' => (int) ($user->analytics_total_score ?? 0),
                     'total_attempts' => $totalAttempts,
-                    'average_score' => $averageScore,
+                    'average_score' => (float) ($user->analytics_avg_percent ?? 0),
                     'university' => $user->university,
                     'rank_badge_class' => $this->getRankBadgeClass($index + 1),
-                    'rank_icon' => $this->getRankIcon($index + 1)
+                    'rank_icon' => $this->getRankIcon($index + 1),
                 ];
             });
     }
@@ -181,12 +264,14 @@ class AnalyticsController extends Controller
         $totalStudents = $this->learnerPoolQuery()->count();
         $activeStudents = $this->usersWithQuizAttempts()->count();
 
-        $scorableAttempts = QuizAttemptHistory::query()->scorable()->get();
+        $scorableAttempts = $this->enrichAttemptScores(
+            QuizAttemptHistory::query()->scorable()->with('quiz.questions')->get()
+        );
         $totalQuizAttempts = $scorableAttempts->count();
 
         $bestPerStudent = $scorableAttempts
             ->groupBy('user_id')
-            ->map(fn ($rows) => (int) $rows->max('score'));
+            ->map(fn ($rows) => (int) $rows->max('effective_score'));
 
         $averageBestPerStudent = $bestPerStudent->isNotEmpty()
             ? round($bestPerStudent->avg(), 1)
@@ -197,7 +282,11 @@ class AnalyticsController extends Controller
             : 0;
 
         $averagePerAttempt = $totalQuizAttempts > 0
-            ? round($scorableAttempts->avg('score'), 1)
+            ? round($scorableAttempts->avg('effective_score'), 1)
+            : 0;
+
+        $averagePercentPerAttempt = $totalQuizAttempts > 0
+            ? round($scorableAttempts->avg('score_percent'), 1)
             : 0;
 
         return [
@@ -209,6 +298,7 @@ class AnalyticsController extends Controller
             'average_total_score' => $averageBestPerStudent,
             'highest_total_score' => $bestSingleAttempt,
             'average_per_attempt' => $averagePerAttempt,
+            'average_percent_per_attempt' => $averagePercentPerAttempt,
             'total_quiz_attempts' => $totalQuizAttempts,
             'unranked_students' => max(0, $totalStudents - $activeStudents),
         ];
@@ -225,14 +315,13 @@ class AnalyticsController extends Controller
             ->map(function ($quiz) {
                 $attempts = $quiz->attemptHistory;
                 $stats = $this->quizLeaderboardStats($attempts);
-                $topPerformers = $this->bestScorePerStudent($attempts)
-                    ->sortByDesc('score')
-                    ->values()
-                    ->take(5);
+                $allTakers = $this->bestScorePerStudent($attempts)
+                    ->sortByDesc('effective_score')
+                    ->values();
 
                 return [
                     'quiz' => $quiz,
-                    'top_attempts' => $topPerformers,
+                    'top_attempts' => $allTakers,
                     'max_points' => (int) $quiz->questions->sum('points'),
                     ...$stats,
                 ];
@@ -295,18 +384,15 @@ class AnalyticsController extends Controller
             ->orderByDesc('completed_at')
             ->get();
 
-        return $attempts
+        return $this->enrichAttemptScores($attempts)
             ->groupBy(fn ($a) => $a->quiz_id.'-'.$a->user_id)
             ->map(function ($userQuizAttempts) {
-                $best = $userQuizAttempts->sortByDesc('score')->first();
-                $maxPossiblePoints = (int) ($best->quiz->questions->sum('points') ?? 0);
-                $percentage = $maxPossiblePoints > 0
-                    ? round(($best->score / $maxPossiblePoints) * 100, 1)
-                    : 0;
+                $best = $userQuizAttempts->sortByDesc('effective_score')->first();
 
                 return [
                     'attempt' => $best,
-                    'percentage' => $percentage,
+                    'percentage' => (float) $best->score_percent,
+                    'grading_pending' => (bool) $best->grading_pending,
                     'user' => $best->user,
                     'quiz' => $best->quiz,
                     'university' => $best->user->university,
@@ -349,17 +435,21 @@ class AnalyticsController extends Controller
 
         $attempts = $quiz->attemptHistory;
         $stats = $this->quizLeaderboardStats($attempts);
-        $studentBests = $this->bestScorePerStudent($attempts);
+        $studentBests = $this->bestScorePerStudent($attempts)
+            ->sortByDesc('effective_score')
+            ->values();
 
         $performanceData = [
             'quiz' => $quiz,
             'total_attempts' => $stats['total_attempts'],
             'student_count' => $stats['student_count'],
+            'max_points' => $stats['max_points'] ?: (int) $quiz->questions->sum('points'),
             'average_score' => $stats['average_score'],
+            'average_percent' => $stats['average_percent'],
             'highest_score' => $stats['highest_score'],
-            'lowest_score' => (int) ($studentBests->min('score') ?? 0),
+            'lowest_score' => (int) ($studentBests->min('effective_score') ?? 0),
             'completion_rate' => $stats['student_count'] > 0 ? 100 : 0,
-            'top_performers' => $studentBests->sortByDesc('score')->take(10)->values(),
+            'top_performers' => $studentBests,
             'score_distribution' => $this->getScoreDistribution($studentBests),
             'university_breakdown' => $this->getUniversityBreakdown($studentBests),
         ];
@@ -367,11 +457,83 @@ class AnalyticsController extends Controller
         return response()->json($performanceData);
     }
 
+    /**
+     * Per-topic stats: student totals (best per quiz) and per-quiz breakdown with max points.
+     *
+     * @return array{topic_max_points: int, students: Collection, quizzes: Collection}
+     */
+    private function buildTopicAnalytics(Collection $topicAttempts): array
+    {
+        $enriched = $this->enrichAttemptScores(
+            $topicAttempts->loadMissing(['user.university', 'quiz.questions'])
+        );
+
+        $quizMaxPoints = $enriched
+            ->groupBy('quiz_id')
+            ->map(fn ($rows) => (int) ($rows->first()->max_points ?? 0));
+
+        $students = $enriched
+            ->groupBy('user_id')
+            ->map(function ($rows) {
+                $bestPerQuiz = $rows
+                    ->groupBy('quiz_id')
+                    ->map(fn ($qRows) => $qRows->sortByDesc('effective_score')->first());
+
+                $score = (int) $bestPerQuiz->sum(fn ($a) => (int) $a->effective_score);
+                $maxPossible = (int) $bestPerQuiz->sum(fn ($a) => (int) ($a->max_points ?? 0));
+                $percent = $maxPossible > 0
+                    ? round($score / $maxPossible * 100, 1)
+                    : 0.0;
+
+                return [
+                    'user' => $rows->first()->user,
+                    'university' => $rows->first()->user->university,
+                    'total_score' => $score,
+                    'max_possible' => $maxPossible,
+                    'score_percent' => $percent,
+                    'quizzes_taken' => $bestPerQuiz->count(),
+                    'grading_pending' => $bestPerQuiz->contains(fn ($a) => (bool) $a->grading_pending),
+                    'total_attempts' => $rows->count(),
+                ];
+            })
+            ->values();
+
+        $quizzes = $enriched
+            ->groupBy('quiz_id')
+            ->map(function ($quizAttempts) {
+                $quiz = $quizAttempts->first()->quiz;
+                $maxPoints = (int) ($quizAttempts->first()->max_points ?? 0);
+                $bests = $this->bestScorePerStudent($quizAttempts);
+
+                return [
+                    'id' => (int) $quiz->id,
+                    'title' => $quiz->title ?? 'Quiz',
+                    'attempts' => $quizAttempts->count(),
+                    'student_count' => $bests->count(),
+                    'max_points' => $maxPoints,
+                    'average_score' => $bests->isNotEmpty()
+                        ? round($bests->avg(fn ($a) => $a->effective_score), 1)
+                        : 0,
+                    'highest_score' => (int) ($bests->max(fn ($a) => $a->effective_score) ?? 0),
+                    'average_percent' => $bests->isNotEmpty()
+                        ? round($bests->avg(fn ($a) => $a->score_percent), 1)
+                        : 0,
+                ];
+            })
+            ->values();
+
+        return [
+            'topic_max_points' => (int) $quizMaxPoints->sum(),
+            'students' => $students,
+            'quizzes' => $quizzes,
+        ];
+    }
+
     private function getTopicPerformance(): Collection
     {
         $attempts = QuizAttemptHistory::query()
             ->scorable()
-            ->with(['user.university', 'quiz'])
+            ->with(['user.university', 'quiz.questions'])
             ->whereHas('quiz', fn ($q) => $q->where('is_active', true))
             ->get();
 
@@ -382,50 +544,24 @@ class AnalyticsController extends Controller
         return $attempts
             ->groupBy(fn ($attempt) => trim((string) ($attempt->quiz->topic ?? '')) ?: 'Uncategorized')
             ->map(function ($topicAttempts, $topic) {
-                $bestPerStudent = $topicAttempts
-                    ->groupBy('user_id')
-                    ->map(fn ($rows) => (int) $rows->max('score'));
-
-                $topPerformers = $topicAttempts
-                    ->groupBy('user_id')
-                    ->map(function ($userAttempts) {
-                        $user = $userAttempts->first()->user;
-                        $bestScore = (int) $userAttempts->max('score');
-
-                        return [
-                            'user' => $user,
-                            'total_score' => $bestScore,
-                            'total_attempts' => $userAttempts->count(),
-                            'average_score' => $bestScore,
-                            'university' => $user->university,
-                        ];
-                    })
-                    ->sortByDesc('total_score')
-                    ->take(5)
-                    ->values();
+                $stats = $this->buildTopicAnalytics($topicAttempts);
+                $students = $stats['students'];
 
                 return [
                     'topic' => $topic,
                     'total_quizzes' => $topicAttempts->pluck('quiz_id')->unique()->count(),
                     'total_attempts' => $topicAttempts->count(),
-                    'unique_students' => $topicAttempts->pluck('user_id')->unique()->count(),
-                    'average_score' => $bestPerStudent->isNotEmpty() ? round($bestPerStudent->avg(), 1) : 0,
-                    'highest_score' => (int) ($bestPerStudent->max() ?? 0),
-                    'top_performers' => $topPerformers,
-                    'quizzes' => $topicAttempts
-                        ->groupBy('quiz_id')
-                        ->map(function ($quizAttempts) {
-                            $quiz = $quizAttempts->first()->quiz;
-                            $bests = $quizAttempts->groupBy('user_id')->map(fn ($rows) => (int) $rows->max('score'));
-
-                            return [
-                                'id' => $quiz->id,
-                                'title' => $quiz->title,
-                                'attempts' => $quizAttempts->count(),
-                                'average_score' => $bests->isNotEmpty() ? round($bests->avg(), 1) : 0,
-                            ];
-                        })
-                        ->values(),
+                    'unique_students' => $students->count(),
+                    'topic_max_points' => $stats['topic_max_points'],
+                    'average_score' => $students->isNotEmpty()
+                        ? round($students->avg('total_score'), 1)
+                        : 0,
+                    'average_percent' => $students->isNotEmpty()
+                        ? round($students->avg('score_percent'), 1)
+                        : 0,
+                    'highest_score' => (int) ($students->max('total_score') ?? 0),
+                    'top_performers' => $students->sortByDesc('total_score')->values(),
+                    'quizzes' => $stats['quizzes'],
                 ];
             })
             ->filter(fn (array $data) => $data['total_attempts'] > 0)
@@ -436,11 +572,13 @@ class AnalyticsController extends Controller
     private function getStudentTopicStrengths()
     {
         return $this->usersWithQuizAttempts()
-            ->with(['university', 'quizAttemptHistory.quiz'])
+            ->with(['university', 'quizAttemptHistory.quiz.questions'])
             ->get()
             ->map(function ($user) {
-                $attempts = $user->quizAttemptHistory->filter(
-                    fn ($a) => in_array($a->status, QuizAttemptHistory::SCORABLE_STATUSES, true)
+                $attempts = $this->enrichAttemptScores(
+                    $user->quizAttemptHistory->filter(
+                        fn ($a) => in_array($a->status, QuizAttemptHistory::SCORABLE_STATUSES, true)
+                    )
                 );
 
                 $topicPerformance = $attempts
@@ -448,41 +586,62 @@ class AnalyticsController extends Controller
                     ->map(function ($topicAttempts, $topic) {
                         $bestPerQuiz = $topicAttempts
                             ->groupBy('quiz_id')
-                            ->map(fn ($quizAttempts) => (int) $quizAttempts->max('score'));
+                            ->map(fn ($qRows) => $qRows->sortByDesc('effective_score')->first());
 
-                        $averageScore = $bestPerQuiz->isNotEmpty()
-                            ? round($bestPerQuiz->avg(), 1)
-                            : 0;
+                        $score = (int) $bestPerQuiz->sum(fn ($a) => (int) $a->effective_score);
+                        $maxPossible = (int) $bestPerQuiz->sum(fn ($a) => (int) ($a->max_points ?? 0));
+                        $percent = $maxPossible > 0
+                            ? round($score / $maxPossible * 100, 1)
+                            : 0.0;
 
                         return [
                             'topic' => $topic,
-                            'total_score' => (int) $topicAttempts->sum('score'),
-                            'total_attempts' => $topicAttempts->count(),
-                            'average_score' => $averageScore,
-                            'quizzes_taken' => $topicAttempts->pluck('quiz_id')->unique()->count(),
-                            'best_score' => (int) ($topicAttempts->max('score') ?? 0),
+                            'total_score' => $score,
+                            'max_possible' => $maxPossible,
+                            'score_percent' => $percent,
+                            'quizzes_taken' => $bestPerQuiz->count(),
+                            'grading_pending' => $bestPerQuiz->contains(fn ($a) => (bool) $a->grading_pending),
                         ];
                     })
-                    ->sortByDesc('average_score')
+                    ->sortByDesc('score_percent')
                     ->values();
 
-                // Find strongest topic
+                $bestPerQuiz = $attempts
+                    ->groupBy('quiz_id')
+                    ->map(fn ($rows) => $rows->sortByDesc('effective_score')->first());
+
+                $overallScore = (int) $bestPerQuiz->sum(fn ($a) => (int) $a->effective_score);
+                $overallMax = (int) $bestPerQuiz->sum(fn ($a) => (int) ($a->max_points ?? 0));
+                $overallPercent = $overallMax > 0
+                    ? round($overallScore / $overallMax * 100, 1)
+                    : 0.0;
+
                 $strongestTopic = $topicPerformance->first();
 
                 return [
                     'user' => $user,
                     'total_topics' => $topicPerformance->count(),
-                    'strongest_topic' => $strongestTopic ? $strongestTopic['topic'] : null,
-                    'strongest_topic_score' => $strongestTopic ? $strongestTopic['average_score'] : 0,
-                    'topic_performance' => $topicPerformance->values(),
-                    'university' => $user->university
+                    'quizzes_taken' => $bestPerQuiz->count(),
+                    'overall_score' => $overallScore,
+                    'overall_max_points' => $overallMax,
+                    'overall_percent' => $overallPercent,
+                    'overall_grading_pending' => $bestPerQuiz->contains(fn ($a) => (bool) $a->grading_pending),
+                    'strongest_topic' => $strongestTopic['topic'] ?? null,
+                    'strongest_topic_score' => (float) ($strongestTopic['score_percent'] ?? 0),
+                    'strongest_topic_points' => $strongestTopic
+                        ? (int) ($strongestTopic['total_score'] ?? 0)
+                        : 0,
+                    'strongest_topic_max' => $strongestTopic
+                        ? (int) ($strongestTopic['max_possible'] ?? 0)
+                        : 0,
+                    'strongest_topic_pending' => (bool) ($strongestTopic['grading_pending'] ?? false),
+                    'topic_performance' => $topicPerformance,
+                    'university' => $user->university,
                 ];
             })
-            ->filter(function($student) {
-                return $student['total_topics'] > 0;
-            })
-            ->sortByDesc('strongest_topic_score')
-            ->take(20);
+            ->filter(fn ($student) => $student['quizzes_taken'] > 0)
+            ->sortByDesc('overall_percent')
+            ->values();
     }
 
     public function getStudentDetails($userId)
@@ -545,52 +704,34 @@ class AnalyticsController extends Controller
             }, 'questions'])
             ->get();
 
-        $allAttempts = $quizzes->flatMap->attemptHistory;
-        $uniqueUsers = $allAttempts->pluck('user')->unique('id');
+        $allAttempts = $this->enrichAttemptScores($quizzes->flatMap->attemptHistory);
+        $topicStats = $this->buildTopicAnalytics($allAttempts);
 
         $performanceData = [
             'topic' => $topic,
             'total_quizzes' => $quizzes->count(),
             'total_attempts' => $allAttempts->count(),
-            'unique_students' => $uniqueUsers->count(),
-            'average_score' => $allAttempts->isNotEmpty() ? round($allAttempts->avg('score'), 1) : 0,
-            'highest_score' => (int) ($allAttempts->max('score') ?? 0),
-            'lowest_score' => (int) ($allAttempts->min('score') ?? 0),
-            'quizzes' => $quizzes->map(function ($quiz) {
-                $attempts = $quiz->attemptHistory;
-                return [
-                    'id' => $quiz->id,
-                    'title' => $quiz->title,
-                    'description' => $quiz->description,
-                    'total_questions' => $quiz->questions->count(),
-                    'total_points' => $quiz->questions->sum('points'),
-                    'attempts' => $attempts->count(),
-                    'average_score' => $attempts->isNotEmpty() ? round($attempts->avg('score'), 1) : 0,
-                    'highest_score' => (int) ($attempts->max('score') ?? 0),
-                    'completion_rate' => $attempts->count() > 0 ? 100 : 0,
-                ];
-            }),
-            'top_performers' => $allAttempts->groupBy('user_id')
-                ->map(function ($userAttempts) {
-                    $user = $userAttempts->first()->user;
-                    $totalScore = (int) $userAttempts->sum('score');
-                    $totalAttempts = $userAttempts->count();
-                    $averageScore = $totalAttempts > 0 ? round($totalScore / $totalAttempts, 1) : 0;
-                    $quizzesTaken = $userAttempts->pluck('quiz_id')->unique()->count();
+            'unique_students' => $topicStats['students']->count(),
+            'topic_max_points' => $topicStats['topic_max_points'],
+            'average_score' => $topicStats['students']->isNotEmpty()
+                ? round($topicStats['students']->avg('total_score'), 1)
+                : 0,
+            'average_percent' => $topicStats['students']->isNotEmpty()
+                ? round($topicStats['students']->avg('score_percent'), 1)
+                : 0,
+            'highest_score' => (int) ($topicStats['students']->max('total_score') ?? 0),
+            'lowest_score' => (int) ($topicStats['students']->min('total_score') ?? 0),
+            'quizzes' => $topicStats['quizzes']->map(function ($quiz) use ($quizzes) {
+                $full = $quizzes->firstWhere('id', $quiz['id']);
 
-                    return [
-                        'user' => $user,
-                        'total_score' => $totalScore,
-                        'total_attempts' => $totalAttempts,
-                        'average_score' => $averageScore,
-                        'quizzes_taken' => $quizzesTaken,
-                        'best_score' => (int) ($userAttempts->max('score') ?? 0),
-                        'university' => $user->university,
-                    ];
-                })
-                ->sortByDesc('total_score')
-                ->take(10)
-                ->values(),
+                return array_merge($quiz, [
+                    'description' => $full?->description,
+                    'total_questions' => $full?->questions?->count() ?? 0,
+                    'total_points' => $quiz['max_points'],
+                    'completion_rate' => $quiz['attempts'] > 0 ? 100 : 0,
+                ]);
+            })->values(),
+            'top_performers' => $topicStats['students']->sortByDesc('total_score')->values(),
             'university_breakdown' => $this->getUniversityBreakdown($allAttempts),
             'score_distribution' => $this->getScoreDistribution($allAttempts),
         ];
@@ -646,7 +787,12 @@ class AnalyticsController extends Controller
                 $attempt->loadMissing('quiz.questions');
                 $maxPoints = (int) ($attempt->quiz?->questions?->sum('points') ?? 0);
             }
-            $score = (int) ($attempt->score ?? $attempt->points_earned ?? 0);
+            $score = (int) ($attempt->effective_score ?? $attempt->score ?? 0);
+            if (! isset($attempt->effective_score) && $attempt instanceof QuizAttemptHistory) {
+                $score = $this->effectiveHistoryScore($attempt);
+                $attempt->loadMissing('quiz.questions');
+                $maxPoints = (int) ($attempt->quiz?->questions?->sum('points') ?? $maxPoints);
+            }
             $percentage = $maxPoints > 0 ? ($score / $maxPoints) * 100 : 0;
 
             if ($percentage <= 20) {
@@ -675,8 +821,8 @@ class AnalyticsController extends Controller
                     'attempts' => $universityAttempts->count(),
                     'total_attempts' => $universityAttempts->count(),
                     'total_students' => $universityAttempts->unique('user_id')->count(),
-                    'average_score' => round($universityAttempts->avg('score'), 1),
-                    'highest_score' => (int) ($universityAttempts->max('score') ?? 0),
+                    'average_score' => round($universityAttempts->avg(fn ($a) => (int) ($a->effective_score ?? $a->score ?? 0)), 1),
+                    'highest_score' => (int) ($universityAttempts->max(fn ($a) => (int) ($a->effective_score ?? $a->score ?? 0)) ?? 0),
                 ];
             })
             ->sortByDesc('average_score')
@@ -692,17 +838,21 @@ class AnalyticsController extends Controller
         try {
             $students = $this->usersWithQuizAttempts()
                 ->with(['university', 'quizAttemptHistory' => function ($query) {
-                    $this->scorableAttemptHistory($query);
-                }])
-                ->withSum(['quizAttemptHistory' => function ($query) {
-                    $this->scorableAttemptHistory($query);
-                }], 'score')
-                ->withCount(['quizAttemptHistory' => function ($query) {
-                    $this->scorableAttemptHistory($query);
+                    $this->scorableAttemptHistory($query)->with('quiz.questions');
                 }])
                 ->get()
-                ->filter(fn ($user) => ($user->quiz_attempt_history_count ?? 0) > 0)
-                ->sortByDesc('quiz_attempt_history_sum_score')
+                ->map(function ($user) {
+                    $attempts = $this->enrichAttemptScores($user->quizAttemptHistory);
+                    $user->setAttribute('analytics_total_score', (int) $attempts->sum('effective_score'));
+                    $user->setAttribute('analytics_attempt_count', $attempts->count());
+                    $user->setAttribute('analytics_avg_percent', $attempts->isNotEmpty()
+                        ? round($attempts->avg('score_percent'), 1)
+                        : 0);
+
+                    return $user;
+                })
+                ->filter(fn ($user) => ($user->analytics_attempt_count ?? 0) > 0)
+                ->sortByDesc('analytics_total_score')
                 ->values();
 
             // Get quiz rank history and last arrow from cache
@@ -780,9 +930,9 @@ class AnalyticsController extends Controller
                 // Store last arrow direction
                 $quizLastArrows[$studentId] = $arrowDirection;
 
-                $totalScore = $user->quiz_attempt_history_sum_score ?? 0;
-                $totalAttempts = $user->quiz_attempt_history_count ?? 0;
-                $averageScore = $totalAttempts > 0 ? round($totalScore / $totalAttempts, 2) : 0;
+                $totalScore = (int) ($user->analytics_total_score ?? 0);
+                $totalAttempts = (int) ($user->analytics_attempt_count ?? 0);
+                $averageScore = (float) ($user->analytics_avg_percent ?? 0);
 
                 return [
                     'rank' => $currentRank,

@@ -47,4 +47,19 @@ class Question extends Model
     {
         return $this->answers()->where('is_correct', true)->get();
     }
+
+    /** Single reference answer for manual grading (text questions only; not shown to takers). */
+    public function referenceAnswer(): ?string
+    {
+        if ($this->question_type !== 'text' || ! filled($this->correct_answer)) {
+            return null;
+        }
+
+        return (string) $this->correct_answer;
+    }
+
+    public function hasReferenceAnswer(): bool
+    {
+        return $this->referenceAnswer() !== null;
+    }
 }

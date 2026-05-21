@@ -92,11 +92,9 @@
                     </div>
                     <div class="ml-5 w-0 flex-1">
                         <dl>
-                            <dt class="text-sm font-medium text-gray-500 truncate">Avg Score per Attempt</dt>
-                            <dd class="text-lg font-medium text-gray-900">{{ $studentStats['average_per_attempt'] ?? 0 }} <span class="text-sm font-normal text-gray-500">pts</span></dd>
-                            @if(($studentStats['total_quiz_attempts'] ?? 0) > 0 && ($studentStats['average_per_attempt'] ?? 0) == 0)
-                                <dd class="text-xs text-amber-600 mt-0.5">{{ $studentStats['total_quiz_attempts'] }} attempt(s); grading may be pending</dd>
-                            @endif
+                            <dt class="text-sm font-medium text-gray-500 truncate">Avg Score %</dt>
+                            <dd class="text-lg font-medium text-gray-900">{{ $studentStats['average_percent_per_attempt'] ?? 0 }}<span class="text-sm font-normal text-gray-500">%</span></dd>
+                            <dd class="text-xs text-gray-500 mt-0.5">{{ $studentStats['average_per_attempt'] ?? 0 }} pts per attempt (after grading)</dd>
                         </dl>
                     </div>
                 </div>
@@ -144,31 +142,71 @@
                                 </span>
                             </div>
 
-                            <div class="grid grid-cols-2 gap-4 mb-4">
-                                <div class="text-center">
-                                    <div class="text-2xl font-bold text-gray-900">{{ $topicData['unique_students'] }}</div>
-                                    <div class="text-sm text-gray-500">Students</div>
+                            <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4 text-center">
+                                <div class="rounded-lg bg-gray-50 px-2 py-2">
+                                    <div class="text-lg font-bold text-gray-900">{{ $topicData['unique_students'] }}</div>
+                                    <div class="text-xs text-gray-500">Takers</div>
                                 </div>
-                                <div class="text-center">
-                                    <div class="text-2xl font-bold text-gray-900">{{ $topicData['average_score'] }}</div>
-                                    <div class="text-sm text-gray-500">Avg Score</div>
+                                <div class="rounded-lg bg-gray-50 px-2 py-2">
+                                    <div class="text-lg font-bold text-gray-900">{{ number_format($topicData['average_percent'] ?? 0, 1) }}%</div>
+                                    <div class="text-xs text-gray-500">Avg %</div>
+                                </div>
+                                <div class="rounded-lg bg-gray-50 px-2 py-2 col-span-2 sm:col-span-1">
+                                    <div class="text-sm font-bold text-gray-900 tabular-nums">
+                                        {{ number_format($topicData['average_score'], 1) }} / {{ $topicData['topic_max_points'] ?? 0 }} pts
+                                    </div>
+                                    <div class="text-xs text-gray-500">Avg best (all quizzes)</div>
+                                </div>
+                                <div class="rounded-lg bg-gray-50 px-2 py-2">
+                                    <div class="text-lg font-bold text-gray-900">{{ $topicData['highest_score'] }}</div>
+                                    <div class="text-xs text-gray-500">Top pts</div>
                                 </div>
                             </div>
 
-                            @if($topicData['top_performers']->count() > 0)
-                                <div class="space-y-2">
-                                    <h5 class="text-sm font-medium text-gray-700">Top Performers:</h5>
-                                    @foreach($topicData['top_performers']->take(3) as $index => $performer)
-                                        <div class="flex items-center justify-between text-sm">
-                                            <div class="flex items-center">
-                                                <span class="inline-flex items-center justify-center w-6 h-6 rounded-full text-xs font-medium {{ $index === 0 ? 'bg-yellow-100 text-yellow-800' : ($index === 1 ? 'bg-gray-100 text-gray-800' : 'bg-orange-100 text-orange-800') }}">
-                                                    {{ $index + 1 }}
-                                                </span>
-                                                <span class="ml-2 font-medium">{{ $performer['user']->name }}</span>
-                                            </div>
-                                            <span class="text-gray-600">{{ $performer['total_score'] }} pts</span>
+                            @if($topicData['quizzes']->count() > 0)
+                                <div class="mb-4 space-y-2" onclick="event.stopPropagation()">
+                                    <h5 class="text-sm font-medium text-gray-700">Quizzes in this topic</h5>
+                                    @foreach($topicData['quizzes'] as $topicQuiz)
+                                        <div class="rounded-lg border border-gray-100 bg-slate-50/80 px-3 py-2 text-xs text-gray-600">
+                                            <p class="font-semibold text-gray-900 text-sm">{{ $topicQuiz['title'] }}</p>
+                                            <p class="mt-0.5 tabular-nums">
+                                                {{ $topicQuiz['student_count'] }} takers · {{ $topicQuiz['attempts'] }} attempts ·
+                                                Avg best: {{ number_format($topicQuiz['average_score'], 1) }} / {{ $topicQuiz['max_points'] }} pts
+                                                ({{ number_format($topicQuiz['average_percent'], 0) }}%) · Top: {{ $topicQuiz['highest_score'] }} pts
+                                            </p>
                                         </div>
                                     @endforeach
+                                </div>
+                            @endif
+
+                            @if($topicData['top_performers']->count() > 0)
+                                <div class="space-y-2" onclick="event.stopPropagation()">
+                                    <h5 class="text-sm font-medium text-gray-700">All takers ({{ $topicData['top_performers']->count() }})</h5>
+                                    <div class="max-h-40 overflow-y-auto space-y-1.5 pr-1">
+                                        @foreach($topicData['top_performers'] as $index => $performer)
+                                            @php
+                                                $tBadge = \App\Http\Controllers\Admin\AnalyticsController::scoreBadgeClass(
+                                                    (float) ($performer['score_percent'] ?? 0),
+                                                    (bool) ($performer['grading_pending'] ?? false)
+                                                );
+                                            @endphp
+                                            <div class="flex items-center justify-between text-sm gap-2">
+                                                <div class="flex items-center min-w-0">
+                                                    <span class="inline-flex items-center justify-center w-6 h-6 shrink-0 rounded-full text-xs font-medium {{ $index === 0 ? 'bg-yellow-100 text-yellow-800' : ($index === 1 ? 'bg-gray-100 text-gray-800' : ($index === 2 ? 'bg-orange-100 text-orange-800' : 'bg-slate-100 text-slate-700')) }}">
+                                                        {{ $index + 1 }}
+                                                    </span>
+                                                    <span class="ml-2 font-medium truncate">{{ $performer['user']->name }}</span>
+                                                </div>
+                                                <span class="shrink-0 inline-flex rounded-full px-2 py-0.5 text-xs font-medium tabular-nums {{ $tBadge }}">
+                                                    @if($performer['grading_pending'] ?? false)
+                                                        Pending
+                                                    @else
+                                                        {{ $performer['total_score'] }}/{{ $performer['max_possible'] }} ({{ number_format($performer['score_percent'], 0) }}%)
+                                                    @endif
+                                                </span>
+                                            </div>
+                                        @endforeach
+                                    </div>
                                 </div>
                             @endif
                         </div>
@@ -193,27 +231,39 @@
                 🎯 Student Strengths by Topic
             </h3>
             <p class="text-sm text-gray-500 mb-6">
-                Students ranked by their strongest topic performance
+                Every taker with scorable quiz attempts, ranked by overall best score (% of points earned).
                 <span class="ml-2 inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
-                    {{ $studentTopicStrengths->count() }} students
+                    {{ $studentTopicStrengths->count() }} takers
                 </span>
             </p>
 
             @if($studentTopicStrengths->count() > 0)
                 <div class="relative">
-                    <div class="max-h-64 overflow-y-auto border border-gray-200 rounded-lg scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100 hover:scrollbar-thumb-gray-400">
+                    <div class="max-h-[28rem] overflow-y-auto border border-gray-200 rounded-lg scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100 hover:scrollbar-thumb-gray-400">
                         <table class="min-w-full divide-y divide-gray-200">
                         <thead class="bg-gray-50 sticky top-0 z-10">
                             <tr>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Student</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Strongest Topic</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Topic Score</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Topics Covered</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">University</th>
+                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Taker</th>
+                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Overall score</th>
+                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Quizzes</th>
+                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Strongest topic</th>
+                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Best in topic</th>
+                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Topics</th>
+                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">University</th>
                             </tr>
                         </thead>
                         <tbody class="bg-white divide-y divide-gray-200">
                             @foreach($studentTopicStrengths as $student)
+                                @php
+                                    $oBadge = \App\Http\Controllers\Admin\AnalyticsController::scoreBadgeClass(
+                                        (float) $student['overall_percent'],
+                                        (bool) ($student['overall_grading_pending'] ?? false)
+                                    );
+                                    $sBadge = \App\Http\Controllers\Admin\AnalyticsController::scoreBadgeClass(
+                                        (float) $student['strongest_topic_score'],
+                                        (bool) ($student['strongest_topic_pending'] ?? false)
+                                    );
+                                @endphp
                                 <tr class="hover:bg-gray-50">
                                     <td class="px-6 py-4 whitespace-nowrap">
                                         <div class="flex items-center">
@@ -232,18 +282,36 @@
                                             </div>
                                         </div>
                                     </td>
-                                    <td class="px-6 py-4 whitespace-nowrap">
-                                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                    <td class="px-4 py-4 whitespace-nowrap">
+                                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium tabular-nums {{ $oBadge }}">
+                                            @if($student['overall_grading_pending'] ?? false)
+                                                Pending · {{ $student['overall_score'] }}/{{ $student['overall_max_points'] }} pts
+                                            @else
+                                                {{ $student['overall_score'] }}/{{ $student['overall_max_points'] }} pts ({{ number_format($student['overall_percent'], 1) }}%)
+                                            @endif
+                                        </span>
+                                    </td>
+                                    <td class="px-4 py-4 whitespace-nowrap text-sm text-gray-700 tabular-nums">
+                                        {{ $student['quizzes_taken'] }} taken
+                                    </td>
+                                    <td class="px-4 py-4 whitespace-nowrap">
+                                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800">
                                             {{ $student['strongest_topic'] ?? 'N/A' }}
                                         </span>
                                     </td>
-                                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                                        {{ $student['strongest_topic_score'] }} avg
+                                    <td class="px-4 py-4 whitespace-nowrap">
+                                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium tabular-nums {{ $sBadge }}">
+                                            @if($student['strongest_topic_pending'] ?? false)
+                                                Pending
+                                            @else
+                                                {{ $student['strongest_topic_points'] }}/{{ $student['strongest_topic_max'] }} ({{ number_format($student['strongest_topic_score'], 1) }}%)
+                                            @endif
+                                        </span>
                                     </td>
-                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                        {{ $student['total_topics'] }} topics
+                                    <td class="px-4 py-4 whitespace-nowrap text-sm text-gray-500">
+                                        {{ $student['total_topics'] }}
                                     </td>
-                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                    <td class="px-4 py-4 whitespace-nowrap text-sm text-gray-900">
                                         {{ $student['university']->name ?? 'N/A' }}
                                     </td>
                                 </tr>
@@ -253,26 +321,14 @@
                     </div>
 
                     <!-- Scroll indicator -->
-                    @if($studentTopicStrengths->count() > 3)
+                    @if($studentTopicStrengths->count() > 8)
                         <div class="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-white to-transparent h-8 pointer-events-none"></div>
-                        <div class="text-center mt-2">
-                            <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                                <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 14l-7 7m0 0l-7-7m7 7V3"></path>
-                                </svg>
-                                Scroll down to see more students ({{ $studentTopicStrengths->count() }} total)
-                            </span>
-                        </div>
-                    @else
-                        <div class="text-center mt-2">
-                            <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                                <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                                </svg>
-                                Showing all {{ $studentTopicStrengths->count() }} students
-                            </span>
-                        </div>
                     @endif
+                    <div class="text-center mt-2">
+                        <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                            Showing all {{ $studentTopicStrengths->count() }} takers — scroll for more
+                        </span>
+                    </div>
                 </div>
             @else
                 <div class="text-center py-8">
@@ -310,7 +366,7 @@
                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">University</th>
                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total Score</th>
                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Quizzes Taken</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Average Score</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Avg %</th>
                             </tr>
                         </thead>
                         <tbody class="bg-white divide-y divide-gray-200">
@@ -348,7 +404,7 @@
                                         {{ $performer['total_attempts'] }} quizzes
                                     </td>
                                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                        {{ $performer['average_score'] }} avg
+                                        {{ number_format($performer['average_score'], 1) }}%
                                     </td>
                                 </tr>
                             @endforeach
@@ -491,7 +547,7 @@
                             <th class="px-3 sm:px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">School / University</th>
                             <th class="px-3 sm:px-6 py-3 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider">Total Score</th>
                             <th class="px-3 sm:px-6 py-3 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider">Attempts</th>
-                            <th class="px-3 sm:px-6 py-3 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider">Average Score</th>
+                            <th class="px-3 sm:px-6 py-3 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider">Avg %</th>
                         </tr>
                     </thead>
                     <tbody class="bg-white divide-y divide-gray-100">
@@ -527,7 +583,7 @@
                                     {{ $ranking['total_attempts'] }}
                                 </td>
                                 <td class="px-3 sm:px-6 py-3 whitespace-nowrap text-xs sm:text-sm text-right text-gray-700">
-                                    {{ number_format($ranking['average_score'], 2) }}
+                                    {{ number_format($ranking['average_score'], 1) }}%
                                 </td>
                             </tr>
                         @endforeach
@@ -542,7 +598,7 @@
     <div class="bg-white shadow rounded-lg">
         <div class="px-4 py-5 sm:p-6">
             <h3 class="text-lg leading-6 font-medium text-gray-900 mb-4">Top Performers by Quiz</h3>
-            <p class="text-sm text-gray-500 mb-6">One row per student per quiz (their best score). Retakes are not listed separately.</p>
+            <p class="text-sm text-gray-500 mb-6">Every taker per quiz (best attempt only), scored as points earned / quiz item points.</p>
 
             @if($topPerformersByQuiz->count() > 0)
                 <div class="space-y-6">
@@ -553,9 +609,9 @@
                                     <h4 class="text-lg font-medium text-gray-900">{{ $quizData['quiz']->title }}</h4>
                                     <p class="text-sm text-gray-500">{{ $quizData['quiz']->description }}</p>
                                     <div class="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-sm text-gray-600">
-                                        <span>{{ $quizData['student_count'] }} students</span>
+                                        <span>{{ $quizData['student_count'] }} takers</span>
                                         <span>{{ $quizData['total_attempts'] }} attempts</span>
-                                        <span>Avg best: {{ number_format($quizData['average_score'], 1) }} / {{ $quizData['max_points'] ?? 0 }} pts</span>
+                                        <span class="tabular-nums">Avg best: {{ number_format($quizData['average_score'], 1) }} / {{ $quizData['max_points'] ?? 0 }} pts ({{ number_format($quizData['average_percent'] ?? 0, 1) }}%)</span>
                                         <span>Top: {{ $quizData['highest_score'] }} pts</span>
                                     </div>
                                 </div>
@@ -566,21 +622,22 @@
                             </div>
 
                             @if($quizData['top_attempts']->count() > 0)
-                                <div class="overflow-hidden">
+                                <h5 class="text-sm font-medium text-gray-700 mb-2">All takers ({{ $quizData['top_attempts']->count() }})</h5>
+                                <div class="max-h-64 overflow-y-auto border border-gray-200 rounded-lg scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
                                     <table class="min-w-full divide-y divide-gray-200">
-                                        <thead class="bg-gray-50">
+                                        <thead class="bg-gray-50 sticky top-0 z-10">
                                             <tr>
-                                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Rank</th>
-                                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Student</th>
-                                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">University</th>
-                                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Best Score</th>
-                                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Last Attempt</th>
+                                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Rank</th>
+                                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Taker</th>
+                                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">University</th>
+                                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Score</th>
+                                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Last Attempt</th>
                                             </tr>
                                         </thead>
                                         <tbody class="bg-white divide-y divide-gray-200">
                                             @foreach($quizData['top_attempts'] as $index => $attempt)
-                                                <tr class="{{ $index < 3 ? 'bg-yellow-50' : '' }}">
-                                                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                                                <tr class="hover:bg-gray-50 {{ $index < 3 ? 'bg-yellow-50/50' : '' }}">
+                                                    <td class="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900">
                                                         @if($index === 0)
                                                             <span class="text-yellow-600">🥇 1st</span>
                                                         @elseif($index === 1)
@@ -591,7 +648,7 @@
                                                             #{{ $index + 1 }}
                                                         @endif
                                                     </td>
-                                                    <td class="px-6 py-4 whitespace-nowrap">
+                                                    <td class="px-4 py-3 whitespace-nowrap">
                                                         <div class="flex items-center">
                                                             <div class="flex-shrink-0 h-8 w-8">
                                                                 @if($attempt->user->profile_picture)
@@ -608,15 +665,26 @@
                                                             </div>
                                                         </div>
                                                     </td>
-                                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                                    <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
                                                         {{ $attempt->user->university->name ?? 'N/A' }}
                                                     </td>
-                                                    <td class="px-6 py-4 whitespace-nowrap">
-                                                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium {{ $attempt->score >= $quizData['highest_score'] * 0.9 ? 'bg-green-100 text-green-800' : ($attempt->score >= $quizData['highest_score'] * 0.7 ? 'bg-yellow-100 text-yellow-800' : 'bg-red-100 text-red-800') }}">
-                                                            {{ $attempt->score }} pts
+                                                    <td class="px-4 py-3 whitespace-nowrap">
+                                                        @php
+                                                            $displayScore = (int) ($attempt->effective_score ?? $attempt->score);
+                                                            $maxPts = (int) ($attempt->max_points ?? $quizData['max_points'] ?? 0);
+                                                            $scorePct = (float) ($attempt->score_percent ?? ($maxPts > 0 ? round($displayScore / $maxPts * 100, 1) : 0));
+                                                            $pendingGrade = (bool) ($attempt->grading_pending ?? false);
+                                                            $badgeClass = \App\Http\Controllers\Admin\AnalyticsController::scoreBadgeClass($scorePct, $pendingGrade);
+                                                        @endphp
+                                                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium tabular-nums {{ $badgeClass }}">
+                                                            @if($pendingGrade)
+                                                                Pending · {{ $displayScore }}/{{ $maxPts }} pts
+                                                            @else
+                                                                {{ $displayScore }}/{{ $maxPts }} pts ({{ number_format($scorePct, 0) }}%)
+                                                            @endif
                                                         </span>
                                                     </td>
-                                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                                    <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500">
                                                         {{ $attempt->completed_at ? \Carbon\Carbon::parse($attempt->completed_at)->format('M j, Y g:i A') : 'N/A' }}
                                                     </td>
                                                 </tr>
@@ -624,6 +692,9 @@
                                         </tbody>
                                     </table>
                                 </div>
+                                @if($quizData['top_attempts']->count() > 6)
+                                    <p class="text-xs text-center text-gray-500 mt-2">Scroll to see all {{ $quizData['top_attempts']->count() }} takers</p>
+                                @endif
                             @else
                                 <div class="text-center py-8">
                                     <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -691,12 +762,27 @@
                                         {{ $score['quiz']->title }}
                                     </td>
                                     <td class="px-6 py-4 whitespace-nowrap">
-                                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium {{ $score['percentage'] >= 90 ? 'bg-green-100 text-green-800' : ($score['percentage'] >= 70 ? 'bg-yellow-100 text-yellow-800' : 'bg-red-100 text-red-800') }}">
-                                            {{ $score['attempt']->score }} pts
+                                        @php
+                                            $recentScore = (int) ($score['attempt']->effective_score ?? $score['attempt']->score);
+                                            $recentBadge = \App\Http\Controllers\Admin\AnalyticsController::scoreBadgeClass(
+                                                (float) $score['percentage'],
+                                                (bool) ($score['grading_pending'] ?? false)
+                                            );
+                                        @endphp
+                                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium {{ $recentBadge }}">
+                                            @if($score['grading_pending'] ?? false)
+                                                Pending · {{ $recentScore }} pts
+                                            @else
+                                                {{ $recentScore }} pts
+                                            @endif
                                         </span>
                                     </td>
                                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                        {{ $score['percentage'] }}%
+                                        @if($score['grading_pending'] ?? false)
+                                            <span class="text-amber-600">Awaiting grading</span>
+                                        @else
+                                            {{ $score['percentage'] }}%
+                                        @endif
                                     </td>
                                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                                         {{ $score['university']->name ?? 'N/A' }}
@@ -780,6 +866,28 @@ function showQuizDetails(quizId) {
     fetch(`/admin/analytics/quiz/${quizId}`)
         .then(response => response.json())
         .then(data => {
+            const maxPts = data.max_points ?? 0;
+            const avgPct = data.average_percent != null ? Number(data.average_percent).toFixed(1) : '0';
+
+            function quizScoreBadgeClass(percent, pending) {
+                if (pending) return 'bg-amber-100 text-amber-800';
+                if (percent >= 90) return 'bg-green-100 text-green-800';
+                if (percent >= 70) return 'bg-yellow-100 text-yellow-800';
+                return 'bg-red-100 text-red-800';
+            }
+
+            function formatTakerScore(attempt) {
+                const score = attempt.effective_score ?? attempt.score ?? 0;
+                const max = attempt.max_points ?? maxPts;
+                const pct = attempt.score_percent ?? (max > 0 ? Math.round(score / max * 100) : 0);
+                const pending = attempt.grading_pending ?? false;
+                const badge = quizScoreBadgeClass(pct, pending);
+                const label = pending
+                    ? `Pending · ${score}/${max} pts`
+                    : `${score}/${max} pts (${Number(pct).toFixed(0)}%)`;
+                return `<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium tabular-nums ${badge}">${label}</span>`;
+            }
+
             content.innerHTML = `
                 <div class="space-y-6">
                     <div class="bg-gray-50 p-4 rounded-lg">
@@ -787,24 +895,24 @@ function showQuizDetails(quizId) {
                         <p class="text-sm text-gray-600 mt-1">${data.quiz.description || 'No description'}</p>
                         <div class="mt-3 grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
                             <div>
-                                <span class="font-medium text-gray-700">Students:</span>
+                                <span class="font-medium text-gray-700">Takers:</span>
                                 <span class="ml-1 text-gray-900">${data.student_count ?? 0}</span>
                             </div>
                             <div>
                                 <span class="font-medium text-gray-700">Attempts:</span>
                                 <span class="ml-1 text-gray-900">${data.total_attempts}</span>
                             </div>
-                            <div>
-                                <span class="font-medium text-gray-700">Avg Best Score:</span>
-                                <span class="ml-1 text-gray-900">${data.average_score} pts</span>
+                            <div class="col-span-2">
+                                <span class="font-medium text-gray-700">Avg best:</span>
+                                <span class="ml-1 text-gray-900 tabular-nums">${Number(data.average_score).toFixed(1)} / ${maxPts} pts (${avgPct}%)</span>
                             </div>
                             <div>
-                                <span class="font-medium text-gray-700">Highest Score:</span>
-                                <span class="ml-1 text-gray-900">${data.highest_score} pts</span>
+                                <span class="font-medium text-gray-700">Top score:</span>
+                                <span class="ml-1 text-gray-900 tabular-nums">${data.highest_score} / ${maxPts} pts</span>
                             </div>
                             <div>
-                                <span class="font-medium text-gray-700">Completion Rate:</span>
-                                <span class="ml-1 text-gray-900">${data.completion_rate}%</span>
+                                <span class="font-medium text-gray-700">Lowest:</span>
+                                <span class="ml-1 text-gray-900 tabular-nums">${data.lowest_score} pts</span>
                             </div>
                         </div>
                     </div>
@@ -836,39 +944,41 @@ function showQuizDetails(quizId) {
                     </div>
 
                     <div>
-                        <h5 class="text-md font-medium text-gray-900 mb-3">Top Performers</h5>
-                        <div class="overflow-hidden">
+                        <h5 class="text-md font-medium text-gray-900 mb-3">All takers (${data.top_performers.length})</h5>
+                        ${data.top_performers.length > 0 ? `
+                        <div class="max-h-72 overflow-y-auto border border-gray-200 rounded-lg">
                             <table class="min-w-full divide-y divide-gray-200">
-                                <thead class="bg-gray-50">
+                                <thead class="bg-gray-50 sticky top-0 z-10">
                                     <tr>
-                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Student</th>
-                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">University</th>
-                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Score</th>
-                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
+                                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">#</th>
+                                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Taker</th>
+                                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">University</th>
+                                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Score</th>
+                                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
                                     </tr>
                                 </thead>
                                 <tbody class="bg-white divide-y divide-gray-200">
-                                    ${data.top_performers.map(attempt => `
-                                        <tr>
-                                            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                                    ${data.top_performers.map((attempt, index) => `
+                                        <tr class="hover:bg-gray-50">
+                                            <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500">${index + 1}</td>
+                                            <td class="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900">
                                                 ${attempt.user.name}
                                             </td>
-                                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                            <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
                                                 ${attempt.user.university ? attempt.user.university.name : 'N/A'}
                                             </td>
-                                            <td class="px-6 py-4 whitespace-nowrap">
-                                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                                                    ${attempt.score} pts
-                                                </span>
+                                            <td class="px-4 py-3 whitespace-nowrap">
+                                                ${formatTakerScore(attempt)}
                                             </td>
-                                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                                ${new Date(attempt.completed_at).toLocaleDateString()}
+                                            <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500">
+                                                ${attempt.completed_at ? new Date(attempt.completed_at).toLocaleDateString() : 'N/A'}
                                             </td>
                                         </tr>
                                     `).join('')}
                                 </tbody>
                             </table>
                         </div>
+                        ` : '<p class="text-sm text-gray-500">No takers yet.</p>'}
                     </div>
                 </div>
             `;
@@ -915,17 +1025,20 @@ function openTopicDetailsModal(topic) {
     fetch(`/admin/analytics/topic/${encodeURIComponent(topic)}`)
         .then(response => response.json())
         .then(data => {
+            const avgPct = data.average_percent != null ? data.average_percent.toFixed(1) : '0';
+            const topicMax = data.topic_max_points != null ? data.topic_max_points : 0;
+
             let content = `
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                     <div>
                         <p class="text-sm text-gray-500">Total Quizzes: <span class="font-medium text-gray-900">${data.total_quizzes}</span></p>
                         <p class="text-sm text-gray-500">Total Attempts: <span class="font-medium text-gray-900">${data.total_attempts}</span></p>
-                        <p class="text-sm text-gray-500">Unique Students: <span class="font-medium text-gray-900">${data.unique_students}</span></p>
-                        <p class="text-sm text-gray-500">Average Score: <span class="font-medium text-gray-900">${data.average_score.toFixed(2)} pts</span></p>
+                        <p class="text-sm text-gray-500">Takers: <span class="font-medium text-gray-900">${data.unique_students}</span></p>
+                        <p class="text-sm text-gray-500">Avg best: <span class="font-medium text-gray-900">${data.average_score.toFixed(1)} / ${topicMax} pts (${avgPct}%)</span></p>
                     </div>
                     <div>
-                        <p class="text-sm text-gray-500">Highest Score: <span class="font-medium text-gray-900">${data.highest_score} pts</span></p>
-                        <p class="text-sm text-gray-500">Lowest Score: <span class="font-medium text-gray-900">${data.lowest_score} pts</span></p>
+                        <p class="text-sm text-gray-500">Top score: <span class="font-medium text-gray-900">${data.highest_score} pts</span></p>
+                        <p class="text-sm text-gray-500">Lowest score: <span class="font-medium text-gray-900">${data.lowest_score} pts</span></p>
                     </div>
                 </div>
 
@@ -933,30 +1046,34 @@ function openTopicDetailsModal(topic) {
                 ${data.quizzes.length > 0 ? `
                     <ul class="divide-y divide-gray-200">
                         ${data.quizzes.map(quiz => `
-                            <li class="py-2 flex items-center justify-between text-sm text-gray-700">
-                                <span>${quiz.title} (${quiz.total_questions} questions, ${quiz.total_points} pts)</span>
-                                <span>Avg: ${quiz.average_score.toFixed(2)} pts (${quiz.attempts} attempts)</span>
+                            <li class="py-2 text-sm text-gray-700">
+                                <p class="font-medium text-gray-900">${quiz.title}</p>
+                                <p class="text-xs text-gray-500 mt-0.5">
+                                    ${quiz.student_count ?? 0} takers · ${quiz.attempts} attempts ·
+                                    Avg best: ${Number(quiz.average_score).toFixed(1)} / ${quiz.max_points ?? quiz.total_points} pts
+                                    (${Number(quiz.average_percent ?? 0).toFixed(0)}%) · Top: ${quiz.highest_score} pts
+                                </p>
                             </li>
                         `).join('')}
                     </ul>
                 ` : '<p class="text-sm text-gray-500">No quizzes found for this topic.</p>'}
 
-                <h4 class="font-medium text-gray-700 mb-2 mt-4">Top Performers in ${topic}:</h4>
+                <h4 class="font-medium text-gray-700 mb-2 mt-4">All takers in ${topic} (${data.top_performers.length}):</h4>
                 ${data.top_performers.length > 0 ? `
-                    <ul class="divide-y divide-gray-200">
+                    <ul class="divide-y divide-gray-200 max-h-64 overflow-y-auto">
                         ${data.top_performers.map((performer, index) => `
-                            <li class="py-2 flex items-center justify-between">
-                                <div class="flex items-center">
-                                    <span class="inline-flex items-center justify-center w-6 h-6 rounded-full text-xs font-medium ${index === 0 ? 'bg-yellow-100 text-yellow-800' : (index === 1 ? 'bg-gray-100 text-gray-800' : 'bg-orange-100 text-orange-800')}">
+                            <li class="py-2 flex items-center justify-between gap-2">
+                                <div class="flex items-center min-w-0">
+                                    <span class="inline-flex items-center justify-center w-6 h-6 shrink-0 rounded-full text-xs font-medium ${index === 0 ? 'bg-yellow-100 text-yellow-800' : (index === 1 ? 'bg-gray-100 text-gray-800' : 'bg-slate-100 text-slate-700')}">
                                         ${index + 1}
                                     </span>
-                                    <div class="ml-3">
-                                        <p class="text-sm font-medium text-gray-900">${performer.user.name}</p>
-                                        <p class="text-xs text-gray-500">${performer.university ? performer.university.name : 'N/A'}</p>
+                                    <div class="ml-3 min-w-0">
+                                        <p class="text-sm font-medium text-gray-900 truncate">${performer.user.name}</p>
+                                        <p class="text-xs text-gray-500">${performer.university ? performer.university.name : 'N/A'} · ${performer.quizzes_taken} quiz(es)</p>
                                     </div>
                                 </div>
-                                <div class="text-sm text-gray-900">
-                                    ${performer.total_score} pts (${performer.average_score.toFixed(2)} avg)
+                                <div class="text-sm text-gray-900 shrink-0 tabular-nums">
+                                    ${performer.grading_pending ? 'Pending' : `${performer.total_score}/${performer.max_possible} pts (${Number(performer.score_percent).toFixed(0)}%)`}
                                 </div>
                             </li>
                         `).join('')}
