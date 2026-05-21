@@ -38,7 +38,7 @@
             </div>
 
             <div>
-                <p class="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-2">Student answer</p>
+                <p class="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-2">Taker answer</p>
                 <p class="text-sm text-gray-900 leading-relaxed rounded-lg bg-sky-50 border border-sky-200 px-4 py-3 whitespace-pre-wrap">{{ $attempt->user_answer }}</p>
             </div>
 
@@ -99,7 +99,7 @@
                               id="feedback_{{ $attempt->id }}"
                               rows="2"
                               class="mt-2 w-full px-3 py-2.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white"
-                              placeholder="Optional note for the student…"></textarea>
+                              placeholder="Optional note for the taker…"></textarea>
                 </div>
                 <div class="mt-5 flex justify-end">
                     <button type="submit"

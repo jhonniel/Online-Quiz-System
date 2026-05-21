@@ -14,7 +14,9 @@
         ];
     })->values();
     $mgStudentsForSelected = $selectedQuizGroup
-        ? $selectedQuizGroup['students']->map(function ($g) {
+        ? $selectedQuizGroup['students']
+            ->filter(fn ($g) => ($g['pending_count'] ?? 0) > 0)
+            ->map(function ($g) {
             $name = $g['user']->name ?? 'Unknown';
             $latest = $g['latest_attempt_at'] ?? null;
 
@@ -85,7 +87,7 @@
                     <div class="flex items-center justify-between gap-3">
                         <div class="min-w-0 flex-1">
                             <p class="text-sm font-semibold truncate" x-text="quiz.title"></p>
-                            <p class="text-xs truncate opacity-80" x-text="quiz.studentCount + (quiz.studentCount === 1 ? ' student' : ' students')"></p>
+                            <p class="text-xs truncate opacity-80" x-text="quiz.studentCount + (quiz.studentCount === 1 ? ' taker' : ' takers')"></p>
                         </div>
                         <span class="shrink-0 min-w-[1.75rem] text-center rounded-full px-2 py-0.5 text-xs font-bold tabular-nums"
                               :class="selectedQuizId === quiz.id ? 'bg-white/25 text-white' : 'bg-amber-100 text-amber-900'"
@@ -143,7 +145,7 @@
                             <svg class="h-7 w-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path></svg>
                         </div>
                         <h3 class="mt-4 text-lg font-semibold text-gray-900">Select a quiz</h3>
-                        <p class="mt-2 text-sm text-gray-500 leading-relaxed">Choose a quiz from the list to see which students need grading.</p>
+                        <p class="mt-2 text-sm text-gray-500 leading-relaxed">Choose a quiz from the list to see which takers need grading.</p>
                     </div>
                 </div>
             @elseif($selectedQuizGroup && !$selectedUserId)
@@ -156,11 +158,11 @@
                         <button type="button" @click="backToQuizzes()" class="text-sm font-medium text-blue-600 hover:text-blue-800">← Quizzes</button>
                         <span class="text-gray-300">/</span>
                         <span class="text-sm font-semibold text-gray-900">{{ $quizTitle }}</span>
-                        <span class="ml-auto text-xs font-medium text-blue-700 bg-blue-50 px-2.5 py-1 rounded-full">Step 2 — pick a student</span>
+                        <span class="ml-auto text-xs font-medium text-blue-700 bg-blue-50 px-2.5 py-1 rounded-full">Step 2 — pick a taker</span>
                     </nav>
 
                     <div class="shrink-0 flex flex-wrap items-center gap-2">
-                        <label class="text-xs font-medium text-gray-600">Sort students:</label>
+                        <label class="text-xs font-medium text-gray-600">Sort takers:</label>
                         <select x-model="studentSort"
                                 @change="saveStudentSort()"
                                 class="text-xs border border-gray-300 rounded-lg bg-white py-1.5 pl-2 pr-7 focus:ring-2 focus:ring-indigo-500">
@@ -174,6 +176,9 @@
                     </div>
 
                     <div class="flex-1 min-h-0 overflow-y-auto mg-sidebar-scroll pr-1 max-h-[min(60vh,36rem)] lg:max-h-[calc(100vh-18rem)]">
+                        <template x-if="sortedStudents.length === 0">
+                            <p class="text-sm text-gray-500 py-8 text-center">No pending answers for this quiz.</p>
+                        </template>
                         <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-3 pb-2">
                             <template x-for="student in sortedStudents" :key="student.id">
                                 <button type="button"

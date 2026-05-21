@@ -16,7 +16,9 @@
         ];
     })->values();
     $mgQuizzesForSelected = $selectedStudentGroup
-        ? $selectedStudentGroup['quizzes']->map(function ($g) {
+        ? $selectedStudentGroup['quizzes']
+            ->filter(fn ($g) => ($g['pending_count'] ?? 0) > 0)
+            ->map(function ($g) {
             $title = $g['quiz']->title ?? 'Quiz';
             $latest = $g['latest_attempt_at'] ?? null;
 
@@ -41,8 +43,8 @@
                     <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"></path></svg>
                 </span>
                 <div class="min-w-0 flex-1">
-                    <h2 class="text-sm font-bold text-gray-900">Students</h2>
-                    <p class="text-xs text-gray-500">Step 1 — select who to grade</p>
+                    <h2 class="text-sm font-bold text-gray-900">Takers</h2>
+                    <p class="text-xs text-gray-500">Step 1 — select a taker to grade</p>
                 </div>
                 <span class="shrink-0 text-xs font-medium text-gray-500 tabular-nums" x-text="filteredSortedStudents.length + ' shown'"></span>
             </div>
@@ -56,7 +58,7 @@
                 </svg>
             </div>
             <label class="mt-2 block">
-                <span class="sr-only">Sort students</span>
+                <span class="sr-only">Sort takers</span>
                 <select x-model="studentSort"
                         @change="saveStudentSort()"
                         class="w-full mt-1 text-xs border border-gray-300 rounded-lg bg-white py-2 pl-2 pr-8 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
@@ -70,10 +72,10 @@
             </label>
         </div>
 
-        <div class="mg-student-list-panel mg-sidebar-scroll" role="list" aria-label="Students pending manual grading">
+        <div class="mg-student-list-panel mg-sidebar-scroll" role="list" aria-label="Takers pending manual grading">
             <div class="p-3 space-y-2 min-h-0">
             <template x-if="filteredSortedStudents.length === 0">
-                <p class="text-center text-sm text-gray-500 py-8">No students match your search.</p>
+                <p class="text-center text-sm text-gray-500 py-8">No takers match your search.</p>
             </template>
             <template x-for="student in filteredSortedStudents" :key="student.id">
                 <button type="button"
@@ -89,7 +91,10 @@
                         <div class="min-w-0 flex-1">
                             <p class="text-sm font-semibold truncate" x-text="student.name"></p>
                             <p class="text-xs truncate opacity-80" x-text="student.email"></p>
-                            <p class="text-xs mt-0.5 opacity-70" x-text="student.quizCount + (student.quizCount === 1 ? ' quiz' : ' quizzes')"></p>
+                            <p class="text-xs mt-0.5 opacity-70">
+                                <span x-text="student.pending + ' to grade'"></span>
+                                <span x-show="student.pending === 0" class="text-green-600 font-medium"> · all graded</span>
+                            </p>
                         </div>
                         <span class="shrink-0 min-w-[1.75rem] text-center rounded-full px-2 py-0.5 text-xs font-bold tabular-nums"
                               :class="selectedUserId === student.id ? 'bg-white/25 text-white' : 'bg-amber-100 text-amber-900'"
@@ -117,7 +122,7 @@
                          data-user-id="{{ (int) $student->id }}"
                          data-quiz-id="{{ (int) $quiz->id }}">
                         <nav class="mg-grading-breadcrumb shrink-0 flex flex-wrap items-center gap-2 rounded-xl bg-white border border-gray-200 px-4 py-3 shadow-sm ring-1 ring-gray-900/5">
-                            <button type="button" @click="backToStudents()" class="text-sm font-medium text-gray-500 hover:text-indigo-600">Students</button>
+                            <button type="button" @click="backToStudents()" class="text-sm font-medium text-gray-500 hover:text-indigo-600">Takers</button>
                             <span class="text-gray-300">/</span>
                             <button type="button" @click="backToQuizzes()" class="text-sm font-medium text-indigo-600 hover:text-indigo-800">{{ $studentName }}</button>
                             <span class="text-gray-300">/</span>
@@ -146,8 +151,8 @@
                         <div class="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-indigo-100 text-indigo-600">
                             <svg class="h-7 w-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg>
                         </div>
-                        <h3 class="mt-4 text-lg font-semibold text-gray-900">Select a student</h3>
-                        <p class="mt-2 text-sm text-gray-500 leading-relaxed">Choose someone from the list on the left to see which quizzes need manual grading.</p>
+                        <h3 class="mt-4 text-lg font-semibold text-gray-900">Select a taker</h3>
+                        <p class="mt-2 text-sm text-gray-500 leading-relaxed">Choose a taker from the list on the left to see which quizzes need manual grading.</p>
                     </div>
                 </div>
             @elseif($selectedStudentGroup && !$selectedQuizId)
@@ -157,7 +162,7 @@
                 @endphp
                 <div class="max-w-6xl mx-auto w-full space-y-4 flex flex-col min-h-0 max-h-full">
                     <nav class="shrink-0 flex flex-wrap items-center gap-2 rounded-xl bg-white border border-gray-200 px-4 py-3 shadow-sm">
-                        <button type="button" @click="backToStudents()" class="text-sm font-medium text-indigo-600 hover:text-indigo-800">← Students</button>
+                        <button type="button" @click="backToStudents()" class="text-sm font-medium text-indigo-600 hover:text-indigo-800">← Takers</button>
                         <span class="text-gray-300">/</span>
                         <span class="text-sm font-semibold text-gray-900">{{ $studentName }}</span>
                         <span class="ml-auto text-xs font-medium text-indigo-700 bg-indigo-50 px-2.5 py-1 rounded-full">Step 2 — pick a quiz</span>
@@ -178,6 +183,9 @@
                     </div>
 
                     <div class="flex-1 min-h-0 overflow-y-auto mg-sidebar-scroll pr-1 -mr-1 max-h-[min(60vh,36rem)] lg:max-h-[calc(100vh-18rem)]">
+                        <template x-if="sortedQuizzes.length === 0">
+                            <p class="text-sm text-gray-500 py-8 text-center">No pending answers for this taker.</p>
+                        </template>
                         <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-3 pb-2">
                             <template x-for="quiz in sortedQuizzes" :key="quiz.id">
                                 <button type="button"

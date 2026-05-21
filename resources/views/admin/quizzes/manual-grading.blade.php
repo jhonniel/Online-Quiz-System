@@ -30,7 +30,7 @@
             <div class="min-w-0">
                 <h1 class="text-2xl sm:text-3xl font-bold tracking-tight text-gray-900">Manual Grading</h1>
                 <p class="mt-1 text-sm text-gray-600 max-w-3xl">
-                    Review text and fill-in-the-blank responses. Select a {{ $viewMode === 'student' ? 'student, then a quiz' : 'quiz, then a student' }}, then grade each question.
+                    Lists everyone who took a quiz with text or fill-in-the-blank questions. The badge is how many answers still need grading. Select a {{ $viewMode === 'student' ? 'taker, then a quiz' : 'quiz, then a taker' }} to review every pending response.
                 </p>
             </div>
             <div class="flex flex-wrap items-center gap-3">
@@ -40,7 +40,7 @@
                         <span class="text-lg font-bold text-amber-900 tabular-nums">{{ $totalPending }}</span>
                     </div>
                     <div class="inline-flex items-center gap-2 rounded-lg bg-slate-50 border border-slate-200 px-3 py-2">
-                        <span class="text-xs font-medium text-slate-600 uppercase tracking-wide">Students</span>
+                        <span class="text-xs font-medium text-slate-600 uppercase tracking-wide">Takers</span>
                         <span class="text-lg font-bold text-slate-900 tabular-nums">{{ count($groupsByStudent) }}</span>
                     </div>
                     <div class="inline-flex items-center gap-2 rounded-lg bg-slate-50 border border-slate-200 px-3 py-2">
@@ -58,13 +58,13 @@
             </div>
         </div>
 
-        @if($totalPending > 0)
+        @if(count($groupsByStudent) > 0)
             <div class="mt-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <div class="inline-flex p-1 rounded-lg bg-gray-100 border border-gray-200">
                     <a href="{{ url('/admin/manual-grading?view=student') }}"
                        class="inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold rounded-md transition-all {{ $viewMode === 'student' ? 'bg-white text-indigo-700 shadow-sm ring-1 ring-gray-200' : 'text-gray-600 hover:text-gray-900' }}">
                         <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg>
-                        By Student
+                        By Taker
                     </a>
                     <a href="{{ url('/admin/manual-grading?view=quiz') }}"
                        class="inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold rounded-md transition-all {{ $viewMode === 'quiz' ? 'bg-white text-indigo-700 shadow-sm ring-1 ring-gray-200' : 'text-gray-600 hover:text-gray-900' }}">
@@ -75,7 +75,7 @@
                 <p class="text-xs text-gray-500">
                     <span class="font-medium text-gray-700">Step 1</span> Choose from the list
                     <span class="mx-1 text-gray-300">→</span>
-                    <span class="font-medium text-gray-700">Step 2</span> Pick {{ $viewMode === 'student' ? 'quiz' : 'student' }}
+                    <span class="font-medium text-gray-700">Step 2</span> Pick {{ $viewMode === 'student' ? 'quiz' : 'taker' }}
                     <span class="mx-1 text-gray-300">→</span>
                     <span class="font-medium text-gray-700">Step 3</span> Grade questions
                 </p>
@@ -83,7 +83,7 @@
         @endif
     </div>
 
-    @if($totalPending > 0)
+    @if(count($groupsByStudent) > 0)
         <div class="flex-1 flex flex-col min-h-0 min-w-0 px-4 sm:px-6 lg:px-8 py-4 overflow-hidden">
             <div class="flex-1 flex flex-col min-h-0 min-w-0 rounded-2xl border border-gray-200 bg-white shadow-sm overflow-hidden">
                 @if($viewMode === 'student')
@@ -101,8 +101,8 @@
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                     </svg>
                 </div>
-                <h3 class="mt-4 text-lg font-semibold text-gray-900">All caught up</h3>
-                <p class="mt-2 text-sm text-gray-500">There are no text or fill-in-the-blank answers waiting for manual grading.</p>
+                <h3 class="mt-4 text-lg font-semibold text-gray-900">No manual grading quizzes yet</h3>
+                <p class="mt-2 text-sm text-gray-500">No takers have completed a quiz with text or fill-in-the-blank questions yet.</p>
             </div>
         </div>
     @endif
