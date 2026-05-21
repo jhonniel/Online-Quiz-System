@@ -1798,6 +1798,12 @@ document.addEventListener('DOMContentLoaded', function() {
         if (!activityDataUrl) {
             return;
         }
+        const onlineUsersList = document.getElementById('online-users-list');
+        const recentActivitiesList = document.getElementById('recent-activities-list');
+        if (window.AppSkeleton) {
+            if (onlineUsersList) AppSkeleton.render(onlineUsersList, 'list');
+            if (recentActivitiesList) AppSkeleton.render(recentActivitiesList, 'list');
+        }
         fetch(activityDataUrl)
             .then(response => response.json())
             .then(data => {

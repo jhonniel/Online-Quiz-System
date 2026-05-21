@@ -462,7 +462,10 @@
             empty.classList.add('hidden');
             errEl.classList.add('hidden');
             list.classList.add('hidden');
-            if (state === 'loading') loading.classList.remove('hidden');
+            if (state === 'loading') {
+                loading.innerHTML = window.AppSkeleton ? AppSkeleton.html('list') : 'Loading...';
+                loading.classList.remove('hidden');
+            }
             if (state === 'empty') empty.classList.remove('hidden');
             if (state === 'error') errEl.classList.remove('hidden');
             if (state === 'list') list.classList.remove('hidden');

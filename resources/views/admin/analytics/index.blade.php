@@ -764,20 +764,15 @@
     </div>
 
     <script>
+function analyticsModalSkeletonHtml() {
+    return window.AppSkeleton ? AppSkeleton.html('modal') : '<p class="text-sm text-gray-500 py-8 text-center">Loading…</p>';
+}
+
 function showQuizDetails(quizId) {
     const modal = document.getElementById('quizDetailsModal');
     const content = document.getElementById('quizDetailsContent');
 
-    // Show loading state
-    content.innerHTML = `
-        <div class="flex justify-center items-center py-8">
-            <svg class="animate-spin h-8 w-8 text-indigo-600" fill="none" viewBox="0 0 24 24">
-                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-            </svg>
-            <span class="ml-2 text-gray-600">Loading quiz details...</span>
-        </div>
-    `;
+    content.innerHTML = analyticsModalSkeletonHtml();
 
     modal.classList.remove('hidden');
 
@@ -915,7 +910,7 @@ document.addEventListener('keydown', function(e) {
 function openTopicDetailsModal(topic) {
     document.getElementById('topicDetailsModal').classList.remove('hidden');
     document.getElementById('modalTopicName').textContent = topic + ' Performance Details';
-    document.getElementById('topicDetailsContent').innerHTML = '<p>Loading topic details...</p>';
+    document.getElementById('topicDetailsContent').innerHTML = analyticsModalSkeletonHtml();
 
     fetch(`/admin/analytics/topic/${encodeURIComponent(topic)}`)
         .then(response => response.json())

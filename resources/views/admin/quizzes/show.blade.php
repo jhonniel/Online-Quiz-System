@@ -538,6 +538,7 @@ document.addEventListener('keydown', function(e) {
 function loadUsers() {
     const quizId = currentQuizId;
     const url = quizId ? `/admin/users/api?quiz_id=${quizId}` : '/admin/users/api';
+    if (window.AppSkeleton) AppSkeleton.render(document.getElementById('usersList'), 'sidebar');
 
     fetch(url)
         .then(response => response.json())

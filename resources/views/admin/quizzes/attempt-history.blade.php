@@ -210,12 +210,11 @@
 <script>
 function viewAttemptDetails(attemptId) {
     // Show loading state
-    document.getElementById('attemptDetails').innerHTML = `
-        <div class="text-center py-8">
-            <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600 mx-auto"></div>
-            <p class="text-gray-500 mt-4">Loading attempt details...</p>
-        </div>
-    `;
+    if (window.AppSkeleton) {
+        AppSkeleton.render(document.getElementById('attemptDetails'), 'panel');
+    } else {
+        document.getElementById('attemptDetails').innerHTML = '<p class="text-gray-500 py-8 text-center">Loading attempt details...</p>';
+    }
     document.getElementById('attemptModal').classList.remove('hidden');
 
     // Make AJAX call to get attempt details

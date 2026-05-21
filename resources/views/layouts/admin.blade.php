@@ -177,7 +177,8 @@
                                     </div>
                                 </div>
                                 <div class="max-h-96 overflow-y-auto">
-                                    <div x-show="notifications.length === 0" class="p-4 text-center text-gray-500">
+                                    <div x-show="isLoading" class="p-2" x-html="window.AppSkeleton ? AppSkeleton.html('list') : ''"></div>
+                                    <div x-show="!isLoading && notifications.length === 0" class="p-4 text-center text-gray-500">
                                         No notifications
                                     </div>
                                     <template x-for="notification in notifications" :key="notification.id">
@@ -292,6 +293,8 @@
         </div>
     </div>
 
+    @include('components.app-skeleton-templates')
+
     @yield('scripts')
     @stack('scripts')
 
@@ -318,6 +321,7 @@
                 },
                 
                 fetchNotifications() {
+                    this.isLoading = true;
                     fetch('{{ url('/admin/notifications/unread') }}', {
                         method: 'GET',
                         headers: {
@@ -345,6 +349,9 @@
                             console.error('Error fetching notifications:', error);
                             this.notifications = [];
                             this.unreadCount = 0;
+                        })
+                        .finally(() => {
+                            this.isLoading = false;
                         });
                 },
                 

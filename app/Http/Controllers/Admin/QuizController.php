@@ -828,6 +828,20 @@ class QuizController extends Controller
 
     public function manualGrading(Request $request)
     {
+        $data = $this->manualGradingPageData($request);
+
+        if ($request->wantsJson()) {
+            return $this->manualGradingJsonResponse($data);
+        }
+
+        return view('admin.quizzes.manual-grading', $data);
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function manualGradingPageData(Request $request): array
+    {
         $viewMode = $request->input('view', 'student');
         if (! in_array($viewMode, ['student', 'quiz'], true)) {
             $viewMode = 'student';
@@ -866,7 +880,7 @@ class QuizController extends Controller
             }
         }
 
-        return view('admin.quizzes.manual-grading', compact(
+        return compact(
             'groupsByStudent',
             'groupsByQuiz',
             'viewMode',
@@ -876,7 +890,65 @@ class QuizController extends Controller
             'gradingAttempts',
             'selectedStudentGroup',
             'selectedQuizGroup'
-        ));
+        );
+    }
+
+    /**
+     * @param  array<string, mixed>  $data
+     */
+    private function manualGradingJsonResponse(array $data): \Illuminate\Http\JsonResponse
+    {
+        $viewName = $data['viewMode'] === 'student'
+            ? 'admin.quizzes.partials.manual-grading-workspace-student'
+            : 'admin.quizzes.partials.manual-grading-workspace-quiz';
+
+        $secondaryList = [];
+        if ($data['viewMode'] === 'student' && $data['selectedStudentGroup']) {
+            $secondaryList = collect($data['selectedStudentGroup']['quizzes'])
+                ->filter(fn ($g) => ($g['pending_count'] ?? 0) > 0)
+                ->map(function ($g) {
+                    $title = $g['quiz']->title ?? 'Quiz';
+                    $latest = $g['latest_attempt_at'] ?? null;
+
+                    return [
+                        'id' => (int) $g['quiz']->id,
+                        'title' => $title,
+                        'pending' => (int) $g['pending_count'],
+                        'latestTs' => $latest ? \Illuminate\Support\Carbon::parse($latest)->timestamp : 0,
+                    ];
+                })
+                ->values()
+                ->all();
+        } elseif ($data['viewMode'] === 'quiz' && $data['selectedQuizGroup']) {
+            $secondaryList = collect($data['selectedQuizGroup']['students'])
+                ->filter(fn ($g) => ($g['pending_count'] ?? 0) > 0)
+                ->map(function ($g) {
+                    $name = $g['user']->name ?? 'Unknown';
+                    $latest = $g['latest_attempt_at'] ?? null;
+                    $user = $g['user'];
+
+                    return [
+                        'id' => (int) $user->id,
+                        'name' => $name,
+                        'email' => $user->email ?? '',
+                        'roleLabel' => $user->getRoleLabel(),
+                        'roleBadgeClass' => $user->getRoleBadgeClass(),
+                        'initial' => strtoupper(substr($name, 0, 1)),
+                        'pending' => (int) $g['pending_count'],
+                        'latestTs' => $latest ? \Illuminate\Support\Carbon::parse($latest)->timestamp : 0,
+                    ];
+                })
+                ->values()
+                ->all();
+        }
+
+        return response()->json([
+            'workspaceHtml' => view($viewName, $data)->render(),
+            'selectedUserId' => $data['selectedUserId'],
+            'selectedQuizId' => $data['selectedQuizId'],
+            'secondaryList' => $secondaryList,
+            'secondaryListKey' => $data['viewMode'] === 'student' ? 'quizzes' : 'students',
+        ]);
     }
 
     /**

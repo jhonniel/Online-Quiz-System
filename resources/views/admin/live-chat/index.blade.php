@@ -30,8 +30,8 @@
                 </div>
             </div>
             <div class="flex items-center space-x-2">
-                <div class="bg-indigo-100 text-indigo-800 px-3 py-1 rounded-full text-sm font-medium" id="unread-count">
-                    Loading...
+                <div class="bg-indigo-100 text-indigo-800 px-3 py-1 rounded-full text-sm font-medium min-h-[1.75rem] flex items-center" id="unread-count" data-skeleton-badge="1">
+                    <span class="inline-block h-5 w-28 animate-pulse bg-indigo-200/80 rounded-full" aria-hidden="true"></span>
                 </div>
             </div>
         </div>
@@ -222,10 +222,10 @@
 document.addEventListener('DOMContentLoaded', function() {
     // Update unread count
     function updateUnreadCount() {
+        const countElement = document.getElementById('unread-count');
         fetch('{{ url("/admin/live-chat/unread-count") }}')
             .then(response => response.json())
             .then(data => {
-                const countElement = document.getElementById('unread-count');
                 if (data.count > 0) {
                     countElement.textContent = `${data.count} unread messages`;
                     countElement.className = 'bg-red-100 text-red-800 px-3 py-1 rounded-full text-sm font-medium';
@@ -241,6 +241,12 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Update user presence counts
     function updatePresenceCounts() {
+        ['online-count', 'away-count', 'idle-count'].forEach(function(id) {
+            const el = document.getElementById(id);
+            if (el && window.AppSkeleton) {
+                el.innerHTML = AppSkeleton.html('badge');
+            }
+        });
         // Fetch online users
         fetch('{{ url("/admin/status/online-users") }}')
             .then(response => response.json())

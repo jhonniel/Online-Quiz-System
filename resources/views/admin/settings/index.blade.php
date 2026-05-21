@@ -2358,6 +2358,12 @@ document.addEventListener('DOMContentLoaded', function() {
         if (isMetricsRefreshing) return;
         isMetricsRefreshing = true;
 
+        ['hm-top-404-ips', 'hm-top-auth-ips', 'hm-top-404-paths'].forEach(function(id) {
+            if (window.AppSkeleton) {
+                AppSkeleton.render(document.getElementById(id), 'table');
+            }
+        });
+
         fetch('{{ url('/admin/settings/health-metrics') }}', {
             method: 'GET',
             headers: {

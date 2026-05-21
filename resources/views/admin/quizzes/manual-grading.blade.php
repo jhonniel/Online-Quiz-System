@@ -33,8 +33,11 @@
                     Lists everyone who took a quiz with text or fill-in-the-blank questions—including students, applicants, and internship candidates. The badge is how many answers still need grading. Select a {{ $viewMode === 'student' ? 'taker, then a quiz' : 'quiz, then a taker' }} to review every pending response.
                 </p>
             </div>
-            <div class="flex flex-wrap items-center gap-3">
-                <div class="flex flex-wrap gap-2">
+            <div class="flex flex-wrap items-center gap-3" x-data="{ statsReady: false }" x-init="$nextTick(() => { statsReady = true })">
+                <div x-show="!statsReady" x-cloak class="flex flex-wrap gap-2">
+                    @include('admin.quizzes.partials.manual-grading-skeletons', ['variant' => 'stats'])
+                </div>
+                <div x-show="statsReady" x-cloak class="flex flex-wrap gap-2">
                     <div class="inline-flex items-center gap-2 rounded-lg bg-amber-50 border border-amber-200 px-3 py-2">
                         <span class="text-xs font-medium text-amber-800 uppercase tracking-wide">Pending</span>
                         <span class="text-lg font-bold text-amber-900 tabular-nums">{{ $totalPending }}</span>
@@ -194,138 +197,5 @@
     }
 </style>
 
-<script>
-document.addEventListener('DOMContentLoaded', function() {
-    document.querySelectorAll('input[name="is_correct"]').forEach(radio => {
-        radio.addEventListener('change', function() {
-            const form = this.closest('form');
-            const pointsInput = form.querySelector('input[name="points_earned"]');
-            const maxPoints = parseInt(pointsInput.getAttribute('max'), 10);
-            pointsInput.value = this.value === '1' ? maxPoints : '0';
-        });
-    });
-
-    document.querySelectorAll('.grade-form').forEach(form => {
-        const pointsInput = form.querySelector('input[name="points_earned"]');
-        const isCorrectRadio = form.querySelector('input[name="is_correct"]:checked');
-        if (isCorrectRadio && isCorrectRadio.value === '0') {
-            pointsInput.value = '0';
-        }
-        const allRadios = form.querySelectorAll('input[name="is_correct"]');
-        if (!form.querySelector('input[name="is_correct"]:checked') && allRadios.length > 0) {
-            allRadios[0].checked = true;
-            pointsInput.value = '0';
-        }
-
-        form.addEventListener('submit', function(e) {
-            e.preventDefault();
-            if (this.dataset.submitting === 'true') return;
-            this.dataset.submitting = 'true';
-
-            const attemptId = this.dataset.attemptId;
-            const formData = new FormData(this);
-            const submitBtn = this.querySelector('button[type="submit"]');
-            const originalText = submitBtn.innerHTML;
-            submitBtn.disabled = true;
-            submitBtn.innerHTML = '<span class="inline-flex items-center gap-2"><svg class="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> Grading…</span>';
-
-            let isCorrectRadio = this.querySelector('input[name="is_correct"]:checked');
-            if (!formData.get('is_correct') && isCorrectRadio) {
-                formData.set('is_correct', isCorrectRadio.value);
-            } else if (!formData.get('is_correct')) {
-                const firstRadio = this.querySelector('input[name="is_correct"]');
-                if (firstRadio) {
-                    firstRadio.checked = true;
-                    formData.set('is_correct', firstRadio.value);
-                } else {
-                    alert('Please select Correct or Incorrect before submitting.');
-                    this.dataset.submitting = 'false';
-                    submitBtn.disabled = false;
-                    submitBtn.innerHTML = originalText;
-                    return;
-                }
-            }
-
-            const isCorrectValue = formData.get('is_correct');
-            const pointsValue = formData.get('points_earned');
-            const maxPoints = parseInt(this.querySelector('input[name="points_earned"]').getAttribute('max'), 10);
-            if (isCorrectValue === '1' && pointsValue === '0') {
-                formData.set('points_earned', String(maxPoints));
-            } else if (isCorrectValue === '0' && pointsValue !== '0') {
-                formData.set('points_earned', '0');
-            }
-
-            fetch(`/admin/quiz-attempts/${attemptId}/grade`, {
-                method: 'POST',
-                headers: {
-                    'X-Requested-With': 'XMLHttpRequest',
-                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
-                },
-                body: formData
-            })
-            .then(response => {
-                if (!response.ok) {
-                    return response.json().then(data => {
-                        throw new Error(data.message || `HTTP error! status: ${response.status}`);
-                    });
-                }
-                return response.json();
-            })
-            .then(data => {
-                if (data.success) {
-                    if (typeof ToastNotification !== 'undefined') {
-                        ToastNotification.success(data.message);
-                    }
-                    const formContainer = document.getElementById(`attempt-${attemptId}`);
-                    if (formContainer) {
-                        const panel = formContainer.closest('[data-quiz-grading-panel]');
-                        formContainer.style.opacity = '0';
-                        formContainer.style.transform = 'translateY(-4px)';
-                        formContainer.style.transition = 'opacity 0.25s ease, transform 0.25s ease';
-                        setTimeout(() => {
-                            formContainer.remove();
-                            if (panel) {
-                                const remaining = panel.querySelectorAll('[data-grading-attempts] .grade-form').length;
-                                decrementPendingBadges(panel);
-                                if (remaining === 0) {
-                                    window.dispatchEvent(new CustomEvent('manual-grading-quiz-complete'));
-                                }
-                            }
-                        }, 260);
-                    }
-                    if (document.querySelectorAll('.grade-form').length === 0) {
-                        window.location.reload();
-                    }
-                } else {
-                    if (typeof ToastNotification !== 'undefined') {
-                        ToastNotification.error(data.message || 'An error occurred while grading.');
-                    }
-                    this.dataset.submitting = 'false';
-                    submitBtn.disabled = false;
-                    submitBtn.innerHTML = originalText;
-                }
-            })
-            .catch(error => {
-                if (typeof ToastNotification !== 'undefined') {
-                    ToastNotification.error(error.message || 'An error occurred while grading.');
-                }
-                this.dataset.submitting = 'false';
-                submitBtn.disabled = false;
-                submitBtn.innerHTML = originalText;
-            });
-        });
-    });
-
-    function decrementPendingBadges(panel) {
-        const userId = panel.getAttribute('data-user-id');
-        const quizId = panel.getAttribute('data-quiz-id');
-        [document.querySelector('[data-pending-badge="student-' + userId + '"]'),
-         document.querySelector('[data-pending-badge="quiz-' + userId + '-' + quizId + '"]')].forEach(function(badge) {
-            if (!badge) return;
-            const n = parseInt(badge.textContent.trim(), 10);
-            if (!isNaN(n) && n > 0) badge.textContent = String(n - 1);
-        });
-    }
-});
-</script>
+@include('admin.quizzes.partials.manual-grading-shared-scripts')
 @endsection

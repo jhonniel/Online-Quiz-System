@@ -539,6 +539,7 @@ let filteredUsers = [];
 function loadUsers() {
     const quizId = currentQuizId;
     const url = quizId ? `/admin/users/api?quiz_id=${quizId}` : '/admin/users/api';
+    if (window.AppSkeleton) AppSkeleton.render(document.getElementById('usersList'), 'sidebar');
 
     fetch(url)
         .then(response => response.json())
@@ -652,6 +653,7 @@ function closeAssignedUsersModal() {
 }
 
 function loadAssignedUsers(quizId) {
+    if (window.AppSkeleton) AppSkeleton.render(document.getElementById('assignedUsersList'), 'list');
     fetch(`/admin/quizzes/${quizId}/assigned-users`)
         .then(response => response.json())
         .then(data => {

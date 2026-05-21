@@ -189,6 +189,11 @@
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-gray-100 bg-white">
+                        <tr x-show="isRefreshing" x-cloak>
+                            <td colspan="10" class="p-4">
+                                <div x-html="window.AppSkeleton ? AppSkeleton.html('table') : ''"></div>
+                            </td>
+                        </tr>
                         <template x-for="row in rows" :key="row.route_key">
                             <tr class="hover:bg-gray-50/70 transition-colors">
                                 <td class="px-4 py-3 text-xs font-semibold text-gray-700" x-text="row.method"></td>
@@ -246,6 +251,7 @@
             timerId: null,
             metricsUrl: config.metricsUrl,
             scope: config.initialScope || 'api_like',
+            isRefreshing: false,
             init() {
                 this.timerId = setInterval(() => this.refresh(), 10000);
             },
@@ -254,6 +260,7 @@
                 this.refresh();
             },
             async refresh() {
+                this.isRefreshing = true;
                 try {
                     const url = `${this.metricsUrl}?scope=${encodeURIComponent(this.scope)}`;
                     const response = await fetch(url, {
@@ -269,6 +276,8 @@
                     this.lastRefreshedText = new Date().toLocaleString();
                 } catch (error) {
                     console.error('API monitor refresh failed', error);
+                } finally {
+                    this.isRefreshing = false;
                 }
             },
             statusBadgeClass(status) {
