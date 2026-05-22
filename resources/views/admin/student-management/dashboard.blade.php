@@ -22,19 +22,22 @@
                 </p>
             </div>
 
+            <div class="flex-shrink-0 md:text-right">
+                <div class="inline-flex flex-col items-start md:items-end px-5 py-4 rounded-xl bg-white/10 border border-white/20 backdrop-blur-sm">
+                    <p class="text-xs font-medium uppercase tracking-wide text-indigo-100">Ongoing Students</p>
+                    <p class="mt-1 text-3xl sm:text-4xl font-extrabold text-white tabular-nums">
+                        {{ number_format($ongoingStudentsCount ?? 0) }}
+                    </p>
+                    <p class="mt-1 text-xs text-indigo-100/90">With remaining time needed</p>
+                </div>
+            </div>
         </div>
     </div>
 
     <!-- Ranking Table -->
     <div class="px-4 sm:px-6">
         <div class="bg-white shadow-md rounded-2xl overflow-hidden">
-            <div class="px-4 sm:px-6 py-4 border-b border-gray-100 flex flex-col gap-3">
-                <div class="inline-flex items-center self-start px-3 py-1.5 rounded-full bg-indigo-50 border border-indigo-100 text-xs sm:text-sm text-indigo-800">
-                    <span class="w-2 h-2 rounded-full bg-emerald-500 mr-2 shrink-0"></span>
-                    <span class="font-semibold tabular-nums">{{ number_format($ongoingStudentsCount ?? 0) }}</span>
-                    <span class="ml-1">ongoing {{ ($ongoingStudentsCount ?? 0) === 1 ? 'student' : 'students' }}</span>
-                </div>
-                <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+            <div class="px-4 sm:px-6 py-4 border-b border-gray-100 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                 <div>
                     <h2 class="text-base sm:text-lg font-semibold text-gray-900">Student Time Ranking</h2>
                     <p class="text-xs sm:text-sm text-gray-500">
@@ -79,7 +82,6 @@
                             Apply
                         </button>
                     </form>
-                </div>
                 </div>
             </div>
 
