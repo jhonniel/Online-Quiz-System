@@ -78,7 +78,7 @@
                         <label class="block text-sm font-medium text-gray-500 mb-1">Request Type</label>
                         @if($leaveRequest->isApproved())
                             <p class="text-sm font-semibold text-gray-900">{{ $leaveRequest->type_label }}</p>
-                        @else
+                        @elseif($canEditLeaveRequestDetails ?? false)
                             <form action="{{ url('/admin/leave-requests/' . $leaveRequest->id . '/type') }}" method="POST"
                                   class="flex flex-col sm:flex-row sm:items-end gap-3"
                                   onsubmit="return confirmLeaveTypeChange(this);">
@@ -110,6 +110,8 @@
                                     Update Type
                                 </button>
                             </form>
+                        @else
+                            <p class="text-sm font-semibold text-gray-900">{{ $leaveRequest->type_label }}</p>
                         @endif
                     </div>
 
@@ -122,7 +124,7 @@
                                     – {{ $leaveRequest->end_date->format('M d, Y') }}
                                 @endif
                             </p>
-                        @else
+                        @elseif($canEditLeaveRequestDetails ?? false)
                             <form action="{{ url('/admin/leave-requests/' . $leaveRequest->id . '/dates') }}" method="POST"
                                   class="flex flex-col sm:flex-row sm:flex-wrap sm:items-end gap-3"
                                   onsubmit="return confirmLeaveDateChange(this);">
@@ -160,6 +162,13 @@
                                 </button>
                             </form>
                             <p class="mt-2 text-xs text-gray-500">Admins may set any date, including past dates. Use the same start and end date for a single day.</p>
+                        @else
+                            <p class="text-sm font-semibold text-gray-900">
+                                {{ $leaveRequest->start_date->format('M d, Y') }}
+                                @if($leaveRequest->end_date && !$leaveRequest->start_date->isSameDay($leaveRequest->end_date))
+                                    – {{ $leaveRequest->end_date->format('M d, Y') }}
+                                @endif
+                            </p>
                         @endif
                     </div>
 

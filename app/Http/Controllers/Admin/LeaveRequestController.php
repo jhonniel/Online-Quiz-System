@@ -394,6 +394,10 @@ class LeaveRequestController extends Controller
             ])
             ->all();
 
+        $authUser = $this->authUser();
+        $canEditLeaveRequestDetails = $authUser !== null
+            && $this->userCanManageLeaveRequest($leaveRequest, $authUser);
+
         return view('admin.leave-requests.show', compact(
             'leaveRequest',
             'balances',
@@ -401,7 +405,8 @@ class LeaveRequestController extends Controller
             'signatories',
             'studentTime',
             'hasNegativeBalance',
-            'leaveTypeOptions'
+            'leaveTypeOptions',
+            'canEditLeaveRequestDetails'
         ));
     }
 
@@ -1871,40 +1876,41 @@ class LeaveRequestController extends Controller
     }
 
     /**
+     * Whether the user may edit type/dates on an employee leave request details page.
+     * Matches route access (Leave Requests sub-feature), not the broader Employee Management parent alone.
+     */
+    private function userCanManageLeaveRequest(LeaveRequest $leaveRequest, User $authUser): bool
+    {
+        $subject = $leaveRequest->user;
+        if (! $subject) {
+            return false;
+        }
+
+        if ($authUser->isSuperAdmin()) {
+            return true;
+        }
+
+        if ($subject->role !== 'employee') {
+            return false;
+        }
+
+        return $authUser->canAccessEmployeeFeature('leave_requests');
+    }
+
+    /**
      * Ensure the authenticated admin may manage this leave request's subject user.
      */
     private function assertCanManageLeaveRequestSubject(LeaveRequest $leaveRequest): void
     {
         $authUser = $this->requireAuthUser();
-        $subject = $leaveRequest->user;
 
-        if (! $subject) {
+        if (! $leaveRequest->user) {
             abort(404, 'Leave request user not found.');
         }
 
-        if ($subject->role === 'employee' && $authUser->canAccessEmployeeManagement()) {
-            $allowedDepartmentIds = $authUser->getAllowedDepartmentIds();
-            if ($allowedDepartmentIds !== null && ! in_array($subject->department_id, $allowedDepartmentIds, true)) {
-                abort(403, 'You do not have permission to manage leave requests for this department.');
-            }
-
-            return;
+        if (! $this->userCanManageLeaveRequest($leaveRequest, $authUser)) {
+            abort(403, 'You do not have permission to manage this leave request.');
         }
-
-        if ($subject->role === 'student' && $authUser->canAccessStudentManagement()) {
-            $allowedDepartmentIds = $authUser->getAllowedStudentDepartmentIds();
-            if ($allowedDepartmentIds !== null && ! in_array($subject->department_id, $allowedDepartmentIds, true)) {
-                abort(403, 'You do not have permission to manage leave requests for this department.');
-            }
-
-            return;
-        }
-
-        if ($authUser->isSuperAdmin()) {
-            return;
-        }
-
-        abort(403, 'You do not have permission to manage this leave request.');
     }
 
     private function revertLeaveTimeFromDtr(LeaveRequest $leaveRequest, bool $force = false): void
