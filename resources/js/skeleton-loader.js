@@ -1,7 +1,9 @@
 /**
  * Global skeleton placeholders for AJAX / fetch loading states.
+ * Skeletons are delayed by default so fast responses never flash placeholders.
  */
 const AppSkeleton = {
+    DEFAULT_DELAY_MS: 300,
     _cache: null,
 
     _loadCache() {
@@ -30,9 +32,19 @@ const AppSkeleton = {
     /**
      * @param {Element|string} target
      * @param {string} variant
+     * @param {{ delayMs?: number }|number} [options]
      * @returns {Element|null}
      */
-    render(target, variant = 'text') {
+    render(target, variant = 'text', options = {}) {
+        if (typeof options === 'number') {
+            options = { delayMs: options };
+        }
+        const delayMs = options.delayMs ?? 0;
+        if (delayMs > 0) {
+            const token = this.beginLoading(target, variant, delayMs);
+            return token.el;
+        }
+
         const el = typeof target === 'string' ? document.querySelector(target) : target;
         if (!el) {
             return null;
@@ -45,6 +57,67 @@ const AppSkeleton = {
         return el;
     },
 
+    /**
+     * Show a skeleton only if loading exceeds delayMs. Call finish() when content is updated.
+     * @returns {{ el: Element|null, finish: Function, cancel: Function }}
+     */
+    beginLoading(target, variant = 'text', delayMs = AppSkeleton.DEFAULT_DELAY_MS) {
+        const el = typeof target === 'string' ? document.querySelector(target) : target;
+        const noop = { el: null, finish() {}, cancel() {} };
+        if (!el) {
+            return noop;
+        }
+
+        let timer = null;
+        let shown = false;
+
+        const show = () => {
+            if (shown) {
+                return;
+            }
+            shown = true;
+            if (!el.dataset.skeletonOriginal) {
+                el.dataset.skeletonOriginal = el.innerHTML;
+            }
+            el.innerHTML = this.html(variant);
+            el.setAttribute('aria-busy', 'true');
+        };
+
+        if (delayMs <= 0) {
+            show();
+        } else {
+            timer = setTimeout(show, delayMs);
+        }
+
+        return {
+            el,
+            finish() {
+                if (timer) {
+                    clearTimeout(timer);
+                    timer = null;
+                }
+                if (el.hasAttribute('aria-busy')) {
+                    el.removeAttribute('aria-busy');
+                    if (el.dataset.skeletonOriginal) {
+                        delete el.dataset.skeletonOriginal;
+                    }
+                }
+            },
+            cancel() {
+                if (timer) {
+                    clearTimeout(timer);
+                    timer = null;
+                }
+                if (shown && el.hasAttribute('aria-busy') && el.dataset.skeletonOriginal) {
+                    el.innerHTML = el.dataset.skeletonOriginal;
+                    delete el.dataset.skeletonOriginal;
+                    el.removeAttribute('aria-busy');
+                    shown = false;
+                }
+            },
+        };
+    },
+
     clear(target) {
         const el = typeof target === 'string' ? document.querySelector(target) : target;
         if (!el) {
@@ -55,30 +128,28 @@ const AppSkeleton = {
 
     /**
      * @param {string} url
-     * @param {{ target?: Element|string, variant?: string, restoreOnError?: boolean } & RequestInit} options
+     * @param {{ target?: Element|string, variant?: string, delayMs?: number, restoreOnError?: boolean } & RequestInit} options
      */
     async fetch(url, options = {}) {
-        const { target, variant = 'text', restoreOnError = true, ...fetchOptions } = options;
-        let el = null;
-        let original = '';
-
-        if (target) {
-            el = typeof target === 'string' ? document.querySelector(target) : target;
-            if (el) {
-                original = el.innerHTML;
-                this.render(el, variant);
-            }
-        }
+        const {
+            target,
+            variant = 'text',
+            delayMs = this.DEFAULT_DELAY_MS,
+            restoreOnError = true,
+            ...fetchOptions
+        } = options;
+        const token = target ? this.beginLoading(target, variant, delayMs) : null;
 
         try {
             const response = await window.fetch(url, fetchOptions);
             return response;
         } catch (err) {
-            if (el && restoreOnError) {
-                el.innerHTML = original;
-                el.removeAttribute('aria-busy');
+            if (token && restoreOnError) {
+                token.cancel();
             }
             throw err;
+        } finally {
+            token?.finish();
         }
     },
 };

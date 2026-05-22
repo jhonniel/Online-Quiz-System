@@ -78,10 +78,7 @@
         </div>
 
         <div class="mg-student-list-panel mg-sidebar-scroll relative" role="list" aria-label="Quizzes pending manual grading">
-            <div x-show="!pageReady" x-cloak class="absolute inset-0 z-10 bg-slate-50/95 overflow-hidden">
-                @include('admin.quizzes.partials.manual-grading-skeletons', ['variant' => 'sidebar'])
-            </div>
-            <div class="p-3 space-y-2 min-h-0" :class="!pageReady && 'opacity-0'">
+            <div class="p-3 space-y-2 min-h-0">
             <template x-if="filteredSortedQuizzes.length === 0">
                 <p class="text-center text-sm text-gray-500 py-8">No quizzes match your search.</p>
             </template>

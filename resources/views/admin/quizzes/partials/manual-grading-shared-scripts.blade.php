@@ -143,13 +143,12 @@ window.ManualGrading = {
 function mgNavigationMixin(viewMode) {
     return {
         viewMode,
-        pageReady: false,
         workspaceLoading: false,
         workspaceSkeleton: 'quiz-grid',
+        _workspaceLoadingTimer: null,
 
         init() {
             this.$nextTick(() => {
-                this.pageReady = true;
                 if (this.$refs.workspace) {
                     window.ManualGrading.initForms(this.$refs.workspace);
                 }
@@ -167,7 +166,11 @@ function mgNavigationMixin(viewMode) {
 
         async loadWorkspace(params) {
             this.workspaceSkeleton = this.resolveWorkspaceSkeleton(params);
-            this.workspaceLoading = true;
+            clearTimeout(this._workspaceLoadingTimer);
+            this.workspaceLoading = false;
+            this._workspaceLoadingTimer = setTimeout(() => {
+                this.workspaceLoading = true;
+            }, 300);
             try {
                 const res = await fetch(this.mgUrl(params), {
                     headers: {
@@ -194,6 +197,8 @@ function mgNavigationMixin(viewMode) {
                 console.error(e);
                 window.location.href = this.mgUrl(params);
             } finally {
+                clearTimeout(this._workspaceLoadingTimer);
+                this._workspaceLoadingTimer = null;
                 this.workspaceLoading = false;
             }
         },

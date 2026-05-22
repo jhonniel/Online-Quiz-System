@@ -2358,10 +2358,10 @@ document.addEventListener('DOMContentLoaded', function() {
         if (isMetricsRefreshing) return;
         isMetricsRefreshing = true;
 
-        ['hm-top-404-ips', 'hm-top-auth-ips', 'hm-top-404-paths'].forEach(function(id) {
-            if (window.AppSkeleton) {
-                AppSkeleton.render(document.getElementById(id), 'table');
-            }
+        const metricLoads = ['hm-top-404-ips', 'hm-top-auth-ips', 'hm-top-404-paths'].map(function(id) {
+            return window.AppSkeleton && document.getElementById(id)
+                ? AppSkeleton.beginLoading(document.getElementById(id), 'table')
+                : null;
         });
 
         fetch('{{ url('/admin/settings/health-metrics') }}', {
@@ -2379,6 +2379,11 @@ document.addEventListener('DOMContentLoaded', function() {
         })
         .catch(() => {
             isMetricsRefreshing = false;
+        })
+        .finally(() => {
+            metricLoads.forEach(function(load) {
+                load?.finish();
+            });
         });
     }
 

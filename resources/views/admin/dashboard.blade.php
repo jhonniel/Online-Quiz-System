@@ -1800,10 +1800,12 @@ document.addEventListener('DOMContentLoaded', function() {
         }
         const onlineUsersList = document.getElementById('online-users-list');
         const recentActivitiesList = document.getElementById('recent-activities-list');
-        if (window.AppSkeleton) {
-            if (onlineUsersList) AppSkeleton.render(onlineUsersList, 'list');
-            if (recentActivitiesList) AppSkeleton.render(recentActivitiesList, 'list');
-        }
+        const onlineLoad = window.AppSkeleton && onlineUsersList
+            ? AppSkeleton.beginLoading(onlineUsersList, 'list')
+            : null;
+        const activitiesLoad = window.AppSkeleton && recentActivitiesList
+            ? AppSkeleton.beginLoading(recentActivitiesList, 'list')
+            : null;
         fetch(activityDataUrl)
             .then(response => response.json())
             .then(data => {
@@ -1895,15 +1897,15 @@ document.addEventListener('DOMContentLoaded', function() {
             })
             .catch(error => {
                 console.error('Error fetching activity data:', error);
+            })
+            .finally(() => {
+                onlineLoad?.finish();
+                activitiesLoad?.finish();
             });
     }
 
     // Polling disabled to reduce server load
-    // Update activity data every 10 seconds
     // setInterval(updateActivityData, 10000);
-
-    // Initial load
-    updateActivityData();
 });
 </script>
 @endsection

@@ -308,9 +308,8 @@
                 isLoading: false,
                 
                 init() {
-                    this.fetchNotifications();
-                    // Poll for new notifications every 30 seconds
-                    setInterval(() => this.fetchNotifications(), 30000);
+                    this.refreshUnreadCount();
+                    setInterval(() => this.refreshUnreadCount(), 30000);
                 },
                 
                 toggleNotifications() {
@@ -319,9 +318,28 @@
                         this.fetchNotifications();
                     }
                 },
+
+                refreshUnreadCount() {
+                    fetch('{{ url('/admin/notifications/unread-count') }}', {
+                        method: 'GET',
+                        headers: {
+                            'Accept': 'application/json',
+                            'X-Requested-With': 'XMLHttpRequest',
+                        },
+                        credentials: 'same-origin',
+                    })
+                        .then(response => response.ok ? response.json() : Promise.reject())
+                        .then(data => {
+                            this.unreadCount = data.unread_count || 0;
+                        })
+                        .catch(() => {});
+                },
                 
                 fetchNotifications() {
-                    this.isLoading = true;
+                    const showSkeleton = this.showNotifications;
+                    if (showSkeleton) {
+                        this.isLoading = true;
+                    }
                     fetch('{{ url('/admin/notifications/unread') }}', {
                         method: 'GET',
                         headers: {
@@ -351,7 +369,9 @@
                             this.unreadCount = 0;
                         })
                         .finally(() => {
-                            this.isLoading = false;
+                            if (showSkeleton) {
+                                this.isLoading = false;
+                            }
                         });
                 },
                 
@@ -364,7 +384,11 @@
                         }
                     })
                     .then(() => {
-                        this.fetchNotifications();
+                        if (this.showNotifications) {
+                            this.fetchNotifications();
+                        } else {
+                            this.refreshUnreadCount();
+                        }
                     })
                     .catch(error => console.error('Error marking notification as read:', error));
                 },
@@ -378,7 +402,11 @@
                         }
                     })
                     .then(() => {
-                        this.fetchNotifications();
+                        if (this.showNotifications) {
+                            this.fetchNotifications();
+                        } else {
+                            this.refreshUnreadCount();
+                        }
                     })
                     .catch(error => console.error('Error marking all notifications as read:', error));
                 }

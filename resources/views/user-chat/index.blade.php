@@ -429,16 +429,20 @@
         }
     }
 
+        let chatMessagesLoad = null;
+
         function showLoading() {
             const chatMessages = document.getElementById('chat-messages');
             if (window.AppSkeleton && chatMessages) {
-                AppSkeleton.render(chatMessages, 'list');
+                chatMessagesLoad = AppSkeleton.beginLoading(chatMessages, 'list');
             } else {
                 document.getElementById('loading-overlay').classList.remove('hidden');
             }
         }
 
         function hideLoading() {
+            chatMessagesLoad?.finish();
+            chatMessagesLoad = null;
             document.getElementById('loading-overlay').classList.add('hidden');
         }
 

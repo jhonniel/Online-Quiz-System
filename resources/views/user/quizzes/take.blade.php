@@ -134,9 +134,10 @@ document.addEventListener('DOMContentLoaded', function() {
         startQuizBtn.addEventListener('click', function() {
         const originalHTML = startQuizBtn.innerHTML;
         startQuizBtn.disabled = true;
-        if (window.AppSkeleton) {
-            AppSkeleton.render(document.getElementById('start-quiz-section'), 'panel');
-        } else {
+        const startSectionLoad = window.AppSkeleton
+            ? AppSkeleton.beginLoading(document.getElementById('start-quiz-section'), 'panel')
+            : null;
+        if (!startSectionLoad) {
             startQuizBtn.innerHTML = '<span>Loading Questions...</span>';
         }
 
@@ -197,7 +198,8 @@ document.addEventListener('DOMContentLoaded', function() {
             ToastNotification.error(error.message || 'An error occurred while loading questions. Please try again.');
             startQuizBtn.disabled = false;
             startQuizBtn.innerHTML = originalHTML;
-        });
+        })
+        .finally(() => startSectionLoad?.finish());
     });
 
     // Initialize quiz

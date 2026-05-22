@@ -209,11 +209,12 @@
 
 <script>
 function viewAttemptDetails(attemptId) {
-    // Show loading state
-    if (window.AppSkeleton) {
-        AppSkeleton.render(document.getElementById('attemptDetails'), 'panel');
-    } else {
-        document.getElementById('attemptDetails').innerHTML = '<p class="text-gray-500 py-8 text-center">Loading attempt details...</p>';
+    const attemptDetails = document.getElementById('attemptDetails');
+    const detailsLoad = window.AppSkeleton && attemptDetails
+        ? AppSkeleton.beginLoading(attemptDetails, 'panel')
+        : null;
+    if (!detailsLoad) {
+        attemptDetails.innerHTML = '<p class="text-gray-500 py-8 text-center">Loading attempt details...</p>';
     }
     document.getElementById('attemptModal').classList.remove('hidden');
 
@@ -234,9 +235,11 @@ function viewAttemptDetails(attemptId) {
         if (data.error) {
             throw new Error(data.error);
         }
+        detailsLoad?.finish();
         displayAttemptDetails(data);
     })
     .catch(error => {
+        detailsLoad?.finish();
         console.error('Error:', error);
         document.getElementById('attemptDetails').innerHTML = `
             <div class="text-center py-8">

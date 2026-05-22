@@ -33,11 +33,8 @@
                     Lists everyone who took a quiz with text or fill-in-the-blank questions—including students, applicants, and internship candidates. The badge is how many answers still need grading. Select a {{ $viewMode === 'student' ? 'taker, then a quiz' : 'quiz, then a taker' }} to review every pending response.
                 </p>
             </div>
-            <div class="flex flex-wrap items-center gap-3" x-data="{ statsReady: false }" x-init="$nextTick(() => { statsReady = true })">
-                <div x-show="!statsReady" x-cloak class="flex flex-wrap gap-2">
-                    @include('admin.quizzes.partials.manual-grading-skeletons', ['variant' => 'stats'])
-                </div>
-                <div x-show="statsReady" x-cloak class="flex flex-wrap gap-2">
+            <div class="flex flex-wrap items-center gap-3">
+                <div class="flex flex-wrap gap-2">
                     <div class="inline-flex items-center gap-2 rounded-lg bg-amber-50 border border-amber-200 px-3 py-2">
                         <span class="text-xs font-medium text-amber-800 uppercase tracking-wide">Pending</span>
                         <span class="text-lg font-bold text-amber-900 tabular-nums">{{ $totalPending }}</span>
