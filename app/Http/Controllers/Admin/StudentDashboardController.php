@@ -121,6 +121,9 @@ class StudentDashboardController extends Controller
 
         $statsOjtTotalSlots = (int) \App\Models\Setting::get('ojt_total_slots', 0);
         $statsOjtUsedSlots = (int) $statsOngoingIncomplete;
+        $statsOjtAvailableSlots = $statsOjtTotalSlots > 0
+            ? max($statsOjtTotalSlots - $statsOjtUsedSlots, 0)
+            : 0;
         $statsOjtOverSlots = $statsOjtTotalSlots > 0
             ? max($statsOjtUsedSlots - $statsOjtTotalSlots, 0)
             : 0;
@@ -213,6 +216,7 @@ class StudentDashboardController extends Controller
             'statsOngoingIncomplete',
             'statsOjtTotalSlots',
             'statsOjtUsedSlots',
+            'statsOjtAvailableSlots',
             'statsOjtOverSlots',
             'statsAvgCompletion',
             'statsTotalApprovedLeaveRequests',
@@ -460,6 +464,7 @@ class StudentDashboardController extends Controller
 
         if ($students->isEmpty()) {
             $ranked = collect();
+            $ongoingStudentsCount = 0;
             $studentsWithRemainingTime = 0;
         } else {
             $studentIds = $students->pluck('id');
@@ -527,6 +532,8 @@ class StudentDashboardController extends Controller
             })->filter(function ($row) {
                 return ($row['remaining_hours'] ?? 0) > 0;
             });
+
+            $ongoingStudentsCount = $ranked->count();
 
             // School filter options should only include schools that currently appear in ranking.
             $rankingSchoolOptions = $ranked
@@ -675,6 +682,7 @@ class StudentDashboardController extends Controller
 
         return view('admin.student-management.dashboard', [
             'students' => $ranked,
+            'ongoingStudentsCount' => $ongoingStudentsCount ?? 0,
             'studentsWithRemainingTime' => $studentsWithRemainingTime,
             'studentsEndingThisMonth' => $studentsEndingThisMonth ?? 0,
             'showApprovedLeaveRequests' => $showApprovedLeaveRequests,

@@ -43,13 +43,17 @@
             <p class="mt-1 text-xs text-gray-500">Reached required hours</p>
         </div>
         @php
+            $ojtTotalSlots = (int) ($statsOjtTotalSlots ?? 0);
+            $ojtUsedSlots = (int) ($statsOjtUsedSlots ?? 0);
+            $ojtAvailableSlots = (int) ($statsOjtAvailableSlots ?? 0);
             $ojtOverSlots = (int) ($statsOjtOverSlots ?? 0);
-            $ojtCardClass = $ojtOverSlots > 0
+            $ojtOverCapacity = $ojtTotalSlots > 0 && $ojtUsedSlots > $ojtTotalSlots;
+            $ojtCardClass = $ojtOverCapacity
                 ? 'bg-rose-50 border-rose-200'
                 : 'bg-white border-gray-200';
-            $ojtTitleClass = $ojtOverSlots > 0 ? 'text-rose-700' : 'text-gray-500';
-            $ojtValueClass = $ojtOverSlots > 0 ? 'text-rose-700' : 'text-gray-900';
-            $ojtIconClass = $ojtOverSlots > 0 ? 'text-rose-600' : 'text-indigo-600';
+            $ojtTitleClass = $ojtOverCapacity ? 'text-rose-700' : 'text-gray-500';
+            $ojtValueClass = $ojtOverCapacity ? 'text-rose-700' : 'text-gray-900';
+            $ojtIconClass = $ojtOverCapacity ? 'text-rose-600' : 'text-indigo-600';
         @endphp
         <div class="border rounded-lg p-4 shadow-sm {{ $ojtCardClass }}">
             <div class="flex items-center gap-3">
@@ -59,16 +63,22 @@
                     </svg>
                 </div>
                 <div>
-                    <p class="text-2xl font-bold {{ $ojtValueClass }}">
-                        {{ number_format((int) ($statsOjtUsedSlots ?? 0)) }}
-                        /
-                        {{ number_format((int) ($statsOjtTotalSlots ?? 0)) }}
-                    </p>
-                    <p class="text-xs font-semibold uppercase tracking-wide mt-1 {{ $ojtTitleClass }}">OJT Slots Used (Ongoing)</p>
-                    @if((int) ($statsOjtOverSlots ?? 0) > 0)
-                        <p class="mt-1 text-xs text-rose-700">Over by {{ number_format((int) ($statsOjtOverSlots ?? 0)) }} slots</p>
+                    @if($ojtTotalSlots > 0)
+                        <p class="text-2xl font-bold {{ $ojtValueClass }}">
+                            {{ number_format($ojtUsedSlots) }} / {{ number_format($ojtTotalSlots) }}
+                        </p>
+                        <p class="text-xs font-semibold uppercase tracking-wide mt-1 {{ $ojtTitleClass }}">OJT Slots Used (Ongoing)</p>
+                        @if($ojtOverCapacity)
+                            <p class="mt-1 text-xs text-rose-700">Over capacity by {{ number_format($ojtOverSlots) }} slot{{ $ojtOverSlots === 1 ? '' : 's' }}</p>
+                        @else
+                            <p class="mt-1 text-xs font-medium text-emerald-700">{{ number_format($ojtAvailableSlots) }} slot{{ $ojtAvailableSlots === 1 ? '' : 's' }} available</p>
+                        @endif
                     @else
-                        <p class="mt-1 text-xs text-gray-500">Within slot capacity</p>
+                        <p class="text-2xl font-bold {{ $ojtValueClass }}">{{ number_format($ojtUsedSlots) }}</p>
+                        <p class="text-xs font-semibold uppercase tracking-wide mt-1 {{ $ojtTitleClass }}">Ongoing Students</p>
+                        <p class="mt-1 text-xs text-gray-500">
+                            <a href="{{ url('/admin/settings') }}" class="text-indigo-600 hover:text-indigo-800 underline">Set total OJT slots</a> in Admin Settings
+                        </p>
                     @endif
                 </div>
             </div>
