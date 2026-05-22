@@ -446,7 +446,13 @@ class LeaveRequestController extends Controller
             $this->revertApprovedCreditOnResubmission($leaveRequest, true);
         }
 
-        $leaveRequest->update(['type' => $newType]);
+        try {
+            $leaveRequest->update(['type' => $newType]);
+        } catch (\Illuminate\Database\QueryException $e) {
+            return redirect('/admin/leave-requests/'.$leaveRequest->id)
+                ->withErrors(['type' => 'Unable to save the selected request type. Please choose another type or contact support.'])
+                ->withInput();
+        }
 
         if ($wasApproved) {
             $this->applyApprovedCreditsForType($leaveRequest);
@@ -508,6 +514,12 @@ class LeaveRequestController extends Controller
         $newEnd = ! empty($validated['end_date'])
             ? Carbon::parse($validated['end_date'])->startOfDay()
             : $newStart->copy();
+
+        if (! $leaveRequest->start_date) {
+            return redirect('/admin/leave-requests/'.$leaveRequest->id)
+                ->withErrors(['start_date' => 'This request has no start date on file. Set dates via edit or resubmission flow first.'])
+                ->withInput();
+        }
 
         $oldStart = $leaveRequest->start_date->copy()->startOfDay();
         $oldEnd = ($leaveRequest->end_date ?? $leaveRequest->start_date)->copy()->startOfDay();
@@ -1884,7 +1896,15 @@ class LeaveRequestController extends Controller
             if ($allowedDepartmentIds !== null && ! in_array($subject->department_id, $allowedDepartmentIds, true)) {
                 abort(403, 'You do not have permission to manage leave requests for this department.');
             }
+
+            return;
         }
+
+        if ($authUser->isSuperAdmin()) {
+            return;
+        }
+
+        abort(403, 'You do not have permission to manage this leave request.');
     }
 
     private function revertLeaveTimeFromDtr(LeaveRequest $leaveRequest, bool $force = false): void
