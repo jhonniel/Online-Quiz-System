@@ -1144,7 +1144,7 @@ class SettingsController extends Controller
      */
     public function getHealthMetrics()
     {
-        $buckets = Cache::get('syshealth:recent_buckets', []);
+        $buckets = Cache::get(\App\Support\SystemHealthMetricsStore::RECENT_BUCKETS_KEY, []);
         if (! is_array($buckets)) {
             $buckets = [];
         }
@@ -1169,13 +1169,15 @@ class SettingsController extends Controller
         $path404 = [];
 
         foreach ($buckets as $bucket) {
-            $reads = (int) (Cache::get("syshealth:bucket:$bucket:reads", 0) ?? 0);
-            $writes = (int) (Cache::get("syshealth:bucket:$bucket:writes", 0) ?? 0);
-            $requests = (int) (Cache::get("syshealth:bucket:$bucket:requests", 0) ?? 0);
-            $errors5xx = (int) (Cache::get("syshealth:bucket:$bucket:errors_5xx", 0) ?? 0);
-            $notFound = (int) (Cache::get("syshealth:bucket:$bucket:not_found", 0) ?? 0);
-            $rateLimited = (int) (Cache::get("syshealth:bucket:$bucket:rate_limited", 0) ?? 0);
-            $authDenied = (int) (Cache::get("syshealth:bucket:$bucket:auth_denied", 0) ?? 0);
+            $data = \App\Support\SystemHealthMetricsStore::loadBucket((string) $bucket);
+
+            $reads = (int) ($data['reads'] ?? 0);
+            $writes = (int) ($data['writes'] ?? 0);
+            $requests = (int) ($data['requests'] ?? 0);
+            $errors5xx = (int) ($data['errors_5xx'] ?? 0);
+            $notFound = (int) ($data['not_found'] ?? 0);
+            $rateLimited = (int) ($data['rate_limited'] ?? 0);
+            $authDenied = (int) ($data['auth_denied'] ?? 0);
 
             $sum['requests'] += $requests;
             $sum['reads'] += $reads;
@@ -1196,10 +1198,10 @@ class SettingsController extends Controller
                 'auth_denied' => $authDenied,
             ];
 
-            $ip404 = $this->mergeCountMaps($ip404, Cache::get("syshealth:bucket:$bucket:ip_404", []));
-            $ipDenied = $this->mergeCountMaps($ipDenied, Cache::get("syshealth:bucket:$bucket:ip_auth_denied", []));
-            $ipRateLimited = $this->mergeCountMaps($ipRateLimited, Cache::get("syshealth:bucket:$bucket:ip_rate_limited", []));
-            $path404 = $this->mergeCountMaps($path404, Cache::get("syshealth:bucket:$bucket:path_404", []));
+            $ip404 = $this->mergeCountMaps($ip404, $data['ip_404'] ?? []);
+            $ipDenied = $this->mergeCountMaps($ipDenied, $data['ip_auth_denied'] ?? []);
+            $ipRateLimited = $this->mergeCountMaps($ipRateLimited, $data['ip_rate_limited'] ?? []);
+            $path404 = $this->mergeCountMaps($path404, $data['path_404'] ?? []);
         }
 
         arsort($ip404);

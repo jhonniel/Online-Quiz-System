@@ -6,7 +6,6 @@ use App\Models\LeaveRequest;
 use Carbon\Carbon;
 use Carbon\CarbonPeriod;
 use Illuminate\Database\Eloquent\Collection as EloquentCollection;
-use Illuminate\Support\Facades\DB;
 
 final class WorkFromHomeQuota
 {
@@ -94,20 +93,20 @@ final class WorkFromHomeQuota
         int $month,
         ?int $excludeLeaveRequestId = null
     ): EloquentCollection {
-        [$monthStart, $monthEnd] = self::monthBounds($year, $month);
-
         $query = LeaveRequest::query()
             ->where('user_id', $userId)
             ->where('type', 'work_from_home')
-            ->where('status', 'approved')
-            ->whereDate('start_date', '<=', $monthEnd)
-            ->whereDate(DB::raw('COALESCE(end_date, start_date)'), '>=', $monthStart);
+            ->where('status', 'approved');
 
         if ($excludeLeaveRequestId !== null) {
             $query->where('id', '!=', $excludeLeaveRequestId);
         }
 
-        return $query->orderBy('start_date')->get();
+        $matching = $query->orderBy('start_date')->get()->filter(
+            fn (LeaveRequest $request) => self::daysOfRequestInMonth($request, $year, $month) > 0
+        );
+
+        return new EloquentCollection($matching->values()->all());
     }
 
     /**

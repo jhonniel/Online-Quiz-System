@@ -6,6 +6,7 @@ use App\Models\LeaveRequest;
 use App\Services\LeaveRequestStaleResubmissionService;
 use Closure;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\View;
 use Symfony\Component\HttpFoundation\Response;
 
@@ -22,8 +23,12 @@ class ShareLeaveResubmissionModalPayload
         if (auth()->check()) {
             $user = auth()->user();
             if (in_array($user->role, ['employee', 'student'], true)) {
-                $payload = app(LeaveRequestStaleResubmissionService::class)
-                    ->pendingResubmissionModalPayloadForUser($user);
+                $payload = Cache::remember(
+                    'leave_resubmission_modal:'.$user->id,
+                    now()->addSeconds(60),
+                    fn () => app(LeaveRequestStaleResubmissionService::class)
+                        ->pendingResubmissionModalPayloadForUser($user)
+                );
 
                 $payload = $this->excludeCurrentLeaveRequestPage($request, $payload);
             }

@@ -236,10 +236,15 @@ class LeaveRequestController extends Controller
 
             $combinedAllowance = (float) $leaveBalance->vacation_allowance + (float) $leaveBalance->sick_allowance;
 
+            // Only exclude a pending WFH request from the balance preview; approved requests must count as used.
+            $excludeWfhRequestId = ($leaveRequest->type === 'work_from_home' && ! $leaveRequest->isApproved())
+                ? (int) $leaveRequest->id
+                : null;
+
             $wfhBalance = WorkFromHomeQuota::balanceForMonth(
                 (int) $user->id,
                 $leaveRequest->start_date?->copy(),
-                $leaveRequest->type === 'work_from_home' ? (int) $leaveRequest->id : null
+                $excludeWfhRequestId
             );
 
             $balances = [
@@ -410,7 +415,7 @@ class LeaveRequestController extends Controller
 
         if ($leaveRequest->status === 'approved') {
             return redirect('/admin/leave-requests/'.$leaveRequest->id)
-                ->withErrors(['type' => 'Request type cannot be changed after this request is approved.']);
+                ->withErrors(['type' => 'Unable to update request type for an approved request.']);
         }
 
         $allowedTypes = LeaveRequest::adminSelectableTypesForRole($leaveRequest->user->role);
@@ -490,7 +495,7 @@ class LeaveRequestController extends Controller
 
         if ($leaveRequest->status === 'approved') {
             return redirect('/admin/leave-requests/'.$leaveRequest->id)
-                ->withErrors(['start_date' => 'Dates cannot be changed after this request is approved.']);
+                ->withErrors(['start_date' => 'Unable to update dates for an approved request.']);
         }
 
         $validated = $request->validate([

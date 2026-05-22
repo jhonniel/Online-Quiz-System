@@ -122,7 +122,6 @@
                                     – {{ $leaveRequest->end_date->format('M d, Y') }}
                                 @endif
                             </p>
-                            <p class="mt-2 text-xs text-gray-500">Dates cannot be changed after this request is approved.</p>
                         @else
                             <form action="{{ url('/admin/leave-requests/' . $leaveRequest->id . '/dates') }}" method="POST"
                                   class="flex flex-col sm:flex-row sm:flex-wrap sm:items-end gap-3"
