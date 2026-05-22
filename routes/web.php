@@ -105,28 +105,36 @@ Route::prefix('admin')->middleware(['auth', 'admin'])->group(function () {
      * Teacher invite links — registered here (auth + admin only) so route names always exist for
      * redirects and caches. TeacherInviteController enforces admin.permission:user_management.
      */
-    Route::get('teachers-management/invite-links', [TeacherInviteController::class, 'adminIndex'])->name('admin.teacher-invites.index');
-    Route::post('teachers-management/invite-links', [TeacherInviteController::class, 'adminStore'])->name('admin.teacher-invites.store');
-
-    // System → Settings, Rules, health (register early so route names always resolve)
-    Route::middleware(['admin.permission:system'])->group(function () {
-        Route::get('/settings', [\App\Http\Controllers\Admin\SettingsController::class, 'index'])->name('admin.settings.index');
-        Route::post('/settings', [\App\Http\Controllers\Admin\SettingsController::class, 'update'])->name('admin.settings.update');
-        Route::get('/settings/health', [\App\Http\Controllers\Admin\SettingsController::class, 'getHealth'])->name('admin.settings.health');
-        Route::get('/settings/health-metrics', [\App\Http\Controllers\Admin\SettingsController::class, 'getHealthMetrics'])->name('admin.settings.health-metrics');
-        Route::post('/settings/test-email', [\App\Http\Controllers\Admin\SettingsController::class, 'testEmail'])->name('admin.settings.test-email');
-        Route::get('/system/rules', [\App\Http\Controllers\Admin\SettingsController::class, 'rulesRegulations'])->name('admin.system.rules');
-        Route::post('/system/rules', [\App\Http\Controllers\Admin\SettingsController::class, 'updateRulesRegulations'])->name('admin.system.rules.update');
-        Route::get('/system/api-monitoring', [\App\Http\Controllers\Admin\ApiMonitoringController::class, 'index'])->name('admin.system.api-monitoring.index');
-        Route::get('/system/api-monitoring/metrics', [\App\Http\Controllers\Admin\ApiMonitoringController::class, 'metrics'])->name('admin.system.api-monitoring.metrics');
-        Route::post('/system/api-monitoring/external-access', [\App\Http\Controllers\Admin\ApiMonitoringController::class, 'updateExternalAccess'])->name('admin.system.api-monitoring.external-access');
-        Route::post('/system/api-monitoring/external-allowed-apis', [\App\Http\Controllers\Admin\ApiMonitoringController::class, 'updateExternalAllowedApis'])->name('admin.system.api-monitoring.external-allowed-apis');
-        Route::post('/system/api-monitoring/keys', [\App\Http\Controllers\Admin\ApiMonitoringController::class, 'createApiKey'])->name('admin.system.api-monitoring.keys.store');
-        Route::post('/system/api-monitoring/keys/{key}/revoke', [\App\Http\Controllers\Admin\ApiMonitoringController::class, 'revokeApiKey'])->name('admin.system.api-monitoring.keys.revoke');
+    Route::middleware(['admin.permission:user_management', 'admin.subfeature:user_management,teacher_invites'])->group(function () {
+        Route::get('teachers-management/invite-links', [TeacherInviteController::class, 'adminIndex'])->name('admin.teacher-invites.index');
+        Route::post('teachers-management/invite-links', [TeacherInviteController::class, 'adminStore'])->name('admin.teacher-invites.store');
     });
 
-    // Billing (requires billing permission or super admin)
-    Route::middleware(['admin.permission:billing'])->group(function () {
+    // System (parent: system; sub-features gate each area)
+    Route::middleware(['admin.permission:system'])->group(function () {
+        Route::middleware(['admin.subfeature:system,settings'])->group(function () {
+            Route::get('/settings', [\App\Http\Controllers\Admin\SettingsController::class, 'index'])->name('admin.settings.index');
+            Route::post('/settings', [\App\Http\Controllers\Admin\SettingsController::class, 'update'])->name('admin.settings.update');
+            Route::get('/settings/health', [\App\Http\Controllers\Admin\SettingsController::class, 'getHealth'])->name('admin.settings.health');
+            Route::get('/settings/health-metrics', [\App\Http\Controllers\Admin\SettingsController::class, 'getHealthMetrics'])->name('admin.settings.health-metrics');
+            Route::post('/settings/test-email', [\App\Http\Controllers\Admin\SettingsController::class, 'testEmail'])->name('admin.settings.test-email');
+        });
+        Route::middleware(['admin.subfeature:system,rules'])->group(function () {
+            Route::get('/system/rules', [\App\Http\Controllers\Admin\SettingsController::class, 'rulesRegulations'])->name('admin.system.rules');
+            Route::post('/system/rules', [\App\Http\Controllers\Admin\SettingsController::class, 'updateRulesRegulations'])->name('admin.system.rules.update');
+        });
+        Route::middleware(['admin.subfeature:system,api_monitoring'])->group(function () {
+            Route::get('/system/api-monitoring', [\App\Http\Controllers\Admin\ApiMonitoringController::class, 'index'])->name('admin.system.api-monitoring.index');
+            Route::get('/system/api-monitoring/metrics', [\App\Http\Controllers\Admin\ApiMonitoringController::class, 'metrics'])->name('admin.system.api-monitoring.metrics');
+            Route::post('/system/api-monitoring/external-access', [\App\Http\Controllers\Admin\ApiMonitoringController::class, 'updateExternalAccess'])->name('admin.system.api-monitoring.external-access');
+            Route::post('/system/api-monitoring/external-allowed-apis', [\App\Http\Controllers\Admin\ApiMonitoringController::class, 'updateExternalAllowedApis'])->name('admin.system.api-monitoring.external-allowed-apis');
+            Route::post('/system/api-monitoring/keys', [\App\Http\Controllers\Admin\ApiMonitoringController::class, 'createApiKey'])->name('admin.system.api-monitoring.keys.store');
+            Route::post('/system/api-monitoring/keys/{key}/revoke', [\App\Http\Controllers\Admin\ApiMonitoringController::class, 'revokeApiKey'])->name('admin.system.api-monitoring.keys.revoke');
+        });
+    });
+
+    // Billing (Subscriptions → Billing sub-feature)
+    Route::middleware(['admin.permission:billing', 'admin.subfeature:subscriptions,billing'])->group(function () {
         Route::get('billing', [App\Http\Controllers\Admin\BillingController::class, 'index'])->name('admin.billing.index');
         Route::post('billing/mark-paid', [App\Http\Controllers\Admin\BillingController::class, 'markAsPaid'])->name('admin.billing.mark-paid');
         Route::post('billing/advance-payment', [App\Http\Controllers\Admin\BillingController::class, 'markAdvancePayment'])->name('admin.billing.advance-payment');
@@ -134,8 +142,8 @@ Route::prefix('admin')->middleware(['auth', 'admin'])->group(function () {
         Route::get('billing/statement/{billingStatement}/pdf', [App\Http\Controllers\Admin\BillingController::class, 'downloadPdf'])->name('admin.billing.statement.pdf');
     });
 
-    // Admin Permissions Management (System access required)
-    Route::middleware(['admin.permission:system'])->group(function () {
+    // Admin Permissions Management (System → Admin Permissions sub-feature)
+    Route::middleware(['admin.permission:system', 'admin.subfeature:system,admin_permissions'])->group(function () {
         Route::get('admin-permissions', [AdminPermissionController::class, 'index'])->name('admin.admin-permissions.index');
         Route::get('admin-permissions/create', [AdminPermissionController::class, 'create'])->name('admin.admin-permissions.create');
         Route::post('admin-permissions', [AdminPermissionController::class, 'store'])->name('admin.admin-permissions.store');
@@ -146,6 +154,7 @@ Route::prefix('admin')->middleware(['auth', 'admin'])->group(function () {
 
     // User Management
     Route::middleware(['admin.permission:user_management'])->group(function () {
+        Route::middleware(['admin.subfeature:user_management,users'])->group(function () {
         Route::get('users/api', [AdminUserController::class, 'api'])->name('admin.users.api');
         Route::resource('users', AdminUserController::class)->names([
             'index' => 'admin.users.index',
@@ -166,40 +175,68 @@ Route::prefix('admin')->middleware(['auth', 'admin'])->group(function () {
         Route::post('users/bulk-assign-ojt-target-end-date', [AdminUserController::class, 'bulkAssignOjtTargetEndDate'])->name('admin.users.bulk-assign-ojt-target-end-date');
         Route::post('users/{user}/send-credentials', [AdminUserController::class, 'sendCredentials'])->name('admin.users.send-credentials');
         Route::post('users/send-bulk-credentials', [AdminUserController::class, 'sendBulkCredentials'])->name('admin.users.send-bulk-credentials');
-        Route::get('teachers-management/teachers', [AdminUserController::class, 'teachersManagement'])->name('admin.teachers-management.teachers');
-        Route::get('teachers-management/moa', [AdminTeacherMoaController::class, 'index'])->name('admin.teacher-moa.index');
-        Route::post('teachers-management/moa/{user}/allow-reupload', [AdminTeacherMoaController::class, 'allowReupload'])->name('admin.teacher-moa.allow-reupload');
-        Route::get('teachers-management/moa/{user}/preview', [AdminTeacherMoaController::class, 'preview'])->name('admin.teacher-moa.preview');
-        Route::get('teachers-management/teacher-excused-requests', [AdminTeacherExcusedRequestController::class, 'index'])->name('admin.teacher-excused-requests.index');
+        });
 
-        // Department Management
-        Route::resource('departments', App\Http\Controllers\Admin\DepartmentController::class)->names('admin.departments');
-        Route::patch('departments/{department}/toggle-status', [App\Http\Controllers\Admin\DepartmentController::class, 'toggleStatus'])->name('admin.departments.toggle-status');
+        Route::middleware(['admin.subfeature:user_management,teachers'])->group(function () {
+            Route::get('teachers-management/teachers', [AdminUserController::class, 'teachersManagement'])->name('admin.teachers-management.teachers');
+        });
+        Route::middleware(['admin.subfeature:user_management,teacher_moa'])->group(function () {
+            Route::get('teachers-management/moa', [AdminTeacherMoaController::class, 'index'])->name('admin.teacher-moa.index');
+            Route::post('teachers-management/moa/{user}/allow-reupload', [AdminTeacherMoaController::class, 'allowReupload'])->name('admin.teacher-moa.allow-reupload');
+            Route::get('teachers-management/moa/{user}/preview', [AdminTeacherMoaController::class, 'preview'])->name('admin.teacher-moa.preview');
+        });
+        Route::middleware(['admin.subfeature:user_management,teacher_excused'])->group(function () {
+            Route::get('teachers-management/teacher-excused-requests', [AdminTeacherExcusedRequestController::class, 'index'])->name('admin.teacher-excused-requests.index');
+        });
+
+        Route::middleware(['admin.subfeature:user_management,universities'])->group(function () {
+            Route::resource('universities', UniversityController::class)->names([
+                'index' => 'admin.universities.index',
+                'create' => 'admin.universities.create',
+                'store' => 'admin.universities.store',
+                'show' => 'admin.universities.show',
+                'edit' => 'admin.universities.edit',
+                'update' => 'admin.universities.update',
+                'destroy' => 'admin.universities.destroy',
+            ]);
+            Route::patch('universities/{university}/toggle-status', [UniversityController::class, 'toggleStatus'])->name('admin.universities.toggle-status');
+        });
+
+        Route::middleware(['admin.subfeature:user_management,departments'])->group(function () {
+            Route::resource('departments', App\Http\Controllers\Admin\DepartmentController::class)->names('admin.departments');
+            Route::patch('departments/{department}/toggle-status', [App\Http\Controllers\Admin\DepartmentController::class, 'toggleStatus'])->name('admin.departments.toggle-status');
+        });
     });
 
-    // Content Management (Quizzes, Forum, Universities)
+    // Content Management (sub-features gate sidebar areas; tasks/import remain parent-only)
     Route::middleware(['admin.permission:content_management'])->group(function () {
-        // University Management
-        Route::resource('universities', UniversityController::class)->names([
-            'index' => 'admin.universities.index',
-            'create' => 'admin.universities.create',
-            'store' => 'admin.universities.store',
-            'show' => 'admin.universities.show',
-            'edit' => 'admin.universities.edit',
-            'update' => 'admin.universities.update',
-            'destroy' => 'admin.universities.destroy',
-        ]);
-        Route::patch('universities/{university}/toggle-status', [UniversityController::class, 'toggleStatus'])->name('admin.universities.toggle-status');
+        Route::middleware(['admin.subfeature:content_management,quizzes'])->group(function () {
+            Route::get('quizzes/import/form', [AdminQuizController::class, 'importForm'])->name('admin.quizzes.import-form');
+            Route::post('quizzes/import', [AdminQuizController::class, 'import'])->name('admin.quizzes.import');
+            Route::get('quizzes/import/template', [AdminQuizController::class, 'downloadTemplate'])->name('admin.quizzes.download-template');
+            Route::get('quizzes/template/download', [AdminQuizController::class, 'downloadTemplate'])->name('admin.quizzes.template.download');
+            Route::post('quizzes/export-csv', [AdminQuizController::class, 'exportToCsv'])->name('admin.quizzes.export-csv');
 
-        // Quiz Management
-        Route::resource('quizzes', AdminQuizController::class);
-        Route::get('quizzes/{quiz}/export-history/pdf', [AdminQuizController::class, 'exportQuizHistoryPdf'])->name('admin.quizzes.export-history-pdf');
-        Route::post('quizzes/{quiz}/assign', [AdminQuizController::class, 'assignToUsers'])->name('admin.quizzes.assign');
-        Route::get('quizzes/{quiz}/assigned-users', [AdminQuizController::class, 'getAssignedUsers'])->name('admin.quizzes.assigned-users');
-        Route::get('quizzes/{quiz}/results', [AdminQuizController::class, 'results'])->name('admin.quizzes.results');
-        Route::post('quizzes/{quiz}/import-questions', [AdminQuizController::class, 'importQuestions'])->name('admin.quizzes.import-questions');
-        Route::get('quizzes/template/download', [AdminQuizController::class, 'downloadTemplate'])->name('admin.quizzes.template.download');
-        Route::post('quizzes/export-csv', [AdminQuizController::class, 'exportToCsv'])->name('admin.quizzes.export-csv');
+            Route::resource('quizzes', AdminQuizController::class);
+
+            Route::get('quizzes/{quiz}/results', [AdminQuizController::class, 'results'])->name('admin.quizzes.results');
+            Route::get('quizzes/{quiz}/export-history/pdf', [AdminQuizController::class, 'exportQuizHistoryPdf'])->name('admin.quizzes.export-history-pdf');
+            Route::post('quizzes/{quiz}/assign', [AdminQuizController::class, 'assignToUsers'])->name('admin.quizzes.assign');
+            Route::get('quizzes/{quiz}/assigned-users', [AdminQuizController::class, 'getAssignedUsers'])->name('admin.quizzes.assigned-users');
+            Route::post('quizzes/{quiz}/import-questions', [AdminQuizController::class, 'importQuestions'])->name('admin.quizzes.import-questions');
+            Route::post('quiz-assignments/{assignment}/reset', [AdminQuizController::class, 'resetAssignment'])->name('admin.quiz-assignments.reset');
+            Route::get('quiz-assignments/{assignment}/history', [AdminQuizController::class, 'viewAttemptHistory'])->name('admin.quiz-assignments.history');
+            Route::get('quiz-assignments/{assignment}/history/pdf', [AdminQuizController::class, 'exportAttemptHistoryPdf'])->name('admin.quiz-assignments.history.pdf');
+            Route::post('quiz-assignments/{assignment}/allow-retake', [AdminQuizController::class, 'allowRetake'])->name('admin.quiz-assignments.allow-retake');
+            Route::get('quiz-attempts/{attemptId}/details', [AdminQuizController::class, 'getAttemptDetails'])->name('admin.quiz-attempts.details');
+            Route::get('quizzes/{quizId}/users/{userId}/history', [AdminQuizController::class, 'getUserQuizHistory'])->name('admin.quizzes.user-history');
+        });
+
+        Route::middleware(['admin.subfeature:content_management,manual_grading'])->group(function () {
+            Route::get('manual-grading', [AdminQuizController::class, 'manualGrading'])->name('admin.manual-grading');
+            Route::get('all-text-attempts', [AdminQuizController::class, 'allTextAttempts'])->name('admin.all-text-attempts');
+            Route::post('quiz-attempts/{attempt}/grade', [AdminQuizController::class, 'gradeAttempt'])->name('admin.quiz-attempts.grade');
+        });
 
         // Task Management - Dashboard and Analytics (Super Admin Only)
         Route::get('tasks/dashboard', [App\Http\Controllers\Admin\TaskController::class, 'dashboard'])->name('admin.tasks.dashboard');
@@ -215,6 +252,7 @@ Route::prefix('admin')->middleware(['auth', 'admin'])->group(function () {
         Route::post('tasks/{task}/attachments', [App\Http\Controllers\Admin\TaskController::class, 'uploadAttachment'])->name('admin.tasks.upload-attachment');
         Route::delete('tasks/attachments/{attachment}', [App\Http\Controllers\Admin\TaskController::class, 'deleteAttachment'])->name('admin.tasks.delete-attachment');
 
+        Route::middleware(['admin.subfeature:content_management,news'])->group(function () {
         // News Management
         Route::resource('news', App\Http\Controllers\Admin\NewsController::class)->names([
             'index' => 'admin.news.index',
@@ -227,6 +265,8 @@ Route::prefix('admin')->middleware(['auth', 'admin'])->group(function () {
         ]);
         Route::post('news/{news}/toggle-publish', [App\Http\Controllers\Admin\NewsController::class, 'togglePublish'])->name('admin.news.toggle-publish');
         Route::post('news/toggle-section', [App\Http\Controllers\Admin\NewsController::class, 'toggleNewsSection'])->name('admin.news.toggle-section');
+        });
+
         Route::post('tasks/{task}/assign-users', [App\Http\Controllers\Admin\TaskController::class, 'assignUsers'])->name('admin.tasks.assign-users');
 
         // Task Invitation Routes
@@ -265,39 +305,25 @@ Route::prefix('admin')->middleware(['auth', 'admin'])->group(function () {
         Route::put('tasks/custom-priorities/{customPriority}', [App\Http\Controllers\Admin\TaskController::class, 'updateCustomPriority'])->name('admin.tasks.custom-priorities.update');
         Route::delete('tasks/custom-priorities/{customPriority}', [App\Http\Controllers\Admin\TaskController::class, 'destroyCustomPriority'])->name('admin.tasks.custom-priorities.destroy');
 
-        // Quiz Assignment Management
-        Route::post('quiz-assignments/{assignment}/reset', [AdminQuizController::class, 'resetAssignment'])->name('admin.quiz-assignments.reset');
-        Route::get('quiz-assignments/{assignment}/history', [AdminQuizController::class, 'viewAttemptHistory'])->name('admin.quiz-assignments.history');
-        Route::get('quiz-assignments/{assignment}/history/pdf', [AdminQuizController::class, 'exportAttemptHistoryPdf'])->name('admin.quiz-assignments.history.pdf');
-        Route::post('quiz-assignments/{assignment}/allow-retake', [AdminQuizController::class, 'allowRetake'])->name('admin.quiz-assignments.allow-retake');
-        Route::get('quiz-attempts/{attemptId}/details', [AdminQuizController::class, 'getAttemptDetails'])->name('admin.quiz-attempts.details');
-        Route::get('quizzes/{quizId}/users/{userId}/history', [AdminQuizController::class, 'getUserQuizHistory'])->name('admin.quizzes.user-history');
-
-        // Manual Grading
-        Route::get('manual-grading', [AdminQuizController::class, 'manualGrading'])->name('admin.manual-grading');
-        Route::get('all-text-attempts', [AdminQuizController::class, 'allTextAttempts'])->name('admin.all-text-attempts');
-        Route::post('quiz-attempts/{attempt}/grade', [AdminQuizController::class, 'gradeAttempt'])->name('admin.quiz-attempts.grade');
-
-        // Quiz Import Routes
-        Route::get('quizzes/import/form', [AdminQuizController::class, 'importForm'])->name('admin.quizzes.import-form');
-        Route::post('quizzes/import', [AdminQuizController::class, 'import'])->name('admin.quizzes.import');
-        Route::get('quizzes/import/template', [AdminQuizController::class, 'downloadTemplate'])->name('admin.quizzes.download-template');
-
         // Import Management (Standalone Import Page)
         Route::get('import', [AdminImportController::class, 'index'])->name('admin.import');
         Route::post('import', [AdminImportController::class, 'import'])->name('admin.import.process');
         Route::get('import/template', [AdminImportController::class, 'downloadTemplate'])->name('admin.import.template');
 
-        // Forum Management
-        Route::resource('forum', App\Http\Controllers\Admin\ForumController::class)->names('admin.forum');
-        Route::patch('forum/{forum}/toggle-publish', [App\Http\Controllers\Admin\ForumController::class, 'togglePublish'])->name('admin.forum.toggle-publish');
-        Route::patch('forum/{forum}/toggle-pin', [App\Http\Controllers\Admin\ForumController::class, 'togglePin'])->name('admin.forum.toggle-pin');
-        Route::post('forum/comment', [App\Http\Controllers\Admin\ForumController::class, 'comment'])->name('admin.forum.comment');
-        Route::post('forum/comment/like', [App\Http\Controllers\Admin\ForumController::class, 'likeComment'])->name('admin.forum.comment.like');
-        Route::resource('evaluations', App\Http\Controllers\Admin\EvaluationController::class)->except(['show'])->names('admin.evaluations');
-        Route::post('evaluations/{evaluation}/activate', [App\Http\Controllers\Admin\EvaluationController::class, 'activate'])->name('admin.evaluations.activate');
-        Route::get('evaluations/{evaluation}/submissions', [App\Http\Controllers\Admin\EvaluationController::class, 'submissions'])->name('admin.evaluations.submissions');
-        Route::post('evaluations/force-send', [App\Http\Controllers\Admin\EvaluationController::class, 'forceSend'])->name('admin.evaluations.force-send');
+        Route::middleware(['admin.subfeature:content_management,forum'])->group(function () {
+            Route::resource('forum', App\Http\Controllers\Admin\ForumController::class)->names('admin.forum');
+            Route::patch('forum/{forum}/toggle-publish', [App\Http\Controllers\Admin\ForumController::class, 'togglePublish'])->name('admin.forum.toggle-publish');
+            Route::patch('forum/{forum}/toggle-pin', [App\Http\Controllers\Admin\ForumController::class, 'togglePin'])->name('admin.forum.toggle-pin');
+            Route::post('forum/comment', [App\Http\Controllers\Admin\ForumController::class, 'comment'])->name('admin.forum.comment');
+            Route::post('forum/comment/like', [App\Http\Controllers\Admin\ForumController::class, 'likeComment'])->name('admin.forum.comment.like');
+        });
+
+        Route::middleware(['admin.subfeature:content_management,evaluations'])->group(function () {
+            Route::resource('evaluations', App\Http\Controllers\Admin\EvaluationController::class)->except(['show'])->names('admin.evaluations');
+            Route::post('evaluations/{evaluation}/activate', [App\Http\Controllers\Admin\EvaluationController::class, 'activate'])->name('admin.evaluations.activate');
+            Route::get('evaluations/{evaluation}/submissions', [App\Http\Controllers\Admin\EvaluationController::class, 'submissions'])->name('admin.evaluations.submissions');
+            Route::post('evaluations/force-send', [App\Http\Controllers\Admin\EvaluationController::class, 'forceSend'])->name('admin.evaluations.force-send');
+        });
     });
 
     // Analytics & Reports (parent: analytics_reports; sub-areas: admin.analytics:{feature})
@@ -331,8 +357,11 @@ Route::prefix('admin')->middleware(['auth', 'admin'])->group(function () {
 
     // Employee Management
     Route::middleware(['admin.permission:employee_management'])->group(function () {
-        Route::get('/employee-dashboard', [App\Http\Controllers\Admin\EmployeeDashboardController::class, 'index'])->name('admin.employee-dashboard.index');
+        Route::middleware(['admin.subfeature:employee_management,employee_dashboard'])->group(function () {
+            Route::get('/employee-dashboard', [App\Http\Controllers\Admin\EmployeeDashboardController::class, 'index'])->name('admin.employee-dashboard.index');
+        });
 
+        Route::middleware(['admin.subfeature:employee_management,dtr'])->group(function () {
         // DTR Management (Employees)
         Route::get('/dtr', [App\Http\Controllers\Admin\DtrController::class, 'index'])->name('admin.dtr.index');
         Route::get('/dtr/create', [App\Http\Controllers\Admin\DtrController::class, 'create'])->name('admin.dtr.create');
@@ -344,13 +373,15 @@ Route::prefix('admin')->middleware(['auth', 'admin'])->group(function () {
         Route::post('/dtr/import', [App\Http\Controllers\Admin\DtrController::class, 'import'])->name('admin.dtr.import');
         Route::get('/dtr/template', [App\Http\Controllers\Admin\DtrController::class, 'downloadTemplate'])->name('admin.dtr.template');
         Route::get('/dtr/export-pdf', [App\Http\Controllers\Admin\DtrController::class, 'exportPdf'])->name('admin.dtr.export-pdf');
+        });
 
-        // Time Report (Employees)
-        Route::get('/time-report', [App\Http\Controllers\Admin\TimeReportController::class, 'index'])->name('admin.time-report.index');
+        Route::middleware(['admin.subfeature:employee_management,time_report'])->group(function () {
+            Route::get('/time-report', [App\Http\Controllers\Admin\TimeReportController::class, 'index'])->name('admin.time-report.index');
+        });
 
+        Route::middleware(['admin.subfeature:employee_management,leave_requests'])->group(function () {
         // Leave Requests Management (Employees)
         Route::get('/leave-requests', [App\Http\Controllers\Admin\LeaveRequestController::class, 'index'])->name('admin.leave-requests.index');
-        Route::get('/leave-calendar', [App\Http\Controllers\Admin\LeaveRequestController::class, 'calendar'])->name('admin.leave-requests.calendar');
         Route::post('/leave-requests/create-for-employee', [App\Http\Controllers\Admin\LeaveRequestController::class, 'storeForEmployee'])->name('admin.leave-requests.store-for-employee');
         Route::get('/leave-requests/{leaveRequest}', [App\Http\Controllers\Admin\LeaveRequestController::class, 'show'])->name('admin.leave-requests.show');
         Route::patch('/leave-requests/{leaveRequest}/type', [App\Http\Controllers\Admin\LeaveRequestController::class, 'updateType'])->name('admin.leave-requests.update-type');
@@ -361,6 +392,11 @@ Route::prefix('admin')->middleware(['auth', 'admin'])->group(function () {
         Route::post('/leave-requests/{leaveRequest}/reject', [App\Http\Controllers\Admin\LeaveRequestController::class, 'reject'])->name('admin.leave-requests.reject');
         Route::post('/leave-requests/{leaveRequest}/resubmit', [App\Http\Controllers\Admin\LeaveRequestController::class, 'resubmit'])->name('admin.leave-requests.resubmit');
         Route::delete('/leave-requests/{leaveRequest}', [App\Http\Controllers\Admin\LeaveRequestController::class, 'destroy'])->name('admin.leave-requests.destroy');
+        });
+
+        Route::middleware(['admin.subfeature:employee_management,leave_calendar'])->group(function () {
+            Route::get('/leave-calendar', [App\Http\Controllers\Admin\LeaveRequestController::class, 'calendar'])->name('admin.leave-requests.calendar');
+        });
     });
 
     // Student Management
@@ -510,30 +546,40 @@ Route::prefix('admin')->middleware(['auth', 'admin'])->group(function () {
         Route::get('live-chat/{ticketNumber}/typing', [AdminLiveChatController::class, 'getTypingIndicators'])->name('live-chat.typing');
     });
 
-    // Linked Accounts (dashboard, Starlinks, Omada, Plan Types)
+    // Linked Accounts (Subscriptions sub-features)
     Route::middleware(['admin.permission:linked_accounts'])->group(function () {
-        Route::get('linked-accounts', [App\Http\Controllers\Admin\LinkedAccountController::class, 'index'])->name('admin.linked-accounts.index');
+        Route::middleware(['admin.subfeature:subscriptions,dashboard'])->group(function () {
+            Route::get('linked-accounts', [App\Http\Controllers\Admin\LinkedAccountController::class, 'index'])->name('admin.linked-accounts.index');
+        });
+        Route::middleware(['admin.subfeature:subscriptions,starlinks'])->group(function () {
         Route::get('starlinks/import', [App\Http\Controllers\Admin\StarlinkController::class, 'importForm'])->name('admin.starlinks.import');
         Route::get('starlinks/import/template', [App\Http\Controllers\Admin\StarlinkController::class, 'importTemplate'])->name('admin.starlinks.import.template');
         Route::get('starlinks/export/csv', [App\Http\Controllers\Admin\StarlinkController::class, 'exportCsv'])->name('admin.starlinks.export.csv');
         Route::get('starlinks/export/pdf', [App\Http\Controllers\Admin\StarlinkController::class, 'exportPdf'])->name('admin.starlinks.export.pdf');
         Route::post('starlinks/import', [App\Http\Controllers\Admin\StarlinkController::class, 'processImport'])->name('admin.starlinks.import.process');
         Route::resource('starlinks', App\Http\Controllers\Admin\StarlinkController::class)->names('admin.starlinks');
+        });
+        Route::middleware(['admin.subfeature:subscriptions,omadas'])->group(function () {
         Route::get('omadas/import', [App\Http\Controllers\Admin\OmadaController::class, 'importForm'])->name('admin.omadas.import');
         Route::get('omadas/import/template', [App\Http\Controllers\Admin\OmadaController::class, 'importTemplate'])->name('admin.omadas.import.template');
         Route::post('omadas/import', [App\Http\Controllers\Admin\OmadaController::class, 'processImport'])->name('admin.omadas.import.process');
         Route::resource('omadas', App\Http\Controllers\Admin\OmadaController::class)->names('admin.omadas');
-        Route::resource('subscription-plan-types', App\Http\Controllers\Admin\SubscriptionPlanTypeController::class)->names('admin.subscription-plan-types');
+        });
+        Route::middleware(['admin.subfeature:subscriptions,plan_types'])->group(function () {
+            Route::resource('subscription-plan-types', App\Http\Controllers\Admin\SubscriptionPlanTypeController::class)->names('admin.subscription-plan-types');
+        });
     });
 
-    // System Management
+    // System Management (landing page, stacks — parent system permission)
     Route::middleware(['admin.permission:system'])->group(function () {
-        // Landing Page Management
-        Route::get('/landing-page', [\App\Http\Controllers\Admin\LandingPageController::class, 'index'])->name('admin.landing-page.index');
-        Route::post('/landing-page', [\App\Http\Controllers\Admin\LandingPageController::class, 'update'])->name('admin.landing-page.update');
+        Route::middleware(['admin.subfeature:system,landing_page'])->group(function () {
+            Route::get('/landing-page', [\App\Http\Controllers\Admin\LandingPageController::class, 'index'])->name('admin.landing-page.index');
+            Route::post('/landing-page', [\App\Http\Controllers\Admin\LandingPageController::class, 'update'])->name('admin.landing-page.update');
+        });
 
-        // Stacks Management
-        Route::resource('stacks', \App\Http\Controllers\Admin\StackController::class)->names('admin.stacks');
+        Route::middleware(['admin.subfeature:system,stacks'])->group(function () {
+            Route::resource('stacks', \App\Http\Controllers\Admin\StackController::class)->names('admin.stacks');
+        });
 
         // Status Management
         Route::get('status/online-users', [StatusController::class, 'getOnlineUsers'])->name('status.online-users');
@@ -542,7 +588,7 @@ Route::prefix('admin')->middleware(['auth', 'admin'])->group(function () {
         Route::get('status/all-users', [StatusController::class, 'getAllUserStatuses'])->name('status.all-users');
     });
 
-    // Feedback Management – requires feedback permission
+    // Feedback Management – requires feedback permission (or Communication → Feedback via canAccessCommunicationFeature)
     Route::middleware(['admin.permission:feedback'])->group(function () {
         Route::resource('feedback', App\Http\Controllers\Admin\FeedbackController::class)->names('admin.feedback');
         Route::post('feedback/{feedback}/assign', [App\Http\Controllers\Admin\FeedbackController::class, 'assign'])->name('admin.feedback.assign');

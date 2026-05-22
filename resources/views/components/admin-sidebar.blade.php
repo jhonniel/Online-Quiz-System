@@ -129,7 +129,7 @@
         @endif
 
         <!-- Content Management -->
-        @if(auth()->user()->canAccessContentManagement())
+        @if(auth()->user()->canAccessAnyAdminSubFeature('content_management'))
         <div class="mb-6" x-data="{
             open: (localStorage.getItem('nav-content-management') || 'true') === 'true',
             toggle() {
@@ -146,6 +146,7 @@
                 </svg>
             </button>
             <div class="space-y-1" x-show="sidebarCollapsed ? true : open" x-transition:enter="transition ease-out duration-100" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100" x-transition:leave="transition ease-in duration-75" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0">
+                @if(auth()->user()->canAccessContentFeature('quizzes'))
                 <a href="{{ url('/admin/quizzes') }}"
                    class="flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors duration-200 {{ request()->routeIs('quizzes.*') ? 'bg-indigo-700 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white' }}"
                    :class="sidebarCollapsed ? 'justify-center' : ''"
@@ -157,6 +158,8 @@
                         Quizzes
                     </span>
                 </a>
+                @endif
+                @if(auth()->user()->canAccessContentFeature('manual_grading'))
                 <a href="{{ url('/admin/manual-grading') }}"
                    class="flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors duration-200 {{ request()->routeIs('admin.manual-grading') ? 'bg-indigo-700 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white' }}"
                    :class="sidebarCollapsed ? 'justify-center' : ''"
@@ -168,6 +171,8 @@
                         Manual Grading
                     </span>
                 </a>
+                @endif
+                @if(auth()->user()->canAccessContentFeature('forum'))
                 <a href="{{ url('/admin/forum') }}"
                    class="flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors duration-200 {{ request()->routeIs('admin.forum.*') ? 'bg-indigo-700 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white' }}"
                    :class="sidebarCollapsed ? 'justify-center' : ''"
@@ -179,6 +184,8 @@
                         Forum
                     </span>
                 </a>
+                @endif
+                @if(auth()->user()->canAccessContentFeature('news'))
                 <a href="{{ url('/admin/news') }}"
                    class="flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors duration-200 {{ request()->routeIs('admin.news.*') ? 'bg-indigo-700 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white' }}"
                    :class="sidebarCollapsed ? 'justify-center' : ''"
@@ -190,6 +197,8 @@
                         News
                     </span>
                 </a>
+                @endif
+                @if(auth()->user()->canAccessContentFeature('evaluations'))
                 <a href="{{ url('/admin/evaluations') }}"
                    class="flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors duration-200 {{ request()->routeIs('admin.evaluations.*') ? 'bg-indigo-700 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white' }}"
                    :class="sidebarCollapsed ? 'justify-center' : ''"
@@ -201,6 +210,7 @@
                         Evaluation Question
                     </span>
                 </a>
+                @endif
             </div>
         </div>
         @endif
@@ -372,7 +382,7 @@
         @endif
 
         <!-- Employee Management -->
-        @if(auth()->user()->canAccessEmployeeManagement())
+        @if(auth()->user()->canAccessAnyAdminSubFeature('employee_management'))
         <div class="mb-6" x-data="{
             open: (localStorage.getItem('nav-employee-management') || 'true') === 'true',
             toggle() {
@@ -389,6 +399,7 @@
                 </svg>
             </button>
             <div class="space-y-1" x-show="sidebarCollapsed ? true : open" x-transition:enter="transition ease-out duration-100" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100" x-transition:leave="transition ease-in duration-75" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0">
+                @if(auth()->user()->canAccessEmployeeFeature('employee_dashboard'))
                 <a href="{{ url('/admin/employee-dashboard') }}"
                    class="flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors duration-200 {{ request()->routeIs('admin.employee-dashboard.index') ? 'bg-indigo-700 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white' }}"
                    :class="sidebarCollapsed ? 'justify-center' : ''"
@@ -400,6 +411,8 @@
                         Employee Dashboard
                     </span>
                 </a>
+                @endif
+                @if(auth()->user()->canAccessEmployeeFeature('dtr'))
                 <a href="{{ url('/admin/dtr') }}"
                    class="flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors duration-200 {{ request()->routeIs('admin.dtr.*') ? 'bg-indigo-700 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white' }}"
                    :class="sidebarCollapsed ? 'justify-center' : ''"
@@ -411,6 +424,8 @@
                         DTR (Time Records)
                     </span>
                 </a>
+                @endif
+                @if(auth()->user()->canAccessEmployeeFeature('time_report'))
                 <a href="{{ url('/admin/time-report') }}"
                    class="flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors duration-200 {{ request()->routeIs('admin.time-report.*') ? 'bg-indigo-700 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white' }}"
                    :class="sidebarCollapsed ? 'justify-center' : ''"
@@ -422,6 +437,8 @@
                         Time Report
                     </span>
                 </a>
+                @endif
+                @if(auth()->user()->canAccessEmployeeFeature('leave_requests'))
                 <a href="{{ url('/admin/leave-requests') }}"
                    class="flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors duration-200 {{ request()->routeIs('admin.leave-requests.index') ? 'bg-indigo-700 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white' }}"
                    :class="sidebarCollapsed ? 'justify-center' : ''"
@@ -433,6 +450,8 @@
                         Leave Requests
                     </span>
                 </a>
+                @endif
+                @if(auth()->user()->canAccessEmployeeFeature('leave_calendar'))
                 <a href="{{ url('/admin/leave-calendar') }}"
                    class="flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors duration-200 {{ request()->routeIs('admin.leave-requests.calendar') ? 'bg-indigo-700 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white' }}"
                    :class="sidebarCollapsed ? 'justify-center' : ''"
@@ -444,12 +463,13 @@
                         Leave Calendar
                     </span>
                 </a>
+                @endif
             </div>
         </div>
         @endif
 
         <!-- Student Management -->
-        @if(auth()->user()->canAccessStudentManagement())
+        @if(auth()->user()->canAccessAnyAdminSubFeature('student_management'))
         <div class="mb-6" x-data="{
             open: (localStorage.getItem('nav-student-management') || 'true') === 'true',
             toggle() {
@@ -467,6 +487,7 @@
                 </svg>
             </button>
             <div class="space-y-1" x-show="sidebarCollapsed ? true : open" x-transition:enter="transition ease-out duration-100" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100" x-transition:leave="transition ease-in duration-75" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0">
+                @if(auth()->user()->canAccessStudentFeature('students'))
                 <a href="{{ url('/admin/student-management/students') }}"
                    class="flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors duration-200 {{ request()->routeIs('admin.student-management.students') ? 'bg-indigo-700 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white' }}"
                    :class="sidebarCollapsed ? 'justify-center' : ''"
@@ -478,6 +499,8 @@
                         Students
                     </span>
                 </a>
+                @endif
+                @if(auth()->user()->canAccessStudentFeature('student_dashboard'))
                 <a href="{{ url('/admin/student-management/dashboard') }}"
                    class="flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors duration-200 {{ request()->routeIs('admin.student-management.dashboard') ? 'bg-indigo-700 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white' }}"
                    :class="sidebarCollapsed ? 'justify-center' : ''"
@@ -489,6 +512,8 @@
                         Student Time Dashboard
                     </span>
                 </a>
+                @endif
+                @if(auth()->user()->canAccessStudentFeature('student_dtr'))
                 <a href="{{ url('/admin/student-dtr') }}"
                    class="flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors duration-200 {{ request()->routeIs('admin.student-dtr.*') ? 'bg-indigo-700 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white' }}"
                    :class="sidebarCollapsed ? 'justify-center' : ''"
@@ -500,6 +525,8 @@
                         DTR (Time Records)
                     </span>
                 </a>
+                @endif
+                @if(auth()->user()->canAccessStudentFeature('student_leave_requests'))
                 <a href="{{ url('/admin/student-leave-requests') }}"
                    class="flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors duration-200 {{ request()->routeIs('admin.student-leave-requests.index') ? 'bg-indigo-700 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white' }}"
                    :class="sidebarCollapsed ? 'justify-center' : ''"
@@ -511,6 +538,8 @@
                         Student Leave Requests
                     </span>
                 </a>
+                @endif
+                @if(auth()->user()->canAccessStudentFeature('student_leave_calendar'))
                 <a href="{{ url('/admin/student-leave-calendar') }}"
                    class="flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors duration-200 {{ request()->routeIs('admin.student-leave-requests.calendar') ? 'bg-indigo-700 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white' }}"
                    :class="sidebarCollapsed ? 'justify-center' : ''"
@@ -522,7 +551,8 @@
                         Student Leave Calendar
                     </span>
                 </a>
-                @if(auth()->user()->isAdmin() || auth()->user()->hasAnyAdminPermission())
+                @endif
+                @if(auth()->user()->canAccessStudentFeature('time_requests'))
                 <a href="{{ url('/admin/time-requests') }}"
                    class="flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors duration-200 {{ request()->routeIs('admin.time-requests.*') ? 'bg-indigo-700 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white' }}"
                    :class="sidebarCollapsed ? 'justify-center' : ''"
@@ -540,7 +570,7 @@
         @endif
 
         <!-- Teachers Management -->
-        @if(auth()->user()->canAccessUserManagement())
+        @if(auth()->user()->canAccessUserManagementFeature('teachers') || auth()->user()->canAccessUserManagementFeature('teacher_invites') || auth()->user()->canAccessUserManagementFeature('teacher_moa') || auth()->user()->canAccessUserManagementFeature('teacher_excused'))
         <div class="mb-6" x-data="{
             open: (localStorage.getItem('nav-teachers-management') || 'true') === 'true',
             toggle() {
@@ -558,6 +588,7 @@
                 </svg>
             </button>
             <div class="space-y-1" x-show="sidebarCollapsed ? true : open" x-transition:enter="transition ease-out duration-100" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100" x-transition:leave="transition ease-in duration-75" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0">
+                @if(auth()->user()->canAccessUserManagementFeature('teachers'))
                 <a href="{{ url('/admin/teachers-management/teachers') }}"
                    class="flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors duration-200 {{ request()->routeIs('admin.teachers-management.teachers') ? 'bg-indigo-700 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white' }}"
                    :class="sidebarCollapsed ? 'justify-center' : ''"
@@ -569,6 +600,8 @@
                         Teachers
                     </span>
                 </a>
+                @endif
+                @if(auth()->user()->canAccessUserManagementFeature('teacher_invites'))
                 <a href="{{ url('/admin/teachers-management/invite-links') }}"
                    class="flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors duration-200 {{ request()->routeIs('admin.teacher-invites.*') ? 'bg-indigo-700 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white' }}"
                    :class="sidebarCollapsed ? 'justify-center' : ''"
@@ -580,6 +613,8 @@
                         Invite Links
                     </span>
                 </a>
+                @endif
+                @if(auth()->user()->canAccessUserManagementFeature('teacher_moa'))
                 <a href="{{ url('/admin/teachers-management/moa') }}"
                    class="flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors duration-200 {{ request()->routeIs('admin.teacher-moa.*') ? 'bg-indigo-700 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white' }}"
                    :class="sidebarCollapsed ? 'justify-center' : ''"
@@ -591,6 +626,8 @@
                         MOA
                     </span>
                 </a>
+                @endif
+                @if(auth()->user()->canAccessUserManagementFeature('teacher_excused'))
                 <a href="{{ url('/admin/teachers-management/teacher-excused-requests') }}"
                    class="flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors duration-200 {{ request()->routeIs('admin.teacher-excused-requests.*') ? 'bg-indigo-700 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white' }}"
                    :class="sidebarCollapsed ? 'justify-center' : ''"
@@ -602,12 +639,13 @@
                         Excused Requests
                     </span>
                 </a>
+                @endif
             </div>
         </div>
         @endif
 
         <!-- Hiring Process -->
-        @if(auth()->user()->canAccessHiringProcess())
+        @if(auth()->user()->canAccessAnyAdminSubFeature('hiring_process'))
         <div class="mb-6" x-data="{
             open: (localStorage.getItem('nav-hiring-process') || 'true') === 'true',
             toggle() {
@@ -625,6 +663,7 @@
                 </svg>
             </button>
             <div class="space-y-1" x-show="sidebarCollapsed ? true : open" x-transition:enter="transition ease-out duration-100" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100" x-transition:leave="transition ease-in duration-75" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0">
+                @if(auth()->user()->canAccessHiringFeature('overview'))
                 <a href="{{ url('/admin/hiring-process') }}"
                    class="flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors duration-200 {{ request()->routeIs('admin.hiring-process.index') ? 'bg-indigo-700 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white' }}"
                    :class="sidebarCollapsed ? 'justify-center' : ''"
@@ -636,6 +675,8 @@
                         Hiring Process
                     </span>
                 </a>
+                @endif
+                @if(auth()->user()->canAccessHiringFeature('positions'))
                 <a href="{{ url('/admin/hiring-positions') }}"
                    class="flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors duration-200 {{ request()->routeIs('admin.hiring-positions.*') ? 'bg-indigo-700 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white' }}"
                    :class="sidebarCollapsed ? 'justify-center' : ''"
@@ -647,6 +688,8 @@
                         Positions
                     </span>
                 </a>
+                @endif
+                @if(auth()->user()->canAccessHiringFeature('applications'))
                 <a href="{{ url('/admin/hiring-applications') }}"
                    class="flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors duration-200 {{ request()->routeIs('admin.hiring-applications.index') || request()->routeIs('admin.hiring-applications.show') ? 'bg-indigo-700 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white' }}"
                    :class="sidebarCollapsed ? 'justify-center' : ''"
@@ -658,6 +701,8 @@
                         Applications
                     </span>
                 </a>
+                @endif
+                @if(auth()->user()->canAccessHiringFeature('hired_applicants'))
                 <a href="{{ url('/admin/hiring-process/applicants?view=hired') }}#hired-applicants"
                    class="flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors duration-200 {{ request()->is('admin/hiring-process/applicants') && request('view') === 'hired' ? 'bg-indigo-700 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white' }}"
                    :class="sidebarCollapsed ? 'justify-center' : ''"
@@ -669,6 +714,8 @@
                         Hired Applicants
                     </span>
                 </a>
+                @endif
+                @if(auth()->user()->canAccessHiringFeature('interview_calendar'))
                 <a href="{{ url('/admin/hiring-applications/calendar') }}"
                    class="flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors duration-200 {{ request()->routeIs('admin.hiring-applications.calendar') ? 'bg-indigo-700 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white' }}"
                    :class="sidebarCollapsed ? 'justify-center' : ''"
@@ -680,12 +727,13 @@
                         Calendar Interview
                     </span>
                 </a>
+                @endif
             </div>
         </div>
         @endif
 
         <!-- Communication -->
-        @if(auth()->user()->canAccessCommunication() || auth()->user()->canAccessFeedback())
+        @if(auth()->user()->canAccessAnyAdminSubFeature('communication') || auth()->user()->canAccessFeedback())
         <div class="mb-6" x-data="{
             open: (localStorage.getItem('nav-communication') || 'true') === 'true',
             toggle() {
@@ -702,7 +750,7 @@
                 </svg>
             </button>
             <div class="space-y-1" x-show="sidebarCollapsed ? true : open" x-transition:enter="transition ease-out duration-100" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100" x-transition:leave="transition ease-in duration-75" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0">
-                @if(auth()->user()->canAccessCommunication())
+                @if(auth()->user()->canAccessCommunicationFeature('contact_messages'))
                 <a href="{{ url('/admin/contact-messages') }}"
                    class="flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors duration-200 {{ request()->routeIs('contact-messages.*') ? 'bg-indigo-700 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white' }}"
                    :class="sidebarCollapsed ? 'justify-center' : ''"
@@ -715,7 +763,7 @@
                     </span>
                 </a>
                 @endif
-                @if(auth()->user()->canAccessCommunication())
+                @if(auth()->user()->canAccessCommunicationFeature('live_chat'))
                 <a href="{{ url('/admin/live-chat') }}"
                    class="flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors duration-200 {{ request()->routeIs('live-chat.*') ? 'bg-indigo-700 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white' }}"
                    :class="sidebarCollapsed ? 'justify-center' : ''"
@@ -746,7 +794,7 @@
         @endif
 
         <!-- Tickets (Report a Problem) -->
-        @if(auth()->user()->canAccessCommunication())
+        @if(auth()->user()->canAccessCommunicationFeature('tickets'))
         <div class="mb-6" x-data="{
             open: (localStorage.getItem('nav-tickets') || 'true') === 'true',
             toggle() {
@@ -804,7 +852,7 @@
         @endif
 
         <!-- Subscriptions (linked_accounts or billing permission) -->
-        @if(auth()->user()->canAccessLinkedAccounts() || auth()->user()->canAccessBilling())
+        @if(auth()->user()->canAccessAnyAdminSubFeature('subscriptions'))
         <div class="mb-6" x-data="{
             open: (localStorage.getItem('nav-linked-accounts') || 'true') === 'true',
             toggle() {
@@ -822,7 +870,7 @@
                 </svg>
             </button>
             <div class="space-y-1" x-show="sidebarCollapsed ? true : open" x-transition:enter="transition ease-out duration-100" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100" x-transition:leave="transition ease-in duration-75" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0">
-                @if(auth()->user()->canAccessLinkedAccounts())
+                @if(auth()->user()->canAccessSubscriptionFeature('dashboard'))
                 <a href="{{ url('/admin/linked-accounts') }}"
                    class="flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors duration-200 {{ request()->is('admin/linked-accounts') && !request()->is('admin/linked-accounts/*') ? 'bg-indigo-700 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white' }}"
                    :class="sidebarCollapsed ? 'justify-center' : ''"
@@ -833,7 +881,7 @@
                     <span class="transition-opacity duration-300" :class="sidebarCollapsed ? 'opacity-0 w-0 overflow-hidden' : 'opacity-100'">Dashboard</span>
                 </a>
                 @endif
-                @if(auth()->user()->canAccessLinkedAccounts())
+                @if(auth()->user()->canAccessSubscriptionFeature('starlinks'))
                 <a href="{{ url('/admin/starlinks') }}"
                    class="flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors duration-200 {{ request()->is('admin/starlinks*') ? 'bg-indigo-700 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white' }}"
                    :class="sidebarCollapsed ? 'justify-center' : ''"
@@ -844,7 +892,7 @@
                     <span class="transition-opacity duration-300" :class="sidebarCollapsed ? 'opacity-0 w-0 overflow-hidden' : 'opacity-100'">Starlinks</span>
                 </a>
                 @endif
-                @if(auth()->user()->canAccessLinkedAccounts())
+                @if(auth()->user()->canAccessSubscriptionFeature('omadas'))
                 <a href="{{ url('/admin/omadas') }}"
                    class="flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors duration-200 {{ request()->is('admin/omadas*') ? 'bg-indigo-700 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white' }}"
                    :class="sidebarCollapsed ? 'justify-center' : ''"
@@ -866,7 +914,7 @@
                     <span class="transition-opacity duration-300" :class="sidebarCollapsed ? 'opacity-0 w-0 overflow-hidden' : 'opacity-100'">Billing</span>
                 </a>
                 @endif
-                @if(auth()->user()->canAccessLinkedAccounts())
+                @if(auth()->user()->canAccessSubscriptionFeature('plan_types'))
                 <a href="{{ url('/admin/subscription-plan-types') }}"
                    class="flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors duration-200 {{ request()->is('admin/subscription-plan-types*') ? 'bg-indigo-700 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white' }}"
                    :class="sidebarCollapsed ? 'justify-center' : ''"
@@ -882,7 +930,7 @@
         @endif
 
         <!-- User Management -->
-        @if(auth()->user()->canAccessUserManagement())
+        @if(auth()->user()->canAccessAnyAdminSubFeature('user_management'))
         <div class="mb-6" x-data="{
             open: (localStorage.getItem('nav-user-management') || 'true') === 'true',
             toggle() {
@@ -899,6 +947,7 @@
                 </svg>
             </button>
             <div class="space-y-1" x-show="sidebarCollapsed ? true : open" x-transition:enter="transition ease-out duration-100" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100" x-transition:leave="transition ease-in duration-75" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0">
+                @if(auth()->user()->canAccessUserManagementFeature('users'))
                 <a href="{{ url('/admin/users') }}"
                    class="flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors duration-200 {{ request()->routeIs('admin.users.*') ? 'bg-indigo-700 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white' }}"
                    :class="sidebarCollapsed ? 'justify-center' : ''"
@@ -910,6 +959,8 @@
                         Users
                     </span>
                 </a>
+                @endif
+                @if(auth()->user()->canAccessUserManagementFeature('universities'))
                 <a href="{{ url('/admin/universities') }}"
                    class="flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors duration-200 {{ request()->routeIs('admin.universities.*') ? 'bg-indigo-700 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white' }}"
                    :class="sidebarCollapsed ? 'justify-center' : ''"
@@ -921,6 +972,8 @@
                         Universities
                     </span>
                 </a>
+                @endif
+                @if(auth()->user()->canAccessUserManagementFeature('departments'))
                 <a href="{{ url('/admin/departments') }}"
                    class="flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors duration-200 {{ request()->routeIs('admin.departments.*') ? 'bg-indigo-700 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white' }}"
                    :class="sidebarCollapsed ? 'justify-center' : ''"
@@ -932,6 +985,7 @@
                         Departments
                     </span>
                 </a>
+                @endif
             </div>
         </div>
         @endif
@@ -1032,7 +1086,7 @@
         </div>
 
         <!-- System -->
-        @if(auth()->user()->canAccessSystem())
+        @if(auth()->user()->canAccessAnyAdminSubFeature('system'))
         <div class="mb-6" x-data="{
             open: (localStorage.getItem('nav-system') || 'true') === 'true',
             toggle() {
@@ -1049,6 +1103,7 @@
                 </svg>
             </button>
             <div class="space-y-1" x-show="sidebarCollapsed ? true : open" x-transition:enter="transition ease-out duration-100" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100" x-transition:leave="transition ease-in duration-75" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0">
+                @if(auth()->user()->canAccessSystemFeature('rules'))
                 <a href="{{ url('/admin/system/rules') }}"
                    class="flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors duration-200 {{ request()->is('admin/system/rules') ? 'bg-indigo-700 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white' }}"
                    :class="sidebarCollapsed ? 'justify-center' : ''"
@@ -1060,6 +1115,8 @@
                         Rules
                     </span>
                 </a>
+                @endif
+                @if(auth()->user()->canAccessSystemFeature('settings'))
                 <a href="{{ url('/admin/settings') }}"
                    class="flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors duration-200 settings-link {{ request()->routeIs('admin.settings.*') ? 'bg-indigo-700 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white' }}"
                    :class="sidebarCollapsed ? 'justify-center' : ''"
@@ -1073,6 +1130,8 @@
                         Settings
                     </span>
                 </a>
+                @endif
+                @if(auth()->user()->canAccessSystemFeature('landing_page'))
                 <a href="{{ url('/admin/landing-page') }}"
                    class="flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors duration-200 {{ request()->routeIs('admin.landing-page.*') ? 'bg-indigo-700 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white' }}"
                    :class="sidebarCollapsed ? 'justify-center' : ''"
@@ -1084,6 +1143,8 @@
                         Landing Page
                     </span>
                 </a>
+                @endif
+                @if(auth()->user()->canAccessSystemFeature('stacks'))
                 <a href="{{ url('/admin/stacks') }}"
                    class="flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors duration-200 {{ request()->routeIs('admin.stacks.*') ? 'bg-indigo-700 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white' }}"
                    :class="sidebarCollapsed ? 'justify-center' : ''"
@@ -1095,6 +1156,8 @@
                         Stacks
                     </span>
                 </a>
+                @endif
+                @if(auth()->user()->canAccessSystemFeature('api_monitoring'))
                 <a href="{{ url('/admin/system/api-monitoring') }}"
                    class="flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors duration-200 {{ request()->routeIs('admin.system.api-monitoring.*') ? 'bg-indigo-700 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white' }}"
                    :class="sidebarCollapsed ? 'justify-center' : ''"
@@ -1106,7 +1169,8 @@
                         API Monitoring
                     </span>
                 </a>
-                @if(auth()->user()->canAccessSystem())
+                @endif
+                @if(auth()->user()->canAccessSystemFeature('admin_permissions'))
                 <a href="{{ url('/admin/admin-permissions') }}"
                    class="flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors duration-200 {{ request()->routeIs('admin.admin-permissions.*') ? 'bg-indigo-700 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white' }}"
                    :class="sidebarCollapsed ? 'justify-center' : ''"

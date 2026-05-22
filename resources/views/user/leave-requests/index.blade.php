@@ -104,7 +104,7 @@
 
     <!-- Leave Balance & Overtime / Student Time -->
     @if(auth()->user()->role === 'employee')
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 px-4 pb-4">
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 px-4 pb-4">
             <!-- Leave Credits Balance -->
             <div class="bg-white rounded-lg shadow p-4 border border-indigo-200">
                 <div class="flex items-center">
@@ -124,6 +124,27 @@
                     </div>
                 </div>
             </div>
+
+            @if(isset($balances['work_from_home']))
+            <div class="bg-white rounded-lg shadow p-4 border border-violet-200">
+                <div class="flex items-center">
+                    <div class="flex-shrink-0 bg-violet-100 rounded-lg p-3">
+                        <svg class="h-6 w-6 text-violet-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path>
+                        </svg>
+                    </div>
+                    <div class="ml-4">
+                        <p class="text-sm font-medium text-gray-500">Work From Home ({{ $balances['work_from_home']['month_label'] }})</p>
+                        <p class="text-xl font-bold text-gray-900">
+                            {{ number_format($balances['work_from_home']['remaining'], 0) }} / {{ $balances['work_from_home']['allowance'] }} days
+                        </p>
+                        <p class="text-xs text-gray-500 mt-1">
+                            Used (approved): {{ number_format($balances['work_from_home']['used'], 0) }} {{ $balances['work_from_home']['used'] == 1 ? 'day' : 'days' }} — pending requests do not reduce balance; resets monthly
+                        </p>
+                    </div>
+                </div>
+            </div>
+            @endif
 
             <!-- Overtime Summary -->
             <div class="bg-white rounded-lg shadow p-4 border border-emerald-200">

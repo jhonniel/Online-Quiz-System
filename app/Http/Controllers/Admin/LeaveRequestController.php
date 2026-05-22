@@ -8,6 +8,7 @@ use App\Models\Department;
 use App\Models\Dtr;
 use App\Models\DtrDeficit;
 use App\Models\LeaveBalance;
+use App\Support\WorkFromHomeQuota;
 use App\Models\LeaveRequest;
 use App\Models\LeaveRequestLog;
 use App\Models\Setting;
@@ -235,6 +236,12 @@ class LeaveRequestController extends Controller
 
             $combinedAllowance = (float) $leaveBalance->vacation_allowance + (float) $leaveBalance->sick_allowance;
 
+            $wfhBalance = WorkFromHomeQuota::balanceForMonth(
+                (int) $user->id,
+                $leaveRequest->start_date?->copy(),
+                $leaveRequest->type === 'work_from_home' ? (int) $leaveRequest->id : null
+            );
+
             $balances = [
                 'vacation' => [
                     'allowance' => (float) $leaveBalance->vacation_allowance,
@@ -251,6 +258,7 @@ class LeaveRequestController extends Controller
                     'used' => $usedLeaveCredits,
                     'remaining' => max($combinedAllowance - $usedLeaveCredits, 0),
                 ],
+                'work_from_home' => $wfhBalance,
             ];
 
             // Establish current date for completed-week checks
@@ -400,6 +408,11 @@ class LeaveRequestController extends Controller
         $leaveRequest->load('user');
         $this->assertCanManageLeaveRequestSubject($leaveRequest);
 
+        if ($leaveRequest->status === 'approved') {
+            return redirect('/admin/leave-requests/'.$leaveRequest->id)
+                ->withErrors(['type' => 'Request type cannot be changed after this request is approved.']);
+        }
+
         $allowedTypes = LeaveRequest::adminSelectableTypesForRole($leaveRequest->user->role);
 
         $validated = $request->validate([
@@ -474,6 +487,11 @@ class LeaveRequestController extends Controller
     {
         $leaveRequest->load('user');
         $this->assertCanManageLeaveRequestSubject($leaveRequest);
+
+        if ($leaveRequest->status === 'approved') {
+            return redirect('/admin/leave-requests/'.$leaveRequest->id)
+                ->withErrors(['start_date' => 'Dates cannot be changed after this request is approved.']);
+        }
 
         $validated = $request->validate([
             'start_date' => ['required', 'date'],
@@ -908,6 +926,18 @@ class LeaveRequestController extends Controller
 
         // Ensure user relationship is loaded
         $leaveRequest->load('user');
+
+        if (
+            $leaveRequest->type === 'work_from_home'
+            && $leaveRequest->user?->role === 'employee'
+            && ! $leaveRequest->logs()->where('action', 'filed_by_admin')->exists()
+        ) {
+            $wfhQuotaError = WorkFromHomeQuota::validateApproval($leaveRequest);
+            if ($wfhQuotaError !== null) {
+                return redirect('/admin/leave-requests/'.$leaveRequest->id)
+                    ->withErrors(['approval' => $wfhQuotaError]);
+            }
+        }
 
         $statusBefore = $leaveRequest->status;
 

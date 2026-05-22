@@ -95,12 +95,75 @@
 
     {{-- Student results table --}}
     <div class="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
-        <div class="px-4 py-5 sm:px-6 border-b border-gray-200">
-            <h2 class="text-lg font-semibold text-gray-900">Student Results</h2>
-            <p class="mt-1 text-sm text-gray-500">Scores include manual grading. Percentages are based on {{ $maxPoints }} total points.</p>
+        <div class="px-4 py-5 sm:px-6 border-b border-gray-200 space-y-4">
+            <div>
+                <h2 class="text-lg font-semibold text-gray-900">Student Results</h2>
+                <p class="mt-1 text-sm text-gray-500">Scores include manual grading. Percentages are based on {{ $maxPoints }} total points.</p>
+            </div>
+
+            @if($allStudentResults->count() > 0)
+            <form method="GET" action="{{ route('admin.quizzes.results', $quiz) }}" class="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end">
+                <div class="flex-1 min-w-[12rem]">
+                    <label for="search" class="block text-xs font-medium text-gray-700 mb-1">Search by name</label>
+                    <input type="search"
+                           id="search"
+                           name="search"
+                           value="{{ $filters['search'] }}"
+                           placeholder="Student name or email"
+                           class="w-full rounded-md border-gray-300 shadow-sm text-sm focus:border-indigo-500 focus:ring-indigo-500">
+                </div>
+                <div class="w-full sm:w-52">
+                    <label for="university_id" class="block text-xs font-medium text-gray-700 mb-1">University</label>
+                    <select id="university_id"
+                            name="university_id"
+                            class="w-full rounded-md border-gray-300 shadow-sm text-sm py-2 focus:border-indigo-500 focus:ring-indigo-500">
+                        <option value="">All universities</option>
+                        @foreach($universities as $university)
+                            <option value="{{ $university->id }}" {{ (string) $filters['university_id'] === (string) $university->id ? 'selected' : '' }}>
+                                {{ $university->name }}
+                            </option>
+                        @endforeach
+                    </select>
+                </div>
+                <div class="w-full sm:w-52">
+                    <label for="sort" class="block text-xs font-medium text-gray-700 mb-1">Sort</label>
+                    <select id="sort"
+                            name="sort"
+                            class="w-full rounded-md border-gray-300 shadow-sm text-sm py-2 focus:border-indigo-500 focus:ring-indigo-500">
+                        <option value="score_desc" {{ $filters['sort'] === 'score_desc' ? 'selected' : '' }}>Score: highest to lowest</option>
+                        <option value="score_asc" {{ $filters['sort'] === 'score_asc' ? 'selected' : '' }}>Score: lowest to highest</option>
+                        <option value="name" {{ $filters['sort'] === 'name' ? 'selected' : '' }}>Name (A–Z)</option>
+                    </select>
+                </div>
+                <div class="flex gap-2">
+                    <button type="submit"
+                            class="inline-flex items-center px-4 py-2 text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700">
+                        Apply
+                    </button>
+                    @if($filters['search'] !== '' || $filters['university_id'] !== '' || $filters['sort'] !== 'score_desc')
+                        <a href="{{ route('admin.quizzes.results', $quiz) }}"
+                           class="inline-flex items-center px-4 py-2 text-sm font-medium rounded-md text-gray-700 bg-white border border-gray-300 hover:bg-gray-50">
+                            Clear
+                        </a>
+                    @endif
+                </div>
+            </form>
+            <p class="text-xs text-gray-500">
+                Showing {{ $studentResults->count() }} of {{ $allStudentResults->count() }} student{{ $allStudentResults->count() === 1 ? '' : 's' }}
+            </p>
+            @endif
         </div>
 
-        @if($studentResults->count() > 0)
+        @if($allStudentResults->count() > 0 && $studentResults->count() === 0)
+            <div class="text-center py-12 px-4">
+                <h3 class="text-sm font-medium text-gray-900">No students match your filters</h3>
+                <p class="mt-1 text-sm text-gray-500">Try a different search, university, or clear filters.</p>
+                <a href="{{ route('admin.quizzes.results', $quiz) }}"
+                   class="mt-4 inline-flex items-center px-4 py-2 text-sm font-medium rounded-md text-indigo-700 bg-indigo-50 hover:bg-indigo-100">
+                    Clear filters
+                </a>
+            </div>
+        @elseif($studentResults->count() > 0)
             <div class="overflow-x-auto">
                 <table class="min-w-full divide-y divide-gray-200">
                     <thead class="bg-gray-50">

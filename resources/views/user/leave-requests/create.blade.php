@@ -325,6 +325,15 @@
                     <div id="wfh-section" class="space-y-4 hidden">
                         <div class="border-t border-gray-200 pt-4 mt-4">
                             <h2 class="text-sm font-semibold text-gray-900 mb-2">Work From Home Details</h2>
+                            @if(isset($balances['work_from_home']))
+                            <p class="text-sm text-indigo-800 mb-2">
+                                <strong>Monthly allowance:</strong>
+                                {{ number_format($balances['work_from_home']['remaining'], 0) }}
+                                of {{ $balances['work_from_home']['allowance'] }} day(s) remaining for
+                                {{ $balances['work_from_home']['month_label'] }}.
+                                Only approved WFH days count toward your balance. Allowance resets on the 1st of each month.
+                            </p>
+                            @endif
                             <p class="text-xs text-gray-500 mb-3">
                                 When requesting <strong>Work From Home</strong>, please specify your remote setup and list the tasks
                                 you will be working on (e.g., ClickUp links).
@@ -450,7 +459,7 @@
     const today = new Date().toISOString().split('T')[0];
 
     const balances = JSON.parse(document.getElementById('leave-request-balances-json').textContent || 'null');
-    const balanceCheckTypes = ['vacation_leave', 'sick_leave', 'offset'];
+    const balanceCheckTypes = ['vacation_leave', 'sick_leave', 'offset', 'work_from_home'];
     const offsetHoursInput = document.getElementById('offset_hours');
     function parseHoursValue(val) {
         if (val === null || val === undefined) return 0;
@@ -464,6 +473,9 @@
     function hasNoBalanceForType(type) {
         if (!balances || !balanceCheckTypes.includes(type)) return false;
         if (type === 'vacation_leave' || type === 'sick_leave') return (balances.leave_remaining || 0) <= 0;
+        if (type === 'work_from_home') {
+            return (balances.work_from_home_remaining ?? balances.work_from_home?.remaining ?? 0) <= 0;
+        }
         if (type === 'offset') {
             const overtimeBal = parseHoursValue(balances.overtime_hours);
             if (overtimeBal <= 0) return true;

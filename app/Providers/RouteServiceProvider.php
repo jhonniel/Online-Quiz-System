@@ -5,6 +5,7 @@ namespace App\Providers;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Foundation\Support\Providers\RouteServiceProvider as ServiceProvider;
 use Illuminate\Http\Request;
+use Illuminate\Routing\RouteCollection;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\Route;
 
@@ -40,6 +41,17 @@ class RouteServiceProvider extends ServiceProvider
         }
 
         $this->configureRateLimiting();
+
+        // Routes are registered in boot() before all providers finish; rebuild name/action lookups
+        // so route() and Route::has() work for every named route (e.g. quizzes.results).
+        $this->app->booted(function () {
+            $routes = $this->app['router']->getRoutes();
+
+            if ($routes instanceof RouteCollection) {
+                $routes->refreshNameLookups();
+                $routes->refreshActionLookups();
+            }
+        });
     }
 
     /**

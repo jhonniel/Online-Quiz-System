@@ -7,6 +7,7 @@ use App\Models\AdminPermission;
 use App\Models\Department;
 use App\Models\HiringPosition;
 use App\Models\User;
+use App\Support\AdminPermissionAreas;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Schema;
 
@@ -152,7 +153,9 @@ class AdminPermissionController extends Controller
         $departments = Department::active()->orderBy('name')->get();
         $hiringPositions = HiringPosition::where('is_active', true)->orderBy('title')->get();
 
-        return view('admin.admin-permissions.edit', compact('user', 'permission', 'departments', 'hiringPositions', 'isFullAccessAdmin'));
+        $permissionAreas = AdminPermissionAreas::areas();
+
+        return view('admin.admin-permissions.edit', compact('user', 'permission', 'departments', 'hiringPositions', 'isFullAccessAdmin', 'permissionAreas'));
     }
 
     /**
@@ -205,6 +208,25 @@ class AdminPermissionController extends Controller
         if ($hasAllowedStudentDepartments) {
             $rules['allowed_student_departments'] = 'nullable|array';
             $rules['allowed_student_departments.*'] = 'exists:departments,id';
+        }
+
+        foreach (AdminPermissionAreas::areas() as $areaKey => $area) {
+            if (! Schema::hasColumn('admin_permissions', $area['column'])) {
+                continue;
+            }
+            $parentField = $areaKey === 'subscriptions'
+                ? 'subscriptions'
+                : $area['parent_flag'];
+            if ($areaKey === 'subscriptions') {
+                continue;
+            }
+            $rules[$area['column']] = 'nullable|array';
+            $rules[$area['column'].'.*'] = 'in:'.implode(',', array_keys($area['features']));
+        }
+
+        if (Schema::hasColumn('admin_permissions', 'allowed_subscription_features')) {
+            $rules['allowed_subscription_features'] = 'nullable|array';
+            $rules['allowed_subscription_features.*'] = 'in:'.implode(',', array_keys(AdminPermissionAreas::SUBSCRIPTION_FEATURES));
         }
 
         $request->validate($rules);
@@ -270,6 +292,46 @@ class AdminPermissionController extends Controller
             }
         }
 
+        $hasSubscriptions = $request->has('subscriptions') || $request->has('linked_accounts') || $request->has('billing');
+        if ($hasSubscriptions) {
+            $permissions['linked_accounts'] = $request->has('linked_accounts') || $request->has('subscriptions');
+            $permissions['billing'] = $request->has('billing') || $request->has('subscriptions');
+        }
+
+        foreach (AdminPermissionAreas::areas() as $areaKey => $area) {
+            if ($areaKey === 'subscriptions' || ! Schema::hasColumn('admin_permissions', $area['column'])) {
+                continue;
+            }
+            $parentField = $area['parent_flag'];
+            if ($areaKey === 'communication' && $request->has('feedback') && ! $request->has('communication')) {
+                if ($area['column'] === 'allowed_communication_features') {
+                    $feedbackOnly = array_values(array_intersect(
+                        $request->input('allowed_communication_features', []),
+                        ['feedback']
+                    ));
+                    $permissions[$area['column']] = $feedbackOnly ?: null;
+                }
+
+                continue;
+            }
+            if ($request->has($parentField)) {
+                $permissions[$area['column']] = $request->input($area['column'], []);
+                if ($areaKey === 'communication' && in_array('feedback', $permissions[$area['column']] ?? [], true)) {
+                    $permissions['feedback'] = true;
+                }
+            } else {
+                $permissions[$area['column']] = null;
+            }
+        }
+
+        if (Schema::hasColumn('admin_permissions', 'allowed_subscription_features')) {
+            if ($hasSubscriptions) {
+                $permissions['allowed_subscription_features'] = $request->input('allowed_subscription_features', []);
+            } else {
+                $permissions['allowed_subscription_features'] = null;
+            }
+        }
+
         // Update or create permission record
         $user->adminPermission()->updateOrCreate(
             ['user_id' => $user->id],
@@ -324,6 +386,8 @@ class AdminPermissionController extends Controller
         $departments = $isSuperAdmin ? collect() : Department::orderBy('name')->get();
         $hiringPositions = $isSuperAdmin ? collect() : HiringPosition::orderBy('title')->get();
 
-        return view('admin.admin-permissions.my-permissions', compact('user', 'permission', 'isSuperAdmin', 'departments', 'hiringPositions'));
+        $permissionAreas = AdminPermissionAreas::areas();
+
+        return view('admin.admin-permissions.my-permissions', compact('user', 'permission', 'isSuperAdmin', 'departments', 'hiringPositions', 'permissionAreas'));
     }
 }

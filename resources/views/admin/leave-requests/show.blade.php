@@ -76,83 +76,92 @@
 
                     <div class="md:col-span-2">
                         <label class="block text-sm font-medium text-gray-500 mb-1">Request Type</label>
-                        <form action="{{ url('/admin/leave-requests/' . $leaveRequest->id . '/type') }}" method="POST"
-                              class="flex flex-col sm:flex-row sm:items-end gap-3"
-                              onsubmit="return confirmLeaveTypeChange(this);">
-                            @csrf
-                            @method('PATCH')
-                            <div class="flex-1 min-w-0">
-                                <select name="type" id="leave-request-type"
-                                        class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white">
-                                    @foreach($leaveTypeOptions ?? [] as $option)
-                                        <option value="{{ $option['value'] }}"
-                                            {{ $leaveRequest->type === $option['value'] ? 'selected' : '' }}>
-                                            {{ $option['label'] }}
-                                        </option>
-                                    @endforeach
-                                </select>
-                                @error('type')
-                                    <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
-                                @enderror
-                            </div>
-                            <div class="flex-1 min-w-0">
-                                <label for="type-change-notes" class="sr-only">Note (optional)</label>
-                                <input type="text" name="admin_notes" id="type-change-notes"
-                                       value="{{ old('admin_notes') }}"
-                                       placeholder="Optional note for activity log"
-                                       class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
-                            </div>
-                            <button type="submit"
-                                    class="inline-flex items-center justify-center px-4 py-2 text-sm font-medium text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 whitespace-nowrap">
-                                Update Type
-                            </button>
-                        </form>
                         @if($leaveRequest->isApproved())
-                            <p class="mt-2 text-xs text-amber-700">This request is approved. Changing the type will adjust DTR credits to match the new type.</p>
+                            <p class="text-sm font-semibold text-gray-900">{{ $leaveRequest->type_label }}</p>
+                            <p class="mt-2 text-xs text-gray-500">Request type cannot be changed after this request is approved.</p>
+                        @else
+                            <form action="{{ url('/admin/leave-requests/' . $leaveRequest->id . '/type') }}" method="POST"
+                                  class="flex flex-col sm:flex-row sm:items-end gap-3"
+                                  onsubmit="return confirmLeaveTypeChange(this);">
+                                @csrf
+                                @method('PATCH')
+                                <div class="flex-1 min-w-0">
+                                    <select name="type" id="leave-request-type"
+                                            class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white">
+                                        @foreach($leaveTypeOptions ?? [] as $option)
+                                            <option value="{{ $option['value'] }}"
+                                                {{ $leaveRequest->type === $option['value'] ? 'selected' : '' }}>
+                                                {{ $option['label'] }}
+                                            </option>
+                                        @endforeach
+                                    </select>
+                                    @error('type')
+                                        <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                                    @enderror
+                                </div>
+                                <div class="flex-1 min-w-0">
+                                    <label for="type-change-notes" class="sr-only">Note (optional)</label>
+                                    <input type="text" name="admin_notes" id="type-change-notes"
+                                           value="{{ old('admin_notes') }}"
+                                           placeholder="Optional note for activity log"
+                                           class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                                </div>
+                                <button type="submit"
+                                        class="inline-flex items-center justify-center px-4 py-2 text-sm font-medium text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 whitespace-nowrap">
+                                    Update Type
+                                </button>
+                            </form>
                         @endif
                     </div>
 
                     <div class="md:col-span-2">
                         <label class="block text-sm font-medium text-gray-500 mb-1">Date range</label>
-                        <form action="{{ url('/admin/leave-requests/' . $leaveRequest->id . '/dates') }}" method="POST"
-                              class="flex flex-col sm:flex-row sm:flex-wrap sm:items-end gap-3"
-                              onsubmit="return confirmLeaveDateChange(this);">
-                            @csrf
-                            @method('PATCH')
-                            <div class="flex-1 min-w-[10rem]">
-                                <label for="leave-request-start-date" class="sr-only">Start date</label>
-                                <input type="date" name="start_date" id="leave-request-start-date"
-                                       value="{{ old('start_date', $leaveRequest->start_date->format('Y-m-d')) }}"
-                                       required
-                                       class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white">
-                                @error('start_date')
-                                    <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
-                                @enderror
-                            </div>
-                            <div class="flex-1 min-w-[10rem]">
-                                <label for="leave-request-end-date" class="sr-only">End date</label>
-                                <input type="date" name="end_date" id="leave-request-end-date"
-                                       value="{{ old('end_date', ($leaveRequest->end_date ?? $leaveRequest->start_date)->format('Y-m-d')) }}"
-                                       class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white">
-                                @error('end_date')
-                                    <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
-                                @enderror
-                            </div>
-                            <div class="flex-1 min-w-0 sm:min-w-[12rem]">
-                                <label for="date-change-notes" class="sr-only">Note (optional)</label>
-                                <input type="text" name="admin_notes" id="date-change-notes"
-                                       value="{{ old('admin_notes') }}"
-                                       placeholder="Optional note for activity log"
-                                       class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
-                            </div>
-                            <button type="submit"
-                                    class="inline-flex items-center justify-center px-4 py-2 text-sm font-medium text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 whitespace-nowrap">
-                                Update Dates
-                            </button>
-                        </form>
-                        <p class="mt-2 text-xs text-gray-500">Admins may set any date, including past dates. Use the same start and end date for a single day.</p>
                         @if($leaveRequest->isApproved())
-                            <p class="mt-1 text-xs text-amber-700">This request is approved. Changing dates will adjust DTR credits to match the new range.</p>
+                            <p class="text-sm font-semibold text-gray-900">
+                                {{ $leaveRequest->start_date->format('M d, Y') }}
+                                @if($leaveRequest->end_date && !$leaveRequest->start_date->isSameDay($leaveRequest->end_date))
+                                    – {{ $leaveRequest->end_date->format('M d, Y') }}
+                                @endif
+                            </p>
+                            <p class="mt-2 text-xs text-gray-500">Dates cannot be changed after this request is approved.</p>
+                        @else
+                            <form action="{{ url('/admin/leave-requests/' . $leaveRequest->id . '/dates') }}" method="POST"
+                                  class="flex flex-col sm:flex-row sm:flex-wrap sm:items-end gap-3"
+                                  onsubmit="return confirmLeaveDateChange(this);">
+                                @csrf
+                                @method('PATCH')
+                                <div class="flex-1 min-w-[10rem]">
+                                    <label for="leave-request-start-date" class="sr-only">Start date</label>
+                                    <input type="date" name="start_date" id="leave-request-start-date"
+                                           value="{{ old('start_date', $leaveRequest->start_date->format('Y-m-d')) }}"
+                                           required
+                                           class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white">
+                                    @error('start_date')
+                                        <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                                    @enderror
+                                </div>
+                                <div class="flex-1 min-w-[10rem]">
+                                    <label for="leave-request-end-date" class="sr-only">End date</label>
+                                    <input type="date" name="end_date" id="leave-request-end-date"
+                                           value="{{ old('end_date', ($leaveRequest->end_date ?? $leaveRequest->start_date)->format('Y-m-d')) }}"
+                                           class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white">
+                                    @error('end_date')
+                                        <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                                    @enderror
+                                </div>
+                                <div class="flex-1 min-w-0 sm:min-w-[12rem]">
+                                    <label for="date-change-notes" class="sr-only">Note (optional)</label>
+                                    <input type="text" name="admin_notes" id="date-change-notes"
+                                           value="{{ old('admin_notes') }}"
+                                           placeholder="Optional note for activity log"
+                                           class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                                </div>
+                                <button type="submit"
+                                        class="inline-flex items-center justify-center px-4 py-2 text-sm font-medium text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 whitespace-nowrap">
+                                    Update Dates
+                                </button>
+                            </form>
+                            <p class="mt-2 text-xs text-gray-500">Admins may set any date, including past dates. Use the same start and end date for a single day.</p>
                         @endif
                     </div>
 
@@ -785,6 +794,22 @@
                                 @endif
                             </p>
                         </div>
+                        @if(isset($balances['work_from_home']))
+                        <div class="border border-gray-100 rounded-lg px-3 py-2 {{ ($balances['work_from_home']['remaining'] ?? 0) <= 0 ? 'bg-amber-50/50 border-amber-200' : '' }}">
+                            <p class="text-xs font-semibold text-gray-500 uppercase tracking-wide">
+                                Work From Home ({{ $balances['work_from_home']['month_label'] ?? 'This month' }})
+                            </p>
+                            <p class="text-sm text-gray-900">
+                                Remaining:
+                                <span class="font-bold">{{ number_format($balances['work_from_home']['remaining'] ?? 0, 0) }}</span>
+                                / {{ $balances['work_from_home']['allowance'] ?? 2 }} days
+                            </p>
+                            <p class="text-xs text-gray-500">
+                                Used (approved): {{ number_format($balances['work_from_home']['used'] ?? 0, 0) }} day(s) — pending does not count; resets each month
+                            </p>
+                            <p class="text-xs text-indigo-600 mt-1">Admins may file WFH for this employee without the monthly limit.</p>
+                        </div>
+                        @endif
                     </div>
                 </div>
             @endif

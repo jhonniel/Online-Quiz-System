@@ -74,18 +74,27 @@
 
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <!-- Content Management -->
-                    <div class="flex items-start space-x-3 p-4 border border-gray-200 rounded-lg hover:bg-gray-50">
-                        <input type="checkbox"
-                               name="content_management"
-                               id="content_management"
-                               value="1"
-                               {{ ($permission && $permission->content_management) ? 'checked' : '' }}
-                               class="mt-1 h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded">
-                        <div class="flex-1">
-                            <label for="content_management" class="block text-sm font-medium text-gray-900 cursor-pointer">
-                                Content Management
-                            </label>
-                            <p class="mt-1 text-sm text-gray-500">Access to quizzes, forum, and content creation</p>
+                    <div class="md:col-span-2">
+                        <div class="flex items-start space-x-3 p-4 border border-gray-200 rounded-lg hover:bg-gray-50">
+                            <input type="checkbox"
+                                   name="content_management"
+                                   id="content_management"
+                                   value="1"
+                                   {{ ($permission && $permission->content_management) ? 'checked' : '' }}
+                                   class="mt-1 h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
+                                   onchange="toggleSubFeaturePanel('content-feature-selection', 'content_management')">
+                            <div class="flex-1">
+                                <label for="content_management" class="block text-sm font-medium text-gray-900 cursor-pointer">
+                                    Content Management
+                                </label>
+                                <p class="mt-1 text-sm text-gray-500">Choose which content areas this user can access</p>
+                                @include('admin.admin-permissions.partials.sub-feature-fields', [
+                                    'areaKey' => 'content_management',
+                                    'permission' => $permission,
+                                    'parentChecked' => $permission && $permission->content_management,
+                                    'containerId' => 'content-feature-selection',
+                                ])
+                            </div>
                         </div>
                     </div>
 
@@ -139,12 +148,19 @@
                                    value="1"
                                    {{ ($permission && $permission->employee_management) ? 'checked' : '' }}
                                    class="mt-1 h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
-                                   onchange="toggleDepartmentSelection()">
+                                   onchange="toggleDepartmentSelection(); toggleSubFeaturePanel('employee-feature-selection', 'employee_management')">
                             <div class="flex-1">
                                 <label for="employee_management" class="block text-sm font-medium text-gray-900 cursor-pointer">
                                     Employee Management
                                 </label>
                                 <p class="mt-1 text-sm text-gray-500">Access to employee DTR, leave requests, and time reports</p>
+
+                                @include('admin.admin-permissions.partials.sub-feature-fields', [
+                                    'areaKey' => 'employee_management',
+                                    'permission' => $permission,
+                                    'parentChecked' => $permission && $permission->employee_management,
+                                    'containerId' => 'employee-feature-selection',
+                                ])
 
                                 <!-- Employee Department Selection -->
                                 <div id="employee-department-selection" class="mt-4 {{ ($permission && $permission->employee_management) ? '' : 'hidden' }}">
@@ -179,19 +195,27 @@
                     </div>
 
                     <!-- Student Management -->
-                    <div class="flex items-start space-x-3 p-4 border border-gray-200 rounded-lg hover:bg-gray-50">
-                        <input type="checkbox"
-                               name="student_management"
-                               id="student_management"
-                               value="1"
-                               {{ ($permission && $permission->student_management) ? 'checked' : '' }}
-                               class="mt-1 h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
-                               onchange="toggleDepartmentSelection()">
-                        <div class="flex-1">
-                            <label for="student_management" class="block text-sm font-medium text-gray-900 cursor-pointer">
-                                Student Management
-                            </label>
-                            <p class="mt-1 text-sm text-gray-500">Access to student dashboard, DTR, and leave requests</p>
+                    <div class="md:col-span-2">
+                        <div class="flex items-start space-x-3 p-4 border border-gray-200 rounded-lg hover:bg-gray-50">
+                            <input type="checkbox"
+                                   name="student_management"
+                                   id="student_management"
+                                   value="1"
+                                   {{ ($permission && $permission->student_management) ? 'checked' : '' }}
+                                   class="mt-1 h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
+                                   onchange="toggleDepartmentSelection(); toggleSubFeaturePanel('student-feature-selection', 'student_management')">
+                            <div class="flex-1">
+                                <label for="student_management" class="block text-sm font-medium text-gray-900 cursor-pointer">
+                                    Student Management
+                                </label>
+                                <p class="mt-1 text-sm text-gray-500">Access to student dashboard, DTR, and leave requests</p>
+
+                                @include('admin.admin-permissions.partials.sub-feature-fields', [
+                                    'areaKey' => 'student_management',
+                                    'permission' => $permission,
+                                    'parentChecked' => $permission && $permission->student_management,
+                                    'containerId' => 'student-feature-selection',
+                                ])
 
                             <!-- Student Department Selection -->
                             <div id="student-department-selection" class="mt-4 {{ ($permission && $permission->student_management) ? '' : 'hidden' }}">
@@ -222,6 +246,7 @@
                                 @endif
                             </div>
                         </div>
+                        </div>
                     </div>
 
                     <!-- Hiring Process -->
@@ -233,12 +258,19 @@
                                    value="1"
                                    {{ ($permission && $permission->hiring_process) ? 'checked' : '' }}
                                    class="mt-1 h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
-                                   onchange="togglePositionSelection()">
+                                   onchange="togglePositionSelection(); toggleSubFeaturePanel('hiring-feature-selection', 'hiring_process')">
                             <div class="flex-1">
                                 <label for="hiring_process" class="block text-sm font-medium text-gray-900 cursor-pointer">
                                     Hiring Process
                                 </label>
                                 <p class="mt-1 text-sm text-gray-500">Access to hiring positions and applications</p>
+
+                                @include('admin.admin-permissions.partials.sub-feature-fields', [
+                                    'areaKey' => 'hiring_process',
+                                    'permission' => $permission,
+                                    'parentChecked' => $permission && $permission->hiring_process,
+                                    'containerId' => 'hiring-feature-selection',
+                                ])
 
                                 <!-- Position Selection (shown only when Hiring Process is checked) -->
                                 <div id="position-selection" class="mt-4 {{ ($permission && $permission->hiring_process) ? '' : 'hidden' }}">
@@ -270,50 +302,57 @@
                     </div>
 
                     <!-- Communication -->
-                    <div class="flex items-start space-x-3 p-4 border border-gray-200 rounded-lg hover:bg-gray-50">
-                        <input type="checkbox"
-                               name="communication"
-                               id="communication"
-                               value="1"
-                               {{ ($permission && $permission->communication) ? 'checked' : '' }}
-                               class="mt-1 h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded">
-                        <div class="flex-1">
-                            <label for="communication" class="block text-sm font-medium text-gray-900 cursor-pointer">
-                                Communication
-                            </label>
-                            <p class="mt-1 text-sm text-gray-500">Access to live chat, contact messages, and notifications</p>
+                    <div class="md:col-span-2">
+                        <div class="flex items-start space-x-3 p-4 border border-gray-200 rounded-lg hover:bg-gray-50">
+                            <input type="checkbox"
+                                   name="communication"
+                                   id="communication"
+                                   value="1"
+                                   {{ ($permission && $permission->communication) ? 'checked' : '' }}
+                                   class="mt-1 h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
+                                   onchange="toggleSubFeaturePanel('communication-feature-selection', 'communication')">
+                            <div class="flex-1">
+                                <label for="communication" class="block text-sm font-medium text-gray-900 cursor-pointer">
+                                    Communication
+                                </label>
+                                <p class="mt-1 text-sm text-gray-500">Messages, live chat, and tickets (Feedback can also be granted separately below)</p>
+                                @include('admin.admin-permissions.partials.sub-feature-fields', [
+                                    'areaKey' => 'communication',
+                                    'permission' => $permission,
+                                    'parentChecked' => $permission && $permission->communication,
+                                    'containerId' => 'communication-feature-selection',
+                                ])
+                            </div>
                         </div>
                     </div>
 
-                    <!-- Starlinks Accounts -->
-                    <div class="flex items-start space-x-3 p-4 border border-gray-200 rounded-lg hover:bg-gray-50">
-                        <input type="checkbox"
-                               name="linked_accounts"
-                               id="linked_accounts"
-                               value="1"
-                               {{ ($permission && ($permission->linked_accounts ?? false)) ? 'checked' : '' }}
-                               class="mt-1 h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded">
-                        <div class="flex-1">
-                            <label for="linked_accounts" class="block text-sm font-medium text-gray-900 cursor-pointer">
-                                Starlinks Accounts
-                            </label>
-                            <p class="mt-1 text-sm text-gray-500">Access to Starlinks Accounts dashboard, Starlinks, Omada, and Plan Types</p>
-                        </div>
-                    </div>
-
-                    <!-- Billing -->
-                    <div class="flex items-start space-x-3 p-4 border border-gray-200 rounded-lg hover:bg-gray-50">
-                        <input type="checkbox"
-                               name="billing"
-                               id="billing"
-                               value="1"
-                               {{ ($permission && $permission->billing) ? 'checked' : '' }}
-                               class="mt-1 h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded">
-                        <div class="flex-1">
-                            <label for="billing" class="block text-sm font-medium text-gray-900 cursor-pointer">
-                                Billing
-                            </label>
-                            <p class="mt-1 text-sm text-gray-500">Access to Starlink/Omada billing, mark as paid, advance payment, and statements</p>
+                    <!-- Subscriptions -->
+                    @php
+                        $subscriptionsEnabled = $permission && (($permission->linked_accounts ?? false) || ($permission->billing ?? false));
+                    @endphp
+                    <div class="md:col-span-2">
+                        <div class="flex items-start space-x-3 p-4 border border-gray-200 rounded-lg hover:bg-gray-50">
+                            <input type="checkbox"
+                                   name="subscriptions"
+                                   id="subscriptions"
+                                   value="1"
+                                   {{ $subscriptionsEnabled ? 'checked' : '' }}
+                                   class="mt-1 h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
+                                   onchange="toggleSubscriptionsPanel()">
+                            <div class="flex-1">
+                                <label for="subscriptions" class="block text-sm font-medium text-gray-900 cursor-pointer">
+                                    Subscriptions
+                                </label>
+                                <p class="mt-1 text-sm text-gray-500">Starlinks/Omada accounts, plan types, and billing</p>
+                                <input type="checkbox" name="linked_accounts" id="linked_accounts_sync" value="1" class="hidden" {{ $subscriptionsEnabled ? 'checked' : '' }}>
+                                <input type="checkbox" name="billing" id="billing_sync" value="1" class="hidden" {{ $subscriptionsEnabled ? 'checked' : '' }}>
+                                @include('admin.admin-permissions.partials.sub-feature-fields', [
+                                    'areaKey' => 'subscriptions',
+                                    'permission' => $permission,
+                                    'parentChecked' => $subscriptionsEnabled,
+                                    'containerId' => 'subscriptions-feature-selection',
+                                ])
+                            </div>
                         </div>
                     </div>
 
@@ -366,34 +405,52 @@
                     </div>
 
                     <!-- User Management -->
-                    <div class="flex items-start space-x-3 p-4 border border-gray-200 rounded-lg hover:bg-gray-50">
-                        <input type="checkbox"
-                               name="user_management"
-                               id="user_management"
-                               value="1"
-                               {{ ($permission && $permission->user_management) ? 'checked' : '' }}
-                               class="mt-1 h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded">
-                        <div class="flex-1">
-                            <label for="user_management" class="block text-sm font-medium text-gray-900 cursor-pointer">
-                                User Management
-                            </label>
-                            <p class="mt-1 text-sm text-gray-500">Access to user management and administration</p>
+                    <div class="md:col-span-2">
+                        <div class="flex items-start space-x-3 p-4 border border-gray-200 rounded-lg hover:bg-gray-50">
+                            <input type="checkbox"
+                                   name="user_management"
+                                   id="user_management"
+                                   value="1"
+                                   {{ ($permission && $permission->user_management) ? 'checked' : '' }}
+                                   class="mt-1 h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
+                                   onchange="toggleSubFeaturePanel('user-management-feature-selection', 'user_management')">
+                            <div class="flex-1">
+                                <label for="user_management" class="block text-sm font-medium text-gray-900 cursor-pointer">
+                                    User Management
+                                </label>
+                                <p class="mt-1 text-sm text-gray-500">Users, teachers, universities, and departments</p>
+                                @include('admin.admin-permissions.partials.sub-feature-fields', [
+                                    'areaKey' => 'user_management',
+                                    'permission' => $permission,
+                                    'parentChecked' => $permission && $permission->user_management,
+                                    'containerId' => 'user-management-feature-selection',
+                                ])
+                            </div>
                         </div>
                     </div>
 
                     <!-- System -->
-                    <div class="flex items-start space-x-3 p-4 border border-gray-200 rounded-lg hover:bg-gray-50">
-                        <input type="checkbox"
-                               name="system"
-                               id="system"
-                               value="1"
-                               {{ ($permission && $permission->system) ? 'checked' : '' }}
-                               class="mt-1 h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded">
-                        <div class="flex-1">
-                            <label for="system" class="block text-sm font-medium text-gray-900 cursor-pointer">
-                                System
-                            </label>
-                            <p class="mt-1 text-sm text-gray-500">Access to settings, error logs, and user activity</p>
+                    <div class="md:col-span-2">
+                        <div class="flex items-start space-x-3 p-4 border border-gray-200 rounded-lg hover:bg-gray-50">
+                            <input type="checkbox"
+                                   name="system"
+                                   id="system"
+                                   value="1"
+                                   {{ ($permission && $permission->system) ? 'checked' : '' }}
+                                   class="mt-1 h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
+                                   onchange="toggleSubFeaturePanel('system-feature-selection', 'system')">
+                            <div class="flex-1">
+                                <label for="system" class="block text-sm font-medium text-gray-900 cursor-pointer">
+                                    System
+                                </label>
+                                <p class="mt-1 text-sm text-gray-500">Settings, landing page, stacks, API monitoring, and admin permissions</p>
+                                @include('admin.admin-permissions.partials.sub-feature-fields', [
+                                    'areaKey' => 'system',
+                                    'permission' => $permission,
+                                    'parentChecked' => $permission && $permission->system,
+                                    'containerId' => 'system-feature-selection',
+                                ])
+                            </div>
                         </div>
                     </div>
 
@@ -477,6 +534,52 @@ function toggleDepartmentSelection() {
     }
 }
 
+function toggleSubFeaturePanel(panelId, parentCheckboxId) {
+    const parent = document.getElementById(parentCheckboxId);
+    const panel = document.getElementById(panelId);
+    if (!parent || !panel) {
+        return;
+    }
+    if (parent.checked) {
+        panel.classList.remove('hidden');
+    } else {
+        panel.classList.add('hidden');
+        panel.querySelectorAll('input[type="checkbox"]').forEach((checkbox) => {
+            checkbox.checked = false;
+        });
+    }
+}
+
+function toggleSubscriptionsPanel() {
+    const subscriptionsCheckbox = document.getElementById('subscriptions');
+    const panel = document.getElementById('subscriptions-feature-selection');
+    const linkedSync = document.getElementById('linked_accounts_sync');
+    const billingSync = document.getElementById('billing_sync');
+
+    if (subscriptionsCheckbox && panel) {
+        if (subscriptionsCheckbox.checked) {
+            panel.classList.remove('hidden');
+            if (linkedSync) {
+                linkedSync.checked = true;
+            }
+            if (billingSync) {
+                billingSync.checked = true;
+            }
+        } else {
+            panel.classList.add('hidden');
+            panel.querySelectorAll('input[type="checkbox"]').forEach((checkbox) => {
+                checkbox.checked = false;
+            });
+            if (linkedSync) {
+                linkedSync.checked = false;
+            }
+            if (billingSync) {
+                billingSync.checked = false;
+            }
+        }
+    }
+}
+
 function toggleAnalyticsFeatureSelection() {
     const analyticsCheckbox = document.getElementById('analytics_reports');
     const featureSelection = document.getElementById('analytics-feature-selection');
@@ -516,6 +619,14 @@ document.addEventListener('DOMContentLoaded', function() {
     toggleDepartmentSelection();
     togglePositionSelection();
     toggleAnalyticsFeatureSelection();
+    toggleSubFeaturePanel('content-feature-selection', 'content_management');
+    toggleSubFeaturePanel('employee-feature-selection', 'employee_management');
+    toggleSubFeaturePanel('student-feature-selection', 'student_management');
+    toggleSubFeaturePanel('hiring-feature-selection', 'hiring_process');
+    toggleSubFeaturePanel('communication-feature-selection', 'communication');
+    toggleSubFeaturePanel('user-management-feature-selection', 'user_management');
+    toggleSubFeaturePanel('system-feature-selection', 'system');
+    toggleSubscriptionsPanel();
 });
 </script>
 @endsection

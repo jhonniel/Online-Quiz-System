@@ -11,6 +11,7 @@ use App\Models\LeaveRequestLog;
 use App\Models\User;
 use App\Rules\ClickUpTasksUrlsOnly;
 use App\Services\MailConfigService;
+use App\Support\WorkFromHomeQuota;
 use Carbon\Carbon;
 use Carbon\CarbonPeriod;
 use Illuminate\Http\Request;
@@ -76,12 +77,14 @@ class LeaveRequestController extends Controller
             ->sum->days;
 
         $totalAllowance = (float) $leaveBalance->vacation_allowance + (float) $leaveBalance->sick_allowance;
+        $wfhBalance = WorkFromHomeQuota::balanceForMonth((int) $userId);
         $balances = [
             'leave' => [
                 'allowance' => $totalAllowance,
                 'used' => $usedLeaveCredits,
                 'remaining' => max($totalAllowance - $usedLeaveCredits, 0),
             ],
+            'work_from_home' => $wfhBalance,
         ];
 
         $overtimeFormatted = null;
@@ -306,6 +309,19 @@ class LeaveRequestController extends Controller
         $requestTypeInputValidationError = $this->validateRequestTypeInputData($validated);
         if ($requestTypeInputValidationError !== null) {
             return redirect()->back()->withErrors($requestTypeInputValidationError)->withInput();
+        }
+
+        if ($user->role === 'employee' && $validated['type'] === 'work_from_home') {
+            $wfhQuotaError = WorkFromHomeQuota::validateEmployeeRequest(
+                (int) $user->id,
+                (string) $validated['start_date'],
+                isset($validated['end_date']) ? (string) $validated['end_date'] : null
+            );
+            if ($wfhQuotaError !== null) {
+                return redirect()->back()
+                    ->withErrors(['type' => $wfhQuotaError])
+                    ->withInput();
+            }
         }
 
         if ($user->role === 'student' && $validated['type'] === 'absent') {
@@ -877,6 +893,20 @@ class LeaveRequestController extends Controller
             return redirect()->back()->withErrors($requestTypeInputValidationError)->withInput();
         }
 
+        if ($user->role === 'employee' && $validated['type'] === 'work_from_home') {
+            $wfhQuotaError = WorkFromHomeQuota::validateEmployeeRequest(
+                (int) $user->id,
+                (string) $validated['start_date'],
+                isset($validated['end_date']) ? (string) $validated['end_date'] : null,
+                (int) $leaveRequest->id
+            );
+            if ($wfhQuotaError !== null) {
+                return redirect()->back()
+                    ->withErrors(['type' => $wfhQuotaError])
+                    ->withInput();
+            }
+        }
+
         if ($user->role === 'student' && $validated['type'] === 'absent') {
             $requestedDays = $this->calculateLeaveRequestDays(
                 (string) $validated['start_date'],
@@ -1223,10 +1253,14 @@ class LeaveRequestController extends Controller
 
         $totalAllowance = (float) $leaveBalance->vacation_allowance + (float) $leaveBalance->sick_allowance;
 
+        $wfhBalance = WorkFromHomeQuota::balanceForMonth((int) $user->id);
+
         return [
             'leave_remaining' => max($totalAllowance - $usedLeave, 0),
             'leave_allowance' => $totalAllowance,
             'overtime_hours' => $this->getEmployeeOvertimeBalanceHours($user),
+            'work_from_home' => $wfhBalance,
+            'work_from_home_remaining' => $wfhBalance['remaining'],
         ];
     }
 

@@ -159,6 +159,9 @@
                     <!-- Work From Home (same fields as employee) -->
                     <div id="admin_wfh_section" class="space-y-1.5 hidden border-t border-gray-100 pt-2 mt-1">
                         <p class="text-[10px] font-semibold text-gray-800">Work From Home Details</p>
+                        <p class="text-[10px] text-indigo-700 bg-indigo-50 border border-indigo-100 rounded px-2 py-1">
+                            Admin filing: no monthly WFH limit (employees are limited to 2 days per month).
+                        </p>
                         <div>
                             <label for="admin_wfh_mode" class="block text-xs font-medium text-gray-700">Work Mode <span class="text-red-500">*</span></label>
                             <select name="wfh_mode" id="admin_wfh_mode" class="w-full px-2.5 py-1.5 text-xs border border-gray-300 rounded-md focus:ring-2 focus:ring-indigo-500">

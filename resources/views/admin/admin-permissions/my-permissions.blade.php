@@ -135,6 +135,31 @@
                                     Allowed areas: {{ empty($allowedAnalytics) ? 'All' : $analyticsLabels->join(', ') }}
                                 </p>
                             @endif
+                            @foreach($permissionAreas as $areaKey => $area)
+                                @if($item['key'] === $area['parent_flag'] && $permission && ($permission->{$area['parent_flag']} ?? false))
+                                    @php
+                                        $allowedSub = $permission->{$area['column']} ?? null;
+                                        $subLabels = empty($allowedSub)
+                                            ? collect($area['features'])->values()
+                                            : collect($allowedSub)->map(fn ($k) => $area['features'][$k] ?? $k);
+                                    @endphp
+                                    <p class="mt-2 text-xs text-gray-600">
+                                        Allowed areas: {{ empty($allowedSub) ? 'All' : $subLabels->join(', ') }}
+                                    </p>
+                                @endif
+                            @endforeach
+                            @if(in_array($item['key'], ['linked_accounts', 'billing'], true) && $permission && (($permission->linked_accounts ?? false) || ($permission->billing ?? false)))
+                                @php
+                                    $subArea = $permissionAreas['subscriptions'];
+                                    $allowedSub = $permission->allowed_subscription_features ?? null;
+                                    $subLabels = empty($allowedSub)
+                                        ? collect($subArea['features'])->values()
+                                        : collect($allowedSub)->map(fn ($k) => $subArea['features'][$k] ?? $k);
+                                @endphp
+                                <p class="mt-2 text-xs text-gray-600">
+                                    Subscription areas: {{ empty($allowedSub) ? 'All' : $subLabels->join(', ') }}
+                                </p>
+                            @endif
                         </div>
                     </div>
                 @endforeach

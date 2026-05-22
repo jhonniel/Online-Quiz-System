@@ -4,6 +4,7 @@ namespace App\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
 use App\Services\MailConfigService;
+use App\Support\AdminPermissionAreas;
 use Illuminate\Auth\Notifications\ResetPassword;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
@@ -717,6 +718,151 @@ class User extends Authenticatable
         return false;
     }
 
+    public function canAccessSubscriptions(): bool
+    {
+        return $this->hasAdminPermission('linked_accounts') || $this->hasAdminPermission('billing');
+    }
+
+    /**
+     * Parent permission flag for an admin area (including virtual subscriptions).
+     */
+    public function hasAdminAreaParent(string $areaKey): bool
+    {
+        $area = AdminPermissionAreas::area($areaKey);
+        if (! $area) {
+            return false;
+        }
+
+        if (! empty($area['subscription_parent'])) {
+            return $this->canAccessSubscriptions();
+        }
+
+        if ($areaKey === 'communication' && $this->hasAdminPermission('feedback')) {
+            return true;
+        }
+
+        return $this->hasAdminPermission($area['parent_flag']);
+    }
+
+    /**
+     * @param  string  $areaKey  Key from AdminPermissionAreas::areas()
+     * @param  string  $feature  Sub-feature key within that area
+     */
+    public function canAccessAdminSubFeature(string $areaKey, string $feature): bool
+    {
+        $area = AdminPermissionAreas::area($areaKey);
+        if (! $area || ! array_key_exists($feature, $area['features'])) {
+            return false;
+        }
+
+        if ($this->isSuperAdmin()) {
+            return true;
+        }
+
+        if ($areaKey === 'analytics_reports') {
+            return $this->canAccessAnalyticsFeature($feature);
+        }
+
+        if ($areaKey === 'communication' && $feature === 'feedback') {
+            if ($this->hasAdminPermission('feedback')) {
+                return true;
+            }
+            if (! $this->hasAdminPermission('communication')) {
+                return false;
+            }
+        } elseif (! $this->hasAdminAreaParent($areaKey)) {
+            return false;
+        }
+
+        if (! $this->relationLoaded('adminPermission')) {
+            $this->load('adminPermission');
+        }
+
+        $adminPermission = $this->adminPermission;
+        if (! $adminPermission) {
+            return false;
+        }
+
+        $column = $area['column'];
+        $allowed = $adminPermission->{$column};
+        if (empty($allowed)) {
+            return true;
+        }
+
+        return in_array($feature, $allowed, true);
+    }
+
+    public function canAccessAnyAdminSubFeature(string $areaKey): bool
+    {
+        if ($this->isSuperAdmin()) {
+            return true;
+        }
+
+        $area = AdminPermissionAreas::area($areaKey);
+        if (! $area) {
+            return false;
+        }
+
+        if ($areaKey === 'analytics_reports') {
+            return $this->canAccessAnyAnalyticsFeature();
+        }
+
+        if (! $this->hasAdminAreaParent($areaKey)) {
+            return false;
+        }
+
+        if (! $this->relationLoaded('adminPermission')) {
+            $this->load('adminPermission');
+        }
+
+        $allowed = $this->adminPermission?->{$area['column']};
+        if (empty($allowed)) {
+            return true;
+        }
+
+        return count(array_intersect($allowed, array_keys($area['features']))) > 0;
+    }
+
+    public function canAccessContentFeature(string $feature): bool
+    {
+        return $this->canAccessAdminSubFeature('content_management', $feature);
+    }
+
+    public function canAccessEmployeeFeature(string $feature): bool
+    {
+        return $this->canAccessAdminSubFeature('employee_management', $feature);
+    }
+
+    public function canAccessStudentFeature(string $feature): bool
+    {
+        return $this->canAccessAdminSubFeature('student_management', $feature);
+    }
+
+    public function canAccessHiringFeature(string $feature): bool
+    {
+        return $this->canAccessAdminSubFeature('hiring_process', $feature);
+    }
+
+    public function canAccessCommunicationFeature(string $feature): bool
+    {
+        return $this->canAccessAdminSubFeature('communication', $feature);
+    }
+
+    public function canAccessSubscriptionFeature(string $feature): bool
+    {
+        return $this->canAccessAdminSubFeature('subscriptions', $feature);
+    }
+
+    public function canAccessUserManagementFeature(string $feature): bool
+    {
+        return $this->canAccessAdminSubFeature('user_management', $feature);
+    }
+
+    public function canAccessSystemFeature(string $feature): bool
+    {
+        return $this->canAccessAdminSubFeature('system', $feature);
+    }
+
     /**
      * Check if user has access to Content Management.
      */
@@ -1002,7 +1148,8 @@ class User extends Authenticatable
      */
     public function canAccessBilling(): bool
     {
-        return $this->hasAdminPermission('billing');
+        return $this->hasAdminPermission('billing')
+            && $this->canAccessSubscriptionFeature('billing');
     }
 
     /**
@@ -1010,7 +1157,14 @@ class User extends Authenticatable
      */
     public function canAccessLinkedAccounts(): bool
     {
-        return $this->hasAdminPermission('linked_accounts');
+        if (! $this->hasAdminPermission('linked_accounts')) {
+            return false;
+        }
+
+        return $this->canAccessSubscriptionFeature('dashboard')
+            || $this->canAccessSubscriptionFeature('starlinks')
+            || $this->canAccessSubscriptionFeature('omadas')
+            || $this->canAccessSubscriptionFeature('plan_types');
     }
 
     /**
@@ -1034,7 +1188,7 @@ class User extends Authenticatable
      */
     public function canAccessFeedback(): bool
     {
-        return $this->hasAdminPermission('feedback');
+        return $this->canAccessCommunicationFeature('feedback');
     }
 
     /**

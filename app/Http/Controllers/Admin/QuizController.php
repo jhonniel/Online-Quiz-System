@@ -11,6 +11,7 @@ use App\Models\QuizAssignment;
 use App\Models\QuizAttempt;
 use App\Models\QuizAttemptHistory;
 use App\Models\Setting;
+use App\Models\University;
 use App\Imports\QuestionsImport;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
@@ -408,7 +409,7 @@ class QuizController extends Controller
         ]);
     }
 
-    public function results(Quiz $quiz)
+    public function results(Request $request, Quiz $quiz)
     {
         $maxPoints = (int) $quiz->questions()->sum('points');
 
@@ -426,7 +427,7 @@ class QuizController extends Controller
             ->unique()
             ->flip();
 
-        $studentResults = $histories
+        $allStudentResults = $histories
             ->groupBy('user_id')
             ->map(function ($userHistories) use ($maxPoints, $pendingManualByUser) {
                 $user = $userHistories->first()->user;
@@ -455,12 +456,11 @@ class QuizController extends Controller
                     'has_pending_manual' => $hasPendingManual,
                 ];
             })
-            ->sortBy(fn ($row) => $row['user']->name ?? '')
             ->values();
 
-        $bestScores = $studentResults->pluck('best_score')->filter(fn ($s) => $s > 0);
+        $bestScores = $allStudentResults->pluck('best_score')->filter(fn ($s) => $s > 0);
         $summary = [
-            'total_students' => $studentResults->count(),
+            'total_students' => $allStudentResults->count(),
             'average_best_score' => $bestScores->isNotEmpty() ? round($bestScores->avg(), 1) : 0,
             'average_best_percent' => $maxPoints > 0 && $bestScores->isNotEmpty()
                 ? round($bestScores->avg() / $maxPoints * 100, 1)
@@ -469,10 +469,66 @@ class QuizController extends Controller
             'highest_percent' => $maxPoints > 0 && $bestScores->isNotEmpty()
                 ? round($bestScores->max() / $maxPoints * 100, 1)
                 : 0,
-            'pending_review_count' => $studentResults->where('has_pending_manual', true)->count(),
+            'pending_review_count' => $allStudentResults->where('has_pending_manual', true)->count(),
         ];
 
-        return view('admin.quizzes.results', compact('quiz', 'studentResults', 'maxPoints', 'summary'));
+        $search = trim((string) $request->input('search', ''));
+        $universityId = $request->input('university_id');
+        $sort = $request->input('sort', 'score_desc');
+
+        if (! in_array($sort, ['name', 'score_desc', 'score_asc'], true)) {
+            $sort = 'score_desc';
+        }
+
+        $studentResults = $allStudentResults;
+
+        if ($search !== '') {
+            $needle = mb_strtolower($search);
+            $studentResults = $studentResults->filter(function ($row) use ($needle) {
+                $name = mb_strtolower($row['user']->name ?? '');
+                $email = mb_strtolower($row['user']->email ?? '');
+
+                return str_contains($name, $needle) || str_contains($email, $needle);
+            });
+        }
+
+        if ($universityId !== null && $universityId !== '') {
+            $uniId = (int) $universityId;
+            $studentResults = $studentResults->filter(
+                fn ($row) => (int) ($row['user']->university_id ?? 0) === $uniId
+            );
+        }
+
+        $studentResults = match ($sort) {
+            'score_desc' => $studentResults->sortByDesc('best_score')->values(),
+            'score_asc' => $studentResults->sortBy('best_score')->values(),
+            default => $studentResults->sortBy(fn ($row) => mb_strtolower($row['user']->name ?? ''))->values(),
+        };
+
+        $universities = University::query()
+            ->whereIn('id', $allStudentResults->pluck('user')->pluck('university_id')->filter()->unique())
+            ->orderBy('name')
+            ->get();
+
+        if ($universities->isEmpty()) {
+            $universities = University::active()->orderBy('name')->get();
+        }
+
+        $filters = [
+            'search' => $search,
+            'university_id' => $universityId !== null && $universityId !== '' ? (string) $universityId : '',
+            'sort' => $sort,
+        ];
+
+        return view('admin.quizzes.results', compact(
+            'quiz',
+            'studentResults',
+            'maxPoints',
+            'summary',
+            'universities',
+            'filters',
+            'allStudentResults'
+        ));
     }
 
     /**
