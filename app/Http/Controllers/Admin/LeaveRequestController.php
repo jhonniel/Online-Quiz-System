@@ -801,6 +801,12 @@ class LeaveRequestController extends Controller
             }
         }
 
+        if ($validated['type'] === 'overtime' && ! $this->requestHasSupportingDocumentUploads($request)) {
+            return redirect()->back()
+                ->withErrors(['supporting_documents' => 'Supporting document is required for Overtime requests.'])
+                ->withInput();
+        }
+
         $reasonToStore = $this->buildReasonStringForAdminFiledEmployeeLeave($validated);
 
         $employeeIds = $validated['user_ids'];
@@ -2230,6 +2236,13 @@ class LeaveRequestController extends Controller
         }
 
         return $reasonToStore;
+    }
+
+    private function requestHasSupportingDocumentUploads(Request $request): bool
+    {
+        $files = $request->file('supporting_documents', []);
+
+        return is_array($files) && collect($files)->filter()->isNotEmpty();
     }
 
     /**

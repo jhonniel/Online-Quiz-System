@@ -195,7 +195,11 @@
                         <p class="text-[10px] text-gray-500 hidden" id="admin_travel_reason_help">For Travel, enter location / destination (required).</p>
                     </div>
                     <div class="space-y-1">
-                        <label for="admin_supporting_documents" class="block text-xs font-medium text-gray-700">Supporting Document(s) <span class="text-gray-400">(optional)</span></label>
+                        <label for="admin_supporting_documents" class="block text-xs font-medium text-gray-700">
+                            Supporting Document(s)
+                            <span id="admin_supporting_optional" class="text-gray-400">(optional)</span>
+                            <span id="admin_supporting_required" class="text-red-500 hidden">*</span>
+                        </label>
                         <input type="file" name="supporting_documents[]" id="admin_supporting_documents" multiple accept=".pdf,.jpg,.jpeg,.png" class="w-full text-xs text-gray-600 file:mr-2 file:py-1 file:px-2 file:rounded-md file:border-0 file:text-xs file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100">
                         <p class="text-[10px] text-gray-500">Upload up to 5 files (PDF/JPG/PNG), 5MB max per file.</p>
                     </div>
@@ -593,9 +597,15 @@ function handleLeaveTypeChange(selectElement) {
     const wfhM = document.getElementById('admin_wfh_mode');
     const wfhA = document.getElementById('admin_wfh_address');
     const wfhTasks = document.getElementById('admin_wfh_tasks');
+    const supportingInput = document.getElementById('admin_supporting_documents');
+    const supportingOptional = document.getElementById('admin_supporting_optional');
+    const supportingRequired = document.getElementById('admin_supporting_required');
 
     [travelHoursContainer, overtimeSec, offsetSec, wfhSec].forEach(el => el && el.classList.add('hidden'));
     [otH, otD, otT, wfhM, wfhA, wfhTasks].forEach(el => { if (el) el.required = false; });
+    if (supportingInput) supportingInput.required = false;
+    if (supportingOptional) supportingOptional.classList.remove('hidden');
+    if (supportingRequired) supportingRequired.classList.add('hidden');
     if (createReason) createReason.required = false;
     if (reasonLabel) reasonLabel.textContent = 'Reason';
     if (reasonOptional) reasonOptional.classList.remove('hidden');
@@ -621,6 +631,9 @@ function handleLeaveTypeChange(selectElement) {
         otH.required = true;
         otD.required = true;
         otT.required = true;
+        if (supportingInput) supportingInput.required = true;
+        if (supportingOptional) supportingOptional.classList.add('hidden');
+        if (supportingRequired) supportingRequired.classList.remove('hidden');
     }
 
     if (v === 'offset') {

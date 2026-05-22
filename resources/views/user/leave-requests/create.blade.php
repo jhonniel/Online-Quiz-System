@@ -203,14 +203,15 @@
                         @enderror
                     </div>
 
-                    <!-- Supporting Document (Optional; hidden for Travel) -->
+                    <!-- Supporting Document (required for Overtime; hidden for Travel) -->
                     <div id="supporting-section">
                         <label class="block text-sm font-medium text-gray-700 mb-2">
                             Supporting Document (e.g., Hubstaff screenshots, ClickUp links/screenshots)
+                            <span id="supporting-required-span" class="text-gray-400">(Optional)</span>
                         </label>
-                        <input type="file" name="supporting_documents[]" accept=".pdf,.jpg,.jpeg,.png" multiple
+                        <input type="file" name="supporting_documents[]" id="supporting_documents_input" accept=".pdf,.jpg,.jpeg,.png" multiple
                                class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100">
-                        <p class="mt-1 text-xs text-gray-500">Optional, upload up to 5 files (PDF/JPG/PNG), 5MB max per file.</p>
+                        <p id="supporting-help" class="mt-1 text-xs text-gray-500">Optional, upload up to 5 files (PDF/JPG/PNG), 5MB max per file.</p>
                         @error('supporting_documents')
                             <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
                         @enderror
@@ -254,9 +255,6 @@
                             <textarea name="overtime_tasks" id="overtime_tasks" rows="4"
                                       placeholder="https://app.clickup.com/... (URLs only; add more on separate lines or separated by spaces)"
                                       class="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">{{ old('overtime_tasks') }}</textarea>
-                            <p class="mt-1 text-xs text-gray-500">
-                                Put <strong>http</strong> or <strong>https</strong> links only (e.g. ClickUp). No sentences, labels, or explanations here—use Additional Explanation if needed.
-                            </p>
                             @error('overtime_tasks')
                                 <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
                             @enderror
@@ -388,9 +386,6 @@
                             <textarea name="wfh_tasks" id="wfh_tasks" rows="4"
                                       placeholder="https://app.clickup.com/... (URLs only; add more on separate lines or separated by spaces)"
                                       class="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">{{ old('wfh_tasks') }}</textarea>
-                            <p class="mt-1 text-xs text-gray-500">
-                                Put <strong>http</strong> or <strong>https</strong> links only (e.g. ClickUp). No sentences or explanations here—use Additional Explanation if needed.
-                            </p>
                             @error('wfh_tasks')
                                 <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
                             @enderror
@@ -827,6 +822,9 @@
         const reasonHelp = document.getElementById('reason-help');
         const reasonTravelHelp = document.getElementById('reason-travel-help');
         const supportingSection = document.getElementById('supporting-section');
+        const supportingRequiredSpan = document.getElementById('supporting-required-span');
+        const supportingHelp = document.getElementById('supporting-help');
+        const supportingInput = document.getElementById('supporting_documents_input');
         if (typeSelect.value === 'travel') {
             if (reasonLabelText) reasonLabelText.textContent = 'Location of travel ';
             if (reasonRequiredSpan) { reasonRequiredSpan.classList.remove('text-gray-400'); reasonRequiredSpan.classList.add('text-red-500'); reasonRequiredSpan.textContent = '*'; }
@@ -835,6 +833,7 @@
             if (reasonTravelHelp) reasonTravelHelp.classList.remove('hidden');
             if (reasonInput) reasonInput.placeholder = 'Enter location or destination of travel...';
             if (supportingSection) supportingSection.classList.add('hidden');
+            if (supportingInput) supportingInput.required = false;
         } else {
             if (reasonLabelText) reasonLabelText.textContent = 'Reason ';
             if (reasonRequiredSpan) { reasonRequiredSpan.classList.add('text-gray-400'); reasonRequiredSpan.classList.remove('text-red-500'); reasonRequiredSpan.textContent = '(Optional)'; }
@@ -843,6 +842,15 @@
             if (reasonTravelHelp) reasonTravelHelp.classList.add('hidden');
             if (reasonInput) reasonInput.placeholder = 'Please provide a reason for this request...';
             if (supportingSection) supportingSection.classList.remove('hidden');
+            if (typeSelect.value === 'overtime') {
+                if (supportingRequiredSpan) { supportingRequiredSpan.classList.remove('text-gray-400'); supportingRequiredSpan.classList.add('text-red-500'); supportingRequiredSpan.textContent = '*'; }
+                if (supportingHelp) supportingHelp.textContent = 'Required for Overtime. Upload up to 5 files (PDF/JPG/PNG), 5MB max per file.';
+                if (supportingInput) supportingInput.required = true;
+            } else {
+                if (supportingRequiredSpan) { supportingRequiredSpan.classList.remove('text-red-500'); supportingRequiredSpan.classList.add('text-gray-400'); supportingRequiredSpan.textContent = '(Optional)'; }
+                if (supportingHelp) supportingHelp.textContent = 'Optional, upload up to 5 files (PDF/JPG/PNG), 5MB max per file.';
+                if (supportingInput) supportingInput.required = false;
+            }
         }
 
         syncEndDateMin();

@@ -331,6 +331,11 @@ class LeaveRequestController extends Controller
             }
         }
 
+        $supportingDocumentsError = $this->supportingDocumentsRequiredForOvertimeError($request);
+        if ($supportingDocumentsError !== null) {
+            return redirect()->back()->withErrors($supportingDocumentsError)->withInput();
+        }
+
         $requestTypeInputValidationError = $this->validateRequestTypeInputData($validated);
         if ($requestTypeInputValidationError !== null) {
             return redirect()->back()->withErrors($requestTypeInputValidationError)->withInput();
@@ -914,6 +919,11 @@ class LeaveRequestController extends Controller
             }
         }
 
+        $supportingDocumentsError = $this->supportingDocumentsRequiredForOvertimeError($request, $leaveRequest);
+        if ($supportingDocumentsError !== null) {
+            return redirect()->back()->withErrors($supportingDocumentsError)->withInput();
+        }
+
         $requestTypeInputValidationError = $this->validateRequestTypeInputData($validated);
         if ($requestTypeInputValidationError !== null) {
             return redirect()->back()->withErrors($requestTypeInputValidationError)->withInput();
@@ -1492,6 +1502,30 @@ class LeaveRequestController extends Controller
             if ($this->parseHourMinuteToMinutes($totalHoursText) <= 0) {
                 return ['additional_time_total_hours' => 'Please enter valid total hours in HH:MM format (example: 08:30).'];
             }
+        }
+
+        return null;
+    }
+
+    /**
+     * @return array<string, string>|null
+     */
+    private function supportingDocumentsRequiredForOvertimeError(Request $request, ?LeaveRequest $existing = null): ?array
+    {
+        if ($request->input('type') !== 'overtime') {
+            return null;
+        }
+
+        $files = $request->file('supporting_documents', []);
+        $hasNewUploads = is_array($files) && collect($files)->filter()->isNotEmpty();
+
+        $hasExisting = $existing !== null && (
+            ! empty($existing->all_supporting_document_paths)
+            || filled($existing->supporting_document_path)
+        );
+
+        if (! $hasNewUploads && ! $hasExisting) {
+            return ['supporting_documents' => 'Supporting document is required for Overtime requests.'];
         }
 
         return null;

@@ -802,24 +802,6 @@
                                 <span class="font-bold">{{ number_format($balances['work_from_home']['remaining'] ?? 0, 0) }}</span>
                                 / {{ $balances['work_from_home']['allowance'] ?? 2 }} days
                             </p>
-                            <p class="text-xs text-gray-500">
-                                Used (approved): {{ number_format($balances['work_from_home']['used'] ?? 0, 0) }} day(s) — auto-deducted; pending does not count; resets each month
-                            </p>
-                            @if(!empty($balances['work_from_home']['approved_deductions']))
-                            <ul class="text-xs text-indigo-600 mt-1 list-disc list-inside">
-                                @foreach($balances['work_from_home']['approved_deductions'] as $deduction)
-                                <li>
-                                    Request #{{ $deduction['id'] }}:
-                                    {{ \Carbon\Carbon::parse($deduction['start_date'])->format('M d') }}
-                                    @if($deduction['start_date'] !== $deduction['end_date'])
-                                        – {{ \Carbon\Carbon::parse($deduction['end_date'])->format('M d, Y') }}
-                                    @endif
-                                    ({{ number_format($deduction['days_in_month'], 0) }} {{ $deduction['days_in_month'] == 1 ? 'day' : 'days' }})
-                                </li>
-                                @endforeach
-                            </ul>
-                            @endif
-                            <p class="text-xs text-indigo-600 mt-1">Admins may file WFH for this employee without the monthly limit.</p>
                         </div>
                         @endif
                     </div>
