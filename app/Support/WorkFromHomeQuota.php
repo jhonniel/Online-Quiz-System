@@ -5,6 +5,8 @@ namespace App\Support;
 use App\Models\LeaveRequest;
 use Carbon\Carbon;
 use Carbon\CarbonPeriod;
+use Illuminate\Database\Eloquent\Collection as EloquentCollection;
+use Illuminate\Support\Facades\DB;
 
 final class WorkFromHomeQuota
 {
@@ -23,8 +25,9 @@ final class WorkFromHomeQuota
         $reference = ($reference ?? Carbon::now('Asia/Manila'))->copy();
         $year = (int) $reference->year;
         $month = (int) $reference->month;
-        $used = self::usedDaysInMonth($userId, $year, $month, $excludeLeaveRequestId);
         $allowance = self::monthlyAllowanceDays();
+        $approvedDeductions = self::approvedDeductionsForMonth($userId, $year, $month, $excludeLeaveRequestId);
+        $used = array_sum(array_column($approvedDeductions, 'days_in_month'));
 
         return [
             'allowance' => $allowance,
@@ -33,7 +36,39 @@ final class WorkFromHomeQuota
             'month_label' => $reference->format('F Y'),
             'year' => $year,
             'month' => $month,
+            'approved_deductions' => $approvedDeductions,
         ];
+    }
+
+    /**
+     * Approved WFH requests that deduct from the given calendar month.
+     *
+     * @return list<array{id: int, start_date: string, end_date: string, days_in_month: float}>
+     */
+    public static function approvedDeductionsForMonth(
+        int $userId,
+        int $year,
+        int $month,
+        ?int $excludeLeaveRequestId = null
+    ): array {
+        $deductions = [];
+
+        foreach (self::approvedRequestsOverlappingMonth($userId, $year, $month, $excludeLeaveRequestId) as $request) {
+            $daysInMonth = self::daysOfRequestInMonth($request, $year, $month);
+            if ($daysInMonth <= 0) {
+                continue;
+            }
+
+            $end = $request->end_date ?? $request->start_date;
+            $deductions[] = [
+                'id' => (int) $request->id,
+                'start_date' => $request->start_date->format('Y-m-d'),
+                'end_date' => $end->format('Y-m-d'),
+                'days_in_month' => $daysInMonth,
+            ];
+        }
+
+        return $deductions;
     }
 
     /**
@@ -41,29 +76,49 @@ final class WorkFromHomeQuota
      */
     public static function usedDaysInMonth(int $userId, int $year, int $month, ?int $excludeLeaveRequestId = null): float
     {
-        $monthStart = Carbon::create($year, $month, 1, 0, 0, 0, 'Asia/Manila')->startOfDay();
-        $monthEnd = $monthStart->copy()->endOfMonth();
+        $total = 0.0;
+
+        foreach (self::approvedRequestsOverlappingMonth($userId, $year, $month, $excludeLeaveRequestId) as $request) {
+            $total += self::daysOfRequestInMonth($request, $year, $month);
+        }
+
+        return $total;
+    }
+
+    /**
+     * @return EloquentCollection<int, LeaveRequest>
+     */
+    public static function approvedRequestsOverlappingMonth(
+        int $userId,
+        int $year,
+        int $month,
+        ?int $excludeLeaveRequestId = null
+    ): EloquentCollection {
+        [$monthStart, $monthEnd] = self::monthBounds($year, $month);
 
         $query = LeaveRequest::query()
             ->where('user_id', $userId)
             ->where('type', 'work_from_home')
             ->where('status', 'approved')
-            ->whereDate('start_date', '<=', $monthEnd);
+            ->whereDate('start_date', '<=', $monthEnd)
+            ->whereDate(DB::raw('COALESCE(end_date, start_date)'), '>=', $monthStart);
 
         if ($excludeLeaveRequestId !== null) {
             $query->where('id', '!=', $excludeLeaveRequestId);
         }
 
-        $total = 0.0;
-        foreach ($query->get() as $request) {
-            $end = ($request->end_date ?? $request->start_date)->copy()->startOfDay();
-            if ($end->lt($monthStart)) {
-                continue;
-            }
-            $total += self::daysOfRequestInMonth($request, $year, $month);
-        }
+        return $query->orderBy('start_date')->get();
+    }
 
-        return $total;
+    /**
+     * @return array{0: Carbon, 1: Carbon}
+     */
+    private static function monthBounds(int $year, int $month): array
+    {
+        $monthStart = Carbon::create($year, $month, 1, 0, 0, 0, 'Asia/Manila')->startOfDay();
+        $monthEnd = $monthStart->copy()->endOfMonth();
+
+        return [$monthStart, $monthEnd];
     }
 
     /**
@@ -94,8 +149,8 @@ final class WorkFromHomeQuota
                 $monthLabel = Carbon::create($year, $month, 1)->format('F Y');
 
                 if ($remaining <= 0) {
-                    return "You have used your {$allowance} Work From Home day(s) for {$monthLabel}. "
-                        .'You cannot file another Work From Home request for that month. '
+                    return 'No balance: You do not have any Work From Home balance remaining for '.$monthLabel.'. '
+                        ."You have already used your {$allowance} approved day(s) for that month. "
                         .'Your allowance resets on the 1st of each month. Contact an administrator if you need additional WFH days.';
                 }
 

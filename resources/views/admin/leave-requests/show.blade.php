@@ -78,7 +78,6 @@
                         <label class="block text-sm font-medium text-gray-500 mb-1">Request Type</label>
                         @if($leaveRequest->isApproved())
                             <p class="text-sm font-semibold text-gray-900">{{ $leaveRequest->type_label }}</p>
-                            <p class="mt-2 text-xs text-gray-500">Request type cannot be changed after this request is approved.</p>
                         @else
                             <form action="{{ url('/admin/leave-requests/' . $leaveRequest->id . '/type') }}" method="POST"
                                   class="flex flex-col sm:flex-row sm:items-end gap-3"
@@ -805,8 +804,22 @@
                                 / {{ $balances['work_from_home']['allowance'] ?? 2 }} days
                             </p>
                             <p class="text-xs text-gray-500">
-                                Used (approved): {{ number_format($balances['work_from_home']['used'] ?? 0, 0) }} day(s) — pending does not count; resets each month
+                                Used (approved): {{ number_format($balances['work_from_home']['used'] ?? 0, 0) }} day(s) — auto-deducted; pending does not count; resets each month
                             </p>
+                            @if(!empty($balances['work_from_home']['approved_deductions']))
+                            <ul class="text-xs text-indigo-600 mt-1 list-disc list-inside">
+                                @foreach($balances['work_from_home']['approved_deductions'] as $deduction)
+                                <li>
+                                    Request #{{ $deduction['id'] }}:
+                                    {{ \Carbon\Carbon::parse($deduction['start_date'])->format('M d') }}
+                                    @if($deduction['start_date'] !== $deduction['end_date'])
+                                        – {{ \Carbon\Carbon::parse($deduction['end_date'])->format('M d, Y') }}
+                                    @endif
+                                    ({{ number_format($deduction['days_in_month'], 0) }} {{ $deduction['days_in_month'] == 1 ? 'day' : 'days' }})
+                                </li>
+                                @endforeach
+                            </ul>
+                            @endif
                             <p class="text-xs text-indigo-600 mt-1">Admins may file WFH for this employee without the monthly limit.</p>
                         </div>
                         @endif

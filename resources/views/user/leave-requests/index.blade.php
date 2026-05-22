@@ -139,8 +139,14 @@
                             {{ number_format($balances['work_from_home']['remaining'], 0) }} / {{ $balances['work_from_home']['allowance'] }} days
                         </p>
                         <p class="text-xs text-gray-500 mt-1">
-                            Used (approved): {{ number_format($balances['work_from_home']['used'], 0) }} {{ $balances['work_from_home']['used'] == 1 ? 'day' : 'days' }} — pending requests do not reduce balance; resets monthly
+                            Used (approved): {{ number_format($balances['work_from_home']['used'], 0) }} {{ $balances['work_from_home']['used'] == 1 ? 'day' : 'days' }}
+                            — auto-deducted from allowance; pending does not count; resets monthly
                         </p>
+                        @if(!empty($balances['work_from_home']['approved_deductions']))
+                        <p class="text-xs text-violet-700 mt-1">
+                            {{ count($balances['work_from_home']['approved_deductions']) }} approved request(s) this month
+                        </p>
+                        @endif
                     </div>
                 </div>
             </div>

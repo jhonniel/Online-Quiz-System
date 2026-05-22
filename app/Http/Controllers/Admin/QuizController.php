@@ -427,19 +427,26 @@ class QuizController extends Controller
             ->unique()
             ->flip();
 
+        $quizAttempts = QuizAttempt::query()
+            ->where('quiz_id', $quiz->id)
+            ->get(['user_id', 'points_earned', 'created_at']);
+
         $allStudentResults = $histories
             ->groupBy('user_id')
-            ->map(function ($userHistories) use ($maxPoints, $pendingManualByUser) {
+            ->map(function ($userHistories) use ($maxPoints, $pendingManualByUser, $quizAttempts) {
                 $user = $userHistories->first()->user;
                 $latestHistory = $userHistories->sortByDesc(fn ($h) => $h->completed_at ?? $h->created_at)->first();
 
                 $scoredAttempts = $userHistories->map(fn ($h) => [
                     'history' => $h,
-                    'score' => $this->scoreForAttemptHistory($h),
+                    'score' => $this->scoreForAttemptHistory($h, $quizAttempts),
                 ]);
 
                 $bestEntry = $scoredAttempts->sortByDesc('score')->first();
-                $latestScore = $this->scoreForAttemptHistory($latestHistory);
+                $latestRow = $scoredAttempts->first(
+                    fn (array $row) => $row['history']->id === $latestHistory->id
+                );
+                $latestScore = (int) ($latestRow['score'] ?? $this->scoreForAttemptHistory($latestHistory, $quizAttempts));
                 $bestScore = (int) ($bestEntry['score'] ?? $latestScore);
                 $hasPendingManual = $pendingManualByUser->has($user->id)
                     || $latestHistory->status === 'partial';
@@ -533,21 +540,37 @@ class QuizController extends Controller
 
     /**
      * Sum points for one quiz submission, including manual grades on text/fill_blank.
+     *
+     * @param  Collection<int, QuizAttempt>|null  $quizAttempts  Preloaded attempts for the quiz (avoids N+1 queries).
      */
-    private function scoreForAttemptHistory(QuizAttemptHistory $history): int
+    private function scoreForAttemptHistory(QuizAttemptHistory $history, ?Collection $quizAttempts = null): int
     {
         $completedAt = $history->completed_at ?? $history->created_at;
-        if (!$completedAt) {
+        if (! $completedAt) {
             return (int) $history->score;
         }
 
         $start = $completedAt->copy()->subMinutes(15);
         $end = $completedAt->copy()->addMinute();
 
-        $liveScore = (int) QuizAttempt::where('quiz_id', $history->quiz_id)
-            ->where('user_id', $history->user_id)
-            ->whereBetween('created_at', [$start, $end])
-            ->sum('points_earned');
+        if ($quizAttempts !== null) {
+            $liveScore = (int) $quizAttempts
+                ->where('user_id', $history->user_id)
+                ->filter(function ($attempt) use ($start, $end) {
+                    $createdAt = $attempt->created_at;
+                    if ($createdAt === null) {
+                        return false;
+                    }
+
+                    return $createdAt->between($start, $end);
+                })
+                ->sum('points_earned');
+        } else {
+            $liveScore = (int) QuizAttempt::where('quiz_id', $history->quiz_id)
+                ->where('user_id', $history->user_id)
+                ->whereBetween('created_at', [$start, $end])
+                ->sum('points_earned');
+        }
 
         return $liveScore > 0 ? $liveScore : (int) $history->score;
     }

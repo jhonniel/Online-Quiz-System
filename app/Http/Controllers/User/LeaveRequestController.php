@@ -215,7 +215,32 @@ class LeaveRequestController extends Controller
             $balances = $this->getEmployeeLeaveBalances($user);
         }
 
-        return view('user.leave-requests.create', compact('balances'));
+        $showNoBalanceModalOnLoad = (bool) session('show_no_balance_modal', false);
+
+        return view('user.leave-requests.create', compact('balances', 'showNoBalanceModalOnLoad'));
+    }
+
+    /**
+     * Current-month WFH balance (approved requests auto-deduct from allowance).
+     */
+    public function wfhBalance(Request $request)
+    {
+        $user = Auth::user();
+        if (! $user || $user->role !== 'employee') {
+            abort(403, 'Only employees have a Work From Home balance.');
+        }
+
+        $reference = $request->filled('start_date')
+            ? \Carbon\Carbon::parse($request->input('start_date'), 'Asia/Manila')
+            : \Carbon\Carbon::now('Asia/Manila');
+
+        $excludeId = $request->filled('exclude')
+            ? (int) $request->input('exclude')
+            : null;
+
+        return response()->json(
+            WorkFromHomeQuota::balanceForMonth((int) $user->id, $reference, $excludeId)
+        );
     }
 
     /**
@@ -320,7 +345,8 @@ class LeaveRequestController extends Controller
             if ($wfhQuotaError !== null) {
                 return redirect()->back()
                     ->withErrors(['type' => $wfhQuotaError])
-                    ->withInput();
+                    ->withInput()
+                    ->with('show_no_balance_modal', str_starts_with($wfhQuotaError, 'No balance:'));
             }
         }
 
@@ -903,7 +929,8 @@ class LeaveRequestController extends Controller
             if ($wfhQuotaError !== null) {
                 return redirect()->back()
                     ->withErrors(['type' => $wfhQuotaError])
-                    ->withInput();
+                    ->withInput()
+                    ->with('show_no_balance_modal', str_starts_with($wfhQuotaError, 'No balance:'));
             }
         }
 

@@ -669,6 +669,8 @@ Route::middleware(['auth', 'student.not_terminated'])->group(function () {
     // Student Time Requests
     Route::post('/dtr-time-requests', [App\Http\Controllers\User\DtrTimeRequestController::class, 'store'])->name('user.dtr-time-requests.store');
 
+    Route::get('leave-requests/wfh-balance', [App\Http\Controllers\User\LeaveRequestController::class, 'wfhBalance'])
+        ->name('user.leave-requests.wfh-balance');
     Route::resource('leave-requests', App\Http\Controllers\User\LeaveRequestController::class)->names('user.leave-requests');
 
     // Hiring Application (Applicant Only)

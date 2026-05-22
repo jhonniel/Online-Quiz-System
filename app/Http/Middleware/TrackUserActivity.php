@@ -2,15 +2,20 @@
 
 namespace App\Http\Middleware;
 
+use App\Jobs\LogUserActivityJob;
+use App\Models\User;
+use App\Models\UserSession;
 use Closure;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use App\Models\UserActivity;
-use App\Models\UserSession;
+use Illuminate\Support\Facades\Cache;
 use Symfony\Component\HttpFoundation\Response;
 
 class TrackUserActivity
 {
+    /** Minimum seconds between session row updates per user/session. */
+    private const SESSION_TOUCH_SECONDS = 120;
+
     /**
      * Handle an incoming request.
      *
@@ -20,33 +25,61 @@ class TrackUserActivity
     {
         $user = Auth::user();
 
-        if ($user) {
-            // Update or create user session
-            $sessionId = session()->getId();
-            UserSession::createOrUpdateSession($user, $sessionId);
+        if ($user instanceof User) {
+            $this->touchUserSessionThrottled($user, $request);
         }
 
-        // Log web traffic for both authenticated users and guests (excluding AJAX/API)
-        if (!$request->ajax() && !$request->is('api/*')) {
-            UserActivity::logActivity($user, 'page_view', $request->route()?->getName(), [
+        if ($this->shouldLogPageView($request, $user)) {
+            $this->dispatchPageViewLog($request, $user);
+        }
+
+        return $next($request);
+    }
+
+    private function shouldLogPageView(Request $request, mixed $user): bool
+    {
+        if ($request->ajax() || $request->is('api/*')) {
+            return false;
+        }
+
+        if ($user instanceof User && $user->isAdmin()) {
+            return false;
+        }
+
+        return true;
+    }
+
+    private function dispatchPageViewLog(Request $request, mixed $user): void
+    {
+        $url = (string) $request->fullUrl();
+        $ua = (string) ($request->userAgent() ?? '');
+        $ip = $request->ip() !== null ? (string) $request->ip() : null;
+
+        LogUserActivityJob::dispatch(
+            $user instanceof User ? (int) $user->id : null,
+            'page_view',
+            $request->route()?->getName(),
+            [
                 'method' => $request->method(),
                 'route' => $request->route()?->getName(),
                 'parameters' => $request->route()?->parameters(),
-                'is_guest' => !$user,
-            ]);
+                'is_guest' => ! $user,
+            ],
+            $url !== '' ? $url : null,
+            $ip,
+            $ua !== '' ? $ua : null,
+        )->afterResponse();
+    }
+
+    private function touchUserSessionThrottled(User $user, Request $request): void
+    {
+        $sessionId = session()->getId();
+        $cacheKey = 'user_session_touch:'.$user->id.':'.md5($sessionId);
+
+        if (! Cache::add($cacheKey, 1, now()->addSeconds(self::SESSION_TOUCH_SECONDS))) {
+            return;
         }
 
-        $response = $next($request);
-
-        // Update session activity after response
-        if ($user) {
-            $sessionId = session()->getId();
-            $session = UserSession::where('session_id', $sessionId)->first();
-            if ($session) {
-                $session->updateActivity();
-            }
-        }
-
-        return $response;
+        UserSession::createOrUpdateSession($user, $sessionId);
     }
 }

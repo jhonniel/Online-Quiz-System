@@ -326,13 +326,19 @@
                         <div class="border-t border-gray-200 pt-4 mt-4">
                             <h2 class="text-sm font-semibold text-gray-900 mb-2">Work From Home Details</h2>
                             @if(isset($balances['work_from_home']))
-                            <p class="text-sm text-indigo-800 mb-2">
-                                <strong>Monthly allowance:</strong>
-                                {{ number_format($balances['work_from_home']['remaining'], 0) }}
-                                of {{ $balances['work_from_home']['allowance'] }} day(s) remaining for
-                                {{ $balances['work_from_home']['month_label'] }}.
-                                Only approved WFH days count toward your balance. Allowance resets on the 1st of each month.
-                            </p>
+                            <div id="wfh-balance-panel" class="text-sm text-indigo-800 mb-2 space-y-1">
+                                <p>
+                                    <strong>Monthly allowance (<span id="wfh-balance-month">{{ $balances['work_from_home']['month_label'] }}</span>):</strong>
+                                    <span id="wfh-balance-remaining">{{ number_format($balances['work_from_home']['remaining'], 0) }}</span>
+                                    of <span id="wfh-balance-allowance">{{ $balances['work_from_home']['allowance'] }}</span> day(s) remaining.
+                                </p>
+                                <p class="text-xs text-indigo-700">
+                                    <span id="wfh-balance-used-label">Used (approved this month):</span>
+                                    <span id="wfh-balance-used">{{ number_format($balances['work_from_home']['used'], 0) }}</span> day(s) — deducted automatically from your balance.
+                                    Pending requests do not count until approved.
+                                </p>
+                                <ul id="wfh-balance-deductions" class="text-xs text-indigo-600 list-disc list-inside hidden"></ul>
+                            </div>
                             @endif
                             <p class="text-xs text-gray-500 mb-3">
                                 When requesting <strong>Work From Home</strong>, please specify your remote setup and list the tasks
@@ -412,7 +418,13 @@
 </div>
 
 @php
-    $showNoBalanceModalOnLoad = $errors->has('type') && str_contains($errors->first('type'), 'No balance');
+    $noBalanceModalMessage = $errors->has('type') ? $errors->first('type') : null;
+    $showNoBalanceModalOnLoad = ($showNoBalanceModalOnLoad ?? false)
+        || ($noBalanceModalMessage && (
+            str_contains($noBalanceModalMessage, 'No balance')
+            || str_contains($noBalanceModalMessage, 'Work From Home balance')
+            || str_contains($noBalanceModalMessage, 'do not have any Work From Home balance')
+        ));
 @endphp
 @if((isset($balances) && $balances) || $showNoBalanceModalOnLoad)
 <div id="no-balance-modal" class="hidden fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50" aria-modal="true" role="dialog" onclick="if (event.target === this) closeNoBalanceModal();">
@@ -424,7 +436,13 @@
                 </svg>
             </div>
             <h3 class="mt-4 text-lg font-semibold text-gray-900 text-center">No balance to file for that type of request</h3>
-            <p class="mt-2 text-sm text-gray-600 text-center">You have no remaining balance for the selected request type (Leave or Offset). Choose another request type or contact HR if you believe your balance should be updated.</p>
+            <p id="no-balance-modal-message" class="mt-2 text-sm text-gray-600 text-center">
+                @if($noBalanceModalMessage)
+                    {{ $noBalanceModalMessage }}
+                @else
+                    You have no remaining balance for the selected request type. Choose another request type or contact HR if you believe your balance should be updated.
+                @endif
+            </p>
             <div class="mt-6">
                 <button type="button" onclick="closeNoBalanceModal()"
                         class="w-full inline-flex justify-center items-center px-4 py-3 border border-transparent text-sm font-medium rounded-lg shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
@@ -460,6 +478,63 @@
 
     const balances = JSON.parse(document.getElementById('leave-request-balances-json').textContent || 'null');
     const balanceCheckTypes = ['vacation_leave', 'sick_leave', 'offset', 'work_from_home'];
+    @if(isset($balances['work_from_home']))
+    const wfhBalanceUrl = @json(route('user.leave-requests.wfh-balance'));
+
+    async function refreshWfhBalance() {
+        const panel = document.getElementById('wfh-balance-panel');
+        if (!panel || typeSelect.value !== 'work_from_home' || !startDateInput?.value) {
+            return;
+        }
+
+        try {
+            const params = new URLSearchParams({ start_date: startDateInput.value });
+            const response = await fetch(`${wfhBalanceUrl}?${params.toString()}`, {
+                headers: { Accept: 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+            });
+            if (!response.ok) {
+                return;
+            }
+
+            const data = await response.json();
+            if (balances) {
+                balances.work_from_home = data;
+                balances.work_from_home_remaining = data.remaining;
+            }
+
+            const monthEl = document.getElementById('wfh-balance-month');
+            const remainingEl = document.getElementById('wfh-balance-remaining');
+            const allowanceEl = document.getElementById('wfh-balance-allowance');
+            const usedEl = document.getElementById('wfh-balance-used');
+            const listEl = document.getElementById('wfh-balance-deductions');
+
+            if (monthEl) monthEl.textContent = data.month_label ?? '';
+            if (remainingEl) remainingEl.textContent = data.remaining ?? 0;
+            if (allowanceEl) allowanceEl.textContent = data.allowance ?? 2;
+            if (usedEl) usedEl.textContent = data.used ?? 0;
+
+            if (listEl && Array.isArray(data.approved_deductions)) {
+                if (data.approved_deductions.length === 0) {
+                    listEl.classList.add('hidden');
+                    listEl.innerHTML = '';
+                } else {
+                    listEl.classList.remove('hidden');
+                    listEl.innerHTML = data.approved_deductions.map((item) => {
+                        const range = item.start_date === item.end_date
+                            ? item.start_date
+                            : `${item.start_date} – ${item.end_date}`;
+                        const days = item.days_in_month == 1 ? 'day' : 'days';
+                        return `<li>Approved #${item.id}: ${range} (${item.days_in_month} ${days})</li>`;
+                    }).join('');
+                }
+            }
+
+            updateNoBalancePrompt();
+        } catch (error) {
+            // ignore network errors for balance preview
+        }
+    }
+    @endif
     const offsetHoursInput = document.getElementById('offset_hours');
     function parseHoursValue(val) {
         if (val === null || val === undefined) return 0;
@@ -474,7 +549,19 @@
         if (!balances || !balanceCheckTypes.includes(type)) return false;
         if (type === 'vacation_leave' || type === 'sick_leave') return (balances.leave_remaining || 0) <= 0;
         if (type === 'work_from_home') {
-            return (balances.work_from_home_remaining ?? balances.work_from_home?.remaining ?? 0) <= 0;
+            const remaining = parseFloat(balances.work_from_home_remaining ?? balances.work_from_home?.remaining ?? 0);
+            if (remaining <= 0) {
+                return true;
+            }
+            const start = startDateInput?.value;
+            const end = endDateInput?.value || start;
+            if (!start) {
+                return false;
+            }
+            const startDate = new Date(start + 'T00:00:00');
+            const endDate = new Date(end + 'T00:00:00');
+            const daysRequested = Math.floor((endDate - startDate) / (24 * 3600 * 1000)) + 1;
+            return daysRequested > remaining;
         }
         if (type === 'offset') {
             const overtimeBal = parseHoursValue(balances.overtime_hours);
@@ -506,12 +593,48 @@
     function closeNoBalanceModal() {
         if (noBalanceModal) noBalanceModal.classList.add('hidden');
     }
+    function noBalanceMessageForType(type) {
+        if (type === 'work_from_home') {
+            const month = document.getElementById('wfh-balance-month')?.textContent?.trim() || 'this month';
+            const remaining = parseFloat(balances?.work_from_home_remaining ?? balances?.work_from_home?.remaining ?? 0);
+            if (remaining <= 0) {
+                return `No balance: You do not have any Work From Home balance remaining for ${month}. Your allowance resets on the 1st of each month.`;
+            }
+            const start = startDateInput?.value;
+            const end = endDateInput?.value || start;
+            if (start) {
+                const startDate = new Date(start + 'T00:00:00');
+                const endDate = new Date(end + 'T00:00:00');
+                const daysRequested = Math.floor((endDate - startDate) / (24 * 3600 * 1000)) + 1;
+                if (daysRequested > remaining) {
+                    const dayLabel = remaining === 1 ? 'day' : 'days';
+                    const needLabel = daysRequested === 1 ? 'day' : 'days';
+                    return `Work From Home is limited to 2 days per month. You have ${remaining} ${dayLabel} remaining for ${month}, but this request needs ${daysRequested} ${needLabel}.`;
+                }
+            }
+        }
+        if (type === 'vacation_leave' || type === 'sick_leave') {
+            return 'No balance: You do not have any Leave Credits balance remaining to file this request.';
+        }
+        if (type === 'offset') {
+            return 'No balance: You do not have enough overtime balance to file this offset request.';
+        }
+        return 'No balance: You do not have remaining balance for the selected request type.';
+    }
+
     function updateNoBalancePrompt() {
         const type = typeSelect.value;
         const noBalance = type && hasNoBalanceForType(type);
+        const messageEl = document.getElementById('no-balance-modal-message');
         if (noBalanceModal) {
-            if (noBalance) noBalanceModal.classList.remove('hidden');
-            else noBalanceModal.classList.add('hidden');
+            if (noBalance) {
+                noBalanceModal.classList.remove('hidden');
+                if (messageEl) {
+                    messageEl.textContent = noBalanceMessageForType(type);
+                }
+            } else {
+                noBalanceModal.classList.add('hidden');
+            }
         }
         if (submitBtn) submitBtn.disabled = !!noBalance;
     }
@@ -724,9 +847,23 @@
 
         syncEndDateMin();
         renderOvertimeSpecificDates();
+
+        @if(isset($balances['work_from_home']))
+        if (typeSelect.value === 'work_from_home') {
+            refreshWfhBalance();
+        }
+        @endif
     }
 
     typeSelect.addEventListener('change', updateRequestTypeSections);
+    @if(isset($balances['work_from_home']))
+    if (startDateInput) {
+        startDateInput.addEventListener('change', refreshWfhBalance);
+    }
+    if (endDateInput) {
+        endDateInput.addEventListener('change', refreshWfhBalance);
+    }
+    @endif
     if (offsetHoursInput) {
         offsetHoursInput.addEventListener('input', updateNoBalancePrompt);
     }
@@ -765,6 +902,13 @@
     const submitText = document.getElementById('submit-text');
 
     form.addEventListener('submit', function(e) {
+        const type = typeSelect.value;
+        if (type && hasNoBalanceForType(type)) {
+            e.preventDefault();
+            updateNoBalancePrompt();
+            return;
+        }
+
         // Disable submit button and show loading state
         submitBtn.disabled = true;
         submitIcon.outerHTML = '<svg id="submit-icon" class="animate-spin h-5 w-5 mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>';
