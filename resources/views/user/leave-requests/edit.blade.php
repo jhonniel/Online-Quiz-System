@@ -344,10 +344,6 @@
                     <div id="wfh-section" class="space-y-4 {{ old('type', $editData['type']) == 'work_from_home' ? '' : 'hidden' }}">
                         <div class="border-t border-gray-200 pt-4 mt-4">
                             <h2 class="text-sm font-semibold text-gray-900 mb-2">Work From Home Details</h2>
-                            <p class="text-xs text-gray-500 mb-3">
-                                When requesting <strong>Work From Home</strong>, please specify your remote setup and list the tasks
-                                you will be working on (e.g., ClickUp links).
-                            </p>
                         </div>
 
                         <!-- Work Mode -->

@@ -323,25 +323,6 @@
                     <div id="wfh-section" class="space-y-4 hidden">
                         <div class="border-t border-gray-200 pt-4 mt-4">
                             <h2 class="text-sm font-semibold text-gray-900 mb-2">Work From Home Details</h2>
-                            @if(isset($balances['work_from_home']))
-                            <div id="wfh-balance-panel" class="text-sm text-indigo-800 mb-2 space-y-1">
-                                <p>
-                                    <strong>Monthly allowance (<span id="wfh-balance-month">{{ $balances['work_from_home']['month_label'] }}</span>):</strong>
-                                    <span id="wfh-balance-remaining">{{ number_format($balances['work_from_home']['remaining'], 0) }}</span>
-                                    of <span id="wfh-balance-allowance">{{ $balances['work_from_home']['allowance'] }}</span> day(s) remaining.
-                                </p>
-                                <p class="text-xs text-indigo-700">
-                                    <span id="wfh-balance-used-label">Used (approved this month):</span>
-                                    <span id="wfh-balance-used">{{ number_format($balances['work_from_home']['used'], 0) }}</span> day(s) — deducted automatically from your balance.
-                                    Pending requests do not count until approved.
-                                </p>
-                                <ul id="wfh-balance-deductions" class="text-xs text-indigo-600 list-disc list-inside hidden"></ul>
-                            </div>
-                            @endif
-                            <p class="text-xs text-gray-500 mb-3">
-                                When requesting <strong>Work From Home</strong>, please specify your remote setup and list the tasks
-                                you will be working on (e.g., ClickUp links).
-                            </p>
                         </div>
 
                         <!-- Work Mode -->
@@ -477,8 +458,7 @@
     const wfhBalanceUrl = @json(route('user.leave-requests.wfh-balance'));
 
     async function refreshWfhBalance() {
-        const panel = document.getElementById('wfh-balance-panel');
-        if (!panel || typeSelect.value !== 'work_from_home' || !startDateInput?.value) {
+        if (typeSelect.value !== 'work_from_home' || !startDateInput?.value) {
             return;
         }
 
@@ -495,33 +475,6 @@
             if (balances) {
                 balances.work_from_home = data;
                 balances.work_from_home_remaining = data.remaining;
-            }
-
-            const monthEl = document.getElementById('wfh-balance-month');
-            const remainingEl = document.getElementById('wfh-balance-remaining');
-            const allowanceEl = document.getElementById('wfh-balance-allowance');
-            const usedEl = document.getElementById('wfh-balance-used');
-            const listEl = document.getElementById('wfh-balance-deductions');
-
-            if (monthEl) monthEl.textContent = data.month_label ?? '';
-            if (remainingEl) remainingEl.textContent = data.remaining ?? 0;
-            if (allowanceEl) allowanceEl.textContent = data.allowance ?? 2;
-            if (usedEl) usedEl.textContent = data.used ?? 0;
-
-            if (listEl && Array.isArray(data.approved_deductions)) {
-                if (data.approved_deductions.length === 0) {
-                    listEl.classList.add('hidden');
-                    listEl.innerHTML = '';
-                } else {
-                    listEl.classList.remove('hidden');
-                    listEl.innerHTML = data.approved_deductions.map((item) => {
-                        const range = item.start_date === item.end_date
-                            ? item.start_date
-                            : `${item.start_date} – ${item.end_date}`;
-                        const days = item.days_in_month == 1 ? 'day' : 'days';
-                        return `<li>Approved #${item.id}: ${range} (${item.days_in_month} ${days})</li>`;
-                    }).join('');
-                }
             }
 
             updateNoBalancePrompt();
@@ -590,7 +543,7 @@
     }
     function noBalanceMessageForType(type) {
         if (type === 'work_from_home') {
-            const month = document.getElementById('wfh-balance-month')?.textContent?.trim() || 'this month';
+            const month = balances?.work_from_home?.month_label ?? 'this month';
             const remaining = parseFloat(balances?.work_from_home_remaining ?? balances?.work_from_home?.remaining ?? 0);
             if (remaining <= 0) {
                 return `No balance: You do not have any Work From Home balance remaining for ${month}. Your allowance resets on the 1st of each month.`;
