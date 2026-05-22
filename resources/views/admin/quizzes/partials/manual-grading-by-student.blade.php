@@ -80,7 +80,10 @@
         </div>
 
         <div class="mg-student-list-panel mg-sidebar-scroll relative" role="list" aria-label="Takers pending manual grading">
-            <div class="p-3 space-y-2 min-h-0">
+            <div x-show="!pageReady" x-cloak class="absolute inset-0 z-10 bg-slate-50/95 overflow-hidden">
+                @include('admin.quizzes.partials.manual-grading-skeletons', ['variant' => 'sidebar'])
+            </div>
+            <div class="p-3 space-y-2 min-h-0" :class="!pageReady && 'opacity-0'">
             <template x-if="filteredSortedStudents.length === 0">
                 <p class="text-center text-sm text-gray-500 py-8">No takers match your search.</p>
             </template>
@@ -137,8 +140,9 @@
     <div class="flex-1 flex flex-col min-w-0 min-h-0 overflow-hidden bg-gradient-to-br from-slate-50 to-gray-100/80 relative">
         <div x-show="workspaceLoading"
              x-cloak
-             class="absolute inset-0 z-20 flex items-center justify-center bg-white/80">
-            <p class="text-sm text-gray-500">Loading…</p>
+             class="absolute inset-0 z-20 flex flex-col min-h-0 overflow-hidden bg-gradient-to-br from-slate-50 to-gray-100/80 p-4 sm:p-6 lg:p-8">
+            <div x-show="workspaceSkeleton === 'grading'" class="flex-1 min-h-0">@include('admin.quizzes.partials.manual-grading-skeletons', ['variant' => 'grading'])</div>
+            <div x-show="workspaceSkeleton !== 'grading'" class="flex-1 min-h-0">@include('admin.quizzes.partials.manual-grading-skeletons', ['variant' => 'quiz-grid'])</div>
         </div>
         <div x-ref="workspace"
              x-show="!workspaceLoading"

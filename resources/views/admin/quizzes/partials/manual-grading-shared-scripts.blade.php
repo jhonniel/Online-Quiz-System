@@ -143,17 +143,30 @@ window.ManualGrading = {
 function mgNavigationMixin(viewMode) {
     return {
         viewMode,
+        pageReady: false,
         workspaceLoading: false,
+        workspaceSkeleton: 'quiz-grid',
 
         init() {
             this.$nextTick(() => {
+                this.pageReady = true;
                 if (this.$refs.workspace) {
                     window.ManualGrading.initForms(this.$refs.workspace);
                 }
             });
         },
 
+        resolveWorkspaceSkeleton(params) {
+            const hasUser = params.has('user_id');
+            const hasQuiz = params.has('quiz_id');
+            if (hasUser && hasQuiz) {
+                return 'grading';
+            }
+            return 'quiz-grid';
+        },
+
         async loadWorkspace(params) {
+            this.workspaceSkeleton = this.resolveWorkspaceSkeleton(params);
             this.workspaceLoading = true;
             try {
                 const res = await fetch(this.mgUrl(params), {
