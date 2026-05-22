@@ -241,12 +241,6 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Update user presence counts
     function updatePresenceCounts() {
-        ['online-count', 'away-count', 'idle-count'].forEach(function(id) {
-            const el = document.getElementById(id);
-            if (el && window.AppSkeleton) {
-                el.innerHTML = AppSkeleton.html('badge');
-            }
-        });
         // Fetch online users
         fetch('{{ url("/admin/status/online-users") }}')
             .then(response => response.json())

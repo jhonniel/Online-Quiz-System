@@ -177,7 +177,7 @@
                                     </div>
                                 </div>
                                 <div class="max-h-96 overflow-y-auto">
-                                    <div x-show="isLoading" class="p-2" x-html="window.AppSkeleton ? AppSkeleton.html('list') : ''"></div>
+                                    <div x-show="isLoading" class="p-4 text-center text-sm text-gray-500">Loading…</div>
                                     <div x-show="!isLoading && notifications.length === 0" class="p-4 text-center text-gray-500">
                                         No notifications
                                     </div>
@@ -292,8 +292,6 @@
             </main>
         </div>
     </div>
-
-    @include('components.app-skeleton-templates')
 
     @yield('scripts')
     @stack('scripts')

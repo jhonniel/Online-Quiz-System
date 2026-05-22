@@ -180,7 +180,7 @@
     </div>
 </div>
 
-    <!-- Fallback overlay when AppSkeleton is unavailable -->
+    <!-- Loading overlay for chat messages -->
     <div id="loading-overlay" class="hidden fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
         <div class="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
             <p class="text-sm text-gray-500 text-center py-8">Loading messages...</p>
@@ -429,20 +429,11 @@
         }
     }
 
-        let chatMessagesLoad = null;
-
         function showLoading() {
-            const chatMessages = document.getElementById('chat-messages');
-            if (window.AppSkeleton && chatMessages) {
-                chatMessagesLoad = AppSkeleton.beginLoading(chatMessages, 'list');
-            } else {
-                document.getElementById('loading-overlay').classList.remove('hidden');
-            }
+            document.getElementById('loading-overlay').classList.remove('hidden');
         }
 
         function hideLoading() {
-            chatMessagesLoad?.finish();
-            chatMessagesLoad = null;
             document.getElementById('loading-overlay').classList.add('hidden');
         }
 

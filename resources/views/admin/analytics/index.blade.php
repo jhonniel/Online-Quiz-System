@@ -851,7 +851,7 @@
 
     <script>
 function analyticsModalSkeletonHtml() {
-    return window.AppSkeleton ? AppSkeleton.html('modal') : '<p class="text-sm text-gray-500 py-8 text-center">Loading…</p>';
+    return '<p class="text-sm text-gray-500 py-8 text-center">Loading…</p>';
 }
 
 function showQuizDetails(quizId) {

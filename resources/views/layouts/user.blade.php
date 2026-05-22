@@ -1385,8 +1385,6 @@
         </div>
     </div>
 
-    @include('components.app-skeleton-templates')
-
     @yield('scripts')
 
     <!-- Live Chat for Logged-in Users -->

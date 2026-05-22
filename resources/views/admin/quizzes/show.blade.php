@@ -547,10 +547,6 @@ document.addEventListener('keydown', function(e) {
 function loadUsers() {
     const quizId = currentQuizId;
     const url = quizId ? `/admin/users/api?quiz_id=${quizId}` : '/admin/users/api';
-    const usersLoad = window.AppSkeleton
-        ? AppSkeleton.beginLoading(document.getElementById('usersList'), 'sidebar')
-        : null;
-
     fetch(url)
         .then(response => response.json())
         .then(data => {
@@ -588,8 +584,7 @@ function loadUsers() {
         .catch(error => {
             console.error('Error loading users:', error);
             document.getElementById('usersList').innerHTML = '<p class="text-red-600 text-sm">Error loading users</p>';
-        })
-        .finally(() => usersLoad?.finish());
+        });
 }
 
 // Handle form submission

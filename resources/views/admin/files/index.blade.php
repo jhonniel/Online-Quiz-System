@@ -459,7 +459,7 @@
             list.classList.add('hidden');
 
             if (state === 'loading') {
-                loading.innerHTML = window.AppSkeleton ? AppSkeleton.html('list') : 'Loading...';
+                loading.innerHTML = 'Loading…';
                 loading.classList.remove('hidden');
             }
             if (state === 'empty') empty.classList.remove('hidden');

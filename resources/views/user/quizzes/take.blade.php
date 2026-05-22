@@ -134,12 +134,7 @@ document.addEventListener('DOMContentLoaded', function() {
         startQuizBtn.addEventListener('click', function() {
         const originalHTML = startQuizBtn.innerHTML;
         startQuizBtn.disabled = true;
-        const startSectionLoad = window.AppSkeleton
-            ? AppSkeleton.beginLoading(document.getElementById('start-quiz-section'), 'panel')
-            : null;
-        if (!startSectionLoad) {
-            startQuizBtn.innerHTML = '<span>Loading Questions...</span>';
-        }
+        startQuizBtn.innerHTML = '<span>Loading questions…</span>';
 
         // Get CSRF token
         const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
@@ -198,8 +193,7 @@ document.addEventListener('DOMContentLoaded', function() {
             ToastNotification.error(error.message || 'An error occurred while loading questions. Please try again.');
             startQuizBtn.disabled = false;
             startQuizBtn.innerHTML = originalHTML;
-        })
-        .finally(() => startSectionLoad?.finish());
+        });
     });
 
     // Initialize quiz

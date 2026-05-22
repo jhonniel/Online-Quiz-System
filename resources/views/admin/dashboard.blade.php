@@ -1798,14 +1798,6 @@ document.addEventListener('DOMContentLoaded', function() {
         if (!activityDataUrl) {
             return;
         }
-        const onlineUsersList = document.getElementById('online-users-list');
-        const recentActivitiesList = document.getElementById('recent-activities-list');
-        const onlineLoad = window.AppSkeleton && onlineUsersList
-            ? AppSkeleton.beginLoading(onlineUsersList, 'list')
-            : null;
-        const activitiesLoad = window.AppSkeleton && recentActivitiesList
-            ? AppSkeleton.beginLoading(recentActivitiesList, 'list')
-            : null;
         fetch(activityDataUrl)
             .then(response => response.json())
             .then(data => {
@@ -1897,10 +1889,6 @@ document.addEventListener('DOMContentLoaded', function() {
             })
             .catch(error => {
                 console.error('Error fetching activity data:', error);
-            })
-            .finally(() => {
-                onlineLoad?.finish();
-                activitiesLoad?.finish();
             });
     }
 

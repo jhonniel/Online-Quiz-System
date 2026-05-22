@@ -144,8 +144,6 @@ function mgNavigationMixin(viewMode) {
     return {
         viewMode,
         workspaceLoading: false,
-        workspaceSkeleton: 'quiz-grid',
-        _workspaceLoadingTimer: null,
 
         init() {
             this.$nextTick(() => {
@@ -155,22 +153,8 @@ function mgNavigationMixin(viewMode) {
             });
         },
 
-        resolveWorkspaceSkeleton(params) {
-            const hasUser = params.has('user_id');
-            const hasQuiz = params.has('quiz_id');
-            if (hasUser && hasQuiz) return 'grading';
-            if (viewMode === 'student' && hasUser) return 'quiz-grid';
-            if (viewMode === 'quiz' && hasQuiz) return 'quiz-grid';
-            return 'quiz-grid';
-        },
-
         async loadWorkspace(params) {
-            this.workspaceSkeleton = this.resolveWorkspaceSkeleton(params);
-            clearTimeout(this._workspaceLoadingTimer);
-            this.workspaceLoading = false;
-            this._workspaceLoadingTimer = setTimeout(() => {
-                this.workspaceLoading = true;
-            }, 300);
+            this.workspaceLoading = true;
             try {
                 const res = await fetch(this.mgUrl(params), {
                     headers: {
@@ -197,8 +181,6 @@ function mgNavigationMixin(viewMode) {
                 console.error(e);
                 window.location.href = this.mgUrl(params);
             } finally {
-                clearTimeout(this._workspaceLoadingTimer);
-                this._workspaceLoadingTimer = null;
                 this.workspaceLoading = false;
             }
         },

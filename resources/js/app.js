@@ -1,5 +1,4 @@
 import './bootstrap';
-import './skeleton-loader';
 
 import Alpine from 'alpinejs';
 

@@ -539,10 +539,6 @@ let filteredUsers = [];
 function loadUsers() {
     const quizId = currentQuizId;
     const url = quizId ? `/admin/users/api?quiz_id=${quizId}` : '/admin/users/api';
-    const usersLoad = window.AppSkeleton
-        ? AppSkeleton.beginLoading(document.getElementById('usersList'), 'sidebar')
-        : null;
-
     fetch(url)
         .then(response => response.json())
         .then(data => {
@@ -554,8 +550,7 @@ function loadUsers() {
         .catch(error => {
             console.error('Error loading users:', error);
             document.getElementById('usersList').innerHTML = '<p class="text-red-600 text-sm">Error loading users</p>';
-        })
-        .finally(() => usersLoad?.finish());
+        });
 }
 
 function renderUsers() {
@@ -656,9 +651,6 @@ function closeAssignedUsersModal() {
 }
 
 function loadAssignedUsers(quizId) {
-    const assignedLoad = window.AppSkeleton
-        ? AppSkeleton.beginLoading(document.getElementById('assignedUsersList'), 'list')
-        : null;
     fetch(`/admin/quizzes/${quizId}/assigned-users`)
         .then(response => response.json())
         .then(data => {
@@ -711,8 +703,7 @@ function loadAssignedUsers(quizId) {
         .catch(error => {
             console.error('Error loading assigned users:', error);
             document.getElementById('assignedUsersList').innerHTML = '<p class="text-red-600 text-center py-8">Error loading assigned users</p>';
-        })
-        .finally(() => assignedLoad?.finish());
+        });
 }
 
 function getStatusBadge(status) {

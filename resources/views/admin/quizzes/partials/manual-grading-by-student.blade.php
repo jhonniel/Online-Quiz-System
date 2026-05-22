@@ -137,9 +137,8 @@
     <div class="flex-1 flex flex-col min-w-0 min-h-0 overflow-hidden bg-gradient-to-br from-slate-50 to-gray-100/80 relative">
         <div x-show="workspaceLoading"
              x-cloak
-             class="absolute inset-0 z-20 flex flex-col min-h-0 overflow-hidden bg-gradient-to-br from-slate-50 to-gray-100/80 p-4 sm:p-6 lg:p-8">
-            <div x-show="workspaceSkeleton === 'grading'" class="flex-1 min-h-0">@include('admin.quizzes.partials.manual-grading-skeletons', ['variant' => 'grading'])</div>
-            <div x-show="workspaceSkeleton !== 'grading'" class="flex-1 min-h-0">@include('admin.quizzes.partials.manual-grading-skeletons', ['variant' => 'quiz-grid'])</div>
+             class="absolute inset-0 z-20 flex items-center justify-center bg-white/80">
+            <p class="text-sm text-gray-500">Loading…</p>
         </div>
         <div x-ref="workspace"
              x-show="!workspaceLoading"

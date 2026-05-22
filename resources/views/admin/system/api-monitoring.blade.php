@@ -191,7 +191,7 @@
                     <tbody class="divide-y divide-gray-100 bg-white">
                         <tr x-show="isRefreshing" x-cloak>
                             <td colspan="10" class="p-4">
-                                <div x-html="window.AppSkeleton ? AppSkeleton.html('table') : ''"></div>
+                                <p class="text-sm text-gray-500 py-4 text-center">Loading…</p>
                             </td>
                         </tr>
                         <template x-for="row in rows" :key="row.route_key">

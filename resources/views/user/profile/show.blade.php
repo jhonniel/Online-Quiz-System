@@ -459,9 +459,7 @@
         }
 
         searchTimeout = setTimeout(() => {
-            resultsDiv.innerHTML = window.AppSkeleton
-                ? '<div class="p-2">' + AppSkeleton.html('list') + '</div>'
-                : '<div class="p-4 text-center text-sm text-gray-500">Searching...</div>';
+            resultsDiv.innerHTML = '<p class="text-sm text-gray-500 py-4 text-center">Loading…</p>';
             resultsDiv.classList.remove('hidden');
 
             fetch(`{{ url('/friends/search') }}?q=${encodeURIComponent(query)}`, {

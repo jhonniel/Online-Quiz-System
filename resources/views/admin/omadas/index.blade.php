@@ -162,7 +162,7 @@
                     </div>
                 </div>
                 <div class="p-8 overflow-y-auto flex-1">
-                    <div x-show="loading" class="py-4" x-html="window.AppSkeleton ? AppSkeleton.html('panel') : ''"></div>
+                    <p x-show="loading" class="py-4 text-sm text-gray-500 text-center">Loading…</p>
                     <p x-show="errorMessage" x-text="errorMessage" class="text-base text-red-600 py-4"></p>
                     <dl x-show="!loading && !errorMessage && device" class="grid grid-cols-1 sm:grid-cols-2 gap-5">
                         <div><dt class="text-sm font-medium text-gray-500 uppercase tracking-wider">Account linked (email)</dt><dd class="mt-1.5 text-base text-gray-900" x-text="device.account_linked_email || '—'"></dd></div>

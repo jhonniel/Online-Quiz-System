@@ -2358,12 +2358,6 @@ document.addEventListener('DOMContentLoaded', function() {
         if (isMetricsRefreshing) return;
         isMetricsRefreshing = true;
 
-        const metricLoads = ['hm-top-404-ips', 'hm-top-auth-ips', 'hm-top-404-paths'].map(function(id) {
-            return window.AppSkeleton && document.getElementById(id)
-                ? AppSkeleton.beginLoading(document.getElementById(id), 'table')
-                : null;
-        });
-
         fetch('{{ url('/admin/settings/health-metrics') }}', {
             method: 'GET',
             headers: {
@@ -2379,11 +2373,6 @@ document.addEventListener('DOMContentLoaded', function() {
         })
         .catch(() => {
             isMetricsRefreshing = false;
-        })
-        .finally(() => {
-            metricLoads.forEach(function(load) {
-                load?.finish();
-            });
         });
     }
 
