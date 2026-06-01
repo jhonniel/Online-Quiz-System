@@ -668,6 +668,7 @@ Route::middleware(['auth', 'student.not_terminated'])->group(function () {
 
     // Student Time Requests
     Route::post('/dtr-time-requests', [App\Http\Controllers\User\DtrTimeRequestController::class, 'store'])->name('user.dtr-time-requests.store');
+    Route::delete('/dtr-time-requests/{dtrTimeRequest}', [App\Http\Controllers\User\DtrTimeRequestController::class, 'destroy'])->name('user.dtr-time-requests.destroy');
 
     Route::get('leave-requests/wfh-balance', [App\Http\Controllers\User\LeaveRequestController::class, 'wfhBalance'])
         ->name('user.leave-requests.wfh-balance');

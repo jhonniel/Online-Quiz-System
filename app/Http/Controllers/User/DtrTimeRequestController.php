@@ -120,11 +120,18 @@ class DtrTimeRequestController extends Controller
         $createdCount = 0;
         $skippedCount = 0;
         $errors = [];
+        $processedDates = [];
 
         $today = Carbon::today()->startOfDay();
         
         foreach ($validated['days'] as $index => $day) {
             $date = Carbon::parse($day['date'])->startOfDay();
+            $dateKey = $date->toDateString();
+
+            if (in_array($dateKey, $processedDates, true)) {
+                $errors[] = "Duplicate date detected in this submission: {$dateKey}. Please keep only one entry per day.";
+                continue;
+            }
             
             // Validate date is not in the future (compare dates only, not time)
             if ($date->gt($today)) {
@@ -170,13 +177,13 @@ class DtrTimeRequestController extends Controller
                 continue;
             }
 
-            // Check if there's already a pending or approved request for this date
+            // Enforce one time request per day (any status) to avoid duplication.
             $existingRequest = DtrTimeRequest::where('user_id', $user->id)
-                ->where('date', $day['date'])
-                ->whereIn('status', ['pending', 'approved'])
+                ->whereDate('date', $day['date'])
                 ->first();
 
             if ($existingRequest) {
+                $errors[] = "A time request already exists for {$day['date']} (one request per day only).";
                 $skippedCount++;
                 continue;
             }
@@ -199,6 +206,7 @@ class DtrTimeRequestController extends Controller
                 ]);
                 
                 $createdCount++;
+                $processedDates[] = $dateKey;
             } catch (\Exception $e) {
                 \Log::error('Failed to create DTR Time Request', [
                     'error' => $e->getMessage(),
@@ -242,5 +250,29 @@ class DtrTimeRequestController extends Controller
         }
 
         return back()->with('success', $message);
+    }
+
+    /**
+     * Allow student to discard their own pending time request.
+     */
+    public function destroy(DtrTimeRequest $dtrTimeRequest)
+    {
+        $user = Auth::user();
+
+        if ($user->role !== 'student') {
+            abort(403, 'Only students can discard time requests.');
+        }
+
+        if ((int) $dtrTimeRequest->user_id !== (int) $user->id) {
+            abort(403, 'You can only discard your own time requests.');
+        }
+
+        if ($dtrTimeRequest->status !== 'pending') {
+            return back()->withErrors(['error' => 'Only pending time requests can be discarded.']);
+        }
+
+        $dtrTimeRequest->delete();
+
+        return back()->with('success', 'Pending time request discarded successfully.');
     }
 }

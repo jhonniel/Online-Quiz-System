@@ -54,15 +54,15 @@
                                         {{ $assignment->quiz->time_limit ? $assignment->quiz->time_limit . ' min' : 'No limit' }}
                                     </td>
                                     <td class="px-6 py-4 whitespace-nowrap">
-                                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium {{ $assignment->is_completed ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800' }}">
-                                            {{ $assignment->is_completed ? 'Completed' : 'Pending' }}
+                                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium {{ $assignment->getStatusBadgeClass() }}">
+                                            {{ $assignment->getStatusText() }}
                                         </span>
                                     </td>
                                     <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
                                         @if(!$assignment->is_completed)
                                             <a href="{{ url('/quizzes/' . $assignment->quiz->id . '/take') }}"
                                                class="text-indigo-600 hover:text-indigo-900 font-medium">
-                                                Take Quiz
+                                                {{ ($assignment->status === 'in_progress' || $assignment->status === 'cancelled') ? 'Resume Quiz' : 'Take Quiz' }}
                                             </a>
                                         @else
                                             <a href="{{ url('/quizzes/' . $assignment->quiz->id . '/result') }}"

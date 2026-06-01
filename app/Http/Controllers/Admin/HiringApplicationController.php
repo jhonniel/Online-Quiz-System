@@ -295,29 +295,48 @@ class HiringApplicationController extends Controller
         $perPage = $request->get('per_page', 20);
         $perPage = in_array($perPage, [10, 20, 50, 100]) ? $perPage : 20;
 
-        // Sort: status workflow order (same as before), then by application date, then name
+        $statusFilter = (string) $request->input('status', '');
+
+        // Sort: for interview_scheduled filter use interview date, otherwise keep workflow + application date sorting.
         $sort = $request->input('sort', 'latest');
         $sort = in_array($sort, ['latest', 'oldest'], true) ? $sort : 'latest';
-        $query->orderByRaw("
-            CASE status
-                WHEN 'pending' THEN 1
-                WHEN 'accepted' THEN 2
-                WHEN 'interview_scheduled' THEN 3
-                WHEN 'done_interview' THEN 4
-                WHEN 'rejected' THEN 5
-                ELSE 99
-            END ASC
-        ");
-        if ($sort === 'oldest') {
-            $query->orderBy('created_at', 'asc')
-                ->orderBy('id', 'asc')
-                ->orderByRaw('LOWER(last_name) ASC')
-                ->orderByRaw('LOWER(first_name) ASC');
+
+        if ($statusFilter === 'interview_scheduled') {
+            if ($sort === 'oldest') {
+                $query->orderByRaw('CASE WHEN interview_date IS NULL THEN 1 ELSE 0 END ASC')
+                    ->orderBy('interview_date', 'asc')
+                    ->orderBy('id', 'asc')
+                    ->orderByRaw('LOWER(last_name) ASC')
+                    ->orderByRaw('LOWER(first_name) ASC');
+            } else {
+                $query->orderByRaw('CASE WHEN interview_date IS NULL THEN 1 ELSE 0 END ASC')
+                    ->orderBy('interview_date', 'desc')
+                    ->orderBy('id', 'desc')
+                    ->orderByRaw('LOWER(last_name) ASC')
+                    ->orderByRaw('LOWER(first_name) ASC');
+            }
         } else {
-            $query->orderBy('created_at', 'desc')
-                ->orderBy('id', 'desc')
-                ->orderByRaw('LOWER(last_name) ASC')
-                ->orderByRaw('LOWER(first_name) ASC');
+            $query->orderByRaw("
+                CASE status
+                    WHEN 'pending' THEN 1
+                    WHEN 'accepted' THEN 2
+                    WHEN 'interview_scheduled' THEN 3
+                    WHEN 'done_interview' THEN 4
+                    WHEN 'rejected' THEN 5
+                    ELSE 99
+                END ASC
+            ");
+            if ($sort === 'oldest') {
+                $query->orderBy('created_at', 'asc')
+                    ->orderBy('id', 'asc')
+                    ->orderByRaw('LOWER(last_name) ASC')
+                    ->orderByRaw('LOWER(first_name) ASC');
+            } else {
+                $query->orderBy('created_at', 'desc')
+                    ->orderBy('id', 'desc')
+                    ->orderByRaw('LOWER(last_name) ASC')
+                    ->orderByRaw('LOWER(first_name) ASC');
+            }
         }
 
         $applications = $query->get();
@@ -333,7 +352,6 @@ class HiringApplicationController extends Controller
         $applications->appends(request()->query());
 
         $positionFilter = $request->position;
-        $statusFilter = $request->status;
 
         // Filter positions dropdown to only show allowed positions
         $user = Auth::user();

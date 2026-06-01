@@ -139,6 +139,7 @@
                         <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
                         <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Remarks</th>
                         <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Submitted</th>
+                        <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Action</th>
                     </tr>
                 </thead>
                 <tbody class="bg-white divide-y divide-gray-200">
@@ -164,6 +165,20 @@
                         </td>
                         <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500">
                             {{ $request->created_at->format('M d, Y g:i A') }}
+                        </td>
+                        <td class="px-4 py-3 whitespace-nowrap text-sm">
+                            @if($request->status === 'pending')
+                                <form method="POST" action="{{ route('user.dtr-time-requests.destroy', $request) }}"
+                                      onsubmit="return confirm('Discard this pending time request?');">
+                                    @csrf
+                                    @method('DELETE')
+                                    <button type="submit" class="text-red-600 hover:text-red-800 font-medium">
+                                        Discard
+                                    </button>
+                                </form>
+                            @else
+                                <span class="text-gray-400">—</span>
+                            @endif
                         </td>
                     </tr>
                     @endforeach
@@ -453,7 +468,7 @@ document.addEventListener('DOMContentLoaded', function() {
             </button>
         </div>
 
-        <form action="{{ url('/dtr-time-requests') }}" method="POST" id="record-attendance-form" onsubmit="return validateAttendanceForm(event)">
+        <form action="{{ url('/dtr-time-requests') }}" method="POST" id="record-attendance-form">
             @csrf
             <input type="hidden" name="filter_date_from" value="{{ request('date_from') }}">
             <input type="hidden" name="filter_date_to" value="{{ request('date_to') }}">
@@ -537,7 +552,77 @@ document.addEventListener('DOMContentLoaded', function() {
     </div>
 </div>
 
+<!-- Attendance Policy Prompt Modal -->
+<div id="attendance-policy-modal" class="hidden fixed inset-0 bg-gray-900/40 z-[60] p-4 flex items-center justify-center">
+    <div class="w-full max-w-2xl p-5 border border-amber-300 shadow-xl rounded-xl bg-amber-50">
+        <div class="flex items-center justify-between mb-3">
+            <h3 id="attendance-policy-modal-title" class="text-lg font-bold text-amber-900">Warning</h3>
+            <button type="button" onclick="closeAttendancePolicyModal(false)" class="text-amber-500 hover:text-amber-700">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                </svg>
+            </button>
+        </div>
+        <div id="attendance-policy-modal-body" class="text-sm text-amber-900 whitespace-pre-line"></div>
+        <div class="mt-5 flex justify-end gap-3">
+            <button type="button"
+                    onclick="closeAttendancePolicyModal(false)"
+                    class="px-4 py-2 border border-amber-300 rounded-lg text-amber-800 bg-white hover:bg-amber-100 transition-colors">
+                Cancel
+            </button>
+            <button type="button"
+                    onclick="closeAttendancePolicyModal(true)"
+                    class="px-4 py-2 bg-amber-500 text-white rounded-lg hover:bg-amber-600 transition-colors">
+                Continue
+            </button>
+        </div>
+    </div>
+</div>
+
+@php
+    $existingTimeRequestDates = isset($pendingTimeRequests)
+        ? $pendingTimeRequests->pluck('date')->map(function ($d) {
+            return optional($d)->format('Y-m-d');
+        })->filter()->values()->all()
+        : [];
+@endphp
+
+<script id="existing-time-request-dates" type="application/json">{!! json_encode($existingTimeRequestDates) !!}</script>
 <script>
+const existingTimeRequestDates = JSON.parse(
+    document.getElementById('existing-time-request-dates')?.textContent || '[]'
+);
+
+let attendancePolicyModalResolver = null;
+
+function closeAttendancePolicyModal(confirmed) {
+    const modal = document.getElementById('attendance-policy-modal');
+    if (modal) {
+        modal.classList.add('hidden');
+    }
+    if (attendancePolicyModalResolver) {
+        attendancePolicyModalResolver(confirmed);
+        attendancePolicyModalResolver = null;
+    }
+}
+
+function showAttendancePolicyModal(title, message) {
+    const modal = document.getElementById('attendance-policy-modal');
+    const titleEl = document.getElementById('attendance-policy-modal-title');
+    const bodyEl = document.getElementById('attendance-policy-modal-body');
+    if (!modal || !titleEl || !bodyEl) {
+        return Promise.resolve(window.confirm(message));
+    }
+
+    titleEl.textContent = title;
+    bodyEl.textContent = message;
+    modal.classList.remove('hidden');
+
+    return new Promise((resolve) => {
+        attendancePolicyModalResolver = resolve;
+    });
+}
+
 function openRecordAttendanceModal() {
     const modal = document.getElementById('record-attendance-modal');
     if (modal) {
@@ -652,6 +737,14 @@ function updateDaysList() {
                 </div>
             </div>
         `;
+
+        if (existingTimeRequestDates.includes(dateStr)) {
+            html += `
+                <div class="mt-1 mb-2 text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded px-2 py-1">
+                    A time request already exists for ${dateStr}. One request per day only.
+                </div>
+            `;
+        }
         
         // Move to next day (add 1 day)
         currentDate.setDate(currentDate.getDate() + 1);
@@ -687,6 +780,7 @@ function updateDaysList() {
 document.addEventListener('DOMContentLoaded', function() {
     const dateFromInput = document.getElementById('attendance_date_from');
     const dateToInput = document.getElementById('attendance_date_to');
+    const attendanceForm = document.getElementById('record-attendance-form');
     
     if (dateFromInput) {
         dateFromInput.addEventListener('change', updateDaysList);
@@ -709,6 +803,14 @@ document.addEventListener('DOMContentLoaded', function() {
         // If no filter, default to today
         dateFromInput.value = today;
         dateToInput.value = today;
+    }
+
+    if (attendanceForm) {
+        attendanceForm.addEventListener('submit', async function (e) {
+            // Always stop the native submit first; resume manually after async modal checks.
+            e.preventDefault();
+            await validateAttendanceForm(e);
+        });
     }
 });
 
@@ -796,15 +898,19 @@ function clearTimeField(inputId) {
 }
 
 // Validate attendance form before submission
-function validateAttendanceForm(event) {
+async function validateAttendanceForm(event) {
     const form = document.getElementById('record-attendance-form');
     if (!form) return true;
+
+    if (form.dataset.submittingConfirmed === '1') {
+        return true;
+    }
     
     const timeInputs = form.querySelectorAll('input[name^="days"][name$="[time]"]');
     let hasValidTime = false;
-    const emptyFields = [];
     const invalidFields = [];
     
+    const validEntries = [];
     timeInputs.forEach((input, index) => {
         const timeValue = input.value.trim();
         // Check if time is in HH:MM format
@@ -812,6 +918,19 @@ function validateAttendanceForm(event) {
         
         if (timeValue && timePattern.test(timeValue)) {
             hasValidTime = true;
+            const [hh, mm] = timeValue.split(':').map(Number);
+            const minutes = (hh * 60) + mm;
+            const dayContainer = input.closest('.flex.items-center.gap-3');
+            const dateInput = dayContainer?.querySelector('input[name^="days"][name$="[date]"]');
+            if (dateInput?.value && existingTimeRequestDates.includes(dateInput.value)) {
+                invalidFields.push(`A time request already exists for ${dateInput.value}. One request per day only.`);
+                return;
+            }
+            validEntries.push({
+                date: dateInput?.value || '',
+                time: timeValue,
+                minutes: minutes,
+            });
         } else if (timeValue) {
             invalidFields.push(`Day ${index + 1} has invalid time format "${timeValue}". Please use HH:MM format (e.g., 00:00, 08:30).`);
         }
@@ -823,9 +942,58 @@ function validateAttendanceForm(event) {
         return false;
     }
     
-    if (invalidFields.length > 0) {
-        const proceed = confirm('Some days have invalid time format. Only days with valid time (HH:MM) will be submitted.\n\n' + invalidFields.join('\n') + '\n\nDo you want to continue?');
-        if (!proceed) {
+    const overEightEntries = validEntries.filter((entry) => entry.minutes > 480);
+    const underEightEntries = validEntries.filter((entry) => entry.minutes > 0 && entry.minutes < 480);
+    const overEightHoursCount = overEightEntries.length;
+    const underEightHoursCount = underEightEntries.length;
+
+    if (overEightHoursCount > 0) {
+        const remarksInput = document.getElementById('attendance_remarks');
+        const remarksValue = (remarksInput?.value || '').trim();
+        if (remarksValue === '') {
+            event.preventDefault();
+            await showAttendancePolicyModal(
+                'Over 08:00 Requires Overtime Approval Note',
+                'You entered time greater than 08:00.\n\nPlease add in Remarks who approved your overtime request (name of the approving Lead Dev) before submitting.'
+            );
+            if (remarksInput) {
+                remarksInput.focus();
+            }
+            return false;
+        }
+
+        const overEightMessage = [
+            `You entered ${overEightHoursCount} day(s) with time greater than 08:00.`,
+            `Entered time(s): ${overEightEntries.map((entry) => `${entry.date} (${entry.time})`).join(', ')}`,
+            '',
+            'This time request will be further checked.',
+            'If you have approved overtime from your assigned Lead Dev, this will be valid.',
+            'If not, only 08:00 will be recorded and the excess time will be discarded.',
+            'Please ensure your Remarks includes who approved your overtime (Lead Dev name).',
+            '',
+            'Do you want to continue?'
+        ].join('\n');
+
+        const overEightProceed = await showAttendancePolicyModal('Over 08:00 Time Request Warning', overEightMessage);
+        if (!overEightProceed) {
+            event.preventDefault();
+            return false;
+        }
+    }
+
+    if (underEightHoursCount > 0) {
+        const underEightMessage = [
+            `You entered ${underEightHoursCount} day(s) with time below 08:00.`,
+            `Entered time(s): ${underEightEntries.map((entry) => `${entry.date} (${entry.time})`).join(', ')}`,
+            '',
+            'You need to complete the required time of 08:00.',
+            'If this issue still persists on the following day, this will be a violation of our Terms and Conditions.',
+            '',
+            'Do you want to continue?'
+        ].join('\n');
+
+        const underEightProceed = await showAttendancePolicyModal('Below 08:00 Time Request Warning', underEightMessage);
+        if (!underEightProceed) {
             event.preventDefault();
             return false;
         }
@@ -849,13 +1017,22 @@ function validateAttendanceForm(event) {
         }
     });
     
-    return true;
+    event.preventDefault();
+    form.dataset.submittingConfirmed = '1';
+    form.submit();
+    return false;
 }
 
 // Close modal when clicking outside
 document.getElementById('record-attendance-modal')?.addEventListener('click', function(e) {
     if (e.target === this) {
         closeRecordAttendanceModal();
+    }
+});
+
+document.getElementById('attendance-policy-modal')?.addEventListener('click', function(e) {
+    if (e.target === this) {
+        closeAttendancePolicyModal(false);
     }
 });
 </script>

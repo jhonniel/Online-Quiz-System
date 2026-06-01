@@ -179,8 +179,9 @@ class QuizController extends Controller
             return view('user.quizzes.start', compact('quiz', 'assignment'));
         }
 
-        // Update status to in_progress if quiz was started but status wasn't updated
-        if ($assignment->status === 'assigned') {
+        // Resume behavior: keep original started_at so remaining time does NOT reset.
+        // Only normalize status back to in_progress when entering/resuming.
+        if (in_array($assignment->status, ['assigned', 'cancelled'], true)) {
             $assignment->update(['status' => 'in_progress']);
         }
 
@@ -203,8 +204,34 @@ class QuizController extends Controller
         $remainingTime = $assignment->remaining_time;
         $timeExpired = $assignment->isTimeExpired();
 
-        // If time has expired, redirect to a time expired page or show message
+        // If time has expired, auto-submit staged answers (if any), then redirect.
         if ($timeExpired) {
+            $savedAnswers = collect((array) ($assignment->progress_answers ?? []))
+                ->filter(fn ($answer) => filled($answer))
+                ->all();
+
+            if ($savedAnswers !== []) {
+                $autoSubmitRequest = Request::create(
+                    '/quizzes/'.$quiz->id.'/submit',
+                    'POST',
+                    ['answers' => $savedAnswers]
+                );
+                $autoSubmitRequest->headers->set('X-Requested-With', 'XMLHttpRequest');
+                $autoSubmitRequest->headers->set('Accept', 'application/json');
+                $autoSubmitRequest->setUserResolver(fn () => auth()->user());
+
+                $autoSubmitResponse = $this->submit($autoSubmitRequest, $quiz);
+                if ($autoSubmitResponse instanceof \Illuminate\Http\JsonResponse) {
+                    $payload = $autoSubmitResponse->getData(true);
+                    if (($payload['success'] ?? false) === true) {
+                        return redirect('/quizzes/' . $quiz->id . '/result')
+                            ->with('success', 'Time has expired. Your staged answers were submitted automatically.');
+                    }
+                }
+            }
+
+            $this->finalizeExpiredAssignmentWithoutSubmission($assignment);
+
             return redirect('/quizzes/' . $quiz->id . '/time-expired')
                 ->with('error', 'Time has expired for this quiz.');
         }
@@ -236,8 +263,8 @@ class QuizController extends Controller
             ], 400);
         }
 
-        // Update status to in_progress if quiz was started but status wasn't updated
-        if ($assignment->status === 'assigned') {
+        // Resume behavior: keep original started_at so remaining time does NOT reset.
+        if (in_array($assignment->status, ['assigned', 'cancelled'], true)) {
             $assignment->update(['status' => 'in_progress']);
         }
 
@@ -355,26 +382,13 @@ class QuizController extends Controller
     public function submit(Request $request, Quiz $quiz)
     {
         $request->validate([
-            'answers' => 'required|array|min:1',
+            'answers' => 'nullable|array',
             'answers.*' => 'nullable', // allow empty for text/fill_blank
         ]);
 
-        $submittedAnswers = collect($request->answers)
+        $submittedAnswers = collect($request->input('answers', []))
             ->filter(fn ($answer) => filled($answer))
             ->all();
-
-        if ($submittedAnswers === []) {
-            if ($this->wantsJsonResponse($request)) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Please answer at least one question before submitting.',
-                    'type' => 'error',
-                ], 422);
-            }
-
-            return redirect()->back()
-                ->withErrors(['error' => 'Please answer at least one question before submitting.']);
-        }
 
         // Check if user is assigned to this quiz
         $assignment = QuizAssignment::where('quiz_id', $quiz->id)
@@ -411,6 +425,19 @@ class QuizController extends Controller
         $timeExpired = $assignment->isTimeExpired();
         if ($timeExpired && !$this->wantsJsonResponse($request)) {
             abort(408, 'Time has expired.');
+        }
+
+        if ($submittedAnswers === [] && ! $timeExpired) {
+            if ($this->wantsJsonResponse($request)) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Please answer at least one question before submitting.',
+                    'type' => 'error',
+                ], 422);
+            }
+
+            return redirect()->back()
+                ->withErrors(['error' => 'Please answer at least one question before submitting.']);
         }
 
         DB::beginTransaction();
@@ -471,7 +498,7 @@ class QuizController extends Controller
                 $totalPoints += $pointsEarned;
             }
 
-            if ($processedAnswers === 0) {
+            if ($processedAnswers === 0 && ! $timeExpired) {
                 DB::rollBack();
 
                 if ($this->wantsJsonResponse($request)) {
@@ -488,6 +515,9 @@ class QuizController extends Controller
 
             // Save attempt to history
             $status = $hasTextQuestions ? 'partial' : 'completed';
+            if ($timeExpired) {
+                $status = 'time_expired';
+            }
             $this->saveAttemptToHistory($assignment, $totalPoints, $correctAnswers, $quiz->total_questions, $submittedAnswers, $status);
 
             // Mark assignment as completed and clear saved progress
@@ -576,11 +606,9 @@ class QuizController extends Controller
             abort(403, 'You have already completed this quiz.');
         }
 
-        // Reset the started_at timestamp and mark as cancelled to allow restart
+        // Stage quiz state: keep started_at/progress so user can resume while time remains.
         $assignment->update([
-            'started_at' => null,
             'status' => 'cancelled',
-            'progress_answers' => null,
         ]);
 
         $this->clearQuizQuestionSession($quiz);
@@ -588,14 +616,14 @@ class QuizController extends Controller
         if ($request->ajax()) {
             return response()->json([
                 'success' => true,
-                'message' => 'Quiz cancelled successfully. You can restart it anytime.',
+                'message' => 'Quiz staged successfully. You can resume while time remains.',
                 'type' => 'success',
                 'redirect_url' => url('/dashboard')
             ]);
         }
 
         return redirect('/dashboard')
-            ->with('success', 'Quiz cancelled successfully. You can restart it anytime.');
+            ->with('success', 'Quiz staged successfully. You can resume while time remains.');
     }
 
     public function timeExpired(Quiz $quiz)
@@ -761,5 +789,34 @@ class QuizController extends Controller
             'best_score' => max($assignment->best_score ?? 0, $totalScore),
             'last_attempt_at' => now(),
         ]);
+    }
+
+    /**
+     * Record a time-expired attempt when nothing was submitted manually.
+     * Keeps admin reset path available by marking assignment as cancelled.
+     */
+    private function finalizeExpiredAssignmentWithoutSubmission(QuizAssignment $assignment): void
+    {
+        if ($assignment->is_completed) {
+            return;
+        }
+
+        DB::transaction(function () use ($assignment) {
+            $this->saveAttemptToHistory(
+                $assignment,
+                0,
+                0,
+                (int) ($assignment->quiz->total_questions ?? 0),
+                [],
+                'time_expired'
+            );
+
+            $assignment->update([
+                'is_completed' => true,
+                'status' => 'cancelled',
+                'progress_answers' => null,
+                'started_at' => null,
+            ]);
+        });
     }
 }

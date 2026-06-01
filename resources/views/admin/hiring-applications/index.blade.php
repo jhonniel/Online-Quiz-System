@@ -201,7 +201,9 @@
                     </select>
                 </div>
                 <div class="flex items-center space-x-2">
-                    <label for="sort" class="text-sm font-medium text-gray-700">Sort by date:</label>
+                    <label for="sort" class="text-sm font-medium text-gray-700">
+                        {{ ($statusFilter ?? '') === 'interview_scheduled' ? 'Sort by interview date:' : 'Sort by date:' }}
+                    </label>
                     <select name="sort" id="sort" onchange="this.form.submit()"
                             class="px-3 py-2 border border-gray-300 rounded-md shadow-sm text-sm focus:ring-indigo-500 focus:border-indigo-500">
                         <option value="latest" {{ ($sort ?? 'latest') === 'latest' ? 'selected' : '' }}>Latest → Oldest</option>
@@ -247,6 +249,11 @@
                         <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                             Applied Date
                         </th>
+                        @if(($statusFilter ?? '') === 'interview_scheduled')
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                Interview Date
+                            </th>
+                        @endif
                         <th scope="col" class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                             Actions
                         </th>
@@ -341,6 +348,15 @@
                             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                                 {{ $application->created_at->format('M j, Y') }}
                             </td>
+                            @if(($statusFilter ?? '') === 'interview_scheduled')
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                    @if($application->interview_date)
+                                        {{ $application->interview_date->format('M j, Y g:i A') }}
+                                    @else
+                                        —
+                                    @endif
+                                </td>
+                            @endif
                             <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                                 <a href="{{ url('/admin/hiring-applications/' . $application->id) }}" class="text-indigo-600 hover:text-indigo-900">
                                     View
@@ -349,7 +365,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="6" class="px-6 py-12 text-center text-sm text-gray-500">
+                            <td colspan="{{ ($statusFilter ?? '') === 'interview_scheduled' ? 7 : 6 }}" class="px-6 py-12 text-center text-sm text-gray-500">
                                 <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
                                 </svg>

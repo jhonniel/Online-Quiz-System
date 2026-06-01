@@ -517,7 +517,7 @@ document.addEventListener('DOMContentLoaded', function() {
         saveAnswer();
 
         const answerCount = countAnsweredQuestions();
-        if (answerCount === 0) {
+        if (answerCount === 0 && !isAutoSubmit) {
             ToastNotification.error('Please answer at least one question before submitting.');
             return;
         }
@@ -597,7 +597,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Cancel quiz functionality
     document.getElementById('cancel-quiz-btn').addEventListener('click', function() {
-        if (confirm('Are you sure you want to cancel this quiz? Your progress will be lost and you can restart it later.')) {
+        if (confirm('Are you sure you want to stage this quiz? Your current answers will be kept, and you can resume while time remains.')) {
                 const cancelButton = this;
                 const originalText = cancelButton.innerHTML;
 

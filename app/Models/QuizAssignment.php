@@ -101,6 +101,10 @@ class QuizAssignment extends Model
 
     public function getStatusBadgeClass()
     {
+        if ($this->status === 'cancelled' && $this->started_at && !$this->is_completed && !$this->isTimeExpired()) {
+            return 'bg-blue-100 text-blue-800';
+        }
+
         return match($this->status) {
             'assigned' => 'bg-gray-100 text-gray-800',
             'in_progress' => 'bg-blue-100 text-blue-800',
@@ -112,9 +116,13 @@ class QuizAssignment extends Model
 
     public function getStatusText()
     {
+        if ($this->status === 'cancelled' && $this->started_at && !$this->is_completed && !$this->isTimeExpired()) {
+            return 'Ongoing';
+        }
+
         return match($this->status) {
             'assigned' => 'Assigned',
-            'in_progress' => 'In Progress',
+            'in_progress' => 'Ongoing',
             'completed' => 'Completed',
             'cancelled' => 'Cancelled',
             default => 'Unknown'
