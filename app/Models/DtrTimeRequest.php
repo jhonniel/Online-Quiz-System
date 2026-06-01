@@ -41,6 +41,18 @@ class DtrTimeRequest extends Model
     }
 
     /**
+     * Hours stored as decimal, displayed as HH:MM (same as student submission).
+     */
+    public function getFormattedTimeAttribute(): string
+    {
+        $totalMinutes = (int) round(((float) $this->hours) * 60);
+        $hours = intdiv($totalMinutes, 60);
+        $minutes = $totalMinutes % 60;
+
+        return sprintf('%02d:%02d', $hours, $minutes);
+    }
+
+    /**
      * Get status badge class
      */
     public function getStatusBadgeClass(): string

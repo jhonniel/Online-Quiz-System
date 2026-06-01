@@ -128,7 +128,7 @@
                     <tr>
                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Student</th>
                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Hours</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Hours (HH:MM)</th>
                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Remarks</th>
                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Requested</th>
@@ -145,14 +145,8 @@
                             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                                 {{ $request->date->format('M d, Y') }}
                             </td>
-                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900" style="font-family: monospace;">
-                                @php
-                                    $totalMinutes = (int) round($request->hours * 60);
-                                    $hours = intdiv($totalMinutes, 60);
-                                    $minutes = $totalMinutes % 60;
-                                    $formattedTime = sprintf('%02d:%02d', $hours, $minutes);
-                                @endphp
-                                {{ $formattedTime }}
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 font-mono">
+                                {{ $request->formatted_time }}
                             </td>
                             <td class="px-6 py-4 text-sm text-gray-500">
                                 {{ $request->remarks ?: '-' }}
@@ -166,17 +160,37 @@
                                 {{ $request->created_at->format('M d, Y g:i A') }}
                             </td>
                             <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                                @if($request->status === 'pending')
-                                    <div class="flex items-center space-x-2">
-                                        <button onclick="openApproveModal({{ $request->id }})"
-                                                class="text-green-600 hover:text-green-900">
-                                            Approve
+                                @if(in_array($request->status, ['pending', 'rejected'], true))
+                                    <div class="flex flex-wrap items-center gap-x-2 gap-y-1">
+                                        <button type="button"
+                                                onclick="openEditModal({{ $request->id }}, @js($request->user->name), @js($request->date->format('Y-m-d')), @js($request->formatted_time), @js($request->remarks ?? ''))"
+                                                class="text-indigo-600 hover:text-indigo-900">
+                                            Edit
                                         </button>
-                                        <span class="text-gray-300">|</span>
-                                        <button onclick="openRejectModal({{ $request->id }})"
-                                                class="text-red-600 hover:text-red-900">
-                                            Reject
-                                        </button>
+                                        @if($request->status === 'pending')
+                                            <span class="text-gray-300">|</span>
+                                            <button type="button" onclick="openApproveModal({{ $request->id }})"
+                                                    class="text-green-600 hover:text-green-900">
+                                                Approve
+                                            </button>
+                                            <span class="text-gray-300">|</span>
+                                            <button type="button" onclick="openRejectModal({{ $request->id }})"
+                                                    class="text-red-600 hover:text-red-900">
+                                                Reject
+                                            </button>
+                                        @else
+                                            <span class="text-gray-300">|</span>
+                                            <span class="text-xs text-gray-500">Edit saves as pending</span>
+                                            @if(auth()->user()->isSuperAdmin())
+                                                <span class="text-gray-300">|</span>
+                                                <button type="button"
+                                                        onclick="openDeleteModal({{ $request->id }}, @js($request->user->name), @js($request->date->format('M d, Y')))"
+                                                        class="text-red-600 hover:text-red-900"
+                                                        title="Delete rejected request">
+                                                    Delete
+                                                </button>
+                                            @endif
+                                        @endif
                                     </div>
                                 @else
                                     <div class="flex items-center space-x-3">
@@ -188,14 +202,6 @@
                                                 @endif
                                             @endif
                                         </div>
-                                        @if($request->status === 'rejected' && auth()->user()->isSuperAdmin())
-                                            <span class="text-gray-300">|</span>
-                                            <button onclick="openDeleteModal({{ $request->id }}, '{{ $request->user->name }}', '{{ $request->date->format('M d, Y') }}')"
-                                                    class="text-red-600 hover:text-red-900"
-                                                    title="Delete rejected request">
-                                                Delete
-                                            </button>
-                                        @endif
                                     </div>
                                 @endif
                             </td>
@@ -230,6 +236,63 @@
                 </div>
             </div>
         @endif
+    </div>
+</div>
+
+<!-- Edit Modal -->
+<div id="edit-modal" class="hidden fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
+    <div class="relative top-20 mx-auto p-5 border w-11/12 md:w-1/2 shadow-lg rounded-md bg-white">
+        <div class="flex items-center justify-between mb-4">
+            <h3 class="text-lg font-bold text-gray-900">Edit Time Request</h3>
+            <button type="button" onclick="closeEditModal()" class="text-gray-400 hover:text-gray-600">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                </svg>
+            </button>
+        </div>
+
+        <p class="text-sm text-gray-600 mb-4">
+            Student: <span id="edit-student-name" class="font-medium text-gray-900"></span>
+        </p>
+
+        <form id="edit-form" method="POST" action="">
+            @csrf
+            @method('PUT')
+            <div class="space-y-4">
+                <div>
+                    <label for="edit_date" class="block text-sm font-medium text-gray-700 mb-2">Date <span class="text-red-600">*</span></label>
+                    <input type="date" name="date" id="edit_date" required max="{{ now()->format('Y-m-d') }}"
+                           class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                </div>
+                <div>
+                    <label for="edit_time" class="block text-sm font-medium text-gray-700 mb-2">Worked hours (HH:MM) <span class="text-red-600">*</span></label>
+                    <input type="text" name="time" id="edit_time" required
+                           placeholder="08:00"
+                           autocomplete="off"
+                           class="edit-time-input w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 font-mono text-center">
+                    <p class="mt-1 text-xs text-gray-500">
+                        Duration in <strong>HH:MM</strong> format (e.g. 08:00 = 8 hours, 07:30 = 7.5 hours). <strong>No AM/PM</strong> — not clock time.
+                    </p>
+                </div>
+                <div>
+                    <label for="edit_remarks" class="block text-sm font-medium text-gray-700 mb-2">Remarks</label>
+                    <textarea name="remarks" id="edit_remarks" rows="3"
+                              class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"></textarea>
+                </div>
+            </div>
+
+            <div class="mt-6 flex justify-end gap-3">
+                <button type="button"
+                        onclick="closeEditModal()"
+                        class="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors">
+                    Cancel
+                </button>
+                <button type="submit"
+                        class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors">
+                    Save changes
+                </button>
+            </div>
+        </form>
     </div>
 </div>
 
@@ -365,6 +428,78 @@
 </div>
 
 <script>
+function formatEditTimeInput(input) {
+    let digits = input.value.replace(/\D/g, '').slice(0, 4);
+    if (digits.length <= 2) {
+        input.value = digits;
+        return;
+    }
+    const h = digits.slice(0, 2);
+    const m = digits.slice(2);
+    input.value = m ? h + ':' + m : h;
+}
+
+function formatEditTimeOnBlur(input) {
+    let value = input.value.trim();
+    if (value === '') {
+        return;
+    }
+
+    let digits = value.replace(/\D/g, '');
+    if (digits.length === 0) {
+        input.value = '';
+        return;
+    }
+
+    let hours = '';
+    let minutes = '';
+
+    if (value.includes(':')) {
+        const parts = value.split(':');
+        hours = parts[0].replace(/\D/g, '').slice(-2);
+        minutes = parts[1].replace(/\D/g, '').slice(0, 2);
+    } else if (digits.length >= 2) {
+        hours = digits.slice(0, digits.length - 2).slice(-2);
+        minutes = digits.slice(-2);
+    } else {
+        hours = digits.padStart(2, '0');
+        minutes = '00';
+    }
+
+    hours = (hours || '0').padStart(2, '0').slice(-2);
+    minutes = (minutes || '0').padStart(2, '0').slice(0, 2);
+    input.value = hours + ':' + minutes;
+}
+
+document.addEventListener('DOMContentLoaded', function () {
+    const editTimeInput = document.getElementById('edit_time');
+    if (editTimeInput) {
+        editTimeInput.addEventListener('input', function () {
+            formatEditTimeInput(this);
+        });
+        editTimeInput.addEventListener('blur', function () {
+            formatEditTimeOnBlur(this);
+        });
+    }
+});
+
+function openEditModal(requestId, studentName, date, time, remarks) {
+    const modal = document.getElementById('edit-modal');
+    const form = document.getElementById('edit-form');
+    form.action = `/admin/time-requests/${requestId}`;
+    document.getElementById('edit-student-name').textContent = studentName;
+    document.getElementById('edit_date').value = date;
+    document.getElementById('edit_time').value = time;
+    document.getElementById('edit_remarks').value = remarks || '';
+    modal.classList.remove('hidden');
+}
+
+function closeEditModal() {
+    const modal = document.getElementById('edit-modal');
+    modal.classList.add('hidden');
+    document.getElementById('edit-form').reset();
+}
+
 function openApproveModal(requestId) {
     const modal = document.getElementById('approve-modal');
     const form = document.getElementById('approve-form');
@@ -408,6 +543,12 @@ function closeDeleteModal() {
 }
 
 // Close modals when clicking outside
+document.getElementById('edit-modal')?.addEventListener('click', function(e) {
+    if (e.target === this) {
+        closeEditModal();
+    }
+});
+
 document.getElementById('approve-modal')?.addEventListener('click', function(e) {
     if (e.target === this) {
         closeApproveModal();

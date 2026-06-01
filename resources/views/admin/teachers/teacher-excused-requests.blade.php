@@ -7,7 +7,7 @@
     <div class="bg-white border border-gray-200 rounded-xl p-4 sm:p-5">
         <h1 class="text-lg sm:text-xl font-semibold text-gray-900">Teacher Excused Requests</h1>
         <p class="text-sm text-gray-600 mt-1">
-            Student excused (absent) requests submitted by teachers on behalf of students. Open a row to review in the standard leave request workflow.
+            Student excused (absent) requests submitted by teachers, grouped by teacher and filing. Each row lists all students included in that submission.
         </p>
     </div>
 
@@ -49,26 +49,23 @@
                     <tr>
                         <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Filed</th>
                         <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Teacher</th>
-                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Student</th>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Students included</th>
                         <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Dates</th>
                         <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Reason</th>
                         <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                        <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Action</th>
+                        <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                     </tr>
                 </thead>
                 <tbody class="bg-white divide-y divide-gray-100">
-                    @forelse($requests as $req)
+                    @forelse($groupedRequests as $group)
                         @php
-                            $log = $req->logs->firstWhere('action', 'filed_by_teacher');
-                            $teacher = $log?->performer;
-                            $studentReason = preg_replace('/^Teacher excused request by .+\n\n/s', '', (string) $req->reason, 1);
-                            if ($studentReason === '') {
-                                $studentReason = (string) $req->reason;
-                            }
+                            $teacher = $group['teacher'];
+                            $students = $group['students'];
+                            $studentCount = $students->count();
                         @endphp
-                        <tr>
+                        <tr class="align-top">
                             <td class="px-4 py-3 text-sm text-gray-700 whitespace-nowrap">
-                                {{ optional($req->created_at)->format('M j, Y g:i A') }}
+                                {{ optional($group['filed_at'])->format('M j, Y g:i A') }}
                             </td>
                             <td class="px-4 py-3 text-sm">
                                 @if($teacher)
@@ -79,30 +76,57 @@
                                 @endif
                             </td>
                             <td class="px-4 py-3 text-sm">
-                                @if($req->user)
-                                    <div class="font-medium text-gray-900">{{ $req->user->name }}</div>
-                                    <div class="text-gray-500">{{ $req->user->email }}</div>
-                                    <div class="text-xs text-gray-400 mt-0.5">{{ optional($req->user->university)->name ?? '—' }}</div>
-                                @else
-                                    <span class="text-gray-400">—</span>
-                                @endif
+                                <p class="text-xs font-medium text-gray-500 mb-1.5">
+                                    {{ $studentCount }} {{ $studentCount === 1 ? 'student' : 'students' }}
+                                </p>
+                                <ul class="space-y-2 max-w-md">
+                                    @foreach($students as $entry)
+                                        @php
+                                            $student = $entry['user'];
+                                            $leaveRequest = $entry['leave_request'];
+                                        @endphp
+                                        <li class="rounded-lg border border-gray-100 bg-gray-50/80 px-2.5 py-2">
+                                            @if($student)
+                                                <div class="font-medium text-gray-900">{{ $student->name }}</div>
+                                                <div class="text-gray-500 text-xs">{{ $student->email }}</div>
+                                                <div class="text-xs text-gray-400 mt-0.5">{{ optional($student->university)->name ?? '—' }}</div>
+                                            @else
+                                                <span class="text-gray-400 italic">Unknown student</span>
+                                            @endif
+                                            @if($group['status_summary'] === 'Mixed')
+                                                <span class="mt-1.5 inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium {{ $leaveRequest->status_badge_class }}">
+                                                    {{ $leaveRequest->display_status }}
+                                                </span>
+                                            @endif
+                                        </li>
+                                    @endforeach
+                                </ul>
                             </td>
                             <td class="px-4 py-3 text-sm text-gray-700 whitespace-nowrap">
-                                {{ $req->start_date?->format('M j, Y') }}
-                                @if($req->end_date && $req->start_date && ! $req->start_date->equalTo($req->end_date))
-                                    – {{ $req->end_date->format('M j, Y') }}
+                                {{ $group['start_date']?->format('M j, Y') }}
+                                @if($group['end_date'] && $group['start_date'] && ! $group['start_date']->equalTo($group['end_date']))
+                                    – {{ $group['end_date']->format('M j, Y') }}
                                 @endif
                             </td>
                             <td class="px-4 py-3 text-sm text-gray-600 max-w-xs">
-                                <span class="line-clamp-2" title="{{ $studentReason }}">{{ \Illuminate\Support\Str::limit($studentReason, 120) }}</span>
+                                <span class="line-clamp-2" title="{{ $group['reason'] }}">{{ \Illuminate\Support\Str::limit($group['reason'], 120) }}</span>
                             </td>
                             <td class="px-4 py-3 text-sm whitespace-nowrap">
-                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium {{ $req->status_badge_class }}">
-                                    {{ $req->display_status }}
+                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium {{ $group['status_badge_class'] }}">
+                                    {{ $group['status_summary'] }}
                                 </span>
                             </td>
-                            <td class="px-4 py-3 text-sm text-right whitespace-nowrap">
-                                <a href="{{ url('/admin/leave-requests/'.$req->id) }}" class="text-indigo-600 hover:text-indigo-800 font-medium">Review</a>
+                            <td class="px-4 py-3 text-sm text-right">
+                                <ul class="space-y-1">
+                                    @foreach($students as $entry)
+                                        @php $leaveRequest = $entry['leave_request']; @endphp
+                                        <li>
+                                            <a href="{{ url('/admin/leave-requests/'.$leaveRequest->id) }}" class="text-indigo-600 hover:text-indigo-800 font-medium whitespace-nowrap">
+                                                Review{{ $studentCount > 1 ? ' — '.(\Illuminate\Support\Str::limit(optional($entry['user'])->name ?? 'Student', 18)) : '' }}
+                                            </a>
+                                        </li>
+                                    @endforeach
+                                </ul>
                             </td>
                         </tr>
                     @empty
@@ -115,9 +139,9 @@
                 </tbody>
             </table>
         </div>
-        @if($requests->hasPages())
+        @if($groupedRequests->hasPages())
             <div class="px-4 py-3 border-t border-gray-100 bg-gray-50">
-                {{ $requests->links() }}
+                {{ $groupedRequests->links() }}
             </div>
         @endif
     </div>

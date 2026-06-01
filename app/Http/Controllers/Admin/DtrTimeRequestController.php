@@ -113,24 +113,63 @@ class DtrTimeRequestController extends Controller
     }
 
     /**
+     * Update a pending or rejected time request (date, time, remarks).
+     */
+    public function update(Request $request, DtrTimeRequest $dtrTimeRequest)
+    {
+        $this->assertCanManageTimeRequest($dtrTimeRequest);
+
+        if (! in_array($dtrTimeRequest->status, ['pending', 'rejected'], true)) {
+            return back()->withErrors(['error' => 'Only pending or rejected time requests can be edited.']);
+        }
+
+        $validated = $request->validate([
+            'date' => ['required', 'date', 'before_or_equal:today'],
+            'time' => ['required', 'date_format:H:i'],
+            'remarks' => ['nullable', 'string', 'max:1000'],
+        ]);
+
+        $hours = $this->timeStringToHours($validated['time']);
+        if ($hours < 0 || $hours > 24) {
+            return back()->withErrors(['time' => 'Time must be between 00:00 and 24:00.'])->withInput();
+        }
+
+        $duplicate = DtrTimeRequest::query()
+            ->where('user_id', $dtrTimeRequest->user_id)
+            ->whereDate('date', $validated['date'])
+            ->where('id', '!=', $dtrTimeRequest->id)
+            ->exists();
+
+        if ($duplicate) {
+            return back()->withErrors(['date' => 'This student already has a time request for the selected date.'])->withInput();
+        }
+
+        $wasRejected = $dtrTimeRequest->status === 'rejected';
+
+        $dtrTimeRequest->update([
+            'date' => $validated['date'],
+            'hours' => $hours,
+            'remarks' => $validated['remarks'] ?? null,
+            'status' => 'pending',
+            'admin_notes' => $wasRejected ? null : $dtrTimeRequest->admin_notes,
+            'reviewed_by' => null,
+            'reviewed_at' => null,
+        ]);
+
+        $message = $wasRejected
+            ? 'Time request updated and set back to pending for review.'
+            : 'Time request updated successfully.';
+
+        return back()->with('success', $message);
+    }
+
+    /**
      * Approve a time request
      */
     public function approve(Request $request, DtrTimeRequest $dtrTimeRequest)
     {
-        $user = Auth::user();
-        
-        // Check if user has student_management permission or is admin
-        if (!$user->isAdmin() && !$user->canAccessStudentManagement()) {
-            abort(403, 'Access denied. You do not have permission to perform this action.');
-        }
-        $allowedStudentDepartmentIds = $user->getAllowedStudentDepartmentIds();
-        if ($allowedStudentDepartmentIds !== null) {
-            $normalizedAllowedDepartmentIds = array_map('intval', $allowedStudentDepartmentIds);
-            if (!in_array((int) $dtrTimeRequest->user->department_id, $normalizedAllowedDepartmentIds, true)) {
-                abort(403, 'Access denied. You cannot manage this student department.');
-            }
-        }
-        
+        $this->assertCanManageTimeRequest($dtrTimeRequest);
+
         if ($dtrTimeRequest->status !== 'pending') {
             return back()->withErrors(['error' => 'This request has already been processed.']);
         }
@@ -185,20 +224,8 @@ class DtrTimeRequestController extends Controller
      */
     public function reject(Request $request, DtrTimeRequest $dtrTimeRequest)
     {
-        $user = Auth::user();
-        
-        // Check if user has student_management permission or is admin
-        if (!$user->isAdmin() && !$user->canAccessStudentManagement()) {
-            abort(403, 'Access denied. You do not have permission to perform this action.');
-        }
-        $allowedStudentDepartmentIds = $user->getAllowedStudentDepartmentIds();
-        if ($allowedStudentDepartmentIds !== null) {
-            $normalizedAllowedDepartmentIds = array_map('intval', $allowedStudentDepartmentIds);
-            if (!in_array((int) $dtrTimeRequest->user->department_id, $normalizedAllowedDepartmentIds, true)) {
-                abort(403, 'Access denied. You cannot manage this student department.');
-            }
-        }
-        
+        $this->assertCanManageTimeRequest($dtrTimeRequest);
+
         if ($dtrTimeRequest->status !== 'pending') {
             return back()->withErrors(['error' => 'This request has already been processed.']);
         }
@@ -240,5 +267,31 @@ class DtrTimeRequestController extends Controller
         $dtrTimeRequest->delete();
 
         return back()->with('success', "Rejected time request for {$studentName} on {$date} has been deleted.");
+    }
+
+    private function assertCanManageTimeRequest(DtrTimeRequest $dtrTimeRequest): void
+    {
+        $user = Auth::user();
+
+        if (! $user->isAdmin() && ! $user->canAccessStudentManagement()) {
+            abort(403, 'Access denied. You do not have permission to perform this action.');
+        }
+
+        $dtrTimeRequest->loadMissing('user');
+
+        $allowedStudentDepartmentIds = $user->getAllowedStudentDepartmentIds();
+        if ($allowedStudentDepartmentIds !== null) {
+            $normalizedAllowedDepartmentIds = array_map('intval', $allowedStudentDepartmentIds);
+            if (! in_array((int) $dtrTimeRequest->user->department_id, $normalizedAllowedDepartmentIds, true)) {
+                abort(403, 'Access denied. You cannot manage this student department.');
+            }
+        }
+    }
+
+    private function timeStringToHours(string $time): float
+    {
+        $parts = explode(':', $time);
+
+        return (float) $parts[0] + ((float) $parts[1] / 60);
     }
 }
