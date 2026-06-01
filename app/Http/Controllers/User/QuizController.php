@@ -204,7 +204,8 @@ class QuizController extends Controller
         $remainingTime = $assignment->remaining_time;
         $timeExpired = $assignment->isTimeExpired();
 
-        // If time has expired, auto-submit staged answers (if any), then redirect.
+        // If time has expired, auto-submit staged answers (if any) or finalize zero-score expiry,
+        // then always redirect to the result page.
         if ($timeExpired) {
             $savedAnswers = collect((array) ($assignment->progress_answers ?? []))
                 ->filter(fn ($answer) => filled($answer))
@@ -232,8 +233,8 @@ class QuizController extends Controller
 
             $this->finalizeExpiredAssignmentWithoutSubmission($assignment);
 
-            return redirect('/quizzes/' . $quiz->id . '/time-expired')
-                ->with('error', 'Time has expired for this quiz.');
+            return redirect('/quizzes/' . $quiz->id . '/result')
+                ->with('error', 'Time has expired. Your quiz was recorded as time expired.');
         }
 
         // Don't pass questions to view - they will be fetched via API when Start Quiz is clicked
