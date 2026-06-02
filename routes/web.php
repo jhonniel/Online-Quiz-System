@@ -673,6 +673,10 @@ Route::middleware(['auth', 'student.not_terminated'])->group(function () {
 
     Route::get('leave-requests/wfh-balance', [App\Http\Controllers\User\LeaveRequestController::class, 'wfhBalance'])
         ->name('user.leave-requests.wfh-balance');
+    Route::get('leave-requests/{leaveRequest}/complete-attendance-overtime', [App\Http\Controllers\User\LeaveRequestController::class, 'completeAttendanceOvertime'])
+        ->name('user.leave-requests.complete-attendance-overtime');
+    Route::put('leave-requests/{leaveRequest}/complete-attendance-overtime', [App\Http\Controllers\User\LeaveRequestController::class, 'storeAttendanceOvertimeCompletion'])
+        ->name('user.leave-requests.complete-attendance-overtime.update');
     Route::resource('leave-requests', App\Http\Controllers\User\LeaveRequestController::class)->names('user.leave-requests');
 
     // Hiring Application (Applicant Only)

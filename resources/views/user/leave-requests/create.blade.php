@@ -59,7 +59,7 @@
                                 class="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
                             <option value="">Select Request Type</option>
                             @if(auth()->user()->role === 'student')
-                                <option value="additional_time" {{ old('type') == 'additional_time' ? 'selected' : '' }}>Additional Time</option>
+                                <option value="additional_time" {{ in_array(old('type'), ['additional_time', 'overtime'], true) ? 'selected' : '' }}>Additional Time</option>
                                 <option value="absent" {{ old('type') == 'absent' ? 'selected' : '' }}>Absent</option>
                                 <option value="other" {{ old('type') == 'other' ? 'selected' : '' }}>Other</option>
                             @else
@@ -96,85 +96,32 @@
 
                         <div>
                             <label for="end_date" class="block text-sm font-medium text-gray-700 mb-2">
-                                End Date <span class="text-gray-400">(Optional)</span>
+                                End Date <span id="end-date-required-span" class="text-gray-400">(Optional)</span>
                             </label>
                             <input type="date" name="end_date" id="end_date"
                                    value="{{ old('end_date') }}"
                                    class="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
-                            <p class="mt-1 text-xs text-gray-500">Leave blank for single day requests</p>
+                            <p id="end-date-hint" class="mt-1 text-xs text-gray-500">Leave blank for single day requests</p>
+                            <p id="overtime-date-hint" class="mt-1 text-xs text-amber-700 hidden">
+                                Additional Time dates must be from the last 7 days through today only (no future dates).
+                            </p>
                             @error('end_date')
                                 <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
                             @enderror
                         </div>
                     </div>
 
-                    <!-- Student Additional Time Input Mode -->
-                    @if(auth()->user()->role === 'student')
-                    <div id="additional-time-section" class="space-y-4 hidden">
-                        <div class="border-t border-gray-200 pt-4 mt-2">
-                            <h2 class="text-sm font-semibold text-gray-900 mb-2">Additional Time Details</h2>
-                            <p class="text-xs text-gray-500 mb-3">
-                                Choose how to submit Additional Time:
-                                <strong>Total Hours</strong>, or <strong>Fixed Date(s)</strong> where each day is counted as <strong>8 hours</strong>.
-                            </p>
-                        </div>
-
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-2">Input Mode <span class="text-red-500">*</span></label>
-                            <div class="space-y-2">
-                                <label class="flex items-start gap-2 rounded-lg border border-gray-200 p-3 cursor-pointer hover:bg-gray-50">
-                                    <input type="radio" name="additional_time_mode" value="fixed_date"
-                                           class="mt-0.5 text-indigo-600 focus:ring-indigo-500"
-                                           {{ old('additional_time_mode', 'fixed_date') === 'fixed_date' ? 'checked' : '' }}>
-                                    <span>
-                                        <span class="block text-sm font-medium text-gray-900">Fixed Date(s)</span>
-                                        <span class="block text-xs text-gray-500">Use Start/End Date. Each day is credited as 8 hours when approved.</span>
-                                    </span>
-                                </label>
-                                <label class="flex items-start gap-2 rounded-lg border border-gray-200 p-3 cursor-pointer hover:bg-gray-50">
-                                    <input type="radio" name="additional_time_mode" value="total_hours"
-                                           class="mt-0.5 text-indigo-600 focus:ring-indigo-500"
-                                           {{ old('additional_time_mode') === 'total_hours' ? 'checked' : '' }}>
-                                    <span>
-                                        <span class="block text-sm font-medium text-gray-900">Total Hours</span>
-                                        <span class="block text-xs text-gray-500">Enter exact hours in HH:MM format. Example: 12:30</span>
-                                    </span>
-                                </label>
-                            </div>
-                            @error('additional_time_mode')
-                                <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
-                            @enderror
-                        </div>
-
-                        <div id="additional-time-hours-wrap" class="hidden">
-                            <label for="additional_time_total_hours" class="block text-sm font-medium text-gray-700 mb-2">
-                                Total Additional Time Hours (HH:MM) <span class="text-red-500">*</span>
-                            </label>
-                            <input type="text" name="additional_time_total_hours" id="additional_time_total_hours"
-                                   value="{{ old('additional_time_total_hours') }}"
-                                   placeholder="08:00"
-                                   class="time-input w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
-                            <p class="mt-1 text-xs text-gray-500">
-                                Accepted format: <strong>HH:MM</strong>. Minutes must be 00-59.
-                            </p>
-                            @error('additional_time_total_hours')
-                                <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
-                            @enderror
-                        </div>
-                    </div>
-                    @endif
-
                     <div id="overtime-specific-dates-container" class="hidden">
                         <label class="block text-sm font-medium text-gray-700 mb-2">
-                            Select specific overtime date(s) from your chosen range <span class="text-red-500">*</span>
+                            Select specific date(s) from your chosen range <span class="text-red-500">*</span>
                         </label>
                         <div id="overtime-specific-dates-wrap"
                              data-old-selected='@json(old("overtime_specific_dates", []))'
                              class="rounded-lg border border-gray-200 bg-gray-50 p-3 min-h-[3rem]">
-                            <p class="text-xs text-gray-500">Pick Start Date and End Date above first (Overtime only).</p>
+                            <p class="text-xs text-gray-500">Pick Start Date and End Date above first (Additional Time only).</p>
                         </div>
                         <p class="mt-1 text-xs text-gray-500">
-                            Overtime requests filed within the past 7 days are eligible for approval.
+                            Additional Time filed within the past 7 days is eligible for approval.
                         </p>
                         @error('overtime_specific_dates')
                             <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
@@ -193,7 +140,7 @@
                                   placeholder="Please provide a reason for this request..."
                                   class="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">{{ old('reason') }}</textarea>
                         <p class="mt-1 text-xs text-gray-500" id="reason-help">
-                            Provide additional details about your request. For <strong>Overtime</strong>, if provided, this will appear as the explanation for extra hours. If not provided, it will be left blank.
+                            Provide additional details about your request. For <strong>Additional Time</strong>, if provided, this will appear as additional explanation. If not provided, it will be left blank.
                         </p>
                         <p class="mt-1 text-xs text-gray-500 hidden" id="reason-travel-help">
                             Enter the location or destination of your travel.
@@ -220,27 +167,29 @@
                         @enderror
                     </div>
 
-                    <!-- Overtime Details (visible only when Request Type = Overtime) -->
+                    <!-- Additional Time / Overtime details (students: Additional Time only) -->
                     <div id="overtime-section" class="space-y-4 hidden">
                         <div class="border-t border-gray-200 pt-4 mt-4">
-                            <h2 class="text-sm font-semibold text-gray-900 mb-2">Overtime Details</h2>
-                            <p class="text-xs text-gray-500 mb-3">
-                                When requesting <strong>Overtime</strong>, please provide the total hours, the dates covered,
-                                and strictly list down the tasks (e.g., ClickUp links) that will be done during the overtime.
+                            <h2 class="text-sm font-semibold text-gray-900 mb-2" id="structured-hours-section-title">Additional Time Details</h2>
+                            <p class="text-xs text-gray-500 mb-3" id="structured-hours-section-help">
+                                When requesting <strong>Additional Time</strong>, provide the total hours, the dates covered,
+                                and list the tasks (e.g., ClickUp links) completed during that time.
+                                @if(auth()->user()->role === 'student')
+                                    When approved, these hours are added to your DTR and count toward your required training hours.
+                                @endif
                             </p>
                         </div>
 
-                        <!-- Total Overtime Hours -->
                         <div>
-                            <label for="overtime_hours" class="block text-sm font-medium text-gray-700 mb-2">
-                                Total Overtime Hours (HH:MM) <span class="text-red-500">*</span>
+                            <label for="overtime_hours" class="block text-sm font-medium text-gray-700 mb-2" id="structured-hours-input-label">
+                                Total Additional Time Hours (HH:MM) <span class="text-red-500">*</span>
                             </label>
                             <input type="text" name="overtime_hours" id="overtime_hours"
                                    value="{{ old('overtime_hours') }}"
                                    placeholder="01:20"
                                    class="time-input w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
                             <p class="mt-1 text-xs text-gray-500">
-                                Enter the total overtime time in <strong>HH:MM</strong> (e.g., 01:00, 02:30). No AM/PM.
+                                Enter the total time in <strong>HH:MM</strong> (e.g., 01:00, 02:30). No AM/PM.
                             </p>
                             @error('overtime_hours')
                                 <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
@@ -422,6 +371,9 @@
             <div class="mt-6">
                 <button type="button" onclick="closeNoBalanceModal()"
                         class="w-full inline-flex justify-center items-center px-4 py-3 border border-transparent text-sm font-medium rounded-lg shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                    <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                    </svg>
                     OK
                 </button>
             </div>
@@ -442,15 +394,40 @@
     const wfhSection = document.getElementById('wfh-section');
     const offsetSection = document.getElementById('offset-section');
     const travelSection = document.getElementById('travel-section');
-    const additionalTimeSection = document.getElementById('additional-time-section');
-    const additionalTimeHoursWrap = document.getElementById('additional-time-hours-wrap');
-    const additionalTimeHoursInput = document.getElementById('additional_time_total_hours');
-    const additionalTimeModeInputs = document.querySelectorAll('input[name="additional_time_mode"]');
+    const isStudent = @json(auth()->user()->role === 'student');
     const overtimeSpecificDatesContainer = document.getElementById('overtime-specific-dates-container');
     const overtimeSpecificDatesWrap = document.getElementById('overtime-specific-dates-wrap');
     const submitBtn = document.getElementById('submit-btn');
     const noBalanceModal = document.getElementById('no-balance-modal');
-    const today = new Date().toISOString().split('T')[0];
+    const leaveDateBounds = {
+        today: @json(now()->toDateString()),
+        overtimeMin: @json(now()->subDays(7)->toDateString()),
+    };
+    const today = leaveDateBounds.today;
+    const endDateRequiredSpan = document.getElementById('end-date-required-span');
+    const endDateHint = document.getElementById('end-date-hint');
+    const overtimeDateHint = document.getElementById('overtime-date-hint');
+
+    function isStructuredHoursType(type) {
+        return type === 'overtime' || (isStudent && type === 'additional_time');
+    }
+
+    function clampOvertimeDateInputs() {
+        if (!startDateInput) return;
+        const minD = leaveDateBounds.overtimeMin;
+        const maxD = leaveDateBounds.today;
+        if (startDateInput.value) {
+            if (startDateInput.value > maxD) startDateInput.value = maxD;
+            if (startDateInput.value < minD) startDateInput.value = minD;
+        }
+        if (endDateInput && endDateInput.value) {
+            if (endDateInput.value > maxD) endDateInput.value = maxD;
+            if (endDateInput.value < minD) endDateInput.value = minD;
+            if (startDateInput.value && endDateInput.value < startDateInput.value) {
+                endDateInput.value = startDateInput.value;
+            }
+        }
+    }
 
     const balances = JSON.parse(document.getElementById('leave-request-balances-json').textContent || 'null');
     const balanceCheckTypes = ['vacation_leave', 'sick_leave', 'offset', 'work_from_home'];
@@ -589,14 +566,16 @@
 
     function renderOvertimeSpecificDates() {
         if (!overtimeSpecificDatesWrap) return;
-        const isOvertime = typeSelect.value === 'overtime';
-        if (!isOvertime) {
-            overtimeSpecificDatesWrap.innerHTML = '<p class="text-xs text-gray-500">Visible only when Request Type is Overtime.</p>';
+        if (!isStructuredHoursType(typeSelect.value)) {
+            overtimeSpecificDatesWrap.innerHTML = '<p class="text-xs text-gray-500">Visible only when Request Type is Additional Time.</p>';
             return;
         }
 
         const start = startDateInput.value;
-        const end = endDateInput.value || start;
+        let end = endDateInput.value || start;
+        if (end > leaveDateBounds.today) {
+            end = leaveDateBounds.today;
+        }
         if (!start || !end) {
             overtimeSpecificDatesWrap.innerHTML = '<p class="text-xs text-gray-500">Pick Start Date and End Date first.</p>';
             return;
@@ -628,6 +607,10 @@
             const m = String(cursor.getMonth() + 1).padStart(2, '0');
             const d = String(cursor.getDate()).padStart(2, '0');
             const value = `${y}-${m}-${d}`;
+            if (value > leaveDateBounds.today || value < leaveDateBounds.overtimeMin) {
+                cursor.setDate(cursor.getDate() + 1);
+                continue;
+            }
             rows.push(`
                 <label class="inline-flex items-center gap-2 text-sm text-gray-700 mr-4 mb-2">
                     <input type="checkbox" name="overtime_specific_dates[]" value="${value}" ${selectedSet.has(value) ? 'checked' : ''} class="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500">
@@ -649,10 +632,13 @@
         if (typeSelect.value === 'travel') {
             endDateInput.removeAttribute('min');
             endDateInput.setAttribute('max', today);
-        } else if (typeSelect.value === 'overtime') {
-            endDateInput.min = startDate || today;
+        } else if (isStructuredHoursType(typeSelect.value)) {
+            const endMin = startDate && startDate >= leaveDateBounds.overtimeMin
+                ? startDate
+                : leaveDateBounds.overtimeMin;
+            endDateInput.min = endMin;
             endDateInput.setAttribute('max', today);
-        } else if (typeSelect.value === 'additional_time' || typeSelect.value === 'sick_leave') {
+        } else if (typeSelect.value === 'sick_leave') {
             endDateInput.removeAttribute('min');
             endDateInput.removeAttribute('max');
         } else if (startDate) {
@@ -675,55 +661,50 @@
     endDateInput.addEventListener('focus', syncEndDateMin);
     endDateInput.addEventListener('change', renderOvertimeSpecificDates);
 
-    function getAdditionalTimeMode() {
-        const selected = document.querySelector('input[name="additional_time_mode"]:checked');
-        return selected ? selected.value : 'fixed_date';
-    }
-
-    function updateAdditionalTimeModeUI() {
-        const isAdditionalTime = typeSelect.value === 'additional_time';
-        if (!additionalTimeSection) return;
-
-        if (isAdditionalTime) {
-            additionalTimeSection.classList.remove('hidden');
-        } else {
-            additionalTimeSection.classList.add('hidden');
-        }
-
-        const mode = getAdditionalTimeMode();
-        const useTotalHours = isAdditionalTime && mode === 'total_hours';
-
-        if (additionalTimeHoursWrap) {
-            additionalTimeHoursWrap.classList.toggle('hidden', !useTotalHours);
-        }
-        if (additionalTimeHoursInput) {
-            additionalTimeHoursInput.required = useTotalHours;
-        }
-
-        if (endDateInput) {
-            if (useTotalHours) {
-                endDateInput.value = '';
-                endDateInput.disabled = true;
-            } else {
-                endDateInput.disabled = false;
-            }
-        }
-    }
-
     function updateRequestTypeSections() {
         if (typeSelect.value === 'travel') {
             // Travel: only today or past (no future dates for employees)
             startDateInput.removeAttribute('min');
             startDateInput.setAttribute('max', today);
-            if (endDateInput) endDateInput.setAttribute('max', today);
-        } else if (typeSelect.value === 'overtime') {
-            const overtimeMin = new Date();
-            overtimeMin.setDate(overtimeMin.getDate() - 7);
-            const overtimeMinText = overtimeMin.toISOString().split('T')[0];
-            startDateInput.setAttribute('min', overtimeMinText);
+            if (endDateInput) {
+                endDateInput.setAttribute('max', today);
+                endDateInput.required = false;
+            }
+            if (overtimeDateHint) overtimeDateHint.classList.add('hidden');
+            if (endDateHint) endDateHint.classList.remove('hidden');
+            if (endDateRequiredSpan) {
+                endDateRequiredSpan.classList.add('text-gray-400');
+                endDateRequiredSpan.classList.remove('text-red-500');
+                endDateRequiredSpan.textContent = '(Optional)';
+            }
+        } else if (isStructuredHoursType(typeSelect.value)) {
+            startDateInput.setAttribute('min', leaveDateBounds.overtimeMin);
             startDateInput.setAttribute('max', today);
-            if (endDateInput) endDateInput.setAttribute('max', today);
-        } else if (typeSelect.value === 'additional_time' || typeSelect.value === 'sick_leave') {
+            if (endDateInput) {
+                endDateInput.setAttribute('max', today);
+                endDateInput.required = true;
+                endDateInput.disabled = false;
+            }
+            clampOvertimeDateInputs();
+            if (overtimeDateHint) overtimeDateHint.classList.remove('hidden');
+            if (endDateHint) endDateHint.classList.add('hidden');
+            if (endDateRequiredSpan) {
+                endDateRequiredSpan.classList.remove('text-gray-400');
+                endDateRequiredSpan.classList.add('text-red-500');
+                endDateRequiredSpan.textContent = '*';
+            }
+        } else if (typeSelect.value === 'sick_leave') {
+            if (endDateInput) {
+                endDateInput.required = false;
+                endDateInput.disabled = false;
+            }
+            if (overtimeDateHint) overtimeDateHint.classList.add('hidden');
+            if (endDateHint) endDateHint.classList.remove('hidden');
+            if (endDateRequiredSpan) {
+                endDateRequiredSpan.classList.add('text-gray-400');
+                endDateRequiredSpan.classList.remove('text-red-500');
+                endDateRequiredSpan.textContent = '(Optional)';
+            }
             startDateInput.removeAttribute('min');
             startDateInput.removeAttribute('max');
             if (endDateInput) {
@@ -733,10 +714,20 @@
         } else {
             startDateInput.setAttribute('min', today);
             startDateInput.removeAttribute('max');
-            if (endDateInput) endDateInput.removeAttribute('max');
+            if (endDateInput) {
+                endDateInput.removeAttribute('max');
+                endDateInput.required = false;
+            }
+            if (overtimeDateHint) overtimeDateHint.classList.add('hidden');
+            if (endDateHint) endDateHint.classList.remove('hidden');
+            if (endDateRequiredSpan) {
+                endDateRequiredSpan.classList.add('text-gray-400');
+                endDateRequiredSpan.classList.remove('text-red-500');
+                endDateRequiredSpan.textContent = '(Optional)';
+            }
         }
 
-        if (typeSelect.value === 'overtime') {
+        if (isStructuredHoursType(typeSelect.value)) {
             overtimeSection.classList.remove('hidden');
             if (overtimeSpecificDatesContainer) overtimeSpecificDatesContainer.classList.remove('hidden');
         } else {
@@ -763,8 +754,6 @@
                 travelSection.classList.add('hidden');
             }
         }
-
-        updateAdditionalTimeModeUI();
 
         updateNoBalancePrompt();
 
@@ -795,9 +784,9 @@
             if (reasonTravelHelp) reasonTravelHelp.classList.add('hidden');
             if (reasonInput) reasonInput.placeholder = 'Please provide a reason for this request...';
             if (supportingSection) supportingSection.classList.remove('hidden');
-            if (typeSelect.value === 'overtime') {
+            if (isStructuredHoursType(typeSelect.value)) {
                 if (supportingRequiredSpan) { supportingRequiredSpan.classList.remove('text-gray-400'); supportingRequiredSpan.classList.add('text-red-500'); supportingRequiredSpan.textContent = '*'; }
-                if (supportingHelp) supportingHelp.textContent = 'Required for Overtime. Upload up to 5 files (PDF/JPG/PNG), 5MB max per file.';
+                if (supportingHelp) supportingHelp.textContent = 'Required for Additional Time. Upload up to 5 files (PDF/JPG/PNG), 5MB max per file.';
                 if (supportingInput) supportingInput.required = true;
             } else {
                 if (supportingRequiredSpan) { supportingRequiredSpan.classList.remove('text-red-500'); supportingRequiredSpan.classList.add('text-gray-400'); supportingRequiredSpan.textContent = '(Optional)'; }
@@ -828,13 +817,9 @@
     if (offsetHoursInput) {
         offsetHoursInput.addEventListener('input', updateNoBalancePrompt);
     }
-    additionalTimeModeInputs.forEach((input) => {
-        input.addEventListener('change', updateAdditionalTimeModeUI);
-    });
-
     // Initialize on page load (for validation errors / old input)
     const oldType = '{{ old("type") }}';
-    if (oldType !== 'overtime' && oldType !== 'additional_time' && oldType !== 'travel' && oldType !== 'sick_leave') {
+    if (!isStructuredHoursType(oldType) && oldType !== 'travel' && oldType !== 'sick_leave') {
         startDateInput.setAttribute('min', today);
     }
     updateRequestTypeSections();
@@ -868,6 +853,19 @@
             e.preventDefault();
             updateNoBalancePrompt();
             return;
+        }
+
+        if (isStructuredHoursType(type)) {
+            clampOvertimeDateInputs();
+            const maxD = leaveDateBounds.today;
+            const minD = leaveDateBounds.overtimeMin;
+            if (!startDateInput.value || !endDateInput?.value
+                || startDateInput.value > maxD || endDateInput.value > maxD
+                || startDateInput.value < minD || endDateInput.value < minD) {
+                e.preventDefault();
+                alert('Additional Time can only be filed for dates within the last 7 days through today.');
+                return;
+            }
         }
 
         // Disable submit button and show loading state

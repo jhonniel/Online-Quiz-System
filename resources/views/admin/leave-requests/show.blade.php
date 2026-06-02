@@ -17,12 +17,12 @@
                     <p class="text-sm sm:text-base text-indigo-100 mt-1">Review and manage this leave request</p>
                 </div>
             </div>
-            <a href="{{ url('/admin/leave-requests') }}"
+            <a href="{{ $backLink['url'] }}"
                class="inline-flex items-center justify-center px-3 py-2 sm:px-4 sm:py-2 text-xs sm:text-sm bg-white/10 backdrop-blur-sm border border-white/20 rounded-lg text-white hover:bg-white/20 transition duration-200">
                 <svg class="h-4 w-4 sm:h-5 sm:w-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
                 </svg>
-                <span class="hidden sm:inline">Back to List</span>
+                <span class="hidden sm:inline">{{ $backLink['label'] }}</span>
                 <span class="sm:hidden">Back</span>
             </a>
         </div>
@@ -83,6 +83,7 @@
                                   class="flex flex-col sm:flex-row sm:items-end gap-3"
                                   onsubmit="return confirmLeaveTypeChange(this);">
                                 @csrf
+                                @include('admin.leave-requests.partials.show-nav-fields')
                                 @method('PATCH')
                                 <div class="flex-1 min-w-0">
                                     <select name="type" id="leave-request-type"
@@ -129,6 +130,7 @@
                                   class="flex flex-col sm:flex-row sm:flex-wrap sm:items-end gap-3"
                                   onsubmit="return confirmLeaveDateChange(this);">
                                 @csrf
+                                @include('admin.leave-requests.partials.show-nav-fields')
                                 @method('PATCH')
                                 <div class="flex-1 min-w-[10rem]">
                                     <label for="leave-request-start-date" class="sr-only">Start date</label>
@@ -168,6 +170,11 @@
                                 @if($leaveRequest->end_date && !$leaveRequest->start_date->isSameDay($leaveRequest->end_date))
                                     – {{ $leaveRequest->end_date->format('M d, Y') }}
                                 @endif
+                            </p>
+                        @endif
+                        @if($dayTotalFiled = $leaveRequest->attendanceDayTotalFiledDisplay())
+                            <p class="mt-1.5 text-xs text-gray-500">
+                                Day total filed: <span class="font-mono font-medium text-gray-700">{{ $dayTotalFiled }}</span>
                             </p>
                         @endif
                     </div>
@@ -651,25 +658,28 @@
                         <!-- Body -->
                         <div class="space-y-3 text-sm text-gray-800">
                             <p>
-                                Please accept this letter to formally request for an approval for additional
+                                I respectfully request your approval for an additional
                                 <span class="font-semibold underline decoration-gray-400 decoration-1">
-                                    {{ $otHours ?: '[Number of hours]' }}
+                                    {{ $otHours ?: '[hours, HH:MM]' }}
                                 </span>
-                                working hours and in days
+                                of overtime worked on
                                 <span class="font-semibold underline decoration-gray-400 decoration-1">
-                                    {{ $otDates ?: '[state the dates]' }}
-                                </span>
-                                @if(!empty($otReason))
+                                    {{ $otDates ?: '[date(s)]' }}
+                                </span>@if(!empty($otReason)),
                                 due to
                                 <span class="font-semibold underline decoration-gray-400 decoration-1">
                                     {{ $otReason }}
-                                </span>
-                                @endif
-                                Examples: urgent project deadline, increased workload due to staffing shortage, critical system maintenance, etc.
+                                </span>@else.@endif
                             </p>
 
+                            @if(empty($otReason))
+                            <p class="text-xs text-gray-600">
+                                Examples of valid reasons: urgent project deadline, increased workload, critical system maintenance.
+                            </p>
+                            @endif
+
                             <p class="font-semibold">
-                                [Strictly List down Task Listed in ClickUp for Devs via link]
+                                Tasks completed (ClickUp links)
                             </p>
                             @php
                                 // Make any URLs inside the task list clickable while preserving line breaks
@@ -817,6 +827,13 @@
                 </div>
             @endif
 
+            @if($leaveRequest->needsAttendanceOvertimeCompletion())
+                <div class="rounded-lg border border-orange-300 bg-orange-50 px-4 py-4 text-sm text-orange-950 mb-4">
+                    <p class="font-semibold">Student must complete overtime details first</p>
+                    <p class="mt-1">This request was created from Record Attendance. The student still needs to submit a reason before you can approve.</p>
+                </div>
+            @endif
+
             <!-- Action Panel -->
             @if($leaveRequest->isPending() || $leaveRequest->status === 'for_more_verification')
                 <!-- Approve Form -->
@@ -836,6 +853,7 @@
                         <h3 class="text-base sm:text-lg font-bold text-gray-900 mb-3 sm:mb-4">Force Approve Request</h3>
                         <form action="{{ url('/admin/leave-requests/' . $leaveRequest->id . '/force-accept') }}" method="POST" class="space-y-3 sm:space-y-4">
                             @csrf
+                            @include('admin.leave-requests.partials.show-nav-fields')
                             <div>
                                 <label for="force_accept_notes" class="block text-xs sm:text-sm font-medium text-gray-700 mb-2">Notes (Optional)</label>
                                 <textarea name="admin_notes" id="force_accept_notes" rows="3"
@@ -860,12 +878,18 @@
                             </button>
                         </form>
                     </div>
+                @elseif($leaveRequest->needsAttendanceOvertimeCompletion())
+                    <div class="bg-white rounded-lg shadow border border-gray-200 p-4 sm:p-6 opacity-75">
+                        <h3 class="text-base sm:text-lg font-bold text-gray-900 mb-2">Approve Request</h3>
+                        <p class="text-sm text-gray-600">Approval is disabled until the student completes the overtime form from Record Attendance.</p>
+                    </div>
                 @else
                     <!-- Normal Approve Form -->
                     <div class="bg-white rounded-lg shadow border border-gray-200 p-4 sm:p-6">
                         <h3 class="text-base sm:text-lg font-bold text-gray-900 mb-3 sm:mb-4">Approve Request</h3>
                         <form action="{{ url('/admin/leave-requests/' . $leaveRequest->id . '/approve') }}" method="POST" class="space-y-3 sm:space-y-4">
                             @csrf
+                            @include('admin.leave-requests.partials.show-nav-fields')
                             <div>
                                 <label for="approve_notes" class="block text-xs sm:text-sm font-medium text-gray-700 mb-2">Notes (Optional)</label>
                                 <textarea name="admin_notes" id="approve_notes" rows="3"
@@ -898,6 +922,7 @@
                     <p class="text-xs sm:text-sm text-gray-600 mb-3 sm:mb-4">Use this when you need additional verification checks before final approval or rejection.</p>
                     <form action="{{ url('/admin/leave-requests/' . $leaveRequest->id . '/verify') }}" method="POST" class="space-y-3 sm:space-y-4">
                         @csrf
+                        @include('admin.leave-requests.partials.show-nav-fields')
                         <div>
                             <label for="verify_notes" class="block text-xs sm:text-sm font-medium text-gray-700 mb-2">Verification Notes (Required)</label>
                             <textarea name="admin_notes" id="verify_notes" rows="3"
@@ -929,6 +954,7 @@
                     <h3 class="text-base sm:text-lg font-bold text-gray-900 mb-3 sm:mb-4">Reject Request</h3>
                     <form action="{{ url('/admin/leave-requests/' . $leaveRequest->id . '/reject') }}" method="POST" class="space-y-3 sm:space-y-4">
                         @csrf
+                        @include('admin.leave-requests.partials.show-nav-fields')
                         <div>
                             <label for="reject_notes" class="block text-xs sm:text-sm font-medium text-gray-700 mb-2">Reason for Rejection</label>
                             <textarea name="admin_notes" id="reject_notes" rows="3"
@@ -960,6 +986,7 @@
                     <p class="text-xs sm:text-sm text-gray-600 mb-3 sm:mb-4">If there are errors in the request, you can ask the employee to resubmit it.</p>
                     <form action="{{ url('/admin/leave-requests/' . $leaveRequest->id . '/resubmit') }}" method="POST" class="space-y-3 sm:space-y-4">
                         @csrf
+                        @include('admin.leave-requests.partials.show-nav-fields')
                         <div>
                             <label for="resubmit_notes" class="block text-xs sm:text-sm font-medium text-gray-700 mb-2">What needs to be corrected?</label>
                             <textarea name="admin_notes" id="resubmit_notes" rows="3"
@@ -998,6 +1025,7 @@
                         @if($leaveRequest->isRejected() || $leaveRequest->isApproved() || $leaveRequest->status === 'for_more_verification')
                             <form action="{{ url('/admin/leave-requests/' . $leaveRequest->id . '/resubmit') }}" method="POST" class="mt-3 sm:mt-4">
                                 @csrf
+                                @include('admin.leave-requests.partials.show-nav-fields')
                                 <div class="mb-3 sm:mb-4">
                                     <label for="resubmit_notes_existing" class="block text-xs sm:text-sm font-medium text-gray-700 mb-2">Notes for Resubmission</label>
                                     <textarea name="admin_notes" id="resubmit_notes_existing" rows="3"

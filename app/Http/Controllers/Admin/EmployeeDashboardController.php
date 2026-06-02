@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\LeaveBalance;
 use App\Models\LeaveRequest;
 use App\Models\User;
+use App\Support\AdminScopedDashboardCharts;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
@@ -319,8 +320,17 @@ class EmployeeDashboardController extends Controller
             ];
         }
 
+        $chartBundle = app(AdminScopedDashboardCharts::class)->forEmployees(
+            $employeeIds->all(),
+            $request
+        );
+
         return view('admin.employee-management.dashboard', [
             'stats' => $stats,
+            'chartPeriod' => $chartBundle['chartPeriod'],
+            'chartFrom' => $chartBundle['chartFrom'],
+            'chartTo' => $chartBundle['chartTo'],
+            'scopedChartPayload' => $chartBundle['payload'],
             'typeCounts' => $typeCounts,
             'approvedDaysByType' => $approvedDaysByType,
             'employeeLeaveDaysByType' => $employeeLeaveDaysByType,

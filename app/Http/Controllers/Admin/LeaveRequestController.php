@@ -199,9 +199,10 @@ class LeaveRequestController extends Controller
     /**
      * Display the specified leave request.
      */
-    public function show(LeaveRequest $leaveRequest)
+    public function show(Request $request, LeaveRequest $leaveRequest)
     {
-        $leaveRequest->load(['user.department', 'reviewer']);
+        $leaveRequest->load(['user.department', 'reviewer', 'dtrTimeRequest']);
+        $backLink = $this->adminLeaveRequestBackLink($request, $leaveRequest);
 
         $user = $leaveRequest->user;
         $balances = null;
@@ -406,7 +407,8 @@ class LeaveRequestController extends Controller
             'studentTime',
             'hasNegativeBalance',
             'leaveTypeOptions',
-            'canEditLeaveRequestDetails'
+            'canEditLeaveRequestDetails',
+            'backLink'
         ));
     }
 
@@ -419,7 +421,7 @@ class LeaveRequestController extends Controller
         $this->assertCanManageLeaveRequestSubject($leaveRequest);
 
         if ($leaveRequest->status === 'approved') {
-            return redirect('/admin/leave-requests/'.$leaveRequest->id)
+            return $this->redirectToAdminLeaveRequestShow($leaveRequest)
                 ->withErrors(['type' => 'Unable to update request type for an approved request.']);
         }
 
@@ -434,14 +436,14 @@ class LeaveRequestController extends Controller
         $oldType = $leaveRequest->type;
 
         if ($oldType === $newType) {
-            return redirect('/admin/leave-requests/'.$leaveRequest->id)
+            return $this->redirectToAdminLeaveRequestShow($leaveRequest)
                 ->with('info', 'Request type is already set to '.LeaveRequest::labelForType($newType).'.');
         }
 
         $wasApproved = $leaveRequest->status === 'approved';
 
         if ($wasApproved && $this->leaveRequestInclusiveDayCount($leaveRequest) > self::MAX_LEAVE_DTR_DAYS_PER_REQUEST) {
-            return redirect('/admin/leave-requests/'.$leaveRequest->id)
+            return $this->redirectToAdminLeaveRequestShow($leaveRequest)
                 ->withErrors([
                     'type' => 'This request spans more than '.self::MAX_LEAVE_DTR_DAYS_PER_REQUEST.' days. Shorten the date range before changing type on an approved request.',
                 ]);
@@ -454,7 +456,7 @@ class LeaveRequestController extends Controller
         try {
             $leaveRequest->update(['type' => $newType]);
         } catch (\Illuminate\Database\QueryException $e) {
-            return redirect('/admin/leave-requests/'.$leaveRequest->id)
+            return $this->redirectToAdminLeaveRequestShow($leaveRequest)
                 ->withErrors(['type' => 'Unable to save the selected request type. Please choose another type or contact support.'])
                 ->withInput();
         }
@@ -492,7 +494,7 @@ class LeaveRequestController extends Controller
             $message .= ' DTR credits were adjusted for the new type.';
         }
 
-        return redirect('/admin/leave-requests/'.$leaveRequest->id)
+        return $this->redirectToAdminLeaveRequestShow($leaveRequest)
             ->with('success', $message);
     }
 
@@ -505,7 +507,7 @@ class LeaveRequestController extends Controller
         $this->assertCanManageLeaveRequestSubject($leaveRequest);
 
         if ($leaveRequest->status === 'approved') {
-            return redirect('/admin/leave-requests/'.$leaveRequest->id)
+            return $this->redirectToAdminLeaveRequestShow($leaveRequest)
                 ->withErrors(['start_date' => 'Unable to update dates for an approved request.']);
         }
 
@@ -521,7 +523,7 @@ class LeaveRequestController extends Controller
             : $newStart->copy();
 
         if (! $leaveRequest->start_date) {
-            return redirect('/admin/leave-requests/'.$leaveRequest->id)
+            return $this->redirectToAdminLeaveRequestShow($leaveRequest)
                 ->withErrors(['start_date' => 'This request has no start date on file. Set dates via edit or resubmission flow first.'])
                 ->withInput();
         }
@@ -531,7 +533,7 @@ class LeaveRequestController extends Controller
 
         if ($oldStart->toDateString() === $newStart->toDateString()
             && $oldEnd->toDateString() === $newEnd->toDateString()) {
-            return redirect('/admin/leave-requests/'.$leaveRequest->id)
+            return $this->redirectToAdminLeaveRequestShow($leaveRequest)
                 ->with('info', 'Dates are already set to the selected range.');
         }
 
@@ -539,7 +541,7 @@ class LeaveRequestController extends Controller
         $newDayCount = (int) $newStart->diffInDays($newEnd) + 1;
 
         if ($wasApproved && $newDayCount > self::MAX_LEAVE_DTR_DAYS_PER_REQUEST) {
-            return redirect('/admin/leave-requests/'.$leaveRequest->id)
+            return $this->redirectToAdminLeaveRequestShow($leaveRequest)
                 ->withErrors([
                     'end_date' => 'The new date range spans more than '.self::MAX_LEAVE_DTR_DAYS_PER_REQUEST.' days. Shorten the range before updating an approved request.',
                 ])
@@ -599,7 +601,7 @@ class LeaveRequestController extends Controller
             $message .= ' DTR credits were adjusted for the new date range.';
         }
 
-        return redirect('/admin/leave-requests/'.$leaveRequest->id)
+        return $this->redirectToAdminLeaveRequestShow($leaveRequest)
             ->with('success', $message);
     }
 
@@ -962,9 +964,14 @@ class LeaveRequestController extends Controller
         ) {
             $wfhQuotaError = WorkFromHomeQuota::validateApproval($leaveRequest);
             if ($wfhQuotaError !== null) {
-                return redirect('/admin/leave-requests/'.$leaveRequest->id)
+                return $this->redirectToAdminLeaveRequestShow($leaveRequest)
                     ->withErrors(['approval' => $wfhQuotaError]);
             }
+        }
+
+        if (! $leaveRequest->isAttendanceOvertimeReadyForApproval()) {
+            return $this->redirectToAdminLeaveRequestShow($leaveRequest)
+                ->withErrors(['approval' => 'The student must complete the overtime request details (reason, ClickUp tasks, and supporting documents) before this can be approved.']);
         }
 
         $statusBefore = $leaveRequest->status;
@@ -1020,7 +1027,7 @@ class LeaveRequestController extends Controller
             // Don't fail the request if email fails
         }
 
-        return redirect('/admin/leave-requests/'.$leaveRequest->id)
+        return $this->redirectToAdminLeaveRequestShow($leaveRequest)
             ->with('success', 'Leave request approved successfully.');
     }
 
@@ -1032,13 +1039,13 @@ class LeaveRequestController extends Controller
     {
         // Only allow force accept for offset requests
         if ($leaveRequest->type !== 'offset') {
-            return redirect('/admin/leave-requests/'.$leaveRequest->id)
+            return $this->redirectToAdminLeaveRequestShow($leaveRequest)
                 ->with('error', 'Force accept is only available for offset requests.');
         }
 
         // Only allow for pending requests
         if (! $leaveRequest->isPending()) {
-            return redirect('/admin/leave-requests/'.$leaveRequest->id)
+            return $this->redirectToAdminLeaveRequestShow($leaveRequest)
                 ->with('error', 'This request has already been processed.');
         }
 
@@ -1100,7 +1107,7 @@ class LeaveRequestController extends Controller
             // Don't fail the request if email fails
         }
 
-        return redirect('/admin/leave-requests/'.$leaveRequest->id)
+        return $this->redirectToAdminLeaveRequestShow($leaveRequest)
             ->with('success', 'Offset request force accepted. Negative balance will be applied to employee account.');
     }
 
@@ -1167,7 +1174,7 @@ class LeaveRequestController extends Controller
             // Don't fail the request if email fails
         }
 
-        return redirect('/admin/leave-requests/'.$leaveRequest->id)
+        return $this->redirectToAdminLeaveRequestShow($leaveRequest)
             ->with('success', 'Leave request rejected successfully.');
     }
 
@@ -1230,7 +1237,7 @@ class LeaveRequestController extends Controller
             // Don't fail the request if email fails
         }
 
-        return redirect('/admin/leave-requests/'.$leaveRequest->id)
+        return $this->redirectToAdminLeaveRequestShow($leaveRequest)
             ->with('success', 'Leave request marked for more verification.');
     }
 
@@ -1284,7 +1291,7 @@ class LeaveRequestController extends Controller
             $this->normalizedLeaveRequestMailNotes($leaveRequest->admin_notes)
         );
 
-        return redirect('/admin/leave-requests/'.$leaveRequest->id)
+        return $this->redirectToAdminLeaveRequestShow($leaveRequest)
             ->with('success', 'Leave request marked for resubmission. The employee will need to correct any errors.');
     }
 
@@ -1305,7 +1312,7 @@ class LeaveRequestController extends Controller
             $perPage = 20;
         }
 
-        $query = LeaveRequest::with(['user', 'reviewer'])
+        $query = LeaveRequest::with(['user', 'reviewer', 'dtrTimeRequest'])
             ->whereHas('user', function ($q) use ($allowedDepartmentIds) {
                 $q->where('role', 'student');
                 if ($allowedDepartmentIds !== null) {
@@ -1850,6 +1857,12 @@ class LeaveRequestController extends Controller
 
         if ($leaveRequest->type === 'travel') {
             $this->revertTravelTimeFromDtr($leaveRequest, (float) ($leaveRequest->travel_hours ?? 8.0), $force);
+
+            return;
+        }
+
+        if ($leaveRequest->type === 'overtime' && $leaveRequest->user?->role === 'student') {
+            \App\Support\StudentOvertimeLeaveRequest::revertFromDtr($leaveRequest);
         }
     }
 
@@ -1872,6 +1885,12 @@ class LeaveRequestController extends Controller
 
         if ($leaveRequest->type === 'travel') {
             $this->applyTravelTimeToDtr($leaveRequest, (float) ($leaveRequest->travel_hours ?? 8.0));
+
+            return;
+        }
+
+        if ($leaveRequest->type === 'overtime' && $leaveRequest->user?->role === 'student') {
+            \App\Support\StudentOvertimeLeaveRequest::applyApprovedToDtr($leaveRequest);
         }
     }
 
@@ -2402,20 +2421,91 @@ class LeaveRequestController extends Controller
             ->first();
 
         if (! $filedByAdminLog) {
-            return redirect('/admin/leave-requests')
+            return redirect($this->adminLeaveRequestListUrl($leaveRequest))
                 ->with('error', 'This leave request cannot be deleted. Only requests filed by admins can be deleted.');
         }
 
         // Check if the current admin is the one who filed it
         if ($filedByAdminLog->performed_by !== Auth::id()) {
-            return redirect('/admin/leave-requests')
+            return redirect($this->adminLeaveRequestListUrl($leaveRequest))
                 ->with('error', 'You can only delete leave requests that you filed.');
         }
 
         // Delete the leave request (logs will be cascade deleted)
         $leaveRequest->delete();
 
-        return redirect('/admin/leave-requests')
+        return redirect($this->adminLeaveRequestListUrl($leaveRequest))
             ->with('success', 'Leave request deleted successfully.');
+    }
+
+    /**
+     * @return array{url: string, label: string}
+     */
+    private function adminLeaveRequestBackLink(Request $request, LeaveRequest $leaveRequest): array
+    {
+        $return = $request->query('return');
+        if (is_string($return) && str_starts_with($return, '/admin/')) {
+            return [
+                'url' => $return,
+                'label' => 'Back to List',
+            ];
+        }
+
+        $from = $request->query('from');
+
+        if ($from === 'student-calendar') {
+            return [
+                'url' => url('/admin/student-leave-calendar'),
+                'label' => 'Back to Student Leave Calendar',
+            ];
+        }
+
+        if ($from === 'student' || ($leaveRequest->user?->role === 'student' && $from !== 'employee')) {
+            return [
+                'url' => route('admin.student-leave-requests.index'),
+                'label' => 'Back to Student Leave Requests',
+            ];
+        }
+
+        return [
+            'url' => route('admin.leave-requests.index'),
+            'label' => 'Back to Employee Leave Requests',
+        ];
+    }
+
+    private function adminLeaveRequestShowUrl(LeaveRequest $leaveRequest): string
+    {
+        $params = array_filter([
+            'from' => request()->input('from') ?? request()->query('from'),
+            'return' => request()->input('return') ?? request()->query('return'),
+        ], fn ($value) => $value !== null && $value !== '');
+
+        $url = route('admin.leave-requests.show', $leaveRequest);
+
+        return $params === [] ? $url : $url.'?'.http_build_query($params);
+    }
+
+    private function redirectToAdminLeaveRequestShow(LeaveRequest $leaveRequest): \Illuminate\Http\RedirectResponse
+    {
+        return redirect($this->adminLeaveRequestShowUrl($leaveRequest));
+    }
+
+    private function adminLeaveRequestListUrl(LeaveRequest $leaveRequest): string
+    {
+        $return = request()->input('return') ?? request()->query('return');
+        if (is_string($return) && str_starts_with($return, '/admin/')) {
+            $path = parse_url($return, PHP_URL_PATH) ?? '';
+
+            if (in_array($path, ['/admin/student-leave-requests', '/admin/student-leave-calendar'], true)) {
+                return $return;
+            }
+        }
+
+        $from = request()->input('from') ?? request()->query('from');
+        if ($from === 'student' || $from === 'student-calendar' || $leaveRequest->user?->role === 'student') {
+            return route('admin.student-leave-requests.index');
+        }
+
+        return route('admin.leave-requests.index');
     }
 }

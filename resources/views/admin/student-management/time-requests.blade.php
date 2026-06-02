@@ -79,6 +79,7 @@
                         <option value="approved" {{ request('status') == 'approved' ? 'selected' : '' }}>Approved</option>
                         <option value="rejected" {{ request('status') == 'rejected' ? 'selected' : '' }}>Rejected</option>
                     </select>
+                    <p class="mt-1 text-xs text-gray-500 min-h-[1rem] invisible" aria-hidden="true">&nbsp;</p>
                 </div>
 
                 <div>
@@ -91,30 +92,33 @@
                             </option>
                         @endforeach
                     </select>
+                    <p class="mt-1 text-xs text-gray-500 min-h-[1rem] invisible" aria-hidden="true">&nbsp;</p>
                 </div>
 
                 <div>
                     <label for="date_from" class="block text-sm font-medium text-gray-700 mb-2">Date From</label>
                     <input type="date" name="date_from" id="date_from" value="{{ request('date_from') }}"
                            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
-                    @if(!request('date_from'))
-                        <p class="mt-1 text-xs text-gray-500">Leave empty for all dates</p>
-                    @endif
+                    <p class="mt-1 text-xs text-gray-500 min-h-[1rem]">
+                        {{ request('date_from') ? "\u{00a0}" : 'Leave empty for all dates' }}
+                    </p>
                 </div>
 
                 <div>
                     <label for="date_to" class="block text-sm font-medium text-gray-700 mb-2">Date To</label>
                     <input type="date" name="date_to" id="date_to" value="{{ request('date_to') }}"
                            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
-                    @if(!request('date_to'))
-                        <p class="mt-1 text-xs text-gray-500">Leave empty for all dates</p>
-                    @endif
+                    <p class="mt-1 text-xs text-gray-500 min-h-[1rem]">
+                        {{ request('date_to') ? "\u{00a0}" : 'Leave empty for all dates' }}
+                    </p>
                 </div>
 
-                <div class="flex items-end">
-                    <button type="submit" class="w-full px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors">
+                <div>
+                    <label for="time-requests-filter-submit" class="block text-sm font-medium text-gray-700 mb-2 invisible" aria-hidden="true">Filter</label>
+                    <button type="submit" id="time-requests-filter-submit" class="w-full px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors">
                         Filter
                     </button>
+                    <p class="mt-1 text-xs text-gray-500 min-h-[1rem] invisible" aria-hidden="true">&nbsp;</p>
                 </div>
             </div>
         </form>
@@ -128,6 +132,7 @@
                     <tr>
                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Student</th>
                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Type</th>
                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Hours (HH:MM)</th>
                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Remarks</th>
                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
@@ -143,7 +148,17 @@
                                 <div class="text-sm text-gray-500">{{ $request->user->email }}</div>
                             </td>
                             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                {{ $request->date->format('M d, Y') }}
+                                <div>{{ $request->date->format('M d, Y') }}</div>
+                                @if($request->requested_total_hours)
+                                    <div class="text-xs text-gray-500 mt-0.5">
+                                        Day total filed: <span class="font-mono font-medium text-gray-700">{{ \App\Support\DtrTimeRequestHours::decimalToTimeString((float) $request->requested_total_hours) }}</span>
+                                    </div>
+                                @endif
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm">
+                                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium {{ $request->isOvertime() ? 'bg-orange-100 text-orange-800' : 'bg-blue-100 text-blue-800' }}">
+                                    {{ $request->request_type_label }}
+                                </span>
                             </td>
                             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 font-mono">
                                 {{ $request->formatted_time }}
@@ -163,7 +178,7 @@
                                 @if(in_array($request->status, ['pending', 'rejected'], true))
                                     <div class="flex flex-wrap items-center gap-x-2 gap-y-1">
                                         <button type="button"
-                                                onclick="openEditModal({{ $request->id }}, @js($request->user->name), @js($request->date->format('Y-m-d')), @js($request->formatted_time), @js($request->remarks ?? ''))"
+                                                onclick="openEditModal({{ $request->id }}, @js($request->user->name), @js($request->date->format('Y-m-d')), @js($request->formatted_time), @js($request->remarks ?? ''), @js($request->request_type_label), @js($request->isOvertime()))"
                                                 class="text-indigo-600 hover:text-indigo-900">
                                             Edit
                                         </button>
@@ -208,7 +223,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="7" class="px-6 py-8 text-center text-sm text-gray-500">
+                            <td colspan="8" class="px-6 py-8 text-center text-sm text-gray-500">
                                 No time requests found.
                             </td>
                         </tr>
@@ -251,8 +266,11 @@
             </button>
         </div>
 
-        <p class="text-sm text-gray-600 mb-4">
+        <p class="text-sm text-gray-600 mb-1">
             Student: <span id="edit-student-name" class="font-medium text-gray-900"></span>
+        </p>
+        <p class="text-sm text-gray-600 mb-4">
+            Request type: <span id="edit-request-type" class="font-medium text-gray-900"></span>
         </p>
 
         <form id="edit-form" method="POST" action="">
@@ -265,7 +283,7 @@
                            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
                 </div>
                 <div>
-                    <label for="edit_time" class="block text-sm font-medium text-gray-700 mb-2">Worked hours (HH:MM) <span class="text-red-600">*</span></label>
+                    <label for="edit_time" class="block text-sm font-medium text-gray-700 mb-2"><span id="edit-time-label">Worked hours (HH:MM)</span> <span class="text-red-600">*</span></label>
                     <input type="text" name="time" id="edit_time" required
                            placeholder="08:00"
                            autocomplete="off"
@@ -483,11 +501,15 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 });
 
-function openEditModal(requestId, studentName, date, time, remarks) {
+function openEditModal(requestId, studentName, date, time, remarks, requestTypeLabel, isOvertime) {
     const modal = document.getElementById('edit-modal');
     const form = document.getElementById('edit-form');
     form.action = `/admin/time-requests/${requestId}`;
     document.getElementById('edit-student-name').textContent = studentName;
+    document.getElementById('edit-request-type').textContent = requestTypeLabel;
+    document.getElementById('edit-time-label').textContent = isOvertime
+        ? 'Overtime hours (HH:MM)'
+        : 'Regular worked hours (HH:MM, max 08:00)';
     document.getElementById('edit_date').value = date;
     document.getElementById('edit_time').value = time;
     document.getElementById('edit_remarks').value = remarks || '';

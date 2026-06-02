@@ -140,7 +140,7 @@
     </div>
 
     <!-- Employee & Student Statistics -->
-    <div class="grid grid-cols-1 gap-3 sm:gap-4 md:gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+    <div class="grid grid-cols-1 gap-3 sm:gap-4 md:gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-7">
         <!-- Total Employees -->
         <div class="bg-gradient-to-r from-blue-50 to-blue-100 overflow-hidden shadow rounded-lg border border-blue-200">
             <div class="p-4 sm:p-5">
@@ -241,6 +241,48 @@
                 </div>
             </div>
         </div>
+
+        <!-- Pending DTR Time Requests -->
+        <a href="{{ url('/admin/time-requests') }}"
+           class="bg-gradient-to-r from-cyan-50 to-cyan-100 overflow-hidden shadow rounded-lg border border-cyan-200 block hover:border-cyan-300 hover:shadow-md transition-shadow">
+            <div class="p-4 sm:p-5">
+                <div class="flex items-center">
+                    <div class="flex-shrink-0">
+                        <svg class="h-5 w-5 sm:h-6 sm:w-6 text-cyan-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                    </div>
+                    <div class="ml-3 sm:ml-5 w-0 flex-1 min-w-0">
+                        <dl>
+                            <dt class="text-xs sm:text-sm font-medium text-cyan-700 truncate">Pending Time Requests</dt>
+                            <dd class="text-base sm:text-lg font-medium text-cyan-900">{{ $pendingTimeRequests ?? 0 }}</dd>
+                            <dd class="text-xs text-cyan-600 mt-1">Student DTR filings</dd>
+                        </dl>
+                    </div>
+                </div>
+            </div>
+        </a>
+
+        <!-- Incomplete student overtime -->
+        <a href="{{ url('/admin/student-leave-requests') }}"
+           class="bg-gradient-to-r from-orange-50 to-orange-100 overflow-hidden shadow rounded-lg border border-orange-200 block hover:border-orange-300 hover:shadow-md transition-shadow">
+            <div class="p-4 sm:p-5">
+                <div class="flex items-center">
+                    <div class="flex-shrink-0">
+                        <svg class="h-5 w-5 sm:h-6 sm:w-6 text-orange-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                        </svg>
+                    </div>
+                    <div class="ml-3 sm:ml-5 w-0 flex-1 min-w-0">
+                        <dl>
+                            <dt class="text-xs sm:text-sm font-medium text-orange-700 truncate">Incomplete Overtime</dt>
+                            <dd class="text-base sm:text-lg font-medium text-orange-900">{{ $incompleteStudentOvertimeCount ?? 0 }}</dd>
+                            <dd class="text-xs text-orange-600 mt-1">Awaiting student details</dd>
+                        </dl>
+                    </div>
+                </div>
+            </div>
+        </a>
 
         <!-- Total DTR Records -->
         <div class="bg-gradient-to-r from-indigo-50 to-indigo-100 overflow-hidden shadow rounded-lg border border-indigo-200">
@@ -541,6 +583,97 @@
             </div>
             <div class="p-6">
                 <canvas id="activityTypeChart" height="200"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- Extended analytics (period-aware) -->
+    <div class="mt-8">
+        <div class="mb-4">
+            <h2 class="text-lg font-bold text-gray-900">Extended Analytics</h2>
+            <p class="text-sm text-gray-500 mt-0.5">Leave, attendance, support, and engagement for the selected chart period</p>
+        </div>
+        <div class="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
+            <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                <div class="px-6 py-4 border-b border-gray-200 bg-gray-50/80">
+                    <h3 class="text-base font-semibold text-gray-900">Quiz Attempts</h3>
+                    <p class="text-sm text-gray-500 mt-0.5">Attempts per period</p>
+                </div>
+                <div class="p-6 h-56">
+                    <canvas id="quizAttemptChart"></canvas>
+                </div>
+            </div>
+            <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                <div class="px-6 py-4 border-b border-gray-200 bg-gray-50/80">
+                    <h3 class="text-base font-semibold text-gray-900">Leave Requests Filed</h3>
+                    <p class="text-sm text-gray-500 mt-0.5">New requests per period</p>
+                </div>
+                <div class="p-6 h-56">
+                    <canvas id="leaveRequestTrendChart"></canvas>
+                </div>
+            </div>
+            <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                <div class="px-6 py-4 border-b border-gray-200 bg-gray-50/80">
+                    <h3 class="text-base font-semibold text-gray-900">DTR Time Requests</h3>
+                    <p class="text-sm text-gray-500 mt-0.5">Filed per period by status</p>
+                </div>
+                <div class="p-6 h-56">
+                    <canvas id="timeRequestTrendChart"></canvas>
+                </div>
+            </div>
+            <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                <div class="px-6 py-4 border-b border-gray-200 bg-gray-50/80">
+                    <h3 class="text-base font-semibold text-gray-900">Student Leave by Type</h3>
+                    <p class="text-sm text-gray-500 mt-0.5">Filed in selected period</p>
+                </div>
+                <div class="p-6 h-56">
+                    <canvas id="studentLeaveTypeChart"></canvas>
+                </div>
+            </div>
+            <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                <div class="px-6 py-4 border-b border-gray-200 bg-gray-50/80">
+                    <h3 class="text-base font-semibold text-gray-900">Employee Leave by Type</h3>
+                    <p class="text-sm text-gray-500 mt-0.5">Filed in selected period</p>
+                </div>
+                <div class="p-6 h-56">
+                    <canvas id="employeeLeaveTypeChart"></canvas>
+                </div>
+            </div>
+            <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                <div class="px-6 py-4 border-b border-gray-200 bg-gray-50/80">
+                    <h3 class="text-base font-semibold text-gray-900">Error Logs</h3>
+                    <p class="text-sm text-gray-500 mt-0.5">By HTTP status in selected period</p>
+                </div>
+                <div class="p-6 h-56">
+                    <canvas id="errorLogsByTypeChart"></canvas>
+                </div>
+            </div>
+            <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                <div class="px-6 py-4 border-b border-gray-200 bg-gray-50/80">
+                    <h3 class="text-base font-semibold text-gray-900">Activity Logs</h3>
+                    <p class="text-sm text-gray-500 mt-0.5">By activity type in selected period</p>
+                </div>
+                <div class="p-6 h-56">
+                    <canvas id="activityLogsByTypeChart"></canvas>
+                </div>
+            </div>
+            <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                <div class="px-6 py-4 border-b border-gray-200 bg-gray-50/80">
+                    <h3 class="text-base font-semibold text-gray-900">Support Tickets</h3>
+                    <p class="text-sm text-gray-500 mt-0.5">Opened vs closed per period</p>
+                </div>
+                <div class="p-6 h-56">
+                    <canvas id="ticketsTrendChart"></canvas>
+                </div>
+            </div>
+            <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                <div class="px-6 py-4 border-b border-gray-200 bg-gray-50/80">
+                    <h3 class="text-base font-semibold text-gray-900">Contact & Say-it Activity</h3>
+                    <p class="text-sm text-gray-500 mt-0.5">Messages and posts per period</p>
+                </div>
+                <div class="p-6 h-56">
+                    <canvas id="engagementTrendChart"></canvas>
+                </div>
             </div>
         </div>
     </div>
@@ -857,7 +990,7 @@
                             @if($leaveRequest->user->role === 'employee')
                                 <a href="{{ url('/admin/leave-requests/' . $leaveRequest->id) }}" class="text-xs text-indigo-600 hover:text-indigo-800 inline-block mt-1">View →</a>
                             @else
-                                <a href="{{ url('/admin/leave-requests/' . $leaveRequest->id) }}" class="text-xs text-purple-600 hover:text-purple-800 inline-block mt-1">View →</a>
+                                <a href="{{ route('admin.leave-requests.show', ['leaveRequest' => $leaveRequest->id, 'from' => 'student']) }}" class="text-xs text-purple-600 hover:text-purple-800 inline-block mt-1">View →</a>
                             @endif
                         </div>
                     </div>
@@ -1380,6 +1513,28 @@
         'activityLogLogoutData' => $activityLogLogoutData ?? [],
         'activityLogPageViewData' => $activityLogPageViewData ?? [],
         'activityLogGuestPageViewData' => $activityLogGuestPageViewData ?? [],
+        'leaveTrendLabels' => $leaveTrendLabels ?? [],
+        'leaveTrendEmployeeData' => $leaveTrendEmployeeData ?? [],
+        'leaveTrendStudentData' => $leaveTrendStudentData ?? [],
+        'timeRequestTrendLabels' => $timeRequestTrendLabels ?? [],
+        'timeRequestTrendPendingData' => $timeRequestTrendPendingData ?? [],
+        'timeRequestTrendApprovedData' => $timeRequestTrendApprovedData ?? [],
+        'timeRequestTrendRejectedData' => $timeRequestTrendRejectedData ?? [],
+        'studentLeaveByTypeLabels' => $studentLeaveByTypeLabels ?? [],
+        'studentLeaveByTypeData' => $studentLeaveByTypeData ?? [],
+        'employeeLeaveByTypeLabels' => $employeeLeaveByTypeLabels ?? [],
+        'employeeLeaveByTypeData' => $employeeLeaveByTypeData ?? [],
+        'errorLogsByTypeLabels' => $errorLogsByTypeLabels ?? [],
+        'errorLogsByTypeData' => $errorLogsByTypeData ?? [],
+        'activityLogsByTypeLabels' => $activityLogsByTypeLabels ?? [],
+        'activityLogsByTypeData' => $activityLogsByTypeData ?? [],
+        'ticketsTrendLabels' => $ticketsTrendLabels ?? [],
+        'ticketsTrendOpenData' => $ticketsTrendOpenData ?? [],
+        'ticketsTrendClosedData' => $ticketsTrendClosedData ?? [],
+        'contactTrendLabels' => $contactTrendLabels ?? [],
+        'contactTrendData' => $contactTrendData ?? [],
+        'confessionTrendLabels' => $confessionTrendLabels ?? [],
+        'confessionTrendData' => $confessionTrendData ?? [],
         'activityDataUrl' => url('/admin/activity-data'),
     ];
 @endphp
@@ -1409,7 +1564,15 @@ document.addEventListener('DOMContentLoaded', function() {
         'loginTimeLabels', 'loginTimeData',
         'activityLogLabels', 'activityLogTotalData', 'activityLogGuestTrafficData',
         'activityLogByTypeLabels', 'activityLogLoginData', 'activityLogLogoutData',
-        'activityLogPageViewData', 'activityLogGuestPageViewData'
+        'activityLogPageViewData', 'activityLogGuestPageViewData',
+        'leaveTrendLabels', 'leaveTrendEmployeeData', 'leaveTrendStudentData',
+        'timeRequestTrendLabels', 'timeRequestTrendPendingData', 'timeRequestTrendApprovedData', 'timeRequestTrendRejectedData',
+        'studentLeaveByTypeLabels', 'studentLeaveByTypeData',
+        'employeeLeaveByTypeLabels', 'employeeLeaveByTypeData',
+        'errorLogsByTypeLabels', 'errorLogsByTypeData',
+        'activityLogsByTypeLabels', 'activityLogsByTypeData',
+        'ticketsTrendLabels', 'ticketsTrendOpenData', 'ticketsTrendClosedData',
+        'contactTrendLabels', 'contactTrendData', 'confessionTrendLabels', 'confessionTrendData'
     ];
     var chartArrays = {};
     chartKeys.forEach(function (key) {
@@ -1447,6 +1610,37 @@ document.addEventListener('DOMContentLoaded', function() {
     var activityLogLogoutData = chartArrays.activityLogLogoutData;
     var activityLogPageViewData = chartArrays.activityLogPageViewData;
     var activityLogGuestPageViewData = chartArrays.activityLogGuestPageViewData;
+    var leaveTrendLabels = chartArrays.leaveTrendLabels;
+    var leaveTrendEmployeeData = chartArrays.leaveTrendEmployeeData;
+    var leaveTrendStudentData = chartArrays.leaveTrendStudentData;
+    var timeRequestTrendLabels = chartArrays.timeRequestTrendLabels;
+    var timeRequestTrendPendingData = chartArrays.timeRequestTrendPendingData;
+    var timeRequestTrendApprovedData = chartArrays.timeRequestTrendApprovedData;
+    var timeRequestTrendRejectedData = chartArrays.timeRequestTrendRejectedData;
+    var studentLeaveByTypeLabels = chartArrays.studentLeaveByTypeLabels;
+    var studentLeaveByTypeData = chartArrays.studentLeaveByTypeData;
+    var ticketsTrendLabels = chartArrays.ticketsTrendLabels;
+    var ticketsTrendOpenData = chartArrays.ticketsTrendOpenData;
+    var ticketsTrendClosedData = chartArrays.ticketsTrendClosedData;
+    var contactTrendLabels = chartArrays.contactTrendLabels;
+    var contactTrendData = chartArrays.contactTrendData;
+    var confessionTrendLabels = chartArrays.confessionTrendLabels;
+    var confessionTrendData = chartArrays.confessionTrendData;
+    var employeeLeaveByTypeLabels = chartArrays.employeeLeaveByTypeLabels;
+    var employeeLeaveByTypeData = chartArrays.employeeLeaveByTypeData;
+    var errorLogsByTypeLabels = chartArrays.errorLogsByTypeLabels;
+    var errorLogsByTypeData = chartArrays.errorLogsByTypeData;
+    var activityLogsByTypeLabels = chartArrays.activityLogsByTypeLabels;
+    var activityLogsByTypeData = chartArrays.activityLogsByTypeData;
+
+    var doughnutPalette = [
+        'rgba(245, 158, 11, 0.8)', 'rgba(59, 130, 246, 0.8)', 'rgba(34, 197, 94, 0.8)',
+        'rgba(239, 68, 68, 0.8)', 'rgba(139, 92, 246, 0.8)', 'rgba(6, 182, 212, 0.8)'
+    ];
+    var doughnutBorderPalette = [
+        'rgb(245, 158, 11)', 'rgb(59, 130, 246)', 'rgb(34, 197, 94)',
+        'rgb(239, 68, 68)', 'rgb(139, 92, 246)', 'rgb(6, 182, 212)'
+    ];
 
     // Activity Trends Chart (Logins + Quiz Attempts)
     if (document.getElementById('activityChart') && typeof Chart !== 'undefined') {
@@ -1732,8 +1926,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 labels: leaveEmployeeLabels,
                 datasets: [{
                     data: leaveEmployeeData,
-                    backgroundColor: ['rgba(245, 158, 11, 0.8)', 'rgba(34, 197, 94, 0.8)', 'rgba(239, 68, 68, 0.8)'],
-                    borderColor: ['rgb(245, 158, 11)', 'rgb(34, 197, 94)', 'rgb(239, 68, 68)'],
+                    backgroundColor: doughnutPalette.slice(0, leaveEmployeeLabels.length),
+                    borderColor: doughnutBorderPalette.slice(0, leaveEmployeeLabels.length),
                     borderWidth: 1
                 }]
             },
@@ -1753,8 +1947,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 labels: leaveStudentLabels,
                 datasets: [{
                     data: leaveStudentData,
-                    backgroundColor: ['rgba(245, 158, 11, 0.8)', 'rgba(34, 197, 94, 0.8)', 'rgba(239, 68, 68, 0.8)'],
-                    borderColor: ['rgb(245, 158, 11)', 'rgb(34, 197, 94)', 'rgb(239, 68, 68)'],
+                    backgroundColor: doughnutPalette.slice(0, leaveStudentLabels.length),
+                    borderColor: doughnutBorderPalette.slice(0, leaveStudentLabels.length),
                     borderWidth: 1
                 }]
             },
@@ -1762,6 +1956,285 @@ document.addEventListener('DOMContentLoaded', function() {
                 responsive: true,
                 maintainAspectRatio: false,
                 plugins: { legend: { position: 'right' } }
+            }
+        });
+    }
+
+    if (document.getElementById('quizAttemptChart') && typeof Chart !== 'undefined') {
+        new Chart(document.getElementById('quizAttemptChart'), {
+            type: 'bar',
+            data: {
+                labels: quizAttemptLabels.length ? quizAttemptLabels : loginLabels,
+                datasets: [{
+                    label: 'Quiz Attempts',
+                    data: quizAttemptData,
+                    backgroundColor: 'rgba(34, 197, 94, 0.75)',
+                    borderColor: 'rgb(34, 197, 94)',
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { display: false } },
+                scales: { y: { beginAtZero: true } }
+            }
+        });
+    }
+
+    if (document.getElementById('leaveRequestTrendChart') && typeof Chart !== 'undefined') {
+        new Chart(document.getElementById('leaveRequestTrendChart'), {
+            type: 'line',
+            data: {
+                labels: leaveTrendLabels,
+                datasets: [
+                    {
+                        label: 'Employees',
+                        data: leaveTrendEmployeeData,
+                        borderColor: 'rgb(245, 158, 11)',
+                        backgroundColor: 'rgba(245, 158, 11, 0.1)',
+                        fill: true,
+                        tension: 0.3
+                    },
+                    {
+                        label: 'Students',
+                        data: leaveTrendStudentData,
+                        borderColor: 'rgb(99, 102, 241)',
+                        backgroundColor: 'rgba(99, 102, 241, 0.1)',
+                        fill: true,
+                        tension: 0.3
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { position: 'top' } },
+                scales: { y: { beginAtZero: true } }
+            }
+        });
+    }
+
+    if (document.getElementById('timeRequestTrendChart') && typeof Chart !== 'undefined') {
+        new Chart(document.getElementById('timeRequestTrendChart'), {
+            type: 'bar',
+            data: {
+                labels: timeRequestTrendLabels,
+                datasets: [
+                    {
+                        label: 'Pending',
+                        data: timeRequestTrendPendingData,
+                        backgroundColor: 'rgba(245, 158, 11, 0.8)'
+                    },
+                    {
+                        label: 'Approved',
+                        data: timeRequestTrendApprovedData,
+                        backgroundColor: 'rgba(34, 197, 94, 0.8)'
+                    },
+                    {
+                        label: 'Rejected',
+                        data: timeRequestTrendRejectedData,
+                        backgroundColor: 'rgba(239, 68, 68, 0.8)'
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { position: 'top' } },
+                scales: { x: { stacked: true }, y: { stacked: true, beginAtZero: true } }
+            }
+        });
+    }
+
+    if (document.getElementById('studentLeaveTypeChart') && typeof Chart !== 'undefined') {
+        new Chart(document.getElementById('studentLeaveTypeChart'), {
+            type: 'bar',
+            data: {
+                labels: studentLeaveByTypeLabels,
+                datasets: [{
+                    label: 'Requests',
+                    data: studentLeaveByTypeData,
+                    backgroundColor: [
+                        'rgba(249, 115, 22, 0.8)',
+                        'rgba(59, 130, 246, 0.8)',
+                        'rgba(239, 68, 68, 0.8)',
+                        'rgba(107, 114, 128, 0.8)'
+                    ],
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { display: false } },
+                scales: {
+                    y: { beginAtZero: true },
+                    x: { ticks: { maxRotation: 45, minRotation: 20 } }
+                }
+            }
+        });
+    }
+
+    if (document.getElementById('employeeLeaveTypeChart') && typeof Chart !== 'undefined') {
+        new Chart(document.getElementById('employeeLeaveTypeChart'), {
+            type: 'bar',
+            data: {
+                labels: employeeLeaveByTypeLabels,
+                datasets: [{
+                    label: 'Requests',
+                    data: employeeLeaveByTypeData,
+                    backgroundColor: [
+                        'rgba(59, 130, 246, 0.8)',
+                        'rgba(16, 185, 129, 0.8)',
+                        'rgba(249, 115, 22, 0.8)',
+                        'rgba(139, 92, 246, 0.8)',
+                        'rgba(6, 182, 212, 0.8)',
+                        'rgba(239, 68, 68, 0.8)'
+                    ],
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { display: false } },
+                scales: {
+                    y: { beginAtZero: true },
+                    x: { ticks: { maxRotation: 45, minRotation: 20 } }
+                }
+            }
+        });
+    }
+
+    if (document.getElementById('errorLogsByTypeChart') && typeof Chart !== 'undefined') {
+        new Chart(document.getElementById('errorLogsByTypeChart'), {
+            type: 'bar',
+            data: {
+                labels: errorLogsByTypeLabels,
+                datasets: [{
+                    label: 'Errors',
+                    data: errorLogsByTypeData,
+                    backgroundColor: [
+                        'rgba(239, 68, 68, 0.8)',
+                        'rgba(249, 115, 22, 0.8)',
+                        'rgba(245, 158, 11, 0.8)',
+                        'rgba(234, 179, 8, 0.8)',
+                        'rgba(107, 114, 128, 0.8)',
+                        'rgba(139, 92, 246, 0.8)',
+                        'rgba(59, 130, 246, 0.8)',
+                        'rgba(16, 185, 129, 0.8)'
+                    ],
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { display: false } },
+                scales: {
+                    y: { beginAtZero: true },
+                    x: { ticks: { maxRotation: 45, minRotation: 20 } }
+                }
+            }
+        });
+    }
+
+    if (document.getElementById('activityLogsByTypeChart') && typeof Chart !== 'undefined') {
+        new Chart(document.getElementById('activityLogsByTypeChart'), {
+            type: 'bar',
+            data: {
+                labels: activityLogsByTypeLabels,
+                datasets: [{
+                    label: 'Activities',
+                    data: activityLogsByTypeData,
+                    backgroundColor: [
+                        'rgba(99, 102, 241, 0.8)',
+                        'rgba(59, 130, 246, 0.8)',
+                        'rgba(6, 182, 212, 0.8)',
+                        'rgba(34, 197, 94, 0.8)',
+                        'rgba(245, 158, 11, 0.8)',
+                        'rgba(139, 92, 246, 0.8)',
+                        'rgba(249, 115, 22, 0.8)',
+                        'rgba(107, 114, 128, 0.8)'
+                    ],
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { display: false } },
+                scales: {
+                    y: { beginAtZero: true },
+                    x: { ticks: { maxRotation: 45, minRotation: 20 } }
+                }
+            }
+        });
+    }
+
+    if (document.getElementById('ticketsTrendChart') && typeof Chart !== 'undefined') {
+        new Chart(document.getElementById('ticketsTrendChart'), {
+            type: 'line',
+            data: {
+                labels: ticketsTrendLabels,
+                datasets: [
+                    {
+                        label: 'Open',
+                        data: ticketsTrendOpenData,
+                        borderColor: 'rgb(245, 158, 11)',
+                        backgroundColor: 'rgba(245, 158, 11, 0.1)',
+                        fill: true,
+                        tension: 0.3
+                    },
+                    {
+                        label: 'Closed',
+                        data: ticketsTrendClosedData,
+                        borderColor: 'rgb(34, 197, 94)',
+                        backgroundColor: 'rgba(34, 197, 94, 0.1)',
+                        fill: true,
+                        tension: 0.3
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { position: 'top' } },
+                scales: { y: { beginAtZero: true } }
+            }
+        });
+    }
+
+    if (document.getElementById('engagementTrendChart') && typeof Chart !== 'undefined') {
+        new Chart(document.getElementById('engagementTrendChart'), {
+            type: 'line',
+            data: {
+                labels: contactTrendLabels.length ? contactTrendLabels : confessionTrendLabels,
+                datasets: [
+                    {
+                        label: 'Contact Messages',
+                        data: contactTrendData,
+                        borderColor: 'rgb(59, 130, 246)',
+                        backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                        fill: true,
+                        tension: 0.3
+                    },
+                    {
+                        label: 'Say-it Posts',
+                        data: confessionTrendData,
+                        borderColor: 'rgb(139, 92, 246)',
+                        backgroundColor: 'rgba(139, 92, 246, 0.1)',
+                        fill: true,
+                        tension: 0.3
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { position: 'top' } },
+                scales: { y: { beginAtZero: true } }
             }
         });
     }

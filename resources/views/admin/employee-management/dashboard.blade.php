@@ -36,6 +36,16 @@
         </div>
     </div>
 
+    @include('admin.partials.scoped-dashboard-analytics', [
+        'chartProfile' => 'employee',
+        'chartFormAction' => route('admin.employee-dashboard.index'),
+        'chartPeriod' => $chartPeriod ?? 'week',
+        'chartFrom' => $chartFrom ?? now()->subDays(6)->format('Y-m-d'),
+        'chartTo' => $chartTo ?? now()->format('Y-m-d'),
+        'scopedChartPayload' => $scopedChartPayload ?? [],
+        'preserveQuery' => request()->except(['chart_period', 'chart_from', 'chart_to']),
+    ])
+
     <div class="grid grid-cols-1 xl:grid-cols-3 gap-6">
         <div class="xl:col-span-2 bg-white border border-gray-200 rounded-2xl shadow-sm overflow-hidden">
             <div class="px-6 py-4 border-b border-gray-100 bg-gray-50/70">

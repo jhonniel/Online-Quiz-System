@@ -24,6 +24,10 @@ class Kernel extends ConsoleKernel
         $schedule->command('leave-requests:auto-reject-stale-resubmissions')
             ->hourly()
             ->withoutOverlapping();
+
+        $schedule->command('leave-requests:auto-reject-incomplete-attendance-overtime')
+            ->hourly()
+            ->withoutOverlapping();
     }
 
     /**

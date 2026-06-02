@@ -6,6 +6,8 @@ use App\Http\Controllers\Controller;
 use App\Models\Dtr;
 use App\Models\LeaveRequest;
 use App\Models\DtrTimeRequest;
+use App\Services\LeaveRequestIncompleteAttendanceOvertimeService;
+use App\Support\TimeRequestOvertimeLeaveImport;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Carbon\Carbon;
@@ -346,13 +348,82 @@ class DtrController extends Controller
 
         // Get pending and rejected time requests (not approved) for students
         $pendingTimeRequests = collect();
+        $pendingOvertimeLeaveRequests = collect();
+        $incompleteOvertimeReminderItems = [];
+        $existingTimeRequestSlots = [];
         if ($user->role === 'student') {
+            app(LeaveRequestIncompleteAttendanceOvertimeService::class)->processDueAutoRejects();
             $pendingTimeRequests = DtrTimeRequest::where('user_id', $user->id)
                 ->whereIn('status', ['pending', 'rejected'])
+                ->where(function ($q): void {
+                    $q->where('request_type', 'regular')->orWhereNull('request_type');
+                })
                 ->orderBy('date', 'desc')
                 ->orderBy('created_at', 'desc')
                 ->get();
+
+            $pendingRegularSlots = DtrTimeRequest::where('user_id', $user->id)
+                ->where('status', 'pending')
+                ->where(function ($q): void {
+                    $q->where('request_type', 'regular')->orWhereNull('request_type');
+                })
+                ->get(['date']);
+            foreach ($pendingRegularSlots as $slot) {
+                $dateKey = $slot->date?->format('Y-m-d');
+                if (! $dateKey) {
+                    continue;
+                }
+                $existingTimeRequestSlots[$dateKey] ??= [];
+                $existingTimeRequestSlots[$dateKey][] = 'regular';
+            }
+
+            $overtimeLeaveDates = \App\Models\LeaveRequest::query()
+                ->where('user_id', $user->id)
+                ->where('type', 'overtime')
+                ->whereIn('status', ['pending', 'rejected', 'approved'])
+                ->get(['start_date']);
+            foreach ($overtimeLeaveDates as $leave) {
+                $dateKey = $leave->start_date?->format('Y-m-d');
+                if (! $dateKey) {
+                    continue;
+                }
+                $existingTimeRequestSlots[$dateKey] ??= [];
+                $existingTimeRequestSlots[$dateKey][] = 'overtime';
+            }
+
+            foreach ($existingTimeRequestSlots as $dateKey => $types) {
+                $existingTimeRequestSlots[$dateKey] = array_values(array_unique($types));
+            }
+
+            $pendingOvertimeLeaveRequests = \App\Models\LeaveRequest::query()
+                ->where('user_id', $user->id)
+                ->awaitingAttendanceOvertimeCompletion()
+                ->orderByDesc('start_date')
+                ->get();
+
+            $incompleteOvertimeReminderItems = app(LeaveRequestIncompleteAttendanceOvertimeService::class)
+                ->reminderModalPayloadForUser($user);
+
+            $pendingTimeRequestByDate = $pendingTimeRequests
+                ->mapWithKeys(function (DtrTimeRequest $request) {
+                    $dateKey = $request->date?->format('Y-m-d');
+                    if (! $dateKey) {
+                        return [];
+                    }
+                    $totalHours = (float) ($request->requested_total_hours ?? $request->hours);
+
+                    return [
+                        $dateKey => [
+                            'formatted_total' => \App\Support\DtrTimeRequestHours::decimalToTimeString($totalHours),
+                            'total_minutes' => (int) round($totalHours * 60),
+                            'has_overtime_portion' => $totalHours > \App\Support\DtrTimeRequestHours::STANDARD_DAY_HOURS,
+                        ],
+                    ];
+                })
+                ->all();
         }
+
+        $pendingTimeRequestByDate = $pendingTimeRequestByDate ?? [];
 
         return view('user.dtr.index', compact(
             'groupedDtrs',
@@ -369,7 +440,11 @@ class DtrController extends Controller
             'expiringOvertimeTotal',
             'minDaysRemaining',
             'expiringOvertimeEntries',
-            'pendingTimeRequests'
+            'pendingTimeRequests',
+            'pendingOvertimeLeaveRequests',
+            'incompleteOvertimeReminderItems',
+            'existingTimeRequestSlots',
+            'pendingTimeRequestByDate'
         ));
     }
 

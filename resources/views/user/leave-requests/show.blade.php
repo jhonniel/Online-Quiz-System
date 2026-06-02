@@ -29,7 +29,19 @@
 
     <!-- Details -->
     <div class="flex-1 overflow-y-auto p-4">
-        <div class="max-w-3xl mx-auto">
+        <div class="max-w-3xl mx-auto space-y-4">
+            @if($leaveRequest->needsAttendanceOvertimeCompletion())
+                @php $attendanceHoursLabel = auth()->user()->role === 'student' ? 'Additional Time' : 'overtime'; @endphp
+                <div class="rounded-lg border border-orange-300 bg-orange-50 px-4 py-4 text-sm text-orange-950">
+                    <p class="font-semibold">Action required: complete your {{ $attendanceHoursLabel }} request</p>
+                    <p class="mt-1">Record Attendance only saved your hours. Submit your reason to complete this request (ClickUp links and supporting documents are optional).</p>
+                    <a href="{{ route('user.leave-requests.complete-attendance-overtime', $leaveRequest) }}"
+                       class="mt-3 inline-flex items-center px-4 py-2 bg-orange-600 text-white text-sm font-medium rounded-lg hover:bg-orange-700">
+                        Complete {{ strtolower($attendanceHoursLabel) }} details
+                    </a>
+                </div>
+            @endif
+
             <div class="bg-white rounded-lg shadow border border-gray-200 p-6 space-y-6">
                 <!-- Status Badge -->
                 <div class="flex items-center justify-between">
@@ -111,33 +123,6 @@
                         @endif
                     @endif
                 </div>
-
-                @if($leaveRequest->type === 'additional_time')
-                    @php
-                        $raw = $leaveRequest->reason ?? '';
-                        $additionalInputMode = 'Fixed Date (1 day = 8 hours)';
-                        $additionalHours = '-';
-
-                        if (preg_match('/Additional Time Input Mode:\s*(.+)/', $raw, $m)) {
-                            $additionalInputMode = trim($m[1]);
-                        }
-                        if (preg_match('/Additional Time Hours:\s*(.+)/', $raw, $m)) {
-                            $additionalHours = trim($m[1]);
-                        }
-                    @endphp
-
-                    <div class="mt-1 grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div>
-                            <label class="block text-sm font-medium text-gray-500 mb-1">Additional Time Input Mode</label>
-                            <p class="text-sm font-semibold text-gray-900">{{ $additionalInputMode }}</p>
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium text-gray-500 mb-1">Additional Time Hours</label>
-                            <p class="text-sm font-semibold text-gray-900">{{ $additionalHours }}</p>
-                        </div>
-                    </div>
-                @endif
-
 
                 <!-- Vacation / Sick Leave / Offset Letter-style View (matches provided template) -->
                 @if(in_array($leaveRequest->type, ['leave', 'vacation_leave', 'sick_leave', 'offset']))
@@ -389,20 +374,23 @@
                             </div>
                         </div>
                     </div>
-                @elseif($leaveRequest->type === 'overtime')
+                @elseif(in_array($leaveRequest->type, ['overtime', 'additional_time'], true))
                     @php
                         $effectiveDate = $leaveRequest->created_at->format('F d, Y');
                         $user = auth()->user();
                         $raw = $leaveRequest->reason ?? '';
+                        $hoursLabel = auth()->user()->role === 'student' ? 'Additional Time' : ($leaveRequest->type === 'additional_time' ? 'Additional Time' : 'Overtime');
                         $otHours = '';
                         $otDates = '';
                         $otReason = '';
                         $otTasks = '';
 
-                        if (preg_match('/Total Overtime Hours:\s*(.+)/', $raw, $m)) {
+                        if (preg_match('/Total (?:Overtime|Additional Time) Hours:\s*(.+)/i', $raw, $m)) {
+                            $otHours = trim($m[1]);
+                        } elseif (preg_match('/Additional Time Hours:\s*([0-9]{1,3}:[0-9]{2})/i', $raw, $m)) {
                             $otHours = trim($m[1]);
                         }
-                        if (preg_match('/Overtime Dates:\s*(.+)/', $raw, $m)) {
+                        if (preg_match('/(?:Overtime|Additional Time) Dates:\s*(.+)/i', $raw, $m)) {
                             $otDates = trim($m[1]);
                         }
                         if (preg_match('/Tasks \/ ClickUp Links:\s*(.+?)(?:\n+Additional Explanation:|\z)/s', $raw, $m)) {
@@ -427,25 +415,28 @@
                         <!-- Body -->
                         <div class="space-y-3 text-sm text-gray-800">
                             <p>
-                                Please accept this letter to formally request for an approval for additional
+                                I respectfully request your approval for an additional
                                 <span class="font-semibold underline decoration-gray-400 decoration-1">
-                                    {{ $otHours ?: '[Number of hours]' }}
+                                    {{ $otHours ?: '[hours, HH:MM]' }}
                                 </span>
-                                working hours and in days
+                                of additional time worked on
                                 <span class="font-semibold underline decoration-gray-400 decoration-1">
-                                    {{ $otDates ?: '[state the dates]' }}
-                                </span>
-                                @if(!empty($otReason))
+                                    {{ $otDates ?: '[date(s)]' }}
+                                </span>@if(!empty($otReason)),
                                 due to
                                 <span class="font-semibold underline decoration-gray-400 decoration-1">
                                     {{ $otReason }}
-                                </span>
-                                @endif
-                                Examples: urgent project deadline, increased workload due to staffing shortage, critical system maintenance, etc.
+                                </span>@else.@endif
                             </p>
 
+                            @if(empty($otReason))
+                            <p class="text-xs text-gray-600">
+                                Examples of valid reasons: urgent project deadline, increased workload, critical system maintenance.
+                            </p>
+                            @endif
+
                             <p class="font-semibold">
-                                [Strictly List down Task Listed in ClickUp for Devs via link]
+                                Tasks completed (ClickUp links)
                             </p>
                             @php
                                 // Make any URLs inside the task list clickable while preserving line breaks
@@ -503,7 +494,7 @@
                 @endif
 
                 <!-- Reason (shown only for simple types, not letter-style layouts like WFH/OT/Vacation/Sick) -->
-                @if($leaveRequest->reason && !in_array($leaveRequest->type, ['leave', 'vacation_leave', 'sick_leave', 'work_from_home', 'overtime']))
+                @if($leaveRequest->reason && !in_array($leaveRequest->type, ['leave', 'vacation_leave', 'sick_leave', 'work_from_home', 'overtime', 'additional_time']))
                     <div>
                         <label class="block text-sm font-medium text-gray-500 mb-1">Reason</label>
                         <p class="text-sm text-gray-900 bg-gray-50 p-4 rounded-lg border border-gray-200">

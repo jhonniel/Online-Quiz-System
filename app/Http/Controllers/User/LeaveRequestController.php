@@ -11,11 +11,13 @@ use App\Models\LeaveRequestLog;
 use App\Models\User;
 use App\Rules\ClickUpTasksUrlsOnly;
 use App\Services\MailConfigService;
+use App\Support\TimeRequestOvertimeLeaveImport;
 use App\Support\WorkFromHomeQuota;
 use Carbon\Carbon;
 use Carbon\CarbonPeriod;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Validation\Rule;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 
@@ -257,7 +259,7 @@ class LeaveRequestController extends Controller
 
         // Define allowed types based on role (only employees can file travel)
         $allowedTypes = $user->role === 'student'
-            ? ['additional_time', 'absent', 'other']
+            ? ['additional_time', 'absent', 'overtime', 'other']
             : ['vacation_leave', 'sick_leave', 'work_from_home', 'absent', 'overtime', 'offset'];
         if ($user->role === 'employee') {
             $allowedTypes[] = 'travel';
@@ -270,7 +272,7 @@ class LeaveRequestController extends Controller
         if ($typeInput === 'travel') {
             $startDateRules[] = 'before_or_equal:today';
             $endDateRules[] = 'before_or_equal:today';
-        } elseif ($typeInput === 'overtime') {
+        } elseif ($this->usesStructuredHoursRequestFormat((string) $typeInput, $user)) {
             $startDateRules[] = 'after_or_equal:'.now()->subDays(7)->toDateString();
             $startDateRules[] = 'before_or_equal:today';
             $endDateRules = ['required', 'date', 'after_or_equal:start_date', 'before_or_equal:today'];
@@ -278,35 +280,43 @@ class LeaveRequestController extends Controller
             $startDateRules[] = 'after_or_equal:today';
         }
 
+        $overtimeSpecificDateItemRules = $this->usesStructuredHoursRequestFormat((string) $typeInput, $user)
+            ? $this->overtimeSpecificDateItemRules()
+            : ['date'];
+
+        $hoursLabel = $this->structuredHoursRequestLabel((string) $typeInput, $user);
+
         $validated = $request->validate([
             'type' => ['required', 'in:'.implode(',', $allowedTypes)],
             'start_date' => $startDateRules,
             'end_date' => $endDateRules,
-            'additional_time_mode' => 'nullable|in:fixed_date,total_hours',
-            'additional_time_total_hours' => ['nullable', 'regex:/^\d{1,3}:\d{2}$/'],
-            // Reason is REQUIRED for overtime (used as the clear explanation of extra hours)
             'reason' => 'required_if:type,travel|nullable|string|max:1000',
             'supporting_documents' => ['nullable', 'array', 'max:5'],
             'supporting_documents.*' => ['file', 'mimes:pdf,jpg,jpeg,png', 'max:5120'],
-            'overtime_hours' => 'required_if:type,overtime|nullable|regex:/^\\d{2}:\\d{2}$/',
-            'overtime_specific_dates' => ['required_if:type,overtime', 'array', 'min:1'],
-            'overtime_specific_dates.*' => ['date'],
-            'overtime_tasks' => ['required_if:type,overtime', 'nullable', 'string', 'max:2000', new ClickUpTasksUrlsOnly],
+            'overtime_hours' => [
+                Rule::requiredIf(fn () => $this->usesStructuredHoursRequestFormat((string) $request->input('type'), $user)),
+                'nullable',
+                'regex:/^\\d{2}:\\d{2}$/',
+            ],
+            'overtime_specific_dates' => [
+                Rule::requiredIf(fn () => $this->usesStructuredHoursRequestFormat((string) $request->input('type'), $user)),
+                'array',
+                'min:1',
+            ],
+            'overtime_specific_dates.*' => $overtimeSpecificDateItemRules,
+            'overtime_tasks' => [
+                Rule::requiredIf(fn () => $this->usesStructuredHoursRequestFormat((string) $request->input('type'), $user)),
+                'nullable',
+                'string',
+                'max:2000',
+                new ClickUpTasksUrlsOnly,
+            ],
             'wfh_mode' => 'required_if:type,work_from_home|nullable|in:working_remotely,request_to_be_excused',
             'wfh_address' => 'required_if:type,work_from_home|nullable|string|max:255',
             'wfh_tasks' => ['required_if:type,work_from_home', 'nullable', 'string', 'max:2000', new ClickUpTasksUrlsOnly],
             'offset_hours' => 'nullable|regex:/^\\d{2}:\\d{2}$/',
             'travel_hours' => ['nullable', 'numeric', 'min:0', 'max:24'],
-        ], [
-            'overtime_hours.required_if' => 'Overtime hours is required for Overtime requests.',
-            'overtime_hours.regex' => 'Overtime hours must be in HH:MM format (example: 02:30).',
-            'overtime_specific_dates.required_if' => 'Please select at least one overtime date.',
-            'overtime_specific_dates.array' => 'Invalid overtime date selection.',
-            'overtime_specific_dates.min' => 'Please select at least one overtime date.',
-            'overtime_specific_dates.*.date' => 'One or more overtime dates are invalid.',
-            'overtime_tasks.required_if' => 'Please provide your overtime task details/links.',
-            'overtime_tasks.max' => 'Overtime task details must not exceed 2000 characters.',
-        ]);
+        ], $this->structuredHoursValidationMessages($hoursLabel));
 
         // Only employees can file travel; reject if someone bypasses the form
         if ($validated['type'] === 'travel' && $user->role !== 'employee') {
@@ -315,7 +325,7 @@ class LeaveRequestController extends Controller
                 ->withInput();
         }
 
-        if ($validated['type'] === 'overtime') {
+        if ($this->usesStructuredHoursRequestFormat($validated['type'], $user)) {
             $overtimeInputValidationError = $this->validateOvertimeInputData($validated);
             if ($overtimeInputValidationError !== null) {
                 return redirect()->back()->withErrors($overtimeInputValidationError)->withInput();
@@ -378,43 +388,15 @@ class LeaveRequestController extends Controller
             }
         }
 
-        // Student Additional Time: allow either explicit total hours OR fixed date(s) at 8h/day.
-        if ($validated['type'] === 'additional_time' && $user->role === 'student') {
-            $additionalMode = $validated['additional_time_mode'] ?? 'fixed_date';
-            if (! in_array($additionalMode, ['fixed_date', 'total_hours'], true)) {
-                return redirect()->back()
-                    ->withErrors(['additional_time_mode' => 'Please choose how to submit Additional Time.'])
-                    ->withInput();
-            }
-
-            if ($additionalMode === 'total_hours') {
-                $totalHoursText = (string) ($validated['additional_time_total_hours'] ?? '');
-                if ($this->parseHourMinuteToMinutes($totalHoursText) <= 0) {
-                    return redirect()->back()
-                        ->withErrors(['additional_time_total_hours' => 'Please enter valid total hours in HH:MM format (e.g., 08:30).'])
-                        ->withInput();
-                }
-
-                // For total-hours mode, keep the request on one reference date.
-                $validated['end_date'] = $validated['start_date'];
-            }
-        }
-
         // Build reason – include structured details when type is overtime or WFH
         $reasonToStore = $validated['reason'] ?? '';
 
-        if ($validated['type'] === 'overtime') {
-            $details = "Overtime Request Details:\n";
-            $details .= 'Total Overtime Hours: '.($validated['overtime_hours'] ?? '')."\n";
-            $details .= 'Overtime Date Range: '.($validated['start_date'] ?? '').' to '.($validated['end_date'] ?? $validated['start_date'] ?? '')."\n";
-            $details .= 'Overtime Dates: '.$this->normalizedSpecificOvertimeDates($validated['overtime_specific_dates'] ?? [])."\n";
-            $details .= "Tasks / ClickUp Links:\n".($validated['overtime_tasks'] ?? '')."\n";
-
-            if (! empty($reasonToStore)) {
-                $details .= "\nAdditional Explanation:\n".$reasonToStore;
-            }
-
-            $reasonToStore = $details;
+        if ($this->usesStructuredHoursRequestFormat($validated['type'], $user)) {
+            $reasonToStore = $this->buildStructuredHoursRequestReason(
+                $this->structuredHoursRequestLabel($validated['type'], $user),
+                $validated,
+                $reasonToStore
+            );
         } elseif ($validated['type'] === 'work_from_home') {
             $modeLabel = $validated['wfh_mode'] === 'request_to_be_excused'
                 ? 'Request to be excused'
@@ -459,23 +441,6 @@ class LeaveRequestController extends Controller
             $reasonToStore = $details;
         } elseif ($validated['type'] === 'travel') {
             $reasonToStore = 'Location of travel: '.trim($validated['reason'] ?? '');
-        } elseif ($validated['type'] === 'additional_time' && $user->role === 'student') {
-            $additionalMode = $validated['additional_time_mode'] ?? 'fixed_date';
-            if ($additionalMode === 'total_hours') {
-                $totalHoursText = trim((string) ($validated['additional_time_total_hours'] ?? ''));
-                $details = "Additional Time Input Mode: Total Hours\n";
-                $details .= "Additional Time Hours: {$totalHoursText}\n";
-                if (! empty($reasonToStore)) {
-                    $details .= "\nReason:\n".$reasonToStore;
-                }
-                $reasonToStore = $details;
-            } else {
-                $details = "Additional Time Input Mode: Fixed Date (1 day = 8 hours)\n";
-                if (! empty($reasonToStore)) {
-                    $details .= "\nReason:\n".$reasonToStore;
-                }
-                $reasonToStore = $details;
-            }
         }
 
         // Balance check: Vacation Leave, Sick Leave, Offset only (employees)
@@ -757,26 +722,20 @@ class LeaveRequestController extends Controller
 
         $raw = $leaveRequest->reason ?? '';
 
-        if ($leaveRequest->type === 'overtime') {
-            if (preg_match('/Total Overtime Hours:\s*(.+)/', $raw, $m)) {
-                $editData['overtime_hours'] = trim($m[1]);
+        if (in_array($leaveRequest->type, ['overtime', 'additional_time'], true)) {
+            $parsed = $this->parseStructuredHoursRequestReason($raw);
+            $editData['overtime_hours'] = $parsed['overtime_hours'];
+            $editData['overtime_specific_dates'] = $parsed['overtime_specific_dates'];
+            $editData['overtime_tasks'] = $parsed['overtime_tasks'];
+            $editData['reason'] = $parsed['reason'];
+            if ($parsed['start_date']) {
+                $editData['start_date'] = $parsed['start_date'];
             }
-            if (preg_match('/Overtime Date Range:\s*(\d{4}-\d{2}-\d{2})\s+to\s+(\d{4}-\d{2}-\d{2})/i', $raw, $m)) {
-                $editData['start_date'] = trim($m[1]);
-                $editData['end_date'] = trim($m[2]);
+            if ($parsed['end_date']) {
+                $editData['end_date'] = $parsed['end_date'];
             }
-            if (preg_match('/Overtime Dates:\s*(.+)/', $raw, $m)) {
-                $editData['overtime_specific_dates'] = collect(explode(',', trim($m[1])))
-                    ->map(fn ($value) => trim($value))
-                    ->filter(fn ($value) => preg_match('/^\d{4}-\d{2}-\d{2}$/', $value) === 1)
-                    ->values()
-                    ->all();
-            }
-            if (preg_match('/Tasks \/ ClickUp Links:\s*(.+?)(?:\n+Additional Explanation:|\z)/s', $raw, $m)) {
-                $editData['overtime_tasks'] = trim($m[1]);
-            }
-            if (preg_match('/Additional Explanation:\s*(.+)\z/s', $raw, $m)) {
-                $editData['reason'] = trim($m[1]);
+            if ($user->role === 'student' && $leaveRequest->type === 'overtime') {
+                $editData['type'] = 'additional_time';
             }
         } elseif ($leaveRequest->type === 'work_from_home') {
             if (preg_match('/Mode:\s*(.+)/', $raw, $m)) {
@@ -799,20 +758,6 @@ class LeaveRequestController extends Controller
             if (preg_match('/Reason:\s*(.+)\z/s', $raw, $m)) {
                 $editData['reason'] = trim($m[1]);
             }
-        } elseif ($leaveRequest->type === 'additional_time') {
-            if (preg_match('/Additional Time Input Mode:\s*Total Hours/i', $raw)) {
-                $editData['additional_time_mode'] = 'total_hours';
-            } else {
-                $editData['additional_time_mode'] = 'fixed_date';
-            }
-
-            if (preg_match('/Additional Time Hours:\s*([0-9]{1,3}:[0-9]{2})/i', $raw, $m)) {
-                $editData['additional_time_total_hours'] = trim($m[1]);
-            }
-
-            if (preg_match('/Reason:\s*(.+)\z/s', $raw, $m)) {
-                $editData['reason'] = trim($m[1]);
-            }
         } else {
             // For other types, use the reason as-is
             $editData['reason'] = $raw;
@@ -821,6 +766,169 @@ class LeaveRequestController extends Controller
         $leaveRequestActivityLogs = $this->leaveRequestActivityLogsForRequester($leaveRequest);
 
         return view('user.leave-requests.edit', compact('leaveRequest', 'editData', 'leaveRequestActivityLogs'));
+    }
+
+    /**
+     * Complete overtime details for a leave request created from Record Attendance.
+     */
+    public function completeAttendanceOvertime(LeaveRequest $leaveRequest)
+    {
+        $user = Auth::user();
+        if (! in_array($user->role, ['student'], true)) {
+            abort(403, 'Only students can complete attendance overtime requests.');
+        }
+
+        if ($leaveRequest->user_id !== Auth::id()) {
+            abort(403, 'You can only complete your own leave requests.');
+        }
+
+        if (! $leaveRequest->needsAttendanceOvertimeCompletion()) {
+            return redirect()->route('user.leave-requests.show', $leaveRequest)
+                ->with('success', 'This overtime request is already complete.');
+        }
+
+        $formData = $this->attendanceOvertimeFormDataFromLeaveRequest($leaveRequest);
+
+        return view('user.leave-requests.complete-attendance-overtime', [
+            'leaveRequest' => $leaveRequest,
+            'formData' => $formData,
+        ]);
+    }
+
+    /**
+     * Store completed overtime details from Record Attendance.
+     */
+    public function storeAttendanceOvertimeCompletion(Request $request, LeaveRequest $leaveRequest)
+    {
+        $user = Auth::user();
+        if (! in_array($user->role, ['student'], true)) {
+            abort(403, 'Only students can complete attendance overtime requests.');
+        }
+
+        if ($leaveRequest->user_id !== Auth::id()) {
+            abort(403, 'You can only complete your own leave requests.');
+        }
+
+        if (! $leaveRequest->needsAttendanceOvertimeCompletion()) {
+            return redirect()->route('user.leave-requests.show', $leaveRequest)
+                ->with('success', 'This overtime request is already complete.');
+        }
+
+        $lockedForm = $this->attendanceOvertimeFormDataFromLeaveRequest($leaveRequest);
+        $lockedHours = $lockedForm['overtime_hours'];
+        $lockedStart = $lockedForm['start_date'];
+        $lockedEnd = $lockedForm['end_date'];
+
+        $validated = $request->validate([
+            'reason' => 'required|string|max:1000',
+            'overtime_hours' => ['required', 'regex:/^\d{2}:\d{2}$/'],
+            'overtime_specific_dates' => ['required', 'array', 'min:1'],
+            'overtime_specific_dates.*' => [
+                'date',
+                'after_or_equal:'.$lockedStart,
+                'before_or_equal:'.$lockedEnd,
+            ],
+            'overtime_tasks' => ['nullable', 'string', 'max:2000', new ClickUpTasksUrlsOnly],
+            'supporting_documents' => ['nullable', 'array', 'max:5'],
+            'supporting_documents.*' => ['file', 'mimes:pdf,jpg,jpeg,png', 'max:5120'],
+        ], [
+            'reason.required' => 'Please provide a reason for this overtime.',
+            'overtime_specific_dates.required' => 'Please select at least one overtime date.',
+            'overtime_specific_dates.*.after_or_equal' => 'Selected dates must match the date(s) filed in Record Attendance.',
+            'overtime_specific_dates.*.before_or_equal' => 'Selected dates must match the date(s) filed in Record Attendance.',
+        ]);
+
+        if (trim($validated['overtime_hours']) !== $lockedHours) {
+            return redirect()->back()
+                ->withErrors(['overtime_hours' => 'Overtime hours must match the amount filed in Record Attendance ('.$lockedHours.').'])
+                ->withInput();
+        }
+
+        if ($this->parseHourMinuteToMinutes(trim($validated['overtime_hours'])) <= 0) {
+            return redirect()->back()
+                ->withErrors(['overtime_hours' => 'Please enter a valid overtime duration in HH:MM.'])
+                ->withInput();
+        }
+
+        $overtimeDateValidationError = $this->validateAttendanceOvertimeDateCompletion(
+            $lockedStart,
+            $lockedEnd,
+            $validated['overtime_specific_dates'] ?? []
+        );
+        if ($overtimeDateValidationError !== null) {
+            return redirect()->back()->withErrors($overtimeDateValidationError)->withInput();
+        }
+
+        [$storedPaths, $primaryPath] = $this->storeSupportingDocumentsFromRequest($request);
+
+        $dayTotalHours = TimeRequestOvertimeLeaveImport::parseDayTotalHoursFromReason($leaveRequest->reason);
+
+        $reasonToStore = TimeRequestOvertimeLeaveImport::buildCompletedAttendanceOvertimeReason(
+            $lockedStart,
+            trim($validated['overtime_hours']),
+            $dayTotalHours,
+            $validated['overtime_specific_dates'] ?? [],
+            trim((string) ($validated['overtime_tasks'] ?? '')),
+            (string) $validated['reason']
+        );
+
+        $updatePayload = [
+            'start_date' => $lockedStart,
+            'end_date' => $lockedEnd,
+            'reason' => $reasonToStore,
+            'attendance_overtime_completed_at' => now(),
+        ];
+
+        if ($storedPaths !== []) {
+            $updatePayload['supporting_document_paths'] = $storedPaths;
+            $updatePayload['supporting_document_path'] = $primaryPath;
+        }
+
+        $leaveRequest->update($updatePayload);
+
+        return redirect()->route('user.leave-requests.show', $leaveRequest)
+            ->with('success', 'Overtime details submitted. Your request is now pending admin approval.');
+    }
+
+    /**
+     * @return array{overtime_hours: string, start_date: string, end_date: string, overtime_specific_dates: array<int, string>, overtime_tasks: string, reason: string, day_total_hours: string|null}
+     */
+    private function attendanceOvertimeFormDataFromLeaveRequest(LeaveRequest $leaveRequest): array
+    {
+        $raw = $leaveRequest->reason ?? '';
+        $data = [
+            'overtime_hours' => '',
+            'start_date' => $leaveRequest->start_date->format('Y-m-d'),
+            'end_date' => ($leaveRequest->end_date ?? $leaveRequest->start_date)->format('Y-m-d'),
+            'overtime_specific_dates' => [$leaveRequest->start_date->format('Y-m-d')],
+            'overtime_tasks' => '',
+            'reason' => '',
+            'day_total_hours' => null,
+        ];
+
+        if (preg_match('/Total Overtime Hours:\s*([0-9]{2}:[0-9]{2})/', $raw, $m)) {
+            $data['overtime_hours'] = trim($m[1]);
+        }
+        if (preg_match('/Overtime Dates:\s*(.+)/', $raw, $m)) {
+            $data['overtime_specific_dates'] = collect(explode(',', trim($m[1])))
+                ->map(fn ($value) => trim($value))
+                ->filter(fn ($value) => preg_match('/^\d{4}-\d{2}-\d{2}$/', $value) === 1)
+                ->values()
+                ->all();
+        }
+        if (preg_match('/Day total filed in attendance:\s*([0-9]{2}:[0-9]{2})/', $raw, $m)) {
+            $data['day_total_hours'] = trim($m[1]);
+        }
+
+        if ($data['start_date'] !== $data['end_date']) {
+            $period = new \Carbon\CarbonPeriod($data['start_date'], $data['end_date']);
+            $data['overtime_specific_dates'] = collect($period)
+                ->map(fn (\Carbon\Carbon $day) => $day->format('Y-m-d'))
+                ->values()
+                ->all();
+        }
+
+        return $data;
     }
 
     /**
@@ -847,7 +955,7 @@ class LeaveRequestController extends Controller
 
         // Define allowed types based on role (only employees can file travel)
         $allowedTypes = $user->role === 'student'
-            ? ['additional_time', 'absent', 'other']
+            ? ['additional_time', 'absent', 'overtime', 'other']
             : ['vacation_leave', 'sick_leave', 'work_from_home', 'absent', 'overtime', 'offset'];
         if ($user->role === 'employee') {
             $allowedTypes[] = 'travel';
@@ -860,7 +968,7 @@ class LeaveRequestController extends Controller
         if ($typeInput === 'travel') {
             $startDateRules[] = 'before_or_equal:today';
             $endDateRules[] = 'before_or_equal:today';
-        } elseif ($typeInput === 'overtime') {
+        } elseif ($this->usesStructuredHoursRequestFormat((string) $typeInput, $user)) {
             $startDateRules[] = 'after_or_equal:'.now()->subDays(7)->toDateString();
             $startDateRules[] = 'before_or_equal:today';
             $endDateRules = ['required', 'date', 'after_or_equal:start_date', 'before_or_equal:today'];
@@ -868,34 +976,43 @@ class LeaveRequestController extends Controller
             $startDateRules[] = 'after_or_equal:today';
         }
 
+        $overtimeSpecificDateItemRules = $this->usesStructuredHoursRequestFormat((string) $typeInput, $user)
+            ? $this->overtimeSpecificDateItemRules()
+            : ['date'];
+
+        $hoursLabel = $this->structuredHoursRequestLabel((string) $typeInput, $user);
+
         $validated = $request->validate([
             'type' => ['required', 'in:'.implode(',', $allowedTypes)],
             'start_date' => $startDateRules,
             'end_date' => $endDateRules,
-            'additional_time_mode' => 'nullable|in:fixed_date,total_hours',
-            'additional_time_total_hours' => ['nullable', 'regex:/^\d{1,3}:\d{2}$/'],
             'reason' => 'required_if:type,travel|nullable|string|max:1000',
             'supporting_documents' => ['nullable', 'array', 'max:5'],
             'supporting_documents.*' => ['file', 'mimes:pdf,jpg,jpeg,png', 'max:5120'],
-            'overtime_hours' => 'required_if:type,overtime|nullable|regex:/^\\d{2}:\\d{2}$/',
-            'overtime_specific_dates' => ['required_if:type,overtime', 'array', 'min:1'],
-            'overtime_specific_dates.*' => ['date'],
-            'overtime_tasks' => ['required_if:type,overtime', 'nullable', 'string', 'max:2000', new ClickUpTasksUrlsOnly],
+            'overtime_hours' => [
+                Rule::requiredIf(fn () => $this->usesStructuredHoursRequestFormat((string) $request->input('type'), $user)),
+                'nullable',
+                'regex:/^\\d{2}:\\d{2}$/',
+            ],
+            'overtime_specific_dates' => [
+                Rule::requiredIf(fn () => $this->usesStructuredHoursRequestFormat((string) $request->input('type'), $user)),
+                'array',
+                'min:1',
+            ],
+            'overtime_specific_dates.*' => $overtimeSpecificDateItemRules,
+            'overtime_tasks' => [
+                Rule::requiredIf(fn () => $this->usesStructuredHoursRequestFormat((string) $request->input('type'), $user)),
+                'nullable',
+                'string',
+                'max:2000',
+                new ClickUpTasksUrlsOnly,
+            ],
             'wfh_mode' => 'required_if:type,work_from_home|nullable|in:working_remotely,request_to_be_excused',
             'wfh_address' => 'required_if:type,work_from_home|nullable|string|max:255',
             'wfh_tasks' => ['required_if:type,work_from_home', 'nullable', 'string', 'max:2000', new ClickUpTasksUrlsOnly],
             'offset_hours' => 'nullable|regex:/^\\d{2}:\\d{2}$/',
             'travel_hours' => ['nullable', 'numeric', 'min:0', 'max:24'],
-        ], [
-            'overtime_hours.required_if' => 'Overtime hours is required for Overtime requests.',
-            'overtime_hours.regex' => 'Overtime hours must be in HH:MM format (example: 02:30).',
-            'overtime_specific_dates.required_if' => 'Please select at least one overtime date.',
-            'overtime_specific_dates.array' => 'Invalid overtime date selection.',
-            'overtime_specific_dates.min' => 'Please select at least one overtime date.',
-            'overtime_specific_dates.*.date' => 'One or more overtime dates are invalid.',
-            'overtime_tasks.required_if' => 'Please provide your overtime task details/links.',
-            'overtime_tasks.max' => 'Overtime task details must not exceed 2000 characters.',
-        ]);
+        ], $this->structuredHoursValidationMessages($hoursLabel));
 
         if ($validated['type'] === 'travel' && $user->role !== 'employee') {
             return redirect()->back()
@@ -903,7 +1020,7 @@ class LeaveRequestController extends Controller
                 ->withInput();
         }
 
-        if ($validated['type'] === 'overtime') {
+        if ($this->usesStructuredHoursRequestFormat($validated['type'], $user)) {
             $overtimeInputValidationError = $this->validateOvertimeInputData($validated);
             if ($overtimeInputValidationError !== null) {
                 return redirect()->back()->withErrors($overtimeInputValidationError)->withInput();
@@ -967,40 +1084,15 @@ class LeaveRequestController extends Controller
             }
         }
 
-        if ($validated['type'] === 'additional_time' && $user->role === 'student') {
-            $additionalMode = $validated['additional_time_mode'] ?? 'fixed_date';
-            if (! in_array($additionalMode, ['fixed_date', 'total_hours'], true)) {
-                return redirect()->back()
-                    ->withErrors(['additional_time_mode' => 'Please choose how to submit Additional Time.'])
-                    ->withInput();
-            }
-
-            if ($additionalMode === 'total_hours') {
-                $totalHoursText = (string) ($validated['additional_time_total_hours'] ?? '');
-                if ($this->parseHourMinuteToMinutes($totalHoursText) <= 0) {
-                    return redirect()->back()
-                        ->withErrors(['additional_time_total_hours' => 'Please enter valid total hours in HH:MM format (e.g., 08:30).'])
-                        ->withInput();
-                }
-                $validated['end_date'] = $validated['start_date'];
-            }
-        }
-
         // Build reason – include structured details when type is overtime or WFH
         $reasonToStore = $validated['reason'] ?? '';
 
-        if ($validated['type'] === 'overtime') {
-            $details = "Overtime Request Details:\n";
-            $details .= 'Total Overtime Hours: '.($validated['overtime_hours'] ?? '')."\n";
-            $details .= 'Overtime Date Range: '.($validated['start_date'] ?? '').' to '.($validated['end_date'] ?? $validated['start_date'] ?? '')."\n";
-            $details .= 'Overtime Dates: '.$this->normalizedSpecificOvertimeDates($validated['overtime_specific_dates'] ?? [])."\n";
-            $details .= "Tasks / ClickUp Links:\n".($validated['overtime_tasks'] ?? '')."\n";
-
-            if (! empty($reasonToStore)) {
-                $details .= "\nAdditional Explanation:\n".$reasonToStore;
-            }
-
-            $reasonToStore = $details;
+        if ($this->usesStructuredHoursRequestFormat($validated['type'], $user)) {
+            $reasonToStore = $this->buildStructuredHoursRequestReason(
+                $this->structuredHoursRequestLabel($validated['type'], $user),
+                $validated,
+                $reasonToStore
+            );
         } elseif ($validated['type'] === 'work_from_home') {
             $modeLabel = $validated['wfh_mode'] === 'request_to_be_excused'
                 ? 'Request to be excused'
@@ -1045,23 +1137,12 @@ class LeaveRequestController extends Controller
             $reasonToStore = $details;
         } elseif ($validated['type'] === 'travel') {
             $reasonToStore = 'Location of travel: '.trim($validated['reason'] ?? '');
-        } elseif ($validated['type'] === 'additional_time' && $user->role === 'student') {
-            $additionalMode = $validated['additional_time_mode'] ?? 'fixed_date';
-            if ($additionalMode === 'total_hours') {
-                $totalHoursText = trim((string) ($validated['additional_time_total_hours'] ?? ''));
-                $details = "Additional Time Input Mode: Total Hours\n";
-                $details .= "Additional Time Hours: {$totalHoursText}\n";
-                if (! empty($reasonToStore)) {
-                    $details .= "\nReason:\n".$reasonToStore;
-                }
-                $reasonToStore = $details;
-            } else {
-                $details = "Additional Time Input Mode: Fixed Date (1 day = 8 hours)\n";
-                if (! empty($reasonToStore)) {
-                    $details .= "\nReason:\n".$reasonToStore;
-                }
-                $reasonToStore = $details;
-            }
+        }
+
+        if ($user->role === 'student'
+            && $leaveRequest->type === 'overtime'
+            && $validated['type'] === 'additional_time') {
+            $validated['type'] = 'overtime';
         }
 
         // Balance check for employee resubmissions:
@@ -1497,13 +1578,6 @@ class LeaveRequestController extends Controller
             }
         }
 
-        if ($type === 'additional_time' && (($validated['additional_time_mode'] ?? null) === 'total_hours')) {
-            $totalHoursText = trim((string) ($validated['additional_time_total_hours'] ?? ''));
-            if ($this->parseHourMinuteToMinutes($totalHoursText) <= 0) {
-                return ['additional_time_total_hours' => 'Please enter valid total hours in HH:MM format (example: 08:30).'];
-            }
-        }
-
         return null;
     }
 
@@ -1512,7 +1586,9 @@ class LeaveRequestController extends Controller
      */
     private function supportingDocumentsRequiredForOvertimeError(Request $request, ?LeaveRequest $existing = null): ?array
     {
-        if ($request->input('type') !== 'overtime') {
+        $user = Auth::user();
+        $type = (string) $request->input('type');
+        if (! $user || ! $this->usesStructuredHoursRequestFormat($type, $user)) {
             return null;
         }
 
@@ -1525,7 +1601,9 @@ class LeaveRequestController extends Controller
         );
 
         if (! $hasNewUploads && ! $hasExisting) {
-            return ['supporting_documents' => 'Supporting document is required for Overtime requests.'];
+            $label = $this->structuredHoursRequestLabel($type, $user);
+
+            return ['supporting_documents' => "Supporting document is required for {$label} requests."];
         }
 
         return null;
@@ -1594,6 +1672,56 @@ class LeaveRequestController extends Controller
     }
 
     /**
+     * @return array<int, string>
+     */
+    private function overtimeSpecificDateItemRules(): array
+    {
+        $earliest = now()->subDays(7)->toDateString();
+
+        return ['date', 'after_or_equal:'.$earliest, 'before_or_equal:today'];
+    }
+
+    /**
+     * Dates for overtime completed from Record Attendance (no 7-day / today window).
+     *
+     * @param  array<int, mixed>  $specificDates
+     * @return array<string, string>|null
+     */
+    private function validateAttendanceOvertimeDateCompletion(string $lockedStart, string $lockedEnd, array $specificDates): ?array
+    {
+        try {
+            $start = \Carbon\Carbon::parse($lockedStart)->startOfDay();
+            $end = \Carbon\Carbon::parse($lockedEnd)->startOfDay();
+        } catch (\Throwable) {
+            return ['overtime_specific_dates' => 'Invalid overtime date from Record Attendance.'];
+        }
+
+        $normalized = collect($specificDates)
+            ->map(fn ($date) => trim((string) $date))
+            ->filter()
+            ->unique()
+            ->values();
+
+        if ($normalized->isEmpty()) {
+            return ['overtime_specific_dates' => 'Select at least one overtime date from Record Attendance.'];
+        }
+
+        foreach ($normalized as $date) {
+            try {
+                $picked = \Carbon\Carbon::parse($date)->startOfDay();
+            } catch (\Throwable) {
+                return ['overtime_specific_dates' => 'One or more selected overtime dates are invalid.'];
+            }
+
+            if ($picked->lt($start) || $picked->gt($end)) {
+                return ['overtime_specific_dates' => 'Selected dates must be within the date(s) filed in Record Attendance only.'];
+            }
+        }
+
+        return null;
+    }
+
+    /**
      * Validate overtime range and specific selected dates.
      *
      * @param  array<int, mixed>  $specificDates
@@ -1637,6 +1765,14 @@ class LeaveRequestController extends Controller
 
             if ($picked->lt($start) || $picked->gt($end)) {
                 return ['overtime_specific_dates' => 'Selected overtime dates must be inside the chosen start/end range only.'];
+            }
+
+            if ($picked->gt($today)) {
+                return ['overtime_specific_dates' => 'Overtime cannot be filed for future dates.'];
+            }
+
+            if ($picked->lt($earliest)) {
+                return ['overtime_specific_dates' => 'Each overtime date must be within the last 7 days through today.'];
             }
         }
 
@@ -1735,5 +1871,101 @@ class LeaveRequestController extends Controller
             ->orderByDesc('created_at')
             ->orderByDesc('id')
             ->get();
+    }
+
+    private function usesStructuredHoursRequestFormat(string $type, User $user): bool
+    {
+        return $type === 'overtime' || ($user->role === 'student' && $type === 'additional_time');
+    }
+
+    private function structuredHoursRequestLabel(string $type, User $user): string
+    {
+        return ($user->role === 'student' && $type === 'additional_time') ? 'Additional Time' : 'Overtime';
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    private function structuredHoursValidationMessages(string $hoursLabel): array
+    {
+        return [
+            'overtime_hours.required_if' => "{$hoursLabel} hours is required.",
+            'overtime_hours.regex' => "{$hoursLabel} hours must be in HH:MM format (example: 02:30).",
+            'overtime_specific_dates.required_if' => 'Please select at least one date.',
+            'overtime_specific_dates.array' => 'Invalid date selection.',
+            'overtime_specific_dates.min' => 'Please select at least one date.',
+            'overtime_specific_dates.*.date' => 'One or more dates are invalid.',
+            'overtime_specific_dates.*.before_or_equal' => 'Dates cannot be in the future.',
+            'overtime_specific_dates.*.after_or_equal' => 'Each date must be within the last 7 days.',
+            'overtime_tasks.required_if' => 'Please provide your task details/links.',
+            'overtime_tasks.max' => 'Task details must not exceed 2000 characters.',
+        ];
+    }
+
+    /**
+     * @param  array<string, mixed>  $validated
+     */
+    private function buildStructuredHoursRequestReason(string $label, array $validated, ?string $additionalExplanation): string
+    {
+        $details = "{$label} Request Details:\n";
+        $details .= "Total {$label} Hours: ".($validated['overtime_hours'] ?? '')."\n";
+        $details .= "{$label} Date Range: ".($validated['start_date'] ?? '').' to '.($validated['end_date'] ?? $validated['start_date'] ?? '')."\n";
+        $details .= "{$label} Dates: ".$this->normalizedSpecificOvertimeDates($validated['overtime_specific_dates'] ?? [])."\n";
+        $details .= "Tasks / ClickUp Links:\n".($validated['overtime_tasks'] ?? '')."\n";
+
+        if (! empty($additionalExplanation)) {
+            $details .= "\nAdditional Explanation:\n".$additionalExplanation;
+        }
+
+        return $details;
+    }
+
+    /**
+     * @return array{
+     *     overtime_hours: string,
+     *     start_date: string|null,
+     *     end_date: string|null,
+     *     overtime_specific_dates: array<int, string>,
+     *     overtime_tasks: string,
+     *     reason: string
+     * }
+     */
+    private function parseStructuredHoursRequestReason(string $raw): array
+    {
+        $data = [
+            'overtime_hours' => '',
+            'start_date' => null,
+            'end_date' => null,
+            'overtime_specific_dates' => [],
+            'overtime_tasks' => '',
+            'reason' => '',
+        ];
+
+        if (preg_match('/Total (?:Overtime|Additional Time) Hours:\s*(.+)/i', $raw, $m)) {
+            $data['overtime_hours'] = trim($m[1]);
+        } elseif (preg_match('/Additional Time Hours:\s*([0-9]{1,3}:[0-9]{2})/i', $raw, $m)) {
+            $data['overtime_hours'] = trim($m[1]);
+        }
+        if (preg_match('/(?:Overtime|Additional Time) Date Range:\s*(\d{4}-\d{2}-\d{2})\s+to\s+(\d{4}-\d{2}-\d{2})/i', $raw, $m)) {
+            $data['start_date'] = trim($m[1]);
+            $data['end_date'] = trim($m[2]);
+        }
+        if (preg_match('/(?:Overtime|Additional Time) Dates:\s*(.+)/i', $raw, $m)) {
+            $data['overtime_specific_dates'] = collect(explode(',', trim($m[1])))
+                ->map(fn ($value) => trim($value))
+                ->filter(fn ($value) => preg_match('/^\d{4}-\d{2}-\d{2}$/', $value) === 1)
+                ->values()
+                ->all();
+        }
+        if (preg_match('/Tasks \/ ClickUp Links:\s*(.+?)(?:\n+Additional Explanation:|\n+Reason:|\z)/s', $raw, $m)) {
+            $data['overtime_tasks'] = trim($m[1]);
+        }
+        if (preg_match('/Additional Explanation:\s*(.+)\z/s', $raw, $m)) {
+            $data['reason'] = trim($m[1]);
+        } elseif (preg_match('/Reason:\s*(.+)\z/s', $raw, $m)) {
+            $data['reason'] = trim($m[1]);
+        }
+
+        return $data;
     }
 }

@@ -27,6 +27,12 @@
     </div>
 
     <!-- Success Message -->
+    @if(session('info'))
+        <div class="bg-blue-50 border-l-4 border-blue-400 p-4 m-4 rounded-lg">
+            <p class="text-sm text-blue-800">{{ session('info') }}</p>
+        </div>
+    @endif
+
     @if(session('success'))
         <div class="bg-green-50 border-l-4 border-green-400 p-4 m-4 rounded-lg">
             <div class="flex">
@@ -162,7 +168,7 @@
                     </div>
                     <div class="ml-4">
                         <p class="text-sm font-medium text-gray-500">
-                            Overtime ({{ $overtimeWindowLabel ?? 'This Year' }})
+                            {{ auth()->user()->role === 'student' ? 'Additional Time' : 'Overtime' }} ({{ $overtimeWindowLabel ?? 'This Year' }})
                         </p>
                         <p class="text-xl">
                             <span class="font-bold {{ str_starts_with($overtimeFormatted, '-') ? 'text-red-600' : 'text-gray-900' }}">
@@ -291,6 +297,12 @@
                                                class="text-indigo-600 hover:text-indigo-900">
                                                 View
                                             </a>
+                                            @if($request->needsAttendanceOvertimeCompletion())
+                                                <a href="{{ route('user.leave-requests.complete-attendance-overtime', $request) }}"
+                                                   class="text-orange-700 hover:text-orange-900 font-semibold">
+                                                    Complete details
+                                                </a>
+                                            @endif
                                             @if($request->isPending())
                                                 <form action="{{ route('user.leave-requests.destroy', $request) }}" method="POST" class="inline"
                                                       onsubmit="return confirm('Are you sure you want to delete this leave request?');">

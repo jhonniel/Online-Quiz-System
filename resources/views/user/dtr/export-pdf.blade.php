@@ -49,7 +49,7 @@
             <span class="summary-value">{{ $totalHoursFormatted }}</span>
         </div>
         <div class="summary-row">
-            <span class="summary-label">Total Overtime:</span>
+            <span class="summary-label">Total {{ ($user->role ?? '') === 'student' ? 'Additional Time' : 'Overtime' }}:</span>
             <span class="summary-value">{{ $totalOvertimeFormatted }}</span>
         </div>
         <div class="summary-row">
@@ -70,7 +70,7 @@
                     <th style="width: 12%;" class="right">Worked Hours</th>
                     <th style="width: 12%;" class="right">Added Time</th>
                     <th style="width: 12%;" class="right">Total Hours</th>
-                    <th style="width: 12%;" class="right">Overtime</th>
+                    <th style="width: 12%;" class="right">{{ ($user->role ?? '') === 'student' ? 'Additional Time' : 'Overtime' }}</th>
                     <th style="width: 10%;" class="center">Status</th>
                     <th style="width: 22%;">Remarks</th>
                 </tr>

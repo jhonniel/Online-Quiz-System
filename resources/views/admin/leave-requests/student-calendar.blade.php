@@ -199,7 +199,7 @@
                                                     default => 'bg-gray-50 text-gray-700 border-gray-100',
                                                 };
                                             @endphp
-                                            <a href="{{ url('/admin/leave-requests/' . $entry['id']) }}"
+                                            <a href="{{ route('admin.leave-requests.show', ['leaveRequest' => $entry['id'], 'from' => 'student-calendar', 'return' => request()->fullUrl()]) }}"
                                                class="block border {{ $statusClass }} rounded px-1 sm:px-1.5 py-0.5 text-[9px] sm:text-[10px] md:text-[11px] hover:border-indigo-300 hover:bg-indigo-50/70">
                                                 <div class="font-semibold truncate">
                                                     {{ $entry['student']->name }}
@@ -312,7 +312,7 @@ function showAllStudentLeaveRequests(dateString, requests) {
         requests.forEach(function(entry) {
             const statusClass = studentGetStatusClass(entry.status);
             const statusBadge = studentGetStatusBadge(entry.status);
-            const showUrl = '{{ url("/admin/leave-requests/") }}' + entry.id;
+            const showUrl = '{{ url("/admin/leave-requests/") }}' + entry.id + '?from=student-calendar&return={{ urlencode(request()->fullUrl()) }}';
 
             const requestDiv = document.createElement('div');
             requestDiv.className = `border ${statusClass} rounded-lg p-3 hover:shadow-md transition-shadow`;

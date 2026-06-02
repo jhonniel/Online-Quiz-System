@@ -11,6 +11,9 @@ class DtrTimeRequest extends Model
         'user_id',
         'date',
         'hours',
+        'request_type',
+        'submission_batch',
+        'requested_total_hours',
         'remarks',
         'status',
         'admin_notes',
@@ -21,8 +24,28 @@ class DtrTimeRequest extends Model
     protected $casts = [
         'date' => 'date',
         'hours' => 'decimal:2',
+        'requested_total_hours' => 'decimal:2',
         'reviewed_at' => 'datetime',
     ];
+
+    public function isOvertime(): bool
+    {
+        return $this->request_type === 'overtime';
+    }
+
+    public function isRegular(): bool
+    {
+        return ($this->request_type ?? 'regular') !== 'overtime';
+    }
+
+    protected static function booted(): void
+    {
+        static::creating(function (DtrTimeRequest $request): void {
+            if (! $request->request_type) {
+                $request->request_type = 'regular';
+            }
+        });
+    }
 
     /**
      * Get the user who created this time request.
@@ -40,16 +63,24 @@ class DtrTimeRequest extends Model
         return $this->belongsTo(User::class, 'reviewed_by');
     }
 
+    public function leaveRequest(): \Illuminate\Database\Eloquent\Relations\HasOne
+    {
+        return $this->hasOne(LeaveRequest::class);
+    }
+
     /**
      * Hours stored as decimal, displayed as HH:MM (same as student submission).
      */
     public function getFormattedTimeAttribute(): string
     {
-        $totalMinutes = (int) round(((float) $this->hours) * 60);
-        $hours = intdiv($totalMinutes, 60);
-        $minutes = $totalMinutes % 60;
+        return \App\Support\DtrTimeRequestHours::decimalToTimeString((float) $this->hours);
+    }
 
-        return sprintf('%02d:%02d', $hours, $minutes);
+    public function getRequestTypeLabelAttribute(): string
+    {
+        $forStudent = auth()->check() && auth()->user()->role === 'student';
+
+        return \App\Support\DtrTimeRequestHours::requestTypeLabel($this->request_type, $forStudent);
     }
 
     /**

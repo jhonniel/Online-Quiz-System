@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\LeaveRequest;
+use App\Support\AdminScopedDashboardCharts;
 use App\Models\LeaveRequestLog;
 use App\Models\User;
 use App\Models\Dtr;
@@ -450,15 +451,19 @@ class StudentDashboardController extends Controller
             ? $user->getAllowedStudentDepartmentIds()
             : null;
 
-        $students = User::with(['university', 'department'])
+        $studentsQuery = User::with(['university', 'department'])
             ->where('role', 'student')
             ->where('is_active', true);
 
         if (is_array($allowedDepartmentIds) && !empty($allowedDepartmentIds)) {
-            $students->whereIn('department_id', $allowedDepartmentIds);
+            $studentsQuery->whereIn('department_id', $allowedDepartmentIds);
         }
 
-        $students = $students->get();
+        $students = $studentsQuery->get();
+        $chartBundle = app(AdminScopedDashboardCharts::class)->forStudents(
+            $students->pluck('id')->all(),
+            $request
+        );
 
         $rankingSchoolOptions = collect();
 
@@ -682,6 +687,10 @@ class StudentDashboardController extends Controller
 
         return view('admin.student-management.dashboard', [
             'students' => $ranked,
+            'chartPeriod' => $chartBundle['chartPeriod'],
+            'chartFrom' => $chartBundle['chartFrom'],
+            'chartTo' => $chartBundle['chartTo'],
+            'scopedChartPayload' => $chartBundle['payload'],
             'ongoingStudentsCount' => $ongoingStudentsCount ?? 0,
             'studentsWithRemainingTime' => $studentsWithRemainingTime,
             'studentsEndingThisMonth' => $studentsEndingThisMonth ?? 0,

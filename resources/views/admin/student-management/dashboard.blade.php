@@ -34,6 +34,18 @@
         </div>
     </div>
 
+    <div class="px-4 sm:px-6">
+        @include('admin.partials.scoped-dashboard-analytics', [
+            'chartProfile' => 'student',
+            'chartFormAction' => url('/admin/student-management/dashboard'),
+            'chartPeriod' => $chartPeriod ?? 'week',
+            'chartFrom' => $chartFrom ?? now()->subDays(6)->format('Y-m-d'),
+            'chartTo' => $chartTo ?? now()->format('Y-m-d'),
+            'scopedChartPayload' => $scopedChartPayload ?? [],
+            'preserveQuery' => request()->except(['chart_period', 'chart_from', 'chart_to']),
+        ])
+    </div>
+
     <!-- Ranking Table -->
     <div class="px-4 sm:px-6">
         <div class="bg-white shadow-md rounded-2xl overflow-hidden">

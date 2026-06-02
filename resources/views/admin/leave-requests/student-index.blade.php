@@ -114,6 +114,7 @@
                     <select name="type" id="type" class="w-full px-3 sm:px-4 py-2 text-sm sm:text-base border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
                         <option value="">All Types</option>
                         <option value="additional_time" {{ request('type') == 'additional_time' ? 'selected' : '' }}>Additional Time</option>
+                        <option value="overtime" {{ request('type') == 'overtime' ? 'selected' : '' }}>Overtime</option>
                         <option value="absent" {{ request('type') == 'absent' ? 'selected' : '' }}>Absent</option>
                         <option value="other" {{ request('type') == 'other' ? 'selected' : '' }}>Other</option>
                     </select>
@@ -142,8 +143,9 @@
                            class="w-full px-3 sm:px-4 py-2 text-sm sm:text-base border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
                 </div>
 
-                <div class="flex items-end">
-                    <button type="submit" class="w-full px-4 py-2 text-sm sm:text-base bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                <div>
+                    <label for="student-leave-filter-submit" class="block text-sm font-medium text-gray-700 mb-2 invisible" aria-hidden="true">Filter</label>
+                    <button type="submit" id="student-leave-filter-submit" class="w-full px-4 py-2 text-sm sm:text-base bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
                         Filter
                     </button>
                 </div>
@@ -197,6 +199,11 @@
                                             <span class="text-gray-500">-</span>
                                             {{ $request->end_date->format('M d, Y') }}
                                         @endif
+                                        @if($dayTotalFiled = $request->attendanceDayTotalFiledDisplay())
+                                            <div class="text-xs text-gray-500 mt-0.5">
+                                                Day total filed: <span class="font-mono font-medium text-gray-700">{{ $dayTotalFiled }}</span>
+                                            </div>
+                                        @endif
                                     </div>
                                 </td>
                                 <td class="px-3 sm:px-6 py-4">
@@ -205,6 +212,11 @@
                                         {{ $request->start_date->format('M d') }}
                                         @if($request->end_date && $request->end_date->ne($request->start_date))
                                             - {{ $request->end_date->format('M d') }}
+                                        @endif
+                                        @if($dayTotalFiled = $request->attendanceDayTotalFiledDisplay())
+                                            <div class="mt-0.5">
+                                                Day total filed: <span class="font-mono font-medium text-gray-700">{{ $dayTotalFiled }}</span>
+                                            </div>
                                         @endif
                                     </div>
                                 </td>
@@ -217,7 +229,7 @@
                                     {{ $request->created_at->format('M d, Y') }}
                                 </td>
                                 <td class="px-3 sm:px-6 py-4 text-xs sm:text-sm font-medium">
-                                    <a href="{{ url('/admin/leave-requests/' . $request->id) }}"
+                                    <a href="{{ route('admin.leave-requests.show', ['leaveRequest' => $request->id, 'from' => 'student', 'return' => request()->fullUrl()]) }}"
                                        class="text-indigo-600 hover:text-indigo-900 whitespace-nowrap">
                                         View Details
                                     </a>

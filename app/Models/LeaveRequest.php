@@ -2,6 +2,8 @@
 
 namespace App\Models;
 
+use App\Support\DtrTimeRequestHours;
+use App\Support\TimeRequestOvertimeLeaveImport;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -10,6 +12,9 @@ class LeaveRequest extends Model
 {
     protected $fillable = [
         'user_id',
+        'dtr_time_request_id',
+        'attendance_submission_batch',
+        'attendance_overtime_completed_at',
         'type',
         'start_date',
         'end_date',
@@ -27,6 +32,7 @@ class LeaveRequest extends Model
         'start_date' => 'date',
         'end_date' => 'date',
         'reviewed_at' => 'datetime',
+        'attendance_overtime_completed_at' => 'datetime',
         'travel_hours' => 'float',
         'supporting_document_paths' => 'array',
     ];
@@ -58,6 +64,11 @@ class LeaveRequest extends Model
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
+    }
+
+    public function dtrTimeRequest(): BelongsTo
+    {
+        return $this->belongsTo(DtrTimeRequest::class);
     }
 
     /**
@@ -114,7 +125,7 @@ class LeaveRequest extends Model
     public static function adminSelectableTypesForRole(string $role): array
     {
         if ($role === 'student') {
-            return ['additional_time', 'absent', 'other'];
+            return ['additional_time', 'absent', 'overtime', 'other'];
         }
 
         return [
@@ -148,6 +159,12 @@ class LeaveRequest extends Model
      */
     public function getTypeLabelAttribute(): string
     {
+        if ($this->type === 'overtime'
+            && auth()->check()
+            && auth()->user()->role === 'student') {
+            return 'Additional Time';
+        }
+
         return self::labelForType($this->type);
     }
 
@@ -175,6 +192,10 @@ class LeaveRequest extends Model
      */
     public function getStatusBadgeClassAttribute(): string
     {
+        if ($this->needsAttendanceOvertimeCompletion()) {
+            return 'bg-orange-100 text-orange-800';
+        }
+
         return match ($this->status) {
             'pending' => 'bg-yellow-100 text-yellow-800',
             'approved' => 'bg-green-100 text-green-800',
@@ -192,6 +213,10 @@ class LeaveRequest extends Model
      */
     public function getDisplayStatusAttribute(): string
     {
+        if ($this->needsAttendanceOvertimeCompletion()) {
+            return 'Incomplete details';
+        }
+
         if ($this->status === 'pending' && $this->reviewed_at) {
             return 'Resubmission';
         }
@@ -200,6 +225,47 @@ class LeaveRequest extends Model
         }
 
         return ucfirst($this->status);
+    }
+
+    public function needsAttendanceOvertimeCompletion(): bool
+    {
+        return $this->type === 'overtime'
+            && $this->isPending()
+            && filled($this->attendance_submission_batch)
+            && $this->attendance_overtime_completed_at === null;
+    }
+
+    /**
+     * Total hours the student filed for the day via Record Attendance (HH:MM), for admin review.
+     */
+    public function attendanceDayTotalFiledDisplay(): ?string
+    {
+        $hours = null;
+
+        $this->loadMissing('dtrTimeRequest');
+
+        if ($this->dtrTimeRequest?->requested_total_hours) {
+            $hours = (float) $this->dtrTimeRequest->requested_total_hours;
+        }
+
+        if ($hours === null) {
+            $hours = TimeRequestOvertimeLeaveImport::parseDayTotalHoursFromReason($this->reason);
+        }
+
+        if ($hours === null || $hours <= 0) {
+            return null;
+        }
+
+        return DtrTimeRequestHours::decimalToTimeString($hours);
+    }
+
+    public function isAttendanceOvertimeReadyForApproval(): bool
+    {
+        if (! TimeRequestOvertimeLeaveImport::isFiledFromAttendance($this)) {
+            return true;
+        }
+
+        return $this->attendance_overtime_completed_at !== null;
     }
 
     /**
@@ -239,6 +305,17 @@ class LeaveRequest extends Model
     }
 
     /**
+     * Pending overtime from Record Attendance awaiting student completion form.
+     */
+    public function scopeAwaitingAttendanceOvertimeCompletion(Builder $query): Builder
+    {
+        return $query->where('type', 'overtime')
+            ->where('status', 'pending')
+            ->whereNotNull('attendance_submission_batch')
+            ->whereNull('attendance_overtime_completed_at');
+    }
+
+    /**
      * Get the number of days.
      */
     public function getDaysAttribute(): int
@@ -248,6 +325,35 @@ class LeaveRequest extends Model
         }
 
         return $this->start_date->diffInDays($this->end_date) + 1;
+    }
+
+    /**
+     * Minutes from "Total Overtime Hours: H:MM" in stored reason (overtime), or null if missing/invalid.
+     */
+    public function parseOvertimeTotalMinutesFromReason(): ?int
+    {
+        $raw = (string) ($this->reason ?? '');
+        if (! preg_match('/Total Overtime Hours:\s*(\d{1,4}):(\d{2})/', $raw, $m)) {
+            return null;
+        }
+        $h = (int) $m[1];
+        $min = (int) $m[2];
+        if ($min > 59) {
+            return null;
+        }
+        $total = $h * 60 + $min;
+
+        return $total >= 0 ? $total : null;
+    }
+
+    /**
+     * Total overtime hours as decimal (from reason text), for balance/DTR helpers.
+     */
+    public function getOvertimeHoursFromReasonAttribute(): float
+    {
+        $mins = $this->parseOvertimeTotalMinutesFromReason();
+
+        return $mins !== null ? $mins / 60.0 : 0.0;
     }
 
     /**
@@ -275,6 +381,20 @@ class LeaveRequest extends Model
      */
     public function getDurationDisplayLabelAttribute(): string
     {
+        if ($this->type === 'overtime') {
+            $mins = $this->parseOvertimeTotalMinutesFromReason();
+            if ($mins !== null) {
+                $h = intdiv($mins, 60);
+                $m = $mins % 60;
+
+                return sprintf('%02d:%02d', $h, $m);
+            }
+
+            $d = $this->days;
+
+            return $d.' '.($d === 1 ? 'day' : 'days');
+        }
+
         if ($this->type !== 'offset') {
             $d = $this->days;
 
@@ -316,5 +436,25 @@ class LeaveRequest extends Model
         }
 
         return (float) ($this->days * 8);
+    }
+
+    /**
+     * Reason text without the teacher filing header line.
+     */
+    public function cleanTeacherExcusedReason(): string
+    {
+        $text = preg_replace('/^Teacher excused request by .+\n\n/s', '', (string) $this->reason, 1);
+
+        return $text !== '' ? $text : (string) $this->reason;
+    }
+
+    /**
+     * Teacher who filed this excused request on behalf of the student.
+     */
+    public function filedByTeacher(): ?\App\Models\User
+    {
+        $this->loadMissing('logs.performer');
+
+        return $this->logs->firstWhere('action', 'filed_by_teacher')?->performer;
     }
 }

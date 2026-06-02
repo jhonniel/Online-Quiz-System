@@ -48,7 +48,7 @@
                                 class="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
                             <option value="">Select Request Type</option>
                             @if(auth()->user()->role === 'student')
-                                <option value="additional_time" {{ old('type', $editData['type']) == 'additional_time' ? 'selected' : '' }}>Additional Time</option>
+                                <option value="additional_time" {{ in_array(old('type', $editData['type']), ['additional_time', 'overtime'], true) ? 'selected' : '' }}>Additional Time</option>
                                 <option value="absent" {{ old('type', $editData['type']) == 'absent' ? 'selected' : '' }}>Absent</option>
                                 <option value="other" {{ old('type', $editData['type']) == 'other' ? 'selected' : '' }}>Other</option>
                             @else
@@ -85,85 +85,36 @@
 
                         <div>
                             <label for="end_date" class="block text-sm font-medium text-gray-700 mb-2">
-                                End Date <span class="text-gray-400">(Optional)</span>
+                                End Date <span id="end-date-required-span" class="text-gray-400">(Optional)</span>
                             </label>
                             <input type="date" name="end_date" id="end_date"
                                    value="{{ old('end_date', $editData['end_date']) }}"
                                    class="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
-                            <p class="mt-1 text-xs text-gray-500">Leave blank for single day requests</p>
+                            <p id="end-date-hint" class="mt-1 text-xs text-gray-500">Leave blank for single day requests</p>
+                            <p id="overtime-date-hint" class="mt-1 text-xs text-amber-700 hidden">
+                                Overtime dates must be from the last 7 days through today only (no future dates).
+                            </p>
                             @error('end_date')
                                 <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
                             @enderror
                         </div>
                     </div>
 
-                    <!-- Student Additional Time Input Mode -->
-                    @if(auth()->user()->role === 'student')
-                    <div id="additional-time-section" class="space-y-4 {{ old('type', $editData['type']) == 'additional_time' ? '' : 'hidden' }}">
-                        <div class="border-t border-gray-200 pt-4 mt-2">
-                            <h2 class="text-sm font-semibold text-gray-900 mb-2">Additional Time Details</h2>
-                            <p class="text-xs text-gray-500 mb-3">
-                                Choose how to submit Additional Time:
-                                <strong>Total Hours</strong>, or <strong>Fixed Date(s)</strong> where each day is counted as <strong>8 hours</strong>.
-                            </p>
-                        </div>
+                    @php
+                        $structuredHoursVisible = in_array(old('type', $editData['type']), ['overtime', 'additional_time'], true);
+                    @endphp
 
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-2">Input Mode <span class="text-red-500">*</span></label>
-                            <div class="space-y-2">
-                                <label class="flex items-start gap-2 rounded-lg border border-gray-200 p-3 cursor-pointer hover:bg-gray-50">
-                                    <input type="radio" name="additional_time_mode" value="fixed_date"
-                                           class="mt-0.5 text-indigo-600 focus:ring-indigo-500"
-                                           {{ old('additional_time_mode', $editData['additional_time_mode']) === 'fixed_date' ? 'checked' : '' }}>
-                                    <span>
-                                        <span class="block text-sm font-medium text-gray-900">Fixed Date(s)</span>
-                                        <span class="block text-xs text-gray-500">Use Start/End Date. Each day is credited as 8 hours when approved.</span>
-                                    </span>
-                                </label>
-                                <label class="flex items-start gap-2 rounded-lg border border-gray-200 p-3 cursor-pointer hover:bg-gray-50">
-                                    <input type="radio" name="additional_time_mode" value="total_hours"
-                                           class="mt-0.5 text-indigo-600 focus:ring-indigo-500"
-                                           {{ old('additional_time_mode', $editData['additional_time_mode']) === 'total_hours' ? 'checked' : '' }}>
-                                    <span>
-                                        <span class="block text-sm font-medium text-gray-900">Total Hours</span>
-                                        <span class="block text-xs text-gray-500">Enter exact hours in HH:MM format. Example: 12:30</span>
-                                    </span>
-                                </label>
-                            </div>
-                            @error('additional_time_mode')
-                                <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
-                            @enderror
-                        </div>
-
-                        <div id="additional-time-hours-wrap" class="{{ old('additional_time_mode', $editData['additional_time_mode']) === 'total_hours' ? '' : 'hidden' }}">
-                            <label for="additional_time_total_hours" class="block text-sm font-medium text-gray-700 mb-2">
-                                Total Additional Time Hours (HH:MM) <span class="text-red-500">*</span>
-                            </label>
-                            <input type="text" name="additional_time_total_hours" id="additional_time_total_hours"
-                                   value="{{ old('additional_time_total_hours', $editData['additional_time_total_hours']) }}"
-                                   placeholder="08:00"
-                                   class="time-input w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
-                            <p class="mt-1 text-xs text-gray-500">
-                                Accepted format: <strong>HH:MM</strong>. Minutes must be 00-59.
-                            </p>
-                            @error('additional_time_total_hours')
-                                <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
-                            @enderror
-                        </div>
-                    </div>
-                    @endif
-
-                    <div id="overtime-specific-dates-container" class="{{ old('type', $editData['type']) == 'overtime' ? '' : 'hidden' }}">
+                    <div id="overtime-specific-dates-container" class="{{ $structuredHoursVisible ? '' : 'hidden' }}">
                         <label class="block text-sm font-medium text-gray-700 mb-2">
-                            Select specific overtime date(s) from your chosen range <span class="text-red-500">*</span>
+                            Select specific date(s) from your chosen range <span class="text-red-500">*</span>
                         </label>
                         <div id="overtime-specific-dates-wrap"
                              data-old-selected='@json(old("overtime_specific_dates", $editData["overtime_specific_dates"]))'
                              class="rounded-lg border border-gray-200 bg-gray-50 p-3 min-h-[3rem]">
-                            <p class="text-xs text-gray-500">Pick Start Date and End Date above first (Overtime only).</p>
+                            <p class="text-xs text-gray-500">Pick Start Date and End Date above first.</p>
                         </div>
                         <p class="mt-1 text-xs text-gray-500">
-                            Overtime requests filed within the past 7 days are eligible for approval.
+                            Additional Time requests filed within the past 7 days are eligible for approval.
                         </p>
                         @error('overtime_specific_dates')
                             <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
@@ -242,26 +193,28 @@
                     </div>
 
                     <!-- Overtime Details (visible only when Request Type = Overtime) -->
-                    <div id="overtime-section" class="space-y-4 {{ old('type', $editData['type']) == 'overtime' ? '' : 'hidden' }}">
+                    <div id="overtime-section" class="space-y-4 {{ $structuredHoursVisible ? '' : 'hidden' }}">
                         <div class="border-t border-gray-200 pt-4 mt-4">
-                            <h2 class="text-sm font-semibold text-gray-900 mb-2">Overtime Details</h2>
+                            <h2 class="text-sm font-semibold text-gray-900 mb-2">Additional Time Details</h2>
                             <p class="text-xs text-gray-500 mb-3">
-                                When requesting <strong>Overtime</strong>, please provide the total hours, the dates covered,
-                                and strictly list down the tasks (e.g., ClickUp links) that will be done during the overtime.
+                                Provide the total hours, the dates covered,
+                                and list the tasks (e.g., ClickUp links) for this Additional Time request.
+                                @if(auth()->user()->role === 'student')
+                                    When approved, these hours are added to your DTR and count toward your required training hours.
+                                @endif
                             </p>
                         </div>
 
-                        <!-- Total Overtime Hours -->
                         <div>
                             <label for="overtime_hours" class="block text-sm font-medium text-gray-700 mb-2">
-                                Total Overtime Hours (HH:MM) <span class="text-red-500">*</span>
+                                Total Additional Time Hours (HH:MM) <span class="text-red-500">*</span>
                             </label>
                             <input type="text" name="overtime_hours" id="overtime_hours"
                                    value="{{ old('overtime_hours', $editData['overtime_hours']) }}"
                                    placeholder="01:20"
                                    class="time-input w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
                             <p class="mt-1 text-xs text-gray-500">
-                                Enter the total overtime time in <strong>HH:MM</strong> (e.g., 01:00, 02:30). No AM/PM.
+                                Enter the total time in <strong>HH:MM</strong> (e.g., 01:00, 02:30). No AM/PM.
                             </p>
                             @error('overtime_hours')
                                 <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
@@ -422,56 +375,92 @@
 </div>
 
 <script>
-    // Auto-set end_date to start_date if not provided
+    const typeSelect = document.getElementById('type');
+    const isStudent = @json(auth()->user()->role === 'student');
+    function isStructuredHoursType(type) {
+        return type === 'overtime' || (isStudent && type === 'additional_time');
+    }
+    const startDateInput = document.getElementById('start_date');
+
     document.getElementById('start_date').addEventListener('change', function() {
         const endDateInput = document.getElementById('end_date');
-        const typeSelect = document.getElementById('type');
-        if (typeSelect && typeSelect.value === 'overtime') {
+        if (typeSelect && isStructuredHoursType(typeSelect.value)) {
             endDateInput.min = this.value || endDateInput.min;
             endDateInput.max = new Date().toISOString().split('T')[0];
         } else if (!endDateInput.value) {
             endDateInput.min = this.value;
         }
     });
-
-    document.getElementById('end_date').addEventListener('focus', function() {
-        const startDate = document.getElementById('start_date').value;
-        const typeSelect = document.getElementById('type');
-        if (startDate) {
-            this.min = startDate;
-        }
-        if (typeSelect && typeSelect.value === 'overtime') {
-            this.max = new Date().toISOString().split('T')[0];
-        }
-    });
-
-    // Toggle overtime section based on request type
-    const typeSelect = document.getElementById('type');
-    const startDateInput = document.getElementById('start_date');
     const endDateInput = document.getElementById('end_date');
-    const today = new Date().toISOString().split('T')[0];
+    const leaveDateBounds = {
+        today: @json(now()->toDateString()),
+        overtimeMin: @json(now()->subDays(7)->toDateString()),
+    };
+    const today = leaveDateBounds.today;
+    const endDateRequiredSpan = document.getElementById('end-date-required-span');
+    const endDateHint = document.getElementById('end-date-hint');
+    const overtimeDateHint = document.getElementById('overtime-date-hint');
+
+    function clampOvertimeDateInputs() {
+        if (!startDateInput) return;
+        const minD = leaveDateBounds.overtimeMin;
+        const maxD = leaveDateBounds.today;
+        if (startDateInput.value) {
+            if (startDateInput.value > maxD) startDateInput.value = maxD;
+            if (startDateInput.value < minD) startDateInput.value = minD;
+        }
+        if (endDateInput && endDateInput.value) {
+            if (endDateInput.value > maxD) endDateInput.value = maxD;
+            if (endDateInput.value < minD) endDateInput.value = minD;
+            if (startDateInput.value && endDateInput.value < startDateInput.value) {
+                endDateInput.value = startDateInput.value;
+            }
+        }
+    }
+
+    function syncEndDateMin() {
+        if (!endDateInput) return;
+        const startDate = startDateInput.value;
+        if (typeSelect.value === 'travel') {
+            endDateInput.removeAttribute('min');
+            endDateInput.setAttribute('max', today);
+        } else if (isStructuredHoursType(typeSelect.value)) {
+            const endMin = startDate && startDate >= leaveDateBounds.overtimeMin
+                ? startDate
+                : leaveDateBounds.overtimeMin;
+            endDateInput.min = endMin;
+            endDateInput.setAttribute('max', today);
+        } else if (typeSelect.value === 'sick_leave') {
+            endDateInput.removeAttribute('min');
+            endDateInput.removeAttribute('max');
+        } else if (startDate) {
+            endDateInput.min = startDate;
+            endDateInput.removeAttribute('max');
+        } else {
+            endDateInput.removeAttribute('min');
+            endDateInput.removeAttribute('max');
+        }
+    }
     const overtimeSection = document.getElementById('overtime-section');
     const wfhSection = document.getElementById('wfh-section');
     const offsetSection = document.getElementById('offset-section');
     const travelSection = document.getElementById('travel-section');
     const supportingSection = document.getElementById('supporting-section');
-    const additionalTimeSection = document.getElementById('additional-time-section');
-    const additionalTimeHoursWrap = document.getElementById('additional-time-hours-wrap');
-    const additionalTimeHoursInput = document.getElementById('additional_time_total_hours');
-    const additionalTimeModeInputs = document.querySelectorAll('input[name="additional_time_mode"]');
     const overtimeSpecificDatesContainer = document.getElementById('overtime-specific-dates-container');
     const overtimeSpecificDatesWrap = document.getElementById('overtime-specific-dates-wrap');
 
     function renderOvertimeSpecificDates() {
         if (!overtimeSpecificDatesWrap) return;
-        const isOvertime = typeSelect.value === 'overtime';
-        if (!isOvertime) {
-            overtimeSpecificDatesWrap.innerHTML = '<p class="text-xs text-gray-500">Visible only when Request Type is Overtime.</p>';
+        if (!isStructuredHoursType(typeSelect.value)) {
+            overtimeSpecificDatesWrap.innerHTML = '<p class="text-xs text-gray-500">Visible only when Request Type is Additional Time.</p>';
             return;
         }
 
         const start = startDateInput.value;
-        const end = endDateInput.value || start;
+        let end = endDateInput.value || start;
+        if (end > leaveDateBounds.today) {
+            end = leaveDateBounds.today;
+        }
         if (!start || !end) {
             overtimeSpecificDatesWrap.innerHTML = '<p class="text-xs text-gray-500">Pick Start Date and End Date first.</p>';
             return;
@@ -503,6 +492,10 @@
             const m = String(cursor.getMonth() + 1).padStart(2, '0');
             const d = String(cursor.getDate()).padStart(2, '0');
             const value = `${y}-${m}-${d}`;
+            if (value > leaveDateBounds.today || value < leaveDateBounds.overtimeMin) {
+                cursor.setDate(cursor.getDate() + 1);
+                continue;
+            }
             rows.push(`
                 <label class="inline-flex items-center gap-2 text-sm text-gray-700 mr-4 mb-2">
                     <input type="checkbox" name="overtime_specific_dates[]" value="${value}" ${selectedSet.has(value) ? 'checked' : ''} class="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500">
@@ -517,46 +510,39 @@
             : '<p class="text-xs text-gray-500">No selectable dates in range.</p>';
     }
 
-    function getAdditionalTimeMode() {
-        const selected = document.querySelector('input[name="additional_time_mode"]:checked');
-        return selected ? selected.value : 'fixed_date';
-    }
-
-    function updateAdditionalTimeModeUI() {
-        const isAdditionalTime = typeSelect.value === 'additional_time';
-        if (additionalTimeSection) {
-            additionalTimeSection.classList.toggle('hidden', !isAdditionalTime);
-        }
-
-        const mode = getAdditionalTimeMode();
-        const useTotalHours = isAdditionalTime && mode === 'total_hours';
-        if (additionalTimeHoursWrap) {
-            additionalTimeHoursWrap.classList.toggle('hidden', !useTotalHours);
-        }
-        if (additionalTimeHoursInput) {
-            additionalTimeHoursInput.required = useTotalHours;
-        }
-        if (endDateInput) {
-            if (useTotalHours) {
-                endDateInput.value = '';
-                endDateInput.disabled = true;
-            } else {
-                endDateInput.disabled = false;
-            }
-        }
-    }
-
     function updateRequestTypeSections() {
         // Travel: only today or past dates (no future for employees)
         if (typeSelect.value === 'travel') {
             if (startDateInput) { startDateInput.removeAttribute('min'); startDateInput.setAttribute('max', today); }
-            if (endDateInput) endDateInput.setAttribute('max', today);
-        } else if (typeSelect.value === 'overtime') {
-            const overtimeMin = new Date();
-            overtimeMin.setDate(overtimeMin.getDate() - 7);
-            const overtimeMinText = overtimeMin.toISOString().split('T')[0];
-            if (startDateInput) { startDateInput.setAttribute('min', overtimeMinText); startDateInput.setAttribute('max', today); }
-            if (endDateInput) endDateInput.setAttribute('max', today);
+            if (endDateInput) {
+                endDateInput.setAttribute('max', today);
+                endDateInput.required = false;
+            }
+            if (overtimeDateHint) overtimeDateHint.classList.add('hidden');
+            if (endDateHint) endDateHint.classList.remove('hidden');
+            if (endDateRequiredSpan) {
+                endDateRequiredSpan.classList.add('text-gray-400');
+                endDateRequiredSpan.classList.remove('text-red-500');
+                endDateRequiredSpan.textContent = '(Optional)';
+            }
+        } else if (isStructuredHoursType(typeSelect.value)) {
+            if (startDateInput) {
+                startDateInput.setAttribute('min', leaveDateBounds.overtimeMin);
+                startDateInput.setAttribute('max', today);
+            }
+            if (endDateInput) {
+                endDateInput.setAttribute('max', today);
+                endDateInput.required = true;
+                endDateInput.disabled = false;
+            }
+            clampOvertimeDateInputs();
+            if (overtimeDateHint) overtimeDateHint.classList.remove('hidden');
+            if (endDateHint) endDateHint.classList.add('hidden');
+            if (endDateRequiredSpan) {
+                endDateRequiredSpan.classList.remove('text-gray-400');
+                endDateRequiredSpan.classList.add('text-red-500');
+                endDateRequiredSpan.textContent = '*';
+            }
         } else if (typeSelect.value === 'sick_leave') {
             if (startDateInput) {
                 startDateInput.removeAttribute('min');
@@ -565,12 +551,31 @@
             if (endDateInput) {
                 endDateInput.removeAttribute('min');
                 endDateInput.removeAttribute('max');
+                endDateInput.required = false;
+                endDateInput.disabled = false;
+            }
+            if (overtimeDateHint) overtimeDateHint.classList.add('hidden');
+            if (endDateHint) endDateHint.classList.remove('hidden');
+            if (endDateRequiredSpan) {
+                endDateRequiredSpan.classList.add('text-gray-400');
+                endDateRequiredSpan.classList.remove('text-red-500');
+                endDateRequiredSpan.textContent = '(Optional)';
             }
         } else {
             if (startDateInput) startDateInput.removeAttribute('max');
-            if (endDateInput) endDateInput.removeAttribute('max');
+            if (endDateInput) {
+                endDateInput.removeAttribute('max');
+                endDateInput.required = false;
+            }
+            if (overtimeDateHint) overtimeDateHint.classList.add('hidden');
+            if (endDateHint) endDateHint.classList.remove('hidden');
+            if (endDateRequiredSpan) {
+                endDateRequiredSpan.classList.add('text-gray-400');
+                endDateRequiredSpan.classList.remove('text-red-500');
+                endDateRequiredSpan.textContent = '(Optional)';
+            }
         }
-        if (typeSelect.value === 'overtime') {
+        if (isStructuredHoursType(typeSelect.value)) {
             overtimeSection.classList.remove('hidden');
             if (overtimeSpecificDatesContainer) overtimeSpecificDatesContainer.classList.remove('hidden');
         } else {
@@ -598,7 +603,7 @@
             }
         }
 
-        updateAdditionalTimeModeUI();
+        syncEndDateMin();
         renderOvertimeSpecificDates();
 
         // For Travel: "Location of travel" required
@@ -628,12 +633,12 @@
             if (reasonTravelHelp) reasonTravelHelp.classList.add('hidden');
             if (reasonInput) reasonInput.placeholder = 'Please provide a reason for this request...';
             if (supportingSection) supportingSection.classList.remove('hidden');
-            if (typeSelect.value === 'overtime') {
+            if (isStructuredHoursType(typeSelect.value)) {
                 if (supportingRequiredSpan) { supportingRequiredSpan.classList.remove('text-gray-400'); supportingRequiredSpan.classList.add('text-red-500'); supportingRequiredSpan.textContent = '*'; }
                 if (supportingHelp) {
                     supportingHelp.textContent = hasExistingSupporting
-                        ? 'Required for Overtime unless current attachment(s) above remain. Uploading new files replaces current attachments.'
-                        : 'Required for Overtime. Upload up to 5 files (PDF/JPG/PNG), 5MB max per file.';
+                        ? 'Required for Additional Time unless current attachment(s) above remain. Uploading new files replaces current attachments.'
+                        : 'Required for Additional Time. Upload up to 5 files (PDF/JPG/PNG), 5MB max per file.';
                 }
                 if (supportingInput) supportingInput.required = !hasExistingSupporting;
             } else {
@@ -645,11 +650,12 @@
     }
 
     typeSelect.addEventListener('change', updateRequestTypeSections);
-    startDateInput.addEventListener('change', renderOvertimeSpecificDates);
-    endDateInput.addEventListener('change', renderOvertimeSpecificDates);
-    additionalTimeModeInputs.forEach((input) => {
-        input.addEventListener('change', updateAdditionalTimeModeUI);
+    startDateInput.addEventListener('change', function() {
+        syncEndDateMin();
+        renderOvertimeSpecificDates();
     });
+    endDateInput.addEventListener('focus', syncEndDateMin);
+    endDateInput.addEventListener('change', renderOvertimeSpecificDates);
     // Initialize on page load (for validation errors / old input)
     updateRequestTypeSections();
 
@@ -675,6 +681,19 @@
 
     if (form && submitBtn) {
         form.addEventListener('submit', function(e) {
+            if (isStructuredHoursType(typeSelect.value)) {
+                clampOvertimeDateInputs();
+                const maxD = leaveDateBounds.today;
+                const minD = leaveDateBounds.overtimeMin;
+                if (!startDateInput.value || !endDateInput?.value
+                    || startDateInput.value > maxD || endDateInput.value > maxD
+                    || startDateInput.value < minD || endDateInput.value < minD) {
+                    e.preventDefault();
+                    alert('Additional Time can only be filed for dates within the last 7 days through today.');
+                    return;
+                }
+            }
+
             // Disable submit button and show loading state
             submitBtn.disabled = true;
             submitIcon.outerHTML = '<svg id="submit-icon" class="animate-spin h-5 w-5 mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>';

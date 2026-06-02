@@ -4,7 +4,8 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\DtrTimeRequest;
-use App\Models\Dtr;
+use App\Support\DtrTimeRequestHours;
+use App\Support\TimeRequestOvertimeLeaveImport;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Carbon\Carbon;
@@ -129,14 +130,19 @@ class DtrTimeRequestController extends Controller
             'remarks' => ['nullable', 'string', 'max:1000'],
         ]);
 
-        $hours = $this->timeStringToHours($validated['time']);
+        $hours = DtrTimeRequestHours::timeStringToDecimal($validated['time']);
         if ($hours < 0 || $hours > 24) {
             return back()->withErrors(['time' => 'Time must be between 00:00 and 24:00.'])->withInput();
+        }
+
+        if ($dtrTimeRequest->isRegular() && $hours > DtrTimeRequestHours::STANDARD_DAY_HOURS) {
+            return back()->withErrors(['time' => 'Regular time requests cannot exceed 08:00. Use an overtime request for hours above 08:00.'])->withInput();
         }
 
         $duplicate = DtrTimeRequest::query()
             ->where('user_id', $dtrTimeRequest->user_id)
             ->whereDate('date', $validated['date'])
+            ->where('request_type', $dtrTimeRequest->request_type ?? 'regular')
             ->where('id', '!=', $dtrTimeRequest->id)
             ->exists();
 
@@ -174,41 +180,15 @@ class DtrTimeRequestController extends Controller
             return back()->withErrors(['error' => 'This request has already been processed.']);
         }
 
-        // Check if DTR already exists for this date
-        $existingDtr = Dtr::where('user_id', $dtrTimeRequest->user_id)
-            ->whereDate('date', $dtrTimeRequest->date)
-            ->first();
-
         $validated = $request->validate([
             'admin_notes' => 'nullable|string|max:1000',
         ]);
 
-        $approvedRemark = 'Approved time request'.($dtrTimeRequest->remarks ? ': '.$dtrTimeRequest->remarks : '');
-        if ($existingDtr) {
-            $newTotalHours = ((float) ($existingDtr->total_hours ?? 0)) + (float) $dtrTimeRequest->hours;
-            $newAddedTime = ((float) ($existingDtr->added_time_from_note ?? 0)) + (float) $dtrTimeRequest->hours;
-            $existingRemarks = trim((string) ($existingDtr->remarks ?? ''));
+        DtrTimeRequestHours::applyApprovedRequestToDtr(
+            $dtrTimeRequest,
+            $validated['admin_notes'] ?? null
+        );
 
-            $existingDtr->total_hours = $newTotalHours;
-            $existingDtr->overtime_hours = max($newTotalHours - 8.0, 0);
-            $existingDtr->status = $existingDtr->status ?: 'present';
-            $existingDtr->added_time_from_note = $newAddedTime;
-            $existingDtr->remarks = $existingRemarks !== '' ? $existingRemarks.' | '.$approvedRemark : $approvedRemark;
-            $existingDtr->save();
-        } else {
-            // Create DTR record when none exists yet.
-            Dtr::create([
-                'user_id' => $dtrTimeRequest->user_id,
-                'date' => $dtrTimeRequest->date,
-                'total_hours' => $dtrTimeRequest->hours,
-                'overtime_hours' => max(((float) $dtrTimeRequest->hours) - 8.0, 0),
-                'status' => 'present',
-                'remarks' => $approvedRemark,
-                'added_time_from_note' => $dtrTimeRequest->hours,
-            ]);
-        }
-
-        // Update time request
         $dtrTimeRequest->update([
             'status' => 'approved',
             'admin_notes' => $validated['admin_notes'] ?? null,
@@ -216,7 +196,22 @@ class DtrTimeRequestController extends Controller
             'reviewed_at' => now(),
         ]);
 
-        return back()->with('success', 'Time request approved and hours were applied to the DTR successfully.');
+        $leaveImported = null;
+        if ($dtrTimeRequest->isOvertime()) {
+            $leaveImported = TimeRequestOvertimeLeaveImport::syncFromApprovedTimeRequest(
+                $dtrTimeRequest->fresh(),
+                Auth::id(),
+                $validated['admin_notes'] ?? null
+            );
+        }
+
+        $typeLabel = strtolower($dtrTimeRequest->request_type_label);
+        $message = "Approved {$typeLabel} time request and applied hours to the student's DTR (counts toward required training time).";
+        if ($leaveImported) {
+            $message .= ' An Overtime leave request was created in Leave Requests ('.TimeRequestOvertimeLeaveImport::IMPORT_REMARK.').';
+        }
+
+        return back()->with('success', $message);
     }
 
     /**
@@ -288,10 +283,4 @@ class DtrTimeRequestController extends Controller
         }
     }
 
-    private function timeStringToHours(string $time): float
-    {
-        $parts = explode(':', $time);
-
-        return (float) $parts[0] + ((float) $parts[1] / 60);
-    }
 }

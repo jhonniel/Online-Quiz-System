@@ -8,6 +8,7 @@ use App\Models\ConfessionPost;
 use App\Models\ContactMessage;
 use App\Models\Dtr;
 use App\Models\DtrDeficit;
+use App\Models\DtrTimeRequest;
 use App\Models\ErrorLog;
 use App\Models\HiringApplication;
 use App\Models\LeaveRequest;
@@ -527,28 +528,225 @@ class DashboardController extends Controller
 
             // Chart data: Leave requests by status - Employees (doughnut chart)
             try {
-                $leaveRequestEmployeeLabels = ['Pending', 'Approved', 'Rejected'];
+                $leaveRequestEmployeeLabels = ['Pending', 'For More Verification', 'Approved', 'Rejected'];
                 $leaveRequestEmployeeData = [
                     LeaveRequest::where('status', 'pending')->whereHas('user', fn ($q) => $q->where('role', 'employee'))->count(),
+                    LeaveRequest::where('status', 'for_more_verification')->whereHas('user', fn ($q) => $q->where('role', 'employee'))->count(),
                     LeaveRequest::where('status', 'approved')->whereHas('user', fn ($q) => $q->where('role', 'employee'))->count(),
                     LeaveRequest::where('status', 'rejected')->whereHas('user', fn ($q) => $q->where('role', 'employee'))->count(),
                 ];
             } catch (\Exception $e) {
-                $leaveRequestEmployeeLabels = ['Pending', 'Approved', 'Rejected'];
-                $leaveRequestEmployeeData = [0, 0, 0];
+                $leaveRequestEmployeeLabels = ['Pending', 'For More Verification', 'Approved', 'Rejected'];
+                $leaveRequestEmployeeData = [0, 0, 0, 0];
             }
 
             // Chart data: Leave requests by status - Students (doughnut chart)
             try {
-                $leaveRequestStudentLabels = ['Pending', 'Approved', 'Rejected'];
+                $incompleteStudentOvertimeCount = LeaveRequest::awaitingAttendanceOvertimeCompletion()->count();
+                $pendingStudentLeaveCount = LeaveRequest::where('status', 'pending')
+                    ->whereHas('user', fn ($q) => $q->where('role', 'student'))
+                    ->count();
+                $leaveRequestStudentLabels = ['Pending', 'Incomplete Details', 'For More Verification', 'Approved', 'Rejected'];
                 $leaveRequestStudentData = [
-                    LeaveRequest::where('status', 'pending')->whereHas('user', fn ($q) => $q->where('role', 'student'))->count(),
+                    max(0, $pendingStudentLeaveCount - $incompleteStudentOvertimeCount),
+                    $incompleteStudentOvertimeCount,
+                    LeaveRequest::where('status', 'for_more_verification')->whereHas('user', fn ($q) => $q->where('role', 'student'))->count(),
                     LeaveRequest::where('status', 'approved')->whereHas('user', fn ($q) => $q->where('role', 'student'))->count(),
                     LeaveRequest::where('status', 'rejected')->whereHas('user', fn ($q) => $q->where('role', 'student'))->count(),
                 ];
             } catch (\Exception $e) {
-                $leaveRequestStudentLabels = ['Pending', 'Approved', 'Rejected'];
-                $leaveRequestStudentData = [0, 0, 0];
+                $leaveRequestStudentLabels = ['Pending', 'Incomplete Details', 'For More Verification', 'Approved', 'Rejected'];
+                $leaveRequestStudentData = [0, 0, 0, 0, 0];
+                $incompleteStudentOvertimeCount = 0;
+            }
+
+            try {
+                $pendingTimeRequests = DtrTimeRequest::where('status', 'pending')->count();
+            } catch (\Exception $e) {
+                $pendingTimeRequests = 0;
+                $incompleteStudentOvertimeCount = $incompleteStudentOvertimeCount ?? 0;
+            }
+
+            // Chart data: Leave requests filed per period (employees vs students)
+            try {
+                $leaveTrendLabels = [];
+                $leaveTrendEmployeeData = [];
+                $leaveTrendStudentData = [];
+                foreach ($chartRanges as $r) {
+                    $leaveTrendLabels[] = $r['label'];
+                    $leaveTrendEmployeeData[] = LeaveRequest::whereHas('user', fn ($q) => $q->where('role', 'employee'))
+                        ->whereBetween('created_at', [$r['start'], $r['end']])
+                        ->count();
+                    $leaveTrendStudentData[] = LeaveRequest::whereHas('user', fn ($q) => $q->where('role', 'student'))
+                        ->whereBetween('created_at', [$r['start'], $r['end']])
+                        ->count();
+                }
+            } catch (\Exception $e) {
+                $leaveTrendLabels = array_column($chartRanges, 'label');
+                $leaveTrendEmployeeData = array_fill(0, count($chartRanges), 0);
+                $leaveTrendStudentData = array_fill(0, count($chartRanges), 0);
+            }
+
+            // Chart data: DTR time requests filed per period by status
+            try {
+                $timeRequestTrendLabels = [];
+                $timeRequestTrendPendingData = [];
+                $timeRequestTrendApprovedData = [];
+                $timeRequestTrendRejectedData = [];
+                foreach ($chartRanges as $r) {
+                    $timeRequestTrendLabels[] = $r['label'];
+                    $timeRequestTrendPendingData[] = DtrTimeRequest::where('status', 'pending')
+                        ->whereBetween('created_at', [$r['start'], $r['end']])
+                        ->count();
+                    $timeRequestTrendApprovedData[] = DtrTimeRequest::where('status', 'approved')
+                        ->whereBetween('created_at', [$r['start'], $r['end']])
+                        ->count();
+                    $timeRequestTrendRejectedData[] = DtrTimeRequest::where('status', 'rejected')
+                        ->whereBetween('created_at', [$r['start'], $r['end']])
+                        ->count();
+                }
+            } catch (\Exception $e) {
+                $timeRequestTrendLabels = array_column($chartRanges, 'label');
+                $timeRequestTrendPendingData = array_fill(0, count($chartRanges), 0);
+                $timeRequestTrendApprovedData = array_fill(0, count($chartRanges), 0);
+                $timeRequestTrendRejectedData = array_fill(0, count($chartRanges), 0);
+            }
+
+            // Chart data: Student leave requests by type (selected period)
+            try {
+                $periodStart = $chartRanges[0]['start'] ?? now()->subDays(7);
+                $periodEnd = end($chartRanges)['end'] ?? now();
+                $studentLeaveTypes = ['overtime', 'additional_time', 'absent', 'other'];
+                $studentLeaveByTypeLabels = [];
+                $studentLeaveByTypeData = [];
+                foreach ($studentLeaveTypes as $type) {
+                    $studentLeaveByTypeLabels[] = LeaveRequest::labelForType($type);
+                    $studentLeaveByTypeData[] = LeaveRequest::where('type', $type)
+                        ->whereHas('user', fn ($q) => $q->where('role', 'student'))
+                        ->whereBetween('created_at', [$periodStart, $periodEnd])
+                        ->count();
+                }
+            } catch (\Exception $e) {
+                $studentLeaveByTypeLabels = ['Overtime', 'Additional Time', 'Absent', 'Other'];
+                $studentLeaveByTypeData = [0, 0, 0, 0];
+            }
+
+            // Chart data: Employee leave requests by type (selected period)
+            try {
+                $periodStart = $chartRanges[0]['start'] ?? now()->subDays(7);
+                $periodEnd = end($chartRanges)['end'] ?? now();
+                $employeeLeaveTypes = ['vacation_leave', 'sick_leave', 'overtime', 'offset', 'work_from_home', 'absent'];
+                $employeeLeaveByTypeLabels = [];
+                $employeeLeaveByTypeData = [];
+                foreach ($employeeLeaveTypes as $type) {
+                    $employeeLeaveByTypeLabels[] = LeaveRequest::labelForType($type);
+                    $employeeLeaveByTypeData[] = LeaveRequest::where('type', $type)
+                        ->whereHas('user', fn ($q) => $q->where('role', 'employee'))
+                        ->whereBetween('created_at', [$periodStart, $periodEnd])
+                        ->count();
+                }
+            } catch (\Exception $e) {
+                $employeeLeaveByTypeLabels = ['Vacation Leave', 'Sick Leave', 'Overtime', 'Offset', 'Work From Home', 'Absent'];
+                $employeeLeaveByTypeData = [0, 0, 0, 0, 0, 0];
+            }
+
+            // Chart data: Error logs by HTTP status (selected period)
+            try {
+                $periodStart = $chartRanges[0]['start'] ?? now()->subDays(7);
+                $periodEnd = end($chartRanges)['end'] ?? now();
+                $errorLogsByTypeLabels = [];
+                $errorLogsByTypeData = [];
+                $errorStatusRows = ErrorLog::whereBetween('created_at', [$periodStart, $periodEnd])
+                    ->selectRaw('status_code, COUNT(*) as count')
+                    ->groupBy('status_code')
+                    ->orderByDesc('count')
+                    ->limit(8)
+                    ->get();
+                foreach ($errorStatusRows as $row) {
+                    $code = $row->status_code;
+                    $errorLogsByTypeLabels[] = $code !== null && $code !== '' ? 'HTTP '.$code : 'Unknown';
+                    $errorLogsByTypeData[] = (int) $row->count;
+                }
+                if ($errorLogsByTypeLabels === []) {
+                    $errorLogsByTypeLabels = ['HTTP 404', 'HTTP 500', 'HTTP 403'];
+                    $errorLogsByTypeData = [0, 0, 0];
+                }
+            } catch (\Exception $e) {
+                $errorLogsByTypeLabels = ['HTTP 404', 'HTTP 500', 'HTTP 403'];
+                $errorLogsByTypeData = [0, 0, 0];
+            }
+
+            // Chart data: Activity logs by type (selected period)
+            try {
+                $periodStart = $chartRanges[0]['start'] ?? now()->subDays(7);
+                $periodEnd = end($chartRanges)['end'] ?? now();
+                $activityLogsByTypeLabels = [];
+                $activityLogsByTypeData = [];
+                $activityTypeRows = UserActivity::whereBetween('created_at', [$periodStart, $periodEnd])
+                    ->select('activity_type', DB::raw('count(*) as count'))
+                    ->groupBy('activity_type')
+                    ->orderByDesc('count')
+                    ->get();
+                foreach ($activityTypeRows as $row) {
+                    $activityLogsByTypeLabels[] = ucfirst(str_replace('_', ' ', (string) $row->activity_type));
+                    $activityLogsByTypeData[] = (int) $row->count;
+                }
+                if ($activityLogsByTypeLabels === []) {
+                    $activityLogsByTypeLabels = ['Login', 'Logout', 'Page view', 'Action'];
+                    $activityLogsByTypeData = [0, 0, 0, 0];
+                }
+            } catch (\Exception $e) {
+                $activityLogsByTypeLabels = ['Login', 'Logout', 'Page view', 'Action'];
+                $activityLogsByTypeData = [0, 0, 0, 0];
+            }
+
+            // Chart data: Support tickets filed per period
+            try {
+                $ticketsTrendLabels = [];
+                $ticketsTrendOpenData = [];
+                $ticketsTrendClosedData = [];
+                foreach ($chartRanges as $r) {
+                    $ticketsTrendLabels[] = $r['label'];
+                    $ticketsTrendOpenData[] = TicketReport::where('status', 'open')
+                        ->whereBetween('created_at', [$r['start'], $r['end']])
+                        ->count();
+                    $ticketsTrendClosedData[] = TicketReport::whereIn('status', [
+                        TicketReport::STATUS_RESOLVED,
+                        TicketReport::STATUS_CLOSED,
+                    ])
+                        ->whereBetween('created_at', [$r['start'], $r['end']])
+                        ->count();
+                }
+            } catch (\Exception $e) {
+                $ticketsTrendLabels = array_column($chartRanges, 'label');
+                $ticketsTrendOpenData = array_fill(0, count($chartRanges), 0);
+                $ticketsTrendClosedData = array_fill(0, count($chartRanges), 0);
+            }
+
+            // Chart data: Contact messages per period
+            try {
+                $contactTrendLabels = [];
+                $contactTrendData = [];
+                foreach ($chartRanges as $r) {
+                    $contactTrendLabels[] = $r['label'];
+                    $contactTrendData[] = ContactMessage::whereBetween('created_at', [$r['start'], $r['end']])->count();
+                }
+            } catch (\Exception $e) {
+                $contactTrendLabels = array_column($chartRanges, 'label');
+                $contactTrendData = array_fill(0, count($chartRanges), 0);
+            }
+
+            // Chart data: Say-it posts per period
+            try {
+                $confessionTrendLabels = [];
+                $confessionTrendData = [];
+                foreach ($chartRanges as $r) {
+                    $confessionTrendLabels[] = $r['label'];
+                    $confessionTrendData[] = ConfessionPost::whereBetween('created_at', [$r['start'], $r['end']])->count();
+                }
+            } catch (\Exception $e) {
+                $confessionTrendLabels = array_column($chartRanges, 'label');
+                $confessionTrendData = array_fill(0, count($chartRanges), 0);
             }
 
             // Chart data: User Activity Logs - total activities (filtered by period)
@@ -681,6 +879,8 @@ class DashboardController extends Controller
                 'notificationsCount',
                 'openTicketsCount',
                 'pendingHiringCount',
+                'pendingTimeRequests',
+                'incompleteStudentOvertimeCount',
                 'loginChartLabels',
                 'loginChartData',
                 'quizAttemptChartLabels',
@@ -711,6 +911,28 @@ class DashboardController extends Controller
                 'activityLogLogoutData',
                 'activityLogPageViewData',
                 'activityLogGuestPageViewData',
+                'leaveTrendLabels',
+                'leaveTrendEmployeeData',
+                'leaveTrendStudentData',
+                'timeRequestTrendLabels',
+                'timeRequestTrendPendingData',
+                'timeRequestTrendApprovedData',
+                'timeRequestTrendRejectedData',
+                'studentLeaveByTypeLabels',
+                'studentLeaveByTypeData',
+                'employeeLeaveByTypeLabels',
+                'employeeLeaveByTypeData',
+                'errorLogsByTypeLabels',
+                'errorLogsByTypeData',
+                'activityLogsByTypeLabels',
+                'activityLogsByTypeData',
+                'ticketsTrendLabels',
+                'ticketsTrendOpenData',
+                'ticketsTrendClosedData',
+                'contactTrendLabels',
+                'contactTrendData',
+                'confessionTrendLabels',
+                'confessionTrendData',
                 'mostActiveUsers'
             ));
         } catch (\Exception $e) {
@@ -770,6 +992,8 @@ class DashboardController extends Controller
                 'notificationsCount' => 0,
                 'openTicketsCount' => 0,
                 'pendingHiringCount' => 0,
+                'pendingTimeRequests' => 0,
+                'incompleteStudentOvertimeCount' => 0,
                 'loginChartLabels' => [],
                 'loginChartData' => [],
                 'quizAttemptChartLabels' => [],
@@ -800,6 +1024,28 @@ class DashboardController extends Controller
                 'activityLogLogoutData' => [],
                 'activityLogPageViewData' => [],
                 'activityLogGuestPageViewData' => [],
+                'leaveTrendLabels' => [],
+                'leaveTrendEmployeeData' => [],
+                'leaveTrendStudentData' => [],
+                'timeRequestTrendLabels' => [],
+                'timeRequestTrendPendingData' => [],
+                'timeRequestTrendApprovedData' => [],
+                'timeRequestTrendRejectedData' => [],
+                'studentLeaveByTypeLabels' => [],
+                'studentLeaveByTypeData' => [],
+                'employeeLeaveByTypeLabels' => [],
+                'employeeLeaveByTypeData' => [],
+                'errorLogsByTypeLabels' => [],
+                'errorLogsByTypeData' => [],
+                'activityLogsByTypeLabels' => [],
+                'activityLogsByTypeData' => [],
+                'ticketsTrendLabels' => [],
+                'ticketsTrendOpenData' => [],
+                'ticketsTrendClosedData' => [],
+                'contactTrendLabels' => [],
+                'contactTrendData' => [],
+                'confessionTrendLabels' => [],
+                'confessionTrendData' => [],
                 'mostActiveUsers' => collect(),
             ])->with('error', 'Some dashboard data could not be loaded. Please refresh the page.');
         }

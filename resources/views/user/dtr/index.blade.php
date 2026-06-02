@@ -119,14 +119,24 @@
         </form>
     </div>
 
-    <!-- Pending Time Requests (Students Only) -->
+    @if(auth()->user()->role === 'student' && !empty($incompleteOvertimeReminderItems))
+    <div class="mx-2 sm:mx-3 lg:mx-4 xl:mx-6 mt-4 mb-2 rounded-lg border border-orange-200 bg-orange-50 px-4 py-3 text-sm text-orange-900">
+        <strong>{{ count($incompleteOvertimeReminderItems) }} Additional Time request(s)</strong> from Record Attendance have
+        <strong>Incomplete details</strong>.
+        Complete them in
+        <a href="{{ route('user.leave-requests.index') }}" class="font-semibold text-orange-800 underline hover:text-orange-950">Leave Requests</a>
+        within {{ \App\Services\LeaveRequestIncompleteAttendanceOvertimeService::RESPONSE_WINDOW_DAYS }} days of filing, or they will be <strong>automatically rejected</strong>.
+    </div>
+    @endif
+
+    <!-- Pending Time Requests — regular hours only (Students Only) -->
     @if(auth()->user()->role === 'student' && isset($pendingTimeRequests) && $pendingTimeRequests->count() > 0)
     <div class="bg-white rounded-lg shadow border border-gray-200 overflow-hidden mx-2 sm:mx-3 lg:mx-4 xl:mx-6 mt-4 mb-4">
         <div class="px-4 sm:px-6 py-4 border-b border-gray-200 bg-yellow-50">
             <div class="flex items-center justify-between">
                 <div>
                     <h2 class="text-lg font-semibold text-gray-900">Pending Time Requests</h2>
-                    <p class="text-sm text-gray-600 mt-1">Time requests awaiting approval ({{ $pendingTimeRequests->count() }})</p>
+                    <p class="text-sm text-gray-600 mt-1">Regular hours awaiting approval ({{ $pendingTimeRequests->count() }}). Additional Time is handled under Leave Requests.</p>
                 </div>
             </div>
         </div>
@@ -135,6 +145,7 @@
                 <thead class="bg-gray-50">
                     <tr>
                         <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
+                        <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Type</th>
                         <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Hours</th>
                         <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
                         <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Remarks</th>
@@ -148,12 +159,13 @@
                         <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
                             {{ $request->date->format('M d, Y') }}
                         </td>
-                        <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
-                            @php
-                                $hours = (int) $request->hours;
-                                $minutes = (int) round(($request->hours - $hours) * 60);
-                            @endphp
-                            {{ sprintf('%02d:%02d', $hours, $minutes) }}
+                        <td class="px-4 py-3 whitespace-nowrap text-sm">
+                            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium {{ $request->isOvertime() ? 'bg-orange-100 text-orange-800' : 'bg-blue-100 text-blue-800' }}">
+                                {{ $request->request_type_label }}
+                            </span>
+                        </td>
+                        <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-900 font-mono">
+                            {{ $request->formatted_time }}
                         </td>
                         <td class="px-4 py-3 whitespace-nowrap">
                             <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium {{ $request->getStatusBadgeClass() }}">
@@ -169,7 +181,7 @@
                         <td class="px-4 py-3 whitespace-nowrap text-sm">
                             @if($request->status === 'pending')
                                 <form method="POST" action="{{ route('user.dtr-time-requests.destroy', $request) }}"
-                                      onsubmit="return confirm('Discard this pending time request?');">
+                                      onsubmit="return confirm('Discard this pending time request? The linked Additional Time leave request for the same day will also be removed.');">
                                     @csrf
                                     @method('DELETE')
                                     <button type="submit" class="text-red-600 hover:text-red-800 font-medium">
@@ -459,13 +471,20 @@ document.addEventListener('DOMContentLoaded', function() {
 <!-- Record Attendance Modal -->
 <div id="record-attendance-modal" class="hidden fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
     <div class="relative top-10 mx-auto p-5 border w-11/12 md:w-3/4 lg:w-2/3 shadow-lg rounded-md bg-white max-h-[90vh] overflow-y-auto">
-        <div class="flex items-center justify-between mb-4">
-            <h3 class="text-lg font-bold text-gray-900">Record Attendance</h3>
-            <button onclick="closeRecordAttendanceModal()" class="text-gray-400 hover:text-gray-600">
+        <div class="flex items-start gap-3 mb-4">
+            <div class="flex-shrink-0 w-10 h-10 rounded-full bg-green-100 flex items-center justify-center">
+                <svg class="w-5 h-5 text-green-700" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                </svg>
+            </div>
+            <div class="flex-1 min-w-0 flex items-start justify-between gap-2">
+                <h3 class="text-lg font-bold text-gray-900 pt-1.5">Record Attendance</h3>
+            <button onclick="closeRecordAttendanceModal()" class="text-gray-400 hover:text-gray-600 flex-shrink-0" aria-label="Close">
                 <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
                 </svg>
             </button>
+            </div>
         </div>
 
         <form action="{{ url('/dtr-time-requests') }}" method="POST" id="record-attendance-form">
@@ -527,10 +546,11 @@ document.addEventListener('DOMContentLoaded', function() {
                     <label for="attendance_remarks" class="block text-sm font-medium text-gray-700 mb-2">Remarks (Optional)</label>
                     <textarea name="remarks" 
                               id="attendance_remarks" 
-                              rows="3"
+                              rows="2"
                               maxlength="1000"
+                              placeholder="Optional notes about this attendance filing"
                               class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"></textarea>
-                    <p class="mt-1 text-xs text-gray-500">Add any additional notes about this attendance</p>
+                    <p id="attendance_remarks_help" class="mt-1 text-xs text-gray-500">If you file Additional Time (over 08:00), you will complete the full Additional Time form under Leave Requests next.</p>
                     @error('remarks')
                         <p class="mt-1 text-xs text-red-600">{{ $message }}</p>
                     @enderror
@@ -540,11 +560,17 @@ document.addEventListener('DOMContentLoaded', function() {
             <div class="mt-6 flex justify-end gap-3">
                 <button type="button" 
                         onclick="closeRecordAttendanceModal()"
-                        class="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors">
+                        class="inline-flex items-center px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors">
+                    <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
                     Cancel
                 </button>
                 <button type="submit" 
-                        class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors">
+                        class="inline-flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors">
+                    <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                    </svg>
                     Submit Request
                 </button>
             </div>
@@ -552,27 +578,121 @@ document.addEventListener('DOMContentLoaded', function() {
     </div>
 </div>
 
-<!-- Attendance Policy Prompt Modal -->
-<div id="attendance-policy-modal" class="hidden fixed inset-0 bg-gray-900/40 z-[60] p-4 flex items-center justify-center">
-    <div class="w-full max-w-2xl p-5 border border-amber-300 shadow-xl rounded-xl bg-amber-50">
-        <div class="flex items-center justify-between mb-3">
-            <h3 id="attendance-policy-modal-title" class="text-lg font-bold text-amber-900">Warning</h3>
-            <button type="button" onclick="closeAttendancePolicyModal(false)" class="text-amber-500 hover:text-amber-700">
-                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+@if(!empty($incompleteOvertimeReminderItems))
+@php
+    $incompleteOvertimeWindowDays = \App\Services\LeaveRequestIncompleteAttendanceOvertimeService::RESPONSE_WINDOW_DAYS;
+@endphp
+<!-- Incomplete Additional Time reminder (shown when opening DTR) -->
+<div id="incomplete-overtime-reminder-modal" class="hidden fixed inset-0 bg-gray-900/50 z-[70] p-4 sm:p-6 flex items-center justify-center overflow-y-auto" role="dialog" aria-modal="true" aria-labelledby="incomplete-overtime-reminder-title">
+    <div class="w-full max-w-2xl max-h-[min(90vh,720px)] flex flex-col p-6 sm:p-8 border border-orange-300 shadow-xl rounded-xl bg-white my-auto" onclick="event.stopPropagation()">
+        <div class="flex items-start gap-4 mb-5 flex-shrink-0">
+            <div class="flex-shrink-0 w-10 h-10 rounded-full bg-orange-100 flex items-center justify-center">
+                <svg class="w-5 h-5 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
+                </svg>
+            </div>
+            <div class="flex-1 min-w-0">
+                <h3 id="incomplete-overtime-reminder-title" class="text-xl font-bold text-gray-900">Incomplete Additional Time details</h3>
+                <p class="mt-2 text-sm sm:text-base text-gray-600 leading-relaxed">
+                    You have {{ count($incompleteOvertimeReminderItems) }} Additional Time request(s) from Record Attendance that still need a <strong>reason</strong> submitted (ClickUp links and supporting documents are optional).
+                </p>
+                <p class="mt-2 text-sm font-medium text-red-700">
+                    If not completed within {{ $incompleteOvertimeWindowDays }} days of filing, each request will be <strong>automatically rejected</strong>.
+                </p>
+            </div>
+            <button type="button" onclick="closeIncompleteOvertimeReminderModal()" class="text-gray-400 hover:text-gray-600 flex-shrink-0" aria-label="Close">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
                 </svg>
             </button>
         </div>
-        <div id="attendance-policy-modal-body" class="text-sm text-amber-900 whitespace-pre-line"></div>
+
+        <ul class="mb-5 flex-1 min-h-[8rem] max-h-[min(22rem,45vh)] overflow-y-auto space-y-0 rounded-lg border border-orange-200 bg-orange-50/60 p-3 sm:p-4">
+            @foreach($incompleteOvertimeReminderItems as $item)
+                <li class="border-b border-orange-100 last:border-0">
+                    <div class="flex items-center gap-2 sm:gap-3 py-2.5 text-sm text-gray-800 min-w-0"
+                         title="Reject by {{ $item['deadline_formatted'] }}{{ !empty($item['time_remaining_label']) ? ' — '.$item['time_remaining_label'].' remaining' : '' }}">
+                        <span class="font-semibold text-gray-900 whitespace-nowrap shrink-0 inline-flex items-center gap-1">
+                            <svg class="w-3.5 h-3.5 text-orange-600 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                            </svg>
+                            {{ $item['date_label_short'] ?? $item['date_label'] }}
+                            @if(!empty($item['hours']))
+                                <span class="font-mono font-medium text-gray-600">· {{ $item['hours'] }}</span>
+                            @endif
+                        </span>
+                        <span class="text-gray-400 shrink-0" aria-hidden="true">|</span>
+                        <span class="text-gray-600 whitespace-nowrap min-w-0 truncate">
+                            Reject {{ $item['deadline_short'] ?? $item['deadline_formatted'] }}
+                            @if(!empty($item['time_remaining_short']))
+                                <span class="text-orange-800 font-medium">({{ $item['time_remaining_short'] }})</span>
+                            @elseif(!empty($item['past_due']))
+                                <span class="text-red-700 font-semibold">(overdue)</span>
+                            @endif
+                        </span>
+                        <span class="text-gray-400 shrink-0 ml-auto" aria-hidden="true">|</span>
+                        <a href="{{ $item['complete_url'] }}"
+                           class="font-semibold text-orange-700 hover:text-orange-900 underline whitespace-nowrap shrink-0">
+                            Complete details
+                        </a>
+                    </div>
+                </li>
+            @endforeach
+        </ul>
+
+        <div class="flex flex-col-reverse sm:flex-row sm:justify-end gap-3 flex-shrink-0 pt-1">
+            <button type="button"
+                    onclick="closeIncompleteOvertimeReminderModal()"
+                    class="inline-flex justify-center items-center px-5 py-2.5 border border-gray-300 rounded-lg text-gray-700 bg-white hover:bg-gray-50 text-sm font-medium">
+                <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                </svg>
+                Remind me later
+            </button>
+            <a href="{{ route('user.leave-requests.index') }}"
+               class="inline-flex justify-center items-center px-5 py-2.5 bg-orange-600 text-white rounded-lg hover:bg-orange-700 text-sm font-medium">
+                <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path>
+                </svg>
+                Go to Leave Requests
+            </a>
+        </div>
+    </div>
+</div>
+@endif
+
+<!-- Attendance Policy Prompt Modal -->
+<div id="attendance-policy-modal" class="hidden fixed inset-0 bg-gray-900/40 z-[60] p-4 flex items-center justify-center" role="dialog" aria-modal="true" aria-labelledby="attendance-policy-modal-title">
+    <div class="w-full max-w-2xl p-5 sm:p-6 border border-amber-300 shadow-xl rounded-xl bg-amber-50" onclick="event.stopPropagation()">
+        <div class="flex items-start gap-4 mb-4">
+            <div id="attendance-policy-modal-icon" class="flex-shrink-0 w-11 h-11 rounded-full bg-amber-200 flex items-center justify-center text-amber-800" aria-hidden="true"></div>
+            <div class="flex-1 min-w-0">
+                <div class="flex items-start justify-between gap-2">
+                    <h3 id="attendance-policy-modal-title" class="text-lg font-bold text-amber-900">Warning</h3>
+                    <button type="button" onclick="closeAttendancePolicyModal(false)" class="text-amber-500 hover:text-amber-700 flex-shrink-0" aria-label="Close">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+        </div>
+        <div id="attendance-policy-modal-body" class="text-sm text-amber-900 space-y-2 pl-0 sm:pl-[3.75rem] -mt-1"></div>
         <div class="mt-5 flex justify-end gap-3">
             <button type="button"
                     onclick="closeAttendancePolicyModal(false)"
-                    class="px-4 py-2 border border-amber-300 rounded-lg text-amber-800 bg-white hover:bg-amber-100 transition-colors">
+                    class="inline-flex items-center px-4 py-2 border border-amber-300 rounded-lg text-amber-800 bg-white hover:bg-amber-100 transition-colors">
+                <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                </svg>
                 Cancel
             </button>
             <button type="button"
                     onclick="closeAttendancePolicyModal(true)"
-                    class="px-4 py-2 bg-amber-500 text-white rounded-lg hover:bg-amber-600 transition-colors">
+                    class="inline-flex items-center px-4 py-2 bg-amber-500 text-white rounded-lg hover:bg-amber-600 transition-colors">
+                <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                </svg>
                 Continue
             </button>
         </div>
@@ -580,20 +700,36 @@ document.addEventListener('DOMContentLoaded', function() {
 </div>
 
 @php
-    $existingTimeRequestDates = isset($pendingTimeRequests)
-        ? $pendingTimeRequests->pluck('date')->map(function ($d) {
-            return optional($d)->format('Y-m-d');
-        })->filter()->values()->all()
-        : [];
+    $existingTimeRequestSlots = $existingTimeRequestSlots ?? [];
+    $pendingTimeRequestByDate = $pendingTimeRequestByDate ?? [];
 @endphp
 
-<script id="existing-time-request-dates" type="application/json">{!! json_encode($existingTimeRequestDates) !!}</script>
+<script id="existing-time-request-slots" type="application/json">{!! json_encode($existingTimeRequestSlots) !!}</script>
+<script id="pending-time-request-by-date" type="application/json">{!! json_encode($pendingTimeRequestByDate) !!}</script>
 <script>
-const existingTimeRequestDates = JSON.parse(
-    document.getElementById('existing-time-request-dates')?.textContent || '[]'
+const existingTimeRequestSlots = JSON.parse(
+    document.getElementById('existing-time-request-slots')?.textContent || '{}'
 );
+const pendingTimeRequestByDate = JSON.parse(
+    document.getElementById('pending-time-request-by-date')?.textContent || '{}'
+);
+const dtrBeyondStandardHoursLabel = 'Additional Time';
 
 let attendancePolicyModalResolver = null;
+
+function closeIncompleteOvertimeReminderModal() {
+    const modal = document.getElementById('incomplete-overtime-reminder-modal');
+    if (modal) {
+        modal.classList.add('hidden');
+    }
+}
+
+function openIncompleteOvertimeReminderModal() {
+    const modal = document.getElementById('incomplete-overtime-reminder-modal');
+    if (modal) {
+        modal.classList.remove('hidden');
+    }
+}
 
 function closeAttendancePolicyModal(confirmed) {
     const modal = document.getElementById('attendance-policy-modal');
@@ -606,16 +742,86 @@ function closeAttendancePolicyModal(confirmed) {
     }
 }
 
-function showAttendancePolicyModal(title, message) {
+const attendancePolicyModalIcons = {
+    'over-eight': '<svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>',
+    'under-eight': '<svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 17h8m0 0V9m0 8l-8-8-4 4-6-6"></path></svg>',
+    warning: '<svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>',
+};
+
+const attendancePolicyBodyBullet = '<span class="shrink-0 w-4 text-center font-bold text-amber-800 leading-5" aria-hidden="true">•</span>';
+
+const attendancePolicyBodyIcons = {
+    question: '<svg class="w-4 h-4 shrink-0 text-amber-800" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>',
+};
+
+function escapeAttendancePolicyHtml(text) {
+    return String(text)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
+}
+
+function formatAttendancePolicyModalBody(message) {
+    const lines = String(message).split('\n');
+    const html = [];
+
+    lines.forEach((line) => {
+        const trimmed = line.trim();
+        if (!trimmed) {
+            return;
+        }
+
+        const escaped = escapeAttendancePolicyHtml(line);
+
+        if (line.startsWith('• ')) {
+            html.push(
+                '<div class="flex items-start gap-2 rounded-md bg-amber-100/60 px-2 py-1.5">'
+                + attendancePolicyBodyBullet
+                + '<span>' + escapeAttendancePolicyHtml(line.slice(2)) + '</span></div>'
+            );
+            return;
+        }
+
+        if (trimmed === 'Do you want to continue?') {
+            html.push(
+                '<p class="mt-3 pt-2 border-t border-amber-200 font-semibold text-amber-950 flex items-center gap-2">'
+                + attendancePolicyBodyIcons.question
+                + '<span>' + escaped + '</span></p>'
+            );
+            return;
+        }
+
+        if (trimmed.includes('Pending Time Requests') || trimmed.includes('Leave Requests') || trimmed.includes('08:00')
+            || trimmed.includes('Terms and Conditions') || trimmed.includes('violation')) {
+            html.push(
+                '<p class="flex items-start gap-2 text-amber-950">'
+                + attendancePolicyBodyBullet
+                + '<span>' + escaped + '</span></p>'
+            );
+            return;
+        }
+
+        html.push('<p class="font-medium text-amber-950">' + escaped + '</p>');
+    });
+
+    return html.join('');
+}
+
+function showAttendancePolicyModal(title, message, variant = 'warning') {
     const modal = document.getElementById('attendance-policy-modal');
     const titleEl = document.getElementById('attendance-policy-modal-title');
     const bodyEl = document.getElementById('attendance-policy-modal-body');
+    const iconEl = document.getElementById('attendance-policy-modal-icon');
     if (!modal || !titleEl || !bodyEl) {
         return Promise.resolve(window.confirm(message));
     }
 
     titleEl.textContent = title;
-    bodyEl.textContent = message;
+    bodyEl.innerHTML = formatAttendancePolicyModalBody(message);
+    if (iconEl) {
+        iconEl.innerHTML = attendancePolicyModalIcons[variant] || attendancePolicyModalIcons.warning;
+    }
     modal.classList.remove('hidden');
 
     return new Promise((resolve) => {
@@ -706,9 +912,12 @@ function updateDaysList() {
         const dayName = currentDate.toLocaleDateString('en-US', { weekday: 'short' });
         const dayNum = currentDate.getDate();
         const monthName = currentDate.toLocaleDateString('en-US', { month: 'short' });
+        const pendingDay = pendingTimeRequestByDate[dateStr] || null;
+        const prefillTime = pendingDay ? pendingDay.formatted_total : '';
         
         html += `
-            <div class="flex items-center gap-3 p-2 bg-gray-50 rounded border border-gray-200">
+            <div class="day-row flex flex-col gap-2 p-2 bg-gray-50 rounded border border-gray-200" data-date="${dateStr}" data-has-pending="${pendingDay ? '1' : '0'}">
+                <div class="flex items-center gap-3">
                 <div class="w-24 text-sm font-medium text-gray-700">
                     ${dayName}, ${monthName} ${dayNum}
                 </div>
@@ -716,32 +925,48 @@ function updateDaysList() {
                        name="days[${dayIndex}][date]" 
                        value="${dateStr}" 
                        hidden>
-                <div class="flex-1 relative">
-                    <input type="text" 
-                           name="days[${dayIndex}][time]" 
-                           id="time-input-${dayIndex}"
-                           value=""
-                           placeholder="00:00"
-                           class="time-input w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-center"
-                           style="text-align: center;"
-                           oninput="formatTimeInput(this)"
-                           onblur="formatTimeOnBlur(this)">
-                    <button type="button" 
-                            onclick="clearTimeField('time-input-${dayIndex}')"
-                            class="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 focus:outline-none"
-                            title="Clear time">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-                        </svg>
-                    </button>
+                <div class="flex-1 space-y-1.5">
+                    <div class="relative">
+                        <input type="text" 
+                               name="days[${dayIndex}][time]" 
+                               id="time-input-${dayIndex}"
+                               value="${prefillTime}"
+                               placeholder="08:00"
+                               class="time-input w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-center font-mono"
+                               style="text-align: center;"
+                               oninput="formatTimeInput(this)"
+                               onblur="formatTimeOnBlur(this)">
+                        <button type="button" 
+                                onclick="clearTimeField('time-input-${dayIndex}')"
+                                class="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 focus:outline-none"
+                                title="Clear time">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
                 </div>
             </div>
         `;
 
-        if (existingTimeRequestDates.includes(dateStr)) {
+        const existingSlots = existingTimeRequestSlots[dateStr] || [];
+        if (existingSlots.includes('regular') && existingSlots.includes('overtime')) {
             html += `
                 <div class="mt-1 mb-2 text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded px-2 py-1">
-                    A time request already exists for ${dateStr}. One request per day only.
+                    Regular and ${dtrBeyondStandardHoursLabel} requests already exist for ${dateStr}.
+                </div>
+            `;
+        } else if (existingSlots.includes('regular')) {
+            html += `
+                <div class="mt-1 mb-2 text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded px-2 py-1">
+                    A pending time request exists for ${dateStr}. Enter time above 08:00 to file ${dtrBeyondStandardHoursLabel} automatically in Leave Requests.
+                </div>
+            `;
+        } else if (existingSlots.includes('overtime')) {
+            html += `
+                <div class="mt-1 mb-2 text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded px-2 py-1">
+                    An ${dtrBeyondStandardHoursLabel} request already exists for ${dateStr}. You may still file regular time.
                 </div>
             `;
         }
@@ -897,6 +1122,33 @@ function clearTimeField(inputId) {
     }
 }
 
+function formatAttendanceDayLabel(dateStr) {
+    if (!dateStr) {
+        return 'Unknown date';
+    }
+    const d = new Date(dateStr + 'T00:00:00');
+    if (Number.isNaN(d.getTime())) {
+        return dateStr;
+    }
+    return d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
+}
+
+function describeAttendanceHourSplit(totalMinutes) {
+    const regularMinutes = Math.min(totalMinutes, 480);
+    const overtimeMinutes = Math.max(0, totalMinutes - 480);
+    const fmt = (m) => {
+        const h = String(Math.floor(m / 60)).padStart(2, '0');
+        const min = String(m % 60).padStart(2, '0');
+        return `${h}:${min}`;
+    };
+
+    return {
+        entered: fmt(totalMinutes),
+        regular: fmt(regularMinutes),
+        overtime: fmt(overtimeMinutes),
+    };
+}
+
 // Validate attendance form before submission
 async function validateAttendanceForm(event) {
     const form = document.getElementById('record-attendance-form');
@@ -920,16 +1172,30 @@ async function validateAttendanceForm(event) {
             hasValidTime = true;
             const [hh, mm] = timeValue.split(':').map(Number);
             const minutes = (hh * 60) + mm;
-            const dayContainer = input.closest('.flex.items-center.gap-3');
+            const dayContainer = input.closest('.day-row');
             const dateInput = dayContainer?.querySelector('input[name^="days"][name$="[date]"]');
-            if (dateInput?.value && existingTimeRequestDates.includes(dateInput.value)) {
-                invalidFields.push(`A time request already exists for ${dateInput.value}. One request per day only.`);
+            const dateValue = dateInput?.value || '';
+            const slots = existingTimeRequestSlots[dateValue] || [];
+            const pendingDay = pendingTimeRequestByDate[dateValue] || null;
+            const effectiveMinutes = pendingDay
+                ? Math.max(minutes, pendingDay.total_minutes || 0)
+                : minutes;
+            if (slots.includes('overtime')) {
+                invalidFields.push(`An ${dtrBeyondStandardHoursLabel} request already exists for ${dateValue} (check Leave Requests).`);
+                return;
+            }
+            if (slots.includes('regular') && slots.includes('overtime')) {
+                invalidFields.push(`Regular and ${dtrBeyondStandardHoursLabel} requests already exist for ${dateValue}.`);
+                return;
+            }
+            if (slots.includes('regular') && effectiveMinutes > 0 && effectiveMinutes <= 480) {
+                invalidFields.push(`A pending time request exists for ${dateValue}. Enter time above 08:00 to file ${dtrBeyondStandardHoursLabel}.`);
                 return;
             }
             validEntries.push({
-                date: dateInput?.value || '',
+                date: dateValue,
                 time: timeValue,
-                minutes: minutes,
+                minutes: effectiveMinutes,
             });
         } else if (timeValue) {
             invalidFields.push(`Day ${index + 1} has invalid time format "${timeValue}". Please use HH:MM format (e.g., 00:00, 08:30).`);
@@ -948,33 +1214,26 @@ async function validateAttendanceForm(event) {
     const underEightHoursCount = underEightEntries.length;
 
     if (overEightHoursCount > 0) {
-        const remarksInput = document.getElementById('attendance_remarks');
-        const remarksValue = (remarksInput?.value || '').trim();
-        if (remarksValue === '') {
-            event.preventDefault();
-            await showAttendancePolicyModal(
-                'Over 08:00 Requires Overtime Approval Note',
-                'You entered time greater than 08:00.\n\nPlease add in Remarks who approved your overtime request (name of the approving Lead Dev) before submitting.'
-            );
-            if (remarksInput) {
-                remarksInput.focus();
-            }
-            return false;
-        }
+        const overEightDetailLines = overEightEntries.map((entry) => {
+            const split = describeAttendanceHourSplit(entry.minutes);
+            const dayLabel = formatAttendanceDayLabel(entry.date);
+            return `• ${dayLabel}: you entered ${split.entered} → ${split.regular} regular + ${split.overtime} ${dtrBeyondStandardHoursLabel}`;
+        });
 
         const overEightMessage = [
-            `You entered ${overEightHoursCount} day(s) with time greater than 08:00.`,
-            `Entered time(s): ${overEightEntries.map((entry) => `${entry.date} (${entry.time})`).join(', ')}`,
+            overEightEntries.length === 1
+                ? 'You entered time greater than 08:00:'
+                : 'You entered time greater than 08:00 on these days:',
             '',
-            'This time request will be further checked.',
-            'If you have approved overtime from your assigned Lead Dev, this will be valid.',
-            'If not, only 08:00 will be recorded and the excess time will be discarded.',
-            'Please ensure your Remarks includes who approved your overtime (Lead Dev name).',
+            ...overEightDetailLines,
+            '',
+            'Regular hours go to Pending Time Requests on this page.',
+            `${dtrBeyondStandardHoursLabel} goes to Leave Requests — submit a reason to complete the request before admin can approve.`,
             '',
             'Do you want to continue?'
         ].join('\n');
 
-        const overEightProceed = await showAttendancePolicyModal('Over 08:00 Time Request Warning', overEightMessage);
+        const overEightProceed = await showAttendancePolicyModal('Over 08:00 Time Request Warning', overEightMessage, 'over-eight');
         if (!overEightProceed) {
             event.preventDefault();
             return false;
@@ -982,9 +1241,17 @@ async function validateAttendanceForm(event) {
     }
 
     if (underEightHoursCount > 0) {
+        const underEightDetailLines = underEightEntries.map((entry) => {
+            const dayLabel = formatAttendanceDayLabel(entry.date);
+            return `• ${dayLabel}: you entered ${entry.time} (below 08:00)`;
+        });
+
         const underEightMessage = [
-            `You entered ${underEightHoursCount} day(s) with time below 08:00.`,
-            `Entered time(s): ${underEightEntries.map((entry) => `${entry.date} (${entry.time})`).join(', ')}`,
+            underEightEntries.length === 1
+                ? 'You entered time below 08:00:'
+                : 'You entered time below 08:00 on these days:',
+            '',
+            ...underEightDetailLines,
             '',
             'You need to complete the required time of 08:00.',
             'If this issue still persists on the following day, this will be a violation of our Terms and Conditions.',
@@ -992,7 +1259,7 @@ async function validateAttendanceForm(event) {
             'Do you want to continue?'
         ].join('\n');
 
-        const underEightProceed = await showAttendancePolicyModal('Below 08:00 Time Request Warning', underEightMessage);
+        const underEightProceed = await showAttendancePolicyModal('Below 08:00 Time Request Warning', underEightMessage, 'under-eight');
         if (!underEightProceed) {
             event.preventDefault();
             return false;
@@ -1006,7 +1273,7 @@ async function validateAttendanceForm(event) {
         
         if (!timeValue || !timePattern.test(timeValue)) {
             // Remove the parent day container if time is invalid
-            const dayContainer = input.closest('.flex.items-center.gap-3');
+            const dayContainer = input.closest('.day-row');
             if (dayContainer) {
                 const dateInput = dayContainer.querySelector('input[type="date"]');
                 if (dateInput) {
@@ -1034,6 +1301,16 @@ document.getElementById('attendance-policy-modal')?.addEventListener('click', fu
     if (e.target === this) {
         closeAttendancePolicyModal(false);
     }
+});
+
+document.getElementById('incomplete-overtime-reminder-modal')?.addEventListener('click', function(e) {
+    if (e.target === this) {
+        closeIncompleteOvertimeReminderModal();
+    }
+});
+
+document.addEventListener('DOMContentLoaded', function() {
+    openIncompleteOvertimeReminderModal();
 });
 </script>
 

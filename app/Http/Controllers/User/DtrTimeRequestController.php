@@ -4,8 +4,11 @@ namespace App\Http\Controllers\User;
 
 use App\Http\Controllers\Controller;
 use App\Models\DtrTimeRequest;
+use App\Support\DtrTimeRequestHours;
+use App\Support\TimeRequestOvertimeLeaveImport;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Str;
 use Carbon\Carbon;
 
 class DtrTimeRequestController extends Controller
@@ -17,14 +20,16 @@ class DtrTimeRequestController extends Controller
     {
         $user = Auth::user();
 
-        // Only students can view time requests
         if ($user->role !== 'student') {
             abort(403, 'Only students can view time requests.');
         }
 
-        // Get only pending and rejected requests (not approved)
         $timeRequests = DtrTimeRequest::where('user_id', $user->id)
             ->whereIn('status', ['pending', 'rejected'])
+            ->where(function ($q): void {
+                $q->where('request_type', 'regular')
+                    ->orWhereNull('request_type');
+            })
             ->orderBy('date', 'desc')
             ->orderBy('created_at', 'desc')
             ->get();
@@ -33,56 +38,36 @@ class DtrTimeRequestController extends Controller
     }
 
     /**
-     * Store a new time request (can be multiple days with different hours)
+     * Store time requests (regular hours on DTR; overtime → Leave Requests).
      */
     public function store(Request $request)
     {
         $user = Auth::user();
 
-        // Only students can create time requests
         if ($user->role !== 'student') {
             abort(403, 'Only students can create time requests.');
         }
 
-        // Log incoming request for debugging
-        \Log::info('DTR Time Request Store - Input', [
-            'user_id' => $user->id,
-            'date_from' => $request->input('date_from'),
-            'date_to' => $request->input('date_to'),
-            'days_count' => count($request->input('days', [])),
-            'days' => $request->input('days', []),
-        ]);
-
-        // Filter out days with empty time before validation
         $days = $request->input('days', []);
         $filteredDays = [];
-        
+
         foreach ($days as $day) {
-            if (!empty($day['time']) && trim($day['time']) !== '') {
+            if (! empty($day['time']) && trim($day['time']) !== '') {
                 $time = trim($day['time']);
-                // Ensure time is in HH:MM format
                 if (preg_match('/^([0-1]?[0-9]|2[0-3]):([0-5][0-9])$/', $time)) {
-                    // Normalize to HH:MM format (pad hours if needed)
                     $parts = explode(':', $time);
-                    $hours = str_pad($parts[0], 2, '0', STR_PAD_LEFT);
-                    $minutes = $parts[1];
-                    $day['time'] = $hours . ':' . $minutes;
+                    $day['time'] = str_pad($parts[0], 2, '0', STR_PAD_LEFT).':'.$parts[1];
                     $filteredDays[] = $day;
-                } else {
-                    \Log::warning('Invalid time format', ['time' => $time, 'day' => $day]);
                 }
             }
         }
-        
-        // If no valid days after filtering, return error
+
         if (empty($filteredDays)) {
-            \Log::warning('No valid days with time', ['original_days' => $days]);
             return back()->withErrors(['days' => 'Please enter time for at least one day in HH:MM format (e.g., 08:00).'])->withInput();
         }
-        
-        // Replace days in request with filtered days
+
         $request->merge(['days' => $filteredDays]);
-        
+
         try {
             $validated = $request->validate([
                 'date_from' => 'required|date|before_or_equal:today',
@@ -92,39 +77,34 @@ class DtrTimeRequestController extends Controller
                 'days.*.time' => 'required|date_format:H:i',
                 'remarks' => 'nullable|string|max:1000',
             ]);
-            
-            \Log::info('DTR Time Request Validation Passed', ['validated' => $validated]);
         } catch (\Illuminate\Validation\ValidationException $e) {
-            \Log::error('DTR Time Request Validation Failed', [
-                'errors' => $e->errors(),
-                'input' => $request->all(),
-            ]);
             return back()->withErrors($e->errors())->withInput();
         }
 
-        // Check if date range is within the filter range (if provided)
         $filterDateFrom = $request->input('filter_date_from');
         $filterDateTo = $request->input('filter_date_to');
-        
+
         if ($filterDateFrom && $filterDateTo) {
             $requestFrom = Carbon::parse($validated['date_from']);
             $requestTo = Carbon::parse($validated['date_to']);
             $filterFrom = Carbon::parse($filterDateFrom);
             $filterTo = Carbon::parse($filterDateTo);
-            
+
             if ($requestFrom->lt($filterFrom) || $requestTo->gt($filterTo)) {
                 return back()->withErrors(['date_from' => 'The date range must be within the selected filter range.'])->withInput();
             }
         }
 
         $createdCount = 0;
+        $updatedCount = 0;
+        $leaveOvertimeCount = 0;
         $skippedCount = 0;
         $errors = [];
         $processedDates = [];
-
+        $createdOvertimeLeaveIds = [];
         $today = Carbon::today()->startOfDay();
-        
-        foreach ($validated['days'] as $index => $day) {
+
+        foreach ($validated['days'] as $day) {
             $date = Carbon::parse($day['date'])->startOfDay();
             $dateKey = $date->toDateString();
 
@@ -132,129 +112,135 @@ class DtrTimeRequestController extends Controller
                 $errors[] = "Duplicate date detected in this submission: {$dateKey}. Please keep only one entry per day.";
                 continue;
             }
-            
-            // Validate date is not in the future (compare dates only, not time)
+
             if ($date->gt($today)) {
-                $errors[] = "Date {$day['date']} cannot be in the future. Only past and today's dates are allowed.";
+                $errors[] = "Date {$day['date']} cannot be in the future.";
                 continue;
             }
-            
-            // Convert time (HH:MM) to decimal hours
-            $timeParts = explode(':', $day['time']);
-            if (count($timeParts) !== 2) {
-                $errors[] = "Invalid time format for {$day['date']}. Expected HH:MM format.";
-                continue;
+
+            $pendingRegular = $this->pendingRegularRequest($user->id, $day['date']);
+            $hours = DtrTimeRequestHours::timeStringToDecimal($day['time']);
+
+            if ($pendingRegular) {
+                $storedTotal = (float) ($pendingRegular->requested_total_hours ?? $pendingRegular->hours);
+                $hours = max($hours, $storedTotal);
             }
-            
-            $hours = (float) $timeParts[0] + ((float) $timeParts[1] / 60);
-            
-            // Validate hours (0 to 24, allow 00:00)
+
             if ($hours < 0 || $hours > 24) {
                 $errors[] = "Time for {$day['date']} must be between 00:00 and 24:00.";
                 continue;
             }
-            
-            // Allow 00:00 but warn if it's exactly 0
-            if ($hours == 0) {
-                \Log::info('Zero hours time request', ['date' => $day['date'], 'user_id' => $user->id]);
-            }
 
-            // Validate date is within the requested range (using date comparison only, ignore time)
-            // Use date strings directly to avoid timezone issues
-            $dayDateStr = $day['date'];
-            $requestFromStr = $validated['date_from'];
-            $requestToStr = $validated['date_to'];
-            
-            // Simple string comparison for dates (YYYY-MM-DD format)
-            if ($dayDateStr < $requestFromStr || $dayDateStr > $requestToStr) {
-                \Log::warning('Date outside range', [
-                    'day_date' => $dayDateStr,
-                    'date_from' => $requestFromStr,
-                    'date_to' => $requestToStr,
-                    'user_id' => $user->id
-                ]);
-                $errors[] = "Date {$dayDateStr} is outside the selected date range ({$requestFromStr} to {$requestToStr}).";
+            if ($day['date'] < $validated['date_from'] || $day['date'] > $validated['date_to']) {
+                $errors[] = "Date {$day['date']} is outside the selected date range.";
                 continue;
             }
 
-            // Enforce one time request per day (any status) to avoid duplication.
-            $existingRequest = DtrTimeRequest::where('user_id', $user->id)
-                ->whereDate('date', $day['date'])
-                ->first();
+            $batchId = $pendingRegular?->submission_batch ?: (string) Str::uuid();
+            $split = DtrTimeRequestHours::splitTotalHours($hours);
+            $overtimeHours = $split['overtime'];
 
-            if ($existingRequest) {
-                $errors[] = "A time request already exists for {$day['date']} (one request per day only).";
-                $skippedCount++;
-                continue;
+            if ($pendingRegular && $overtimeHours <= 0) {
+                $storedTotal = (float) ($pendingRegular->requested_total_hours ?? $pendingRegular->hours);
+                $overtimeHours = max($storedTotal - DtrTimeRequestHours::STANDARD_DAY_HOURS, 0);
+                if ($overtimeHours > 0 && $hours < $storedTotal) {
+                    $hours = $storedTotal;
+                    $split = DtrTimeRequestHours::splitTotalHours($hours);
+                }
             }
 
-            // Create time request for this day
-            try {
-                $timeRequest = DtrTimeRequest::create([
-                    'user_id' => $user->id,
-                    'date' => $day['date'],
-                    'hours' => $hours,
-                    'remarks' => $validated['remarks'] ?? null,
-                    'status' => 'pending',
-                ]);
-                
-                \Log::info('DTR Time Request Created', [
-                    'id' => $timeRequest->id,
-                    'user_id' => $user->id,
-                    'date' => $day['date'],
-                    'hours' => $hours,
-                ]);
-                
+            if ($pendingRegular) {
+                if ($split['regular'] > 0 || $hours > 0) {
+                    $pendingRegular->update([
+                        'hours' => $split['regular'] > 0 ? $split['regular'] : (float) $pendingRegular->hours,
+                        'requested_total_hours' => $hours > 0 ? $hours : $pendingRegular->requested_total_hours,
+                        'remarks' => $validated['remarks'] ?? $pendingRegular->remarks,
+                    ]);
+                    $updatedCount++;
+                }
+            } elseif ($split['regular'] > 0) {
+                $this->createRegularRequest(
+                    $user->id,
+                    $day['date'],
+                    $split['regular'],
+                    $batchId,
+                    $hours,
+                    $validated['remarks'] ?? null
+                );
                 $createdCount++;
-                $processedDates[] = $dateKey;
-            } catch (\Exception $e) {
-                \Log::error('Failed to create DTR Time Request', [
-                    'error' => $e->getMessage(),
-                    'user_id' => $user->id,
-                    'date' => $day['date'],
-                    'hours' => $hours,
-                    'trace' => $e->getTraceAsString(),
-                ]);
-                $errors[] = "Failed to create time request for {$day['date']}: " . $e->getMessage();
+            } elseif ($hours <= 0) {
+                $errors[] = "Time for {$day['date']} must be greater than 00:00.";
+                continue;
             }
+
+            if ($pendingRegular && $overtimeHours <= 0 && $hours <= DtrTimeRequestHours::STANDARD_DAY_HOURS) {
+                // Pending regular updated only; day total is 08:00 or less.
+            }
+
+            if ($overtimeHours > 0) {
+                if ($this->hasExistingOvertimeForDate($user->id, $day['date'])) {
+                    $errors[] = "An Additional Time request already exists for {$day['date']} (check Leave Requests).";
+                    $skippedCount++;
+                } else {
+                    $overtimeLeave = TimeRequestOvertimeLeaveImport::createPendingFromAttendance(
+                        $user->id,
+                        $day['date'],
+                        $overtimeHours,
+                        $hours,
+                        $batchId,
+                        null
+                    );
+                    $createdOvertimeLeaveIds[] = $overtimeLeave->id;
+                    $leaveOvertimeCount++;
+                }
+            }
+
+            $processedDates[] = $dateKey;
         }
 
-        if (count($errors) > 0) {
-            \Log::warning('DTR Time Request Errors', [
-                'errors' => $errors,
-                'user_id' => $user->id,
-                'created_count' => $createdCount,
-                'skipped_count' => $skippedCount
-            ]);
+        if (count($errors) > 0 && $createdCount === 0 && $updatedCount === 0 && $leaveOvertimeCount === 0) {
             return back()->withErrors(['days' => $errors])->withInput();
         }
 
-        if ($createdCount === 0) {
-            \Log::warning('No DTR Time Requests Created', [
-                'user_id' => $user->id,
-                'skipped_count' => $skippedCount,
-                'errors_count' => count($errors)
-            ]);
-            return back()->withErrors(['days' => 'No new time requests were created. All dates may already have pending/approved requests.'])->withInput();
+        if ($createdCount === 0 && $updatedCount === 0 && $leaveOvertimeCount === 0) {
+            return back()->withErrors(['days' => array_merge($errors, ['No new time requests were created.'])])->withInput();
         }
-        
-        \Log::info('DTR Time Requests Created Successfully', [
-            'user_id' => $user->id,
-            'created_count' => $createdCount,
-            'skipped_count' => $skippedCount
-        ]);
 
-        $message = "Successfully submitted {$createdCount} time request(s).";
+        $parts = [];
+        if ($createdCount > 0) {
+            $parts[] = "{$createdCount} regular time request(s) submitted";
+        }
+        if ($updatedCount > 0) {
+            $parts[] = "{$updatedCount} pending time request(s) updated";
+        }
+        if ($leaveOvertimeCount > 0) {
+            $parts[] = "{$leaveOvertimeCount} Additional Time request(s) created in Leave Requests (details required)";
+        }
+        $message = 'Successfully '.implode('; ', $parts).'.';
         if ($skippedCount > 0) {
-            $message .= " {$skippedCount} date(s) were skipped (already have pending/approved requests).";
+            $message .= " {$skippedCount} entry/entries were skipped.";
+        }
+        if (count($errors) > 0) {
+            $message .= ' Some dates had issues: '.implode(' ', array_slice($errors, 0, 3));
+        }
+
+        if ($leaveOvertimeCount === 1 && count($createdOvertimeLeaveIds) === 1) {
+            return redirect()
+                ->route('user.leave-requests.complete-attendance-overtime', $createdOvertimeLeaveIds[0])
+                ->with('info', $message.' Please complete the Additional Time form (reason required) to submit for approval.');
+        }
+
+        if ($leaveOvertimeCount > 0) {
+            $message .= ' Open each Additional Time request under Leave Requests and use Complete details.';
+
+            return redirect()
+                ->route('user.leave-requests.index')
+                ->with('info', $message);
         }
 
         return back()->with('success', $message);
     }
 
-    /**
-     * Allow student to discard their own pending time request.
-     */
     public function destroy(DtrTimeRequest $dtrTimeRequest)
     {
         $user = Auth::user();
@@ -271,8 +257,93 @@ class DtrTimeRequestController extends Controller
             return back()->withErrors(['error' => 'Only pending time requests can be discarded.']);
         }
 
-        $dtrTimeRequest->delete();
+        $batchId = $dtrTimeRequest->submission_batch;
+        $datesToClear = [];
 
-        return back()->with('success', 'Pending time request discarded successfully.');
+        if ($batchId) {
+            $pendingInBatch = DtrTimeRequest::query()
+                ->where('user_id', $user->id)
+                ->where('submission_batch', $batchId)
+                ->where('status', 'pending')
+                ->get();
+
+            $datesToClear = $pendingInBatch
+                ->map(fn (DtrTimeRequest $request) => $request->date?->format('Y-m-d'))
+                ->filter()
+                ->unique()
+                ->values()
+                ->all();
+
+            DtrTimeRequest::query()
+                ->where('user_id', $user->id)
+                ->where('submission_batch', $batchId)
+                ->where('status', 'pending')
+                ->delete();
+
+            TimeRequestOvertimeLeaveImport::discardPendingLeaveForBatch((int) $user->id, $batchId);
+        } else {
+            $dateStr = $dtrTimeRequest->date?->format('Y-m-d');
+            if ($dateStr) {
+                $datesToClear = [$dateStr];
+            }
+            $dtrTimeRequest->delete();
+        }
+
+        if ($datesToClear === []) {
+            $fallbackDate = $dtrTimeRequest->date?->format('Y-m-d');
+            if ($fallbackDate) {
+                $datesToClear = [$fallbackDate];
+            }
+        }
+
+        TimeRequestOvertimeLeaveImport::discardPendingAttendanceOvertimeForDates((int) $user->id, $datesToClear);
+
+        return back()->with('success', 'Pending time request(s) and linked Additional Time leave request(s) discarded successfully.');
+    }
+
+    private function pendingRegularRequest(int $userId, string $date): ?DtrTimeRequest
+    {
+        return DtrTimeRequest::query()
+            ->where('user_id', $userId)
+            ->whereDate('date', $date)
+            ->where('status', 'pending')
+            ->where(function ($q): void {
+                $q->where('request_type', 'regular')->orWhereNull('request_type');
+            })
+            ->first();
+    }
+
+    private function hasExistingOvertimeForDate(int $userId, string $date): bool
+    {
+        if (TimeRequestOvertimeLeaveImport::hasPendingOrApprovedOvertimeLeaveForDate($userId, $date)) {
+            return true;
+        }
+
+        return DtrTimeRequest::query()
+            ->where('user_id', $userId)
+            ->whereDate('date', $date)
+            ->where('request_type', 'overtime')
+            ->whereIn('status', ['pending', 'approved'])
+            ->exists();
+    }
+
+    private function createRegularRequest(
+        int $userId,
+        string $date,
+        float $hours,
+        string $batchId,
+        ?float $requestedTotalHours,
+        ?string $remarks
+    ): void {
+        DtrTimeRequest::create([
+            'user_id' => $userId,
+            'date' => $date,
+            'hours' => $hours,
+            'request_type' => 'regular',
+            'submission_batch' => $batchId,
+            'requested_total_hours' => $requestedTotalHours,
+            'remarks' => $remarks,
+            'status' => 'pending',
+        ]);
     }
 }
