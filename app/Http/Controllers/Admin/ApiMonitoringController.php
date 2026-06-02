@@ -10,6 +10,7 @@ use App\Models\Setting;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Str;
 
@@ -123,12 +124,33 @@ class ApiMonitoringController extends Controller
     private function buildApiRows(string $scope = 'api_like'): array
     {
         $metrics = ApiEndpointMetric::query()->get()->keyBy('route_key');
-        $hourlyPointsByRoute = ApiEndpointMetricPoint::query()
+        $hourlyBucketsByRoute = ApiEndpointMetricPoint::query()
             ->where('recorded_at', '>=', now()->subDay())
-            ->orderByDesc('recorded_at')
-            ->limit(4000)
+            ->select([
+                'route_key',
+                DB::raw("DATE_FORMAT(recorded_at, '%Y-%m-%d %H:00:00') as hour_key"),
+                DB::raw('COUNT(*) as total_count'),
+                DB::raw('SUM(CASE WHEN is_success = 1 THEN 1 ELSE 0 END) as success_count'),
+            ])
+            ->groupBy('route_key', DB::raw("DATE_FORMAT(recorded_at, '%Y-%m-%d %H:00:00')"))
             ->get()
-            ->groupBy('route_key');
+            ->groupBy('route_key')
+            ->map(function ($rows) {
+                $bucket = [];
+                foreach ($rows as $row) {
+                    $hourKey = (string) ($row->hour_key ?? '');
+                    if ($hourKey === '') {
+                        continue;
+                    }
+
+                    $bucket[$hourKey] = [
+                        'total' => (int) ($row->total_count ?? 0),
+                        'success' => (int) ($row->success_count ?? 0),
+                    ];
+                }
+
+                return $bucket;
+            });
 
         $hourKeys = collect(range(23, 0))->map(function (int $hoursAgo) {
             return now()->subHours($hoursAgo)->format('Y-m-d H:00:00');
@@ -172,8 +194,8 @@ class ApiMonitoringController extends Controller
                 'avg_response_time_ms' => round((float) ($metric->avg_response_time_ms ?? 0), 2),
                 'last_response_at' => optional($metric?->last_response_at)->toDateTimeString(),
                 'last_failure_at' => optional($metric?->last_failure_at)->toDateTimeString(),
-                'uptime_points' => $this->buildHourlyUptimePoints($hourlyPointsByRoute->get($routeKey, collect()), $hourKeys),
-                'uptime_stats' => $this->buildHourlyUptimeStats($hourlyPointsByRoute->get($routeKey, collect()), $hourKeys),
+                'uptime_points' => $this->buildHourlyUptimePoints($hourlyBucketsByRoute->get($routeKey, []), $hourKeys),
+                'uptime_stats' => $this->buildHourlyUptimeStats($hourlyBucketsByRoute->get($routeKey, []), $hourKeys),
             ];
         }
 
@@ -268,29 +290,12 @@ class ApiMonitoringController extends Controller
     }
 
     /**
-     * @param  \Illuminate\Support\Collection<int, ApiEndpointMetricPoint>  $points
+     * @param  array<string, array{total: int, success: int}>  $hourly
      * @param  array<int, string>  $hourKeys
      * @return array<int, float|null>
      */
-    private function buildHourlyUptimePoints($points, array $hourKeys): array
+    private function buildHourlyUptimePoints(array $hourly, array $hourKeys): array
     {
-        $hourly = [];
-        foreach ($points as $point) {
-            $hourKey = optional($point->recorded_at)->format('Y-m-d H:00:00');
-            if (! $hourKey) {
-                continue;
-            }
-
-            if (! isset($hourly[$hourKey])) {
-                $hourly[$hourKey] = ['total' => 0, 'success' => 0];
-            }
-
-            $hourly[$hourKey]['total']++;
-            if ($point->is_success) {
-                $hourly[$hourKey]['success']++;
-            }
-        }
-
         return collect($hourKeys)->map(function (string $hourKey) use ($hourly) {
             if (! isset($hourly[$hourKey]) || $hourly[$hourKey]['total'] === 0) {
                 return null;
@@ -301,13 +306,13 @@ class ApiMonitoringController extends Controller
     }
 
     /**
-     * @param  \Illuminate\Support\Collection<int, ApiEndpointMetricPoint>  $points
+     * @param  array<string, array{total: int, success: int}>  $hourly
      * @param  array<int, string>  $hourKeys
      * @return array<string, float|int|null>
      */
-    private function buildHourlyUptimeStats($points, array $hourKeys): array
+    private function buildHourlyUptimeStats(array $hourly, array $hourKeys): array
     {
-        $uptimePoints = $this->buildHourlyUptimePoints($points, $hourKeys);
+        $uptimePoints = $this->buildHourlyUptimePoints($hourly, $hourKeys);
         $valid = collect($uptimePoints)->filter(fn ($value) => $value !== null)->values();
 
         if ($valid->isEmpty()) {
