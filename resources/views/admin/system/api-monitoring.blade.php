@@ -308,14 +308,15 @@
                 }
 
                 const stepX = width / (count - 1);
-                const midY = height / 2;
-                const amplitude = 28;
+                const baselineY = height - 6;
+                const maxRise = height - 8;
                 return validValues.map((value, index) => {
                     const clamped = Math.max(0, Math.min(100, Number(value) || 0));
                     const x = (index * stepX).toFixed(2);
-                    // Monitor-style: 100% uptime stays on baseline, lower uptime spikes upward.
-                    const deviation = (100 - clamped) / 100;
-                    const y = Math.max(2, Math.min(height - 2, midY - (deviation * amplitude))).toFixed(2);
+                    // Amplify tiny drops near 100% so the sparkline remains readable.
+                    const dropRatio = (100 - clamped) / 100;
+                    const emphasizedDrop = dropRatio <= 0 ? 0 : Math.pow(dropRatio, 0.35);
+                    const y = Math.max(2, Math.min(height - 2, baselineY - (emphasizedDrop * maxRise))).toFixed(2);
                     return `${x},${y}`;
                 }).join(' ');
             },
