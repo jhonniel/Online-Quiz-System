@@ -160,9 +160,10 @@ class LeaveRequest extends Model
      */
     public function getTypeLabelAttribute(): string
     {
-        if ($this->type === 'overtime'
-            && auth()->check()
-            && auth()->user()->role === 'student') {
+        $isStudentRequest = ($this->user?->role === 'student')
+            || (auth()->check() && auth()->user()->role === 'student');
+
+        if ($this->type === 'overtime' && $isStudentRequest) {
             return 'Additional Time';
         }
 
