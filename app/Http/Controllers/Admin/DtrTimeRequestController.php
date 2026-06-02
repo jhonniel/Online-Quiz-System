@@ -318,9 +318,42 @@ class DtrTimeRequestController extends Controller
 
         $query->chunkById(150, function ($requests): void {
             foreach ($requests as $timeRequest) {
+                $this->normalizePendingRegularRequest($timeRequest);
                 TimeRequestOvertimeLeaveImport::ensurePendingAdditionalTimeFromRegularTimeRequest($timeRequest);
             }
         });
+    }
+
+    private function normalizePendingRegularRequest(DtrTimeRequest $timeRequest): void
+    {
+        $storedTotal = (float) ($timeRequest->requested_total_hours ?? 0);
+        $baseHours = (float) $timeRequest->hours;
+
+        // Legacy rows may have regular hours > 08:00 directly on the request.
+        // Preserve the full total in requested_total_hours, cap regular hours to 08:00.
+        if ($storedTotal <= 0) {
+            $storedTotal = $baseHours;
+        }
+
+        $normalizedRegular = min($storedTotal, DtrTimeRequestHours::STANDARD_DAY_HOURS);
+
+        $dirty = false;
+        $update = [];
+
+        if ($baseHours !== $normalizedRegular) {
+            $update['hours'] = $normalizedRegular;
+            $dirty = true;
+        }
+
+        if ((float) ($timeRequest->requested_total_hours ?? 0) !== $storedTotal) {
+            $update['requested_total_hours'] = $storedTotal;
+            $dirty = true;
+        }
+
+        if ($dirty) {
+            $timeRequest->update($update);
+            $timeRequest->refresh();
+        }
     }
 
 }
