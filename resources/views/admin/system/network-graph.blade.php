@@ -482,7 +482,7 @@
         network.selectNodes([nodeKey, ...connected]);
         network.focus(nodeKey, {
             scale: 1.2,
-            animation: { duration: 350, easingFunction: 'easeInOutQuad' },
+            animation: { duration: 600, easingFunction: 'easeInOutQuad' },
         });
         document.querySelectorAll('.ng-user-row').forEach(row => {
             const on = row.getAttribute('data-user-key') === nodeKey;
@@ -595,7 +595,7 @@
         }
 
         const start = performance.now();
-        const durationMs = 520;
+        const durationMs = 780;
         const animateScatter = (now) => {
             const t = Math.min(1, (now - start) / durationMs);
             const e = easeOutCubic(t);
@@ -696,12 +696,18 @@
         network.setOptions({
             physics: {
                 enabled: true,
+                timestep: 0.12,
+                maxVelocity: 10,
                 stabilization: {
                     enabled: true,
                     iterations: 50,
                     updateInterval: 50,
                 },
-                minVelocity: 2,
+                minVelocity: 0.4,
+                forceAtlas2Based: {
+                    damping: 0.78,
+                    springConstant: 0.025,
+                },
             },
         });
 
@@ -710,7 +716,7 @@
             if (finished || !network) return;
             finished = true;
             network.setOptions({ physics: { enabled: true, stabilization: { enabled: false } } });
-            network.fit({ animation: { duration: 220, easingFunction: 'easeInOutQuad' } });
+            network.fit({ animation: { duration: 480, easingFunction: 'easeInOutQuad' } });
         };
 
         const onStabilized = () => {
@@ -795,21 +801,21 @@
             physics: {
                 enabled: true,
                 solver: 'forceAtlas2Based',
-                timestep: 0.35,
+                timestep: 0.12,
                 stabilization: {
                     enabled: true,
                     iterations: nodeCount > 120 ? 80 : 120,
-                    updateInterval: 25,
+                    updateInterval: 40,
                 },
                 forceAtlas2Based: {
-                    gravitationalConstant: -95,
-                    centralGravity: 0.02,
-                    springLength: 58,
-                    springConstant: 0.04,
-                    damping: 0.62,
+                    gravitationalConstant: -62,
+                    centralGravity: 0.012,
+                    springLength: 64,
+                    springConstant: 0.022,
+                    damping: 0.82,
                 },
-                maxVelocity: 28,
-                minVelocity: 0.75,
+                maxVelocity: 9,
+                minVelocity: 0.35,
             },
         };
     }
@@ -833,11 +839,11 @@
 
         const fitGraphToView = () => {
             if (!network) return;
-            network.fit({ animation: { duration: 280, easingFunction: 'easeInOutQuad' } });
+            network.fit({ animation: { duration: 520, easingFunction: 'easeInOutQuad' } });
         };
         network.on('stabilizationIterationsDone', fitGraphToView);
         network.on('stabilized', fitGraphToView);
-        setTimeout(fitGraphToView, 900);
+        setTimeout(fitGraphToView, 1200);
     }
 
     function setGraphData(payload) {
@@ -892,9 +898,9 @@
                 network.startSimulation();
                 setTimeout(() => {
                     if (network) {
-                        network.fit({ animation: { duration: 280, easingFunction: 'easeInOutQuad' } });
+                        network.fit({ animation: { duration: 520, easingFunction: 'easeInOutQuad' } });
                     }
-                }, 900);
+                }, 1200);
             }
         } catch (error) {
             console.error('Network graph render failed', error);
@@ -987,7 +993,7 @@
                 clearNodeFocus();
             } else if (network) {
                 network.unselectAll();
-                network.fit({ animation: { duration: 350, easingFunction: 'easeInOutQuad' } });
+                network.fit({ animation: { duration: 550, easingFunction: 'easeInOutQuad' } });
             }
             selectedNodeId = null;
             renderActivityLogs(allActivityLogs);
