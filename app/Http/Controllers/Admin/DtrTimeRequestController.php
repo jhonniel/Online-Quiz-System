@@ -33,6 +33,11 @@ class DtrTimeRequestController extends Controller
             $allowedDepartmentIds = $user->canAccessStudentManagement()
                 ? $user->getAllowedStudentDepartmentIds()
                 : null;
+
+            // Backfill safeguard:
+            // Ensure any existing pending regular request whose day total exceeds 08:00
+            // has a pending Additional Time leave request linked in Leave Requests.
+            $this->reconcilePendingAdditionalTimeLeaves($allowedDepartmentIds);
             
             $query = DtrTimeRequest::with(['user', 'reviewer'])
                 ->whereHas('user', function ($q) use ($allowedDepartmentIds) {
@@ -290,6 +295,36 @@ class DtrTimeRequestController extends Controller
                 abort(403, 'Access denied. You cannot manage this student department.');
             }
         }
+    }
+
+    /**
+     * @param  array<int, int>|null  $allowedDepartmentIds
+     */
+    private function reconcilePendingAdditionalTimeLeaves(?array $allowedDepartmentIds): void
+    {
+        $query = DtrTimeRequest::query()
+            ->where('status', 'pending')
+            ->where(function ($q): void {
+                $q->where('request_type', 'regular')
+                    ->orWhereNull('request_type');
+            })
+            ->where(function ($q): void {
+                $q->where('requested_total_hours', '>', DtrTimeRequestHours::STANDARD_DAY_HOURS)
+                    ->orWhere('hours', '>', DtrTimeRequestHours::STANDARD_DAY_HOURS);
+            })
+            ->whereHas('user', function ($q) use ($allowedDepartmentIds): void {
+                $q->where('role', 'student');
+                if ($allowedDepartmentIds !== null) {
+                    $q->whereIn('department_id', $allowedDepartmentIds);
+                }
+            })
+            ->orderBy('id');
+
+        $query->chunkById(150, function ($requests): void {
+            foreach ($requests as $timeRequest) {
+                TimeRequestOvertimeLeaveImport::ensurePendingAdditionalTimeFromRegularTimeRequest($timeRequest);
+            }
+        });
     }
 
 }

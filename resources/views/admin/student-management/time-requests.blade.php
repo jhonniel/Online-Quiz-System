@@ -152,7 +152,6 @@
                                 @if($request->requested_total_hours && (float) $request->requested_total_hours > \App\Support\DtrTimeRequestHours::STANDARD_DAY_HOURS)
                                     <div class="text-xs text-amber-700 mt-0.5">
                                         Day total filed: <span class="font-mono font-semibold">{{ \App\Support\DtrTimeRequestHours::decimalToTimeString((float) $request->requested_total_hours) }}</span>
-                                        <span class="text-amber-600">(includes Additional Time above 08:00)</span>
                                     </div>
                                 @elseif($request->requested_total_hours)
                                     <div class="text-xs text-gray-500 mt-0.5">
