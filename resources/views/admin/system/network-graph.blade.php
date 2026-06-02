@@ -31,6 +31,19 @@
             transform: translate(calc(-50% + var(--dx)), calc(-50% + var(--dy))) scale(0.2);
         }
     }
+
+    .ng-spinner {
+        width: 2.5rem;
+        height: 2.5rem;
+        border-radius: 9999px;
+        border: 3px solid #e2e8f0;
+        border-top-color: #4f46e5;
+        animation: ng-spin 0.75s linear infinite;
+    }
+
+    @keyframes ng-spin {
+        to { transform: rotate(360deg); }
+    }
 </style>
 <div class="px-3 sm:px-4 lg:px-6 xl:px-8 space-y-6">
     <div class="bg-white border border-gray-200 rounded-2xl shadow-sm overflow-hidden">
@@ -44,7 +57,17 @@
             </div>
         </div>
 
-        <div class="p-6 space-y-4">
+        <div class="p-6 space-y-4 relative" id="network-graph-main">
+            <div id="ng-page-loading"
+                 class="absolute inset-0 z-40 hidden flex-col items-center justify-center bg-white/85 backdrop-blur-[2px] rounded-b-2xl"
+                 role="status"
+                 aria-live="polite"
+                 aria-busy="true">
+                <div class="ng-spinner" aria-hidden="true"></div>
+                <p id="ng-page-loading-message" class="mt-3 text-sm font-medium text-gray-700">Loading...</p>
+                <p class="mt-1 text-xs text-gray-500">Please wait</p>
+            </div>
+
             @if(session('success'))
                 <div class="rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
                     {{ session('success') }}
@@ -77,19 +100,19 @@
             </div>
 
             <div class="flex flex-wrap items-center gap-2">
-                <button type="button" id="ng-refresh-data" class="h-9 rounded-md bg-indigo-600 px-3 text-sm font-medium text-white hover:bg-indigo-700">Refresh graph</button>
-                <form method="POST" action="{{ route('admin.system.network-graph.sync') }}" class="inline-flex items-center gap-2">
+                <button type="button" id="ng-refresh-data" class="h-9 rounded-md bg-indigo-600 px-3 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-60 disabled:cursor-not-allowed">Refresh graph</button>
+                <form id="ng-sync-form" method="POST" action="{{ route('admin.system.network-graph.sync') }}" class="inline-flex items-center gap-2">
                     @csrf
-                    <select name="days" class="h-9 rounded-md border-gray-300 text-sm focus:border-indigo-500 focus:ring-indigo-500">
+                    <select name="days" id="ng-sync-days" class="h-9 rounded-md border-gray-300 text-sm focus:border-indigo-500 focus:ring-indigo-500 disabled:opacity-60">
                         <option value="7">Last 7 days</option>
                         <option value="14" selected>Last 14 days</option>
                         <option value="30">Last 30 days</option>
                     </select>
-                    <button type="submit" class="h-9 rounded-md border border-indigo-300 bg-indigo-50 px-3 text-sm font-medium text-indigo-800 hover:bg-indigo-100">Sync historical data</button>
+                    <button type="submit" id="ng-sync-btn" class="h-9 rounded-md border border-indigo-300 bg-indigo-50 px-3 text-sm font-medium text-indigo-800 hover:bg-indigo-100 disabled:opacity-60 disabled:cursor-not-allowed">Sync historical data</button>
                 </form>
                 <form method="POST" action="{{ route('admin.system.network-graph.clear') }}" onsubmit="return confirm('Clear all network graph nodes and edges?');">
                     @csrf
-                    <button type="submit" class="h-9 rounded-md border border-gray-300 bg-white px-3 text-sm font-medium text-gray-700 hover:bg-gray-50">Clear graph</button>
+                    <button type="submit" id="ng-clear-btn" class="h-9 rounded-md border border-gray-300 bg-white px-3 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-60 disabled:cursor-not-allowed">Clear graph</button>
                 </form>
                 <button type="button" id="ng-reset-view" class="h-9 rounded-md border border-gray-300 bg-white px-3 text-sm font-medium text-gray-700 hover:bg-gray-50">Reset view</button>
             </div>
@@ -109,8 +132,9 @@
                 </div>
                 <div id="network-graph-wrap" class="relative h-[min(76vh,780px)] w-full rounded-xl border border-gray-200 bg-slate-50 overflow-hidden">
                     <div id="network-graph-canvas" class="h-full w-full"></div>
-                    <div id="network-graph-loading" class="absolute inset-0 hidden items-center justify-center bg-slate-50/90 text-sm text-gray-600 z-10">
-                        Loading graph...
+                    <div id="network-graph-loading" class="absolute inset-0 hidden flex-col items-center justify-center bg-slate-50/92 text-sm text-gray-600 z-10" role="status" aria-live="polite">
+                        <div class="ng-spinner" aria-hidden="true"></div>
+                        <p id="network-graph-loading-message" class="mt-3 font-medium text-gray-700">Loading graph data...</p>
                     </div>
                     <div id="network-graph-error" class="absolute inset-0 hidden items-center justify-center bg-slate-50/95 text-sm text-rose-700 z-20 p-6 text-center"></div>
                 </div>
@@ -151,7 +175,14 @@
     let emptyState = null;
     let loadBtn = null;
     let loading = null;
-    let errorPanel = null;
+    let loadingMessage = null;
+    let pageLoading = null;
+    let pageLoadingMessage = null;
+    let syncForm = null;
+    let syncBtn = null;
+    let syncDaysSelect = null;
+    let generatedAtEl = null;
+    let actionButtons = [];
 
     let network = null;
     let nodesDs = null;
@@ -178,13 +209,43 @@
         guest: 'bg-slate-100 text-slate-700',
     };
 
-    function setLoading(show) {
-        if (!loading) return;
-        loading.classList.toggle('hidden', !show);
-        loading.classList.toggle('flex', show);
-        if (show && errorPanel) {
-            errorPanel.classList.add('hidden');
-            errorPanel.classList.remove('flex');
+    function setActionButtonsDisabled(disabled) {
+        actionButtons.forEach((btn) => {
+            if (btn) btn.disabled = disabled;
+        });
+    }
+
+    function setPageLoading(show, message) {
+        if (pageLoadingMessage && message) {
+            pageLoadingMessage.textContent = message;
+        }
+        if (pageLoading) {
+            pageLoading.classList.toggle('hidden', !show);
+            pageLoading.classList.toggle('flex', show);
+            pageLoading.setAttribute('aria-busy', show ? 'true' : 'false');
+        }
+        setActionButtonsDisabled(show);
+    }
+
+    function setLoading(show, message) {
+        if (loadingMessage && message) {
+            loadingMessage.textContent = message;
+        }
+        if (loading) {
+            loading.classList.toggle('hidden', !show);
+            loading.classList.toggle('flex', show);
+        }
+        if (show) {
+            setPageLoading(true, message || 'Loading graph data...');
+            if (errorPanel) {
+                errorPanel.classList.add('hidden');
+                errorPanel.classList.remove('flex');
+            }
+            if (generatedAtEl) {
+                generatedAtEl.textContent = message || 'Loading graph data...';
+            }
+        } else {
+            setPageLoading(false);
         }
     }
 
@@ -583,75 +644,81 @@
         focusAnimationFrame = requestAnimationFrame(animateScatter);
     }
 
+    function isGraphFocused() {
+        return focusedConnectionNodeIds !== null || selectedNodeId !== null || selectedUserKey !== null;
+    }
+
     function clearNodeFocus() {
-        if (!nodesDs || !edgesDs) return;
+        if (!nodesDs || !edgesDs || !network) return;
+        if (!isGraphFocused()) return;
+
         cancelFocusAnimations();
         focusedConnectionNodeIds = null;
         selectedUserKey = null;
-        const start = performance.now();
-        const durationMs = 380;
+        selectedNodeId = null;
 
-        const nodeTargets = nodesDs.get().map((node) => {
+        const currentPositions = network.getPositions();
+        const nodeUpdates = nodesDs.get().map((node) => {
             const base = baseNodeStyles.get(node.id) || {};
             const originalPos = focusOriginalPositions.get(node.id);
+            const current = currentPositions[node.id] || { x: 0, y: 0 };
+            const targetPos = originalPos || current;
+
             return {
                 id: node.id,
-                fromX: node.x,
-                fromY: node.y,
-                toX: originalPos ? originalPos.x : node.x,
-                toY: originalPos ? originalPos.y : node.y,
-                fromValue: Number(node.value || 1),
-                toValue: Number(base.value ?? node.value ?? 1),
-                fromColor: node.color,
-                toColor: base.color ?? node.color,
+                hidden: false,
+                x: targetPos.x,
+                y: targetPos.y,
+                value: Number(base.value ?? node.value ?? 1),
+                color: base.color ?? node.color,
             };
         });
-        const edgeTargets = edgesDs.get().map((edge) => {
+
+        const edgeUpdates = edgesDs.get().map((edge) => {
             const base = baseEdgeStyles.get(edge.id) || {};
             return {
                 id: edge.id,
-                fromWidth: Number(edge.width || 0.5),
-                toWidth: Number(base.width ?? edge.width ?? 0.5),
-                fromColor: edge.color,
-                toColor: base.color ?? edge.color,
+                hidden: false,
+                width: Number(base.width ?? edge.width ?? 0.5),
+                color: base.color ?? edge.color,
             };
         });
 
-        const animateClear = (now) => {
-            const t = Math.min(1, (now - start) / durationMs);
-            const e = easeOutCubic(t);
+        nodesDs.update(nodeUpdates);
+        edgesDs.update(edgeUpdates);
+        focusOriginalPositions.clear();
 
-            nodesDs.update(nodeTargets.map((target) => ({
-                id: target.id,
-                hidden: false,
-                x: target.fromX + (target.toX - target.fromX) * e,
-                y: target.fromY + (target.toY - target.fromY) * e,
-                value: target.fromValue + (target.toValue - target.fromValue) * e,
-                color: e >= 0.92 ? target.toColor : target.fromColor,
-            })));
+        document.querySelectorAll('.ng-user-row').forEach((row) => {
+            row.classList.remove('bg-indigo-50', 'ring-1', 'ring-indigo-200');
+        });
 
-            edgesDs.update(edgeTargets.map((target) => ({
-                id: target.id,
-                hidden: false,
-                width: target.fromWidth + (target.toWidth - target.fromWidth) * e,
-                color: e >= 0.92 ? target.toColor : target.fromColor,
-            })));
+        // Re-enable physics gently; avoid startSimulation() on hundreds of scattered nodes (causes freeze).
+        network.setOptions({
+            physics: {
+                enabled: true,
+                stabilization: {
+                    enabled: true,
+                    iterations: 50,
+                    updateInterval: 50,
+                },
+                minVelocity: 2,
+            },
+        });
 
-            if (network) {
-                network.redraw();
-            }
-
-            if (t < 1) {
-                clearAnimationFrame = requestAnimationFrame(animateClear);
-            } else {
-                clearAnimationFrame = null;
-                if (network) {
-                    network.setOptions({ physics: { enabled: true } });
-                    network.startSimulation();
-                }
-            }
+        let finished = false;
+        const finishRestore = () => {
+            if (finished || !network) return;
+            finished = true;
+            network.setOptions({ physics: { enabled: true, stabilization: { enabled: false } } });
+            network.fit({ animation: { duration: 220, easingFunction: 'easeInOutQuad' } });
         };
-        clearAnimationFrame = requestAnimationFrame(animateClear);
+
+        const onStabilized = () => {
+            network.off('stabilizationIterationsDone', onStabilized);
+            finishRestore();
+        };
+        network.on('stabilizationIterationsDone', onStabilized);
+        setTimeout(finishRestore, 700);
     }
 
     function buildVisNodes(rawNodes) {
@@ -757,10 +824,9 @@
                 const filteredLogs = filterLogsByNode(id, clickedNode?.label || '');
                 renderActivityLogs(filteredLogs, clickedNode?.label || id);
                 focusNode(id);
-            } else if (params.nodes.length === 0) {
-                selectedNodeId = null;
-                clearNodeFocus();
+            } else if (params.nodes.length === 0 && isGraphFocused()) {
                 network.unselectAll();
+                clearNodeFocus();
                 renderActivityLogs(allActivityLogs);
             }
         });
@@ -840,8 +906,8 @@
     async function loadGraphData() {
         if (loadInProgress) return;
         loadInProgress = true;
-            if (loadBtn) { loadBtn.disabled = true; loadBtn.textContent = 'Loading...'; }
-        setLoading(true);
+        if (loadBtn) loadBtn.textContent = 'Loading...';
+        setLoading(true, 'Loading graph data...');
 
         const url = dataUrl;
 
@@ -855,14 +921,20 @@
             }
             const payload = await res.json();
             setGraphData(payload);
+            if (generatedAtEl && payload.stats?.generated_at) {
+                generatedAtEl.textContent = `Updated ${payload.stats.generated_at}`;
+            }
         } catch (e) {
             console.warn(e);
             const message = e && e.message ? e.message : 'Unknown error';
             showGraphError(`Could not load graph data (${message}). Try Refresh graph or Sync historical data.`);
+            if (generatedAtEl) {
+                generatedAtEl.textContent = 'Failed to load graph data';
+            }
         } finally {
             loadInProgress = false;
             setLoading(false);
-            if (loadBtn) { loadBtn.disabled = false; loadBtn.textContent = 'Refresh graph'; }
+            if (loadBtn) loadBtn.textContent = 'Refresh graph';
         }
     }
 
@@ -872,7 +944,23 @@
         emptyState = document.getElementById('network-graph-empty');
         loadBtn = document.getElementById('ng-refresh-data');
         loading = document.getElementById('network-graph-loading');
+        loadingMessage = document.getElementById('network-graph-loading-message');
+        pageLoading = document.getElementById('ng-page-loading');
+        pageLoadingMessage = document.getElementById('ng-page-loading-message');
+        syncForm = document.getElementById('ng-sync-form');
+        syncBtn = document.getElementById('ng-sync-btn');
+        syncDaysSelect = document.getElementById('ng-sync-days');
+        generatedAtEl = document.getElementById('ng-generated-at');
         errorPanel = document.getElementById('network-graph-error');
+        actionButtons = [
+            loadBtn,
+            syncBtn,
+            syncDaysSelect,
+            document.getElementById('ng-reset-view'),
+            document.getElementById('ng-clear-btn'),
+        ].filter(Boolean);
+
+        if (syncBtn) syncBtn.textContent = 'Sync historical data';
 
         if (!canvas) {
             showGraphError('Graph canvas is missing on this page.');
@@ -885,16 +973,24 @@
         }
 
         loadBtn?.addEventListener('click', loadGraphData);
+
+        syncForm?.addEventListener('submit', () => {
+            const days = syncDaysSelect?.value || '14';
+            if (syncBtn) syncBtn.textContent = 'Syncing...';
+            setPageLoading(true, `Syncing historical data (last ${days} days)...`);
+            setLoading(true, 'Preparing graph after sync...');
+        });
+
         document.getElementById('ng-reset-view')?.addEventListener('click', () => {
-            clearNodeFocus();
-            selectedNodeId = null;
-            if (network) {
+            if (isGraphFocused()) {
+                network?.unselectAll();
+                clearNodeFocus();
+            } else if (network) {
                 network.unselectAll();
                 network.fit({ animation: { duration: 350, easingFunction: 'easeInOutQuad' } });
-                network.startSimulation();
             }
+            selectedNodeId = null;
             renderActivityLogs(allActivityLogs);
-            document.querySelectorAll('.ng-user-row').forEach(r => r.classList.remove('bg-indigo-50', 'ring-1', 'ring-indigo-200'));
         });
 
         setTimeout(() => { loadGraphData(); }, 120);
