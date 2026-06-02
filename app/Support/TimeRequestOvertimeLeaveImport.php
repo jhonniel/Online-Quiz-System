@@ -120,6 +120,24 @@ class TimeRequestOvertimeLeaveImport
         }
 
         $effectiveTotal = (float) ($timeRequest->requested_total_hours ?? $timeRequest->hours);
+
+        // Legacy/backfill fallback:
+        // Some older pending requests were split into regular + overtime rows where
+        // requested_total_hours may be null or <= 08:00 on the regular row itself.
+        // In that case, compute day total by adding sibling overtime rows on the same date.
+        if ($effectiveTotal <= DtrTimeRequestHours::STANDARD_DAY_HOURS) {
+            $siblingOvertimeHours = (float) DtrTimeRequest::query()
+                ->where('user_id', $timeRequest->user_id)
+                ->whereDate('date', $dateStr)
+                ->where('request_type', 'overtime')
+                ->whereIn('status', ['pending', 'approved'])
+                ->sum('hours');
+
+            if ($siblingOvertimeHours > 0) {
+                $effectiveTotal = (float) $timeRequest->hours + $siblingOvertimeHours;
+            }
+        }
+
         $overtimeHours = max($effectiveTotal - DtrTimeRequestHours::STANDARD_DAY_HOURS, 0);
         if ($overtimeHours <= 0) {
             return null;

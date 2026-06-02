@@ -308,10 +308,6 @@ class DtrTimeRequestController extends Controller
                 $q->where('request_type', 'regular')
                     ->orWhereNull('request_type');
             })
-            ->where(function ($q): void {
-                $q->where('requested_total_hours', '>', DtrTimeRequestHours::STANDARD_DAY_HOURS)
-                    ->orWhere('hours', '>', DtrTimeRequestHours::STANDARD_DAY_HOURS);
-            })
             ->whereHas('user', function ($q) use ($allowedDepartmentIds): void {
                 $q->where('role', 'student');
                 if ($allowedDepartmentIds !== null) {
