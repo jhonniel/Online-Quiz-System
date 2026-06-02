@@ -78,7 +78,8 @@ class DtrTimeRequest extends Model
 
     public function getRequestTypeLabelAttribute(): string
     {
-        $forStudent = auth()->check() && auth()->user()->role === 'student';
+        $forStudent = ($this->user?->role === 'student')
+            || (auth()->check() && auth()->user()->role === 'student');
 
         return \App\Support\DtrTimeRequestHours::requestTypeLabel($this->request_type, $forStudent);
     }
