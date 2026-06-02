@@ -128,17 +128,18 @@ class ApiMonitoringController extends Controller
             ->where('recorded_at', '>=', now()->subDay())
             ->select([
                 'route_key',
-                DB::raw("DATE_FORMAT(recorded_at, '%Y-%m-%d %H:00:00') as hour_key"),
+                DB::raw("DATE_TRUNC('hour', recorded_at) as hour_bucket"),
                 DB::raw('COUNT(*) as total_count'),
                 DB::raw('SUM(CASE WHEN is_success = 1 THEN 1 ELSE 0 END) as success_count'),
             ])
-            ->groupBy('route_key', DB::raw("DATE_FORMAT(recorded_at, '%Y-%m-%d %H:00:00')"))
+            ->groupBy('route_key', DB::raw("DATE_TRUNC('hour', recorded_at)"))
             ->get()
             ->groupBy('route_key')
             ->map(function ($rows) {
                 $bucket = [];
                 foreach ($rows as $row) {
-                    $hourKey = (string) ($row->hour_key ?? '');
+                    $hourValue = $row->hour_bucket ?? null;
+                    $hourKey = $hourValue ? \Illuminate\Support\Carbon::parse($hourValue)->format('Y-m-d H:00:00') : '';
                     if ($hourKey === '') {
                         continue;
                     }
