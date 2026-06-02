@@ -4,6 +4,34 @@
 
 @section('content')
 <link rel="stylesheet" href="https://unpkg.com/vis-network@9.1.9/styles/vis-network.min.css">
+<style>
+    #network-graph-wrap .ng-burst-particle {
+        position: absolute;
+        width: 6px;
+        height: 6px;
+        border-radius: 9999px;
+        pointer-events: none;
+        z-index: 20;
+        transform: translate(-50%, -50%);
+        animation: ng-particle-burst 680ms cubic-bezier(0.22, 0.8, 0.2, 1) forwards;
+        box-shadow: 0 0 8px currentColor;
+    }
+
+    @keyframes ng-particle-burst {
+        0% {
+            opacity: 0.95;
+            transform: translate(-50%, -50%) scale(0.6);
+        }
+        72% {
+            opacity: 0.85;
+            transform: translate(calc(-50% + var(--dx) * 0.78), calc(-50% + var(--dy) * 0.78)) scale(1);
+        }
+        100% {
+            opacity: 0;
+            transform: translate(calc(-50% + var(--dx)), calc(-50% + var(--dy))) scale(0.2);
+        }
+    }
+</style>
 <div class="px-3 sm:px-4 lg:px-6 xl:px-8 space-y-6">
     <div class="bg-white border border-gray-200 rounded-2xl shadow-sm overflow-hidden">
         <div class="px-6 py-4 border-b border-gray-100 bg-gray-50/70 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
@@ -84,9 +112,6 @@
                     <div id="network-graph-loading" class="absolute inset-0 hidden items-center justify-center bg-slate-50/90 text-sm text-gray-600 z-10">
                         Loading graph...
                     </div>
-                    <div id="network-graph-hint" class="pointer-events-none absolute bottom-2 left-2 rounded bg-white/90 px-2 py-1 text-[11px] text-gray-600 border border-gray-200 shadow-sm">
-                        Drag = pan · Scroll = zoom · Hover nodes for details
-                    </div>
                 </div>
 
                 <div class="grid grid-cols-1 xl:grid-cols-2 gap-4">
@@ -132,9 +157,17 @@
     let nodesDs = null;
     let edgesDs = null;
     let selectedUserKey = null;
+    let focusedConnectionNodeIds = null;
     let allActivityLogs = [];
     let selectedNodeId = null;
     let loadInProgress = false;
+    let focusHideTimer = null;
+    let focusScatterTimer = null;
+    let focusAnimationFrame = null;
+    let clearAnimationFrame = null;
+    let baseNodeStyles = new Map();
+    let baseEdgeStyles = new Map();
+    let focusOriginalPositions = new Map();
 
     const roleBadgeClass = {
         student: 'bg-blue-100 text-blue-800',
@@ -149,6 +182,53 @@
         if (!loading) return;
         loading.classList.toggle('hidden', !show);
         loading.classList.toggle('flex', show);
+    }
+
+    function withAlpha(color, alpha) {
+        if (!color || typeof color !== 'string') return color;
+        if (color.startsWith('rgba(')) {
+            return color.replace(/rgba\(([^)]+)\)/, (_, inner) => {
+                const parts = inner.split(',').map((p) => p.trim());
+                return `rgba(${parts[0]}, ${parts[1]}, ${parts[2]}, ${alpha})`;
+            });
+        }
+        if (color.startsWith('rgb(')) {
+            return color.replace(/rgb\(([^)]+)\)/, 'rgba($1, '+alpha+')');
+        }
+        if (color.startsWith('#')) {
+            let hex = color.slice(1);
+            if (hex.length === 3) {
+                hex = hex.split('').map((c) => c + c).join('');
+            }
+            const r = parseInt(hex.slice(0, 2), 16);
+            const g = parseInt(hex.slice(2, 4), 16);
+            const b = parseInt(hex.slice(4, 6), 16);
+            return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+        }
+        return color;
+    }
+
+    function easeOutCubic(t) {
+        return 1 - Math.pow(1 - t, 3);
+    }
+
+    function cancelFocusAnimations() {
+        if (focusHideTimer) {
+            clearTimeout(focusHideTimer);
+            focusHideTimer = null;
+        }
+        if (focusScatterTimer) {
+            clearTimeout(focusScatterTimer);
+            focusScatterTimer = null;
+        }
+        if (focusAnimationFrame) {
+            cancelAnimationFrame(focusAnimationFrame);
+            focusAnimationFrame = null;
+        }
+        if (clearAnimationFrame) {
+            cancelAnimationFrame(clearAnimationFrame);
+            clearAnimationFrame = null;
+        }
     }
 
     function updateStats(stats) {
@@ -282,7 +362,9 @@
     function focusUser(nodeKey) {
         if (!network || !nodeKey) return;
         selectedUserKey = nodeKey;
+        spawnExplosionParticles(nodeKey);
         const connected = network.getConnectedNodes(nodeKey);
+        applyUserFocus(nodeKey, connected);
         network.selectNodes([nodeKey, ...connected]);
         network.focus(nodeKey, {
             scale: 1.2,
@@ -294,6 +376,225 @@
             row.classList.toggle('ring-1', on);
             row.classList.toggle('ring-indigo-200', on);
         });
+    }
+
+    function spawnExplosionParticles(nodeKey) {
+        if (!network || !wrap || !nodeKey) return;
+        const nodePos = network.getPositions([nodeKey])[nodeKey];
+        if (!nodePos) return;
+
+        const domPos = network.canvasToDOM(nodePos);
+        const count = 36;
+        const colors = ['#a855f7', '#6366f1', '#c084fc', '#93c5fd', '#e879f9'];
+
+        for (let i = 0; i < count; i++) {
+            const particle = document.createElement('span');
+            particle.className = 'ng-burst-particle';
+
+            const angle = (Math.PI * 2 * i) / count + (Math.random() - 0.5) * 0.35;
+            const radius = 85 + Math.random() * 220;
+            const dx = Math.cos(angle) * radius;
+            const dy = Math.sin(angle) * radius;
+            const size = 3 + Math.random() * 4;
+            const color = colors[i % colors.length];
+
+            particle.style.left = `${domPos.x}px`;
+            particle.style.top = `${domPos.y}px`;
+            particle.style.setProperty('--dx', `${dx}px`);
+            particle.style.setProperty('--dy', `${dy}px`);
+            particle.style.width = `${size}px`;
+            particle.style.height = `${size}px`;
+            particle.style.color = color;
+            particle.style.background = color;
+
+            wrap.appendChild(particle);
+            setTimeout(() => particle.remove(), 760);
+        }
+    }
+
+    function applyUserFocus(nodeKey, connectedNodeIds) {
+        if (!nodesDs || !edgesDs) return;
+        cancelFocusAnimations();
+
+        const connectedSet = new Set([nodeKey, ...(connectedNodeIds || [])]);
+        focusedConnectionNodeIds = connectedSet;
+        const currentPositions = network ? network.getPositions() : {};
+        const anchor = currentPositions[nodeKey] || { x: 0, y: 0 };
+        focusOriginalPositions = new Map();
+
+        const nodeTargets = nodesDs.get().map((node, idx) => {
+            const base = baseNodeStyles.get(node.id) || {};
+            const connected = connectedSet.has(node.id);
+            const pos = currentPositions[node.id] || { x: node.x || 0, y: node.y || 0 };
+            focusOriginalPositions.set(node.id, { x: pos.x, y: pos.y });
+
+            let target = {
+                id: node.id,
+                connected,
+                fromX: pos.x,
+                fromY: pos.y,
+                toX: pos.x,
+                toY: pos.y,
+                fromValue: Number(base.value || node.value || 1),
+                toValue: connected ? Number(base.value || node.value || 1) : Math.max(1, Number(base.value || node.value || 1) * 0.16),
+                fromColor: base.color || node.color,
+                toColor: connected ? (base.color || node.color) : withAlpha(base.color || node.color, 0.16),
+            };
+
+            if (!connected) {
+                // Scatter non-connected nodes outward from focused node.
+                const dx = pos.x - anchor.x;
+                const dy = pos.y - anchor.y;
+                const len = Math.hypot(dx, dy) || 1;
+                const ux = dx / len;
+                const uy = dy / len;
+                const burst = 290 + (idx % 10) * 42;
+                target = {
+                    ...target,
+                    toX: pos.x + ux * burst,
+                    toY: pos.y + uy * burst,
+                };
+            }
+
+            return target;
+        });
+
+        const edgeTargets = edgesDs.get().map((edge) => {
+            const base = baseEdgeStyles.get(edge.id) || {};
+            const connected = connectedSet.has(edge.from) && connectedSet.has(edge.to);
+            return {
+                id: edge.id,
+                connected,
+                fromWidth: Number(base.width || edge.width || 0.5),
+                toWidth: connected ? Number(base.width || edge.width || 0.5) : Math.max(0.12, Number(base.width || edge.width || 0.5) * 0.16),
+                fromColor: base.color || edge.color,
+                toColor: connected ? (base.color || edge.color) : withAlpha(base.color || edge.color, 0.08),
+            };
+        });
+
+        if (network) {
+            network.setOptions({ physics: { enabled: false } });
+        }
+
+        const start = performance.now();
+        const durationMs = 520;
+        const animateScatter = (now) => {
+            const t = Math.min(1, (now - start) / durationMs);
+            const e = easeOutCubic(t);
+
+            const nodeUpdates = nodeTargets.map((target) => ({
+                id: target.id,
+                hidden: false,
+                x: target.fromX + (target.toX - target.fromX) * e,
+                y: target.fromY + (target.toY - target.fromY) * e,
+                value: target.fromValue + (target.toValue - target.fromValue) * e,
+                color: e >= 0.92 ? target.toColor : target.fromColor,
+            }));
+            nodesDs.update(nodeUpdates);
+
+            const edgeUpdates = edgeTargets.map((target) => ({
+                id: target.id,
+                hidden: false,
+                width: target.fromWidth + (target.toWidth - target.fromWidth) * e,
+                color: e >= 0.92 ? target.toColor : target.fromColor,
+            }));
+            edgesDs.update(edgeUpdates);
+
+            if (network) {
+                network.redraw();
+            }
+
+            if (t < 1) {
+                focusAnimationFrame = requestAnimationFrame(animateScatter);
+            } else {
+                focusAnimationFrame = null;
+                focusHideTimer = setTimeout(() => {
+                    const hideNodeUpdates = nodesDs.get().map((node) => ({
+                        id: node.id,
+                        hidden: !connectedSet.has(node.id),
+                    }));
+                    nodesDs.update(hideNodeUpdates);
+
+                    const hideEdgeUpdates = edgesDs.get().map((edge) => ({
+                        id: edge.id,
+                        hidden: !(connectedSet.has(edge.from) && connectedSet.has(edge.to)),
+                    }));
+                    edgesDs.update(hideEdgeUpdates);
+                }, 120);
+            }
+        };
+        focusAnimationFrame = requestAnimationFrame(animateScatter);
+    }
+
+    function clearUserFocus() {
+        if (!nodesDs || !edgesDs) return;
+        cancelFocusAnimations();
+        focusedConnectionNodeIds = null;
+        selectedUserKey = null;
+        const start = performance.now();
+        const durationMs = 380;
+
+        const nodeTargets = nodesDs.get().map((node) => {
+            const base = baseNodeStyles.get(node.id) || {};
+            const originalPos = focusOriginalPositions.get(node.id);
+            return {
+                id: node.id,
+                fromX: node.x,
+                fromY: node.y,
+                toX: originalPos ? originalPos.x : node.x,
+                toY: originalPos ? originalPos.y : node.y,
+                fromValue: Number(node.value || 1),
+                toValue: Number(base.value ?? node.value ?? 1),
+                fromColor: node.color,
+                toColor: base.color ?? node.color,
+            };
+        });
+        const edgeTargets = edgesDs.get().map((edge) => {
+            const base = baseEdgeStyles.get(edge.id) || {};
+            return {
+                id: edge.id,
+                fromWidth: Number(edge.width || 0.5),
+                toWidth: Number(base.width ?? edge.width ?? 0.5),
+                fromColor: edge.color,
+                toColor: base.color ?? edge.color,
+            };
+        });
+
+        const animateClear = (now) => {
+            const t = Math.min(1, (now - start) / durationMs);
+            const e = easeOutCubic(t);
+
+            nodesDs.update(nodeTargets.map((target) => ({
+                id: target.id,
+                hidden: false,
+                x: target.fromX + (target.toX - target.fromX) * e,
+                y: target.fromY + (target.toY - target.fromY) * e,
+                value: target.fromValue + (target.toValue - target.fromValue) * e,
+                color: e >= 0.92 ? target.toColor : target.fromColor,
+            })));
+
+            edgesDs.update(edgeTargets.map((target) => ({
+                id: target.id,
+                hidden: false,
+                width: target.fromWidth + (target.toWidth - target.fromWidth) * e,
+                color: e >= 0.92 ? target.toColor : target.fromColor,
+            })));
+
+            if (network) {
+                network.redraw();
+            }
+
+            if (t < 1) {
+                clearAnimationFrame = requestAnimationFrame(animateClear);
+            } else {
+                clearAnimationFrame = null;
+                if (network) {
+                    network.setOptions({ physics: { enabled: true } });
+                    network.startSimulation();
+                }
+            }
+        };
+        clearAnimationFrame = requestAnimationFrame(animateClear);
     }
 
     function setGraphData(payload) {
@@ -327,6 +628,7 @@
             shape: n.shape || (n.group === 'user' ? 'diamond' : 'dot'),
             image: n.image || undefined,
             color: typeof n.color === 'string' ? n.color : undefined,
+            hidden: false,
         }));
 
         const edgeItems = (payload.edges || []).map((e) => ({
@@ -337,7 +639,11 @@
             dashes: !!e.dashes,
             color: e.dashes ? '#c084fc' : '#94a3b8',
             width: Math.min(6, Math.max(1, Math.log((e.value || 1) + 1))),
+            hidden: false,
         }));
+
+        focusedConnectionNodeIds = null;
+        selectedUserKey = null;
 
         if (!network) {
             nodesDs = new vis.DataSet(nodeItems);
@@ -355,6 +661,9 @@
                     color: n.shape === 'circularImage' ? n.color : `hsl(${hue} ${sat}% ${light}%)`,
                 };
             }));
+
+            baseNodeStyles = new Map(nodesDs.get().map((n) => [n.id, { value: n.value, color: n.color }]));
+            baseEdgeStyles = new Map(edgeItems.map((e) => [e.id, { width: e.width, color: e.color }]));
 
             network = new vis.Network(canvas, { nodes: nodesDs, edges: edgesDs }, {
                 layout: { improvedLayout: true, randomSeed: 2 },
@@ -415,6 +724,8 @@
                     }
                 } else if (params.nodes.length === 0) {
                     selectedNodeId = null;
+                    clearUserFocus();
+                    network.unselectAll();
                     renderActivityLogs(allActivityLogs);
                 }
             });
@@ -438,13 +749,11 @@
             nodesDs.remove(nodesDs.getIds().filter(id => !nodeIds.has(id)));
             edgesDs.update(edgeItems);
             edgesDs.remove(edgesDs.getIds().filter(id => !edgeIds.has(id)));
+            baseNodeStyles = new Map(nodesDs.get().map((n) => [n.id, { value: n.value, color: n.color }]));
+            baseEdgeStyles = new Map(edgesDs.get().map((e) => [e.id, { width: e.width, color: e.color }]));
             network.startSimulation();
         }
 
-        const hint = document.getElementById('network-graph-hint');
-        if (hint) {
-            hint.textContent = `Showing ${nodeItems.length} nodes, ${edgeItems.length} links · Drag = pan · Scroll = zoom · Labels enabled`;
-        }
     }
 
     async function loadGraphData() {
@@ -474,7 +783,7 @@
     }
 
     document.getElementById('ng-reset-view')?.addEventListener('click', () => {
-        selectedUserKey = null;
+        clearUserFocus();
         selectedNodeId = null;
         if (network) {
             network.unselectAll();
