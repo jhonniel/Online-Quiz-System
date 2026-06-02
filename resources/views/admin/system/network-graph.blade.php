@@ -112,6 +112,7 @@
                     <div id="network-graph-loading" class="absolute inset-0 hidden items-center justify-center bg-slate-50/90 text-sm text-gray-600 z-10">
                         Loading graph...
                     </div>
+                    <div id="network-graph-error" class="absolute inset-0 hidden items-center justify-center bg-slate-50/95 text-sm text-rose-700 z-20 p-6 text-center"></div>
                 </div>
 
                 <div class="grid grid-cols-1 xl:grid-cols-2 gap-4">
@@ -145,13 +146,12 @@
 <script>
 (function () {
     const dataUrl = "{{ route('admin.system.network-graph.data') }}";
-    const wrap = document.getElementById('network-graph-wrap');
-    const canvas = document.getElementById('network-graph-canvas');
-    const emptyState = document.getElementById('network-graph-empty');
-    const loadBtn = document.getElementById('ng-refresh-data');
-    const loading = document.getElementById('network-graph-loading');
-
-    if (!canvas || typeof vis === 'undefined') return;
+    let wrap = null;
+    let canvas = null;
+    let emptyState = null;
+    let loadBtn = null;
+    let loading = null;
+    let errorPanel = null;
 
     let network = null;
     let nodesDs = null;
@@ -182,6 +182,28 @@
         if (!loading) return;
         loading.classList.toggle('hidden', !show);
         loading.classList.toggle('flex', show);
+        if (show && errorPanel) {
+            errorPanel.classList.add('hidden');
+            errorPanel.classList.remove('flex');
+        }
+    }
+
+    function showGraphError(message) {
+        if (!errorPanel) return;
+        errorPanel.textContent = message;
+        errorPanel.classList.remove('hidden');
+        errorPanel.classList.add('flex');
+        if (loading) {
+            loading.classList.add('hidden');
+            loading.classList.remove('flex');
+        }
+    }
+
+    function hideGraphError() {
+        if (!errorPanel) return;
+        errorPanel.classList.add('hidden');
+        errorPanel.classList.remove('flex');
+        errorPanel.textContent = '';
     }
 
     function withAlpha(color, alpha) {
@@ -632,7 +654,129 @@
         clearAnimationFrame = requestAnimationFrame(animateClear);
     }
 
+    function buildVisNodes(rawNodes) {
+        const maxValue = rawNodes.reduce((m, n) => Math.max(m, Number(n.value || 1)), 1);
+
+        return rawNodes.map((n) => {
+            const shape = n.shape === 'circularImage' ? 'circularImage' : 'dot';
+            const t = Math.min(1, Math.max(0, Number(n.value || 1) / maxValue));
+            const hue = Math.round(200 - (200 * t));
+            const sat = 80;
+            const light = Math.round(58 - (20 * t));
+            const image = shape === 'circularImage' ? (n.image || undefined) : undefined;
+
+            return {
+                id: n.id,
+                label: n.label,
+                group: n.group,
+                value: Math.max(1, Number(n.value || 1)),
+                title: `${n.label} (${Number(n.value || 0).toLocaleString()} hits)`,
+                shape,
+                image,
+                brokenImage: image,
+                color: shape === 'circularImage' ? (n.color || '#94a3b8') : `hsl(${hue} ${sat}% ${light}%)`,
+                hidden: false,
+            };
+        });
+    }
+
+    function buildVisEdges(rawEdges) {
+        return (rawEdges || []).map((e, index) => ({
+            id: `${e.from}|${e.to}|${index}`,
+            from: e.from,
+            to: e.to,
+            value: Math.max(1, Number(e.value || 1)),
+            dashes: !!e.dashes,
+            color: e.dashes ? '#c084fc' : '#94a3b8',
+            width: Math.min(6, Math.max(1, Math.log((e.value || 1) + 1))),
+            hidden: false,
+        }));
+    }
+
+    function createNetworkOptions(nodeCount) {
+        const useImprovedLayout = nodeCount <= 80;
+
+        return {
+            layout: { improvedLayout: useImprovedLayout, randomSeed: 2 },
+            nodes: {
+                borderWidth: 0.5,
+                scaling: { min: 8, max: 42 },
+                font: {
+                    size: 13,
+                    face: 'Inter, sans-serif',
+                    color: '#0f172a',
+                    strokeWidth: 4,
+                    strokeColor: '#ffffff',
+                },
+            },
+            edges: {
+                smooth: false,
+                color: {
+                    color: 'rgba(148, 163, 184, 0.24)',
+                    highlight: 'rgba(99, 102, 241, 0.45)',
+                    hover: 'rgba(99, 102, 241, 0.45)',
+                },
+                width: 0.5,
+            },
+            interaction: {
+                dragView: true,
+                zoomView: true,
+                hover: true,
+                navigationButtons: true,
+                tooltipDelay: 90,
+            },
+            physics: {
+                enabled: true,
+                solver: 'forceAtlas2Based',
+                timestep: 0.35,
+                stabilization: {
+                    enabled: true,
+                    iterations: nodeCount > 120 ? 80 : 120,
+                    updateInterval: 25,
+                },
+                forceAtlas2Based: {
+                    gravitationalConstant: -95,
+                    centralGravity: 0.02,
+                    springLength: 58,
+                    springConstant: 0.04,
+                    damping: 0.62,
+                },
+                maxVelocity: 28,
+                minVelocity: 0.75,
+            },
+        };
+    }
+
+    function bindNetworkEvents() {
+        if (!network) return;
+
+        network.on('click', (params) => {
+            if (params.nodes.length === 1) {
+                const id = String(params.nodes[0]);
+                const clickedNode = nodesDs.get(id);
+                const filteredLogs = filterLogsByNode(id, clickedNode?.label || '');
+                renderActivityLogs(filteredLogs, clickedNode?.label || id);
+                focusNode(id);
+            } else if (params.nodes.length === 0) {
+                selectedNodeId = null;
+                clearNodeFocus();
+                network.unselectAll();
+                renderActivityLogs(allActivityLogs);
+            }
+        });
+
+        const fitGraphToView = () => {
+            if (!network) return;
+            network.fit({ animation: { duration: 280, easingFunction: 'easeInOutQuad' } });
+        };
+        network.on('stabilizationIterationsDone', fitGraphToView);
+        network.on('stabilized', fitGraphToView);
+        setTimeout(fitGraphToView, 900);
+    }
+
     function setGraphData(payload) {
+        hideGraphError();
+
         const rawNodes = payload.nodes || [];
         updateStats(payload.stats);
         renderUsersList(payload.users || []);
@@ -640,8 +784,8 @@
         renderActivityLogs(allActivityLogs);
 
         if (!rawNodes.length) {
-            wrap.classList.add('hidden');
-            emptyState.classList.remove('hidden');
+            if (wrap) wrap.classList.add('hidden');
+            if (emptyState) emptyState.classList.remove('hidden');
             if (network) {
                 network.destroy();
                 network = null;
@@ -651,140 +795,46 @@
             return;
         }
 
-        wrap.classList.remove('hidden');
-        emptyState.classList.add('hidden');
+        if (wrap) wrap.classList.remove('hidden');
+        if (emptyState) emptyState.classList.add('hidden');
 
-        const nodeItems = rawNodes.map((n) => ({
-            id: n.id,
-            label: n.label,
-            group: n.group,
-            value: Math.max(1, Number(n.value || 1)),
-            title: `${n.label} (${Number(n.value || 0).toLocaleString()} hits)`,
-            shape: n.shape || (n.group === 'user' ? 'diamond' : 'dot'),
-            image: n.image || undefined,
-            color: typeof n.color === 'string' ? n.color : undefined,
-            hidden: false,
-        }));
-
-        const edgeItems = (payload.edges || []).map((e) => ({
-            id: `${e.from}|${e.to}`,
-            from: e.from,
-            to: e.to,
-            value: Math.max(1, Number(e.value || 1)),
-            dashes: !!e.dashes,
-            color: e.dashes ? '#c084fc' : '#94a3b8',
-            width: Math.min(6, Math.max(1, Math.log((e.value || 1) + 1))),
-            hidden: false,
-        }));
+        const nodeItems = buildVisNodes(rawNodes);
+        const edgeItems = buildVisEdges(payload.edges || []);
 
         focusedConnectionNodeIds = null;
         selectedUserKey = null;
 
-        if (!network) {
-            nodesDs = new vis.DataSet(nodeItems);
-            edgesDs = new vis.DataSet(edgeItems);
-            const maxValue = nodeItems.reduce((m, n) => Math.max(m, Number(n.value || 1)), 1);
+        try {
+            if (!network) {
+                nodesDs = new vis.DataSet(nodeItems);
+                edgesDs = new vis.DataSet(edgeItems);
+                baseNodeStyles = new Map(nodesDs.get().map((n) => [n.id, { value: n.value, color: n.color }]));
+                baseEdgeStyles = new Map(edgesDs.get().map((e) => [e.id, { width: e.width, color: e.color }]));
 
-            nodesDs.update(nodeItems.map((n) => {
-                const t = Math.min(1, Math.max(0, Number(n.value || 1) / maxValue));
-                const hue = Math.round(200 - (200 * t)); // blue -> red
-                const sat = 80;
-                const light = Math.round(58 - (20 * t));
-
-                return {
-                    ...n,
-                    color: n.shape === 'circularImage' ? n.color : `hsl(${hue} ${sat}% ${light}%)`,
-                };
-            }));
-
-            baseNodeStyles = new Map(nodesDs.get().map((n) => [n.id, { value: n.value, color: n.color }]));
-            baseEdgeStyles = new Map(edgeItems.map((e) => [e.id, { width: e.width, color: e.color }]));
-
-            network = new vis.Network(canvas, { nodes: nodesDs, edges: edgesDs }, {
-                layout: { improvedLayout: true, randomSeed: 2 },
-                nodes: {
-                    borderWidth: 0.5,
-                    scaling: { min: 8, max: 42 },
-                    font: {
-                        size: 13,
-                        face: 'Inter, sans-serif',
-                        color: '#0f172a',
-                        strokeWidth: 4,
-                        strokeColor: '#ffffff',
-                    },
-                },
-                edges: {
-                    smooth: false,
-                    color: {
-                        color: 'rgba(148, 163, 184, 0.24)',
-                        highlight: 'rgba(99, 102, 241, 0.45)',
-                        hover: 'rgba(99, 102, 241, 0.45)',
-                    },
-                    width: 0.5,
-                },
-                interaction: {
-                    dragView: true,
-                    zoomView: true,
-                    hover: true,
-                    navigationButtons: true,
-                    tooltipDelay: 90,
-                },
-                physics: {
-                    enabled: true,
-                    solver: 'forceAtlas2Based',
-                    timestep: 0.3,
-                    stabilization: { enabled: false },
-                    forceAtlas2Based: {
-                        gravitationalConstant: -115,
-                        centralGravity: 0.015,
-                        springLength: 52,
-                        springConstant: 0.045,
-                        damping: 0.55,
-                    },
-                    maxVelocity: 32,
-                    minVelocity: 0.35,
-                },
-            });
-
-            network.on('click', (params) => {
-                if (params.nodes.length === 1) {
-                    const id = String(params.nodes[0]);
-                    const clickedNode = nodesDs.get(id);
-                    const filteredLogs = filterLogsByNode(id, clickedNode?.label || '');
-                    renderActivityLogs(filteredLogs, clickedNode?.label || id);
-                    focusNode(id);
-                } else if (params.nodes.length === 0) {
-                    selectedNodeId = null;
-                    clearNodeFocus();
-                    network.unselectAll();
-                    renderActivityLogs(allActivityLogs);
-                }
-            });
-        } else {
-            const maxValue = nodeItems.reduce((m, n) => Math.max(m, Number(n.value || 1)), 1);
-            const recolored = nodeItems.map((n) => {
-                const t = Math.min(1, Math.max(0, Number(n.value || 1) / maxValue));
-                const hue = Math.round(200 - (200 * t));
-                const sat = 80;
-                const light = Math.round(58 - (20 * t));
-
-                return {
-                    ...n,
-                    color: n.shape === 'circularImage' ? n.color : `hsl(${hue} ${sat}% ${light}%)`,
-                };
-            });
-
-            const nodeIds = new Set(nodeItems.map(n => n.id));
-            const edgeIds = new Set(edgeItems.map(e => e.id));
-            nodesDs.update(recolored);
-            nodesDs.remove(nodesDs.getIds().filter(id => !nodeIds.has(id)));
-            edgesDs.update(edgeItems);
-            edgesDs.remove(edgesDs.getIds().filter(id => !edgeIds.has(id)));
-            baseNodeStyles = new Map(nodesDs.get().map((n) => [n.id, { value: n.value, color: n.color }]));
-            baseEdgeStyles = new Map(edgesDs.get().map((e) => [e.id, { width: e.width, color: e.color }]));
-            network.startSimulation();
+                network = new vis.Network(canvas, { nodes: nodesDs, edges: edgesDs }, createNetworkOptions(nodeItems.length));
+                bindNetworkEvents();
+            } else {
+                const nodeIds = new Set(nodeItems.map(n => n.id));
+                const edgeIds = new Set(edgeItems.map(e => e.id));
+                nodesDs.update(nodeItems);
+                nodesDs.remove(nodesDs.getIds().filter(id => !nodeIds.has(id)));
+                edgesDs.update(edgeItems);
+                edgesDs.remove(edgesDs.getIds().filter(id => !edgeIds.has(id)));
+                baseNodeStyles = new Map(nodesDs.get().map((n) => [n.id, { value: n.value, color: n.color }]));
+                baseEdgeStyles = new Map(edgesDs.get().map((e) => [e.id, { width: e.width, color: e.color }]));
+                network.setOptions(createNetworkOptions(nodeItems.length));
+                network.startSimulation();
+                setTimeout(() => {
+                    if (network) {
+                        network.fit({ animation: { duration: 280, easingFunction: 'easeInOutQuad' } });
+                    }
+                }, 900);
+            }
+        } catch (error) {
+            console.error('Network graph render failed', error);
+            showGraphError('Could not render the graph. Try Refresh graph or Sync historical data.');
+            throw error;
         }
-
     }
 
     async function loadGraphData() {
@@ -800,12 +850,15 @@
                 headers: { 'Accept': 'application/json', 'X-Network-Graph-Probe': '1' },
                 credentials: 'same-origin',
             });
-            if (!res.ok) throw new Error('Failed to load');
+            if (!res.ok) {
+                throw new Error(`HTTP ${res.status}`);
+            }
             const payload = await res.json();
             setGraphData(payload);
         } catch (e) {
             console.warn(e);
-            alert('Could not load graph data. Try again or sync historical data first.');
+            const message = e && e.message ? e.message : 'Unknown error';
+            showGraphError(`Could not load graph data (${message}). Try Refresh graph or Sync historical data.`);
         } finally {
             loadInProgress = false;
             setLoading(false);
@@ -813,21 +866,45 @@
         }
     }
 
-    document.getElementById('ng-reset-view')?.addEventListener('click', () => {
-        clearNodeFocus();
-        selectedNodeId = null;
-        if (network) {
-            network.unselectAll();
-            network.fit({ animation: { duration: 350, easingFunction: 'easeInOutQuad' } });
-            network.startSimulation();
-        }
-        renderActivityLogs(allActivityLogs);
-        document.querySelectorAll('.ng-user-row').forEach(r => r.classList.remove('bg-indigo-50', 'ring-1', 'ring-indigo-200'));
-    });
+    function boot() {
+        wrap = document.getElementById('network-graph-wrap');
+        canvas = document.getElementById('network-graph-canvas');
+        emptyState = document.getElementById('network-graph-empty');
+        loadBtn = document.getElementById('ng-refresh-data');
+        loading = document.getElementById('network-graph-loading');
+        errorPanel = document.getElementById('network-graph-error');
 
-    loadBtn?.addEventListener('click', loadGraphData);
-    // Auto-load on page open
-    setTimeout(() => { loadGraphData(); }, 120);
+        if (!canvas) {
+            showGraphError('Graph canvas is missing on this page.');
+            return;
+        }
+
+        if (typeof vis === 'undefined' || !vis.Network || !vis.DataSet) {
+            showGraphError('Graph library failed to load. Check your internet connection and refresh.');
+            return;
+        }
+
+        loadBtn?.addEventListener('click', loadGraphData);
+        document.getElementById('ng-reset-view')?.addEventListener('click', () => {
+            clearNodeFocus();
+            selectedNodeId = null;
+            if (network) {
+                network.unselectAll();
+                network.fit({ animation: { duration: 350, easingFunction: 'easeInOutQuad' } });
+                network.startSimulation();
+            }
+            renderActivityLogs(allActivityLogs);
+            document.querySelectorAll('.ng-user-row').forEach(r => r.classList.remove('bg-indigo-50', 'ring-1', 'ring-indigo-200'));
+        });
+
+        setTimeout(() => { loadGraphData(); }, 120);
+    }
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', boot);
+    } else {
+        boot();
+    }
 })();
 </script>
 @endpush

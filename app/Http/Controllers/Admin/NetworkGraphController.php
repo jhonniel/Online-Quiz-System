@@ -33,9 +33,10 @@ class NetworkGraphController extends Controller
         $totalEdges = NetworkGraphEdge::query()->count();
         $totalUsers = NetworkGraphNode::query()->where('node_group', 'user')->count();
 
-        $maxNodes = max(1, $totalNodes);
-        $maxEdges = max(1, $totalEdges);
-        $maxUserNodes = max(1, $totalUsers);
+        // Cap payload size so the browser can render reliably on large datasets.
+        $maxNodes = max(1, min($totalNodes, 500));
+        $maxEdges = max(1, min($totalEdges, 1200));
+        $maxUserNodes = max(1, min($totalUsers, 120));
 
         return response()->json($builder->toVisNetworkPayload(
             $maxNodes,
