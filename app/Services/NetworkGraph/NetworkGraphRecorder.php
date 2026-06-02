@@ -22,6 +22,11 @@ class NetworkGraphRecorder
         'activity' => '#f59e0b',
         'status' => '#64748b',
         'user' => '#ec4899',
+        'quiz' => '#22c55e',
+        'dtr' => '#eab308',
+        'leave_request' => '#f97316',
+        'application' => '#06b6d4',
+        'position' => '#0f766e',
     ];
 
     /** @var array<string, string> */
@@ -67,6 +72,15 @@ class NetworkGraphRecorder
         $this->touchEdge('api:'.$this->slug($routeKey), $statusKey);
         $this->touchEdge('role:'.$role, 'api:'.$this->slug($routeKey));
 
+        $domain = $this->resolveDomainFromUri($uri);
+        if ($domain !== null) {
+            $domainKey = $domain['key'];
+            $this->touchNode($domainKey, $domain['label'], $domain['group'], self::GROUP_COLORS[$domain['group']] ?? '#94a3b8');
+            $this->touchEdge('module:'.$module, $domainKey, 'domain');
+            $this->touchEdge($domainKey, 'api:'.$this->slug($routeKey), 'domain');
+            $this->touchEdge('role:'.$role, $domainKey, 'domain');
+        }
+
         $errorKey = null;
         if ($statusCode >= 400) {
             $errorKey = 'error:'.$statusCode.':'.$this->slug($request->path());
@@ -80,6 +94,32 @@ class NetworkGraphRecorder
             $this->linkUserToAccess($user, $role, $module, 'api:'.$this->slug($routeKey), $errorKey);
         } elseif ($role === 'applicant') {
             $this->linkGuestToAccess('guest:applicant', 'Applicants (guest)', $module, 'api:'.$this->slug($routeKey), $errorKey);
+        }
+
+        $quizKey = $this->extractQuizKeyFromUri($uri);
+        if ($quizKey !== null) {
+            $this->touchNode('quiz:domain', 'Quizzes', 'quiz', self::GROUP_COLORS['quiz']);
+            $this->touchNode($quizKey, str_starts_with($quizKey, 'quiz:id:') ? 'Quiz #'.substr($quizKey, strlen('quiz:id:')) : 'Quiz', 'quiz', self::GROUP_COLORS['quiz']);
+            $this->touchEdge('quiz:domain', $quizKey, 'domain');
+            $this->touchEdge('api:'.$this->slug($routeKey), $quizKey, 'quiz');
+            if ($user instanceof User) {
+                $this->touchEdge('user:'.$user->id, $quizKey, 'quiz_attempt');
+            } elseif ($role === 'applicant') {
+                $this->touchEdge('guest:applicant', $quizKey, 'quiz_attempt');
+            }
+        }
+
+        $positionNode = $this->extractPositionFromUri($uri);
+        if ($positionNode !== null) {
+            $this->touchNode('application:domain', 'Applications', 'application', self::GROUP_COLORS['application']);
+            $this->touchNode($positionNode['key'], $positionNode['label'], 'position', self::GROUP_COLORS['position']);
+            $this->touchEdge('application:domain', $positionNode['key'], 'application');
+            $this->touchEdge('api:'.$this->slug($routeKey), $positionNode['key'], 'application');
+            if ($user instanceof User) {
+                $this->touchEdge('user:'.$user->id, $positionNode['key'], 'applied_position');
+            } elseif ($role === 'applicant') {
+                $this->touchEdge('guest:applicant', $positionNode['key'], 'applied_position');
+            }
         }
     }
 
@@ -315,5 +355,93 @@ class NetworkGraphRecorder
         $slug = preg_replace('/[^a-zA-Z0-9]+/', '_', strtolower($value)) ?? 'node';
 
         return trim($slug, '_') !== '' ? trim($slug, '_') : 'node';
+    }
+
+    /**
+     * @return array{key: string, label: string, group: string}|null
+     */
+    private function resolveDomainFromUri(string $uri): ?array
+    {
+        $path = strtolower(trim($uri, '/'));
+        if ($path === '') {
+            return null;
+        }
+
+        if (str_contains($path, 'quiz')) {
+            return ['key' => 'quiz:domain', 'label' => 'Quizzes', 'group' => 'quiz'];
+        }
+
+        if (str_contains($path, 'dtr') || str_contains($path, 'time-request')) {
+            return ['key' => 'dtr:domain', 'label' => 'DTR & Time Requests', 'group' => 'dtr'];
+        }
+
+        if (str_contains($path, 'leave-request') || str_contains($path, 'leave')) {
+            return ['key' => 'leave_request:domain', 'label' => 'Leave Requests', 'group' => 'leave_request'];
+        }
+
+        if (str_contains($path, 'hiring') || str_contains($path, 'application') || str_contains($path, 'apply')) {
+            return ['key' => 'application:domain', 'label' => 'Applications', 'group' => 'application'];
+        }
+
+        return null;
+    }
+
+    private function extractQuizKeyFromUri(string $uri): ?string
+    {
+        $segments = array_values(array_filter(explode('/', strtolower(trim($uri, '/')))));
+        $quizIndex = array_search('quizzes', $segments, true);
+        if ($quizIndex === false) {
+            $quizIndex = array_search('quiz', $segments, true);
+        }
+        if ($quizIndex === false) {
+            return null;
+        }
+
+        $next = $segments[$quizIndex + 1] ?? null;
+        if ($next !== null && preg_match('/^\d+$/', $next)) {
+            return 'quiz:id:'.$next;
+        }
+
+        return 'quiz:domain';
+    }
+
+    /**
+     * @return array{key: string, label: string}|null
+     */
+    private function extractPositionFromUri(string $uri): ?array
+    {
+        $segments = array_values(array_filter(explode('/', trim($uri, '/'))));
+        if ($segments === []) {
+            return null;
+        }
+
+        $lower = array_map('strtolower', $segments);
+        $applyIndex = array_search('apply', $lower, true);
+        if ($applyIndex === false) {
+            $applyIndex = array_search('applications', $lower, true);
+        }
+        if ($applyIndex === false) {
+            return null;
+        }
+
+        $candidate = $segments[$applyIndex + 1] ?? null;
+        if ($candidate === null || $candidate === '') {
+            return null;
+        }
+
+        if (preg_match('/^\d+$/', $candidate)) {
+            return [
+                'key' => 'position:id:'.$candidate,
+                'label' => 'Position #'.$candidate,
+            ];
+        }
+
+        $label = str_replace(['-', '_'], ' ', $candidate);
+        $label = str($label)->title()->toString();
+
+        return [
+            'key' => 'position:'.$this->slug((string) $candidate),
+            'label' => $label,
+        ];
     }
 }

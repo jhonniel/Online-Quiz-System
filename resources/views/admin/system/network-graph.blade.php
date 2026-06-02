@@ -37,7 +37,7 @@
         <div class="px-6 py-4 border-b border-gray-100 bg-gray-50/70 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
             <div>
                 <h1 class="text-xl font-bold text-gray-900">Network Graph</h1>
-                <p class="text-sm text-gray-500">Live moving graph with all connections. Drag to pan, scroll to zoom, and click <strong>Load graph</strong> to fetch current traffic.</p>
+                <p class="text-sm text-gray-500">Live moving graph with all connections. Click any node to show only its links; click empty space to reset. Drag to pan, scroll to zoom.</p>
             </div>
             <div class="text-xs text-gray-500">
                 <span id="ng-generated-at" class="text-gray-500">Waiting for graph data...</span>
@@ -118,7 +118,7 @@
                     <div class="rounded-xl border border-gray-200 bg-white flex flex-col max-h-80">
                         <div class="px-4 py-3 border-b border-gray-100 bg-gray-50/60">
                             <h2 class="text-sm font-semibold text-gray-900">Users & access</h2>
-                            <p class="text-xs text-gray-500 mt-0.5">Click a user to highlight links in the graph.</p>
+                            <p class="text-xs text-gray-500 mt-0.5">Click any node in the graph or a user here to show only its connections.</p>
                         </div>
                         <div id="ng-users-list" class="flex-1 overflow-y-auto divide-y divide-gray-100 text-sm">
                             <p class="px-4 py-6 text-xs text-gray-400 text-center">Click <strong>Load graph</strong> first.</p>
@@ -348,6 +348,35 @@
             });
         }
 
+        if (lowerId.startsWith('quiz:')) {
+            return logs.filter(log => {
+                const url = String(log.page_url || '').toLowerCase();
+                const type = String(log.activity_type || '').toLowerCase();
+                return url.includes('quiz') || type.includes('quiz');
+            });
+        }
+
+        if (lowerId.startsWith('dtr:')) {
+            return logs.filter(log => {
+                const url = String(log.page_url || '').toLowerCase();
+                return url.includes('dtr') || url.includes('time-request');
+            });
+        }
+
+        if (lowerId.startsWith('leave_request:')) {
+            return logs.filter(log => {
+                const url = String(log.page_url || '').toLowerCase();
+                return url.includes('leave');
+            });
+        }
+
+        if (lowerId.startsWith('application:') || lowerId.startsWith('position:')) {
+            return logs.filter(log => {
+                const url = String(log.page_url || '').toLowerCase();
+                return url.includes('hiring') || url.includes('apply') || url.includes('application');
+            });
+        }
+
         return logs.filter(log => {
             const url = String(log.page_url || '').toLowerCase();
             const type = String(log.activity_type || '').toLowerCase();
@@ -359,12 +388,14 @@
         return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
     }
 
-    function focusUser(nodeKey) {
+    function focusNode(nodeKey) {
         if (!network || !nodeKey) return;
-        selectedUserKey = nodeKey;
+        selectedNodeId = nodeKey;
+        const isUserNode = nodeKey.startsWith('user:') || nodeKey.startsWith('guest:');
+        selectedUserKey = isUserNode ? nodeKey : null;
         spawnExplosionParticles(nodeKey);
         const connected = network.getConnectedNodes(nodeKey);
-        applyUserFocus(nodeKey, connected);
+        applyNodeFocus(nodeKey, connected);
         network.selectNodes([nodeKey, ...connected]);
         network.focus(nodeKey, {
             scale: 1.2,
@@ -376,6 +407,10 @@
             row.classList.toggle('ring-1', on);
             row.classList.toggle('ring-indigo-200', on);
         });
+    }
+
+    function focusUser(nodeKey) {
+        focusNode(nodeKey);
     }
 
     function spawnExplosionParticles(nodeKey) {
@@ -412,7 +447,7 @@
         }
     }
 
-    function applyUserFocus(nodeKey, connectedNodeIds) {
+    function applyNodeFocus(nodeKey, connectedNodeIds) {
         if (!nodesDs || !edgesDs) return;
         cancelFocusAnimations();
 
@@ -526,7 +561,7 @@
         focusAnimationFrame = requestAnimationFrame(animateScatter);
     }
 
-    function clearUserFocus() {
+    function clearNodeFocus() {
         if (!nodesDs || !edgesDs) return;
         cancelFocusAnimations();
         focusedConnectionNodeIds = null;
@@ -715,16 +750,12 @@
                 if (params.nodes.length === 1) {
                     const id = String(params.nodes[0]);
                     const clickedNode = nodesDs.get(id);
-                    selectedNodeId = id;
                     const filteredLogs = filterLogsByNode(id, clickedNode?.label || '');
                     renderActivityLogs(filteredLogs, clickedNode?.label || id);
-
-                    if (id.startsWith('user:') || id.startsWith('guest:')) {
-                        focusUser(id);
-                    }
+                    focusNode(id);
                 } else if (params.nodes.length === 0) {
                     selectedNodeId = null;
-                    clearUserFocus();
+                    clearNodeFocus();
                     network.unselectAll();
                     renderActivityLogs(allActivityLogs);
                 }
@@ -783,7 +814,7 @@
     }
 
     document.getElementById('ng-reset-view')?.addEventListener('click', () => {
-        clearUserFocus();
+        clearNodeFocus();
         selectedNodeId = null;
         if (network) {
             network.unselectAll();

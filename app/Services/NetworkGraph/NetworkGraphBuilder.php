@@ -4,8 +4,10 @@ namespace App\Services\NetworkGraph;
 
 use App\Models\ApiEndpointMetric;
 use App\Models\ErrorLog;
+use App\Models\HiringApplication;
 use App\Models\NetworkGraphEdge;
 use App\Models\NetworkGraphNode;
+use App\Models\QuizAttempt;
 use App\Models\User;
 use App\Models\UserActivity;
 class NetworkGraphBuilder
@@ -55,6 +57,63 @@ class NetworkGraphBuilder
 
         foreach (UserActivity::query()->where('created_at', '>=', $since)->orderByDesc('id')->limit(1000)->cursor() as $activity) {
             $this->recorder->recordUserActivity($activity);
+            $imported++;
+        }
+
+        foreach (QuizAttempt::query()->where('created_at', '>=', $since)->with(['quiz', 'user'])->orderByDesc('id')->limit(3000)->cursor() as $attempt) {
+            $quizId = (int) ($attempt->quiz_id ?? 0);
+            if ($quizId <= 0) {
+                continue;
+            }
+
+            $quizTitle = trim((string) ($attempt->quiz?->title ?? 'Quiz #'.$quizId));
+            $quizKey = 'quiz:'.$quizId;
+
+            $this->recorder->touchNode($quizKey, $quizTitle, 'quiz', '#22c55e', [
+                'quiz_id' => $quizId,
+            ]);
+            $this->recorder->touchNode('quiz:domain', 'Quizzes', 'quiz', '#22c55e');
+            $this->recorder->touchEdge('quiz:domain', $quizKey, 'domain');
+
+            if ($attempt->user) {
+                $role = match ((string) $attempt->user->role) {
+                    'student', 'employee', 'teacher', 'admin' => (string) $attempt->user->role,
+                    default => 'other',
+                };
+                $this->recorder->linkUserToAccess($attempt->user, $role, 'quiz', $quizKey);
+                $this->recorder->touchEdge('user:'.$attempt->user->id, $quizKey, 'quiz_attempt');
+            }
+
+            $imported++;
+        }
+
+        foreach (HiringApplication::query()->where('created_at', '>=', $since)->with(['hiringPosition', 'user'])->orderByDesc('id')->limit(2000)->cursor() as $application) {
+            $positionName = trim((string) ($application->hiringPosition?->title ?: $application->position_applied ?: 'Unspecified Position'));
+            $positionKey = 'position:'.$this->slug($positionName);
+            $applicationKey = 'application:'.$application->id;
+
+            $applicantLabel = trim($application->full_name) !== '' ? $application->full_name : ('Applicant #'.$application->id);
+            $this->recorder->touchNode('application:domain', 'Applications', 'application', '#06b6d4');
+            $this->recorder->touchNode($applicationKey, $applicantLabel, 'application', '#06b6d4', [
+                'application_id' => (int) $application->id,
+                'status' => (string) $application->status,
+                'email' => (string) $application->email,
+            ]);
+            $this->recorder->touchNode($positionKey, $positionName, 'position', '#0f766e');
+
+            $this->recorder->touchEdge('application:domain', $applicationKey, 'application');
+            $this->recorder->touchEdge($applicationKey, $positionKey, 'applied_position');
+            $this->recorder->touchEdge('application:domain', $positionKey, 'application');
+
+            if ($application->user) {
+                $this->recorder->linkUserToAccess($application->user, (string) ($application->user->role ?: 'applicant'), 'hiring', $applicationKey);
+                $this->recorder->touchEdge('user:'.$application->user->id, $positionKey, 'applied_position');
+            } else {
+                $guestKey = 'guest:applicant:'.$application->id;
+                $this->recorder->linkGuestToAccess($guestKey, $applicantLabel.' (Applicant)', 'hiring', $applicationKey);
+                $this->recorder->touchEdge($guestKey, $positionKey, 'applied_position');
+            }
+
             $imported++;
         }
 
