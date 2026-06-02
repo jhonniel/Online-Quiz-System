@@ -201,7 +201,8 @@ class LeaveRequestController extends Controller
      */
     public function show(Request $request, LeaveRequest $leaveRequest)
     {
-        $leaveRequest->load(['user.department', 'reviewer', 'dtrTimeRequest']);
+        $leaveRequest->load(['user.department', 'reviewer', 'dtrTimeRequest', 'logs.performer']);
+        $teacherExcusedBatchmates = LeaveRequest::siblingsInTeacherExcusedFiling($leaveRequest);
         $backLink = $this->adminLeaveRequestBackLink($request, $leaveRequest);
 
         $user = $leaveRequest->user;
@@ -408,7 +409,8 @@ class LeaveRequestController extends Controller
             'hasNegativeBalance',
             'leaveTypeOptions',
             'canEditLeaveRequestDetails',
-            'backLink'
+            'backLink',
+            'teacherExcusedBatchmates'
         ));
     }
 

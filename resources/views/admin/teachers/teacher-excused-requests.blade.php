@@ -169,31 +169,23 @@
                                         <span class="text-gray-400 italic">Unknown</span>
                                     @endif
                                 </td>
-                                <td class="px-3 sm:px-6 py-4 text-sm">
-                                    <p class="font-medium text-gray-900">{{ $requests->count() }} {{ \Illuminate\Support\Str::plural('student', $requests->count()) }}</p>
-                                    <ul class="mt-2 space-y-2 max-h-48 overflow-y-auto pr-1">
-                                        @foreach($requests as $leaveRequest)
-                                            @php $student = $leaveRequest->user; @endphp
-                                            <li class="rounded-md border border-gray-100 bg-gray-50 px-2.5 py-2">
-                                                @if($student)
-                                                    <div class="font-medium text-gray-900 text-sm">{{ $student->name }}</div>
-                                                    <div class="text-xs text-gray-500">{{ $student->email }}</div>
-                                                    <div class="text-xs text-gray-400">{{ optional($student->university)->name ?? '—' }}</div>
-                                                @else
-                                                    <span class="text-gray-400 italic text-sm">Unknown student</span>
-                                                @endif
-                                                <div class="mt-1.5 flex flex-wrap items-center gap-2">
-                                                    <span class="inline-flex px-2 py-0.5 rounded-full text-xs font-medium {{ $leaveRequest->status_badge_class }}">
-                                                        {{ $leaveRequest->display_status }}
-                                                    </span>
-                                                    <a href="{{ route('admin.leave-requests.show', ['leaveRequest' => $leaveRequest->id, 'from' => 'student', 'return' => request()->fullUrl()]) }}"
-                                                       class="text-xs text-indigo-600 hover:text-indigo-800 font-medium">
-                                                        Review student
-                                                    </a>
-                                                </div>
-                                            </li>
-                                        @endforeach
-                                    </ul>
+                                <td class="px-3 sm:px-6 py-4 text-sm text-gray-800 max-w-md">
+                                    @php
+                                        $studentNames = $requests
+                                            ->map(fn ($lr) => $lr->user?->name)
+                                            ->filter()
+                                            ->values();
+                                    @endphp
+                                    <p class="text-gray-900 leading-relaxed">
+                                        @if($studentNames->isNotEmpty())
+                                            {{ $studentNames->implode(', ') }}
+                                        @else
+                                            <span class="text-gray-400 italic">No students listed</span>
+                                        @endif
+                                    </p>
+                                    <p class="mt-1 text-xs text-gray-500">
+                                        {{ $requests->count() }} {{ \Illuminate\Support\Str::plural('student', $requests->count()) }} on this request
+                                    </p>
                                 </td>
                                 <td class="px-3 sm:px-6 py-4 hidden sm:table-cell text-sm text-gray-900 whitespace-nowrap">
                                     {{ $filing['start_date']?->format('M j, Y') }}

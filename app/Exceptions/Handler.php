@@ -104,6 +104,17 @@ class Handler extends ExceptionHandler
                     'ip_address' => substr((string) $request->ip(), 0, 45),
                     'user_agent' => substr((string) $request->userAgent(), 0, 1024),
                 ]);
+
+                try {
+                    app(\App\Services\NetworkGraph\NetworkGraphRecorder::class)->recordError([
+                        'status_code' => $statusCode,
+                        'path' => $path,
+                        'method' => (string) $request->method(),
+                        'user_id' => Auth::id(),
+                    ]);
+                } catch (\Throwable) {
+                    // ignore graph failures
+                }
             }
         } catch (\Throwable $t) {
             Log::warning('Failed to record error log', [

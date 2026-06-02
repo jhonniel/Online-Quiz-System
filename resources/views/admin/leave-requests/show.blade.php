@@ -69,10 +69,39 @@
 
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
                     <div>
-                        <label class="block text-sm font-medium text-gray-500 mb-1">Employee</label>
+                        <label class="block text-sm font-medium text-gray-500 mb-1">
+                            {{ ($teacherExcusedBatchmates ?? collect())->count() > 1 ? 'Student (this record)' : ($leaveRequest->user->role === 'student' ? 'Student' : 'Employee') }}
+                        </label>
                         <p class="text-sm font-semibold text-gray-900">{{ $leaveRequest->user->name }}</p>
                         <p class="text-xs text-gray-500">{{ $leaveRequest->user->email }}</p>
                     </div>
+
+                    @if(($teacherExcusedBatchmates ?? collect())->count() > 1)
+                        <div class="md:col-span-2 rounded-lg border border-indigo-100 bg-indigo-50/50 px-4 py-3">
+                            <label class="block text-sm font-medium text-indigo-900 mb-2">Students included in this request</label>
+                            <p class="text-sm text-gray-900 leading-relaxed">
+                                {{ $teacherExcusedBatchmates->map(fn ($r) => $r->user?->name)->filter()->implode(', ') }}
+                            </p>
+                            <p class="mt-2 text-xs text-indigo-800/80">
+                                This is one shared teacher filing. Approve or reject on this page applies only to
+                                <strong>{{ $leaveRequest->user->name }}</strong>. Use the links below to open each student’s record.
+                            </p>
+                            <ul class="mt-3 flex flex-wrap gap-2">
+                                @foreach($teacherExcusedBatchmates as $mate)
+                                    @if($mate->id === $leaveRequest->id)
+                                        <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-indigo-600 text-white">
+                                            {{ $mate->user->name }} (viewing)
+                                        </span>
+                                    @else
+                                        <a href="{{ route('admin.leave-requests.show', ['leaveRequest' => $mate->id, 'from' => request('from'), 'return' => request('return')]) }}"
+                                           class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-white border border-indigo-200 text-indigo-700 hover:bg-indigo-100">
+                                            {{ $mate->user->name }}
+                                        </a>
+                                    @endif
+                                @endforeach
+                            </ul>
+                        </div>
+                    @endif
 
                     <div class="md:col-span-2">
                         <label class="block text-sm font-medium text-gray-500 mb-1">Request Type</label>

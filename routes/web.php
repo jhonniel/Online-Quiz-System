@@ -131,6 +131,12 @@ Route::prefix('admin')->middleware(['auth', 'admin'])->group(function () {
             Route::post('/system/api-monitoring/keys', [\App\Http\Controllers\Admin\ApiMonitoringController::class, 'createApiKey'])->name('admin.system.api-monitoring.keys.store');
             Route::post('/system/api-monitoring/keys/{key}/revoke', [\App\Http\Controllers\Admin\ApiMonitoringController::class, 'revokeApiKey'])->name('admin.system.api-monitoring.keys.revoke');
         });
+        Route::middleware(['admin.subfeature:system,network_graph'])->group(function () {
+            Route::get('/system/network-graph', [\App\Http\Controllers\Admin\NetworkGraphController::class, 'index'])->name('admin.system.network-graph.index');
+            Route::get('/system/network-graph/data', [\App\Http\Controllers\Admin\NetworkGraphController::class, 'graphData'])->name('admin.system.network-graph.data');
+            Route::post('/system/network-graph/sync', [\App\Http\Controllers\Admin\NetworkGraphController::class, 'sync'])->name('admin.system.network-graph.sync');
+            Route::post('/system/network-graph/clear', [\App\Http\Controllers\Admin\NetworkGraphController::class, 'clear'])->name('admin.system.network-graph.clear');
+        });
     });
 
     // Billing (Subscriptions → Billing sub-feature)

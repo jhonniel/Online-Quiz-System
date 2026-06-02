@@ -460,6 +460,42 @@ class LeaveRequest extends Model
     }
 
     /**
+     * All leave requests from the same teacher excused filing as this record.
+     *
+     * @return \Illuminate\Support\Collection<int, self>
+     */
+    public static function siblingsInTeacherExcusedFiling(self $request): \Illuminate\Support\Collection
+    {
+        $request->loadMissing(['logs.performer', 'user']);
+
+        if ($request->type !== 'absent' || ! $request->filedByTeacher()) {
+            return collect([$request]);
+        }
+
+        if (filled($request->teacher_excused_batch)) {
+            return static::query()
+                ->where('teacher_excused_batch', $request->teacher_excused_batch)
+                ->with(['user.university'])
+                ->get()
+                ->sortBy(fn (self $lr) => $lr->user?->name ?? '')
+                ->values();
+        }
+
+        $groupKey = $request->teacherExcusedGroupKey();
+
+        return static::query()
+            ->where('type', 'absent')
+            ->whereHas('logs', function ($q): void {
+                $q->where('action', 'filed_by_teacher');
+            })
+            ->with(['user.university', 'logs.performer'])
+            ->get()
+            ->filter(fn (self $lr) => $lr->teacherExcusedGroupKey() === $groupKey)
+            ->sortBy(fn (self $lr) => $lr->user?->name ?? '')
+            ->values();
+    }
+
+    /**
      * Group key for teacher excused filings (one form submission = one row in admin).
      */
     public function teacherExcusedGroupKey(): string

@@ -26,7 +26,7 @@ class LogUserActivityJob implements ShouldQueue
 
     public function handle(): void
     {
-        UserActivity::create([
+        $activity = UserActivity::create([
             'user_id' => $this->userId,
             'activity_type' => Str::limit($this->activityType, 255, ''),
             'action' => $this->action !== null ? Str::limit($this->action, 255, '') : null,
@@ -36,5 +36,11 @@ class LogUserActivityJob implements ShouldQueue
             'metadata' => $this->metadata,
             'created_at' => now(),
         ]);
+
+        try {
+            app(\App\Services\NetworkGraph\NetworkGraphRecorder::class)->recordUserActivity($activity);
+        } catch (\Throwable) {
+            // ignore graph failures
+        }
     }
 }

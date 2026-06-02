@@ -28,7 +28,7 @@ class TrackApiEndpointMetrics
         }
 
         $uri = trim((string) $route->uri(), '/');
-        if (str_starts_with($uri, 'admin/system/api-monitoring')) {
+        if (str_starts_with($uri, 'admin/system/api-monitoring') || str_starts_with($uri, 'admin/system/network-graph')) {
             return $response;
         }
 
@@ -86,10 +86,11 @@ class TrackApiEndpointMetrics
             || str_starts_with($uri, '_ignition')
             || str_starts_with($uri, 'livewire')
             || $uri === 'sanctum/csrf-cookie'
-            || str_starts_with($uri, 'admin/system/api-monitoring')) {
+            || str_starts_with($uri, 'admin/system/api-monitoring')
+            || str_starts_with($uri, 'admin/system/network-graph')) {
             return false;
         }
-        
+
         return true;
     }
 }

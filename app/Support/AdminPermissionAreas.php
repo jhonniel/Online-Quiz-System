@@ -71,6 +71,7 @@ final class AdminPermissionAreas
         'landing_page' => 'Landing Page',
         'stacks' => 'Stacks',
         'api_monitoring' => 'API Monitoring',
+        'network_graph' => 'Network Graph',
         'admin_permissions' => 'Admin Permissions',
     ];
 
