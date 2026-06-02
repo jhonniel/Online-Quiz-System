@@ -6,13 +6,13 @@
 <link rel="stylesheet" href="https://unpkg.com/vis-network@9.1.9/styles/vis-network.min.css">
 <div class="px-3 sm:px-4 lg:px-6 xl:px-8 space-y-6">
     <div class="bg-white border border-gray-200 rounded-2xl shadow-sm overflow-hidden">
-        <div class="px-6 py-4 border-b border-gray-100 bg-gray-50/70 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3">
+        <div class="px-6 py-4 border-b border-gray-100 bg-gray-50/70 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
             <div>
                 <h1 class="text-xl font-bold text-gray-900">Network Graph</h1>
                 <p class="text-sm text-gray-500">Live moving graph with all connections. Drag to pan, scroll to zoom, and click <strong>Load graph</strong> to fetch current traffic.</p>
             </div>
-            <div class="flex flex-wrap items-center gap-2 text-xs text-gray-500">
-                <span id="ng-generated-at" class="text-gray-400"></span>
+            <div class="text-xs text-gray-500">
+                <span id="ng-generated-at" class="text-gray-500">Waiting for graph data...</span>
             </div>
         </div>
 
@@ -75,35 +75,38 @@
                 <span class="inline-flex items-center gap-1"><span class="h-0.5 w-4 border-t-2 border-dashed border-purple-400"></span> User access</span>
             </div>
 
-            <div class="grid grid-cols-1 xl:grid-cols-4 gap-4">
-                <div class="xl:col-span-3">
-                    <div id="network-graph-empty" class="hidden h-[min(72vh,720px)] w-full rounded-xl border border-dashed border-gray-300 bg-slate-50 flex items-center justify-center p-8 text-center">
-                        <p class="text-sm text-gray-600">No graph data. Sync historical data, then click <strong>Refresh graph</strong>.</p>
+            <div class="space-y-4">
+                <div id="network-graph-empty" class="hidden h-[min(76vh,780px)] w-full rounded-xl border border-dashed border-gray-300 bg-slate-50 flex items-center justify-center p-8 text-center">
+                    <p class="text-sm text-gray-600">No graph data. Sync historical data, then click <strong>Refresh graph</strong>.</p>
+                </div>
+                <div id="network-graph-wrap" class="relative h-[min(76vh,780px)] w-full rounded-xl border border-gray-200 bg-slate-50 overflow-hidden">
+                    <div id="network-graph-canvas" class="h-full w-full"></div>
+                    <div id="network-graph-loading" class="absolute inset-0 hidden items-center justify-center bg-slate-50/90 text-sm text-gray-600 z-10">
+                        Loading graph...
                     </div>
-                    <div id="network-graph-wrap" class="relative h-[min(72vh,720px)] w-full rounded-xl border border-gray-200 bg-slate-50 overflow-hidden">
-                        <div id="network-graph-canvas" class="h-full w-full"></div>
-                        <div id="network-graph-loading" class="absolute inset-0 hidden items-center justify-center bg-slate-50/90 text-sm text-gray-600 z-10">
-                            Loading graph...
-                        </div>
-                        <div id="network-graph-hint" class="pointer-events-none absolute bottom-2 left-2 rounded bg-white/90 px-2 py-1 text-[11px] text-gray-600 border border-gray-200 shadow-sm">
-                            Drag = pan · Scroll = zoom · Hover nodes for details
-                        </div>
+                    <div id="network-graph-hint" class="pointer-events-none absolute bottom-2 left-2 rounded bg-white/90 px-2 py-1 text-[11px] text-gray-600 border border-gray-200 shadow-sm">
+                        Drag = pan · Scroll = zoom · Hover nodes for details
                     </div>
                 </div>
-                <div class="xl:col-span-1 rounded-xl border border-gray-200 bg-white flex flex-col max-h-[min(72vh,720px)]">
-                    <div class="px-4 py-3 border-b border-gray-100">
-                        <h2 class="text-sm font-semibold text-gray-900">Users & access</h2>
-                        <p class="text-xs text-gray-500 mt-0.5">Click a user to highlight links.</p>
+
+                <div class="grid grid-cols-1 xl:grid-cols-2 gap-4">
+                    <div class="rounded-xl border border-gray-200 bg-white flex flex-col max-h-80">
+                        <div class="px-4 py-3 border-b border-gray-100 bg-gray-50/60">
+                            <h2 class="text-sm font-semibold text-gray-900">Users & access</h2>
+                            <p class="text-xs text-gray-500 mt-0.5">Click a user to highlight links in the graph.</p>
+                        </div>
+                        <div id="ng-users-list" class="flex-1 overflow-y-auto divide-y divide-gray-100 text-sm">
+                            <p class="px-4 py-6 text-xs text-gray-400 text-center">Click <strong>Load graph</strong> first.</p>
+                        </div>
                     </div>
-                    <div id="ng-users-list" class="h-1/2 overflow-y-auto divide-y divide-gray-100 text-sm">
-                        <p class="px-4 py-6 text-xs text-gray-400 text-center">Click <strong>Load graph</strong> first.</p>
-                    </div>
-                    <div class="px-4 py-3 border-y border-gray-100 bg-gray-50">
-                        <h3 class="text-sm font-semibold text-gray-900">User Activity Logs</h3>
-                        <p class="text-xs text-gray-500 mt-0.5">Recent actions from users and guests.</p>
-                    </div>
-                    <div id="ng-activity-list" class="h-1/2 overflow-y-auto divide-y divide-gray-100 text-xs">
-                        <p class="px-4 py-6 text-gray-400 text-center">Activity logs will appear here.</p>
+                    <div class="rounded-xl border border-gray-200 bg-white flex flex-col max-h-80">
+                        <div class="px-4 py-3 border-b border-gray-100 bg-gray-50/60">
+                            <h3 class="text-sm font-semibold text-gray-900">User Activity Logs</h3>
+                            <p class="text-xs text-gray-500 mt-0.5">Recent actions from users and guests.</p>
+                        </div>
+                        <div id="ng-activity-list" class="flex-1 overflow-y-auto divide-y divide-gray-100 text-xs">
+                            <p class="px-4 py-6 text-gray-400 text-center">Activity logs will appear here.</p>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -321,7 +324,8 @@
             group: n.group,
             value: Math.max(1, Number(n.value || 1)),
             title: `${n.label} (${Number(n.value || 0).toLocaleString()} hits)`,
-            shape: n.group === 'user' ? 'diamond' : 'dot',
+            shape: n.shape || (n.group === 'user' ? 'diamond' : 'dot'),
+            image: n.image || undefined,
             color: typeof n.color === 'string' ? n.color : undefined,
         }));
 
@@ -348,7 +352,7 @@
 
                 return {
                     ...n,
-                    color: `hsl(${hue} ${sat}% ${light}%)`,
+                    color: n.shape === 'circularImage' ? n.color : `hsl(${hue} ${sat}% ${light}%)`,
                 };
             }));
 
@@ -424,7 +428,7 @@
 
                 return {
                     ...n,
-                    color: `hsl(${hue} ${sat}% ${light}%)`,
+                    color: n.shape === 'circularImage' ? n.color : `hsl(${hue} ${sat}% ${light}%)`,
                 };
             });
 

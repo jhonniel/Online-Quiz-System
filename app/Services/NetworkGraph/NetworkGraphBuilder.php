@@ -6,6 +6,7 @@ use App\Models\ApiEndpointMetric;
 use App\Models\ErrorLog;
 use App\Models\NetworkGraphEdge;
 use App\Models\NetworkGraphNode;
+use App\Models\User;
 use App\Models\UserActivity;
 class NetworkGraphBuilder
 {
@@ -161,8 +162,25 @@ class NetworkGraphBuilder
      */
     private function formatPayload($nodes, $edges): array
     {
-        $visNodes = $nodes->map(function (NetworkGraphNode $node) {
+        $userNodeIds = $nodes
+            ->filter(fn (NetworkGraphNode $node) => $node->node_group === 'user')
+            ->map(fn (NetworkGraphNode $node) => (int) ($node->meta['user_id'] ?? 0))
+            ->filter(fn (int $id) => $id > 0)
+            ->unique()
+            ->values()
+            ->all();
+
+        $profileByUserId = User::query()
+            ->whereIn('id', $userNodeIds)
+            ->get(['id', 'profile_picture'])
+            ->mapWithKeys(fn (User $user) => [$user->id => $user->getProfilePictureUrl()])
+            ->all();
+
+        $visNodes = $nodes->map(function (NetworkGraphNode $node) use ($profileByUserId) {
             $isUser = $node->node_group === 'user';
+            $userId = (int) ($node->meta['user_id'] ?? 0);
+            $profileUrl = $isUser ? ($profileByUserId[$userId] ?? '') : '';
+            $avatarFallback = $isUser ? $this->makeAvatarFallbackDataUri($node->label, $node->color ?? '#94a3b8') : '';
 
             return [
                 'id' => $node->node_key,
@@ -170,6 +188,8 @@ class NetworkGraphBuilder
                 'group' => $node->node_group,
                 'value' => $node->hit_count,
                 'color' => $node->color ?? '#94a3b8',
+                'shape' => $isUser ? 'circularImage' : 'dot',
+                'image' => $isUser ? ($profileUrl !== '' ? $profileUrl : $avatarFallback) : null,
             ];
         })->values()->all();
 
@@ -301,5 +321,29 @@ class NetworkGraphBuilder
     private function shortLabel(string $label, int $max): string
     {
         return strlen($label) > $max ? substr($label, 0, $max - 1).'…' : $label;
+    }
+
+    private function makeAvatarFallbackDataUri(string $name, string $color): string
+    {
+        $initials = collect(preg_split('/\s+/', trim($name)) ?: [])
+            ->filter()
+            ->take(2)
+            ->map(fn (string $part) => strtoupper(substr($part, 0, 1)))
+            ->implode('');
+
+        if ($initials === '') {
+            $initials = 'U';
+        }
+
+        $bg = preg_match('/^#[0-9a-fA-F]{6}$/', $color) ? $color : '#64748b';
+        $svg = <<<SVG
+<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128">
+  <circle cx="64" cy="64" r="64" fill="{$bg}" />
+  <text x="50%" y="53%" dominant-baseline="middle" text-anchor="middle"
+        font-family="Arial, sans-serif" font-size="44" font-weight="700" fill="#ffffff">{$initials}</text>
+</svg>
+SVG;
+
+        return 'data:image/svg+xml;base64,'.base64_encode($svg);
     }
 }
