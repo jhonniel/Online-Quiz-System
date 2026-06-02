@@ -130,7 +130,7 @@ class ApiMonitoringController extends Controller
                 'route_key',
                 DB::raw("DATE_TRUNC('hour', recorded_at) as hour_bucket"),
                 DB::raw('COUNT(*) as total_count'),
-                DB::raw('SUM(CASE WHEN is_success = 1 THEN 1 ELSE 0 END) as success_count'),
+                DB::raw('SUM(CASE WHEN is_success THEN 1 ELSE 0 END) as success_count'),
             ])
             ->groupBy('route_key', DB::raw("DATE_TRUNC('hour', recorded_at)"))
             ->get()
