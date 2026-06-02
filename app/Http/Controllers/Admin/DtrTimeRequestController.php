@@ -136,7 +136,7 @@ class DtrTimeRequestController extends Controller
         }
 
         if ($dtrTimeRequest->isRegular() && $hours > DtrTimeRequestHours::STANDARD_DAY_HOURS) {
-            return back()->withErrors(['time' => 'Regular time requests cannot exceed 08:00. Use an overtime request for hours above 08:00.'])->withInput();
+            return back()->withErrors(['time' => 'Regular time requests cannot exceed 08:00. Hours above 08:00 are filed as Additional Time in Leave Requests when the day total exceeds 08:00.'])->withInput();
         }
 
         $duplicate = DtrTimeRequest::query()
@@ -196,19 +196,28 @@ class DtrTimeRequestController extends Controller
             'reviewed_at' => now(),
         ]);
 
+        $freshRequest = $dtrTimeRequest->fresh();
+
         $leaveImported = null;
-        if ($dtrTimeRequest->isOvertime()) {
+        $attendanceAdditionalTimeLeave = null;
+        if ($freshRequest->isOvertime()) {
             $leaveImported = TimeRequestOvertimeLeaveImport::syncFromApprovedTimeRequest(
-                $dtrTimeRequest->fresh(),
+                $freshRequest,
                 Auth::id(),
                 $validated['admin_notes'] ?? null
             );
+        } else {
+            $attendanceAdditionalTimeLeave = TimeRequestOvertimeLeaveImport::ensurePendingAdditionalTimeFromRegularTimeRequest(
+                $freshRequest
+            );
         }
 
-        $typeLabel = strtolower($dtrTimeRequest->request_type_label);
+        $typeLabel = strtolower($freshRequest->request_type_label);
         $message = "Approved {$typeLabel} time request and applied hours to the student's DTR (counts toward required training time).";
         if ($leaveImported) {
-            $message .= ' An Overtime leave request was created in Leave Requests ('.TimeRequestOvertimeLeaveImport::IMPORT_REMARK.').';
+            $message .= ' An Additional Time leave request was recorded in Leave Requests ('.TimeRequestOvertimeLeaveImport::IMPORT_REMARK.').';
+        } elseif ($attendanceAdditionalTimeLeave) {
+            $message .= ' A pending Additional Time request was created in Leave Requests — the student must complete the details before it can be approved.';
         }
 
         return back()->with('success', $message);

@@ -14,6 +14,7 @@ class LeaveRequest extends Model
         'user_id',
         'dtr_time_request_id',
         'attendance_submission_batch',
+        'teacher_excused_batch',
         'attendance_overtime_completed_at',
         'type',
         'start_date',
@@ -456,5 +457,81 @@ class LeaveRequest extends Model
         $this->loadMissing('logs.performer');
 
         return $this->logs->firstWhere('action', 'filed_by_teacher')?->performer;
+    }
+
+    /**
+     * Group key for teacher excused filings (one form submission = one row in admin).
+     */
+    public function teacherExcusedGroupKey(): string
+    {
+        if (filled($this->teacher_excused_batch)) {
+            return 'batch:'.$this->teacher_excused_batch;
+        }
+
+        $this->loadMissing(['logs.performer']);
+
+        $teacher = $this->filedByTeacher();
+        $filedLog = $this->logs->firstWhere('action', 'filed_by_teacher');
+        $filedMinute = $filedLog?->created_at ?? $this->created_at;
+
+        return implode('|', [
+            'legacy',
+            (string) ($teacher?->id ?? '0'),
+            $this->start_date?->format('Y-m-d') ?? '',
+            $this->end_date?->format('Y-m-d') ?? '',
+            md5($this->cleanTeacherExcusedReason()),
+            md5(json_encode($this->supporting_document_paths ?? [])),
+            $filedMinute?->format('Y-m-d H:i') ?? '',
+        ]);
+    }
+
+    /**
+     * @param  \Illuminate\Support\Collection<int, self>  $requests
+     * @return array{
+     *     group_key: string,
+     *     filed_at: \Carbon\Carbon|null,
+     *     teacher: ?\App\Models\User,
+     *     start_date: ?\Carbon\Carbon,
+     *     end_date: ?\Carbon\Carbon,
+     *     reason: string,
+     *     requests: \Illuminate\Support\Collection<int, self>,
+     *     status_label: string,
+     *     status_badge_class: string,
+     * }
+     */
+    public static function summarizeTeacherExcusedFiling(\Illuminate\Support\Collection $requests): array
+    {
+        $sorted = $requests->sortBy('id')->values();
+        $first = $sorted->first();
+        $filedLog = $sorted
+            ->flatMap(fn (self $r) => $r->logs)
+            ->firstWhere('action', 'filed_by_teacher');
+
+        $statuses = $sorted->pluck('status')->unique();
+        if ($statuses->count() === 1) {
+            $statusLabel = $sorted->first()->display_status;
+            $statusBadge = $sorted->first()->status_badge_class;
+        } elseif ($statuses->contains('pending')) {
+            $statusLabel = 'Pending (partial)';
+            $statusBadge = 'bg-yellow-100 text-yellow-800';
+        } elseif ($statuses->contains('for_more_verification')) {
+            $statusLabel = 'For verification (partial)';
+            $statusBadge = 'bg-blue-100 text-blue-800';
+        } else {
+            $statusLabel = 'Mixed';
+            $statusBadge = 'bg-gray-100 text-gray-800';
+        }
+
+        return [
+            'group_key' => $first?->teacherExcusedGroupKey() ?? '',
+            'filed_at' => $filedLog?->created_at ?? $first?->created_at,
+            'teacher' => $first?->filedByTeacher(),
+            'start_date' => $first?->start_date,
+            'end_date' => $first?->end_date,
+            'reason' => $first?->cleanTeacherExcusedReason() ?? '',
+            'requests' => $sorted,
+            'status_label' => $statusLabel,
+            'status_badge_class' => $statusBadge,
+        ];
     }
 }

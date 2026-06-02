@@ -182,16 +182,16 @@ class DtrTimeRequestController extends Controller
                     $errors[] = "An Additional Time request already exists for {$day['date']} (check Leave Requests).";
                     $skippedCount++;
                 } else {
-                    $overtimeLeave = TimeRequestOvertimeLeaveImport::createPendingFromAttendance(
-                        $user->id,
-                        $day['date'],
-                        $overtimeHours,
-                        $hours,
-                        $batchId,
-                        null
-                    );
-                    $createdOvertimeLeaveIds[] = $overtimeLeave->id;
-                    $leaveOvertimeCount++;
+                    $regularRequest = $this->pendingRegularRequest($user->id, $day['date']);
+                    if ($regularRequest) {
+                        $overtimeLeave = TimeRequestOvertimeLeaveImport::ensurePendingAdditionalTimeFromRegularTimeRequest(
+                            $regularRequest
+                        );
+                        if ($overtimeLeave) {
+                            $createdOvertimeLeaveIds[] = $overtimeLeave->id;
+                            $leaveOvertimeCount++;
+                        }
+                    }
                 }
             }
 

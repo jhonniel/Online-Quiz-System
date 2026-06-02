@@ -628,6 +628,7 @@ class DashboardController extends Controller
         ]);
 
         [$supportingPaths, $legacySupportingPath] = $this->storeSupportingDocumentsFromRequest($request);
+        $teacherExcusedBatch = (string) \Illuminate\Support\Str::uuid();
         $createdCount = 0;
 
         foreach ($validated['student_ids'] as $studentId) {
@@ -650,6 +651,7 @@ class DashboardController extends Controller
                 'reason' => trim("Teacher excused request by {$teacher->name} ({$teacher->email}).\n\n".$validated['reason']),
                 'supporting_document_path' => $legacySupportingPath,
                 'supporting_document_paths' => $supportingPaths,
+                'teacher_excused_batch' => $teacherExcusedBatch,
                 'status' => 'pending',
                 'reviewed_by' => null,
                 'reviewed_at' => null,

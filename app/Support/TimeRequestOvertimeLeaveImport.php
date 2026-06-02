@@ -29,8 +29,9 @@ class TimeRequestOvertimeLeaveImport
     ): LeaveRequest {
         $existing = LeaveRequest::query()
             ->where('user_id', $userId)
-            ->where('attendance_submission_batch', $batchId)
             ->where('type', 'overtime')
+            ->whereDate('start_date', $dateStr)
+            ->whereIn('status', ['pending', 'approved', 'for_more_verification'])
             ->first();
 
         if ($existing) {
@@ -101,6 +102,48 @@ class TimeRequestOvertimeLeaveImport
         }
 
         return DtrTimeRequestHours::timeStringToDecimal(trim($m[1]));
+    }
+
+    /**
+     * When a regular time request reflects more than 08:00 total (requested_total_hours),
+     * ensure a pending Additional Time leave exists — same as Record Attendance filing.
+     */
+    public static function ensurePendingAdditionalTimeFromRegularTimeRequest(DtrTimeRequest $timeRequest): ?LeaveRequest
+    {
+        if (! $timeRequest->isRegular()) {
+            return null;
+        }
+
+        $dateStr = $timeRequest->date?->format('Y-m-d');
+        if (! $dateStr) {
+            return null;
+        }
+
+        $effectiveTotal = (float) ($timeRequest->requested_total_hours ?? $timeRequest->hours);
+        $overtimeHours = max($effectiveTotal - DtrTimeRequestHours::STANDARD_DAY_HOURS, 0);
+        if ($overtimeHours <= 0) {
+            return null;
+        }
+
+        if (self::hasPendingOrApprovedOvertimeLeaveForDate((int) $timeRequest->user_id, $dateStr)) {
+            return LeaveRequest::query()
+                ->where('user_id', $timeRequest->user_id)
+                ->where('type', 'overtime')
+                ->whereDate('start_date', $dateStr)
+                ->whereIn('status', ['pending', 'approved', 'for_more_verification'])
+                ->first();
+        }
+
+        $batchId = $timeRequest->submission_batch ?: (string) \Illuminate\Support\Str::uuid();
+
+        return self::createPendingFromAttendance(
+            (int) $timeRequest->user_id,
+            $dateStr,
+            $overtimeHours,
+            $effectiveTotal,
+            $batchId,
+            $timeRequest->remarks
+        );
     }
 
     /**

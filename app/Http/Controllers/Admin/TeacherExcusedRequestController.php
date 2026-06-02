@@ -5,26 +5,28 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\LeaveRequest;
 use Illuminate\Http\Request;
+use Illuminate\Pagination\LengthAwarePaginator;
 
 class TeacherExcusedRequestController extends Controller
 {
     /**
-     * Student excused (absent) requests filed by teachers on behalf of students.
+     * @return \Illuminate\Database\Eloquent\Builder<LeaveRequest>
      */
-    public function index(Request $request)
+    private function teacherExcusedBaseQuery()
     {
-        $search = trim((string) $request->input('search', ''));
-        $status = trim((string) $request->input('status', ''));
-        $perPage = (int) $request->input('per_page', 20);
-        if (! in_array($perPage, [10, 20, 50, 100], true)) {
-            $perPage = 20;
-        }
-
-        $query = LeaveRequest::query()
+        return LeaveRequest::query()
             ->where('type', 'absent')
             ->whereHas('logs', function ($q): void {
                 $q->where('action', 'filed_by_teacher');
-            })
+            });
+    }
+
+    /**
+     * @return \Illuminate\Support\Collection<int, array<string, mixed>>
+     */
+    private function buildGroupedFilings(string $search, string $statusFilter): \Illuminate\Support\Collection
+    {
+        $query = $this->teacherExcusedBaseQuery()
             ->with([
                 'user.university',
                 'reviewer',
@@ -34,10 +36,6 @@ class TeacherExcusedRequestController extends Controller
                         ->with('performer');
                 },
             ]);
-
-        if ($status !== '') {
-            $query->where('status', $status);
-        }
 
         if ($search !== '') {
             $like = '%'.$search.'%';
@@ -55,16 +53,65 @@ class TeacherExcusedRequestController extends Controller
             });
         }
 
-        $leaveRequests = $query
+        $filings = $query
             ->orderByDesc('created_at')
-            ->paginate($perPage)
-            ->withQueryString();
+            ->get()
+            ->groupBy(fn (LeaveRequest $request) => $request->teacherExcusedGroupKey())
+            ->map(fn (\Illuminate\Support\Collection $group) => LeaveRequest::summarizeTeacherExcusedFiling($group))
+            ->sortByDesc(fn (array $filing) => $filing['filed_at'])
+            ->values();
+
+        if ($statusFilter !== '') {
+            $filings = $filings->filter(
+                fn (array $filing) => $filing['requests']->contains('status', $statusFilter)
+            )->values();
+        }
+
+        return $filings;
+    }
+
+    /**
+     * Student excused (absent) requests filed by teachers — one admin row per teacher filing.
+     */
+    public function index(Request $request)
+    {
+        $search = trim((string) $request->input('search', ''));
+        $status = trim((string) $request->input('status', ''));
+        $perPage = (int) $request->input('per_page', 20);
+        if (! in_array($perPage, [10, 20, 50, 100], true)) {
+            $perPage = 20;
+        }
+
+        $allFilings = $this->buildGroupedFilings($search, '');
+        $stats = [
+            'total' => $allFilings->count(),
+            'pending' => $allFilings->filter(fn (array $f) => $f['requests']->contains('status', 'pending'))->count(),
+            'approved' => $allFilings->filter(fn (array $f) => $f['requests']->every(fn (LeaveRequest $r) => $r->status === 'approved'))->count(),
+            'rejected' => $allFilings->filter(fn (array $f) => $f['requests']->every(fn (LeaveRequest $r) => $r->status === 'rejected'))->count(),
+        ];
+
+        $filteredFilings = $status !== ''
+            ? $this->buildGroupedFilings($search, $status)
+            : $allFilings;
+
+        $currentPage = LengthAwarePaginator::resolveCurrentPage();
+        $paginatedFilings = new LengthAwarePaginator(
+            $filteredFilings->forPage($currentPage, $perPage)->values(),
+            $filteredFilings->count(),
+            $perPage,
+            $currentPage,
+            [
+                'path' => $request->url(),
+                'query' => $request->query(),
+            ]
+        );
 
         return view('admin.teachers.teacher-excused-requests', [
-            'leaveRequests' => $leaveRequests,
+            'filings' => $paginatedFilings,
             'search' => $search,
             'status' => $status,
             'perPage' => $perPage,
+            'stats' => $stats,
         ]);
     }
 }
