@@ -174,7 +174,7 @@
                             <div class="mt-4 rounded-xl border border-amber-200 bg-amber-50/60 p-4" id="student_merits_wrapper">
                                 <h3 class="text-sm font-semibold text-gray-900">Merits</h3>
                                 <p class="mt-1 text-xs text-gray-600">
-                                    Automatic: 1 merit per filed time request below <strong>08:00</strong>, plus 1 merit per approved absent day over the allowable absence balance above.
+                                    Automatic: 1 merit per <strong>{{ \App\Support\StudentViolationCounter::UNDERTIME_FILINGS_PER_MERIT }}</strong> filed time requests below <strong>08:00</strong>, plus approved absent days minus the allowable absence balance above (when over zero).
                                 </p>
                                 @if($studentMeritBreakdown)
                                     <dl class="mt-3 grid grid-cols-2 sm:grid-cols-4 gap-3 text-sm">

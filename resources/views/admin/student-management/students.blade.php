@@ -486,7 +486,8 @@
             body.innerHTML =
                 '<div class="space-y-5">'
                 + '<div class="grid grid-cols-2 sm:grid-cols-4 gap-3">'
-                + '<div class="rounded-lg border border-amber-200 bg-amber-50/60 px-3 py-2"><p class="text-xs text-gray-500">Under-time</p><p class="text-xl font-bold text-gray-900 tabular-nums">' + escapeHtml(b.undertime ?? 0) + '</p></div>'
+                + '<div class="rounded-lg border border-amber-200 bg-amber-50/60 px-3 py-2"><p class="text-xs text-gray-500">Under-time merits</p><p class="text-xl font-bold text-gray-900 tabular-nums">' + escapeHtml(b.undertime ?? 0) + '</p>'
+                + '<p class="text-[10px] text-gray-500 mt-0.5">' + escapeHtml(data.undertime_filing_count ?? 0) + ' filing(s) ÷ ' + escapeHtml(data.undertime_filings_per_merit ?? 5) + '</p></div>'
                 + '<div class="rounded-lg border border-amber-200 bg-amber-50/60 px-3 py-2"><p class="text-xs text-gray-500">Excess absences</p><p class="text-xl font-bold text-gray-900 tabular-nums">' + escapeHtml(b.excess_absence ?? 0) + '</p></div>'
                 + '<div class="rounded-lg border border-amber-200 bg-amber-50/60 px-3 py-2"><p class="text-xs text-gray-500">Manual</p><p class="text-xl font-bold text-gray-900 tabular-nums">' + escapeHtml(b.manual ?? 0) + '</p></div>'
                 + '<div class="rounded-lg border border-amber-300 bg-amber-100/50 px-3 py-2"><p class="text-xs font-medium text-amber-900">Total merits</p><p class="text-2xl font-bold text-amber-900 tabular-nums">' + escapeHtml(b.total ?? 0) + '</p></div>'
@@ -497,6 +498,7 @@
                 + '<dl class="grid grid-cols-2 gap-2 text-sm"><div><dt class="text-gray-500">Balance allowed</dt><dd class="font-semibold tabular-nums">' + escapeHtml(absence.allowable) + ' days</dd></div>'
                 + '<div><dt class="text-gray-500">Approved absent days</dt><dd class="font-semibold tabular-nums">' + escapeHtml(absence.approved_days) + '</dd></div>'
                 + '<div><dt class="text-gray-500">Remaining</dt><dd class="font-semibold tabular-nums">' + escapeHtml(absence.remaining_balance) + ' days</dd></div>'
+                + '<div><dt class="text-gray-500">Days over balance</dt><dd class="font-semibold tabular-nums">' + escapeHtml(absence.days_over_balance ?? absence.excess_merits) + '</dd></div>'
                 + '<div><dt class="text-gray-500">Excess absence merits</dt><dd class="font-semibold tabular-nums">' + escapeHtml(absence.excess_merits) + '</dd></div></dl>'
                 + '<p class="mt-2 text-xs text-gray-500">' + escapeHtml(data.rules?.excess_absence || '') + '</p></div>'
                 + '<div><h3 class="text-sm font-semibold text-gray-900 mb-2">Under-time time requests <span class="font-normal text-gray-500">(' + undertime.length + ')</span></h3>'

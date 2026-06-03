@@ -17,11 +17,20 @@ class StudentViolationCounterTest extends TestCase
         $this->assertSame(4, $breakdown['total']);
     }
 
-    public function test_excess_absence_merits_respects_allowable_balance(): void
+    public function test_undertime_merit_from_filing_count_divides_by_five(): void
+    {
+        $this->assertSame(0, StudentViolationCounter::undertimeMeritFromFilingCount(0));
+        $this->assertSame(0, StudentViolationCounter::undertimeMeritFromFilingCount(4));
+        $this->assertSame(1, StudentViolationCounter::undertimeMeritFromFilingCount(5));
+        $this->assertSame(1, StudentViolationCounter::undertimeMeritFromFilingCount(8));
+        $this->assertSame(2, StudentViolationCounter::undertimeMeritFromFilingCount(10));
+    }
+
+    public function test_excess_absence_merits_is_approved_minus_allowable(): void
     {
         $this->assertSame(0, StudentViolationCounter::excessAbsenceMerits(3, 3.0));
         $this->assertSame(1, StudentViolationCounter::excessAbsenceMerits(4, 3.0));
-        $this->assertSame(1, StudentViolationCounter::excessAbsenceMerits(4, 3.5));
-        $this->assertSame(3, StudentViolationCounter::excessAbsenceMerits(6, 3.5));
+        $this->assertSame(0, StudentViolationCounter::excessAbsenceMerits(4, 3.5));
+        $this->assertSame(2, StudentViolationCounter::excessAbsenceMerits(6, 3.5));
     }
 }

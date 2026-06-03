@@ -314,8 +314,9 @@ final class StudentMeritRulesNotice
 
         if (($breakdown['undertime'] ?? 0) > 0) {
             $parts[] = sprintf(
-                '%d from under-time time request(s) filed below 08:00',
-                (int) $breakdown['undertime']
+                '%d from under-time (1 merit per %d filing(s) below 08:00)',
+                (int) $breakdown['undertime'],
+                StudentViolationCounter::UNDERTIME_FILINGS_PER_MERIT
             );
         }
 

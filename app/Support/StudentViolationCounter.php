@@ -9,6 +9,9 @@ use App\Support\DtrTimeRequestHours;
 
 final class StudentViolationCounter
 {
+    /** Under-time filings below 08:00 required for each merit from undertime. */
+    public const UNDERTIME_FILINGS_PER_MERIT = 5;
+
     /**
      * @param  list<int>  $userIds
      * @return array<int, int> Total merits per user id
@@ -69,7 +72,15 @@ final class StudentViolationCounter
     }
 
     /**
-     * Each filed regular time request below 08:00 counts as 1 merit (rejected excluded).
+     * Merits from under-time filing count: every 5 filings below 08:00 = 1 merit.
+     */
+    public static function undertimeMeritFromFilingCount(int $undertimeFilingCount): int
+    {
+        return max(0, intdiv(max(0, $undertimeFilingCount), self::UNDERTIME_FILINGS_PER_MERIT));
+    }
+
+    /**
+     * Each filed regular time request below 08:00 counts toward undertime (rejected excluded).
      */
     public static function isUndertimeFiling(DtrTimeRequest $request): bool
     {
@@ -126,9 +137,10 @@ final class StudentViolationCounter
             ->get(['id', 'user_id', 'date', 'hours', 'requested_total_hours', 'request_type', 'status']);
 
         foreach ($requests->groupBy('user_id') as $userId => $userRequests) {
-            $counts[(int) $userId] = $userRequests
+            $filingCount = $userRequests
                 ->filter(fn (DtrTimeRequest $request) => self::isUndertimeFiling($request))
                 ->count();
+            $counts[(int) $userId] = self::undertimeMeritFromFilingCount($filingCount);
         }
 
         return $counts;
@@ -194,7 +206,7 @@ final class StudentViolationCounter
     }
 
     /**
-     * Merits from approved absent days over the student's allowable absence balance.
+     * Merits from approved absent days minus allowable absence balance (remaining over balance).
      */
     public static function excessAbsenceMerits(int $approvedAbsentDays, float $allowableAbsences): int
     {
@@ -204,7 +216,7 @@ final class StudentViolationCounter
 
         $excess = $approvedAbsentDays - $allowableAbsences;
 
-        return $excess > 0 ? (int) ceil($excess) : 0;
+        return $excess > 0 ? (int) floor($excess) : 0;
     }
 
     /**
@@ -220,7 +232,7 @@ final class StudentViolationCounter
         $approvedAbsentDays = (int) (self::approvedAbsentDaysByUserId([$userId])[$userId] ?? 0);
         $remainingBalance = max($allowable - $approvedAbsentDays, 0);
 
-        $undertimeFilings = DtrTimeRequest::query()
+        $undertimeFilingCount = count($undertimeFilings = DtrTimeRequest::query()
             ->where('user_id', $userId)
             ->where('status', '!=', 'rejected')
             ->where(function ($q): void {
@@ -244,7 +256,7 @@ final class StudentViolationCounter
                     'status' => (string) $request->status,
                 ];
             })
-            ->all();
+            ->all());
 
         $absentRequests = LeaveRequest::query()
             ->where('user_id', $userId)
@@ -280,10 +292,13 @@ final class StudentViolationCounter
                 'edit_url' => url('/admin/users/'.$userId.'/edit'),
             ],
             'breakdown' => $breakdown,
+            'undertime_filing_count' => $undertimeFilingCount,
+            'undertime_filings_per_merit' => self::UNDERTIME_FILINGS_PER_MERIT,
             'absence' => [
                 'allowable' => round($allowable, 2),
                 'approved_days' => $approvedAbsentDays,
                 'remaining_balance' => round($remainingBalance, 2),
+                'days_over_balance' => self::excessAbsenceMerits($approvedAbsentDays, $allowable),
                 'excess_merits' => (int) ($breakdown['excess_absence'] ?? 0),
             ],
             'undertime_filings' => $undertimeFilings,
@@ -297,8 +312,12 @@ final class StudentViolationCounter
             ],
             'thresholds' => $thresholds,
             'rules' => [
-                'undertime' => '1 merit per regular time request filed below 08:00 (pending or approved; rejected excluded).',
-                'excess_absence' => '1 merit per approved absent day over the allowable absence balance.',
+                'undertime' => sprintf(
+                    '1 merit for every %d regular time request(s) filed below 08:00 (pending or approved; rejected excluded). Under-time merits = filings ÷ %d.',
+                    self::UNDERTIME_FILINGS_PER_MERIT,
+                    self::UNDERTIME_FILINGS_PER_MERIT
+                ),
+                'excess_absence' => 'Excess absence merits = approved absent days minus allowable absence balance (when the result is over zero).',
                 'manual' => 'Added by an administrator on the student profile.',
             ],
         ];
