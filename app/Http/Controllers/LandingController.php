@@ -51,16 +51,14 @@ class LandingController extends Controller
         $topStudents = User::query()
             ->learners()
             ->where('is_active', true)
-            ->select('users.*', DB::raw('COALESCE(SUM(quiz_attempts.points_earned), 0) as total_score'))
-            ->leftJoin('quiz_attempts', function ($join) {
-                $join->on('users.id', '=', 'quiz_attempts.user_id')
-                    ->whereNotNull('quiz_attempts.completed_at');
-            })
-            ->groupBy('users.id')
-            ->having('total_score', '>', 0)
-            ->orderBy('total_score', 'desc')
+            ->withSum(['quizAttempts as total_score' => function ($query) {
+                $query->whereNotNull('completed_at');
+            }], 'points_earned')
+            ->get()
+            ->filter(fn ($user) => ($user->total_score ?? 0) > 0)
+            ->sortByDesc('total_score')
             ->take(5)
-            ->get();
+            ->values();
 
         // University Student Count Ranking (public version - only show top 5)
         $universityRanking = University::withCount(['users' => function($query) {
