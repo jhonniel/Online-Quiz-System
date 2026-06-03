@@ -318,6 +318,7 @@ class HiringApplicationController extends Controller
 
             // Handle school selection - if "Other", create or find university
             $schoolName = null;
+            $universityId = null;
             if ($request->school === '__other' && $request->filled('school_other')) {
                 $customSchoolName = trim($request->school_other);
                 // Check if university already exists (case-insensitive)
@@ -342,9 +343,11 @@ class HiringApplicationController extends Controller
                     ]);
                 }
 
+                $universityId = $university->id;
                 $schoolName = $university->full_name;
             } elseif ($request->filled('school') && $request->school !== '__other') {
                 $schoolName = $request->school;
+                $universityId = University::resolveIdFromSchoolLabel($schoolName);
             }
 
             // Create new application (normalize email to lowercase for consistency)
@@ -357,6 +360,7 @@ class HiringApplicationController extends Controller
                 'birth_date' => $request->birth_date ?: null,
                 'address' => $request->address ?: null,
                 'school' => $schoolName,
+                'university_id' => $universityId,
                 'position_applied' => $position->title,
                 'cover_letter' => $request->cover_letter ?: null,
                 'cover_letter_path' => null,

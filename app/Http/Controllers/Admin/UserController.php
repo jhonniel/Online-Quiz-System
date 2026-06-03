@@ -505,6 +505,7 @@ class UserController extends Controller
                 : null;
         } else {
             $data['student_rules_warning'] = false;
+            $data['student_rules_warning_manual'] = false;
             $data['student_rules_marquee_enabled'] = false;
             $data['student_rules_notice_message'] = null;
             $data['student_terminated'] = false;
@@ -514,6 +515,15 @@ class UserController extends Controller
 
         $prevStudentRulesWarning = (bool) ($user->student_rules_warning ?? false);
         $prevStudentRulesMarquee = (bool) ($user->student_rules_marquee_enabled ?? false);
+
+        if ($request->role === 'student') {
+            $newWarning = $request->boolean('student_rules_warning');
+            if ($newWarning && ! $prevStudentRulesWarning) {
+                $data['student_rules_warning_manual'] = true;
+            } elseif (! $newWarning) {
+                $data['student_rules_warning_manual'] = false;
+            }
+        }
 
         $user->update($data);
 

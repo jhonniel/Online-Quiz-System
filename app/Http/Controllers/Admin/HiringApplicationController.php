@@ -947,22 +947,7 @@ class HiringApplicationController extends Controller
         // Generate a random password for the applicant
         $password = \Illuminate\Support\Str::random(12);
 
-        // Find university by matching school name from application
-        $universityId = null;
-        if ($application->school) {
-            // Try to match by full_name first (includes location), then by name
-            // PostgreSQL-compatible concatenation
-            $university = \App\Models\University::where(function ($query) use ($application) {
-                $query->whereRaw(
-                    "name || CASE WHEN location IS NOT NULL AND location <> '' THEN ' (' || location || ')' ELSE '' END = ?",
-                    [$application->school]
-                )->orWhere('name', $application->school);
-            })->first();
-
-            if ($university) {
-                $universityId = $university->id;
-            }
-        }
+        $universityId = $application->resolvedUniversityId();
 
         // Check if user already exists with this email
         $user = \App\Models\User::where('email', $application->email)->first();
@@ -1153,22 +1138,7 @@ class HiringApplicationController extends Controller
         // Generate a random password for the applicant
         $password = \Illuminate\Support\Str::random(12);
 
-        // Find university by matching school name from application
-        $universityId = null;
-        if ($application->school) {
-            // Try to match by full_name first (includes location), then by name
-            // PostgreSQL-compatible concatenation
-            $university = \App\Models\University::where(function ($query) use ($application) {
-                $query->whereRaw(
-                    "name || CASE WHEN location IS NOT NULL AND location <> '' THEN ' (' || location || ')' ELSE '' END = ?",
-                    [$application->school]
-                )->orWhere('name', $application->school);
-            })->first();
-
-            if ($university) {
-                $universityId = $university->id;
-            }
-        }
+        $universityId = $application->resolvedUniversityId();
 
         // Check if user already exists with this email
         $user = \App\Models\User::where('email', $application->email)->first();
@@ -1730,6 +1700,11 @@ class HiringApplicationController extends Controller
             'is_approved' => true,
             'is_active' => true,
         ];
+
+        $universityId = $application->resolvedUniversityId();
+        if ($universityId) {
+            $userUpdateData['university_id'] = $universityId;
+        }
 
         // If previous status was done_interview and user is applicant, change role to student (not employee)
         if ($previousStatus === 'done_interview' && $user->role === 'applicant') {

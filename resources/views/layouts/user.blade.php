@@ -91,11 +91,17 @@
             min-width: max-content;
             will-change: transform;
             backface-visibility: hidden;
-            animation: student-rules-marquee-scroll 8s linear infinite;
+            animation: student-rules-marquee-scroll 22s linear infinite;
         }
 
         .student-rules-marquee-inner:hover {
             animation-play-state: paused;
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            .student-rules-marquee-inner {
+                animation-duration: 50s !important;
+            }
         }
     </style>
 </head>
@@ -164,6 +170,36 @@
                 </div>
             @endif
         </div>
+        <script>
+            (function () {
+                function tuneStudentRulesMarqueeSpeed() {
+                    document.querySelectorAll('.student-rules-marquee-inner').forEach(function (track) {
+                        var segment = track.querySelector('span');
+                        if (!segment) {
+                            return;
+                        }
+
+                        var segmentWidth = segment.getBoundingClientRect().width;
+                        if (segmentWidth < 1) {
+                            return;
+                        }
+
+                        // ~75px/s — faster scroll while still scaling with message length.
+                        var pixelsPerSecond = 75;
+                        var durationSeconds = Math.max(18, Math.round(segmentWidth / pixelsPerSecond));
+                        track.style.animationDuration = durationSeconds + 's';
+                    });
+                }
+
+                if (document.readyState === 'loading') {
+                    document.addEventListener('DOMContentLoaded', tuneStudentRulesMarqueeSpeed);
+                } else {
+                    tuneStudentRulesMarqueeSpeed();
+                }
+
+                window.addEventListener('resize', tuneStudentRulesMarqueeSpeed);
+            })();
+        </script>
     @endif
     <div
         class="flex min-h-0 overflow-hidden h-[calc(100vh-var(--layout-offset-mobile))] sm:h-[calc(100vh-var(--layout-offset-desktop))]"

@@ -19,7 +19,7 @@ class AnalyticsController extends Controller
     /** Roles treated as learners in analytics (excludes admin/technician). */
     private function studentRoles(): array
     {
-        return ['student', 'user', 'applicant', 'employee', 'teacher'];
+        return User::LEARNER_ROLES;
     }
 
     /** Active users who have at least one scorable quiz submission (any learner role). */

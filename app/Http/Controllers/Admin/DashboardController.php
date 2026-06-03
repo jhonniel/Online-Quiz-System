@@ -329,12 +329,14 @@ class DashboardController extends Controller
                 'disabled' => $disabledUsers,
             ];
 
-            // Top Students by Total Score - with error handling
+            // Top Students by Total Score — all learner roles, sum completed question attempts (matches profile pts)
             try {
-                $topStudents = User::where('role', 'user')
+                $topStudents = User::query()
+                    ->learners()
                     ->with(['university'])
-                    ->withSum('quizAttemptHistory', 'score')
-                    ->withCount('quizAttemptHistory')
+                    ->withSum(['quizAttempts as quiz_attempt_history_sum_score' => function ($query) {
+                        $query->whereNotNull('completed_at');
+                    }], 'points_earned')
                     ->get()
                     ->filter(function ($user) {
                         return ($user->quiz_attempt_history_sum_score ?? 0) > 0;

@@ -17,6 +17,7 @@ final class AdminPermissionAreas
 
     public const EMPLOYEE_FEATURES = [
         'employee_dashboard' => 'Employee Dashboard',
+        'file_request' => 'File Request',
         'dtr' => 'DTR (Time Records)',
         'time_report' => 'Time Report',
         'leave_requests' => 'Leave Requests',

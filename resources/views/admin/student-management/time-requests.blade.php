@@ -32,6 +32,25 @@
     </div>
 
     <!-- Success/Error Messages -->
+    @if(!empty($undertimeRulesResult['enabled']) || !empty($undertimeRulesResult['disabled']))
+        <div class="bg-amber-50 border-l-4 border-amber-400 p-4 rounded-lg">
+            <p class="text-sm text-amber-900">
+                @if(!empty($undertimeRulesResult['enabled']))
+                    <strong>{{ $undertimeRulesResult['enabled'] }}</strong> student(s) had
+                    <strong>Rules violation warning</strong> enabled automatically (5+ consecutive under-time days).
+                @endif
+                @if(!empty($undertimeRulesResult['enabled']) && !empty($undertimeRulesResult['disabled']))
+                    <span class="mx-1">·</span>
+                @endif
+                @if(!empty($undertimeRulesResult['disabled']))
+                    <strong>{{ $undertimeRulesResult['disabled'] }}</strong> student(s) had the warning
+                    <strong>disabled automatically</strong> (10+ consecutive 08:00 days).
+                @endif
+                Admin-manually enabled warnings are not changed by automation.
+            </p>
+        </div>
+    @endif
+
     @if(session('success'))
         <div class="bg-green-50 border-l-4 border-green-400 p-4 rounded-lg">
             <div class="flex">

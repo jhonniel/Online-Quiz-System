@@ -1427,33 +1427,21 @@ class DtrController extends Controller
             ? $user->getAllowedStudentDepartmentIds()
             : null;
 
+        $search = trim((string) $request->input('search', ''));
+
         $query = Dtr::with(['user.university'])
-            ->whereHas('user', function($q) use ($allowedDepartmentIds) {
+            ->whereHas('user', function ($q) use ($allowedDepartmentIds, $request, $search) {
                 $q->where('role', 'student');
                 if ($allowedDepartmentIds !== null) {
                     $q->whereIn('department_id', $allowedDepartmentIds);
                 }
+                if ($request->filled('university_id')) {
+                    $q->where('university_id', $request->university_id);
+                }
+                if ($search !== '') {
+                    $this->applyStudentUserSearch($q, $search);
+                }
             });
-
-        // Filter by university
-        if ($request->filled('university_id')) {
-            $query->whereHas('user', function($q) use ($request) {
-                $q->where('university_id', $request->university_id);
-            });
-        }
-
-        // Filter by student search (name, email, or school/university)
-        if ($request->filled('search')) {
-            $searchTerm = $request->search;
-            $query->whereHas('user', function($q) use ($searchTerm) {
-                $q->where('name', 'like', '%' . $searchTerm . '%')
-                  ->orWhere('email', 'like', '%' . $searchTerm . '%')
-                  ->orWhereHas('university', function($universityQuery) use ($searchTerm) {
-                      $universityQuery->where('name', 'like', '%' . $searchTerm . '%')
-                                      ->orWhere('location', 'like', '%' . $searchTerm . '%');
-                  });
-            });
-        }
 
         // Filter by student
         if ($request->filled('student_id')) {
@@ -1481,7 +1469,8 @@ class DtrController extends Controller
             ->get();
 
         // Get students for filter dropdown (only students, optionally filtered by university)
-        $studentsQuery = User::where('role', 'student')
+        $studentsQuery = User::with('university')
+            ->where('role', 'student')
             ->where('is_active', true);
         if ($allowedDepartmentIds !== null) {
             $studentsQuery->whereIn('department_id', $allowedDepartmentIds);
@@ -1493,46 +1482,44 @@ class DtrController extends Controller
 
         $allStudents = $studentsQuery->orderBy('name')->get();
 
-        // Calculate remaining hours for each student and filter to only those with remaining time needed
-        // BUT: If search is provided, show all matching students regardless of remaining time
+        // Student dropdown: every active student who has at least one DTR record
+        $studentsDropdownQuery = User::query()
+            ->where('role', 'student')
+            ->where('is_active', true)
+            ->whereHas('dtrs');
+        if ($allowedDepartmentIds !== null) {
+            $studentsDropdownQuery->whereIn('department_id', $allowedDepartmentIds);
+        }
+        if ($request->filled('university_id')) {
+            $studentsDropdownQuery->where('university_id', $request->university_id);
+        }
+        if ($search !== '') {
+            $this->applyStudentUserSearch($studentsDropdownQuery, $search);
+        }
+        $students = $studentsDropdownQuery->orderBy('name')->get(['id', 'name']);
+
+        // Main list: by default only students who still need training hours (unless searching)
         $studentsWithRemainingTime = [];
-        $searchProvided = $request->filled('search');
-        
+        $searchProvided = $search !== '';
+
         foreach ($allStudents as $student) {
             $requiredHours = (float) ($student->required_training_hours ?? 0);
             $totalDtrHours = (float) Dtr::where('user_id', $student->id)->sum('total_hours');
             $remainingHours = $requiredHours - $totalDtrHours;
-            
-            // Only include students with remaining time needed (remaining > 0)
-            // OR if search is provided, include all students (they'll be filtered by search query)
+
             if ($remainingHours > 0 || $searchProvided) {
                 $studentsWithRemainingTime[] = $student->id;
             }
         }
 
-        // Filter DTR query to only include students with remaining time needed
-        // UNLESS search is provided, then show all matching students
-        if (!empty($studentsWithRemainingTime)) {
-            if (!$searchProvided) {
-                // Only filter by remaining time if no search is provided
+        $studentFilterApplied = $request->filled('student_id');
+        if (! $searchProvided && ! $studentFilterApplied) {
+            if (! empty($studentsWithRemainingTime)) {
                 $query->whereIn('user_id', $studentsWithRemainingTime);
-            }
-            // If search is provided, the search filter in the query already handles it
-        } else {
-            // If no students have remaining time and no search, return empty result
-            if (!$searchProvided) {
-                $query->whereRaw('1 = 0'); // Force empty result
+            } else {
+                $query->whereRaw('1 = 0');
             }
         }
-
-        // Filter students list to only those with remaining time (or all if search provided)
-        $students = $allStudents->filter(function($student) use ($studentsWithRemainingTime, $searchProvided) {
-            if ($searchProvided) {
-                // If search is provided, show all students (they'll be filtered by the search query)
-                return true;
-            }
-            return in_array($student->id, $studentsWithRemainingTime);
-        })->values();
 
         $dtrs = $query->orderBy('date', 'desc')
             ->orderBy('user_id')
@@ -2305,11 +2292,19 @@ class DtrController extends Controller
         $allowedDepartmentIds = $user->canAccessStudentManagement()
             ? $user->getAllowedStudentDepartmentIds()
             : null;
+        $search = trim((string) $request->input('search', ''));
+
         $query = Dtr::with(['user.university'])
-            ->whereHas('user', function($q) use ($allowedDepartmentIds) {
+            ->whereHas('user', function ($q) use ($allowedDepartmentIds, $request, $search) {
                 $q->where('role', 'student');
                 if ($allowedDepartmentIds !== null) {
                     $q->whereIn('department_id', $allowedDepartmentIds);
+                }
+                if ($request->filled('university_id')) {
+                    $q->where('university_id', $request->university_id);
+                }
+                if ($search !== '') {
+                    $this->applyStudentUserSearch($q, $search);
                 }
             });
 
@@ -2317,9 +2312,6 @@ class DtrController extends Controller
         $selectedUniversity = null;
         if ($request->filled('university_id')) {
             $selectedUniversity = University::find($request->university_id);
-            $query->whereHas('user', function($q) use ($request) {
-                $q->where('university_id', $request->university_id);
-            });
         }
 
         // Filter by student
@@ -3199,5 +3191,36 @@ class DtrController extends Controller
 
         $filename = 'employee_dtr_export_' . ($dateFrom ? Carbon::parse($dateFrom)->format('Y-m-d') : 'all') . '_' . ($dateTo ? Carbon::parse($dateTo)->format('Y-m-d') : 'all') . '.pdf';
         return $pdf->stream($filename);
+    }
+
+    /**
+     * Partial match on student name, email, ID, or school (university).
+     *
+     * @param  \Illuminate\Database\Eloquent\Builder|\Illuminate\Database\Query\Builder  $query
+     */
+    private function applyStudentUserSearch($query, string $search): void
+    {
+        $search = trim($search);
+        if ($search === '') {
+            return;
+        }
+
+        $term = '%' . addcslashes($search, '%_\\') . '%';
+
+        $query->where(function ($q) use ($term, $search) {
+            if (ctype_digit($search)) {
+                $q->orWhere('id', (int) $search);
+            }
+
+            $q->orWhere('name', 'like', $term)
+                ->orWhere('email', 'like', $term)
+                ->orWhereHas('university', function ($uq) use ($term) {
+                    $uq->where(function ($inner) use ($term) {
+                        $inner->where('name', 'like', $term)
+                            ->orWhere('location', 'like', $term)
+                            ->orWhere('code', 'like', $term);
+                    });
+                });
+        });
     }
 }

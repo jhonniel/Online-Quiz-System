@@ -23,6 +23,7 @@ class HiringApplication extends Model
         'resume_path',
         'resume_link',
         'school',
+        'university_id',
         'status',
         'admin_notes',
         'reviewed_by',
@@ -57,6 +58,20 @@ class HiringApplication extends Model
     public function user()
     {
         return $this->belongsTo(User::class);
+    }
+
+    public function university()
+    {
+        return $this->belongsTo(University::class);
+    }
+
+    public function resolvedUniversityId(): ?int
+    {
+        if ($this->university_id) {
+            return (int) $this->university_id;
+        }
+
+        return University::resolveIdFromSchoolLabel($this->school);
     }
 
     // Helper methods

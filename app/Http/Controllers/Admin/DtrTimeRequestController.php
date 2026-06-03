@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\DtrTimeRequest;
 use App\Support\DtrTimeRequestHours;
+use App\Support\StudentUndertimeRulesViolation;
 use App\Support\TimeRequestOvertimeLeaveImport;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -38,6 +39,7 @@ class DtrTimeRequestController extends Controller
             // Ensure any existing pending regular request whose day total exceeds 08:00
             // has a pending Additional Time leave request linked in Leave Requests.
             $this->reconcilePendingAdditionalTimeLeaves($allowedDepartmentIds);
+            $undertimeRulesResult = StudentUndertimeRulesViolation::reconcileForStudents($allowedDepartmentIds);
             
             $query = DtrTimeRequest::with(['user', 'reviewer'])
                 ->whereHas('user', function ($q) use ($allowedDepartmentIds) {
@@ -104,7 +106,8 @@ class DtrTimeRequestController extends Controller
                 'timeRequests',
                 'students',
                 'pendingCount',
-                'rejectedCount'
+                'rejectedCount',
+                'undertimeRulesResult'
             ));
         } catch (\Exception $e) {
             \Log::error('Error in DtrTimeRequestController@index: ' . $e->getMessage(), [
@@ -223,6 +226,21 @@ class DtrTimeRequestController extends Controller
             $message .= ' An Additional Time leave request was recorded in Leave Requests ('.TimeRequestOvertimeLeaveImport::IMPORT_REMARK.').';
         } elseif ($attendanceAdditionalTimeLeave) {
             $message .= ' A pending Additional Time request was created in Leave Requests — the student must complete the details before it can be approved.';
+        }
+
+        $automation = StudentUndertimeRulesViolation::evaluateAfterApprovedTimeRequest($freshRequest);
+        if ($automation['disabled']) {
+            $streak = StudentUndertimeRulesViolation::countConsecutiveApprovedFullDaysEndingOn(
+                (int) $freshRequest->user_id,
+                $freshRequest->date->copy()->startOfDay()
+            );
+            $message .= " Student rules violation warning was disabled automatically ({$streak} consecutive day(s) at 08:00 or above).";
+        } elseif ($automation['enabled']) {
+            $streak = StudentUndertimeRulesViolation::countConsecutiveApprovedUndertimeEndingOn(
+                (int) $freshRequest->user_id,
+                $freshRequest->date->copy()->startOfDay()
+            );
+            $message .= " Student rules violation warning was enabled automatically ({$streak} consecutive under-time day(s) below 08:00).";
         }
 
         return back()->with('success', $message);

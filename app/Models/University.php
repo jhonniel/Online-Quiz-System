@@ -43,6 +43,29 @@ class University extends Model
         if ($this->code) {
             return $this->name . ' (' . $this->code . ')';
         }
+
         return $this->name;
+    }
+
+    /**
+     * Match a school label from hiring forms (full_name or plain name).
+     */
+    public static function resolveIdFromSchoolLabel(?string $school): ?int
+    {
+        $school = trim((string) $school);
+        if ($school === '') {
+            return null;
+        }
+
+        $normalized = strtolower($school);
+
+        $match = static::query()
+            ->get()
+            ->first(function (self $university) use ($normalized) {
+                return strtolower($university->full_name) === $normalized
+                    || strtolower(trim($university->name)) === $normalized;
+            });
+
+        return $match?->id;
     }
 }

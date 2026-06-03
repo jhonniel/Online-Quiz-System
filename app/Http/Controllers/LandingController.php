@@ -48,11 +48,16 @@ class LandingController extends Controller
 
         // Get ranking data for public display
         // Top Students by Total Score (public version - only show top 5)
-        $topStudents = User::where('role', 'user')
+        $topStudents = User::query()
+            ->learners()
             ->where('is_active', true)
             ->select('users.*', DB::raw('COALESCE(SUM(quiz_attempts.points_earned), 0) as total_score'))
-            ->leftJoin('quiz_attempts', 'users.id', '=', 'quiz_attempts.user_id')
+            ->leftJoin('quiz_attempts', function ($join) {
+                $join->on('users.id', '=', 'quiz_attempts.user_id')
+                    ->whereNotNull('quiz_attempts.completed_at');
+            })
             ->groupBy('users.id')
+            ->having('total_score', '>', 0)
             ->orderBy('total_score', 'desc')
             ->take(5)
             ->get();

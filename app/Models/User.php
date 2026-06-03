@@ -17,6 +17,14 @@ class User extends Authenticatable
 
     public const DEFAULT_STUDENT_ABSENCE_ALLOWANCE = 3.0;
 
+    /** Roles that participate in quizzes / leaderboard rankings. */
+    public const LEARNER_ROLES = ['student', 'user', 'applicant', 'employee', 'teacher'];
+
+    public function scopeLearners($query)
+    {
+        return $query->whereIn('role', self::LEARNER_ROLES);
+    }
+
     public static function normalizedStudentAbsenceAllowance(mixed $raw): float
     {
         $value = is_numeric($raw) ? (float) $raw : 0.0;
@@ -55,6 +63,7 @@ class User extends Authenticatable
         'student_absence_allowance',
         'qr_code_id',
         'student_rules_warning',
+        'student_rules_warning_manual',
         'student_rules_marquee_enabled',
         'student_rules_notice_message',
         'student_terminated',
@@ -91,6 +100,7 @@ class User extends Authenticatable
         'moa_uploaded_at' => 'datetime',
         'moa_reupload_allowed' => 'boolean',
         'student_rules_warning' => 'boolean',
+        'student_rules_warning_manual' => 'boolean',
         'student_rules_marquee_enabled' => 'boolean',
         'student_terminated' => 'boolean',
         'student_absence_allowance' => 'float',
@@ -371,7 +381,8 @@ class User extends Authenticatable
             }
 
             // Use a more efficient query to count users with higher scores
-            $usersWithHigherScore = User::where('role', 'user')
+            $usersWithHigherScore = User::query()
+                ->learners()
                 ->where('is_active', true)
                 ->where('id', '!=', $this->id)
                 ->whereHas('quizAttempts', function ($query) {

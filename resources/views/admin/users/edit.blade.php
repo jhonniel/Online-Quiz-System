@@ -195,6 +195,7 @@
                             <span class="text-sm text-gray-700">
                                 <span class="font-semibold text-gray-900">Rules violation warning</span><br>
                                 When enabled, the student gets a <strong class="text-amber-800">yellow top banner</strong> with a continuous marquee and the rules modal uses a light yellow style with “You have violated the rules” above the title when they log in.
+                                <span class="block mt-1 text-xs text-gray-500">If you turn this on here, automatic enable/disable from time requests will no longer change it for this student.</span>
                             </span>
                         </label>
                         @error('student_rules_warning') <p class="text-sm text-red-600">{{ $message }}</p> @enderror
