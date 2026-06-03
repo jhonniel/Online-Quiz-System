@@ -3,6 +3,7 @@
 @section('content')
 @php
     $showDepartmentColumn = auth()->user()->isAdmin();
+    $canViewMeritDetails = auth()->user()->isAdmin();
 @endphp
 <div class="space-y-6">
     <!-- Page Header -->
@@ -196,7 +197,9 @@
                         @if($showDepartmentColumn)
                             <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Department</th>
                         @endif
-                        <th scope="col" class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider" title="Total merits. Sub-line shows under-time + excess absences + manual (e.g. 2+1+0).">Merits</th>
+                        @if($canViewMeritDetails)
+                            <th scope="col" class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider" title="Total merits. Click for breakdown. Sub-line shows under-time + excess absences + manual (e.g. 2+1+0).">Merits</th>
+                        @endif
                         <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Internship Started</th>
                         <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Internship Ended</th>
                         <th scope="col" class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Hours</th>
@@ -239,7 +242,7 @@
                                 $meritsCount = (int) ($meritBreakdown['total'] ?? 0);
                                 $meritTitle = $meritsCount > 0
                                     ? sprintf(
-                                        'Total %d = under-time %d + excess absences %d + manual %d. Click for full profile.',
+                                        'Total %d = under-time %d + excess absences %d + manual %d',
                                         $meritsCount,
                                         (int) ($meritBreakdown['undertime'] ?? 0),
                                         (int) ($meritBreakdown['excess_absence'] ?? 0),
@@ -247,18 +250,22 @@
                                     )
                                     : 'No merits on record';
                             @endphp
-                            <td class="px-6 py-4 whitespace-nowrap text-sm text-center">
-                                <a href="{{ url('/admin/users/' . $student->id . '/edit') }}"
-                                   class="{{ $meritsCount > 0 ? 'font-semibold text-amber-700 hover:text-amber-900' : 'text-gray-500 hover:text-gray-700' }}"
-                                   title="{{ $meritTitle }}">
-                                    <span class="tabular-nums">{{ number_format($meritsCount) }}</span>
-                                    @if($meritsCount > 0)
-                                        <span class="block text-[10px] font-normal leading-tight text-amber-800/90 mt-0.5 tabular-nums">
-                                            {{ (int) $meritBreakdown['undertime'] }}+{{ (int) $meritBreakdown['excess_absence'] }}+{{ (int) $meritBreakdown['manual'] }}
-                                        </span>
-                                    @endif
-                                </a>
-                            </td>
+                            @if($canViewMeritDetails)
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-center">
+                                    <button type="button"
+                                            class="merit-details-trigger inline-flex flex-col items-center rounded-md px-2 py-1 -mx-2 transition-colors focus:outline-none focus:ring-2 focus:ring-amber-500 focus:ring-offset-1 {{ $meritsCount > 0 ? 'font-semibold text-amber-700 hover:bg-amber-50 hover:text-amber-900' : 'text-gray-500 hover:bg-gray-50 hover:text-gray-700' }}"
+                                            data-student-id="{{ $student->id }}"
+                                            data-merits-url="{{ route('admin.student-management.students.merits', $student) }}"
+                                            title="{{ $meritTitle }} — click for full details">
+                                        <span class="tabular-nums">{{ number_format($meritsCount) }}</span>
+                                        @if($meritsCount > 0)
+                                            <span class="block text-[10px] font-normal leading-tight text-amber-800/90 mt-0.5 tabular-nums">
+                                                {{ (int) $meritBreakdown['undertime'] }}+{{ (int) $meritBreakdown['excess_absence'] }}+{{ (int) $meritBreakdown['manual'] }}
+                                            </span>
+                                        @endif
+                                    </button>
+                                </td>
+                            @endif
                             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
                                 {{ $started ? $started->format('M j, Y') : '—' }}
                             </td>
@@ -280,7 +287,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="{{ ($showDepartmentColumn ? 7 : 6) + 1 }}" class="px-6 py-12 text-center text-sm text-gray-500">
+                            <td colspan="{{ ($showDepartmentColumn ? 1 : 0) + ($canViewMeritDetails ? 1 : 0) + 6 }}" class="px-6 py-12 text-center text-sm text-gray-500">
                                 <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z"></path>
                                 </svg>
@@ -300,6 +307,32 @@
         @endif
     </div>
 </div>
+
+@if($canViewMeritDetails)
+{{-- Merit details modal (admin only) --}}
+<div id="meritDetailsModal" class="fixed inset-0 z-50 hidden" aria-hidden="true" role="dialog" aria-labelledby="meritDetailsModalTitle">
+    <div class="fixed inset-0 bg-gray-900/50 backdrop-blur-sm" data-merit-modal-dismiss></div>
+    <div class="fixed inset-0 flex items-start justify-center p-4 sm:p-6 overflow-y-auto pointer-events-none">
+        <div class="relative w-full max-w-2xl bg-white rounded-xl shadow-xl border border-gray-200 pointer-events-auto my-8">
+            <div class="flex items-start justify-between gap-4 px-5 py-4 border-b border-gray-100 bg-amber-50/80 rounded-t-xl">
+                <div class="min-w-0">
+                    <h2 id="meritDetailsModalTitle" class="text-lg font-semibold text-gray-900 truncate">Merit details</h2>
+                    <p id="meritDetailsModalSubtitle" class="text-sm text-gray-600 mt-0.5 truncate"></p>
+                </div>
+                <button type="button" class="shrink-0 rounded-lg p-2 text-gray-500 hover:bg-white hover:text-gray-700" data-merit-modal-dismiss aria-label="Close">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                </button>
+            </div>
+            <div id="meritDetailsModalBody" class="px-5 py-4 max-h-[min(70vh,560px)] overflow-y-auto text-sm text-gray-700">
+                <p class="text-gray-500">Loading…</p>
+            </div>
+            <div class="px-5 py-4 border-t border-gray-100 flex justify-end rounded-b-xl bg-gray-50/80">
+                <button type="button" class="inline-flex items-center px-4 py-2 rounded-lg border border-gray-300 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50" data-merit-modal-dismiss>Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+@endif
 @endsection
 
 @section('scripts')
@@ -376,6 +409,139 @@
             });
         }
     })();
+
+    @if($canViewMeritDetails)
+    (function () {
+        const modal = document.getElementById('meritDetailsModal');
+        const body = document.getElementById('meritDetailsModalBody');
+        const subtitle = document.getElementById('meritDetailsModalSubtitle');
+        if (!modal || !body) return;
+
+        function closeModal() {
+            modal.classList.add('hidden');
+            modal.setAttribute('aria-hidden', 'true');
+            document.body.classList.remove('overflow-hidden');
+        }
+
+        function openModal() {
+            modal.classList.remove('hidden');
+            modal.setAttribute('aria-hidden', 'false');
+            document.body.classList.add('overflow-hidden');
+        }
+
+        modal.querySelectorAll('[data-merit-modal-dismiss]').forEach(function (el) {
+            el.addEventListener('click', closeModal);
+        });
+
+        document.addEventListener('keydown', function (e) {
+            if (e.key === 'Escape' && !modal.classList.contains('hidden')) {
+                closeModal();
+            }
+        });
+
+        function escapeHtml(value) {
+            return String(value ?? '')
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;');
+        }
+
+        function statusBadge(status) {
+            const s = String(status || '').toLowerCase();
+            const colors = s === 'approved'
+                ? 'bg-emerald-100 text-emerald-800'
+                : (s === 'pending' ? 'bg-amber-100 text-amber-800' : 'bg-gray-100 text-gray-700');
+            return '<span class="inline-flex px-2 py-0.5 rounded text-xs font-medium ' + colors + '">' + escapeHtml(status) + '</span>';
+        }
+
+        function renderDetails(data) {
+            const b = data.breakdown || {};
+            const absence = data.absence || {};
+            const notices = data.notices || {};
+            const thresholds = data.thresholds || {};
+            const undertime = data.undertime_filings || [];
+            const absentReqs = data.absent_requests || [];
+
+            let noticeLines = [];
+            if (notices.rules_warning) noticeLines.push('Rules violation warning (active)');
+            if (notices.final_notice) noticeLines.push('Final notice (active)');
+            if (notices.merit_automation_disabled) noticeLines.push('Automatic merit notices blocked');
+            if (noticeLines.length === 0) noticeLines.push('No active rules notices from merits');
+
+            let undertimeRows = undertime.length
+                ? undertime.map(function (row) {
+                    return '<tr class="border-t border-gray-100"><td class="py-2 pr-3">' + escapeHtml(row.date) + '</td>'
+                        + '<td class="py-2 pr-3 font-mono text-xs">' + escapeHtml(row.hours_label) + '</td>'
+                        + '<td class="py-2">' + statusBadge(row.status) + '</td></tr>';
+                }).join('')
+                : '<tr><td colspan="3" class="py-3 text-gray-500">No under-time filings below 08:00.</td></tr>';
+
+            let absentRows = absentReqs.length
+                ? absentReqs.map(function (row) {
+                    return '<tr class="border-t border-gray-100"><td class="py-2 pr-3">' + escapeHtml(row.range) + '</td>'
+                        + '<td class="py-2 pr-3 tabular-nums">' + escapeHtml(row.days) + ' day(s)</td>'
+                        + '<td class="py-2">' + statusBadge(row.status) + '</td></tr>';
+                }).join('')
+                : '<tr><td colspan="3" class="py-3 text-gray-500">No approved absent leave requests.</td></tr>';
+
+            body.innerHTML =
+                '<div class="space-y-5">'
+                + '<div class="grid grid-cols-2 sm:grid-cols-4 gap-3">'
+                + '<div class="rounded-lg border border-amber-200 bg-amber-50/60 px-3 py-2"><p class="text-xs text-gray-500">Under-time</p><p class="text-xl font-bold text-gray-900 tabular-nums">' + escapeHtml(b.undertime ?? 0) + '</p></div>'
+                + '<div class="rounded-lg border border-amber-200 bg-amber-50/60 px-3 py-2"><p class="text-xs text-gray-500">Excess absences</p><p class="text-xl font-bold text-gray-900 tabular-nums">' + escapeHtml(b.excess_absence ?? 0) + '</p></div>'
+                + '<div class="rounded-lg border border-amber-200 bg-amber-50/60 px-3 py-2"><p class="text-xs text-gray-500">Manual</p><p class="text-xl font-bold text-gray-900 tabular-nums">' + escapeHtml(b.manual ?? 0) + '</p></div>'
+                + '<div class="rounded-lg border border-amber-300 bg-amber-100/50 px-3 py-2"><p class="text-xs font-medium text-amber-900">Total merits</p><p class="text-2xl font-bold text-amber-900 tabular-nums">' + escapeHtml(b.total ?? 0) + '</p></div>'
+                + '</div>'
+                + '<p class="text-xs text-gray-500">Auto notices (system): violation warning at <strong>' + escapeHtml(thresholds.warning ?? 1) + '+</strong> merits; final notice at <strong>' + escapeHtml(thresholds.final ?? 3) + '+</strong> merits.</p>'
+                + '<div class="rounded-lg border border-gray-200 p-3"><p class="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-1">Rules notices</p><ul class="text-sm text-gray-700 list-disc list-inside">' + noticeLines.map(function (l) { return '<li>' + escapeHtml(l) + '</li>'; }).join('') + '</ul></div>'
+                + '<div><h3 class="text-sm font-semibold text-gray-900 mb-1">Allowable absences</h3>'
+                + '<dl class="grid grid-cols-2 gap-2 text-sm"><div><dt class="text-gray-500">Balance allowed</dt><dd class="font-semibold tabular-nums">' + escapeHtml(absence.allowable) + ' days</dd></div>'
+                + '<div><dt class="text-gray-500">Approved absent days</dt><dd class="font-semibold tabular-nums">' + escapeHtml(absence.approved_days) + '</dd></div>'
+                + '<div><dt class="text-gray-500">Remaining</dt><dd class="font-semibold tabular-nums">' + escapeHtml(absence.remaining_balance) + ' days</dd></div>'
+                + '<div><dt class="text-gray-500">Excess absence merits</dt><dd class="font-semibold tabular-nums">' + escapeHtml(absence.excess_merits) + '</dd></div></dl>'
+                + '<p class="mt-2 text-xs text-gray-500">' + escapeHtml(data.rules?.excess_absence || '') + '</p></div>'
+                + '<div><h3 class="text-sm font-semibold text-gray-900 mb-2">Under-time time requests <span class="font-normal text-gray-500">(' + undertime.length + ')</span></h3>'
+                + '<p class="text-xs text-gray-500 mb-2">' + escapeHtml(data.rules?.undertime || '') + '</p>'
+                + '<div class="overflow-x-auto rounded-lg border border-gray-200"><table class="min-w-full text-sm"><thead class="bg-gray-50 text-left text-xs text-gray-500 uppercase"><tr><th class="px-3 py-2">Date</th><th class="px-3 py-2">Filed</th><th class="px-3 py-2">Status</th></tr></thead><tbody class="px-3">' + undertimeRows + '</tbody></table></div></div>'
+                + '<div><h3 class="text-sm font-semibold text-gray-900 mb-2">Approved absent leave <span class="font-normal text-gray-500">(' + absentReqs.length + ')</span></h3>'
+                + '<div class="overflow-x-auto rounded-lg border border-gray-200"><table class="min-w-full text-sm"><thead class="bg-gray-50 text-left text-xs text-gray-500 uppercase"><tr><th class="px-3 py-2">Period</th><th class="px-3 py-2">Days</th><th class="px-3 py-2">Status</th></tr></thead><tbody>' + absentRows + '</tbody></table></div></div>'
+                + '<p class="text-xs text-gray-500">' + escapeHtml(data.rules?.manual || '') + '</p>'
+                + '</div>';
+        }
+
+        document.querySelectorAll('.merit-details-trigger').forEach(function (btn) {
+            btn.addEventListener('click', function () {
+                const url = btn.getAttribute('data-merits-url');
+                if (!url) return;
+
+                openModal();
+                body.innerHTML = '<p class="text-gray-500 py-6 text-center">Loading merit details…</p>';
+                subtitle.textContent = '';
+
+                fetch(url, {
+                    headers: {
+                        'Accept': 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest',
+                    },
+                    credentials: 'same-origin',
+                })
+                    .then(function (res) {
+                        if (!res.ok) throw new Error('Failed to load');
+                        return res.json();
+                    })
+                    .then(function (data) {
+                        const student = data.student || {};
+                        subtitle.textContent = (student.name || '') + (student.email ? ' · ' + student.email : '');
+                        renderDetails(data);
+                    })
+                    .catch(function () {
+                        body.innerHTML = '<p class="text-red-600 py-4">Could not load merit details. Please try again.</p>';
+                    });
+            });
+        });
+    })();
+    @endif
 </script>
 @endsection
 

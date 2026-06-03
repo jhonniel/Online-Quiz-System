@@ -5,6 +5,8 @@ namespace App\Support;
 use App\Models\DtrTimeRequest;
 use App\Models\LeaveRequest;
 use App\Models\User;
+use App\Support\DtrTimeRequestHours;
+
 final class StudentViolationCounter
 {
     /**
@@ -203,5 +205,101 @@ final class StudentViolationCounter
         $excess = $approvedAbsentDays - $allowableAbsences;
 
         return $excess > 0 ? (int) ceil($excess) : 0;
+    }
+
+    /**
+     * Full merit breakdown and source records for admin detail views.
+     *
+     * @return array<string, mixed>
+     */
+    public static function detailsForUser(User $student): array
+    {
+        $userId = (int) $student->id;
+        $breakdown = self::breakdownForUser($userId);
+        $allowable = User::normalizedStudentAbsenceAllowance($student->student_absence_allowance);
+        $approvedAbsentDays = (int) (self::approvedAbsentDaysByUserId([$userId])[$userId] ?? 0);
+        $remainingBalance = max($allowable - $approvedAbsentDays, 0);
+
+        $undertimeFilings = DtrTimeRequest::query()
+            ->where('user_id', $userId)
+            ->where('status', '!=', 'rejected')
+            ->where(function ($q): void {
+                $q->where('request_type', 'regular')
+                    ->orWhereNull('request_type');
+            })
+            ->orderByDesc('date')
+            ->orderByDesc('id')
+            ->get(['id', 'date', 'hours', 'requested_total_hours', 'status'])
+            ->filter(fn (DtrTimeRequest $request) => self::isUndertimeFiling($request))
+            ->values()
+            ->map(function (DtrTimeRequest $request) {
+                $hours = StudentUndertimeRulesViolation::effectiveFiledHours($request);
+
+                return [
+                    'id' => (int) $request->id,
+                    'date' => $request->date?->format('M j, Y') ?? '—',
+                    'date_sort' => $request->date?->format('Y-m-d') ?? '',
+                    'hours' => round($hours, 2),
+                    'hours_label' => DtrTimeRequestHours::decimalToTimeString($hours),
+                    'status' => (string) $request->status,
+                ];
+            })
+            ->all();
+
+        $absentRequests = LeaveRequest::query()
+            ->where('user_id', $userId)
+            ->where('type', 'absent')
+            ->where('status', 'approved')
+            ->orderByDesc('start_date')
+            ->get(['id', 'start_date', 'end_date', 'status'])
+            ->map(function (LeaveRequest $request) {
+                $days = $request->days;
+                $start = $request->start_date;
+                $end = $request->end_date ?? $start;
+                $range = $start && $end && ! $start->equalTo($end)
+                    ? $start->format('M j, Y').' – '.$end->format('M j, Y')
+                    : ($start?->format('M j, Y') ?? '—');
+
+                return [
+                    'id' => (int) $request->id,
+                    'range' => $range,
+                    'days' => $days,
+                    'status' => (string) $request->status,
+                ];
+            })
+            ->values()
+            ->all();
+
+        $thresholds = StudentMeritNoticeSettings::thresholds();
+
+        return [
+            'student' => [
+                'id' => $userId,
+                'name' => (string) $student->name,
+                'email' => (string) $student->email,
+            ],
+            'breakdown' => $breakdown,
+            'absence' => [
+                'allowable' => round($allowable, 2),
+                'approved_days' => $approvedAbsentDays,
+                'remaining_balance' => round($remainingBalance, 2),
+                'excess_merits' => (int) ($breakdown['excess_absence'] ?? 0),
+            ],
+            'undertime_filings' => $undertimeFilings,
+            'absent_requests' => $absentRequests,
+            'notices' => [
+                'rules_warning' => (bool) ($student->student_rules_warning ?? false),
+                'final_notice' => (bool) ($student->student_rules_marquee_enabled ?? false),
+                'merit_automation_disabled' => (bool) ($student->student_rules_merit_automation_disabled ?? false),
+                'warning_manual' => (bool) ($student->student_rules_warning_manual ?? false),
+                'final_manual' => (bool) ($student->student_rules_marquee_manual ?? false),
+            ],
+            'thresholds' => $thresholds,
+            'rules' => [
+                'undertime' => '1 merit per regular time request filed below 08:00 (pending or approved; rejected excluded).',
+                'excess_absence' => '1 merit per approved absent day over the allowable absence balance.',
+                'manual' => 'Added by an administrator on the student profile.',
+            ],
+        ];
     }
 }

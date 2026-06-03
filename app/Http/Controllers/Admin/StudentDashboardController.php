@@ -246,6 +246,47 @@ class StudentDashboardController extends Controller
         ));
     }
 
+    public function studentMeritDetails(User $user)
+    {
+        $this->assertAdminCanViewStudentMeritDetails($user);
+
+        return response()->json(
+            StudentViolationCounter::detailsForUser($user->fresh())
+        );
+    }
+
+    private function assertAdminCanViewStudentMeritDetails(User $student): void
+    {
+        $authUser = auth()->user();
+        if (! $authUser?->isAdmin()) {
+            abort(403, 'Access denied. Only administrators can view merit details.');
+        }
+
+        $this->assertCanViewStudentInManagement($student);
+    }
+
+    private function assertCanViewStudentInManagement(User $student): void
+    {
+        $authUser = auth()->user();
+        if (! $authUser || (! $authUser->isAdmin() && ! $authUser->canAccessStudentManagement())) {
+            abort(403, 'Access denied.');
+        }
+
+        if ($student->role !== 'student') {
+            abort(404);
+        }
+
+        $allowedDepartmentIds = $authUser->canAccessStudentManagement()
+            ? $authUser->getAllowedStudentDepartmentIds()
+            : null;
+
+        if (is_array($allowedDepartmentIds) && $allowedDepartmentIds !== []) {
+            if (! in_array((int) $student->department_id, array_map('intval', $allowedDepartmentIds), true)) {
+                abort(403, 'Access denied.');
+            }
+        }
+    }
+
     /**
      * One row per school that has at least one student still completing OJT (required hours not yet met).
      * Picks the ongoing student whose effective exit-conference date is closest to today, then sorts rows by that date (earliest first).
