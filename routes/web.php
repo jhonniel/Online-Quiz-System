@@ -122,6 +122,7 @@ Route::prefix('admin')->middleware(['auth', 'admin'])->group(function () {
         Route::middleware(['admin.subfeature:system,rules'])->group(function () {
             Route::get('/system/rules', [\App\Http\Controllers\Admin\SettingsController::class, 'rulesRegulations'])->name('admin.system.rules');
             Route::post('/system/rules', [\App\Http\Controllers\Admin\SettingsController::class, 'updateRulesRegulations'])->name('admin.system.rules.update');
+            Route::post('/system/rules/merit-notices', [\App\Http\Controllers\Admin\SettingsController::class, 'updateMeritNoticeSettings'])->name('admin.system.rules.merit-notices.update');
         });
         Route::middleware(['admin.subfeature:system,api_monitoring'])->group(function () {
             Route::get('/system/api-monitoring', [\App\Http\Controllers\Admin\ApiMonitoringController::class, 'index'])->name('admin.system.api-monitoring.index');
@@ -621,6 +622,9 @@ Route::prefix('admin')->middleware(['auth', 'admin'])->group(function () {
 
 // User Routes
 Route::middleware(['auth'])->group(function () {
+    Route::get('/access', [\App\Http\Controllers\User\AccountTerminatedController::class, 'show'])
+        ->name('user.account-terminated');
+
     // Teachers only; kept on `auth` alone so access is not coupled to student termination checks.
     Route::get('/teacher/pending-applications', [UserDashboardController::class, 'teacherPendingApplications'])->name('user.teacher.pending-applications');
 });

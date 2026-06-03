@@ -67,6 +67,54 @@
         </div>
     </div>
 
+    {{-- Merit-based automatic notices (system-wide) --}}
+    <div class="rounded-2xl border border-amber-200 bg-amber-50/40 shadow-sm overflow-hidden">
+        <div class="px-6 py-4 border-b border-amber-200/80 bg-amber-50/80">
+            <h2 class="text-lg font-semibold text-slate-900">Automatic rules notices (merit counts)</h2>
+            <p class="text-sm text-slate-600 mt-1 max-w-3xl">
+                Control when the system turns on <strong>rules violation warning</strong> or <strong>final notice</strong> from each student’s total merits
+                (under-time filings, excess absences, and manual merits). Per-student overrides are on <strong>Users → edit student</strong>.
+            </p>
+        </div>
+        <form action="{{ url('/admin/system/rules/merit-notices') }}" method="POST" class="p-5 sm:p-6 space-y-5">
+            @csrf
+            <div>
+                <label for="student_merit_auto_notices_enabled" class="block text-sm font-semibold text-slate-800 mb-1.5">Automatic notices</label>
+                <select name="student_merit_auto_notices_enabled" id="student_merit_auto_notices_enabled"
+                        class="block w-full max-w-md rounded-xl border border-slate-300 px-4 py-2.5 text-sm focus:ring-2 focus:ring-indigo-500">
+                    <option value="enabled" {{ old('student_merit_auto_notices_enabled', ($merit_auto_notices_enabled ?? true) ? 'enabled' : 'disabled') === 'enabled' ? 'selected' : '' }}>Enabled — apply thresholds below for all eligible students</option>
+                    <option value="disabled" {{ old('student_merit_auto_notices_enabled', ($merit_auto_notices_enabled ?? true) ? 'enabled' : 'disabled') === 'disabled' ? 'selected' : '' }}>Disabled — never auto-enable or auto-clear merit-based notices</option>
+                </select>
+            </div>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-5 max-w-2xl">
+                <div>
+                    <label for="student_merit_violation_warning_threshold" class="block text-sm font-semibold text-slate-800 mb-1.5">Violation warning at (merits)</label>
+                    <input type="number" name="student_merit_violation_warning_threshold" id="student_merit_violation_warning_threshold"
+                           min="1" max="999" step="1" required
+                           value="{{ old('student_merit_violation_warning_threshold', $merit_violation_warning_threshold ?? 1) }}"
+                           class="block w-full rounded-xl border border-slate-300 px-4 py-2.5 text-sm focus:ring-2 focus:ring-indigo-500">
+                    <p class="mt-1 text-xs text-slate-500">Yellow rules violation warning when total merits are at least this number (and below final threshold).</p>
+                    @error('student_merit_violation_warning_threshold') <p class="mt-1 text-sm text-red-600">{{ $message }}</p> @enderror
+                </div>
+                <div>
+                    <label for="student_merit_final_notice_threshold" class="block text-sm font-semibold text-slate-800 mb-1.5">Final notice at (merits)</label>
+                    <input type="number" name="student_merit_final_notice_threshold" id="student_merit_final_notice_threshold"
+                           min="1" max="999" step="1" required
+                           value="{{ old('student_merit_final_notice_threshold', $merit_final_notice_threshold ?? 3) }}"
+                           class="block w-full rounded-xl border border-slate-300 px-4 py-2.5 text-sm focus:ring-2 focus:ring-indigo-500">
+                    <p class="mt-1 text-xs text-slate-500">Red final notice banner when total merits reach this number or higher.</p>
+                    @error('student_merit_final_notice_threshold') <p class="mt-1 text-sm text-red-600">{{ $message }}</p> @enderror
+                </div>
+            </div>
+            <div class="pt-2">
+                <button type="submit"
+                        class="inline-flex items-center gap-2 rounded-xl bg-amber-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-amber-700">
+                    Save merit notice settings
+                </button>
+            </div>
+        </form>
+    </div>
+
     <form action="{{ url('/admin/system/rules') }}" method="POST" id="rules-regulations-form" class="space-y-6">
         @csrf
 

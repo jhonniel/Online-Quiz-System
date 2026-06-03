@@ -2,32 +2,40 @@
 
 namespace App\Http\Middleware;
 
+use App\Http\Controllers\User\AccountTerminatedController;
 use App\Models\User;
 use Closure;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
 use Symfony\Component\HttpFoundation\Response;
 
 class RejectTerminatedStudent
 {
     /**
-     * Log out students whose account has been marked terminated and block access.
+     * Block navigation for terminated students; show restricted access screen instead.
      */
     public function handle(Request $request, Closure $next): Response
     {
         $user = $request->user();
-        if ($user instanceof User
-            && $user->role === 'student'
-            && (bool) $user->student_terminated) {
-            Auth::logout();
-            $request->session()->invalidate();
-            $request->session()->regenerateToken();
-
-            return redirect()
-                ->route('login')
-                ->with('error', 'Your student account has been terminated. You can no longer access the system. Contact the administration if you need assistance.');
+        if (! $user instanceof User
+            || $user->role !== 'student'
+            || ! (bool) $user->student_terminated) {
+            return $next($request);
         }
 
-        return $next($request);
+        if ($request->routeIs('user.account-terminated', 'logout')) {
+            return $next($request);
+        }
+
+        if ($request->is('access') || $request->is('logout')) {
+            return $next($request);
+        }
+
+        if ($request->expectsJson() || $request->ajax()) {
+            return response()->json([
+                'message' => 'Your student account has been terminated. You cannot access the system.',
+            ], 403);
+        }
+
+        return redirect()->to(AccountTerminatedController::url());
     }
 }

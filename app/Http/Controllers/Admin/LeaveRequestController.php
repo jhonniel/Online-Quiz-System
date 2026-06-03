@@ -16,6 +16,7 @@ use App\Models\User;
 use App\Rules\ClickUpTasksUrlsOnly;
 use App\Services\LeaveRequestStaleResubmissionService;
 use App\Services\MailConfigService;
+use App\Support\StudentMeritRulesNotice;
 use Carbon\Carbon;
 use Carbon\CarbonPeriod;
 use Illuminate\Database\QueryException;
@@ -1027,6 +1028,10 @@ class LeaveRequestController extends Controller
                 'exception' => $e::class,
             ]);
             // Don't fail the request if email fails
+        }
+
+        if ($leaveRequest->user?->role === 'student') {
+            StudentMeritRulesNotice::syncForStudent($leaveRequest->user);
         }
 
         return $this->redirectToAdminLeaveRequestShow($leaveRequest)

@@ -5,6 +5,8 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\LeaveRequest;
 use App\Support\AdminScopedDashboardCharts;
+use App\Support\StudentMeritRulesNotice;
+use App\Support\StudentViolationCounter;
 use App\Models\LeaveRequestLog;
 use App\Models\User;
 use App\Models\Dtr;
@@ -69,6 +71,11 @@ class StudentDashboardController extends Controller
         if (!$user->isAdmin() && !$user->canAccessStudentManagement()) {
             abort(403, 'Access denied. You do not have permission to access Student Management.');
         }
+
+        $allowedDepartmentIds = $user->canAccessStudentManagement()
+            ? $user->getAllowedStudentDepartmentIds()
+            : null;
+        StudentMeritRulesNotice::reconcileForStudents($allowedDepartmentIds);
 
         $search = trim((string) $request->input('search', ''));
         $perPage = (int) $request->input('per_page', 20);
@@ -202,6 +209,13 @@ class StudentDashboardController extends Controller
             ->paginate($perPage)
             ->appends($request->query());
 
+        $studentIdsOnPage = $students->getCollection()->pluck('id')->all();
+        $violationBreakdowns = StudentViolationCounter::breakdownsForUserIds($studentIdsOnPage);
+        $violationCounts = [];
+        foreach ($studentIdsOnPage as $studentId) {
+            $violationCounts[$studentId] = (int) ($violationBreakdowns[$studentId]['total'] ?? 0);
+        }
+
         $exitConferenceClosestBySchool = $this->buildExitConferenceClosestBySchoolRows(
             $studentsQueryUnfilteredForExitConference->get()
         );
@@ -226,7 +240,9 @@ class StudentDashboardController extends Controller
             'statsTopSchoolsMax',
             'statsRemainingBuckets',
             'statsRemainingBucketsMax',
-            'exitConferenceClosestBySchool'
+            'exitConferenceClosestBySchool',
+            'violationCounts',
+            'violationBreakdowns'
         ));
     }
 

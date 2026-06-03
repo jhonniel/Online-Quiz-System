@@ -21,7 +21,7 @@ class StudentUndertimeRulesViolation
      */
     public static function isAutomationLocked(User $student): bool
     {
-        return (bool) ($student->student_rules_warning_manual ?? false);
+        return StudentMeritRulesNotice::isMeritAutomationLocked($student);
     }
 
     /**
@@ -164,18 +164,33 @@ class StudentUndertimeRulesViolation
         $student = $timeRequest->user;
 
         if (! $student instanceof User || $student->role !== 'student') {
-            return ['enabled' => false, 'disabled' => false, 'manual' => false];
+            return ['enabled' => false, 'final_enabled' => false, 'disabled' => false, 'manual' => false];
         }
 
         if (self::isAutomationLocked($student)) {
-            return ['enabled' => false, 'disabled' => false, 'manual' => true];
+            return ['enabled' => false, 'final_enabled' => false, 'disabled' => false, 'manual' => true];
+        }
+
+        $meritResult = StudentMeritRulesNotice::syncForStudent($student);
+        if (! $meritResult['skipped'] && $meritResult['total'] >= StudentMeritNoticeSettings::violationWarningThreshold()) {
+            return [
+                'enabled' => $meritResult['enabled'],
+                'final_enabled' => $meritResult['final_enabled'],
+                'disabled' => false,
+                'manual' => false,
+            ];
         }
 
         $disabled = self::clearAfterApprovedTimeRequest($timeRequest);
+        if ($meritResult['disabled']) {
+            $disabled = true;
+        }
+
         $enabled = ! $disabled && self::applyAfterApprovedTimeRequest($timeRequest);
 
         return [
             'enabled' => $enabled,
+            'final_enabled' => false,
             'disabled' => $disabled,
             'manual' => false,
         ];
@@ -307,14 +322,30 @@ class StudentUndertimeRulesViolation
 
         $studentQuery = User::query()
             ->where('role', 'student')
-            ->where('student_rules_warning_manual', false);
+            ->where('student_rules_merit_automation_disabled', false)
+            ->where('student_rules_warning_manual', false)
+            ->where('student_rules_marquee_manual', false);
 
         if ($allowedDepartmentIds !== null) {
             $studentQuery->whereIn('department_id', $allowedDepartmentIds);
         }
 
-        foreach ($studentQuery->pluck('id') as $studentId) {
-            if (self::tryReconcileRecoveryForStudent((int) $studentId)) {
+        foreach ($studentQuery->get() as $student) {
+            $meritResult = StudentMeritRulesNotice::syncForStudent($student);
+            if ($meritResult['enabled']) {
+                $enabled++;
+            }
+            if ($meritResult['disabled']) {
+                $disabled++;
+            }
+
+            if (! $meritResult['skipped'] && $meritResult['total'] >= StudentMeritNoticeSettings::violationWarningThreshold()) {
+                continue;
+            }
+
+            $studentId = (int) $student->id;
+
+            if (self::tryReconcileRecoveryForStudent($studentId)) {
                 $disabled++;
                 continue;
             }

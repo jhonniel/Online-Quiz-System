@@ -1,6 +1,9 @@
 @extends('layouts.admin')
 
 @section('content')
+@php
+    $showDepartmentColumn = auth()->user()->isAdmin();
+@endphp
 <div class="space-y-6">
     <!-- Page Header -->
     <div class="bg-gradient-to-r from-indigo-500 to-indigo-600 rounded-lg shadow-sm p-6">
@@ -148,7 +151,7 @@
                         <input type="text"
                                name="search"
                                value="{{ request('search', $search ?? '') }}"
-                               placeholder="Search students (name, email, university, department, ID)..."
+                               placeholder="{{ $showDepartmentColumn ? 'Search students (name, email, university, department, ID)...' : 'Search students (name, email, university, ID)...' }}"
                                autocomplete="off"
                                class="block w-full pl-9 pr-10 py-2 border border-gray-300 rounded-md shadow-sm text-sm focus:ring-indigo-500 focus:border-indigo-500">
                         @if(request('search'))
@@ -190,7 +193,10 @@
                     <tr>
                         <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Student</th>
                         <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">School / University</th>
-                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Department</th>
+                        @if($showDepartmentColumn)
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Department</th>
+                        @endif
+                        <th scope="col" class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider" title="Total merits. Sub-line shows under-time + excess absences + manual (e.g. 2+1+0).">Merits</th>
                         <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Internship Started</th>
                         <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Internship Ended</th>
                         <th scope="col" class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Hours</th>
@@ -223,8 +229,35 @@
                             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
                                 {{ optional($student->university)->name ?? '—' }}
                             </td>
-                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
-                                {{ optional($student->department)->name ?? '—' }}
+                            @if($showDepartmentColumn)
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
+                                    {{ optional($student->department)->name ?? '—' }}
+                                </td>
+                            @endif
+                            @php
+                                $meritBreakdown = $violationBreakdowns[$student->id] ?? ['undertime' => 0, 'excess_absence' => 0, 'manual' => 0, 'total' => 0];
+                                $meritsCount = (int) ($meritBreakdown['total'] ?? 0);
+                                $meritTitle = $meritsCount > 0
+                                    ? sprintf(
+                                        'Total %d = under-time %d + excess absences %d + manual %d. Click for full profile.',
+                                        $meritsCount,
+                                        (int) ($meritBreakdown['undertime'] ?? 0),
+                                        (int) ($meritBreakdown['excess_absence'] ?? 0),
+                                        (int) ($meritBreakdown['manual'] ?? 0)
+                                    )
+                                    : 'No merits on record';
+                            @endphp
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-center">
+                                <a href="{{ url('/admin/users/' . $student->id . '/edit') }}"
+                                   class="{{ $meritsCount > 0 ? 'font-semibold text-amber-700 hover:text-amber-900' : 'text-gray-500 hover:text-gray-700' }}"
+                                   title="{{ $meritTitle }}">
+                                    <span class="tabular-nums">{{ number_format($meritsCount) }}</span>
+                                    @if($meritsCount > 0)
+                                        <span class="block text-[10px] font-normal leading-tight text-amber-800/90 mt-0.5 tabular-nums">
+                                            {{ (int) $meritBreakdown['undertime'] }}+{{ (int) $meritBreakdown['excess_absence'] }}+{{ (int) $meritBreakdown['manual'] }}
+                                        </span>
+                                    @endif
+                                </a>
                             </td>
                             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
                                 {{ $started ? $started->format('M j, Y') : '—' }}
@@ -247,7 +280,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="7" class="px-6 py-12 text-center text-sm text-gray-500">
+                            <td colspan="{{ ($showDepartmentColumn ? 7 : 6) + 1 }}" class="px-6 py-12 text-center text-sm text-gray-500">
                                 <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z"></path>
                                 </svg>

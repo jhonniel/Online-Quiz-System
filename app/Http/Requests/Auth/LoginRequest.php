@@ -73,11 +73,6 @@ class LoginRequest extends FormRequest
                 ]);
             }
 
-            if ($user->role === 'student' && (bool) $user->student_terminated) {
-                throw ValidationException::withMessages([
-                    'email' => 'Your student account has been terminated. You cannot sign in. Contact the administration if you need assistance.',
-                ]);
-            }
         }
 
         if (! Auth::attempt($this->only('email', 'password'), $this->boolean('remember'))) {

@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Controllers\User\AccountTerminatedController;
 use App\Models\User;
 use Illuminate\Http\Request;
 
@@ -17,7 +18,10 @@ class RedirectController extends Controller
                 return redirect('/admin/dashboard');
             }
 
-            // Everyone else goes to the user dashboard.
+            if ($user->role === 'student' && (bool) $user->student_terminated) {
+                return redirect()->to(AccountTerminatedController::url());
+            }
+
             return redirect('/dashboard');
         }
 

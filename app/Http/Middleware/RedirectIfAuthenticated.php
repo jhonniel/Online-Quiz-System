@@ -2,6 +2,7 @@
 
 namespace App\Http\Middleware;
 
+use App\Http\Controllers\User\AccountTerminatedController;
 use App\Models\User;
 use App\Providers\RouteServiceProvider;
 use Closure;
@@ -26,6 +27,10 @@ class RedirectIfAuthenticated
 
                 if ($user instanceof User && $user->isAdmin()) {
                     return redirect('/admin/dashboard');
+                }
+
+                if ($user instanceof User && $user->role === 'student' && (bool) $user->student_terminated) {
+                    return redirect()->to(AccountTerminatedController::url());
                 }
 
                 return redirect(RouteServiceProvider::HOME);

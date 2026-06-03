@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
+use App\Http\Controllers\User\AccountTerminatedController;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -13,6 +14,11 @@ class RoleLoginController extends Controller
     public function showLoginForm()
     {
         if (Auth::check()) {
+            $user = Auth::user();
+            if ($user instanceof User && $user->role === 'student' && (bool) $user->student_terminated) {
+                return redirect()->to(AccountTerminatedController::url());
+            }
+
             return redirect('/home');
         }
         
@@ -29,22 +35,16 @@ class RoleLoginController extends Controller
         $credentials = $request->only('email', 'password');
         $remember = $request->filled('remember');
 
-        $existing = User::where('email', $request->input('email'))->first();
-        if ($existing && $existing->role === 'student' && (bool) $existing->student_terminated) {
-            throw ValidationException::withMessages([
-                'email' => [
-                    'Your student account has been terminated. You cannot sign in. Contact the administration if you need assistance.',
-                ],
-            ]);
-        }
-
         if (Auth::attempt($credentials, $remember)) {
             $request->session()->regenerate();
 
-            // Force admin-role users to admin URL after login.
             $user = Auth::user();
             if ($user instanceof User && $user->isAdmin()) {
                 return redirect('/admin/dashboard');
+            }
+
+            if ($user instanceof User && $user->role === 'student' && (bool) $user->student_terminated) {
+                return redirect()->to(AccountTerminatedController::url());
             }
 
             return redirect()->intended('/home');

@@ -1100,12 +1100,65 @@ class SettingsController extends Controller
     {
         $html = (string) Setting::get('student_rules_regulations_html', '');
         $defaultRulesHtml = View::make('components.student-rules-regulations-default-body')->render();
+        $meritAutoEnabled = (string) Setting::get('student_merit_auto_notices_enabled', 'enabled') === 'enabled';
+        $meritWarningThreshold = max(1, (int) Setting::get('student_merit_violation_warning_threshold', 1));
+        $meritFinalThreshold = max(1, (int) Setting::get('student_merit_final_notice_threshold', 3));
 
         return view('admin.settings.rules-regulations', [
             'student_rules_regulations_html' => $html,
             'default_rules_html' => $defaultRulesHtml,
             'has_custom_rules' => trim($html) !== '',
+            'merit_auto_notices_enabled' => $meritAutoEnabled,
+            'merit_violation_warning_threshold' => $meritWarningThreshold,
+            'merit_final_notice_threshold' => $meritFinalThreshold,
         ]);
+    }
+
+    public function updateMeritNoticeSettings(Request $request)
+    {
+        $request->validate([
+            'student_merit_auto_notices_enabled' => 'required|in:enabled,disabled',
+            'student_merit_violation_warning_threshold' => 'required|integer|min:1|max:999',
+            'student_merit_final_notice_threshold' => 'required|integer|min:1|max:999',
+        ]);
+
+        $warning = (int) $request->input('student_merit_violation_warning_threshold');
+        $final = (int) $request->input('student_merit_final_notice_threshold');
+
+        if ($final <= $warning) {
+            return back()
+                ->withErrors([
+                    'student_merit_final_notice_threshold' => 'Final notice threshold must be greater than the violation warning threshold.',
+                ])
+                ->withInput();
+        }
+
+        Setting::set(
+            'student_merit_auto_notices_enabled',
+            $request->input('student_merit_auto_notices_enabled'),
+            'text',
+            'Enable automatic student rules notices from merit counts (enabled or disabled)'
+        );
+        Setting::set(
+            'student_merit_violation_warning_threshold',
+            (string) $warning,
+            'number',
+            'Minimum total merits to auto-enable rules violation warning'
+        );
+        Setting::set(
+            'student_merit_final_notice_threshold',
+            (string) $final,
+            'number',
+            'Minimum total merits to auto-enable final notice (scrolling banner)'
+        );
+
+        Cache::forget('setting.student_merit_auto_notices_enabled');
+        Cache::forget('setting.student_merit_violation_warning_threshold');
+        Cache::forget('setting.student_merit_final_notice_threshold');
+        Setting::clearCache();
+
+        return redirect('/admin/system/rules')
+            ->with('success', 'Merit-based rules notice settings saved.');
     }
 
     /**

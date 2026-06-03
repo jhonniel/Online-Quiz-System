@@ -5,6 +5,8 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\DtrTimeRequest;
 use App\Support\DtrTimeRequestHours;
+use App\Support\StudentMeritNoticeSettings;
+use App\Support\StudentMeritRulesNotice;
 use App\Support\StudentUndertimeRulesViolation;
 use App\Support\TimeRequestOvertimeLeaveImport;
 use Illuminate\Http\Request;
@@ -229,18 +231,29 @@ class DtrTimeRequestController extends Controller
         }
 
         $automation = StudentUndertimeRulesViolation::evaluateAfterApprovedTimeRequest($freshRequest);
-        if ($automation['disabled']) {
+        if (! empty($automation['final_enabled'])) {
+            $meritTotal = \App\Support\StudentViolationCounter::countForUser((int) $freshRequest->user_id);
+            $message .= " Final notice (scrolling banner) was enabled automatically ({$meritTotal} merit(s) on record, maximum reached).";
+        } elseif ($automation['enabled']) {
+            $meritTotal = \App\Support\StudentViolationCounter::countForUser((int) $freshRequest->user_id);
+            $meritThresholds = StudentMeritNoticeSettings::thresholds();
+            if ($meritTotal >= $meritThresholds['warning'] && $meritTotal < $meritThresholds['final']) {
+                $message .= " Student rules violation warning was enabled automatically ({$meritTotal} merit(s) on record).";
+            } elseif ($meritTotal >= $meritThresholds['final']) {
+                $message .= " Final notice (scrolling banner) was enabled automatically ({$meritTotal} merit(s) on record, maximum reached).";
+            } else {
+                $streak = StudentUndertimeRulesViolation::countConsecutiveApprovedUndertimeEndingOn(
+                    (int) $freshRequest->user_id,
+                    $freshRequest->date->copy()->startOfDay()
+                );
+                $message .= " Student rules violation warning was enabled automatically ({$streak} consecutive under-time day(s) below 08:00).";
+            }
+        } elseif ($automation['disabled']) {
             $streak = StudentUndertimeRulesViolation::countConsecutiveApprovedFullDaysEndingOn(
                 (int) $freshRequest->user_id,
                 $freshRequest->date->copy()->startOfDay()
             );
             $message .= " Student rules violation warning was disabled automatically ({$streak} consecutive day(s) at 08:00 or above).";
-        } elseif ($automation['enabled']) {
-            $streak = StudentUndertimeRulesViolation::countConsecutiveApprovedUndertimeEndingOn(
-                (int) $freshRequest->user_id,
-                $freshRequest->date->copy()->startOfDay()
-            );
-            $message .= " Student rules violation warning was enabled automatically ({$streak} consecutive under-time day(s) below 08:00).";
         }
 
         return back()->with('success', $message);
@@ -267,6 +280,11 @@ class DtrTimeRequestController extends Controller
             'reviewed_by' => Auth::id(),
             'reviewed_at' => now(),
         ]);
+
+        $dtrTimeRequest->loadMissing('user');
+        if ($dtrTimeRequest->user?->role === 'student') {
+            StudentMeritRulesNotice::syncForStudent($dtrTimeRequest->user);
+        }
 
         return back()->with('success', 'Time request rejected.');
     }

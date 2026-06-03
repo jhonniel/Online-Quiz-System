@@ -6,6 +6,9 @@ use App\Http\Controllers\Controller;
 use App\Mail\StudentRulesNoticeMail;
 use App\Mail\UserCredentials;
 use App\Models\Department;
+use App\Support\StudentMeritNoticeSettings;
+use App\Support\StudentMeritRulesNotice;
+use App\Support\StudentViolationCounter;
 use App\Models\LeaveBalance;
 use App\Models\University;
 use App\Models\User;
@@ -397,7 +400,21 @@ class UserController extends Controller
         $universities = University::active()->orderBy('name')->get();
         $departments = Department::active()->orderBy('name')->get();
 
-        return view('admin.users.edit', compact('user', 'universities', 'departments'));
+        $studentMeritBreakdown = $user->role === 'student'
+            ? StudentViolationCounter::breakdownForUser((int) $user->id)
+            : null;
+
+        $studentMeritNoticeSettings = $user->role === 'student'
+            ? StudentMeritNoticeSettings::thresholds()
+            : null;
+
+        return view('admin.users.edit', compact(
+            'user',
+            'universities',
+            'departments',
+            'studentMeritBreakdown',
+            'studentMeritNoticeSettings'
+        ));
     }
 
     public function update(Request $request, User $user)
@@ -440,6 +457,8 @@ class UserController extends Controller
                 }),
             ],
             'student_terminated' => 'nullable|boolean',
+            'student_manual_merits' => 'nullable|integer|min:0|max:9999',
+            'student_rules_allow_merit_automation' => 'nullable|boolean',
         ]);
 
         // Custom validation for new university
@@ -503,13 +522,19 @@ class UserController extends Controller
             $data['ojt_target_end_date'] = $request->filled('ojt_target_end_date')
                 ? $request->ojt_target_end_date
                 : null;
+            if (auth()->user()->isAdmin()) {
+                $data['student_manual_merits'] = max(0, (int) $request->input('student_manual_merits', 0));
+            }
         } else {
             $data['student_rules_warning'] = false;
             $data['student_rules_warning_manual'] = false;
             $data['student_rules_marquee_enabled'] = false;
+            $data['student_rules_marquee_manual'] = false;
+            $data['student_rules_merit_automation_disabled'] = false;
             $data['student_rules_notice_message'] = null;
             $data['student_terminated'] = false;
             $data['student_absence_allowance'] = 0;
+            $data['student_manual_merits'] = 0;
             $data['ojt_target_end_date'] = null;
         }
 
@@ -523,9 +548,28 @@ class UserController extends Controller
             } elseif (! $newWarning) {
                 $data['student_rules_warning_manual'] = false;
             }
+
+            $newMarquee = $request->boolean('student_rules_marquee_enabled');
+            if ($newMarquee && ! $prevStudentRulesMarquee) {
+                $data['student_rules_marquee_manual'] = true;
+            } elseif (! $newMarquee) {
+                $data['student_rules_marquee_manual'] = false;
+            }
+
+            $allowMeritAutomation = $request->boolean('student_rules_allow_merit_automation');
+            if (! $newWarning && ! $newMarquee && ! $allowMeritAutomation) {
+                $data['student_rules_merit_automation_disabled'] = true;
+            } else {
+                $data['student_rules_merit_automation_disabled'] = ! $allowMeritAutomation;
+            }
         }
 
         $user->update($data);
+
+        $user->refresh();
+        if ($request->role === 'student' && ! StudentMeritRulesNotice::isMeritAutomationLocked($user)) {
+            StudentMeritRulesNotice::syncForStudent($user);
+        }
 
         if ($request->role === 'student' && filter_var($user->email, FILTER_VALIDATE_EMAIL)) {
             $notifyViolation = ! empty($data['student_rules_warning']) && ! $prevStudentRulesWarning;

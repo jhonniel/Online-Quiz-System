@@ -170,6 +170,45 @@
                                 <p class="mt-1 text-xs text-gray-500">Students cannot file <strong>Absent</strong> leave once this balance reaches 0.</p>
                                 @error('student_absence_allowance') <p class="mt-1 text-sm text-red-600">{{ $message }}</p> @enderror
                             </div>
+
+                            <div class="mt-4 rounded-xl border border-amber-200 bg-amber-50/60 p-4" id="student_merits_wrapper">
+                                <h3 class="text-sm font-semibold text-gray-900">Merits</h3>
+                                <p class="mt-1 text-xs text-gray-600">
+                                    Automatic: 1 merit per filed time request below <strong>08:00</strong>, plus 1 merit per approved absent day over the allowable absence balance above.
+                                </p>
+                                @if($studentMeritBreakdown)
+                                    <dl class="mt-3 grid grid-cols-2 sm:grid-cols-4 gap-3 text-sm">
+                                        <div class="rounded-lg bg-white/80 border border-amber-100 px-3 py-2">
+                                            <dt class="text-xs text-gray-500">Under-time filings</dt>
+                                            <dd class="font-semibold text-gray-900">{{ number_format($studentMeritBreakdown['undertime']) }}</dd>
+                                        </div>
+                                        <div class="rounded-lg bg-white/80 border border-amber-100 px-3 py-2">
+                                            <dt class="text-xs text-gray-500">Excess absences</dt>
+                                            <dd class="font-semibold text-gray-900">{{ number_format($studentMeritBreakdown['excess_absence']) }}</dd>
+                                        </div>
+                                        <div class="rounded-lg bg-white/80 border border-amber-100 px-3 py-2">
+                                            <dt class="text-xs text-gray-500">Manual (admin)</dt>
+                                            <dd class="font-semibold text-gray-900">{{ number_format($studentMeritBreakdown['manual']) }}</dd>
+                                        </div>
+                                        <div class="rounded-lg bg-white border border-amber-300 px-3 py-2">
+                                            <dt class="text-xs font-medium text-amber-800">Total merits</dt>
+                                            <dd class="text-lg font-bold text-amber-900">{{ number_format($studentMeritBreakdown['total']) }}</dd>
+                                        </div>
+                                    </dl>
+                                @endif
+                                @if(auth()->user()->isAdmin())
+                                    <div class="mt-4">
+                                        <label for="student_manual_merits" class="block text-sm font-semibold text-gray-700 mb-1.5">Manual merit count</label>
+                                        <input type="number" name="student_manual_merits" id="student_manual_merits" min="0" max="9999" step="1"
+                                               value="{{ old('student_manual_merits', (int) ($user->student_manual_merits ?? 0)) }}"
+                                               class="block w-full max-w-xs px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-amber-500 text-sm">
+                                        <p class="mt-1 text-xs text-gray-500">Added on top of automatic merits. Only administrators can edit this.</p>
+                                        @error('student_manual_merits') <p class="mt-1 text-sm text-red-600">{{ $message }}</p> @enderror
+                                    </div>
+                                @elseif($user->role === 'student')
+                                    <p class="mt-3 text-xs text-gray-500">Contact an administrator to adjust manual merits.</p>
+                                @endif
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -181,6 +220,14 @@
                             <strong class="text-gray-800">Rules violation warning</strong> (yellow): light-amber rules modal, “You have violated the rules”, and a <strong class="text-amber-800">yellow scrolling banner</strong> at the top.
                             <strong class="text-gray-800">Final notice</strong> (red): red rules modal, “This is your final warning…”, and a <strong class="text-red-700">red scrolling banner</strong>.
                             <span class="text-gray-800 font-medium">Only one of these can be enabled at a time.</span>
+                            @if($studentMeritNoticeSettings)
+                                When automatic notices are enabled (see <a href="{{ url('/admin/system/rules') }}" class="text-indigo-600 hover:underline font-medium">System → Rules</a>),
+                                <strong>{{ $studentMeritNoticeSettings['warning'] }}+ merit(s)</strong> turns on the violation warning;
+                                <strong>{{ $studentMeritNoticeSettings['final'] }}+ merit(s)</strong> turns on final notice instead.
+                            @else
+                                Merit thresholds are configured under System → Rules.
+                            @endif
+                            Notice text is filled from their merit breakdown. Uncheck both notices below to disable and block auto re-enable, or use the automation checkbox.
                         </p>
                     </div>
                     <div class="p-5 sm:p-6 space-y-5">
@@ -209,6 +256,7 @@
                                 <span class="text-sm text-gray-700">
                                     <span class="font-semibold text-gray-900">Enable final notice (scrolling banner)</span><br>
                                     When enabled, a <strong class="text-red-700">red</strong> “Final notice” banner with scrolling text appears at the top of the student portal on every page until you turn it off or change their role.
+                                    <span class="block mt-1 text-xs text-gray-500">Automatically enabled when the student reaches 3 merits. If you turn this on here, merit-based automation will no longer change it.</span>
                                 </span>
                             </label>
                             @error('student_rules_marquee_enabled') <p class="text-sm text-red-600">{{ $message }}</p> @enderror
@@ -221,6 +269,19 @@
                             <p class="mt-1 text-xs text-gray-500">Required when either notice type is enabled. Plain text; it is stored in the database and drives the marquee for that student.</p>
                             @error('student_rules_notice_message') <p class="mt-1 text-sm text-red-600">{{ $message }}</p> @enderror
                         </div>
+                        <div class="border-t border-gray-100 pt-5">
+                            <input type="hidden" name="student_rules_allow_merit_automation" value="0">
+                            <label class="flex items-start gap-3 cursor-pointer group">
+                                <input type="checkbox" name="student_rules_allow_merit_automation" value="1" id="student_rules_allow_merit_automation"
+                                       class="mt-1 h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
+                                       {{ (string) old('student_rules_allow_merit_automation', ($user->student_rules_merit_automation_disabled ?? false) ? '0' : '1') === '1' ? 'checked' : '' }}>
+                                <span class="text-sm text-gray-700">
+                                    <span class="font-semibold text-gray-900">Allow automatic merit-based notices</span><br>
+                                    When checked, the system may enable or update violation / final notices from this student’s merit count (using thresholds in System → Rules).
+                                    <span class="block mt-1 text-xs text-gray-500">Uncheck and save to keep notices off (or as you set them) without the system turning them back on. Turning off both notices above also blocks automation until you check this again.</span>
+                                </span>
+                            </label>
+                        </div>
                         <div class="border-t border-amber-200 pt-5 space-y-2">
                             <input type="hidden" name="student_terminated" value="0">
                             <label class="flex items-start gap-3 cursor-pointer group">
@@ -229,7 +290,7 @@
                                        {{ (string) old('student_terminated', ($user->student_terminated ?? false) ? '1' : '0') === '1' ? 'checked' : '' }}>
                                 <span class="text-sm text-gray-700">
                                     <span class="font-semibold text-red-800">Student terminated</span><br>
-                                    When checked, this student cannot log in. Session access ends on the next request. Remove when restoring access (e.g. reinstatement).
+                                    When checked, the student sees a full-screen <strong class="text-red-800">Account terminated</strong> warning (with a glitch-style effect) and cannot open any other page until you uncheck this and save. They may still sign out from that screen.
                                 </span>
                             </label>
                             @error('student_terminated') <p class="text-sm text-red-600">{{ $message }}</p> @enderror
@@ -404,16 +465,27 @@ document.addEventListener('DOMContentLoaded', function() {
     const studentRulesWarningCb = document.getElementById('student_rules_warning');
     const studentRulesMarqueeCb = document.getElementById('student_rules_marquee_enabled');
     if (studentRulesWarningCb && studentRulesMarqueeCb) {
+        const meritAutomationCb = document.getElementById('student_rules_allow_merit_automation');
+        function syncMeritAutomationCheckbox() {
+            if (!meritAutomationCb) return;
+            if (!studentRulesWarningCb.checked && !studentRulesMarqueeCb.checked) {
+                meritAutomationCb.checked = false;
+            }
+        }
         studentRulesWarningCb.addEventListener('change', function() {
             if (this.checked) {
                 studentRulesMarqueeCb.checked = false;
             }
+            syncMeritAutomationCheckbox();
         });
         studentRulesMarqueeCb.addEventListener('change', function() {
             if (this.checked) {
                 studentRulesWarningCb.checked = false;
             }
+            syncMeritAutomationCheckbox();
         });
+
+        syncMeritAutomationCheckbox();
     }
 
     const form = document.getElementById('editUserForm');

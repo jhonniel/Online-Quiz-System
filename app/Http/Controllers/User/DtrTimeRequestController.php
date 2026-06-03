@@ -5,6 +5,7 @@ namespace App\Http\Controllers\User;
 use App\Http\Controllers\Controller;
 use App\Models\DtrTimeRequest;
 use App\Support\DtrTimeRequestHours;
+use App\Support\StudentMeritRulesNotice;
 use App\Support\TimeRequestOvertimeLeaveImport;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -224,6 +225,8 @@ class DtrTimeRequestController extends Controller
             $message .= ' Some dates had issues: '.implode(' ', array_slice($errors, 0, 3));
         }
 
+        StudentMeritRulesNotice::syncForStudent($user);
+
         if ($leaveOvertimeCount === 1 && count($createdOvertimeLeaveIds) === 1) {
             return redirect()
                 ->route('user.leave-requests.complete-attendance-overtime', $createdOvertimeLeaveIds[0])
@@ -297,6 +300,8 @@ class DtrTimeRequestController extends Controller
         }
 
         TimeRequestOvertimeLeaveImport::discardPendingAttendanceOvertimeForDates((int) $user->id, $datesToClear);
+
+        StudentMeritRulesNotice::syncForStudent($user);
 
         return back()->with('success', 'Pending time request(s) and linked Additional Time leave request(s) discarded successfully.');
     }
