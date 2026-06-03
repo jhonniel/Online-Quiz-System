@@ -248,21 +248,15 @@ class StudentDashboardController extends Controller
 
     public function studentMeritDetails(User $user)
     {
-        $this->assertAdminCanViewStudentMeritDetails($user);
+        $this->assertCanViewStudentInManagement($user);
 
-        return response()->json(
-            StudentViolationCounter::detailsForUser($user->fresh())
-        );
-    }
+        $details = StudentViolationCounter::detailsForUser($user->fresh());
 
-    private function assertAdminCanViewStudentMeritDetails(User $student): void
-    {
-        $authUser = auth()->user();
-        if (! $authUser?->isAdmin()) {
-            abort(403, 'Access denied. Only administrators can view merit details.');
+        if (! auth()->user()?->isAdmin()) {
+            unset($details['student']['edit_url']);
         }
 
-        $this->assertCanViewStudentInManagement($student);
+        return response()->json($details);
     }
 
     private function assertCanViewStudentInManagement(User $student): void

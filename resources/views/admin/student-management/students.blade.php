@@ -3,7 +3,7 @@
 @section('content')
 @php
     $showDepartmentColumn = auth()->user()->isAdmin();
-    $canViewMeritDetails = auth()->user()->isAdmin();
+    $showMeritModalProfileLink = auth()->user()->isAdmin();
 @endphp
 <div class="space-y-6">
     <!-- Page Header -->
@@ -197,9 +197,7 @@
                         @if($showDepartmentColumn)
                             <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Department</th>
                         @endif
-                        @if($canViewMeritDetails)
-                            <th scope="col" class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider" title="Total merits. Click for breakdown. Sub-line shows under-time + excess absences + manual (e.g. 2+1+0).">Merits</th>
-                        @endif
+                        <th scope="col" class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider" title="Total merits. Click for breakdown. Sub-line shows under-time + excess absences + manual (e.g. 2+1+0).">Merits</th>
                         <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Internship Started</th>
                         <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Internship Ended</th>
                         <th scope="col" class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Hours</th>
@@ -250,22 +248,20 @@
                                     )
                                     : 'No merits on record';
                             @endphp
-                            @if($canViewMeritDetails)
-                                <td class="px-6 py-4 whitespace-nowrap text-sm text-center">
-                                    <button type="button"
-                                            class="merit-details-trigger inline-flex flex-col items-center rounded-md px-2 py-1 -mx-2 transition-colors focus:outline-none focus:ring-2 focus:ring-amber-500 focus:ring-offset-1 {{ $meritsCount > 0 ? 'font-semibold text-amber-700 hover:bg-amber-50 hover:text-amber-900' : 'text-gray-500 hover:bg-gray-50 hover:text-gray-700' }}"
-                                            data-student-id="{{ $student->id }}"
-                                            data-merits-url="{{ route('admin.student-management.students.merits', $student) }}"
-                                            title="{{ $meritTitle }} — click for full details">
-                                        <span class="tabular-nums">{{ number_format($meritsCount) }}</span>
-                                        @if($meritsCount > 0)
-                                            <span class="block text-[10px] font-normal leading-tight text-amber-800/90 mt-0.5 tabular-nums">
-                                                {{ (int) $meritBreakdown['undertime'] }}+{{ (int) $meritBreakdown['excess_absence'] }}+{{ (int) $meritBreakdown['manual'] }}
-                                            </span>
-                                        @endif
-                                    </button>
-                                </td>
-                            @endif
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-center">
+                                <button type="button"
+                                        class="merit-details-trigger inline-flex flex-col items-center rounded-md px-2 py-1 -mx-2 transition-colors focus:outline-none focus:ring-2 focus:ring-amber-500 focus:ring-offset-1 {{ $meritsCount > 0 ? 'font-semibold text-amber-700 hover:bg-amber-50 hover:text-amber-900' : 'text-gray-500 hover:bg-gray-50 hover:text-gray-700' }}"
+                                        data-student-id="{{ $student->id }}"
+                                        data-merits-url="{{ route('admin.student-management.students.merits', $student) }}"
+                                        title="{{ $meritTitle }} — click for full details">
+                                    <span class="tabular-nums">{{ number_format($meritsCount) }}</span>
+                                    @if($meritsCount > 0)
+                                        <span class="block text-[10px] font-normal leading-tight text-amber-800/90 mt-0.5 tabular-nums">
+                                            {{ (int) $meritBreakdown['undertime'] }}+{{ (int) $meritBreakdown['excess_absence'] }}+{{ (int) $meritBreakdown['manual'] }}
+                                        </span>
+                                    @endif
+                                </button>
+                            </td>
                             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
                                 {{ $started ? $started->format('M j, Y') : '—' }}
                             </td>
@@ -287,7 +283,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="{{ ($showDepartmentColumn ? 1 : 0) + ($canViewMeritDetails ? 1 : 0) + 6 }}" class="px-6 py-12 text-center text-sm text-gray-500">
+                            <td colspan="{{ ($showDepartmentColumn ? 7 : 6) + 1 }}" class="px-6 py-12 text-center text-sm text-gray-500">
                                 <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z"></path>
                                 </svg>
@@ -308,9 +304,8 @@
     </div>
 </div>
 
-@if($canViewMeritDetails)
-{{-- Merit details modal (admin only) --}}
-<div id="meritDetailsModal" class="fixed inset-0 z-50 hidden" aria-hidden="true" role="dialog" aria-labelledby="meritDetailsModalTitle">
+{{-- Merit details modal --}}
+<div id="meritDetailsModal" class="fixed inset-0 z-50 hidden" aria-hidden="true" role="dialog" aria-labelledby="meritDetailsModalTitle" data-show-profile-link="{{ $showMeritModalProfileLink ? '1' : '0' }}">
     <div class="fixed inset-0 bg-gray-900/50 backdrop-blur-sm" data-merit-modal-dismiss></div>
     <div class="fixed inset-0 flex items-start justify-center p-4 sm:p-6 overflow-y-auto pointer-events-none">
         <div class="relative w-full max-w-2xl bg-white rounded-xl shadow-xl border border-gray-200 pointer-events-auto my-8">
@@ -326,13 +321,15 @@
             <div id="meritDetailsModalBody" class="px-5 py-4 max-h-[min(70vh,560px)] overflow-y-auto text-sm text-gray-700">
                 <p class="text-gray-500">Loading…</p>
             </div>
-            <div class="px-5 py-4 border-t border-gray-100 flex justify-end rounded-b-xl bg-gray-50/80">
+            <div class="px-5 py-4 border-t border-gray-100 flex flex-wrap items-center justify-end gap-3 rounded-b-xl bg-gray-50/80">
+                @if($showMeritModalProfileLink)
+                    <a id="meritDetailsEditLink" href="#" class="text-sm font-medium text-indigo-600 hover:text-indigo-800 hidden">Open student profile</a>
+                @endif
                 <button type="button" class="inline-flex items-center px-4 py-2 rounded-lg border border-gray-300 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50" data-merit-modal-dismiss>Close</button>
             </div>
         </div>
     </div>
 </div>
-@endif
 @endsection
 
 @section('scripts')
@@ -410,11 +407,12 @@
         }
     })();
 
-    @if($canViewMeritDetails)
     (function () {
         const modal = document.getElementById('meritDetailsModal');
         const body = document.getElementById('meritDetailsModalBody');
         const subtitle = document.getElementById('meritDetailsModalSubtitle');
+        const editLink = document.getElementById('meritDetailsEditLink');
+        const showProfileLink = modal && modal.getAttribute('data-show-profile-link') === '1';
         if (!modal || !body) return;
 
         function closeModal() {
@@ -533,6 +531,13 @@
                     .then(function (data) {
                         const student = data.student || {};
                         subtitle.textContent = (student.name || '') + (student.email ? ' · ' + student.email : '');
+                        if (showProfileLink && editLink && student.edit_url) {
+                            editLink.href = student.edit_url;
+                            editLink.classList.remove('hidden');
+                        } else if (editLink) {
+                            editLink.classList.add('hidden');
+                            editLink.href = '#';
+                        }
                         renderDetails(data);
                     })
                     .catch(function () {
@@ -541,7 +546,6 @@
             });
         });
     })();
-    @endif
 </script>
 @endsection
 

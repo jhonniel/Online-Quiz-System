@@ -277,6 +277,7 @@ final class StudentViolationCounter
                 'id' => $userId,
                 'name' => (string) $student->name,
                 'email' => (string) $student->email,
+                'edit_url' => url('/admin/users/'.$userId.'/edit'),
             ],
             'breakdown' => $breakdown,
             'absence' => [
