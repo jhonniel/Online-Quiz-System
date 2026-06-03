@@ -123,4 +123,64 @@ class UserActivity extends Model
             ->whereDate('created_at', today())
             ->count();
     }
+
+    /**
+     * Human-readable summary for admin activity logs.
+     */
+    public function displaySummary(): string
+    {
+        $metadata = $this->metadata ?? [];
+        if (! empty($metadata['description']) && is_string($metadata['description'])) {
+            return $metadata['description'];
+        }
+
+        $actionLabels = [
+            'user_login' => 'Signed in',
+            'user_logout' => 'Signed out',
+            'rules_regulations_acknowledged' => 'Acknowledged rules and regulations',
+            'student_merits_updated' => 'Updated student merits and notices',
+            'student_terminated_enabled' => 'Marked student account as terminated',
+            'student_terminated_disabled' => 'Restored student account access',
+        ];
+
+        if ($this->action && isset($actionLabels[$this->action])) {
+            $label = $actionLabels[$this->action];
+            $target = $metadata['target_user_name'] ?? $metadata['target_user_email'] ?? null;
+            if ($target) {
+                return $label.' — '.$target;
+            }
+
+            return $label;
+        }
+
+        if ($this->action) {
+            return ucfirst(str_replace('_', ' ', $this->action));
+        }
+
+        return ucfirst(str_replace('_', ' ', (string) $this->activity_type));
+    }
+
+    /**
+     * Extra detail lines (e.g. field changes) for activity log tables.
+     *
+     * @return list<string>
+     */
+    public function displayDetailLines(): array
+    {
+        $metadata = $this->metadata ?? [];
+        $changes = $metadata['changes'] ?? null;
+        if (! is_array($changes) || $changes === []) {
+            return [];
+        }
+
+        $lines = [];
+        foreach ($changes as $change) {
+            if (! is_string($change) || $change === '') {
+                continue;
+            }
+            $lines[] = $change;
+        }
+
+        return $lines;
+    }
 }

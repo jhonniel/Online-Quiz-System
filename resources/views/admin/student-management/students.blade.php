@@ -5,6 +5,7 @@
     $showDepartmentColumn = auth()->user()->isAdmin();
     $showMeritModalProfileLink = auth()->user()->isAdmin();
     $canManageMeritAutomation = auth()->user()->isAdmin();
+    $canManageStudentTermination = auth()->user()->isAdmin();
 @endphp
 <div class="space-y-6">
     <!-- Page Header -->
@@ -248,16 +249,22 @@
                                         (int) ($meritBreakdown['manual'] ?? 0)
                                     )
                                     : 'No merits on record';
+                                $meritsAtFinal = $meritsCount >= 3;
+                                $meritBtnClass = $meritsAtFinal
+                                    ? 'font-semibold text-red-700 hover:bg-red-50 hover:text-red-900'
+                                    : ($meritsCount > 0 ? 'font-semibold text-amber-700 hover:bg-amber-50 hover:text-amber-900' : 'text-gray-500 hover:bg-gray-50 hover:text-gray-700');
+                                $meritRingClass = $meritsAtFinal ? 'focus:ring-red-500' : 'focus:ring-amber-500';
+                                $meritSubClass = $meritsAtFinal ? 'text-red-800/90' : 'text-amber-800/90';
                             @endphp
                             <td class="px-6 py-4 whitespace-nowrap text-sm text-center">
                                 <button type="button"
-                                        class="merit-details-trigger inline-flex flex-col items-center rounded-md px-2 py-1 -mx-2 transition-colors focus:outline-none focus:ring-2 focus:ring-amber-500 focus:ring-offset-1 {{ $meritsCount > 0 ? 'font-semibold text-amber-700 hover:bg-amber-50 hover:text-amber-900' : 'text-gray-500 hover:bg-gray-50 hover:text-gray-700' }}"
+                                        class="merit-details-trigger inline-flex flex-col items-center rounded-md px-2 py-1 -mx-2 transition-colors focus:outline-none focus:ring-2 {{ $meritRingClass }} focus:ring-offset-1 {{ $meritBtnClass }}"
                                         data-student-id="{{ $student->id }}"
                                         data-merits-url="{{ route('admin.student-management.students.merits', $student) }}"
                                         title="{{ $meritTitle }} — click for full details">
                                     <span class="tabular-nums">{{ number_format($meritsCount) }}</span>
                                     @if($meritsCount > 0)
-                                        <span class="block text-[10px] font-normal leading-tight text-amber-800/90 mt-0.5 tabular-nums">
+                                        <span class="block text-[10px] font-normal leading-tight {{ $meritSubClass }} mt-0.5 tabular-nums">
                                             {{ (int) $meritBreakdown['undertime'] }}+{{ (int) $meritBreakdown['excess_absence'] }}+{{ (int) $meritBreakdown['manual'] }}
                                         </span>
                                     @endif
@@ -306,7 +313,7 @@
 </div>
 
 {{-- Merit details modal --}}
-<div id="meritDetailsModal" class="fixed inset-0 z-50 hidden" aria-hidden="true" role="dialog" aria-labelledby="meritDetailsModalTitle" data-show-profile-link="{{ $showMeritModalProfileLink ? '1' : '0' }}" data-can-edit-automation="{{ $canManageMeritAutomation ? '1' : '0' }}">
+<div id="meritDetailsModal" class="fixed inset-0 z-50 hidden" aria-hidden="true" role="dialog" aria-labelledby="meritDetailsModalTitle" data-show-profile-link="{{ $showMeritModalProfileLink ? '1' : '0' }}" data-can-edit-automation="{{ $canManageMeritAutomation ? '1' : '0' }}" data-can-edit-terminated="{{ $canManageStudentTermination ? '1' : '0' }}">
     <div class="fixed inset-0 bg-gray-900/50 backdrop-blur-sm" data-merit-modal-dismiss></div>
     <div class="fixed inset-0 flex items-start justify-center p-4 sm:p-6 overflow-y-auto pointer-events-none">
         <div class="relative w-full max-w-2xl bg-white rounded-xl shadow-xl border border-gray-200 pointer-events-auto my-8">
@@ -367,6 +374,25 @@
                                 </span>
                             </label>
                         @endif
+                        @if($canManageStudentTermination)
+                            <div class="border-t border-red-200 pt-4">
+                                <label class="flex items-start gap-3 cursor-pointer">
+                                    <input type="checkbox" name="student_terminated" id="merit_modal_student_terminated" value="1"
+                                           class="mt-1 h-4 w-4 text-red-600 focus:ring-red-500 border-gray-300 rounded">
+                                    <span class="text-sm text-gray-700">
+                                        <span class="font-semibold text-red-800">Student terminated</span><br>
+                                        <span class="text-xs text-gray-500">When checked, the student sees a full-screen account terminated warning and cannot open other pages until you uncheck this and save.</span>
+                                    </span>
+                                </label>
+                            </div>
+                        @endif
+                        <div class="border-t border-gray-200 pt-4">
+                            <label for="merit_modal_confirm_password" class="block text-sm font-semibold text-gray-700 mb-1">Your password</label>
+                            <input type="password" name="confirm_password" id="merit_modal_confirm_password" autocomplete="current-password"
+                                   class="block w-full max-w-sm rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 bg-white"
+                                   placeholder="Required to save changes">
+                            <p class="mt-1 text-xs text-gray-500">Confirm your identity. This action is recorded in User Activity logs.</p>
+                        </div>
                         <p id="meritDetailsFormError" class="hidden text-sm text-red-600 rounded-lg border border-red-200 bg-red-50 px-3 py-2"></p>
                     </form>
                 </div>
@@ -476,6 +502,9 @@
         const automationCb = document.getElementById('merit_modal_allow_automation');
         const showProfileLink = modal && modal.getAttribute('data-show-profile-link') === '1';
         const canEditAutomation = modal && modal.getAttribute('data-can-edit-automation') === '1';
+        const canEditTerminated = modal && modal.getAttribute('data-can-edit-terminated') === '1';
+        const terminatedCb = document.getElementById('merit_modal_student_terminated');
+        const confirmPasswordInput = document.getElementById('merit_modal_confirm_password');
         const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content || '';
         let currentUpdateUrl = '';
         let currentTriggerBtn = null;
@@ -531,6 +560,7 @@
             if (notices.rules_warning) noticeLines.push('Rules violation warning (active)');
             if (notices.final_notice) noticeLines.push('Final notice (active)');
             if (notices.merit_automation_disabled) noticeLines.push('Automatic merit notices blocked');
+            if (notices.student_terminated) noticeLines.push('Account terminated (access blocked)');
             if (noticeLines.length === 0) noticeLines.push('No active rules notices from merits');
 
             let undertimeRows = undertime.length
@@ -549,14 +579,19 @@
                 }).join('')
                 : '<tr><td colspan="3" class="py-3 text-gray-500">No approved absent leave requests.</td></tr>';
 
+            const meritTotal = parseInt(b.total, 10) || 0;
+            const meritTotalHigh = meritTotal >= 3;
+            const totalMeritBox = meritTotalHigh
+                ? '<div class="rounded-lg border border-red-300 bg-red-100/50 px-3 py-2"><p class="text-xs font-medium text-red-900">Total merits</p><p class="text-2xl font-bold text-red-900 tabular-nums">' + escapeHtml(b.total ?? 0) + '</p></div>'
+                : '<div class="rounded-lg border border-amber-300 bg-amber-100/50 px-3 py-2"><p class="text-xs font-medium text-amber-900">Total merits</p><p class="text-2xl font-bold text-amber-900 tabular-nums">' + escapeHtml(b.total ?? 0) + '</p></div>';
+
             content.innerHTML =
                 '<div class="space-y-5">'
                 + '<div class="grid grid-cols-2 sm:grid-cols-4 gap-3">'
-                + '<div class="rounded-lg border border-amber-200 bg-amber-50/60 px-3 py-2"><p class="text-xs text-gray-500">Under-time merits</p><p class="text-xl font-bold text-gray-900 tabular-nums">' + escapeHtml(b.undertime ?? 0) + '</p>'
-                + '<p class="text-[10px] text-gray-500 mt-0.5">' + escapeHtml(data.undertime_filing_count ?? 0) + ' filing(s) ÷ ' + escapeHtml(data.undertime_filings_per_merit ?? 5) + '</p></div>'
+                + '<div class="rounded-lg border border-amber-200 bg-amber-50/60 px-3 py-2"><p class="text-xs text-gray-500">Under-time merits</p><p class="text-xl font-bold text-gray-900 tabular-nums">' + escapeHtml(b.undertime ?? 0) + '</p></div>'
                 + '<div class="rounded-lg border border-amber-200 bg-amber-50/60 px-3 py-2"><p class="text-xs text-gray-500">Excess absences</p><p class="text-xl font-bold text-gray-900 tabular-nums">' + escapeHtml(b.excess_absence ?? 0) + '</p></div>'
                 + '<div class="rounded-lg border border-amber-200 bg-amber-50/60 px-3 py-2"><p class="text-xs text-gray-500">Manual</p><p class="text-xl font-bold text-gray-900 tabular-nums">' + escapeHtml(b.manual ?? 0) + '</p></div>'
-                + '<div class="rounded-lg border border-amber-300 bg-amber-100/50 px-3 py-2"><p class="text-xs font-medium text-amber-900">Total merits</p><p class="text-2xl font-bold text-amber-900 tabular-nums">' + escapeHtml(b.total ?? 0) + '</p></div>'
+                + totalMeritBox
                 + '</div>'
                 + '<p class="text-xs text-gray-500">Auto notices (system): violation warning at <strong>' + escapeHtml(thresholds.warning ?? 1) + '+</strong> merits; final notice at <strong>' + escapeHtml(thresholds.final ?? 3) + '+</strong> merits.</p>'
                 + '<p class="text-xs"><button type="button" id="meritScrollToManage" class="text-indigo-600 font-semibold hover:text-indigo-800 hover:underline">Edit manual merits &amp; notices below ↓</button></p>'
@@ -604,8 +639,12 @@
             if (canEditAutomation && automationCb) {
                 automationCb.checked = editable.allow_merit_automation !== false;
             }
+            if (canEditTerminated && terminatedCb) {
+                terminatedCb.checked = !!editable.student_terminated;
+            }
             const noticeTa = document.getElementById('merit_modal_notice_message');
             if (noticeTa) noticeTa.value = editable.notice_message || '';
+            if (confirmPasswordInput) confirmPasswordInput.value = '';
 
             manageSection.classList.remove('hidden');
             if (saveBtn) saveBtn.classList.remove('hidden');
@@ -640,11 +679,16 @@
             btn.title = total > 0
                 ? 'Total ' + total + ' = under-time ' + undertime + ' + excess absences ' + excess + ' + manual ' + manual + ' — click for full details'
                 : 'No merits on record';
-            btn.className = 'merit-details-trigger inline-flex flex-col items-center rounded-md px-2 py-1 -mx-2 transition-colors focus:outline-none focus:ring-2 focus:ring-amber-500 focus:ring-offset-1 '
-                + (total > 0 ? 'font-semibold text-amber-700 hover:bg-amber-50 hover:text-amber-900' : 'text-gray-500 hover:bg-gray-50 hover:text-gray-700');
+            const meritHigh = total >= 3;
+            const meritRing = meritHigh ? 'focus:ring-red-500' : 'focus:ring-amber-500';
+            const meritStyle = meritHigh
+                ? 'font-semibold text-red-700 hover:bg-red-50 hover:text-red-900'
+                : (total > 0 ? 'font-semibold text-amber-700 hover:bg-amber-50 hover:text-amber-900' : 'text-gray-500 hover:bg-gray-50 hover:text-gray-700');
+            const meritSub = meritHigh ? 'text-red-800/90' : 'text-amber-800/90';
+            btn.className = 'merit-details-trigger inline-flex flex-col items-center rounded-md px-2 py-1 -mx-2 transition-colors focus:outline-none focus:ring-2 ' + meritRing + ' focus:ring-offset-1 ' + meritStyle;
             let html = '<span class="tabular-nums">' + total.toLocaleString() + '</span>';
             if (total > 0) {
-                html += '<span class="block text-[10px] font-normal leading-tight text-amber-800/90 mt-0.5 tabular-nums">'
+                html += '<span class="block text-[10px] font-normal leading-tight ' + meritSub + ' mt-0.5 tabular-nums">'
                     + undertime + '+' + excess + '+' + manual + '</span>';
             }
             btn.innerHTML = html;
@@ -653,6 +697,14 @@
         if (saveBtn && meritForm) {
             saveBtn.addEventListener('click', function () {
                 if (!currentUpdateUrl) return;
+                const confirmPassword = confirmPasswordInput ? confirmPasswordInput.value.trim() : '';
+                if (!confirmPassword) {
+                    if (formError) {
+                        formError.textContent = 'Enter your password to save changes.';
+                        formError.classList.remove('hidden');
+                    }
+                    return;
+                }
                 if (warningCb && finalCb && warningCb.checked && finalCb.checked) {
                     if (formError) {
                         formError.textContent = 'Rules violation warning and final notice cannot both be enabled.';
@@ -664,12 +716,16 @@
                 if (formError) formError.classList.add('hidden');
 
                 const payload = {
+                    confirm_password: confirmPassword,
                     student_rules_warning: warningCb && warningCb.checked ? 1 : 0,
                     student_rules_marquee_enabled: finalCb && finalCb.checked ? 1 : 0,
                     student_rules_notice_message: document.getElementById('merit_modal_notice_message')?.value || '',
                 };
                 if (canEditAutomation && automationCb) {
                     payload.student_rules_allow_merit_automation = automationCb.checked ? 1 : 0;
+                }
+                if (canEditTerminated && terminatedCb) {
+                    payload.student_terminated = terminatedCb.checked ? 1 : 0;
                 }
                 const manualInput = document.getElementById('merit_modal_manual_merits');
                 if (manualInput && !manualWrap.classList.contains('hidden')) {

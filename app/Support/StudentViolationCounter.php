@@ -307,6 +307,7 @@ final class StudentViolationCounter
                 'rules_warning' => (bool) ($student->student_rules_warning ?? false),
                 'final_notice' => (bool) ($student->student_rules_marquee_enabled ?? false),
                 'merit_automation_disabled' => (bool) ($student->student_rules_merit_automation_disabled ?? false),
+                'student_terminated' => (bool) ($student->student_terminated ?? false),
                 'warning_manual' => (bool) ($student->student_rules_warning_manual ?? false),
                 'final_manual' => (bool) ($student->student_rules_marquee_manual ?? false),
             ],

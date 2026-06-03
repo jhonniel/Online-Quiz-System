@@ -635,6 +635,7 @@ Route::middleware(['auth', 'student.not_terminated'])->group(function () {
     Route::get('/dashboard', [UserDashboardController::class, 'index'])->name('user.dashboard');
     Route::post('/dashboard/rules-regulations/acknowledge', [UserDashboardController::class, 'acknowledgeRulesRegulations'])->name('user.rules-regulations.acknowledge');
     Route::get('/teacher/students', [UserDashboardController::class, 'teacherStudents'])->name('user.teacher.students');
+    Route::get('/teacher/students/{user}/merits', [UserDashboardController::class, 'teacherStudentMeritDetails'])->name('user.teacher.students.merits');
     Route::get('/teacher/news', [UserDashboardController::class, 'teacherNews'])->name('user.teacher.news');
     Route::get('/teacher/excused-requests', [UserDashboardController::class, 'teacherExcusedRequests'])->name('user.teacher.excused-requests.index');
     Route::post('/teacher/excused-requests', [UserDashboardController::class, 'storeTeacherExcusedRequest'])->name('user.teacher.excused-requests.store');

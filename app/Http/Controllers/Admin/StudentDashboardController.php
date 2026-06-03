@@ -8,7 +8,9 @@ use App\Models\LeaveRequest;
 use App\Support\AdminScopedDashboardCharts;
 use App\Support\StudentMeritNoticeSettings;
 use App\Support\StudentMeritRulesNotice;
+use App\Models\UserActivity;
 use App\Support\StudentViolationCounter;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Validation\Rule;
@@ -275,6 +277,7 @@ class StudentDashboardController extends Controller
             || $request->boolean('student_rules_marquee_enabled');
 
         $request->validate([
+            'confirm_password' => 'required|string',
             'student_manual_merits' => 'nullable|integer|min:0|max:9999',
             'student_rules_warning' => 'nullable|boolean',
             'student_rules_marquee_enabled' => 'nullable|boolean',
@@ -285,7 +288,18 @@ class StudentDashboardController extends Controller
                 Rule::requiredIf($requiresNoticeMessage),
             ],
             'student_rules_allow_merit_automation' => 'nullable|boolean',
+            'student_terminated' => 'nullable|boolean',
         ]);
+
+        $actor = auth()->user();
+        if (! $actor || ! Hash::check((string) $request->input('confirm_password'), (string) $actor->password)) {
+            return response()->json([
+                'message' => 'Your password is incorrect.',
+                'errors' => [
+                    'confirm_password' => ['Your password is incorrect.'],
+                ],
+            ], 422);
+        }
 
         if ($request->boolean('student_rules_warning') && $request->boolean('student_rules_marquee_enabled')) {
             return response()->json([
@@ -299,6 +313,10 @@ class StudentDashboardController extends Controller
         $user->refresh();
         $prevWarning = (bool) ($user->student_rules_warning ?? false);
         $prevMarquee = (bool) ($user->student_rules_marquee_enabled ?? false);
+        $prevManualMerits = (int) ($user->student_manual_merits ?? 0);
+        $prevAutomationDisabled = (bool) ($user->student_rules_merit_automation_disabled ?? false);
+        $prevTerminated = (bool) ($user->student_terminated ?? false);
+        $prevNoticeMessage = (string) ($user->student_rules_notice_message ?? '');
 
         $newWarning = $request->boolean('student_rules_warning');
         $newMarquee = $request->boolean('student_rules_marquee_enabled');
@@ -324,12 +342,18 @@ class StudentDashboardController extends Controller
             $data['student_rules_marquee_manual'] = false;
         }
 
+        $newAutomationDisabled = $prevAutomationDisabled;
         if (auth()->user()->isAdmin()) {
             $allowMeritAutomation = $request->boolean('student_rules_allow_merit_automation');
             if (! $newWarning && ! $newMarquee && ! $allowMeritAutomation) {
-                $data['student_rules_merit_automation_disabled'] = true;
+                $newAutomationDisabled = true;
             } else {
-                $data['student_rules_merit_automation_disabled'] = ! $allowMeritAutomation;
+                $newAutomationDisabled = ! $allowMeritAutomation;
+            }
+            $data['student_rules_merit_automation_disabled'] = $newAutomationDisabled;
+
+            if ($user->role === 'student') {
+                $data['student_terminated'] = $request->boolean('student_terminated');
             }
         }
 
@@ -355,6 +379,15 @@ class StudentDashboardController extends Controller
 
         $user->update($data);
         $user->refresh();
+
+        $this->logStudentMeritDetailsActivity($actor, $user, [
+            'manual_merits' => [$prevManualMerits, (int) ($user->student_manual_merits ?? 0)],
+            'rules_warning' => [$prevWarning, (bool) ($user->student_rules_warning ?? false)],
+            'final_notice' => [$prevMarquee, (bool) ($user->student_rules_marquee_enabled ?? false)],
+            'merit_automation_disabled' => [$prevAutomationDisabled, (bool) ($user->student_rules_merit_automation_disabled ?? false)],
+            'student_terminated' => [$prevTerminated, (bool) ($user->student_terminated ?? false)],
+            'notice_message' => [$prevNoticeMessage, (string) ($user->student_rules_notice_message ?? '')],
+        ]);
 
         if (! StudentMeritRulesNotice::isMeritAutomationLocked($user)) {
             StudentMeritRulesNotice::syncForStudent($user);
@@ -406,9 +439,80 @@ class StudentDashboardController extends Controller
         if (auth()->user()?->isAdmin()) {
             $payload['can_edit_automation'] = true;
             $payload['allow_merit_automation'] = ! (bool) ($student->student_rules_merit_automation_disabled ?? false);
+            if ($student->role === 'student') {
+                $payload['can_edit_terminated'] = true;
+                $payload['student_terminated'] = (bool) ($student->student_terminated ?? false);
+            }
         }
 
         return $payload;
+    }
+
+    /**
+     * @param  array<string, array{0: mixed, 1: mixed}>  $fieldChanges
+     */
+    private function logStudentMeritDetailsActivity(User $actor, User $target, array $fieldChanges): void
+    {
+        $changeLines = [];
+        $terminatedChanged = false;
+        $terminatedNow = false;
+
+        foreach ($fieldChanges as $field => [$before, $after]) {
+            if ($before === $after) {
+                continue;
+            }
+            switch ($field) {
+                case 'manual_merits':
+                    $changeLines[] = 'Manual merits: '.$before.' → '.$after;
+                    break;
+                case 'rules_warning':
+                    $changeLines[] = $after ? 'Enabled rules violation warning' : 'Disabled rules violation warning';
+                    break;
+                case 'final_notice':
+                    $changeLines[] = $after ? 'Enabled final notice' : 'Disabled final notice';
+                    break;
+                case 'merit_automation_disabled':
+                    $changeLines[] = $after
+                        ? 'Disabled automatic merit-based notices'
+                        : 'Enabled automatic merit-based notices';
+                    break;
+                case 'student_terminated':
+                    $terminatedChanged = true;
+                    $terminatedNow = (bool) $after;
+                    $changeLines[] = $after
+                        ? 'Marked account as terminated (access blocked)'
+                        : 'Cleared terminated status (access restored)';
+                    break;
+                case 'notice_message':
+                    if (trim((string) $after) === '' && trim((string) $before) === '') {
+                        break;
+                    }
+                    $changeLines[] = 'Updated notice message';
+                    break;
+            }
+        }
+
+        if ($changeLines === []) {
+            $changeLines[] = 'Saved student merits and notices (no field changes detected)';
+        }
+
+        $action = 'student_merits_updated';
+        if ($terminatedChanged && count($changeLines) === 1) {
+            $action = $terminatedNow ? 'student_terminated_enabled' : 'student_terminated_disabled';
+        }
+
+        $description = $terminatedChanged && count($changeLines) === 1
+            ? ($terminatedNow ? 'Terminated student account' : 'Restored terminated student account')
+            : 'Updated student merits and notices';
+
+        UserActivity::logActivity($actor, 'action', $action, [
+            'description' => $description.' for '.$target->name,
+            'target_user_id' => $target->id,
+            'target_user_name' => $target->name,
+            'target_user_email' => $target->email,
+            'performed_via' => 'student_management_merit_modal',
+            'changes' => $changeLines,
+        ]);
     }
 
     private function assertCanViewStudentInManagement(User $student): void

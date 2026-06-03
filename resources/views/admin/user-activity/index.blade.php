@@ -120,7 +120,7 @@
                         <tr>
                             <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">User</th>
                             <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Activity</th>
-                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Action</th>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">What they did</th>
                             <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Page</th>
                             <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">IP Address</th>
                             <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Timestamp</th>
@@ -150,8 +150,14 @@
                                         {{ ucfirst(str_replace('_', ' ', $activity->activity_type)) }}
                                     </span>
                                 </td>
-                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                    {{ $activity->action ?? 'N/A' }}
+                                <td class="px-6 py-4 text-sm text-gray-900 max-w-md">
+                                    <p class="font-medium text-gray-900">{{ $activity->displaySummary() }}</p>
+                                    @if($activity->action && $activity->action !== 'page_view')
+                                        <p class="text-xs text-gray-500 mt-0.5">{{ ucfirst(str_replace('_', ' ', $activity->action)) }}</p>
+                                    @endif
+                                    @foreach($activity->displayDetailLines() as $detailLine)
+                                        <p class="text-xs text-gray-600 mt-1">• {{ $detailLine }}</p>
+                                    @endforeach
                                 </td>
                                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                                     @if($activity->page_url)

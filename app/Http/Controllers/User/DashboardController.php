@@ -18,6 +18,7 @@ use App\Models\University;
 use App\Models\User;
 use App\Models\UserActivity;
 use App\Services\StudentOjtPostCompletionService;
+use App\Support\StudentViolationCounter;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
@@ -459,11 +460,33 @@ class DashboardController extends Controller
             })->values();
         }
 
+        $violationBreakdowns = [];
+        foreach ($students as $student) {
+            $violationBreakdowns[$student->id] = StudentViolationCounter::breakdownForUser((int) $student->id);
+        }
+
         return view('user.teacher-students', [
             'students' => $students,
             'schoolName' => $teacherData['schoolName'],
             'search' => $search,
+            'violationBreakdowns' => $violationBreakdowns,
         ]);
+    }
+
+    public function teacherStudentMeritDetails(User $user): JsonResponse
+    {
+        $teacher = auth()->user();
+        abort_unless($teacher && $teacher->role === 'teacher', 403);
+
+        $this->assertTeacherCanViewStudent($teacher, $user);
+
+        $details = StudentViolationCounter::detailsForUser($user->fresh());
+        if (isset($details['student']['edit_url'])) {
+            unset($details['student']['edit_url']);
+        }
+        $details['read_only'] = true;
+
+        return response()->json($details);
     }
 
     public function teacherPendingApplications()
@@ -715,6 +738,17 @@ class DashboardController extends Controller
         }
 
         return [$paths, $paths[0] ?? null];
+    }
+
+    private function assertTeacherCanViewStudent(User $teacher, User $student): void
+    {
+        if ($student->role !== 'student') {
+            abort(404);
+        }
+
+        if (! $teacher->university_id || (int) $student->university_id !== (int) $teacher->university_id) {
+            abort(403, 'Access denied.');
+        }
     }
 
     private function getTeacherSchoolData(User $teacher): array

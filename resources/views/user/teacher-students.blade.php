@@ -3,6 +3,9 @@
 @section('page-title', 'My Students')
 
 @section('content')
+@php
+    $violationBreakdowns = $violationBreakdowns ?? [];
+@endphp
 <div class="h-full flex flex-col min-h-0 min-w-0">
     <div class="bg-gradient-to-r from-indigo-500 to-indigo-600 shadow-sm p-3 sm:p-4 flex-shrink-0">
         <h1 class="text-lg sm:text-xl lg:text-2xl font-bold text-white break-words">My Students</h1>
@@ -58,6 +61,14 @@
                         $logged = (float) ($student->logged_hours ?? 0);
                         $remaining = (float) ($student->remaining_hours ?? max($required - $logged, 0));
                         $approvedAbsentCount = (int) ($student->approved_absent_days ?? 0);
+                        $meritBreakdown = $violationBreakdowns[$student->id] ?? ['undertime' => 0, 'excess_absence' => 0, 'manual' => 0, 'total' => 0];
+                        $meritsCount = (int) ($meritBreakdown['total'] ?? 0);
+                        $meritsAtFinal = $meritsCount >= 3;
+                        $meritBtnClass = $meritsAtFinal
+                            ? 'font-semibold text-red-700 hover:bg-red-50'
+                            : ($meritsCount > 0 ? 'font-semibold text-amber-700 hover:bg-amber-50' : 'text-gray-500 hover:bg-gray-50');
+                        $meritRingClass = $meritsAtFinal ? 'focus:ring-red-500' : 'focus:ring-amber-500';
+                        $meritSubClass = $meritsAtFinal ? 'text-red-800/90' : 'text-amber-800/90';
                     @endphp
                     <div class="p-4 space-y-2">
                         <div>
@@ -89,6 +100,22 @@
                                     @endif
                                 </dd>
                             </div>
+                            <div>
+                                <dt class="text-gray-500">Merits</dt>
+                                <dd>
+                                    <button type="button"
+                                            class="merit-details-trigger inline-flex flex-col items-start rounded-md px-1 py-0.5 -mx-1 transition-colors focus:outline-none focus:ring-2 {{ $meritRingClass }} {{ $meritBtnClass }}"
+                                            data-merits-url="{{ route('user.teacher.students.merits', $student) }}"
+                                            title="View merit details (read only)">
+                                        <span class="tabular-nums text-sm">{{ number_format($meritsCount) }}</span>
+                                        @if($meritsCount > 0)
+                                            <span class="text-[10px] font-normal leading-tight {{ $meritSubClass }} tabular-nums">
+                                                {{ (int) $meritBreakdown['undertime'] }}+{{ (int) $meritBreakdown['excess_absence'] }}+{{ (int) $meritBreakdown['manual'] }}
+                                            </span>
+                                        @endif
+                                    </button>
+                                </dd>
+                            </div>
                             <div class="col-span-2">
                                 <dt class="text-gray-500">Approved absent days</dt>
                                 <dd class="{{ $approvedAbsentCount > 0 ? 'text-amber-700 font-semibold' : 'text-gray-600' }}">
@@ -108,6 +135,7 @@
                             <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total Time from DTR</th>
                             <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Remaining Time Needed</th>
                             <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Estimated End Date</th>
+                            <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider" title="Total merits. Click for breakdown (view only).">Merits</th>
                             <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Approved Absent Days</th>
                         </tr>
                     </thead>
@@ -117,6 +145,17 @@
                                 $required = (float) ($student->required_training_hours ?? 0);
                                 $logged = (float) ($student->logged_hours ?? 0);
                                 $remaining = (float) ($student->remaining_hours ?? max($required - $logged, 0));
+                                $meritBreakdown = $violationBreakdowns[$student->id] ?? ['undertime' => 0, 'excess_absence' => 0, 'manual' => 0, 'total' => 0];
+                                $meritsCount = (int) ($meritBreakdown['total'] ?? 0);
+                                $meritTitle = $meritsCount > 0
+                                    ? 'Total '.$meritsCount.' = under-time '.(int) ($meritBreakdown['undertime'] ?? 0).' + excess '.(int) ($meritBreakdown['excess_absence'] ?? 0).' + manual '.(int) ($meritBreakdown['manual'] ?? 0)
+                                    : 'No merits on record';
+                                $meritsAtFinal = $meritsCount >= 3;
+                                $meritBtnClass = $meritsAtFinal
+                                    ? 'font-semibold text-red-700 hover:bg-red-50 hover:text-red-900'
+                                    : ($meritsCount > 0 ? 'font-semibold text-amber-700 hover:bg-amber-50 hover:text-amber-900' : 'text-gray-500 hover:bg-gray-50 hover:text-gray-700');
+                                $meritRingClass = $meritsAtFinal ? 'focus:ring-red-500' : 'focus:ring-amber-500';
+                                $meritSubClass = $meritsAtFinal ? 'text-red-800/90' : 'text-amber-800/90';
                             @endphp
                             <tr>
                                 <td class="px-4 py-3">
@@ -143,6 +182,19 @@
                                         <span class="text-gray-400">N/A</span>
                                     @endif
                                 </td>
+                                <td class="px-4 py-3 text-center text-sm">
+                                    <button type="button"
+                                            class="merit-details-trigger inline-flex flex-col items-center rounded-md px-2 py-1 -mx-2 transition-colors focus:outline-none focus:ring-2 {{ $meritRingClass }} focus:ring-offset-1 {{ $meritBtnClass }}"
+                                            data-merits-url="{{ route('user.teacher.students.merits', $student) }}"
+                                            title="{{ $meritTitle }} — click to view details (read only)">
+                                        <span class="tabular-nums">{{ number_format($meritsCount) }}</span>
+                                        @if($meritsCount > 0)
+                                            <span class="block text-[10px] font-normal leading-tight {{ $meritSubClass }} mt-0.5 tabular-nums">
+                                                {{ (int) $meritBreakdown['undertime'] }}+{{ (int) $meritBreakdown['excess_absence'] }}+{{ (int) $meritBreakdown['manual'] }}
+                                            </span>
+                                        @endif
+                                    </button>
+                                </td>
                                 <td class="px-4 py-3 text-sm text-gray-700">
                                     @php
                                         $approvedAbsentCount = (int) ($student->approved_absent_days ?? 0);
@@ -162,4 +214,6 @@
         @endif
     </div>
 </div>
+
+@include('partials.merit-details-readonly')
 @endsection
