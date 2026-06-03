@@ -16,6 +16,9 @@ use Illuminate\Support\Str;
 
 class ApiMonitoringController extends Controller
 {
+    /** Rolling window for uptime sparklines (daily buckets). */
+    private const UPTIME_MONITOR_DAYS = 30;
+
     public function index()
     {
         $scope = request()->query('scope', 'all');
@@ -124,27 +127,30 @@ class ApiMonitoringController extends Controller
     private function buildApiRows(string $scope = 'api_like'): array
     {
         $metrics = ApiEndpointMetric::query()->get()->keyBy('route_key');
-        $hourlyBucketsByRoute = ApiEndpointMetricPoint::query()
-            ->where('recorded_at', '>=', now()->subDay())
+        $uptimeSince = now()->subDays(self::UPTIME_MONITOR_DAYS - 1)->startOfDay();
+        $dayBucketSql = $this->dailyBucketSqlExpression();
+
+        $dailyBucketsByRoute = ApiEndpointMetricPoint::query()
+            ->where('recorded_at', '>=', $uptimeSince)
             ->select([
                 'route_key',
-                DB::raw("DATE_TRUNC('hour', recorded_at) as hour_bucket"),
+                DB::raw("{$dayBucketSql} as day_bucket"),
                 DB::raw('COUNT(*) as total_count'),
                 DB::raw('SUM(CASE WHEN is_success THEN 1 ELSE 0 END) as success_count'),
             ])
-            ->groupBy('route_key', DB::raw("DATE_TRUNC('hour', recorded_at)"))
+            ->groupBy('route_key', DB::raw($dayBucketSql))
             ->get()
             ->groupBy('route_key')
             ->map(function ($rows) {
                 $bucket = [];
                 foreach ($rows as $row) {
-                    $hourValue = $row->hour_bucket ?? null;
-                    $hourKey = $hourValue ? \Illuminate\Support\Carbon::parse($hourValue)->format('Y-m-d H:00:00') : '';
-                    if ($hourKey === '') {
+                    $dayValue = $row->day_bucket ?? null;
+                    $dayKey = $dayValue ? \Illuminate\Support\Carbon::parse($dayValue)->startOfDay()->format('Y-m-d 00:00:00') : '';
+                    if ($dayKey === '') {
                         continue;
                     }
 
-                    $bucket[$hourKey] = [
+                    $bucket[$dayKey] = [
                         'total' => (int) ($row->total_count ?? 0),
                         'success' => (int) ($row->success_count ?? 0),
                     ];
@@ -153,8 +159,8 @@ class ApiMonitoringController extends Controller
                 return $bucket;
             });
 
-        $hourKeys = collect(range(23, 0))->map(function (int $hoursAgo) {
-            return now()->subHours($hoursAgo)->format('Y-m-d H:00:00');
+        $dayKeys = collect(range(self::UPTIME_MONITOR_DAYS - 1, 0))->map(function (int $daysAgo) {
+            return now()->subDays($daysAgo)->startOfDay()->format('Y-m-d 00:00:00');
         })->values()->all();
         $rows = [];
         foreach (Route::getRoutes() as $route) {
@@ -195,8 +201,8 @@ class ApiMonitoringController extends Controller
                 'avg_response_time_ms' => round((float) ($metric->avg_response_time_ms ?? 0), 2),
                 'last_response_at' => optional($metric?->last_response_at)->toDateTimeString(),
                 'last_failure_at' => optional($metric?->last_failure_at)->toDateTimeString(),
-                'uptime_points' => $this->buildHourlyUptimePoints($hourlyBucketsByRoute->get($routeKey, []), $hourKeys),
-                'uptime_stats' => $this->buildHourlyUptimeStats($hourlyBucketsByRoute->get($routeKey, []), $hourKeys),
+                'uptime_points' => $this->buildDailyUptimePoints($dailyBucketsByRoute->get($routeKey, []), $dayKeys),
+                'uptime_stats' => $this->buildDailyUptimeStats($dailyBucketsByRoute->get($routeKey, []), $dayKeys),
             ];
         }
 
@@ -291,29 +297,41 @@ class ApiMonitoringController extends Controller
     }
 
     /**
-     * @param  array<string, array{total: int, success: int}>  $hourly
-     * @param  array<int, string>  $hourKeys
+     * SQL expression to bucket recorded_at by calendar day (driver-specific).
+     */
+    private function dailyBucketSqlExpression(): string
+    {
+        return match (DB::connection()->getDriverName()) {
+            'pgsql' => "DATE_TRUNC('day', recorded_at)",
+            'sqlite' => 'date(recorded_at)',
+            default => 'DATE(recorded_at)',
+        };
+    }
+
+    /**
+     * @param  array<string, array{total: int, success: int}>  $daily
+     * @param  array<int, string>  $dayKeys
      * @return array<int, float|null>
      */
-    private function buildHourlyUptimePoints(array $hourly, array $hourKeys): array
+    private function buildDailyUptimePoints(array $daily, array $dayKeys): array
     {
-        return collect($hourKeys)->map(function (string $hourKey) use ($hourly) {
-            if (! isset($hourly[$hourKey]) || $hourly[$hourKey]['total'] === 0) {
+        return collect($dayKeys)->map(function (string $dayKey) use ($daily) {
+            if (! isset($daily[$dayKey]) || $daily[$dayKey]['total'] === 0) {
                 return null;
             }
 
-            return round(($hourly[$hourKey]['success'] / $hourly[$hourKey]['total']) * 100, 2);
+            return round(($daily[$dayKey]['success'] / $daily[$dayKey]['total']) * 100, 2);
         })->all();
     }
 
     /**
-     * @param  array<string, array{total: int, success: int}>  $hourly
-     * @param  array<int, string>  $hourKeys
+     * @param  array<string, array{total: int, success: int}>  $daily
+     * @param  array<int, string>  $dayKeys
      * @return array<string, float|int|null>
      */
-    private function buildHourlyUptimeStats(array $hourly, array $hourKeys): array
+    private function buildDailyUptimeStats(array $daily, array $dayKeys): array
     {
-        $uptimePoints = $this->buildHourlyUptimePoints($hourly, $hourKeys);
+        $uptimePoints = $this->buildDailyUptimePoints($daily, $dayKeys);
         $valid = collect($uptimePoints)->filter(fn ($value) => $value !== null)->values();
 
         if ($valid->isEmpty()) {
@@ -321,7 +339,7 @@ class ApiMonitoringController extends Controller
                 'avg' => null,
                 'min' => null,
                 'max' => null,
-                'hours_with_traffic' => 0,
+                'days_with_traffic' => 0,
             ];
         }
 
@@ -329,7 +347,7 @@ class ApiMonitoringController extends Controller
             'avg' => round((float) $valid->avg(), 2),
             'min' => round((float) $valid->min(), 2),
             'max' => round((float) $valid->max(), 2),
-            'hours_with_traffic' => $valid->count(),
+            'days_with_traffic' => $valid->count(),
         ];
     }
 }

@@ -183,7 +183,7 @@
                             <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-500">Requests</th>
                             <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-500">Failures</th>
                             <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-500">Uptime</th>
-                            <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">Uptime Monitor (24h)</th>
+                            <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">Uptime Monitor (30 days)</th>
                             <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-500">Avg Response (ms)</th>
                             <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">Last Status</th>
                         </tr>
