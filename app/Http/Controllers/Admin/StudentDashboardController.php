@@ -3,10 +3,15 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Mail\StudentRulesNoticeMail;
 use App\Models\LeaveRequest;
 use App\Support\AdminScopedDashboardCharts;
+use App\Support\StudentMeritNoticeSettings;
 use App\Support\StudentMeritRulesNotice;
 use App\Support\StudentViolationCounter;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
+use Illuminate\Validation\Rule;
 use App\Models\LeaveRequestLog;
 use App\Models\User;
 use App\Models\Dtr;
@@ -256,7 +261,154 @@ class StudentDashboardController extends Controller
             unset($details['student']['edit_url']);
         }
 
+        $details['editable'] = $this->meritDetailsEditablePayload($user);
+        $details['update_url'] = route('admin.student-management.students.merits.update', $user);
+
         return response()->json($details);
+    }
+
+    public function updateStudentMeritDetails(Request $request, User $user)
+    {
+        $this->assertCanViewStudentInManagement($user);
+
+        $requiresNoticeMessage = $request->boolean('student_rules_warning')
+            || $request->boolean('student_rules_marquee_enabled');
+
+        $request->validate([
+            'student_manual_merits' => 'nullable|integer|min:0|max:9999',
+            'student_rules_warning' => 'nullable|boolean',
+            'student_rules_marquee_enabled' => 'nullable|boolean',
+            'student_rules_notice_message' => [
+                'nullable',
+                'string',
+                'max:5000',
+                Rule::requiredIf($requiresNoticeMessage),
+            ],
+            'student_rules_allow_merit_automation' => 'nullable|boolean',
+        ]);
+
+        if ($request->boolean('student_rules_warning') && $request->boolean('student_rules_marquee_enabled')) {
+            return response()->json([
+                'message' => 'Rules violation warning and final notice cannot both be enabled.',
+                'errors' => [
+                    'student_rules_notices' => ['Choose only one notice type.'],
+                ],
+            ], 422);
+        }
+
+        $user->refresh();
+        $prevWarning = (bool) ($user->student_rules_warning ?? false);
+        $prevMarquee = (bool) ($user->student_rules_marquee_enabled ?? false);
+
+        $newWarning = $request->boolean('student_rules_warning');
+        $newMarquee = $request->boolean('student_rules_marquee_enabled');
+
+        $data = [
+            'student_rules_warning' => $newWarning,
+            'student_rules_marquee_enabled' => $newMarquee,
+        ];
+
+        if (auth()->user()->isAdmin()) {
+            $data['student_manual_merits'] = max(0, (int) $request->input('student_manual_merits', 0));
+        }
+
+        if ($newWarning && ! $prevWarning) {
+            $data['student_rules_warning_manual'] = true;
+        } elseif (! $newWarning) {
+            $data['student_rules_warning_manual'] = false;
+        }
+
+        if ($newMarquee && ! $prevMarquee) {
+            $data['student_rules_marquee_manual'] = true;
+        } elseif (! $newMarquee) {
+            $data['student_rules_marquee_manual'] = false;
+        }
+
+        if (auth()->user()->isAdmin()) {
+            $allowMeritAutomation = $request->boolean('student_rules_allow_merit_automation');
+            if (! $newWarning && ! $newMarquee && ! $allowMeritAutomation) {
+                $data['student_rules_merit_automation_disabled'] = true;
+            } else {
+                $data['student_rules_merit_automation_disabled'] = ! $allowMeritAutomation;
+            }
+        }
+
+        $noticeMsg = trim((string) ($request->input('student_rules_notice_message') ?? ''));
+        if ($requiresNoticeMessage && $noticeMsg === '') {
+            $breakdown = StudentViolationCounter::breakdownForUser((int) $user->id);
+            $total = (int) ($breakdown['total'] ?? 0);
+            $thresholds = StudentMeritNoticeSettings::thresholds();
+            if ($newMarquee) {
+                $noticeMsg = StudentMeritRulesNotice::buildFinalNoticeMessage(
+                    $user,
+                    $breakdown,
+                    $total,
+                    $thresholds['final']
+                );
+            } else {
+                $noticeMsg = StudentMeritRulesNotice::buildViolationNoticeMessage($user, $breakdown, $total);
+            }
+        }
+        $data['student_rules_notice_message'] = ($newWarning || $newMarquee) && $noticeMsg !== ''
+            ? $noticeMsg
+            : null;
+
+        $user->update($data);
+        $user->refresh();
+
+        if (! StudentMeritRulesNotice::isMeritAutomationLocked($user)) {
+            StudentMeritRulesNotice::syncForStudent($user);
+            $user->refresh();
+        }
+
+        if (filter_var($user->email, FILTER_VALIDATE_EMAIL)) {
+            $notifyViolation = $newWarning && ! $prevWarning;
+            $notifyFinal = $newMarquee && ! $prevMarquee;
+            if ($notifyViolation || $notifyFinal) {
+                try {
+                    Mail::to($user->email)->send(new StudentRulesNoticeMail(
+                        $user,
+                        $notifyFinal ? 'final' : 'violation',
+                        $user->student_rules_notice_message
+                    ));
+                } catch (\Throwable $e) {
+                    Log::warning('Student rules notice email failed: '.$e->getMessage());
+                }
+            }
+        }
+
+        $details = StudentViolationCounter::detailsForUser($user);
+        if (! auth()->user()?->isAdmin()) {
+            unset($details['student']['edit_url']);
+        }
+        $details['editable'] = $this->meritDetailsEditablePayload($user);
+        $details['update_url'] = route('admin.student-management.students.merits.update', $user);
+
+        return response()->json([
+            'message' => 'Student merits and notices saved.',
+            'details' => $details,
+        ]);
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function meritDetailsEditablePayload(User $student): array
+    {
+        $payload = [
+            'can_edit_manual' => (bool) auth()->user()?->isAdmin(),
+            'manual_merits' => (int) ($student->student_manual_merits ?? 0),
+            'rules_warning' => (bool) ($student->student_rules_warning ?? false),
+            'final_notice' => (bool) ($student->student_rules_marquee_enabled ?? false),
+            'notice_message' => (string) ($student->student_rules_notice_message ?? ''),
+        ];
+
+        if (auth()->user()?->isAdmin()) {
+            $payload['can_edit_automation'] = true;
+            $payload['allow_merit_automation'] = ! (bool) ($student->student_rules_merit_automation_disabled ?? false);
+        }
+
+        return $payload;
     }
 
     private function assertCanViewStudentInManagement(User $student): void
