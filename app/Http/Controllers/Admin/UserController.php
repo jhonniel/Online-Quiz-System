@@ -43,6 +43,7 @@ class UserController extends Controller
 
         $schoolId = $request->input('school');
         $roleFilter = $isTeachersManagement ? 'teacher' : trim((string) $request->input('role', ''));
+        $departmentFilter = $isTeachersManagement ? '' : trim((string) $request->input('department', ''));
         $schools = University::active()->orderBy('name')->get();
         $departments = $isTeachersManagement
             ? collect()
@@ -60,6 +61,14 @@ class UserController extends Controller
 
         if ($roleFilter !== '') {
             $query->where('role', $roleFilter);
+        }
+
+        if ($roleFilter === 'employee' && $departmentFilter !== '') {
+            if ($departmentFilter === 'unassigned') {
+                $query->whereNull('department_id');
+            } else {
+                $query->where('department_id', (int) $departmentFilter);
+            }
         }
 
         if ($search !== '') {
@@ -85,7 +94,7 @@ class UserController extends Controller
 
         $users = $query->paginate($perPage)->appends($request->query());
 
-        return view('admin.users.index', compact('users', 'search', 'perPage', 'schools', 'schoolId', 'roleFilter', 'departments', 'isTeachersManagement'));
+        return view('admin.users.index', compact('users', 'search', 'perPage', 'schools', 'schoolId', 'roleFilter', 'departmentFilter', 'departments', 'isTeachersManagement'));
     }
 
     public function api(Request $request)

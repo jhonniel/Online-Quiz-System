@@ -224,15 +224,21 @@
                             @if(isset($approvedLeaves) && $approvedLeaves->isNotEmpty())
                             <div class="mb-6 space-y-2">
                                 @foreach($approvedLeaves as $leave)
-                                <div class="flex items-center gap-3 p-3 rounded-lg bg-amber-50 border border-amber-200 text-sm whitespace-nowrap">
+                                <div class="flex items-start gap-3 p-3 rounded-lg bg-amber-50 border border-amber-200 text-sm">
                                     <div class="w-10 h-10 rounded-lg bg-amber-500 flex items-center justify-center flex-shrink-0">
                                         <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
                                         </svg>
                                     </div>
-                                    <span class="font-semibold text-gray-900">On {{ $leave->type_label }}</span>
-                                    <span class="text-gray-600"> — {{ $leave->days }} {{ $leave->days === 1 ? 'day' : 'days' }}</span>
-                                    <span class="text-gray-500"> ({{ $leave->start_date->format('M j, Y') }}@if($leave->end_date && $leave->end_date->ne($leave->start_date)) – {{ $leave->end_date->format('M j, Y') }}@endif)</span>
+                                    <div class="min-w-0 flex-1">
+                                        <p class="font-semibold text-gray-900 leading-snug">On {{ $leave->type_label }}</p>
+                                        <p class="mt-0.5 text-gray-600 leading-snug">
+                                            <span>{{ $leave->days }} {{ $leave->days === 1 ? 'day' : 'days' }}</span>
+                                            <span class="text-gray-500">
+                                                ({{ $leave->start_date->format('M j, Y') }}@if($leave->end_date && $leave->end_date->ne($leave->start_date)) – {{ $leave->end_date->format('M j, Y') }}@endif)
+                                            </span>
+                                        </p>
+                                    </div>
                                 </div>
                                 @endforeach
                             </div>

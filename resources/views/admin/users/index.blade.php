@@ -104,7 +104,7 @@
 
     <!-- Search and Filter Bar -->
     <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-4 flex-shrink-0">
-        <div class="flex flex-col lg:flex-row lg:items-center gap-3 sm:gap-4">
+        <div class="flex flex-col lg:flex-row lg:flex-wrap lg:items-center gap-3 sm:gap-4">
             <form id="users-search-form" method="GET" action="{{ $usersIndexUrl }}" class="flex-1 min-w-0">
                 @if(request()->has('per_page'))
                     <input type="hidden" name="per_page" value="{{ request('per_page') }}">
@@ -114,6 +114,9 @@
                 @endif
                 @if(isset($roleFilter) && $roleFilter !== '')
                     <input type="hidden" name="role" value="{{ $roleFilter }}">
+                @endif
+                @if(($roleFilter ?? '') === 'employee' && !empty($departmentFilter))
+                    <input type="hidden" name="department" value="{{ $departmentFilter }}">
                 @endif
                 <div class="relative">
                     <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
@@ -157,6 +160,9 @@
                 @if(isset($roleFilter) && $roleFilter !== '')
                     <input type="hidden" name="role" value="{{ $roleFilter }}">
                 @endif
+                @if(($roleFilter ?? '') === 'employee' && !empty($departmentFilter))
+                    <input type="hidden" name="department" value="{{ $departmentFilter }}">
+                @endif
                 <div class="flex items-center gap-2">
                     <label for="school-filter" class="text-sm font-medium text-gray-700 whitespace-nowrap">School</label>
                     <select name="school" id="school-filter" class="rounded-lg border border-gray-300 bg-white py-2 pl-3 pr-8 text-sm text-gray-900 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500 min-w-[140px]">
@@ -193,6 +199,30 @@
                         </select>
                     </div>
                 </form>
+                @if(($roleFilter ?? '') === 'employee' && ($departments ?? collect())->isNotEmpty())
+                <form method="GET" action="{{ $usersIndexUrl }}" class="flex-shrink-0" id="department-filter-form">
+                    @if(request()->has('per_page'))
+                        <input type="hidden" name="per_page" value="{{ request('per_page') }}">
+                    @endif
+                    @if(request('search'))
+                        <input type="hidden" name="search" value="{{ request('search') }}">
+                    @endif
+                    @if(isset($schoolId) && $schoolId !== '' && $schoolId !== null)
+                        <input type="hidden" name="school" value="{{ $schoolId }}">
+                    @endif
+                    <input type="hidden" name="role" value="employee">
+                    <div class="flex items-center gap-2">
+                        <label for="department-filter" class="text-sm font-medium text-gray-700 whitespace-nowrap">Department</label>
+                        <select name="department" id="department-filter" class="rounded-lg border border-gray-300 bg-white py-2 pl-3 pr-8 text-sm text-gray-900 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500 min-w-[160px] max-w-[220px]">
+                            <option value="">All departments</option>
+                            <option value="unassigned" {{ ($departmentFilter ?? '') === 'unassigned' ? 'selected' : '' }}>Unassigned</option>
+                            @foreach($departments as $department)
+                                <option value="{{ $department->id }}" {{ (isset($departmentFilter) && (string) $departmentFilter === (string) $department->id) ? 'selected' : '' }}>{{ $department->name }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                </form>
+                @endif
             @endif
             <div class="flex items-center gap-2 flex-shrink-0 lg:ml-auto">
                 <button id="send-credentials-btn" type="button" disabled
@@ -653,6 +683,15 @@
         if (roleFilter && roleFilterForm) {
             roleFilter.addEventListener('change', function() {
                 roleFilterForm.submit();
+            });
+        }
+
+        // Department filter (employees only): auto-submit on change
+        const departmentFilter = document.getElementById('department-filter');
+        const departmentFilterForm = document.getElementById('department-filter-form');
+        if (departmentFilter && departmentFilterForm) {
+            departmentFilter.addEventListener('change', function() {
+                departmentFilterForm.submit();
             });
         }
 
