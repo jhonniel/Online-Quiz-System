@@ -10,13 +10,16 @@ use App\Support\EmployeeFileTemplateRenderer;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
 
 class FileRequestController extends Controller
 {
+    private const SPACES_DISK = 'digitalocean';
+
     private const MAX_UPLOAD_KB = 20480;
 
-    private const ALLOWED_MIMES = [
+    private const ALLOWED_EXTENSIONS = [
         'pdf',
         'doc',
         'docx',
@@ -41,18 +44,38 @@ class FileRequestController extends Controller
             ->orderBy('name')
             ->get(['id', 'name', 'email', 'department_id', 'role']);
 
-        $recentRequests = EmployeeFileRequest::query()
-            ->with(['template:id,name,category', 'employee:id,name,email', 'generator:id,name'])
+        $scopedEmployeeIds = $this->scopedEmployeeQuery()->pluck('id');
+
+        $pendingRequests = EmployeeFileRequest::query()
+            ->pending()
+            ->with(['employee:id,name,email,department_id', 'employee.department:id,name'])
+            ->whereIn('user_id', $scopedEmployeeIds)
+            ->latest()
+            ->get();
+
+        $recordsQuery = EmployeeFileRequest::query()
             ->whereHas('employee', function ($query) {
                 $this->applyEmployeeScope($query);
-            })
+            });
+
+        $recentRequests = (clone $recordsQuery)
+            ->with(['template:id,name,category', 'employee:id,name,email,department_id', 'employee.department:id,name', 'generator:id,name'])
             ->latest()
             ->paginate(15)
             ->appends($request->query());
 
+        $stats = [
+            'pending' => $pendingRequests->count(),
+            'records_total' => (clone $recordsQuery)->count(),
+            'fulfilled' => (clone $recordsQuery)->where('status', EmployeeFileRequest::STATUS_FULFILLED)->count(),
+            'rejected' => (clone $recordsQuery)->where('status', EmployeeFileRequest::STATUS_REJECTED)->count(),
+        ];
+
         return view('admin.employee-management.file-request.index', compact(
             'employees',
-            'recentRequests'
+            'pendingRequests',
+            'recentRequests',
+            'stats'
         ));
     }
 
@@ -60,18 +83,11 @@ class FileRequestController extends Controller
     {
         $this->authorizeAccess();
 
-        $validated = $request->validate([
+        $validated = $request->validate(array_merge([
             'employee_id' => ['required', 'exists:users,id'],
             'title' => ['nullable', 'string', 'max:255'],
-            'file' => [
-                'required',
-                'file',
-                'max:'.self::MAX_UPLOAD_KB,
-                'mimes:'.implode(',', self::ALLOWED_MIMES),
-            ],
-        ], [
+        ], $this->uploadFileRules()), [
             'file.required' => 'Please choose a file to send.',
-            'file.mimes' => 'Allowed file types: PDF, Word, Excel, and images.',
         ]);
 
         $employee = $this->scopedEmployeeQuery()->findOrFail($validated['employee_id']);
@@ -84,33 +100,129 @@ class FileRequestController extends Controller
             'user_id' => $employee->id,
             'generated_by' => auth()->id(),
             'title' => $title,
+            'status' => EmployeeFileRequest::STATUS_FULFILLED,
+            'fulfilled_at' => now(),
             'original_filename' => $originalName,
             'mime_type' => $uploaded->getMimeType() ?: $this->guessMimeType($originalName),
             'field_values' => null,
             'rendered_html' => null,
         ]);
 
-        $disk = 'digitalocean';
-        $root = trim((string) env('DIGITALOCEAN_SPACES_ROOT_PATH', ''), '/');
-        $dir = $root ? $root.'/employee-file-requests' : 'employee-file-requests';
-        $storedName = Str::uuid()->toString().'.'.$uploaded->getClientOriginalExtension();
-        $path = $dir.'/'.$fileRequest->id.'/'.$storedName;
+        if (! $this->isSpacesConfigured()) {
+            return back()
+                ->withInput()
+                ->with('error', $this->spacesNotConfiguredMessage());
+        }
 
         try {
-            Storage::disk($disk)->put($path, file_get_contents($uploaded->getRealPath()));
-            $fileRequest->update(['pdf_path' => $path]);
+            $this->attachUploadedFile($fileRequest, $uploaded);
         } catch (\Throwable $e) {
             $fileRequest->delete();
             report($e);
 
             return back()
                 ->withInput()
-                ->with('error', 'Could not upload the file. Please try again.');
+                ->with('error', 'Could not upload the file to DigitalOcean Spaces. Please try again.');
         }
 
         return redirect()
             ->route('admin.file-request.index')
             ->with('success', 'File sent to '.$employee->name.'.');
+    }
+
+    public function fulfill(Request $request, EmployeeFileRequest $fileRequest)
+    {
+        $this->authorizeAccess();
+
+        $fileRequest->loadMissing('employee');
+        if (! $fileRequest->isPending() || ! $this->canAccessEmployee($fileRequest->employee)) {
+            abort(404);
+        }
+
+        if (! $request->hasFile('file') || ! $request->file('file')->isValid()) {
+            return redirect()
+                ->to(route('admin.file-request.index').'#request-'.$fileRequest->id)
+                ->withErrors(['file' => 'Please choose a valid file to upload. If the file is large, check server upload limits (post_max_size / upload_max_filesize).'])
+                ->withInput();
+        }
+
+        $validator = Validator::make(
+            $request->all(),
+            array_merge(
+                $this->uploadFileRules(),
+                ['admin_notes' => ['nullable', 'string', 'max:2000']]
+            ),
+            ['file.required' => 'Please choose a file to send to the employee.']
+        );
+
+        if ($validator->fails()) {
+            return redirect()
+                ->to(route('admin.file-request.index').'#request-'.$fileRequest->id)
+                ->withErrors($validator)
+                ->withInput();
+        }
+
+        $validated = $validator->validated();
+
+        if (! $this->isSpacesConfigured()) {
+            return redirect()
+                ->to(route('admin.file-request.index').'#request-'.$fileRequest->id)
+                ->with('error', $this->spacesNotConfiguredMessage())
+                ->withInput();
+        }
+
+        $uploaded = $request->file('file');
+        $originalName = $uploaded->getClientOriginalName();
+
+        try {
+            $this->attachUploadedFile($fileRequest, $uploaded);
+        } catch (\Throwable $e) {
+            report($e);
+
+            return redirect()
+                ->to(route('admin.file-request.index').'#request-'.$fileRequest->id)
+                ->with('error', 'Could not upload the file to DigitalOcean Spaces. Please try again.')
+                ->withInput();
+        }
+
+        $fileRequest->update([
+            'generated_by' => auth()->id(),
+            'status' => EmployeeFileRequest::STATUS_FULFILLED,
+            'fulfilled_at' => now(),
+            'original_filename' => $originalName,
+            'mime_type' => $uploaded->getMimeType() ?: $this->guessMimeType($originalName),
+            'admin_notes' => trim((string) ($validated['admin_notes'] ?? '')) ?: $fileRequest->admin_notes,
+        ]);
+
+        return redirect()
+            ->route('admin.file-request.index')
+            ->with('success', 'Request fulfilled — file sent to '.$fileRequest->employee->name.'.');
+    }
+
+    public function reject(Request $request, EmployeeFileRequest $fileRequest)
+    {
+        $this->authorizeAccess();
+
+        $fileRequest->loadMissing('employee');
+        if (! $fileRequest->isPending() || ! $this->canAccessEmployee($fileRequest->employee)) {
+            abort(404);
+        }
+
+        $validated = $request->validate([
+            'admin_notes' => ['required', 'string', 'max:2000'],
+        ], [
+            'admin_notes.required' => 'Please provide a reason or note for the employee.',
+        ]);
+
+        $fileRequest->update([
+            'status' => EmployeeFileRequest::STATUS_REJECTED,
+            'generated_by' => auth()->id(),
+            'admin_notes' => trim($validated['admin_notes']),
+        ]);
+
+        return redirect()
+            ->route('admin.file-request.index')
+            ->with('success', 'Request declined. The employee will see your note.');
     }
 
     public function view(EmployeeFileRequest $fileRequest)
@@ -147,7 +259,12 @@ class FileRequestController extends Controller
         }
 
         if ($fileRequest->pdf_path) {
-            Storage::disk('digitalocean')->delete($fileRequest->pdf_path);
+            $disk = $this->resolveStorageDiskForPath($fileRequest) ?? $fileRequest->storage_disk ?? 'digitalocean';
+            try {
+                Storage::disk($disk)->delete($fileRequest->pdf_path);
+            } catch (\Throwable $e) {
+                report($e);
+            }
         }
 
         $fileRequest->delete();
@@ -174,7 +291,10 @@ class FileRequestController extends Controller
             : null;
 
         if ($allowedDepartmentIds !== null) {
-            $query->whereIn('department_id', $allowedDepartmentIds);
+            $query->where(function ($q) use ($allowedDepartmentIds) {
+                $q->whereIn('department_id', $allowedDepartmentIds)
+                    ->orWhereNull('department_id');
+            });
         }
 
         return $query;
@@ -184,7 +304,10 @@ class FileRequestController extends Controller
     {
         $allowedDepartmentIds = auth()->user()->getAllowedDepartmentIds();
         if ($allowedDepartmentIds !== null) {
-            $query->whereIn('department_id', $allowedDepartmentIds);
+            $query->where(function ($q) use ($allowedDepartmentIds) {
+                $q->whereIn('department_id', $allowedDepartmentIds)
+                    ->orWhereNull('department_id');
+            });
         }
     }
 
@@ -196,6 +319,10 @@ class FileRequestController extends Controller
 
         $allowedDepartmentIds = auth()->user()->getAllowedDepartmentIds();
         if ($allowedDepartmentIds === null) {
+            return true;
+        }
+
+        if ($employee->department_id === null) {
             return true;
         }
 
@@ -213,13 +340,17 @@ class FileRequestController extends Controller
 
     private function hasStoredFile(EmployeeFileRequest $fileRequest): bool
     {
-        return $fileRequest->pdf_path
-            && Storage::disk('digitalocean')->exists($fileRequest->pdf_path);
+        return $this->resolveStorageDiskForPath($fileRequest) !== null;
     }
 
     private function respondWithStoredFile(EmployeeFileRequest $fileRequest, bool $inline): \Symfony\Component\HttpFoundation\Response
     {
-        $disk = Storage::disk('digitalocean');
+        $diskName = $this->resolveStorageDiskForPath($fileRequest);
+        if ($diskName === null) {
+            abort(404, 'File not found.');
+        }
+
+        $disk = Storage::disk($diskName);
         $filename = $fileRequest->original_filename ?: basename($fileRequest->pdf_path);
         $mime = $fileRequest->mime_type
             ?: ($disk->mimeType($fileRequest->pdf_path) ?: null)
@@ -277,6 +408,102 @@ class FileRequestController extends Controller
             report($e);
             abort(500, 'Could not open this file. Try Download instead, or upload a new copy.');
         }
+    }
+
+    private function attachUploadedFile(EmployeeFileRequest $fileRequest, \Illuminate\Http\UploadedFile $uploaded): void
+    {
+        if (! $this->isSpacesConfigured()) {
+            throw new \RuntimeException($this->spacesNotConfiguredMessage());
+        }
+
+        $path = $this->buildSpacesObjectKey($fileRequest, $uploaded);
+        $contents = file_get_contents($uploaded->getRealPath());
+
+        if ($contents === false) {
+            throw new \RuntimeException('Could not read the uploaded file from disk.');
+        }
+
+        Storage::disk(self::SPACES_DISK)->put($path, $contents, 'public');
+
+        $fileRequest->update([
+            'pdf_path' => $path,
+            'storage_disk' => self::SPACES_DISK,
+        ]);
+    }
+
+    private function buildSpacesObjectKey(EmployeeFileRequest $fileRequest, \Illuminate\Http\UploadedFile $uploaded): string
+    {
+        $root = trim((string) env('DIGITALOCEAN_SPACES_ROOT_PATH', ''), '/');
+        $dir = $root ? $root.'/employee-file-requests' : 'employee-file-requests';
+        $storedName = Str::uuid()->toString().'.'.($uploaded->getClientOriginalExtension() ?: 'bin');
+
+        return $dir.'/'.$fileRequest->id.'/'.$storedName;
+    }
+
+    /**
+     * @return array<string, array<int, mixed>>
+     */
+    private function uploadFileRules(): array
+    {
+        return [
+            'file' => [
+                'required',
+                'file',
+                'max:'.self::MAX_UPLOAD_KB,
+                function (string $attribute, $value, \Closure $fail): void {
+                    if (! $value instanceof \Illuminate\Http\UploadedFile) {
+                        $fail('Invalid upload.');
+
+                        return;
+                    }
+                    $ext = strtolower($value->getClientOriginalExtension() ?: '');
+                    if ($ext === '' || ! in_array($ext, self::ALLOWED_EXTENSIONS, true)) {
+                        $fail('Allowed file types: PDF, Word, Excel, and images (.pdf, .doc, .docx, .xls, .xlsx, .png, .jpg, .jpeg, .webp).');
+                    }
+                },
+            ],
+        ];
+    }
+
+    private function isSpacesConfigured(): bool
+    {
+        $cfg = config('filesystems.disks.'.self::SPACES_DISK, []);
+        $bucket = $cfg['bucket'] ?? null;
+        $endpoint = $cfg['endpoint'] ?? null;
+        $key = $cfg['key'] ?? null;
+        $secret = $cfg['secret'] ?? null;
+
+        return ! empty($bucket) && ! empty($endpoint) && ! empty($key) && ! empty($secret);
+    }
+
+    private function spacesNotConfiguredMessage(): string
+    {
+        return 'File upload requires DigitalOcean Spaces. Set DIGITALOCEAN_SPACES_* or DO_SPACES_* in .env.';
+    }
+
+    private function resolveStorageDiskForPath(EmployeeFileRequest $fileRequest): ?string
+    {
+        if (! $fileRequest->pdf_path) {
+            return null;
+        }
+
+        $disks = array_values(array_unique(array_filter([
+            $fileRequest->storage_disk ?: self::SPACES_DISK,
+            self::SPACES_DISK,
+            'public',
+        ])));
+
+        foreach ($disks as $disk) {
+            try {
+                if (Storage::disk($disk)->exists($fileRequest->pdf_path)) {
+                    return $disk;
+                }
+            } catch (\Throwable) {
+                continue;
+            }
+        }
+
+        return null;
     }
 
     private function guessMimeType(string $filename): string

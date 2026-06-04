@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Setting;
 use App\Models\User;
+use App\Support\EmployeeDocumentRequestTypes;
 use App\Services\MailConfigService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
@@ -288,6 +289,8 @@ class SettingsController extends Controller
             'sick_in_array' => isset($settings['default_sick_leave_balance']) ? 'YES' : 'NO',
         ]);
 
+        $settings['employee_document_request_types'] = EmployeeDocumentRequestTypes::all();
+
         // Get system health information
         $health = $this->getSystemHealth();
 
@@ -567,6 +570,11 @@ class SettingsController extends Controller
             'social_youtube' => 'nullable|url|max:500',
             'interview_reschedule_social_media_link' => 'nullable|url|max:500',
             'default_sick_leave_balance' => 'nullable|numeric|min:0|max:365',
+            'employee_document_request_types' => 'nullable|array|max:50',
+            'employee_document_request_types.*.label' => 'required_with:employee_document_request_types|string|max:120',
+            'employee_document_request_types.*.key' => 'nullable|string|max:80|regex:/^[a-z0-9_]*$/',
+            'employee_document_request_types.*.enabled' => 'nullable',
+            'employee_document_request_types.*.sort' => 'nullable|integer|min:0|max:999',
             // Landing Page - Employees
             // Email Configuration
             'mail_mailer' => 'nullable|string|in:smtp,sendmail,mailgun,ses,postmark,resend,log,array',
@@ -825,6 +833,12 @@ class SettingsController extends Controller
             ? (float) $sickLeaveBalance
             : 0.0;
         Setting::set('default_sick_leave_balance', $sickValue, 'number', 'Default sick leave balance in days for new employees');
+
+        if ($request->has('employee_document_request_types')) {
+            EmployeeDocumentRequestTypes::persistFromRequest(
+                $request->input('employee_document_request_types', [])
+            );
+        }
 
         // Email Configuration Settings
         $mailMailer = $request->input('mail_mailer', (string) env('MAIL_MAILER', 'smtp'));

@@ -652,6 +652,9 @@
                                 </div>
                             </div>
                         </div>
+
+                        @include('admin.settings.partials.employee-document-types')
+
                         </div>
                     </div>
 

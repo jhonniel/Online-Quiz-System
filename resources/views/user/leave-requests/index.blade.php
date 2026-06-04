@@ -28,13 +28,13 @@
 
     <!-- Success Message -->
     @if(session('info'))
-        <div class="bg-blue-50 border-l-4 border-blue-400 p-4 m-4 rounded-lg">
+        <div class="bg-blue-50 border-l-4 border-blue-400 p-4 mx-4 mt-4 rounded-lg">
             <p class="text-sm text-blue-800">{{ session('info') }}</p>
         </div>
     @endif
 
     @if(session('success'))
-        <div class="bg-green-50 border-l-4 border-green-400 p-4 m-4 rounded-lg">
+        <div class="bg-green-50 border-l-4 border-green-400 p-4 mx-4 mt-4 rounded-lg">
             <div class="flex">
                 <div class="flex-shrink-0">
                     <svg class="h-5 w-5 text-green-400" fill="currentColor" viewBox="0 0 20 20">
@@ -48,8 +48,8 @@
         </div>
     @endif
 
-    <!-- Statistics Cards -->
-    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 p-4">
+    <!-- Statistics & balance cards -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-x-4 gap-y-5 pt-5 sm:pt-6 px-4 pb-5 sm:pb-6">
         <div class="bg-white rounded-lg shadow p-4 border border-gray-200">
             <div class="flex items-center">
                 <div class="flex-shrink-0 bg-indigo-100 rounded-lg p-3">
@@ -106,20 +106,15 @@
             </div>
         </div>
 
-    </div>
-
-    <!-- Leave Balance & Overtime / Student Time -->
-    @if(auth()->user()->role === 'employee')
-        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 px-4 pb-4">
-            <!-- Leave Credits Balance -->
-            <div class="bg-white rounded-lg shadow p-4 border border-indigo-200">
-                <div class="flex items-center">
+        @if(auth()->user()->role === 'employee')
+            <div class="bg-white rounded-lg shadow p-4 border border-indigo-200 sm:col-span-2 lg:col-span-2">
+                <div class="flex items-center min-h-[4.5rem]">
                     <div class="flex-shrink-0 bg-indigo-100 rounded-lg p-3">
-                        <svg class="h-6 w-6 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <svg class="h-6 w-6 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
                         </svg>
                     </div>
-                    <div class="ml-4">
+                    <div class="ml-4 min-w-0">
                         <p class="text-sm font-medium text-gray-500">Leave Credits</p>
                         <p class="text-xl font-bold text-gray-900">
                             {{ $balances['leave']['remaining'] }} / {{ $balances['leave']['allowance'] }} days
@@ -131,64 +126,33 @@
                 </div>
             </div>
 
-            @if(isset($balances['work_from_home']))
-            <div class="bg-white rounded-lg shadow p-4 border border-violet-200">
-                <div class="flex items-center">
-                    <div class="flex-shrink-0 bg-violet-100 rounded-lg p-3">
-                        <svg class="h-6 w-6 text-violet-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path>
-                        </svg>
-                    </div>
-                    <div class="ml-4">
-                        <p class="text-sm font-medium text-gray-500">Work From Home ({{ $balances['work_from_home']['month_label'] }})</p>
-                        <p class="text-xl font-bold text-gray-900">
-                            {{ number_format($balances['work_from_home']['remaining'], 0) }} / {{ $balances['work_from_home']['allowance'] }} days
-                        </p>
-                        <p class="text-xs text-gray-500 mt-1">
-                            Used (approved): {{ number_format($balances['work_from_home']['used'], 0) }} {{ $balances['work_from_home']['used'] == 1 ? 'day' : 'days' }}
-                            — auto-deducted from allowance; pending does not count; resets monthly
-                        </p>
-                        @if(!empty($balances['work_from_home']['approved_deductions']))
-                        <p class="text-xs text-violet-700 mt-1">
-                            {{ count($balances['work_from_home']['approved_deductions']) }} approved request(s) this month
-                        </p>
-                        @endif
-                    </div>
-                </div>
-            </div>
-            @endif
-
-            <!-- Overtime Summary -->
-            <div class="bg-white rounded-lg shadow p-4 border border-emerald-200">
-                <div class="flex items-center">
+            <div class="bg-white rounded-lg shadow p-4 border border-emerald-200 sm:col-span-2 lg:col-span-2">
+                <div class="flex items-center min-h-[4.5rem]">
                     <div class="flex-shrink-0 bg-emerald-100 rounded-lg p-3">
-                        <svg class="h-6 w-6 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <svg class="h-6 w-6 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m3-4h-4a2 2 0 00-2 2v6a2 2 0 002 2h3l2 2 2-2h1a2 2 0 002-2v-3a8 8 0 10-4 0v1"></path>
                         </svg>
                     </div>
-                    <div class="ml-4">
-                        <p class="text-sm font-medium text-gray-500">
-                            {{ auth()->user()->role === 'student' ? 'Additional Time' : 'Overtime' }} ({{ $overtimeWindowLabel ?? 'This Year' }})
-                        </p>
+                    <div class="ml-4 min-w-0">
+                        <p class="text-sm font-medium text-gray-500">Overtime ({{ $overtimeWindowLabel ?? 'This Year' }})</p>
                         <p class="text-xl">
                             <span class="font-bold {{ str_starts_with($overtimeFormatted, '-') ? 'text-red-600' : 'text-gray-900' }}">
                                 {{ $overtimeFormatted }}
                             </span>
                         </p>
-                        <p class="text-xs text-gray-500 mt-1">
                         @if(isset($approvedAbsentCount))
-                            Approved Absent: {{ $approvedAbsentCount }}
+                            <p class="text-xs text-gray-500 mt-1">Approved Absent: {{ $approvedAbsentCount }}</p>
                         @endif
-                        </p>
                     </div>
                 </div>
             </div>
+        @endif
+    </div>
 
-        </div>
-    @elseif(auth()->user()->role === 'student' && isset($studentTime))
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 px-4 pb-4">
+    @if(auth()->user()->role === 'student' && isset($studentTime))
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 px-4 pb-4">
             <!-- Total Time from DTR -->
-            <div class="bg-white rounded-lg shadow p-4 border border-indigo-200">
+            <div class="bg-white rounded-lg shadow p-4 border border-indigo-200 sm:col-span-2 lg:col-span-2">
                 <div class="flex items-center">
                     <div class="flex-shrink-0 bg-indigo-100 rounded-lg p-3">
                         <svg class="h-6 w-6 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -208,7 +172,7 @@
             </div>
 
             <!-- Remaining Time Needed -->
-            <div class="bg-white rounded-lg shadow p-4 border border-blue-200">
+            <div class="bg-white rounded-lg shadow p-4 border border-blue-200 sm:col-span-2 lg:col-span-2">
                 <div class="flex items-center">
                     <div class="flex-shrink-0 bg-blue-100 rounded-lg p-3">
                         <svg class="h-6 w-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -250,7 +214,7 @@
     @endif
 
     <!-- Leave Requests Table -->
-    <div class="flex-1 overflow-y-auto p-3 sm:p-4">
+    <div class="flex-1 overflow-y-auto px-3 sm:px-4 pt-2 sm:pt-3 pb-3 sm:pb-4">
         @if($leaveRequests->count() > 0)
             <x-responsive-data-panel>
                 <x-slot:mobile>

@@ -379,6 +379,8 @@ Route::prefix('admin')->middleware(['auth', 'admin'])->group(function () {
                 ->with('error', 'Document generation was removed. Upload a file and use Send to employee.'));
             Route::get('/file-request', [App\Http\Controllers\Admin\FileRequestController::class, 'index'])->name('admin.file-request.index');
             Route::post('/file-request', [App\Http\Controllers\Admin\FileRequestController::class, 'store'])->name('admin.file-request.store');
+            Route::post('/file-request/history/{fileRequest}/fulfill', [App\Http\Controllers\Admin\FileRequestController::class, 'fulfill'])->name('admin.file-request.fulfill');
+            Route::post('/file-request/history/{fileRequest}/reject', [App\Http\Controllers\Admin\FileRequestController::class, 'reject'])->name('admin.file-request.reject');
             Route::get('/file-request/history/{fileRequest}', function (App\Models\EmployeeFileRequest $fileRequest) {
                 return redirect()->route('admin.file-request.view', $fileRequest);
             })->name('admin.file-request.show');
@@ -679,6 +681,12 @@ Route::middleware(['auth', 'student.not_terminated'])->group(function () {
     Route::post('/files/{file}/unshare', [UserFileController::class, 'unshare'])->name('user.files.unshare');
     Route::get('/files/{file}/shared-users', [UserFileController::class, 'getSharedUsers'])->name('user.files.shared-users');
     Route::delete('/files/{file}', [UserFileController::class, 'destroy'])->name('user.files.destroy');
+
+    // Employee document requests (certificates, etc.)
+    Route::get('/document-requests', [App\Http\Controllers\User\EmployeeFileRequestController::class, 'index'])->name('user.employee-file-requests.index');
+    Route::post('/document-requests', [App\Http\Controllers\User\EmployeeFileRequestController::class, 'store'])->name('user.employee-file-requests.store');
+    Route::get('/document-requests/{employeeFileRequest}/view', [App\Http\Controllers\User\EmployeeFileRequestController::class, 'view'])->name('user.employee-file-requests.view');
+    Route::get('/document-requests/{employeeFileRequest}/download', [App\Http\Controllers\User\EmployeeFileRequestController::class, 'download'])->name('user.employee-file-requests.download');
 
     // Chat Routes
     Route::get('/chat/messages', [ChatController::class, 'index'])->name('chat.messages');

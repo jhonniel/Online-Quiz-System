@@ -544,6 +544,20 @@
                         </a>
                         @endif
 
+                        @if(auth()->user()->role === 'employee')
+                        <a href="{{ url('/document-requests') }}"
+                           class="group flex items-center px-2 py-2 text-sm font-medium rounded-md transition-colors duration-200 {{ request()->routeIs('user.employee-file-requests.*') ? 'bg-indigo-700 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white' }}"
+                           :class="sidebarCollapsed ? 'justify-center' : ''"
+                           :title="sidebarCollapsed ? 'Document Requests' : ''">
+                            <svg class="h-5 w-5" :class="sidebarCollapsed ? '' : 'mr-3'" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                            </svg>
+                            <span class="transition-opacity duration-300" :class="sidebarCollapsed ? 'opacity-0 w-0 overflow-hidden' : 'opacity-100'">
+                                Document Requests
+                            </span>
+                        </a>
+                        @endif
+
                         <!-- Leave Requests (Employee & Student) -->
                         @if(in_array(auth()->user()->role, ['employee', 'student']))
                         <a href="{{ url('/leave-requests') }}"
@@ -1013,6 +1027,17 @@
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-4l-2-2H5a2 2 0 00-2 2z"></path>
                             </svg>
                             File Storage
+                        </a>
+                        @endif
+
+                        @if(auth()->user()->role === 'employee')
+                        <a href="{{ url('/document-requests') }}"
+                           @click="sidebarOpen = false"
+                           class="group flex items-center px-2 py-2 text-sm font-medium rounded-md transition-colors duration-200 {{ request()->routeIs('user.employee-file-requests.*') ? 'bg-indigo-700 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white' }}">
+                            <svg class="mr-3 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                            </svg>
+                            Document Requests
                         </a>
                         @endif
 
