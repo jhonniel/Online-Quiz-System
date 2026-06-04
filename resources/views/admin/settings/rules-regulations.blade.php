@@ -19,157 +19,151 @@
 @php
     $defaultRulesHtml = $default_rules_html ?? '';
 @endphp
-<div class="max-w-7xl mx-auto space-y-8 pb-10">
+<div class="rules-regulations-page -mx-3 sm:-mx-4 lg:-mx-8 w-[calc(100%+1.5rem)] sm:w-[calc(100%+2rem)] lg:w-[calc(100%+4rem)] flex flex-col min-h-[calc(100dvh-7rem)] pb-6">
+
     @if(session('success'))
-        <div class="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-900 flex items-start gap-3 shadow-sm">
+        <div class="mx-4 sm:mx-6 lg:mx-8 mt-4 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-900 flex items-start gap-3 shadow-sm">
             <svg class="w-5 h-5 text-emerald-600 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
             <span>{{ session('success') }}</span>
         </div>
     @endif
 
     {{-- Page header --}}
-    <div class="relative overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-        <div class="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-indigo-600 via-violet-600 to-indigo-600"></div>
-        <div class="px-6 py-8 sm:px-10 sm:py-10">
-            <div class="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-6">
-                <div class="flex gap-4">
-                    <div class="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-indigo-600 text-white shadow-lg shadow-indigo-600/25">
-                        <svg class="h-7 w-7" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
-                        </svg>
-                    </div>
-                    <div>
-                        <h1 class="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900">RULES AND REGULATIONS</h1>
-                        <p class="mt-2 text-sm sm:text-base text-slate-600 max-w-2xl leading-relaxed">
-                            Control the HTML shown <strong class="font-semibold text-slate-800">below the fixed title</strong> in the student agreement modal (after login until they acknowledge).
-                            <span class="block mt-2 text-xs sm:text-sm text-slate-500">When you save, this HTML is written to the <strong class="font-medium text-slate-700">settings</strong> table (<code class="text-[11px] bg-slate-100 px-1.5 py-0.5 rounded font-mono">student_rules_regulations_html</code>) and loaded for every student modal.</span>
-                            Per-account warnings and banners are managed separately under <span class="font-medium text-slate-800">Users → edit student</span>.
-                        </p>
-                    </div>
+    <div class="shrink-0 border-b border-indigo-800/20 bg-gradient-to-r from-indigo-600 via-violet-600 to-indigo-700 px-4 sm:px-6 lg:px-8 py-5 sm:py-6">
+        <div class="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
+            <div class="flex items-start gap-4 min-w-0">
+                <div class="hidden sm:flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-white/15 text-white ring-1 ring-white/20">
+                    <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                    </svg>
                 </div>
-                <div class="flex flex-col items-start gap-2 shrink-0">
-                    @if(!empty($has_custom_rules))
-                        <span class="inline-flex items-center gap-1.5 rounded-full border border-indigo-200 bg-indigo-50 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-indigo-800">
-                            <span class="h-2 w-2 rounded-full bg-indigo-500"></span>
-                            Custom content saved
-                        </span>
-                    @else
-                        <span class="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-slate-700">
-                            <span class="h-2 w-2 rounded-full bg-slate-400"></span>
-                            Built-in default (live)
-                        </span>
-                    @endif
-                    <p class="text-xs text-slate-500 max-w-xs leading-snug">
-                        If the editor is empty, students see the same default rules as in <code class="text-[11px] bg-slate-100 px-1 rounded">student-rules-regulations-default-body</code>.
+                <div class="min-w-0">
+                    <h1 class="text-xl sm:text-2xl font-bold tracking-tight text-white">Rules &amp; regulations</h1>
+                    <p class="mt-1 text-sm text-indigo-100 max-w-3xl leading-relaxed">
+                        Edit the HTML shown below the fixed title in the student agreement modal. Merit-based warnings and per-student overrides are managed here and under <span class="font-medium text-white">Users → edit student</span>.
                     </p>
                 </div>
+            </div>
+            <div class="flex flex-wrap items-center gap-3 shrink-0">
+                @if(!empty($has_custom_rules))
+                    <span class="inline-flex items-center gap-1.5 rounded-full border border-white/25 bg-white/10 px-3 py-1.5 text-xs font-semibold uppercase tracking-wide text-white">
+                        <span class="h-2 w-2 rounded-full bg-emerald-300"></span>
+                        Custom content saved
+                    </span>
+                @else
+                    <span class="inline-flex items-center gap-1.5 rounded-full border border-white/25 bg-white/10 px-3 py-1.5 text-xs font-semibold uppercase tracking-wide text-indigo-100">
+                        <span class="h-2 w-2 rounded-full bg-white/60"></span>
+                        Built-in default (live)
+                    </span>
+                @endif
+                <a href="{{ url('/admin/settings?tab=general') }}"
+                   class="inline-flex items-center gap-2 rounded-lg border border-white/25 bg-white/10 px-4 py-2 text-sm font-medium text-white hover:bg-white/20 transition-colors">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/></svg>
+                    System settings
+                </a>
             </div>
         </div>
     </div>
 
-    {{-- Merit-based automatic notices (system-wide) --}}
-    <div class="rounded-2xl border border-amber-200 bg-amber-50/40 shadow-sm overflow-hidden">
-        <div class="px-6 py-4 border-b border-amber-200/80 bg-amber-50/80">
-            <h2 class="text-lg font-semibold text-slate-900">Automatic rules notices (merit counts)</h2>
-            <p class="text-sm text-slate-600 mt-1 max-w-3xl">
-                Control when the system turns on <strong>rules violation warning</strong> or <strong>final notice</strong> from each student’s total merits
-                (under-time filings, excess absences, and manual merits). Per-student overrides are on <strong>Users → edit student</strong>.
-            </p>
-        </div>
-        <form action="{{ url('/admin/system/rules/merit-notices') }}" method="POST" class="p-5 sm:p-6 space-y-5">
+    {{-- Merit-based automatic notices --}}
+    <div class="shrink-0 border-b border-amber-200/80 bg-amber-50/70 px-4 sm:px-6 lg:px-8 py-4 sm:py-5">
+        <form action="{{ url('/admin/system/rules/merit-notices') }}" method="POST">
             @csrf
-            <div>
-                <label for="student_merit_auto_notices_enabled" class="block text-sm font-semibold text-slate-800 mb-1.5">Automatic notices</label>
-                <select name="student_merit_auto_notices_enabled" id="student_merit_auto_notices_enabled"
-                        class="block w-full max-w-md rounded-xl border border-slate-300 px-4 py-2.5 text-sm focus:ring-2 focus:ring-indigo-500">
-                    <option value="enabled" {{ old('student_merit_auto_notices_enabled', ($merit_auto_notices_enabled ?? true) ? 'enabled' : 'disabled') === 'enabled' ? 'selected' : '' }}>Enabled — apply thresholds below for all eligible students</option>
-                    <option value="disabled" {{ old('student_merit_auto_notices_enabled', ($merit_auto_notices_enabled ?? true) ? 'enabled' : 'disabled') === 'disabled' ? 'selected' : '' }}>Disabled — never auto-enable or auto-clear merit-based notices</option>
-                </select>
-            </div>
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-5 max-w-2xl">
-                <div>
-                    <label for="student_merit_violation_warning_threshold" class="block text-sm font-semibold text-slate-800 mb-1.5">Violation warning at (merits)</label>
-                    <input type="number" name="student_merit_violation_warning_threshold" id="student_merit_violation_warning_threshold"
-                           min="1" max="999" step="1" required
-                           value="{{ old('student_merit_violation_warning_threshold', $merit_violation_warning_threshold ?? 1) }}"
-                           class="block w-full rounded-xl border border-slate-300 px-4 py-2.5 text-sm focus:ring-2 focus:ring-indigo-500">
-                    <p class="mt-1 text-xs text-slate-500">Yellow rules violation warning when total merits are at least this number (and below final threshold).</p>
-                    @error('student_merit_violation_warning_threshold') <p class="mt-1 text-sm text-red-600">{{ $message }}</p> @enderror
+            <div class="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
+                <div class="min-w-0">
+                    <h2 class="text-sm font-semibold text-slate-900 uppercase tracking-wide">Automatic merit notices</h2>
+                    <p class="mt-1 text-xs sm:text-sm text-slate-600 max-w-4xl">
+                        Turn on rules violation warning or final notice from each student’s total merits (under-time filings, absences, manual merits).
+                    </p>
                 </div>
-                <div>
-                    <label for="student_merit_final_notice_threshold" class="block text-sm font-semibold text-slate-800 mb-1.5">Final notice at (merits)</label>
-                    <input type="number" name="student_merit_final_notice_threshold" id="student_merit_final_notice_threshold"
-                           min="1" max="999" step="1" required
-                           value="{{ old('student_merit_final_notice_threshold', $merit_final_notice_threshold ?? 3) }}"
-                           class="block w-full rounded-xl border border-slate-300 px-4 py-2.5 text-sm focus:ring-2 focus:ring-indigo-500">
-                    <p class="mt-1 text-xs text-slate-500">Red final notice banner when total merits reach this number or higher.</p>
-                    @error('student_merit_final_notice_threshold') <p class="mt-1 text-sm text-red-600">{{ $message }}</p> @enderror
+                <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-[minmax(220px,1.4fr)_minmax(120px,0.8fr)_minmax(120px,0.8fr)_auto] gap-3 xl:gap-4 xl:flex-1 xl:max-w-5xl xl:ml-8">
+                    <div>
+                        <label for="student_merit_auto_notices_enabled" class="block text-xs font-semibold text-slate-700 mb-1">Automatic notices</label>
+                        <select name="student_merit_auto_notices_enabled" id="student_merit_auto_notices_enabled"
+                                class="block w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500">
+                            <option value="enabled" {{ old('student_merit_auto_notices_enabled', ($merit_auto_notices_enabled ?? true) ? 'enabled' : 'disabled') === 'enabled' ? 'selected' : '' }}>Enabled for all eligible students</option>
+                            <option value="disabled" {{ old('student_merit_auto_notices_enabled', ($merit_auto_notices_enabled ?? true) ? 'enabled' : 'disabled') === 'disabled' ? 'selected' : '' }}>Disabled — no auto merit notices</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label for="student_merit_violation_warning_threshold" class="block text-xs font-semibold text-slate-700 mb-1">Warning at (merits)</label>
+                        <input type="number" name="student_merit_violation_warning_threshold" id="student_merit_violation_warning_threshold"
+                               min="1" max="999" step="1" required
+                               value="{{ old('student_merit_violation_warning_threshold', $merit_violation_warning_threshold ?? 1) }}"
+                               class="block w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500">
+                        @error('student_merit_violation_warning_threshold') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
+                    </div>
+                    <div>
+                        <label for="student_merit_final_notice_threshold" class="block text-xs font-semibold text-slate-700 mb-1">Final notice at (merits)</label>
+                        <input type="number" name="student_merit_final_notice_threshold" id="student_merit_final_notice_threshold"
+                               min="1" max="999" step="1" required
+                               value="{{ old('student_merit_final_notice_threshold', $merit_final_notice_threshold ?? 3) }}"
+                               class="block w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500">
+                        @error('student_merit_final_notice_threshold') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
+                    </div>
+                    <div class="sm:col-span-2 xl:col-span-1 flex items-end">
+                        <button type="submit"
+                                class="w-full xl:w-auto inline-flex justify-center items-center gap-2 rounded-lg bg-amber-600 px-5 py-2 text-sm font-semibold text-white shadow-sm hover:bg-amber-700 transition-colors">
+                            Save merit settings
+                        </button>
+                    </div>
                 </div>
-            </div>
-            <div class="pt-2">
-                <button type="submit"
-                        class="inline-flex items-center gap-2 rounded-xl bg-amber-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-amber-700">
-                    Save merit notice settings
-                </button>
             </div>
         </form>
     </div>
 
-    <form action="{{ url('/admin/system/rules') }}" method="POST" id="rules-regulations-form" class="space-y-6">
+    {{-- Editor + preview workspace --}}
+    <form action="{{ url('/admin/system/rules') }}" method="POST" id="rules-regulations-form" class="flex flex-col flex-1 min-h-0">
         @csrf
 
-        <div class="grid grid-cols-1 xl:grid-cols-2 gap-6 xl:gap-8 items-start">
-            {{-- Editor column --}}
-            <div class="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden flex flex-col min-h-[480px]">
-                <div class="px-5 py-4 border-b border-slate-100 bg-slate-50/90 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <div class="grid grid-cols-1 xl:grid-cols-2 flex-1 min-h-0 divide-y xl:divide-y-0 xl:divide-x divide-slate-200">
+            {{-- Editor --}}
+            <div class="flex flex-col min-h-[420px] xl:min-h-[calc(100dvh-18rem)] bg-white">
+                <div class="shrink-0 px-4 sm:px-6 lg:px-8 py-3 border-b border-slate-100 bg-slate-50/80 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                     <div>
-                        <h2 class="text-base font-semibold text-slate-900">HTML editor</h2>
-                        <p class="text-xs text-slate-500 mt-0.5">Mono-spaced source · Scripts removed on student view</p>
+                        <h2 class="text-sm font-semibold text-slate-900">HTML editor</h2>
+                        <p class="text-xs text-slate-500 mt-0.5">Mono-spaced source · scripts removed on student view</p>
                     </div>
                     <div class="flex flex-wrap items-center gap-2">
                         <button type="button" id="btn-insert-default"
-                                class="inline-flex items-center gap-1.5 rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-700 shadow-sm hover:bg-slate-50 transition-colors">
+                                class="inline-flex items-center gap-1.5 rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 shadow-sm hover:bg-slate-50 transition-colors">
                             <svg class="w-4 h-4 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg>
-                            Insert built-in default
+                            Insert default
                         </button>
                         <button type="button" id="btn-clear-editor"
-                                class="inline-flex items-center rounded-lg border border-transparent px-3 py-2 text-xs font-medium text-slate-600 hover:bg-slate-100 transition-colors">
-                            Clear editor
+                                class="inline-flex items-center rounded-lg border border-transparent px-3 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-100 transition-colors">
+                            Clear
                         </button>
                     </div>
                 </div>
-                <div class="p-4 sm:p-5 flex-1 flex flex-col">
+                <div class="flex flex-col flex-1 min-h-0 px-4 sm:px-6 lg:px-8 py-4">
                     <label for="student_rules_regulations_html" class="sr-only">Rules HTML</label>
-                    <textarea name="student_rules_regulations_html" id="student_rules_regulations_html" rows="20"
-                              class="flex-1 min-h-[380px] w-full resize-y rounded-xl border border-slate-300 bg-slate-50/50 px-4 py-3 font-mono text-[13px] leading-relaxed text-slate-800 shadow-inner focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 focus:bg-white @error('student_rules_regulations_html') border-red-400 @enderror"
+                    <textarea name="student_rules_regulations_html" id="student_rules_regulations_html"
+                              class="flex-1 min-h-[320px] w-full resize-none rounded-xl border border-slate-300 bg-slate-50/50 px-4 py-3 font-mono text-[13px] leading-relaxed text-slate-800 shadow-inner focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 focus:bg-white @error('student_rules_regulations_html') border-red-400 @enderror"
                               placeholder="Leave empty to keep using the built-in default rules, or paste HTML here…">{{ old('student_rules_regulations_html', $student_rules_regulations_html ?? '') }}</textarea>
                     @error('student_rules_regulations_html')
                         <p class="mt-2 text-sm text-red-600">{{ $message }}</p>
                     @enderror
-                    <p class="mt-3 text-xs text-slate-500 flex items-start gap-2">
-                        <svg class="w-4 h-4 text-slate-400 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-                        <span>
-                            Allowed: semantic HTML (<code class="text-[11px] bg-slate-100 px-1 rounded">&lt;p&gt;</code>, <code class="text-[11px] bg-slate-100 px-1 rounded">&lt;section&gt;</code>, <code class="text-[11px] bg-slate-100 px-1 rounded">&lt;ul&gt;</code>, etc.).
-                            Saving an empty editor restores the live built-in default for students.
-                        </span>
+                    <p class="mt-3 text-xs text-slate-500">
+                        Allowed: semantic HTML (<code class="text-[11px] bg-slate-100 px-1 rounded">&lt;p&gt;</code>, <code class="text-[11px] bg-slate-100 px-1 rounded">&lt;section&gt;</code>, <code class="text-[11px] bg-slate-100 px-1 rounded">&lt;ul&gt;</code>).
+                        Empty editor restores the built-in default for students.
                     </p>
                 </div>
             </div>
 
-            {{-- Preview column --}}
-            <div class="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden flex flex-col min-h-[480px] xl:sticky xl:top-24">
-                <div class="px-5 py-4 border-b border-slate-100 bg-gradient-to-r from-slate-50 to-white flex flex-wrap items-center justify-between gap-2">
+            {{-- Preview --}}
+            <div class="flex flex-col min-h-[420px] xl:min-h-[calc(100dvh-18rem)] bg-slate-50/40">
+                <div class="shrink-0 px-4 sm:px-6 lg:px-8 py-3 border-b border-slate-100 bg-white flex flex-wrap items-center justify-between gap-2">
                     <div>
-                        <h2 class="text-base font-semibold text-slate-900">Live preview</h2>
+                        <h2 class="text-sm font-semibold text-slate-900">Live preview</h2>
                         <p class="text-xs text-slate-500 mt-0.5" id="preview-status">Showing what students see in the modal body</p>
                     </div>
                     <span id="preview-badge" class="text-[10px] font-bold uppercase tracking-wider px-2 py-1 rounded-md bg-slate-100 text-slate-600">Default</span>
                 </div>
-                <div class="p-5 sm:p-6 flex-1 overflow-auto max-h-[min(70vh,720px)] bg-[linear-gradient(180deg,#f8fafc_0%,#ffffff_40%)]">
-                    <div class="rounded-xl border border-slate-200 bg-white p-5 sm:p-6 shadow-sm">
+                <div class="flex-1 min-h-0 overflow-auto px-4 sm:px-6 lg:px-8 py-4">
+                    <div class="rounded-xl border border-slate-200 bg-white p-5 sm:p-6 shadow-sm min-h-full">
                         <p class="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-4 pb-3 border-b border-slate-100">Agreement modal · body only</p>
                         <div id="rules-preview" class="prose prose-sm max-w-none text-slate-700 prose-headings:text-slate-900 prose-p:leading-relaxed prose-li:marker:text-indigo-500">
-                            {{-- Filled by JS; SSR fallback --}}
                             @if(trim($student_rules_regulations_html ?? '') !== '')
                                 {!! $student_rules_regulations_html !!}
                             @else
@@ -181,22 +175,18 @@
             </div>
         </div>
 
-        {{-- Hidden: default HTML for preview swap & strip baseline --}}
         <div id="default-rules-source" class="hidden" aria-hidden="true">{!! $defaultRulesHtml !!}</div>
 
-        <div class="rounded-2xl border border-slate-200 bg-slate-50 px-5 py-4 flex flex-col-reverse sm:flex-row sm:items-center sm:justify-between gap-4">
-            <a href="{{ url('/admin/settings?tab=general') }}"
-               class="inline-flex justify-center items-center px-5 py-2.5 rounded-xl border border-slate-300 bg-white text-slate-700 text-sm font-medium shadow-sm hover:bg-slate-50 transition-colors">
-                ← Back to System Settings
-            </a>
-            <div class="flex flex-col sm:flex-row gap-3 sm:items-center">
-                <span class="text-xs text-slate-500 hidden sm:inline">Changes apply on next student modal display.</span>
-                <button type="submit"
-                        class="inline-flex justify-center items-center gap-2 px-7 py-3 rounded-xl bg-indigo-600 text-white text-sm font-semibold shadow-md shadow-indigo-600/20 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
-                    Save rules content
-                </button>
-            </div>
+        {{-- Sticky save bar --}}
+        <div class="sticky bottom-0 z-10 shrink-0 border-t border-slate-200 bg-white/95 backdrop-blur px-4 sm:px-6 lg:px-8 py-3 flex flex-col-reverse sm:flex-row sm:items-center sm:justify-between gap-3 shadow-[0_-4px_12px_rgba(15,23,42,0.06)]">
+            <p class="text-xs text-slate-500">
+                Stored as <code class="text-[11px] bg-slate-100 px-1 rounded font-mono">student_rules_regulations_html</code> · applies on next student modal
+            </p>
+            <button type="submit"
+                    class="inline-flex justify-center items-center gap-2 px-6 py-2.5 rounded-lg bg-indigo-600 text-white text-sm font-semibold shadow-sm hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+                Save rules content
+            </button>
         </div>
     </form>
 </div>
