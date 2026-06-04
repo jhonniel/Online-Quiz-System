@@ -20,9 +20,6 @@
     <!-- Scripts -->
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 
-    <!-- Tailwind CSS -->
-    <script src="https://cdn.tailwindcss.com"></script>
-
     <!-- Alpine.js -->
     <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
 
@@ -80,7 +77,7 @@
         */
         @keyframes student-rules-marquee-scroll {
             from { transform: translate3d(0, 0, 0); }
-            to { transform: translate3d(calc(-100% / 24), 0, 0); }
+            to { transform: translate3d(calc(-100% / 8), 0, 0); }
         }
 
         .student-rules-marquee-inner {
@@ -113,7 +110,6 @@
                 'themeColor' => $userLayoutThemeColor,
             ])
         @endif
-        @include('partials.user-theme-chart-helper')
     @endauth
 </head>
 
@@ -157,7 +153,7 @@
                     </div>
                     <div class="flex flex-1 min-w-0 overflow-hidden items-center justify-start py-1.5 sm:py-2">
                         <div class="student-rules-marquee-inner text-sm font-semibold tracking-wide text-white">
-                            @foreach(range(1, 24) as $marqueeI)
+                            @foreach(range(1, 8) as $marqueeI)
                             <span class="inline-flex shrink-0 items-center pr-[2in] whitespace-nowrap" @if($marqueeI > 1) aria-hidden="true" @endif>{{ $studentRulesMarqueeMessage }}</span>
                             @endforeach
                         </div>
@@ -174,7 +170,7 @@
                     </div>
                     <div class="flex flex-1 min-w-0 overflow-hidden items-center justify-start py-1.5 sm:py-2 bg-amber-200">
                         <div class="student-rules-marquee-inner text-xs sm:text-sm font-semibold tracking-wide text-amber-950">
-                            @foreach(range(1, 24) as $marqueeI)
+                            @foreach(range(1, 8) as $marqueeI)
                             <span class="inline-flex shrink-0 items-center pr-[2in] whitespace-nowrap" @if($marqueeI > 1) aria-hidden="true" @endif>{{ $studentRulesWarningMarqueeMessage }}</span>
                             @endforeach
                         </div>

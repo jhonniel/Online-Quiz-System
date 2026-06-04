@@ -822,17 +822,6 @@ document.getElementById('quizCodeModal').addEventListener('click', function(e) {
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    const theme = window.getUserThemeChartColors ? window.getUserThemeChartColors() : {
-        primary: '#6366f1',
-        dark: '#4f46e5',
-        mid: '#818cf8',
-        light: '#a5b4fc',
-        palette: ['#6366f1', '#4f46e5', '#818cf8', '#a5b4fc'],
-        fill: 'rgba(99, 102, 241, 0.15)',
-        grid: '#e5e7eb',
-        border: '#6366f1',
-    };
-
     const chartNode = document.getElementById('student-training-charts-data');
     const studentChartData = chartNode ? JSON.parse(chartNode.textContent) : {
         progress: { labels: [], values: [] },
@@ -848,7 +837,7 @@ document.addEventListener('DOMContentLoaded', function() {
         scales: {
             y: {
                 beginAtZero: true,
-                grid: { color: theme.grid },
+                grid: { color: '#e5e7eb' },
             },
             x: {
                 grid: { display: false },
@@ -864,7 +853,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 labels: studentChartData.progress.labels,
                 datasets: [{
                     data: studentChartData.progress.values,
-                    backgroundColor: theme.palette.slice(0, 3),
+                    backgroundColor: ['#6366f1', '#10b981', '#f59e0b'],
                     borderRadius: 6,
                     maxBarThickness: 54,
                 }],
@@ -881,7 +870,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 labels: studentChartData.monthly.labels,
                 datasets: [{
                     data: studentChartData.monthly.values,
-                    backgroundColor: theme.primary,
+                    backgroundColor: '#3b82f6',
                     borderRadius: 6,
                     maxBarThickness: 36,
                 }],
@@ -904,7 +893,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 labels: employeeChartData.status.labels,
                 datasets: [{
                     data: employeeChartData.status.values,
-                    backgroundColor: theme.palette,
+                    backgroundColor: ['#f59e0b', '#10b981', '#ef4444', '#f43f5e'],
                     borderColor: '#ffffff',
                     borderWidth: 2,
                 }],
@@ -927,7 +916,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 labels: employeeChartData.monthly.labels,
                 datasets: [{
                     data: employeeChartData.monthly.values,
-                    backgroundColor: theme.primary,
+                    backgroundColor: '#6366f1',
                     borderRadius: 6,
                     maxBarThickness: 36,
                 }],
