@@ -192,11 +192,11 @@
                         </div>
                         <div class="ml-2">
                             <h4 class="text-sm font-medium text-gray-900">Find New Friends</h4>
-                            <p class="text-xs text-gray-500">Search by name or email address</p>
+                            <p class="text-xs text-gray-500">Partial match on name, email, role, or university</p>
                         </div>
                     </div>
                     <div class="flex-1 max-w-md">
-                        <div class="relative">
+                        <div class="relative z-30 overflow-visible">
                             <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                                 <svg class="h-4 w-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
@@ -211,7 +211,7 @@
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
                                 </svg>
                             </button>
-                            <div id="search-results" class="absolute z-50 w-full mt-2 bg-white border border-gray-200 rounded-lg shadow-xl hidden max-h-80 overflow-y-auto">
+                            <div id="search-results" class="absolute z-[100] w-full mt-2 bg-white border border-gray-200 rounded-lg shadow-xl hidden max-h-80 overflow-y-auto">
                                 <!-- Search results will be populated here -->
                             </div>
                         </div>
@@ -233,7 +233,8 @@
                     </h4>
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
                         @foreach($pendingRequests as $request)
-                            <div class="bg-gradient-to-r from-yellow-50 to-orange-50 border border-yellow-200 rounded-lg p-3 hover:shadow-md transition-all duration-200">
+                            <div class="bg-gradient-to-r from-yellow-50 to-orange-50 border border-yellow-200 rounded-lg p-3 hover:shadow-md transition-all duration-200"
+                                 data-friend-list-item data-search-text="{{ strtolower($request->user->name.' '.$request->user->email) }}">
                                 <div class="flex items-center space-x-3">
                                     <div class="flex-shrink-0">
                                         @if($request->user->profile_picture)
@@ -290,7 +291,8 @@
                     </h4>
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
                         @foreach($sentRequests as $request)
-                            <div class="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-lg p-3 hover:shadow-md transition-all duration-200">
+                            <div class="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-lg p-3 hover:shadow-md transition-all duration-200"
+                                 data-friend-list-item data-search-text="{{ strtolower($request->friend->name.' '.$request->friend->email) }}">
                                 <div class="flex items-center space-x-3">
                                     <div class="flex-shrink-0">
                                         @if($request->friend->profile_picture)
@@ -346,7 +348,8 @@
                 @if($allFriends->count() > 0)
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
                         @foreach($allFriends as $friend)
-                            <div class="bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-lg p-3 hover:shadow-md transition-all duration-200 group">
+                            <div class="bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-lg p-3 hover:shadow-md transition-all duration-200 group"
+                                 data-friend-list-item data-search-text="{{ strtolower($friend->name.' '.$friend->email) }}">
                                 <div class="flex items-center space-x-3">
                                     <div class="flex-shrink-0">
                                         @if($friend->profile_picture)
@@ -424,6 +427,90 @@
 @section('scripts')
 <script>
     let searchTimeout;
+    const friendSearchUrl = @json(route('friends.search'));
+
+    function escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text ?? '';
+        return div.innerHTML;
+    }
+
+    function filterFriendListCards(query) {
+        const needle = query.trim().toLowerCase();
+        document.querySelectorAll('[data-friend-list-item]').forEach((card) => {
+            const haystack = (card.getAttribute('data-search-text') || card.textContent || '').toLowerCase();
+            const show = needle === '' || haystack.includes(needle);
+            card.classList.toggle('hidden', !show);
+        });
+    }
+
+    function renderSearchResults(users, resultsDiv) {
+        if (!Array.isArray(users) || users.length === 0) {
+            resultsDiv.innerHTML = `
+                <div class="p-6 text-center">
+                    <svg class="mx-auto h-12 w-12 text-gray-400 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                    </svg>
+                    <p class="text-gray-500 text-sm">No users found matching your search</p>
+                    <p class="text-gray-400 text-xs mt-1">Try part of a name, email, role, or university</p>
+                </div>
+            `;
+            return;
+        }
+
+        resultsDiv.innerHTML = `
+            <div class="p-2">
+                <div class="text-xs text-gray-500 px-3 py-2 border-b border-gray-100">
+                    Found ${users.length} user${users.length === 1 ? '' : 's'}
+                </div>
+                ${users.map(user => {
+                    const rawName = user.name || '';
+                    const name = escapeHtml(rawName);
+                    const email = escapeHtml(user.email);
+                    const university = user.university ? escapeHtml(String(user.university)) : '';
+                    const safeAttrName = rawName.replace(/"/g, '&quot;');
+                    const avatar = user.profile_picture_url
+                        ? `<img src="${escapeHtml(user.profile_picture_url)}" alt="${name}" class="w-12 h-12 rounded-full object-cover border-2 border-gray-200 shadow-sm">`
+                        : `<div class="w-12 h-12 bg-gradient-to-br from-indigo-400 to-indigo-600 rounded-full flex items-center justify-center border-2 border-gray-200 shadow-sm">
+                                <span class="text-white font-semibold text-lg">${escapeHtml(rawName.charAt(0).toUpperCase())}</span>
+                           </div>`;
+                    let action = '';
+                    if (user.friendship_status === 'accepted') {
+                        action = `<a href="{{ url('/user-chat') }}?friend=${user.id}" class="inline-flex items-center px-3 py-1.5 rounded-md text-xs font-medium bg-indigo-500 text-white hover:bg-indigo-600">Chat</a>`;
+                    } else if (user.friendship_status === 'pending') {
+                        action = `<span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getStatusClass(user.friendship_status)}">${getStatusText(user.friendship_status)}</span>`;
+                    } else {
+                        action = `<button type="button" class="js-add-friend inline-flex items-center px-3 py-1.5 rounded-md text-xs font-medium bg-indigo-500 text-white hover:bg-indigo-600" data-user-id="${user.id}" data-user-name="${safeAttrName}">Add Friend</button>`;
+                    }
+                    return `
+                        <div class="p-3 hover:bg-indigo-50 border-b border-gray-100 last:border-b-0">
+                            <div class="flex items-center space-x-3">
+                                <div class="flex-shrink-0">${avatar}</div>
+                                <div class="flex-1 min-w-0">
+                                    <p class="font-semibold text-gray-900 truncate text-sm sm:text-base">${name}</p>
+                                    <p class="text-xs sm:text-sm text-gray-500 truncate">${email}</p>
+                                    ${university ? `<p class="text-xs text-gray-400 truncate mt-1">${university}</p>` : ''}
+                                </div>
+                                <div class="flex-shrink-0">${action}</div>
+                            </div>
+                        </div>
+                    `;
+                }).join('')}
+            </div>
+        `;
+
+        resultsDiv.querySelectorAll('.js-add-friend').forEach((btn) => {
+            btn.addEventListener('click', () => {
+                selectUser(
+                    parseInt(btn.dataset.userId, 10),
+                    btn.getAttribute('data-user-name') || '',
+                    '',
+                    'none',
+                    null
+                );
+            });
+        });
+    }
 
     // Clear search functionality
     document.getElementById('clear-search').addEventListener('click', function() {
@@ -434,6 +521,7 @@
         searchInput.value = '';
         resultsDiv.classList.add('hidden');
         clearButton.classList.add('hidden');
+        filterFriendListCards('');
     });
 
     // Show/hide clear button based on input
@@ -446,14 +534,15 @@
         }
     });
 
-    // Search functionality
+    // Search functionality (partial match + filter lists on this page)
     document.getElementById('friend-search').addEventListener('input', function(e) {
         const query = e.target.value;
         const resultsDiv = document.getElementById('search-results');
 
         clearTimeout(searchTimeout);
+        filterFriendListCards(query);
 
-        if (query.length < 2) {
+        if (query.trim().length < 1) {
             resultsDiv.classList.add('hidden');
             return;
         }
@@ -462,84 +551,36 @@
             resultsDiv.innerHTML = '<p class="text-sm text-gray-500 py-4 text-center">Loading…</p>';
             resultsDiv.classList.remove('hidden');
 
-            fetch(`{{ url('/friends/search') }}?q=${encodeURIComponent(query)}`, {
+            fetch(`${friendSearchUrl}?q=${encodeURIComponent(query.trim())}`, {
                 method: 'GET',
                 headers: {
                     'Accept': 'application/json',
                     'X-Requested-With': 'XMLHttpRequest',
-                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
-                }
+                },
+                credentials: 'same-origin',
             })
-            .then(response => response.json())
-            .then(users => {
-                if (users.length === 0) {
-                    resultsDiv.innerHTML = `
-                        <div class="p-6 text-center">
-                            <svg class="mx-auto h-12 w-12 text-gray-400 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
-                            </svg>
-                            <p class="text-gray-500 text-sm">No users found matching your search</p>
-                            <p class="text-gray-400 text-xs mt-1">Try searching with a different name or email</p>
-                        </div>
-                    `;
-                } else {
-                    resultsDiv.innerHTML = `
-                        <div class="p-2">
-                            <div class="text-xs text-gray-500 px-3 py-2 border-b border-gray-100">
-                                Found ${users.length} user${users.length === 1 ? '' : 's'}
-                            </div>
-                            ${users.map(user => `
-                                <div class="p-3 hover:bg-indigo-50 border-b border-gray-100 last:border-b-0 transition-colors duration-150">
-                                    <div class="flex items-center space-x-3">
-                                        <div class="flex-shrink-0">
-                                            ${user.profile_picture ?
-                                                `<img src="${user.profile_picture_url}" alt="${user.name}" class="w-12 h-12 rounded-full object-cover border-2 border-gray-200 shadow-sm">` :
-                                                `<div class="w-12 h-12 bg-gradient-to-br from-indigo-400 to-indigo-600 rounded-full flex items-center justify-center border-2 border-gray-200 shadow-sm">
-                                                    <span class="text-white font-semibold text-lg">${user.name.charAt(0).toUpperCase()}</span>
-                                                </div>`
-                                            }
-                                        </div>
-                                        <div class="flex-1 min-w-0">
-                                            <p class="font-semibold text-gray-900 truncate text-sm sm:text-base">${user.name}</p>
-                                            <p class="text-xs sm:text-sm text-gray-500 truncate">${user.email}</p>
-                                            ${user.university ? `<p class="text-xs text-gray-400 truncate mt-1">${user.university}</p>` : ''}
-                                        </div>
-                                        <div class="flex-shrink-0">
-                                            ${user.friendship_status === 'accepted' ?
-                                                `<a href="{{ url('/user-chat') }}?friend=${user.id}" class="inline-flex items-center px-3 py-1.5 rounded-md text-xs font-medium bg-indigo-500 text-white hover:bg-indigo-600 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-colors duration-200">
-                                                    Chat
-                                                </a>` :
-                                                user.friendship_status === 'pending' ?
-                                                `<span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getStatusClass(user.friendship_status)}">
-                                                    ${getStatusText(user.friendship_status)}
-                                                </span>` :
-                                                `<button onclick="selectUser(${user.id}, '${user.name}', '${user.email}', '${user.friendship_status}', ${user.friendship_id || 'null'})" class="inline-flex items-center px-3 py-1.5 rounded-md text-xs font-medium bg-indigo-500 text-white hover:bg-indigo-600 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-colors duration-200">
-                                                    Add Friend
-                                                </button>`
-                                            }
-                                        </div>
-                                    </div>
-                                </div>
-                            `).join('')}
-                        </div>
-                    `;
+            .then(async (response) => {
+                const data = await response.json().catch(() => null);
+                if (!response.ok) {
+                    throw new Error((data && data.message) ? data.message : 'Search request failed');
                 }
+                return Array.isArray(data) ? data : [];
+            })
+            .then(users => {
+                renderSearchResults(users, resultsDiv);
                 resultsDiv.classList.remove('hidden');
             })
             .catch(error => {
                 console.error('Search error:', error);
                 resultsDiv.innerHTML = `
                     <div class="p-4 text-center">
-                        <svg class="mx-auto h-8 w-8 text-red-400 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                        </svg>
                         <p class="text-red-500 text-sm">Error searching users</p>
                         <p class="text-gray-400 text-xs mt-1">Please try again</p>
                     </div>
                 `;
                 resultsDiv.classList.remove('hidden');
             });
-        }, 300);
+        }, 250);
     });
 
     function getStatusClass(status) {

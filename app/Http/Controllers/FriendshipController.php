@@ -29,39 +29,63 @@ class FriendshipController extends Controller
 
     public function search(Request $request): JsonResponse
     {
-        $query = $request->get('q', '');
+        $query = trim((string) ($request->get('q', $request->get('search', ''))));
         $currentUserId = auth()->id();
 
-        if (strlen($query) < 2) {
+        if ($query === '') {
             return response()->json([]);
         }
 
-        $users = User::where('id', '!=', $currentUserId)
+        if (mb_strlen($query) < 1) {
+            return response()->json([]);
+        }
+
+        $likeTerm = '%'.$this->escapeLikeTerm(mb_strtolower($query)).'%';
+
+        $users = User::query()
+            ->where('id', '!=', $currentUserId)
             ->where('is_active', true)
-            ->where('is_approved', true)
-            ->where(function ($q) use ($query) {
-                $q->where('name', 'like', "%{$query}%")
-                  ->orWhere('email', 'like', "%{$query}%");
+            ->where(function ($q) {
+                $q->where('is_approved', true)
+                    ->orWhereNull('is_approved');
             })
-            ->with('university')
-            ->limit(10)
+            ->where(function ($q) use ($likeTerm) {
+                $q->whereRaw('LOWER(name) LIKE ?', [$likeTerm])
+                    ->orWhereRaw('LOWER(email) LIKE ?', [$likeTerm])
+                    ->orWhereRaw('LOWER(role) LIKE ?', [$likeTerm])
+                    ->orWhereHas('university', function ($uq) use ($likeTerm) {
+                        $uq->whereRaw('LOWER(name) LIKE ?', [$likeTerm]);
+                    });
+            })
+            ->with('university:id,name')
+            ->orderBy('name')
+            ->limit(25)
             ->get(['id', 'name', 'email', 'profile_picture', 'university_id', 'role']);
 
-        // Add friendship status and additional data to each user
-        $users->each(function ($user) use ($currentUserId) {
-            $friendship = Friendship::where(function ($q) use ($currentUserId, $user) {
-                $q->where('user_id', $currentUserId)->where('friend_id', $user->id);
-            })->orWhere(function ($q) use ($currentUserId, $user) {
-                $q->where('user_id', $user->id)->where('friend_id', $currentUserId);
-            })->first();
+        $payload = $users->map(function (User $user) use ($currentUserId) {
+            $friendship = Friendship::query()
+                ->where(function ($q) use ($currentUserId, $user) {
+                    $q->where('user_id', $currentUserId)->where('friend_id', $user->id);
+                })
+                ->orWhere(function ($q) use ($currentUserId, $user) {
+                    $q->where('user_id', $user->id)->where('friend_id', $currentUserId);
+                })
+                ->first();
 
-            $user->friendship_status = $friendship ? $friendship->status : 'none';
-            $user->friendship_id = $friendship ? $friendship->id : null;
-            $user->profile_picture_url = $user->getProfilePictureUrl();
-            $user->university = $user->university ? $user->university->name : null;
-        });
+            return [
+                'id' => $user->id,
+                'name' => $user->name,
+                'email' => $user->email,
+                'role' => $user->role,
+                'profile_picture' => $user->profile_picture,
+                'profile_picture_url' => $user->getProfilePictureUrl(),
+                'university' => $user->university?->name,
+                'friendship_status' => $friendship ? $friendship->status : 'none',
+                'friendship_id' => $friendship?->id,
+            ];
+        })->values();
 
-        return response()->json($users);
+        return response()->json($payload);
     }
 
     public function sendRequest(Request $request): JsonResponse
@@ -116,7 +140,7 @@ class FriendshipController extends Controller
             ->where('status', 'pending')
             ->first();
 
-        if (!$friendship) {
+        if (! $friendship) {
             return response()->json(['error' => 'Friend request not found'], 404);
         }
 
@@ -135,7 +159,7 @@ class FriendshipController extends Controller
             ->where('status', 'pending')
             ->first();
 
-        if (!$friendship) {
+        if (! $friendship) {
             return response()->json(['error' => 'Friend request not found'], 404);
         }
 
@@ -157,7 +181,7 @@ class FriendshipController extends Controller
             ->where('status', 'pending')
             ->first();
 
-        if (!$friendship) {
+        if (! $friendship) {
             return response()->json(['error' => 'Friend request not found'], 404);
         }
 
@@ -178,15 +202,15 @@ class FriendshipController extends Controller
             ->where(function ($q) use ($currentUserId, $friendId) {
                 $q->where(function ($subQ) use ($currentUserId, $friendId) {
                     $subQ->where('user_id', $currentUserId)
-                         ->where('friend_id', $friendId);
+                        ->where('friend_id', $friendId);
                 })->orWhere(function ($subQ) use ($currentUserId, $friendId) {
                     $subQ->where('user_id', $friendId)
-                         ->where('friend_id', $currentUserId);
+                        ->where('friend_id', $currentUserId);
                 });
             })
             ->first();
 
-        if (!$friendship) {
+        if (! $friendship) {
             return response()->json(['error' => 'Friendship not found'], 404);
         }
 
@@ -231,5 +255,10 @@ class FriendshipController extends Controller
             'success' => true,
             'message' => 'User blocked successfully',
         ]);
+    }
+
+    private function escapeLikeTerm(string $value): string
+    {
+        return addcslashes($value, '%_\\');
     }
 }
