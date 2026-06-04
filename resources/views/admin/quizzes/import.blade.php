@@ -2,7 +2,9 @@
     $errors = $errors ?? new \Illuminate\Support\MessageBag();
 @endphp
 
-@extends('layouts.app')
+@extends('layouts.admin')
+
+@section('page-title', 'Import Quiz')
 
 @section('content')
 <div class="space-y-6">

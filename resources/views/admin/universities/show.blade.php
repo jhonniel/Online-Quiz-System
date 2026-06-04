@@ -1,4 +1,6 @@
-@extends('layouts.app')
+@extends('layouts.admin')
+
+@section('page-title', 'University Details')
 
 @section('content')
 <div class="space-y-6">

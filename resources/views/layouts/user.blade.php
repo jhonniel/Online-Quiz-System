@@ -2,7 +2,7 @@
 <html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
 <head>
     <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
     <meta name="csrf-token" content="{{ csrf_token() }}">
 
     <title>@yield('title', $settings['system_name'])</title>
@@ -142,7 +142,7 @@
         : ($studentRulesBannerRows === 1 ? ' pt-10 sm:pt-11' : '');
     $userThemeBodyClass = ($authUser && $authUser->resolvedThemeColor()) ? ' user-theme-custom' : '';
 @endphp
-<body class="font-sans antialiased bg-gray-50{{ $studentRulesBodyPad }}{{ $userThemeBodyClass }}" x-data="{ sidebarOpen: false, sidebarCollapsed: false }">
+<body class="font-sans antialiased bg-gray-50 app-shell overflow-x-hidden{{ $studentRulesBodyPad }}{{ $userThemeBodyClass }}" x-data="{ sidebarOpen: false, sidebarCollapsed: false }">
     @php
         $layoutOffsetMobilePx = $studentRulesBannerRows === 2 ? 80 : ($studentRulesBannerRows === 1 ? 40 : 0);
         $layoutOffsetDesktopPx = $studentRulesBannerRows === 2 ? 96 : ($studentRulesBannerRows === 1 ? 44 : 0);
@@ -1410,7 +1410,7 @@
             </div>
 
             <!-- Page content -->
-            <main class="flex-1 min-h-0 min-w-0 overflow-y-auto overflow-x-hidden bg-gray-50 px-3 sm:px-4 lg:px-6 py-3 sm:py-4">
+            <main class="flex-1 min-h-0 min-w-0 overflow-y-auto overflow-x-hidden bg-gray-50 px-3 sm:px-4 lg:px-6 py-3 sm:py-4 safe-bottom">
                 <div class="min-h-full">
                     <div>
                         @if(session('success'))

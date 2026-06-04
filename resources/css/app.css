@@ -1,3 +1,109 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+@layer base {
+    html {
+        -webkit-text-size-adjust: 100%;
+        text-size-adjust: 100%;
+    }
+
+    body {
+        overflow-x: hidden;
+    }
+
+    img,
+    video,
+    canvas,
+    svg {
+        max-width: 100%;
+        height: auto;
+    }
+}
+
+@layer components {
+    /* Prevent page-level horizontal scroll from wide children */
+    .app-shell {
+        @apply min-w-0 overflow-x-hidden;
+    }
+
+    /* Touch-friendly tap targets on coarse pointers */
+    @media (pointer: coarse) {
+        .touch-target {
+            min-height: 44px;
+            min-width: 44px;
+        }
+    }
+
+    /* Horizontal scroll wrapper for tables that stay as tables on mobile */
+    .mobile-table-scroll {
+        @apply overflow-x-auto -mx-3 px-3 sm:mx-0 sm:px-0;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    .mobile-table-scroll::after {
+        content: '';
+        display: block;
+        height: 1px;
+    }
+
+    /* Card list for mobile data views */
+    .mobile-card-list {
+        @apply divide-y divide-gray-200;
+    }
+
+    .mobile-card {
+        @apply p-4 sm:p-5 hover:bg-gray-50/80 transition-colors;
+    }
+
+    .mobile-card-title {
+        @apply text-sm font-semibold text-gray-900 truncate;
+    }
+
+    .mobile-card-subtitle {
+        @apply text-sm text-gray-500 truncate mt-0.5;
+    }
+
+    .mobile-card-meta {
+        @apply flex flex-wrap gap-2 mt-2;
+    }
+
+    .mobile-card-actions {
+        @apply flex flex-wrap items-center gap-3 mt-3 pt-3 border-t border-gray-100;
+    }
+
+    .mobile-card-row {
+        @apply flex items-start justify-between gap-3;
+    }
+
+    .mobile-card-kv {
+        @apply grid grid-cols-2 gap-x-4 gap-y-2 mt-3 text-sm;
+    }
+
+    .mobile-card-kv dt {
+        @apply text-gray-500;
+    }
+
+    .mobile-card-kv dd {
+        @apply text-gray-900 font-medium text-right;
+    }
+
+    /* Safe area for fixed bottom bars / chat widgets */
+    .safe-bottom {
+        padding-bottom: env(safe-area-inset-bottom, 0px);
+    }
+
+    .safe-top {
+        padding-top: env(safe-area-inset-top, 0px);
+    }
+}
+
+@layer utilities {
+    .scrollbar-thin-x::-webkit-scrollbar {
+        height: 6px;
+    }
+
+    .scrollbar-thin-x::-webkit-scrollbar-thumb {
+        @apply bg-gray-300 rounded-full;
+    }
+}

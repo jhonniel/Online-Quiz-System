@@ -7,7 +7,7 @@
 ])
 
 @if($data->count() > 0)
-    <div class="overflow-x-auto flex-1">
+    <div class="mobile-table-scroll scrollbar-thin-x flex-1">
         <table class="min-w-full divide-y divide-gray-200">
             <thead class="bg-gray-50 sticky top-0 z-10">
                 <tr>

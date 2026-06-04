@@ -69,8 +69,6 @@
              sidebarOpen || isDesktop ? 'translate-x-0' : '-translate-x-full',
              sidebarCollapsed ? 'w-16' : 'w-64'
          ]"
-         style="transform: translateX(0);"
-         x-bind:style="(sidebarOpen || isDesktop) ? 'transform: translateX(0) !important;' : 'transform: translateX(-100%);'"
          x-init="
              if (typeof Alpine !== 'undefined') {
                  if (!Alpine.store('sidebar')) {

@@ -509,7 +509,48 @@
     <div class="bg-white shadow-sm border-t border-gray-200 overflow-visible flex flex-col">
 
         @if($allQuizzes->count() > 0)
-            <div class="overflow-x-auto overflow-y-visible">
+            {{-- Mobile card list --}}
+            <div class="md:hidden mobile-card-list border-b border-gray-200">
+                @foreach($allQuizzes as $quiz)
+                    @php
+                        $assignment = $quiz->assignments->first();
+                        $isAssigned = $assignment !== null;
+                        $isCompleted = $assignment ? $assignment->is_completed : false;
+                    @endphp
+                    <div class="mobile-card">
+                        <div class="flex items-start justify-between gap-2">
+                            <div class="min-w-0 flex-1">
+                                <p class="text-xs font-medium text-gray-500">#{{ str_pad($quiz->id, 4, '0', STR_PAD_LEFT) }}</p>
+                                <p class="mobile-card-title">{{ $quiz->title }}</p>
+                                @if($quiz->description)
+                                    <p class="mobile-card-subtitle">{{ Str::limit($quiz->description, 80) }}</p>
+                                @endif
+                                <div class="mobile-card-meta">
+                                    <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">{{ $quiz->topic }}</span>
+                                    <span class="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-gray-100 text-gray-700">{{ $quiz->total_questions }} Q</span>
+                                    @if($isAssigned)
+                                        <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium {{ $assignment->getStatusBadgeClass() }}">{{ $assignment->getStatusText() }}</span>
+                                    @else
+                                        <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">Available</span>
+                                    @endif
+                                </div>
+                            </div>
+                        </div>
+                        <div class="mobile-card-actions">
+                            @if($isAssigned && $isCompleted)
+                                <a href="{{ url('/quizzes/' . $quiz->id . '/result') }}" class="text-sm font-semibold text-green-600 hover:text-green-800 touch-manipulation py-1">View Result</a>
+                            @elseif($isAssigned && in_array($assignment->status, ['in_progress', 'cancelled'], true))
+                                <a href="{{ url('/quizzes/' . $quiz->id . '/take') }}" class="text-sm font-semibold text-indigo-600 hover:text-indigo-800 touch-manipulation py-1">{{ $assignment->status === 'cancelled' ? 'Restart Quiz' : 'Continue Quiz' }}</a>
+                            @elseif($isAssigned)
+                                <a href="{{ url('/quizzes/' . $quiz->id . '/take') }}" class="text-sm font-semibold text-indigo-600 hover:text-indigo-800 touch-manipulation py-1">Take Quiz</a>
+                            @endif
+                        </div>
+                    </div>
+                @endforeach
+            </div>
+
+            {{-- Desktop table --}}
+            <div class="hidden md:block overflow-x-auto overflow-y-visible mobile-table-scroll">
                 <table class="min-w-full divide-y divide-gray-200">
                     <thead class="bg-gray-50 sticky top-0 z-10">
                         <tr>

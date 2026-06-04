@@ -28,11 +28,12 @@
                     </svg>
                     <span class="hidden sm:inline">Filter</span>
                 </button>
-                <a href="{{ route('user.feedback.create') }}" class="inline-flex items-center px-3 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
-                    <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <a href="{{ route('user.feedback.create') }}" class="inline-flex items-center justify-center px-3 py-2.5 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 touch-manipulation">
+                    <svg class="w-4 h-4 sm:mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
                     </svg>
                     <span class="hidden sm:inline">Submit Feedback</span>
+                    <span class="sm:hidden">New</span>
                 </a>
             </div>
         </div>
@@ -54,9 +55,34 @@
     </div>
 
     <!-- Feedback Table -->
-    <div class="bg-white shadow-sm border-t border-b border-gray-200 overflow-visible flex-1 flex flex-col">
+    <div class="bg-white shadow-sm border-t border-b border-gray-200 overflow-visible flex-1 flex flex-col mx-2 sm:mx-3 lg:mx-4 xl:mx-6">
         @if($userFeedbacks->count() > 0)
-            <div class="overflow-x-auto overflow-y-visible flex-1">
+            <x-responsive-data-panel class="border-0 shadow-none rounded-none flex-1 flex flex-col">
+                <x-slot:mobile>
+                    @foreach($userFeedbacks as $feedback)
+                        <div class="mobile-card">
+                            <div class="flex items-start justify-between gap-2">
+                                <div class="min-w-0 flex-1">
+                                    <p class="text-xs font-medium text-gray-500">#{{ str_pad($feedback->id, 4, '0', STR_PAD_LEFT) }}</p>
+                                    <p class="mobile-card-title">{{ $feedback->title }}</p>
+                                    <p class="mobile-card-subtitle">{{ Str::limit($feedback->description, 100) }}</p>
+                                </div>
+                            </div>
+                            <div class="mobile-card-meta">
+                                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium {{ $feedback->type_badge_class }}">{{ $feedback->type_icon }} {{ ucfirst(str_replace('_', ' ', $feedback->type)) }}</span>
+                                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium {{ $feedback->status_badge_class }}">{{ ucfirst(str_replace('_', ' ', $feedback->status)) }}</span>
+                            </div>
+                            <div class="mobile-card-actions">
+                                <span class="text-xs text-gray-500">{{ $feedback->created_at->format('M d, Y') }}</span>
+                                <a href="{{ route('user.feedback.show', $feedback) }}" class="text-sm font-semibold text-indigo-600 hover:text-indigo-800 touch-manipulation py-1 ml-auto">
+                                    View details
+                                </a>
+                            </div>
+                        </div>
+                    @endforeach
+                </x-slot:mobile>
+                <x-slot:desktop>
+            <div class="overflow-x-auto overflow-y-visible flex-1 mobile-table-scroll">
                 <table class="min-w-full divide-y divide-gray-200">
                     <thead class="bg-gray-50 sticky top-0 z-10">
                         <tr>
@@ -147,6 +173,8 @@
                     </tbody>
                 </table>
             </div>
+                </x-slot:desktop>
+            </x-responsive-data-panel>
 
             <!-- Pagination -->
             <div class="bg-white px-4 py-3 flex items-center justify-between border-t border-gray-200 sm:px-6">

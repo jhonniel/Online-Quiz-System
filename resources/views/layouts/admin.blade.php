@@ -2,7 +2,7 @@
 <html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
 <head>
     <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
     <meta name="csrf-token" content="{{ csrf_token() }}">
 
     <title>@yield('title', $settings['system_name'] ?? 'Admin')</title>
@@ -86,7 +86,7 @@
         }
     </style>
 </head>
-<body class="font-sans antialiased bg-gray-100" 
+<body class="font-sans antialiased bg-gray-100 app-shell min-h-screen" 
       x-data="{ sidebarCollapsed: false }"
       x-init="
           $store.sidebar = { collapsed: sidebarCollapsed }; 
@@ -106,7 +106,7 @@
                 <div class="flex items-center justify-between h-14 px-3 sm:px-4 lg:px-6">
                     <div class="flex items-center space-x-3">
                         <!-- Mobile menu button -->
-                        <button @click="$dispatch('sidebar-toggle')" class="lg:hidden text-gray-500 hover:text-gray-600 focus:outline-none focus:text-gray-600 p-1">
+                        <button @click="$dispatch('sidebar-toggle')" class="lg:hidden touch-target text-gray-500 hover:text-gray-600 focus:outline-none focus:text-gray-600 p-2 -ml-1 rounded-md touch-manipulation" aria-label="Open menu">
                             <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
                             </svg>
@@ -261,7 +261,7 @@
             </header>
 
             <!-- Main Content -->
-            <main class="flex-1 overflow-y-auto bg-gray-50 px-3 sm:px-4 lg:px-8 min-w-0">
+            <main class="flex-1 overflow-y-auto overflow-x-hidden bg-gray-50 px-3 sm:px-4 lg:px-8 min-w-0 safe-bottom">
                 <!-- Flash Messages -->
                 @if(session('success'))
                     <div class="mb-3 bg-green-100 border border-green-400 text-green-700 px-4 py-2 rounded text-sm">

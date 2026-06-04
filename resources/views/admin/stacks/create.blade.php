@@ -1,4 +1,6 @@
-@extends('layouts.app')
+@extends('layouts.admin')
+
+@section('page-title', 'Add Stack')
 
 @section('content')
 <div class="max-w-2xl mx-auto">

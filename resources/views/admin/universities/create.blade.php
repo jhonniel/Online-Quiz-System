@@ -1,4 +1,6 @@
-@extends('layouts.app')
+@extends('layouts.admin')
+
+@section('page-title', 'Create University')
 
 @section('content')
 <div class="max-w-2xl mx-auto">

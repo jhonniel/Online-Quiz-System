@@ -140,7 +140,46 @@
                 </div>
             </div>
         </div>
-        <div class="overflow-x-auto">
+        <x-responsive-data-panel class="border-0 shadow-none rounded-none">
+            <x-slot:mobile>
+                @foreach($pendingTimeRequests as $request)
+                    <div class="mobile-card">
+                        <div class="flex items-start justify-between gap-3">
+                            <div>
+                                <p class="mobile-card-title">{{ $request->date->format('M d, Y') }}</p>
+                                <span class="inline-flex items-center mt-1 px-2 py-0.5 rounded-full text-xs font-medium {{ $request->isOvertime() ? 'bg-orange-100 text-orange-800' : 'bg-blue-100 text-blue-800' }}">
+                                    {{ $request->request_type_label }}
+                                </span>
+                            </div>
+                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium {{ $request->getStatusBadgeClass() }}">
+                                {{ ucfirst($request->status) }}
+                            </span>
+                        </div>
+                        <dl class="mobile-card-kv">
+                            <dt>Hours</dt>
+                            <dd class="font-mono">{{ $request->formatted_time }}</dd>
+                            <dt>Submitted</dt>
+                            <dd>{{ $request->created_at->format('M d, Y') }}</dd>
+                        </dl>
+                        @if($request->remarks)
+                            <p class="mt-2 text-sm text-gray-500">{{ \Illuminate\Support\Str::limit($request->remarks, 80) }}</p>
+                        @endif
+                        @if($request->status === 'pending')
+                            <div class="mobile-card-actions">
+                                <form method="POST" action="{{ route('user.dtr-time-requests.destroy', $request) }}"
+                                      onsubmit="return confirm('Discard this pending time request? The linked Additional Time leave request for the same day will also be removed.');">
+                                    @csrf
+                                    @method('DELETE')
+                                    <button type="submit" class="text-sm font-semibold text-red-600 hover:text-red-800 touch-manipulation py-1">
+                                        Discard
+                                    </button>
+                                </form>
+                            </div>
+                        @endif
+                    </div>
+                @endforeach
+            </x-slot:mobile>
+            <x-slot:desktop>
             <table class="min-w-full divide-y divide-gray-200">
                 <thead class="bg-gray-50">
                     <tr>
@@ -196,7 +235,8 @@
                     @endforeach
                 </tbody>
             </table>
-        </div>
+            </x-slot:desktop>
+        </x-responsive-data-panel>
     </div>
     @endif
 
@@ -249,6 +289,12 @@
                                 </button>
 
                                 <div class="hidden" data-week-content style="display: none;">
+                                    <div class="md:hidden mobile-card-list px-2 py-1 bg-white">
+                                        @foreach($week['records'] as $record)
+                                            @include('user.dtr.partials.record-card', ['record' => $record])
+                                        @endforeach
+                                    </div>
+                                    <div class="hidden md:block overflow-x-auto mobile-table-scroll">
                                     <table class="min-w-full divide-y divide-gray-200">
                                         <thead class="bg-gray-50">
                                             <tr>
@@ -401,6 +447,31 @@
                                             </tr>
                                         </tfoot>
                                     </table>
+                                    </div>
+                                    @php
+                                        $weeklyTotalHours = 0;
+                                        foreach ($week['records'] as $dtr) {
+                                            $weeklyTotalHours += ($dtr->total_hours ?? 0);
+                                        }
+                                        $weeklyTotalMinutes = (int) round($weeklyTotalHours * 60);
+                                        $weeklyTotalH = intdiv($weeklyTotalMinutes, 60);
+                                        $weeklyTotalM = $weeklyTotalMinutes % 60;
+                                        $weeklyTotalFormatted = sprintf('%02d:%02d', $weeklyTotalH, $weeklyTotalM);
+                                        $weeklyBaseMinutes = 40 * 60;
+                                        $deficitMinutes = max(0, $weeklyBaseMinutes - $weeklyTotalMinutes);
+                                        $deficitH = intdiv($deficitMinutes, 60);
+                                        $deficitM = $deficitMinutes % 60;
+                                        $deficitFormatted = sprintf('%02d:%02d', $deficitH, $deficitM);
+                                    @endphp
+                                    <div class="md:hidden mx-3 mb-3 mt-1 rounded-lg bg-indigo-50 border border-indigo-200 px-4 py-3 text-sm">
+                                        <div class="flex justify-between font-semibold text-gray-900">
+                                            <span>Weekly total</span>
+                                            <span>{{ $deficitMinutes === 0 ? 'Complete' : $weeklyTotalFormatted }}</span>
+                                        </div>
+                                        @if($deficitMinutes > 0)
+                                            <p class="text-xs text-gray-600 mt-1">Deficit: {{ $deficitFormatted }}</p>
+                                        @endif
+                                    </div>
                                 </div>
                             </div>
                         @endforeach

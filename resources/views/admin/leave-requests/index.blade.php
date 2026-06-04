@@ -179,8 +179,56 @@
     <!-- Leave Requests Table -->
     <div class="bg-white rounded-lg shadow border border-gray-200 overflow-hidden">
         @if($leaveRequests->count() > 0)
-            <div class="overflow-x-auto">
-                <table class="min-w-full divide-y divide-gray-200">
+            <x-responsive-data-panel class="border-0 shadow-none rounded-none">
+                <x-slot:mobile>
+                    @foreach($leaveRequests as $request)
+                        <div class="mobile-card">
+                            <div class="flex items-start justify-between gap-3">
+                                <div class="min-w-0 flex-1">
+                                    <p class="mobile-card-title">{{ $request->user->name }}</p>
+                                    <p class="mobile-card-subtitle">{{ $request->user->email }}</p>
+                                    <p class="text-sm font-medium text-gray-800 mt-1">{{ $request->type_label }}</p>
+                                </div>
+                                <span class="px-2 py-1 inline-flex shrink-0 text-xs leading-5 font-semibold rounded-full {{ $request->status_badge_class }}">
+                                    {{ $request->display_status }}
+                                </span>
+                            </div>
+                            <dl class="mobile-card-kv">
+                                <dt>Dates</dt>
+                                <dd>
+                                    {{ $request->start_date->format('M d') }}
+                                    @if($request->end_date && $request->end_date->ne($request->start_date))
+                                        – {{ $request->end_date->format('M d, Y') }}
+                                    @endif
+                                </dd>
+                                <dt>Duration</dt>
+                                <dd>{{ $request->duration_display_label }}</dd>
+                                <dt>Submitted</dt>
+                                <dd>{{ $request->created_at->format('M d, Y') }}</dd>
+                            </dl>
+                            <div class="mobile-card-actions">
+                                <a href="{{ url('/admin/leave-requests/' . $request->id) }}"
+                                   class="text-sm font-semibold text-indigo-600 hover:text-indigo-800 touch-manipulation py-1">
+                                    View Details
+                                </a>
+                                @php
+                                    $filedByAdminLog = $request->logs->firstWhere('action', 'filed_by_admin');
+                                    $canDelete = $filedByAdminLog && $filedByAdminLog->performed_by === auth()->id();
+                                @endphp
+                                @if($canDelete)
+                                    <form action="{{ url('/admin/leave-requests/' . $request->id) }}" method="POST" class="inline" onsubmit="return confirm('Are you sure you want to delete this leave request?');">
+                                        @csrf
+                                        @method('DELETE')
+                                        <button type="submit" class="text-sm font-semibold text-red-600 hover:text-red-800 touch-manipulation py-1">Delete</button>
+                                    </form>
+                                @endif
+                            </div>
+                        </div>
+                    @endforeach
+                </x-slot:mobile>
+
+                <x-slot:desktop>
+            <table class="min-w-full divide-y divide-gray-200">
                     <thead class="bg-gray-50">
                         <tr>
                             <th class="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Employee</th>
@@ -283,7 +331,8 @@
                         @endforeach
                     </tbody>
                 </table>
-            </div>
+                </x-slot:desktop>
+            </x-responsive-data-panel>
 
             <!-- Pagination -->
             <div class="bg-gray-50 px-4 py-3 border-t border-gray-200">
