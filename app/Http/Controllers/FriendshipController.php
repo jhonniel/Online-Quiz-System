@@ -40,8 +40,6 @@ class FriendshipController extends Controller
             return response()->json([]);
         }
 
-        $likeTerm = '%'.$this->escapeLikeTerm(mb_strtolower($query)).'%';
-
         $users = User::query()
             ->where('id', '!=', $currentUserId)
             ->where('is_active', true)
@@ -49,18 +47,13 @@ class FriendshipController extends Controller
                 $q->where('is_approved', true)
                     ->orWhereNull('is_approved');
             })
-            ->where(function ($q) use ($likeTerm) {
-                $q->whereRaw('LOWER(name) LIKE ?', [$likeTerm])
-                    ->orWhereRaw('LOWER(email) LIKE ?', [$likeTerm])
-                    ->orWhereRaw('LOWER(role) LIKE ?', [$likeTerm])
-                    ->orWhereHas('university', function ($uq) use ($likeTerm) {
-                        $uq->whereRaw('LOWER(name) LIKE ?', [$likeTerm]);
-                    });
+            ->where(function ($q) use ($query) {
+                $this->applyFriendSearchFilters($q, $query);
             })
-            ->with('university:id,name')
+            ->with(['university:id,name', 'department:id,name'])
             ->orderBy('name')
             ->limit(25)
-            ->get(['id', 'name', 'email', 'profile_picture', 'university_id', 'role']);
+            ->get(['id', 'name', 'email', 'profile_picture', 'university_id', 'department_id', 'role']);
 
         $payload = $users->map(function (User $user) use ($currentUserId) {
             $friendship = Friendship::query()
@@ -75,8 +68,10 @@ class FriendshipController extends Controller
             return [
                 'id' => $user->id,
                 'name' => $user->name,
+                'full_name' => $user->name,
                 'email' => $user->email,
                 'role' => $user->role,
+                'department' => $user->department?->name,
                 'profile_picture' => $user->profile_picture,
                 'profile_picture_url' => $user->getProfilePictureUrl(),
                 'university' => $user->university?->name,
@@ -255,6 +250,48 @@ class FriendshipController extends Controller
             'success' => true,
             'message' => 'User blocked successfully',
         ]);
+    }
+
+    private function applyFriendSearchFilters($query, string $searchText): void
+    {
+        $normalized = mb_strtolower(trim($searchText));
+        $likeTerm = '%'.$this->escapeLikeTerm($normalized).'%';
+        $tokens = preg_split('/\s+/u', $normalized, -1, PREG_SPLIT_NO_EMPTY) ?: [];
+
+        $query->where(function ($outer) use ($likeTerm, $tokens) {
+            $outer->where(function ($q) use ($likeTerm) {
+                $this->applyFriendSearchFieldMatch($q, $likeTerm);
+            });
+
+            if (count($tokens) > 1) {
+                $outer->orWhere(function ($q) use ($tokens) {
+                    foreach ($tokens as $token) {
+                        $tokenTerm = '%'.$this->escapeLikeTerm($token).'%';
+                        $q->where(function ($sub) use ($tokenTerm) {
+                            $this->applyFriendSearchFieldMatch($sub, $tokenTerm);
+                        });
+                    }
+                });
+            }
+        });
+    }
+
+    /**
+     * @param  \Illuminate\Database\Eloquent\Builder<User>|\Illuminate\Database\Query\Builder  $query
+     */
+    private function applyFriendSearchFieldMatch($query, string $likeTerm): void
+    {
+        $query->where(function ($q) use ($likeTerm) {
+            $q->whereRaw('LOWER(name) LIKE ?', [$likeTerm])
+                ->orWhereRaw('LOWER(email) LIKE ?', [$likeTerm])
+                ->orWhereRaw('LOWER(role) LIKE ?', [$likeTerm])
+                ->orWhereHas('university', function ($uq) use ($likeTerm) {
+                    $uq->whereRaw('LOWER(name) LIKE ?', [$likeTerm]);
+                })
+                ->orWhereHas('department', function ($dq) use ($likeTerm) {
+                    $dq->whereRaw('LOWER(name) LIKE ?', [$likeTerm]);
+                });
+        });
     }
 
     private function escapeLikeTerm(string $value): string

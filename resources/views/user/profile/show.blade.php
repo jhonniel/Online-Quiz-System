@@ -192,7 +192,7 @@
                         </div>
                         <div class="ml-2">
                             <h4 class="text-sm font-medium text-gray-900">Find New Friends</h4>
-                            <p class="text-xs text-gray-500">Partial match on name, email, role, or university</p>
+                            <p class="text-xs text-gray-500">Partial match on full name, email, role, department, or university</p>
                         </div>
                     </div>
                     <div class="flex-1 max-w-md">
@@ -204,7 +204,7 @@
                             </div>
                             <input type="text"
                                    id="friend-search"
-                                   placeholder="Search for users..."
+                                   placeholder="Search by full name, email..."
                                    class="block w-full pl-9 pr-10 py-2 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 text-sm transition-all duration-200">
                             <button type="button" id="clear-search" class="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600 hidden">
                                 <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -234,7 +234,7 @@
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
                         @foreach($pendingRequests as $request)
                             <div class="bg-gradient-to-r from-yellow-50 to-orange-50 border border-yellow-200 rounded-lg p-3 hover:shadow-md transition-all duration-200"
-                                 data-friend-list-item data-search-text="{{ strtolower($request->user->name.' '.$request->user->email) }}">
+                                 data-friend-list-item data-search-text="{{ strtolower(trim($request->user->name.' '.$request->user->email.' '.($request->user->department?->name ?? ''))) }}">
                                 <div class="flex items-center space-x-3">
                                     <div class="flex-shrink-0">
                                         @if($request->user->profile_picture)
@@ -292,7 +292,7 @@
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
                         @foreach($sentRequests as $request)
                             <div class="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-lg p-3 hover:shadow-md transition-all duration-200"
-                                 data-friend-list-item data-search-text="{{ strtolower($request->friend->name.' '.$request->friend->email) }}">
+                                 data-friend-list-item data-search-text="{{ strtolower(trim($request->friend->name.' '.$request->friend->email.' '.($request->friend->department?->name ?? ''))) }}">
                                 <div class="flex items-center space-x-3">
                                     <div class="flex-shrink-0">
                                         @if($request->friend->profile_picture)
@@ -349,7 +349,7 @@
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
                         @foreach($allFriends as $friend)
                             <div class="bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-lg p-3 hover:shadow-md transition-all duration-200 group"
-                                 data-friend-list-item data-search-text="{{ strtolower($friend->name.' '.$friend->email) }}">
+                                 data-friend-list-item data-search-text="{{ strtolower(trim($friend->name.' '.$friend->email.' '.($friend->department?->name ?? ''))) }}">
                                 <div class="flex items-center space-x-3">
                                     <div class="flex-shrink-0">
                                         @if($friend->profile_picture)
@@ -452,7 +452,7 @@
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
                     </svg>
                     <p class="text-gray-500 text-sm">No users found matching your search</p>
-                    <p class="text-gray-400 text-xs mt-1">Try part of a name, email, role, or university</p>
+                    <p class="text-gray-400 text-xs mt-1">Try part of a full name, email, role, department, or university</p>
                 </div>
             `;
             return;
@@ -464,7 +464,7 @@
                     Found ${users.length} user${users.length === 1 ? '' : 's'}
                 </div>
                 ${users.map(user => {
-                    const rawName = user.name || '';
+                    const rawName = user.full_name || user.name || '';
                     const name = escapeHtml(rawName);
                     const email = escapeHtml(user.email);
                     const university = user.university ? escapeHtml(String(user.university)) : '';
@@ -487,9 +487,11 @@
                             <div class="flex items-center space-x-3">
                                 <div class="flex-shrink-0">${avatar}</div>
                                 <div class="flex-1 min-w-0">
+                                    <p class="text-[10px] uppercase tracking-wide text-gray-400">Full name</p>
                                     <p class="font-semibold text-gray-900 truncate text-sm sm:text-base">${name}</p>
                                     <p class="text-xs sm:text-sm text-gray-500 truncate">${email}</p>
-                                    ${university ? `<p class="text-xs text-gray-400 truncate mt-1">${university}</p>` : ''}
+                                    ${user.department ? `<p class="text-xs text-gray-400 truncate">${escapeHtml(String(user.department))}</p>` : ''}
+                                    ${university ? `<p class="text-xs text-gray-400 truncate">${university}</p>` : ''}
                                 </div>
                                 <div class="flex-shrink-0">${action}</div>
                             </div>
