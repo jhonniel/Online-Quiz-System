@@ -187,6 +187,17 @@
 ]) !!}</script>
 <script>
     (function () {
+        const theme = window.getUserThemeChartColors ? window.getUserThemeChartColors() : {
+            primary: '#6366F1',
+            dark: '#4F46E5',
+            mid: '#818CF8',
+            light: '#A5B4FC',
+            palette: ['#6366F1', '#4F46E5', '#818CF8', '#A5B4FC'],
+            fill: 'rgba(99, 102, 241, 0.15)',
+            grid: '#E5E7EB',
+            border: '#6366F1',
+        };
+
         const teacherChartsNode = document.getElementById('teacher-charts-data');
         const teacherCharts = teacherChartsNode ? JSON.parse(teacherChartsNode.textContent) : {
             studentStatus: { labels: [], values: [] },
@@ -213,7 +224,7 @@
                     labels: teacherCharts.studentStatus.labels,
                     datasets: [{
                         data: teacherCharts.studentStatus.values,
-                        backgroundColor: ['#10B981', '#9CA3AF'],
+                        backgroundColor: [theme.primary, theme.light],
                     }],
                 },
                 options: commonOptions,
@@ -228,7 +239,7 @@
                     labels: teacherCharts.internshipStatus.labels,
                     datasets: [{
                         data: teacherCharts.internshipStatus.values,
-                        backgroundColor: ['#4F46E5', '#A78BFA'],
+                        backgroundColor: [theme.primary, theme.mid],
                     }],
                 },
                 options: commonOptions,
@@ -244,8 +255,8 @@
                     datasets: [{
                         label: 'Total Hours',
                         data: teacherCharts.monthlyHours.values,
-                        borderColor: '#2563EB',
-                        backgroundColor: 'rgba(37, 99, 235, 0.15)',
+                        borderColor: theme.primary,
+                        backgroundColor: theme.fill,
                         fill: true,
                         tension: 0.3,
                     }],
@@ -255,6 +266,10 @@
                     scales: {
                         y: {
                             beginAtZero: true,
+                            grid: { color: theme.grid },
+                        },
+                        x: {
+                            grid: { color: theme.grid },
                         },
                     },
                 },
@@ -270,7 +285,7 @@
                     datasets: [{
                         label: 'Hours',
                         data: teacherCharts.internshipHoursSummary.values,
-                        backgroundColor: ['#6366f1', '#10b981', '#f59e0b'],
+                        backgroundColor: theme.palette.slice(0, 3),
                         borderRadius: 6,
                     }],
                 },
@@ -283,6 +298,10 @@
                     scales: {
                         y: {
                             beginAtZero: true,
+                            grid: { color: theme.grid },
+                        },
+                        x: {
+                            grid: { display: false },
                         },
                     },
                 },

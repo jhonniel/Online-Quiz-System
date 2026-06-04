@@ -5,8 +5,10 @@ namespace App\Http\Controllers\Auth;
 use App\Http\Controllers\Controller;
 use App\Http\Controllers\User\AccountTerminatedController;
 use App\Models\User;
+use App\Services\StudentOjtPostCompletionService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Validation\ValidationException;
 
 class RoleLoginController extends Controller
@@ -41,6 +43,13 @@ class RoleLoginController extends Controller
             $user = Auth::user();
             if ($user instanceof User && $user->isAdmin()) {
                 return redirect('/admin/dashboard');
+            }
+
+            if ($user instanceof User
+                && $user->role === 'student'
+                && Schema::hasColumn('users', 'ojt_requirement_met_at')) {
+                app(StudentOjtPostCompletionService::class)->syncForStudentId((int) $user->id, false);
+                $user->refresh();
             }
 
             if ($user instanceof User && $user->role === 'student' && (bool) $user->student_terminated) {

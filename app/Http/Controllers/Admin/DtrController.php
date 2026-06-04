@@ -1983,7 +1983,7 @@ class DtrController extends Controller
             ]);
 
                 if ($updatedDtr->user && $updatedDtr->user->role === 'student') {
-                    app(StudentOjtPostCompletionService::class)->syncForStudentId((int) $updatedDtr->user_id);
+                    app(StudentOjtPostCompletionService::class)->syncForStudentId((int) $updatedDtr->user_id, false);
                 }
 
                 return redirect('/admin/student-dtr')

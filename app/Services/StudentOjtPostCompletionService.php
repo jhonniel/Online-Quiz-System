@@ -7,6 +7,7 @@ use App\Mail\StudentOjtCompletedCongratulationsMail;
 use App\Models\Dtr;
 use App\Models\User;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
@@ -96,8 +97,15 @@ class StudentOjtPostCompletionService
         ];
     }
 
-    public function syncForStudentId(int $userId): void
+    public function syncForStudentId(int $userId, bool $allowThrottle = true): void
     {
+        if ($allowThrottle) {
+            $cacheKey = 'ojt_post_completion_sync:'.$userId;
+            if (! Cache::add($cacheKey, 1, now()->addMinutes(2))) {
+                return;
+            }
+        }
+
         $user = User::query()->find($userId);
         if (! $user || $user->role !== 'student') {
             return;
@@ -106,46 +114,81 @@ class StudentOjtPostCompletionService
         $this->processStudent($user);
     }
 
-    public function processAllStudents(): int
+    /**
+     * @return array{processed: int, completed_hours: int, backfilled_met_at: int, terminated: int, congratulations_sent: int, disabled_notice_sent: int}
+     */
+    public function processAllStudents(): array
     {
-        $count = 0;
+        $stats = [
+            'processed' => 0,
+            'completed_hours' => 0,
+            'backfilled_met_at' => 0,
+            'terminated' => 0,
+            'congratulations_sent' => 0,
+            'disabled_notice_sent' => 0,
+        ];
+
         User::query()
             ->where('role', 'student')
             ->select('id')
             ->orderBy('id')
-            ->chunkById(100, function ($users) use (&$count) {
+            ->chunkById(100, function ($users) use (&$stats) {
                 foreach ($users as $u) {
-                    $this->syncForStudentId((int) $u->id);
-                    $count++;
+                    $student = User::query()->find($u->id);
+                    if (! $student) {
+                        continue;
+                    }
+                    $rowStats = $this->processStudent($student);
+                    foreach ($rowStats as $key => $value) {
+                        if (isset($stats[$key])) {
+                            $stats[$key] += (int) $value;
+                        }
+                    }
                 }
             });
 
-        return $count;
+        return $stats;
     }
 
-    public function processStudent(User $user): void
+    /**
+     * Apply post-completion rules to one student (including existing accounts that already met required DTR hours).
+     *
+     * @return array{processed: int, completed_hours: int, backfilled_met_at: int, terminated: int, congratulations_sent: int, disabled_notice_sent: int}
+     */
+    public function processStudent(User $user): array
     {
+        $stats = [
+            'processed' => 1,
+            'completed_hours' => 0,
+            'backfilled_met_at' => 0,
+            'terminated' => 0,
+            'congratulations_sent' => 0,
+            'disabled_notice_sent' => 0,
+        ];
+
         if ($user->role !== 'student') {
-            return;
+            return $stats;
         }
 
         $required = (float) ($user->required_training_hours ?? 0);
         if ($required <= 0) {
-            return;
+            return $stats;
         }
 
         $total = $this->totalDtrHoursForStudent((int) $user->id);
         if ($total < $required) {
-            return;
+            return $stats;
         }
 
+        $stats['completed_hours'] = 1;
         $user->refresh();
 
-        if ($user->ojt_requirement_met_at === null) {
-            $metAt = $this->estimateRequirementMetDate((int) $user->id, $required) ?? now()->startOfDay();
+        $wasMissingMetAt = $user->ojt_requirement_met_at === null;
+        if ($wasMissingMetAt) {
+            $metAt = $this->resolveRequirementMetAt($user, $required);
 
-            DB::transaction(function () use ($user, $metAt) {
-                $locked = User::query()->whereKey($user->id)->lockForUpdate()->first();
+            $this->runWriteTransaction(function () use ($user, $metAt) {
+                $locked = $this->lockUserRow((int) $user->id);
                 if (! $locked || $locked->role !== 'student' || $locked->ojt_requirement_met_at !== null) {
                     return;
                 }
@@ -154,25 +197,40 @@ class StudentOjtPostCompletionService
             });
 
             $user->refresh();
+            if ($user->ojt_requirement_met_at !== null) {
+                $stats['backfilled_met_at'] = 1;
+            }
         }
 
-        $metAt = $user->ojt_requirement_met_at ? Carbon::parse($user->ojt_requirement_met_at) : null;
+        $metAt = $user->ojt_requirement_met_at ? Carbon::parse($user->ojt_requirement_met_at)->startOfDay() : null;
         if (! $metAt) {
-            $this->sendAccountDisabledNoticeIfPending($user);
+            $stats['disabled_notice_sent'] += $this->sendAccountDisabledNoticeIfPending($user) ? 1 : 0;
 
-            return;
+            return $stats;
         }
 
         $graceEnd = $metAt->copy()->addDays(self::GRACE_DAYS)->startOfDay();
+        $graceAlreadyEnded = now()->startOfDay()->gte($graceEnd);
 
-        if (now()->gte($graceEnd)
-            && ! (bool) $user->student_terminated
-            && $user->ojt_post_completion_grace_closed_at === null) {
-            $this->terminateStudentAfterOjtGrace($user);
+        if ($graceAlreadyEnded && $user->ojt_completion_congratulations_sent_at === null) {
+            $user->forceFill([
+                'ojt_completion_congratulations_sent_at' => $graceEnd,
+            ])->save();
             $user->refresh();
         }
 
-        if ($user->ojt_completion_congratulations_sent_at === null && now()->lt($graceEnd)) {
+        $wasTerminated = (bool) $user->student_terminated;
+        if ($graceAlreadyEnded
+            && ! $wasTerminated
+            && $user->ojt_post_completion_grace_closed_at === null) {
+            $this->terminateStudentAfterOjtGrace($user);
+            $user->refresh();
+            if ((bool) $user->student_terminated && ! $wasTerminated) {
+                $stats['terminated'] = 1;
+            }
+        }
+
+        if ($user->ojt_completion_congratulations_sent_at === null && ! $graceAlreadyEnded) {
             if (filter_var($user->email, FILTER_VALIDATE_EMAIL)) {
                 try {
                     Mail::to($user->email)->send(new StudentOjtCompletedCongratulationsMail(
@@ -181,21 +239,54 @@ class StudentOjtPostCompletionService
                         self::GRACE_DAYS
                     ));
                     $user->forceFill(['ojt_completion_congratulations_sent_at' => now()])->save();
+                    $stats['congratulations_sent'] = 1;
                 } catch (\Throwable $e) {
                     Log::warning('OJT completion congratulations email failed: '.$e->getMessage(), [
                         'user_id' => $user->id,
                     ]);
                 }
+            } else {
+                $user->forceFill(['ojt_completion_congratulations_sent_at' => now()])->save();
             }
+            $user->refresh();
         }
 
-        $this->sendAccountDisabledNoticeIfPending($user);
+        $stats['disabled_notice_sent'] += $this->sendAccountDisabledNoticeIfPending($user) ? 1 : 0;
+
+        return $stats;
+    }
+
+    /**
+     * Historical completion date from DTR (for students who finished before tracking existed).
+     */
+    private function resolveRequirementMetAt(User $user, float $requiredHours): Carbon
+    {
+        if ($user->ojt_requirement_met_at) {
+            return Carbon::parse($user->ojt_requirement_met_at)->startOfDay();
+        }
+
+        $estimated = $this->estimateRequirementMetDate((int) $user->id, $requiredHours);
+        if ($estimated) {
+            return $estimated;
+        }
+
+        $lastDtrDate = Dtr::query()
+            ->where('user_id', $user->id)
+            ->where('total_hours', '>', 0)
+            ->orderByDesc('date')
+            ->value('date');
+
+        if ($lastDtrDate) {
+            return Carbon::parse($lastDtrDate)->startOfDay();
+        }
+
+        return now()->startOfDay();
     }
 
     private function terminateStudentAfterOjtGrace(User $user): void
     {
-        DB::transaction(function () use ($user) {
-            $locked = User::query()->whereKey($user->id)->lockForUpdate()->first();
+        $this->runWriteTransaction(function () use ($user) {
+            $locked = $this->lockUserRow((int) $user->id);
             if (! $locked || $locked->role !== 'student') {
                 return;
             }
@@ -221,24 +312,63 @@ class StudentOjtPostCompletionService
         });
     }
 
-    private function sendAccountDisabledNoticeIfPending(User $user): void
+    private function lockUserRow(int $userId): ?User
+    {
+        $query = User::query()->whereKey($userId);
+
+        if (DB::connection()->getDriverName() !== 'sqlite') {
+            $query->lockForUpdate();
+        }
+
+        return $query->first();
+    }
+
+    private function runWriteTransaction(callable $callback): void
+    {
+        $maxAttempts = DB::connection()->getDriverName() === 'sqlite' ? 8 : 1;
+
+        for ($attempt = 1; $attempt <= $maxAttempts; $attempt++) {
+            try {
+                DB::transaction($callback);
+
+                return;
+            } catch (\Throwable $e) {
+                if ($attempt >= $maxAttempts || ! $this->isDatabaseLockedException($e)) {
+                    throw $e;
+                }
+
+                usleep(50_000 * $attempt);
+            }
+        }
+    }
+
+    private function isDatabaseLockedException(\Throwable $e): bool
+    {
+        $message = strtolower($e->getMessage());
+
+        return str_contains($message, 'database is locked')
+            || str_contains($message, 'database table is locked')
+            || str_contains($message, 'general error: 5');
+    }
+
+    private function sendAccountDisabledNoticeIfPending(User $user): bool
     {
         $user->refresh();
 
         if ($user->ojt_account_disabled_notice_sent_at !== null) {
-            return;
+            return false;
         }
         if (! (bool) $user->student_terminated) {
-            return;
+            return false;
         }
         if ($user->ojt_post_completion_grace_closed_at === null) {
-            return;
+            return false;
         }
 
         if (! filter_var($user->email, FILTER_VALIDATE_EMAIL)) {
             $user->forceFill(['ojt_account_disabled_notice_sent_at' => now()])->save();
 
-            return;
+            return false;
         }
 
         try {
@@ -248,9 +378,11 @@ class StudentOjtPostCompletionService
                 'user_id' => $user->id,
             ]);
 
-            return;
+            return false;
         }
 
         $user->forceFill(['ojt_account_disabled_notice_sent_at' => now()])->save();
+
+        return true;
     }
 }

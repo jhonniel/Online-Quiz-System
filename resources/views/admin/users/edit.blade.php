@@ -336,6 +336,14 @@
                                    class="mt-1 h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded">
                             <span class="text-sm text-gray-700 group-hover:text-gray-900">Active (user can log in and use the system)</span>
                         </label>
+                        <label class="flex items-start gap-3 cursor-pointer group mt-4 pt-4 border-t border-gray-100">
+                            <input type="checkbox" name="theme_color_enabled" id="theme_color_enabled" value="1" {{ old('theme_color_enabled', $user->theme_color_enabled) ? 'checked' : '' }}
+                                   class="mt-1 h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded">
+                            <span>
+                                <span class="block text-sm text-gray-700 group-hover:text-gray-900">Allow custom theme color</span>
+                                <span class="block text-xs text-gray-500 mt-0.5">When enabled, the user can pick an account theme color on Edit Profile.</span>
+                            </span>
+                        </label>
                     </div>
                 </div>
 

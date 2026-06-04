@@ -8,6 +8,7 @@ use App\Models\Setting;
 use App\Observers\DtrObserver;
 use App\Observers\HiringApplicationObserver;
 use App\Services\MailConfigService;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Schema;
@@ -74,6 +75,13 @@ class AppServiceProvider extends ServiceProvider
 
             // Update config with absolute path
             config(['database.connections.sqlite.database' => $databasePath]);
+
+            try {
+                DB::connection('sqlite')->statement('PRAGMA journal_mode=WAL;');
+                DB::connection('sqlite')->statement('PRAGMA busy_timeout=5000;');
+            } catch (\Throwable) {
+                // Ignore if connection is not ready yet.
+            }
         }
     }
 

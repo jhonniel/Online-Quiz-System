@@ -40,6 +40,7 @@ class DashboardController extends Controller
         $studentResubmissionRequests = collect();
         $studentOjtAccessCountdown = null;
         $studentLeaveBalanceSummary = null;
+        $studentMeritDetails = null;
         $employeeLeaveSummary = null;
         $employeeLeaveCharts = null;
         $employeeResubmissionRequests = collect();
@@ -134,8 +135,13 @@ class DashboardController extends Controller
         }
 
         if ($user->role === 'student' && Schema::hasColumn('users', 'ojt_requirement_met_at')) {
-            $studentOjtAccessCountdown = app(StudentOjtPostCompletionService::class)
-                ->studentAccountDisableCountdownForDashboard($user);
+            $ojtService = app(StudentOjtPostCompletionService::class);
+            $ojtService->syncForStudentId((int) $user->id);
+            $user->refresh();
+            if ((bool) $user->student_terminated) {
+                return redirect()->to(\App\Http\Controllers\User\AccountTerminatedController::url());
+            }
+            $studentOjtAccessCountdown = $ojtService->studentAccountDisableCountdownForDashboard($user);
         }
 
         if ($user->role === 'student' && Schema::hasTable('evaluation_forms') && Schema::hasTable('evaluation_submissions')) {
@@ -275,6 +281,8 @@ class DashboardController extends Controller
                 'approved_absent_days' => round($approvedAbsentDays, 2),
                 'remaining_absence_balance' => round(max($allowableAbsences - $approvedAbsentDays, 0), 2),
             ];
+
+            $studentMeritDetails = StudentViolationCounter::detailsForUser($user->fresh());
         }
 
         if ($user->role === 'employee') {
@@ -400,6 +408,7 @@ class DashboardController extends Controller
             'studentTrainingCharts',
             'studentResubmissionRequests',
             'studentLeaveBalanceSummary',
+            'studentMeritDetails',
             'employeeLeaveSummary',
             'employeeLeaveCharts',
             'employeeResubmissionRequests'

@@ -162,6 +162,42 @@
                         @enderror
                     </div>
                 </div>
+
+                @if($user->canCustomizeThemeColor())
+                    @php
+                        $accountThemeColor = old('theme_color', $user->theme_color ?: \App\Support\UserThemeColor::DEFAULT);
+                    @endphp
+                    <div class="mb-8">
+                        <h3 class="text-lg font-medium text-gray-900 mb-2">Account Theme</h3>
+                        <p class="text-sm text-gray-500 mb-4">Color for your sidebar, navigation, buttons, banners, charts, and lists.</p>
+                        <div class="flex flex-col sm:flex-row sm:items-center gap-4">
+                            <label for="theme_color" class="inline-flex items-center gap-3 cursor-pointer">
+                                <input type="color"
+                                       name="theme_color"
+                                       id="theme_color"
+                                       value="{{ $accountThemeColor }}"
+                                       class="h-12 w-16 rounded-lg border border-gray-300 cursor-pointer bg-white p-1">
+                                <span class="text-sm font-medium text-gray-700">Account color</span>
+                            </label>
+                            <div class="flex items-center gap-2">
+                                <label for="theme_color_hex" class="sr-only">Account color hex</label>
+                                <input type="text"
+                                       id="theme_color_hex"
+                                       value="{{ strtoupper($accountThemeColor) }}"
+                                       maxlength="7"
+                                       pattern="^#[0-9A-Fa-f]{6}$"
+                                       class="block w-28 px-3 py-2 border border-gray-300 rounded-md shadow-sm font-mono text-sm uppercase focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 @error('theme_color') border-red-300 @enderror">
+                            </div>
+                            <div id="theme-color-preview"
+                                 class="h-10 w-10 rounded-full border-2 border-white shadow-md ring-1 ring-gray-200"
+                                 style="background-color: {{ $accountThemeColor }};"
+                                 title="Account color preview"></div>
+                        </div>
+                        @error('theme_color')
+                            <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                        @enderror
+                    </div>
+                @endif
             </div>
 
             <!-- Form Actions - Sticky at bottom -->
@@ -242,6 +278,59 @@
 <x-toast />
 
 <script>
+@if($user->canCustomizeThemeColor())
+(function () {
+    function normalizeHex(value) {
+        if (!value) {
+            return '';
+        }
+        let hex = value.trim().toUpperCase();
+        if (!hex.startsWith('#')) {
+            hex = '#' + hex;
+        }
+        return /^#[0-9A-F]{6}$/.test(hex) ? hex : '';
+    }
+
+    function bindColorPair(colorId, hexId, previewId) {
+        const colorInput = document.getElementById(colorId);
+        const hexInput = document.getElementById(hexId);
+        const preview = document.getElementById(previewId);
+        if (!colorInput || !hexInput || !preview) {
+            return;
+        }
+
+        function syncFromPicker() {
+            hexInput.value = colorInput.value.toUpperCase();
+            preview.style.backgroundColor = colorInput.value;
+        }
+
+        function syncFromHex() {
+            const normalized = normalizeHex(hexInput.value);
+            if (normalized) {
+                colorInput.value = normalized;
+                hexInput.value = normalized;
+                preview.style.backgroundColor = normalized;
+            }
+        }
+
+        colorInput.addEventListener('input', syncFromPicker);
+        hexInput.addEventListener('change', syncFromHex);
+        hexInput.addEventListener('blur', syncFromHex);
+    }
+
+    bindColorPair('theme_color', 'theme_color_hex', 'theme-color-preview');
+
+    document.getElementById('profile-form')?.addEventListener('submit', function () {
+        const colorInput = document.getElementById('theme_color');
+        const hexInput = document.getElementById('theme_color_hex');
+        const normalized = normalizeHex(hexInput?.value || colorInput?.value || '');
+        if (normalized && colorInput) {
+            colorInput.value = normalized;
+        }
+    });
+})();
+@endif
+
 // Profile Picture Preview
 function previewProfilePicture(input) {
     if (input.files && input.files[0]) {

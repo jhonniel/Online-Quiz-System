@@ -5,6 +5,7 @@ namespace App\Models;
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
 use App\Services\MailConfigService;
 use App\Support\AdminPermissionAreas;
+use App\Support\UserThemeColor;
 use Illuminate\Auth\Notifications\ResetPassword;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
@@ -57,6 +58,8 @@ class User extends Authenticatable
         'moa_uploaded_at',
         'moa_reupload_allowed',
         'bio',
+        'theme_color_enabled',
+        'theme_color',
         'overtime_months_credited',
         'required_training_hours',
         'ojt_target_end_date',
@@ -102,6 +105,7 @@ class User extends Authenticatable
         'evaluation_forced_at' => 'datetime',
         'moa_uploaded_at' => 'datetime',
         'moa_reupload_allowed' => 'boolean',
+        'theme_color_enabled' => 'boolean',
         'student_rules_warning' => 'boolean',
         'student_rules_warning_manual' => 'boolean',
         'student_rules_marquee_enabled' => 'boolean',
@@ -538,6 +542,20 @@ class User extends Authenticatable
         }
 
         return substr($initials, 0, 2);
+    }
+
+    public function canCustomizeThemeColor(): bool
+    {
+        return (bool) ($this->theme_color_enabled ?? false);
+    }
+
+    public function resolvedThemeColor(): ?string
+    {
+        if (! $this->canCustomizeThemeColor()) {
+            return null;
+        }
+
+        return UserThemeColor::normalize($this->theme_color) ?? UserThemeColor::DEFAULT;
     }
 
     // Friendship relationships

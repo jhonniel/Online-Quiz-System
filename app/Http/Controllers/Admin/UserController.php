@@ -439,6 +439,7 @@ class UserController extends Controller
                 'exists:departments,id',
             ],
             'is_active' => 'boolean',
+            'theme_color_enabled' => 'boolean',
             'required_training_hours' => 'nullable|numeric|min:0',
             'ojt_target_end_date' => 'nullable|date',
             'student_absence_allowance' => 'nullable|numeric|min:0|max:365',
@@ -498,6 +499,7 @@ class UserController extends Controller
             'university_id' => $universityId,
             'department_id' => in_array($request->role, ['employee', 'student'], true) ? $request->department_id : null,
             'is_active' => $request->has('is_active'),
+            'theme_color_enabled' => $request->boolean('theme_color_enabled'),
         ];
 
         if ($request->filled('password')) {

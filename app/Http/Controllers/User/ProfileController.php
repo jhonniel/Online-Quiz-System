@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\User;
 
 use App\Http\Controllers\Controller;
+use App\Support\UserThemeColor;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Hash;
@@ -37,24 +38,35 @@ class ProfileController extends Controller
         try {
             $user = auth()->user();
 
-            $request->validate([
+            $rules = [
                 'name' => 'required|string|max:255',
                 'bio' => 'nullable|string|max:1000',
                 'profile_picture' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:2048',
                 'cover_photo' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:5120', // 5MB max for cover photo
-            ], [
+            ];
+
+            if ($user->canCustomizeThemeColor()) {
+                $rules['theme_color'] = ['nullable', 'regex:/^#[0-9A-Fa-f]{6}$/'];
+            }
+
+            $request->validate($rules, [
                 'profile_picture.image' => 'Profile picture must be an image file.',
                 'profile_picture.mimes' => 'Profile picture must be a JPEG, PNG, JPG, GIF, or WEBP file.',
                 'profile_picture.max' => 'Profile picture must not be larger than 2MB.',
                 'cover_photo.image' => 'Cover photo must be an image file.',
                 'cover_photo.mimes' => 'Cover photo must be a JPEG, PNG, JPG, GIF, or WEBP file.',
                 'cover_photo.max' => 'Cover photo must not be larger than 5MB.',
+                'theme_color.regex' => 'Theme color must be a valid hex color (e.g. #4F46E5).',
             ]);
 
             $data = [
                 'name' => $request->name,
                 'bio' => $request->bio,
             ];
+
+            if ($user->canCustomizeThemeColor()) {
+                $data['theme_color'] = UserThemeColor::normalize($request->input('theme_color'));
+            }
 
             // Store profile picture and cover on DigitalOcean Spaces when configured, else public disk
             $spacesConfigured = !empty(env('DIGITALOCEAN_SPACES_KEY') ?: env('DO_SPACES_KEY'))

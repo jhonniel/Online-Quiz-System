@@ -369,18 +369,22 @@ Route::prefix('admin')->middleware(['auth', 'admin'])->group(function () {
         });
 
         Route::middleware(['admin.subfeature:employee_management,file_request'])->group(function () {
+            Route::redirect('/file-request/templates', '/admin/file-request');
+            Route::redirect('/file-request/templates/{path}', '/admin/file-request')->where('path', '.*');
+            Route::post('/file-request/preview', fn () => redirect()
+                ->route('admin.file-request.index')
+                ->with('error', 'Document generation was removed. Upload a file and use Send to employee.'));
+            Route::post('/file-request/generate', fn () => redirect()
+                ->route('admin.file-request.index')
+                ->with('error', 'Document generation was removed. Upload a file and use Send to employee.'));
             Route::get('/file-request', [App\Http\Controllers\Admin\FileRequestController::class, 'index'])->name('admin.file-request.index');
-            Route::post('/file-request/preview', [App\Http\Controllers\Admin\FileRequestController::class, 'preview'])->name('admin.file-request.preview');
-            Route::post('/file-request/generate', [App\Http\Controllers\Admin\FileRequestController::class, 'generate'])->name('admin.file-request.generate');
+            Route::post('/file-request', [App\Http\Controllers\Admin\FileRequestController::class, 'store'])->name('admin.file-request.store');
+            Route::get('/file-request/history/{fileRequest}', function (App\Models\EmployeeFileRequest $fileRequest) {
+                return redirect()->route('admin.file-request.view', $fileRequest);
+            })->name('admin.file-request.show');
             Route::get('/file-request/history/{fileRequest}/view', [App\Http\Controllers\Admin\FileRequestController::class, 'view'])->name('admin.file-request.view');
             Route::get('/file-request/history/{fileRequest}/download', [App\Http\Controllers\Admin\FileRequestController::class, 'download'])->name('admin.file-request.download');
             Route::delete('/file-request/history/{fileRequest}', [App\Http\Controllers\Admin\FileRequestController::class, 'destroy'])->name('admin.file-request.destroy');
-            Route::get('/file-request/templates', [App\Http\Controllers\Admin\FileRequestController::class, 'templatesIndex'])->name('admin.file-request.templates.index');
-            Route::get('/file-request/templates/create', [App\Http\Controllers\Admin\FileRequestController::class, 'templatesCreate'])->name('admin.file-request.templates.create');
-            Route::post('/file-request/templates', [App\Http\Controllers\Admin\FileRequestController::class, 'templatesStore'])->name('admin.file-request.templates.store');
-            Route::get('/file-request/templates/{template}/edit', [App\Http\Controllers\Admin\FileRequestController::class, 'templatesEdit'])->name('admin.file-request.templates.edit');
-            Route::put('/file-request/templates/{template}', [App\Http\Controllers\Admin\FileRequestController::class, 'templatesUpdate'])->name('admin.file-request.templates.update');
-            Route::delete('/file-request/templates/{template}', [App\Http\Controllers\Admin\FileRequestController::class, 'templatesDestroy'])->name('admin.file-request.templates.destroy');
         });
 
         Route::middleware(['admin.subfeature:employee_management,dtr'])->group(function () {

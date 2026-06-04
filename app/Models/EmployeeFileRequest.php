@@ -12,6 +12,8 @@ class EmployeeFileRequest extends Model
         'user_id',
         'generated_by',
         'title',
+        'original_filename',
+        'mime_type',
         'field_values',
         'rendered_html',
         'pdf_path',

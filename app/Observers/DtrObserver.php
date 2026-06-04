@@ -17,6 +17,6 @@ class DtrObserver
             return;
         }
 
-        $this->studentOjtPostCompletionService->syncForStudentId((int) $dtr->user_id);
+        $this->studentOjtPostCompletionService->syncForStudentId((int) $dtr->user_id, false);
     }
 }

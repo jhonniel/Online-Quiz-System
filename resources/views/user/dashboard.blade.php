@@ -50,7 +50,15 @@
             </div>
             <div class="ml-3">
                 <h1 class="text-lg sm:text-xl lg:text-2xl font-bold text-white">My Dashboard</h1>
-                <p class="text-indigo-100 text-sm">Welcome back, {{ auth()->user()->name }}! Your rank: {{ auth()->user()->getRankText() }} ({{ auth()->user()->getTotalScore() }} pts)</p>
+                <p class="text-indigo-100 text-sm">
+                    Welcome back, {{ auth()->user()->name }}! Your rank: {{ auth()->user()->getRankText() }} ({{ auth()->user()->getTotalScore() }} pts)
+                    @if(auth()->user()->role === 'student' && !empty($studentMeritDetails['breakdown']['total']))
+                        · Merits:
+                        <span class="font-semibold tabular-nums {{ (int) $studentMeritDetails['breakdown']['total'] >= 3 ? 'text-red-200' : '' }}">
+                            {{ (int) $studentMeritDetails['breakdown']['total'] }}
+                        </span>
+                    @endif
+                </p>
             </div>
         </div>
     </div>
@@ -63,7 +71,7 @@
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
                 </svg>
                 <div class="min-w-0">
-                    <p class="text-sm font-semibold text-sky-900">Absent-request allowance (set by administrator)</p>
+                    <p class="text-sm font-semibold text-sky-900">Absent-request allowance</p>
                     <p class="text-sm text-sky-800 mt-0.5">
                         <span class="font-bold tabular-nums">{{ number_format((float) ($studentLeaveBalanceSummary['remaining_absence_balance'] ?? 0), 2) }}</span>
                         day(s) still available
@@ -265,7 +273,7 @@
             </div>
             <div class="rounded-lg p-4 shadow-sm border {{ $absenceBalanceExhausted ? 'bg-red-50 border-red-200' : 'bg-white border-gray-200' }}">
                 <p class="text-xs font-medium uppercase tracking-wide {{ $absenceBalanceExhausted ? 'text-red-700' : 'text-gray-500' }}">Available absence balance</p>
-                <p class="mt-0.5 text-[11px] leading-snug {{ $absenceBalanceExhausted ? 'text-red-700' : 'text-gray-500' }}">Based on the absence allowance your administrator set (approved “Absent” requests consume this balance).</p>
+                <p class="mt-0.5 text-[11px] leading-snug {{ $absenceBalanceExhausted ? 'text-red-700' : 'text-gray-500' }}">Based on your absence allowance (approved “Absent” requests consume this balance).</p>
                 <p class="mt-2 text-2xl font-bold tabular-nums {{ $absenceBalanceExhausted ? 'text-red-800' : 'text-gray-900' }}">
                     {{ number_format($remainingAbsenceBalance, 2) }}
                     <span class="text-base font-semibold {{ $absenceBalanceExhausted ? 'text-red-700' : 'text-gray-600' }}">days left</span>
@@ -279,6 +287,10 @@
                 </p>
             </div>
         </div>
+        @endif
+
+        @if(!empty($studentMeritDetails))
+            @include('partials.student-merit-dashboard-summary', ['studentMeritDetails' => $studentMeritDetails])
         @endif
 
         <div class="grid grid-cols-1 xl:grid-cols-2 gap-3">
@@ -810,6 +822,17 @@ document.getElementById('quizCodeModal').addEventListener('click', function(e) {
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
+    const theme = window.getUserThemeChartColors ? window.getUserThemeChartColors() : {
+        primary: '#6366f1',
+        dark: '#4f46e5',
+        mid: '#818cf8',
+        light: '#a5b4fc',
+        palette: ['#6366f1', '#4f46e5', '#818cf8', '#a5b4fc'],
+        fill: 'rgba(99, 102, 241, 0.15)',
+        grid: '#e5e7eb',
+        border: '#6366f1',
+    };
+
     const chartNode = document.getElementById('student-training-charts-data');
     const studentChartData = chartNode ? JSON.parse(chartNode.textContent) : {
         progress: { labels: [], values: [] },
@@ -825,7 +848,7 @@ document.addEventListener('DOMContentLoaded', function() {
         scales: {
             y: {
                 beginAtZero: true,
-                grid: { color: '#e5e7eb' },
+                grid: { color: theme.grid },
             },
             x: {
                 grid: { display: false },
@@ -841,7 +864,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 labels: studentChartData.progress.labels,
                 datasets: [{
                     data: studentChartData.progress.values,
-                    backgroundColor: ['#6366f1', '#10b981', '#f59e0b'],
+                    backgroundColor: theme.palette.slice(0, 3),
                     borderRadius: 6,
                     maxBarThickness: 54,
                 }],
@@ -858,7 +881,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 labels: studentChartData.monthly.labels,
                 datasets: [{
                     data: studentChartData.monthly.values,
-                    backgroundColor: '#3b82f6',
+                    backgroundColor: theme.primary,
                     borderRadius: 6,
                     maxBarThickness: 36,
                 }],
@@ -881,7 +904,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 labels: employeeChartData.status.labels,
                 datasets: [{
                     data: employeeChartData.status.values,
-                    backgroundColor: ['#f59e0b', '#10b981', '#ef4444', '#f43f5e'],
+                    backgroundColor: theme.palette,
                     borderColor: '#ffffff',
                     borderWidth: 2,
                 }],
@@ -904,7 +927,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 labels: employeeChartData.monthly.labels,
                 datasets: [{
                     data: employeeChartData.monthly.values,
-                    backgroundColor: '#6366f1',
+                    backgroundColor: theme.primary,
                     borderRadius: 6,
                     maxBarThickness: 36,
                 }],

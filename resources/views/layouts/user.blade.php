@@ -104,6 +104,17 @@
             }
         }
     </style>
+    @auth
+        @php $userLayoutThemeColor = auth()->user()->resolvedThemeColor(); @endphp
+        @if($userLayoutThemeColor)
+            @include('partials.user-theme-scope-styles', [
+                'scopeClass' => 'user-theme-custom',
+                'varPrefix' => 'user-theme',
+                'themeColor' => $userLayoutThemeColor,
+            ])
+        @endif
+        @include('partials.user-theme-chart-helper')
+    @endauth
 </head>
 
 @php
@@ -130,8 +141,9 @@
     $studentRulesBodyPad = $studentRulesBannerRows === 2
         ? ' pt-20 sm:pt-24'
         : ($studentRulesBannerRows === 1 ? ' pt-10 sm:pt-11' : '');
+    $userThemeBodyClass = ($authUser && $authUser->resolvedThemeColor()) ? ' user-theme-custom' : '';
 @endphp
-<body class="font-sans antialiased bg-gray-50{{ $studentRulesBodyPad }}" x-data="{ sidebarOpen: false, sidebarCollapsed: false }">
+<body class="font-sans antialiased bg-gray-50{{ $studentRulesBodyPad }}{{ $userThemeBodyClass }}" x-data="{ sidebarOpen: false, sidebarCollapsed: false }">
     @php
         $layoutOffsetMobilePx = $studentRulesBannerRows === 2 ? 80 : ($studentRulesBannerRows === 1 ? 40 : 0);
         $layoutOffsetDesktopPx = $studentRulesBannerRows === 2 ? 96 : ($studentRulesBannerRows === 1 ? 44 : 0);
