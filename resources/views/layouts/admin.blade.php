@@ -34,6 +34,9 @@
     <!-- Scripts -->
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 
+    <!-- Tailwind CDN fallback: keeps legacy/dynamic utility classes working if not in the Vite build -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
     <!-- Alpine.js -->
     <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
 
