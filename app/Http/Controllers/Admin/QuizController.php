@@ -1205,23 +1205,36 @@ class QuizController extends Controller
                 }
 
                 $attemptNumber = (int) ($history->attempt_number ?? 1);
-                $hasRowForAttempt = QuizAttempt::query()
+                $existingAttempt = QuizAttempt::query()
                     ->where('quiz_id', $history->quiz_id)
                     ->where('user_id', $history->user_id)
                     ->where('question_id', $questionId)
                     ->where('attempt_number', $attemptNumber)
-                    ->exists();
+                    ->first();
 
-                if ($hasRowForAttempt) {
+                // Correction for old rows created by the previous (buggy) sync:
+                // if graded_at exists but there is no graded_by, treat it as still pending.
+                if ($existingAttempt) {
+                    if (
+                        $existingAttempt->graded_at !== null
+                        && $existingAttempt->graded_by === null
+                        && (
+                            ($existingAttempt->completed_at !== null && $existingAttempt->graded_at->equalTo($existingAttempt->completed_at))
+                            || ($existingAttempt->completed_at === null && $existingAttempt->graded_at->equalTo($existingAttempt->created_at))
+                        )
+                    ) {
+                        $existingAttempt->update(['graded_at' => null]);
+                    }
+
                     continue;
                 }
 
                 $pointsEarned = (int) ($row['points_earned'] ?? 0);
                 $isCorrect = (bool) ($row['is_correct'] ?? false);
+                // Never auto-mark as graded.
+                // Manual grading visibility is driven by admin action (graded_at),
+                // not by score correctness recorded in attempt history.
                 $gradedAt = null;
-                if ($history->status === 'completed' && ($pointsEarned > 0 || $isCorrect)) {
-                    $gradedAt = $history->completed_at ?? $history->created_at;
-                }
 
                 $this->createManualGradingAttempt(
                     $history->quiz_id,

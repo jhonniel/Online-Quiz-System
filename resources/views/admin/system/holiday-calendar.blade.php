@@ -52,7 +52,7 @@
         <div class="rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">{{ session('success') }}</div>
     @endif
 
-    <div class="grid grid-cols-1 xl:grid-cols-4 gap-4 lg:gap-6 items-start">
+    <div class="grid grid-cols-1 xl:grid-cols-4 gap-4 lg:gap-6 items-stretch">
         <div class="xl:col-span-1">
             <div class="bg-amber-50 rounded-2xl border border-amber-200 p-4">
                 <h3 class="text-xs font-bold uppercase tracking-wide text-amber-900">Holidays this month</h3>
@@ -108,7 +108,7 @@
             </div>
         </div>
 
-        <div class="xl:col-span-3 space-y-3">
+        <div class="xl:col-span-3 flex flex-col space-y-3 min-h-0">
                 <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                 <div class="flex items-center gap-2">
                     <a href="{{ route('admin.system.calendar.index', ['month' => $prevMonth]) }}"
@@ -129,15 +129,15 @@
                 </div>
             </div>
 
-            <div class="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
+            <div class="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden flex flex-col flex-1 min-h-0">
                 <div class="grid grid-cols-7 bg-gray-50 border-b border-gray-200">
                     @foreach(['Mon','Tue','Wed','Thu','Fri','Sat','Sun'] as $weekday)
                         <div class="px-2 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wide text-center">{{ $weekday }}</div>
                     @endforeach
                 </div>
-                <div class="divide-y divide-gray-200">
+                <div class="divide-y divide-gray-200 flex-1 flex flex-col min-h-0">
                     @foreach($weeks as $week)
-                        <div class="grid grid-cols-7 min-h-[88px] sm:min-h-[100px]">
+                        <div class="grid grid-cols-7 flex-1 h-full min-h-0">
                             @foreach($week as $day)
                                 @php
                                     $date = $day['date'];
@@ -153,7 +153,7 @@
                                         ? 'border-violet-300 bg-violet-100/80 text-violet-900 hover:bg-violet-200/80'
                                         : 'border-amber-300 bg-amber-100/80 text-amber-900 hover:bg-amber-200/80';
                                 @endphp
-                                <div class="border-r border-gray-100 last:border-r-0 p-1.5 sm:p-2 text-xs flex flex-col group {{ $cellHolidayBg }}
+                                <div class="border-r border-gray-100 last:border-r-0 p-1.5 sm:p-2 text-xs flex flex-col group h-full min-h-0 {{ $cellHolidayBg }}
                                     {{ $isWeekend && !$holiday ? 'opacity-70' : '' }}">
                                     <div class="flex items-center justify-between gap-1 mb-1">
                                         @if($isCurrentMonth && !$isWeekend && !$holiday)
@@ -201,7 +201,14 @@
 </div>
 
 {{-- Add / edit holiday modal --}}
-<div id="holidayModal" class="fixed inset-0 z-50 {{ $shouldOpenModal ? '' : 'hidden' }}" aria-hidden="{{ $shouldOpenModal ? 'false' : 'true' }}" role="dialog" aria-labelledby="holidayModalTitle">
+<div id="holidayModal"
+     class="fixed inset-0 z-50 {{ $shouldOpenModal ? '' : 'hidden' }}"
+     aria-hidden="{{ $shouldOpenModal ? 'false' : 'true' }}"
+     role="dialog"
+     aria-labelledby="holidayModalTitle"
+     data-default-type="{{ DtrHoliday::TYPE_REGULAR }}"
+     data-store-url="{{ route('admin.system.calendar.store') }}"
+     data-should-open-on-load="{{ $shouldOpenModal ? '1' : '0' }}">
     <div id="holidayModalBackdrop"
          class="fixed inset-0 bg-gray-900/50 backdrop-blur-sm transition-opacity duration-200 ease-out {{ $shouldOpenModal ? 'opacity-100' : 'opacity-0' }}"
          data-holiday-modal-dismiss></div>
@@ -293,10 +300,10 @@
         const nameInput = document.getElementById('holiday_name');
         const typeInput = document.getElementById('holiday_type');
         const notesInput = document.getElementById('holiday_notes');
-        const defaultType = @json(DtrHoliday::TYPE_REGULAR);
         const holidayIdInput = document.getElementById('holiday_id');
-        const storeUrl = @json(route('admin.system.calendar.store'));
-        const shouldOpenOnLoad = @json($shouldOpenModal);
+        const defaultType = modal?.dataset.defaultType ?? '';
+        const storeUrl = modal?.dataset.storeUrl ?? '';
+        const shouldOpenOnLoad = (modal?.dataset.shouldOpenOnLoad ?? '0') === '1';
         const backdrop = document.getElementById('holidayModalBackdrop');
         const panel = document.getElementById('holidayModalPanel');
         const ANIM_MS = 200;

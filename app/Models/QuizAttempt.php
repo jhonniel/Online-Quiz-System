@@ -19,6 +19,8 @@ class QuizAttempt extends Model
         'started_at',
         'completed_at',
         'graded_at',
+        'graded_by',
+        'feedback',
     ];
 
     protected $casts = [
