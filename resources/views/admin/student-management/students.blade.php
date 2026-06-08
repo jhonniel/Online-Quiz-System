@@ -314,9 +314,12 @@
 
 {{-- Merit details modal --}}
 <div id="meritDetailsModal" class="fixed inset-0 z-50 hidden" aria-hidden="true" role="dialog" aria-labelledby="meritDetailsModalTitle" data-show-profile-link="{{ $showMeritModalProfileLink ? '1' : '0' }}" data-can-edit-automation="{{ $canManageMeritAutomation ? '1' : '0' }}" data-can-edit-terminated="{{ $canManageStudentTermination ? '1' : '0' }}">
-    <div class="fixed inset-0 bg-gray-900/50 backdrop-blur-sm" data-merit-modal-dismiss></div>
+    <div id="meritDetailsModalBackdrop"
+         class="fixed inset-0 bg-gray-900/50 backdrop-blur-sm transition-opacity duration-200 ease-out opacity-0"
+         data-merit-modal-dismiss></div>
     <div class="fixed inset-0 flex items-start justify-center p-4 sm:p-6 overflow-y-auto pointer-events-none">
-        <div class="relative w-full max-w-2xl bg-white rounded-xl shadow-xl border border-gray-200 pointer-events-auto my-8">
+        <div id="meritDetailsModalPanel"
+             class="relative w-full max-w-2xl bg-white rounded-xl shadow-xl border border-gray-200 pointer-events-auto my-8 transition-all duration-200 ease-out opacity-0 scale-95 translate-y-3 sm:translate-y-2 sm:scale-[0.98]">
             <div class="flex items-start justify-between gap-4 px-5 py-4 border-b border-gray-100 bg-amber-50/80 rounded-t-xl">
                 <div class="min-w-0">
                     <h2 id="meritDetailsModalTitle" class="text-lg font-semibold text-gray-900 truncate">Merit details</h2>
@@ -386,13 +389,6 @@
                                 </label>
                             </div>
                         @endif
-                        <div class="border-t border-gray-200 pt-4">
-                            <label for="merit_modal_confirm_password" class="block text-sm font-semibold text-gray-700 mb-1">Your password</label>
-                            <input type="password" name="confirm_password" id="merit_modal_confirm_password" autocomplete="current-password"
-                                   class="block w-full max-w-sm rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 bg-white"
-                                   placeholder="Required to save changes">
-                            <p class="mt-1 text-xs text-gray-500">Confirm your identity. This action is recorded in User Activity logs.</p>
-                        </div>
                         <p id="meritDetailsFormError" class="hidden text-sm text-red-600 rounded-lg border border-red-200 bg-red-50 px-3 py-2"></p>
                     </form>
                 </div>
@@ -405,6 +401,35 @@
                     Save changes
                 </button>
                 <button type="button" class="inline-flex items-center px-4 py-2 rounded-lg border border-gray-300 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50" data-merit-modal-dismiss>Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+{{-- Password confirmation when saving merit details --}}
+<div id="meritPasswordModal" class="fixed inset-0 z-[60] hidden" aria-hidden="true" role="dialog" aria-labelledby="meritPasswordModalTitle">
+    <div id="meritPasswordModalBackdrop"
+         class="fixed inset-0 bg-gray-900/60 backdrop-blur-sm transition-opacity duration-200 ease-out opacity-0"
+         data-merit-password-dismiss></div>
+    <div class="fixed inset-0 flex items-center justify-center p-4 pointer-events-none">
+        <div id="meritPasswordModalPanel"
+             class="relative w-full max-w-md rounded-xl bg-white shadow-xl border border-gray-200 pointer-events-auto transition-all duration-200 ease-out opacity-0 scale-95 translate-y-3 sm:translate-y-2 sm:scale-[0.98]">
+            <div class="px-5 py-4 border-b border-gray-100">
+                <h3 id="meritPasswordModalTitle" class="text-base font-semibold text-gray-900">Confirm your password</h3>
+                <p class="mt-1 text-sm text-gray-600">Enter your password to save merit and notice changes. This action is recorded in User Activity logs.</p>
+            </div>
+            <div class="px-5 py-4 space-y-3">
+                <label for="merit_modal_confirm_password" class="block text-sm font-semibold text-gray-700">Your password</label>
+                <input type="password" name="confirm_password" id="merit_modal_confirm_password" autocomplete="current-password"
+                       class="block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 bg-white"
+                       placeholder="Enter your password">
+                <p id="meritPasswordModalError" class="hidden text-sm text-red-600 rounded-lg border border-red-200 bg-red-50 px-3 py-2"></p>
+            </div>
+            <div class="px-5 py-4 border-t border-gray-100 flex flex-wrap items-center justify-end gap-2 rounded-b-xl bg-gray-50/80">
+                <button type="button" class="inline-flex items-center px-4 py-2 rounded-lg border border-gray-300 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50" data-merit-password-dismiss>Cancel</button>
+                <button type="button" id="meritPasswordConfirmBtn" class="inline-flex items-center px-4 py-2 rounded-lg bg-indigo-600 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-50">
+                    Confirm &amp; save
+                </button>
             </div>
         </div>
     </div>
@@ -505,29 +530,135 @@
         const canEditTerminated = modal && modal.getAttribute('data-can-edit-terminated') === '1';
         const terminatedCb = document.getElementById('merit_modal_student_terminated');
         const confirmPasswordInput = document.getElementById('merit_modal_confirm_password');
+        const passwordModal = document.getElementById('meritPasswordModal');
+        const passwordConfirmBtn = document.getElementById('meritPasswordConfirmBtn');
+        const passwordModalError = document.getElementById('meritPasswordModalError');
+        const meritBackdrop = document.getElementById('meritDetailsModalBackdrop');
+        const meritPanel = document.getElementById('meritDetailsModalPanel');
+        const passwordBackdrop = document.getElementById('meritPasswordModalBackdrop');
+        const passwordPanel = document.getElementById('meritPasswordModalPanel');
         const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content || '';
+        const ANIM_MS = 200;
         let currentUpdateUrl = '';
         let currentTriggerBtn = null;
         if (!modal || !body || !content) return;
 
+        function playMeritOpenAnimation() {
+            meritBackdrop?.classList.remove('opacity-0');
+            meritBackdrop?.classList.add('opacity-100');
+            meritPanel?.classList.remove('opacity-0', 'scale-95', 'translate-y-3', 'sm:translate-y-2', 'sm:scale-[0.98]');
+            meritPanel?.classList.add('opacity-100', 'scale-100', 'translate-y-0');
+        }
+
+        function playMeritCloseAnimation(callback) {
+            meritBackdrop?.classList.remove('opacity-100');
+            meritBackdrop?.classList.add('opacity-0');
+            meritPanel?.classList.remove('opacity-100', 'scale-100', 'translate-y-0');
+            meritPanel?.classList.add('opacity-0', 'scale-95', 'translate-y-3', 'sm:translate-y-2', 'sm:scale-[0.98]');
+            window.setTimeout(callback, ANIM_MS);
+        }
+
+        function playPasswordOpenAnimation() {
+            passwordBackdrop?.classList.remove('opacity-0');
+            passwordBackdrop?.classList.add('opacity-100');
+            passwordPanel?.classList.remove('opacity-0', 'scale-95', 'translate-y-3', 'sm:translate-y-2', 'sm:scale-[0.98]');
+            passwordPanel?.classList.add('opacity-100', 'scale-100', 'translate-y-0');
+        }
+
+        function playPasswordCloseAnimation(callback) {
+            passwordBackdrop?.classList.remove('opacity-100');
+            passwordBackdrop?.classList.add('opacity-0');
+            passwordPanel?.classList.remove('opacity-100', 'scale-100', 'translate-y-0');
+            passwordPanel?.classList.add('opacity-0', 'scale-95', 'translate-y-3', 'sm:translate-y-2', 'sm:scale-[0.98]');
+            window.setTimeout(callback, ANIM_MS);
+        }
+
         function closeModal() {
-            modal.classList.add('hidden');
-            modal.setAttribute('aria-hidden', 'true');
-            document.body.classList.remove('overflow-hidden');
+            const finishClose = function () {
+                playMeritCloseAnimation(function () {
+                    modal.classList.add('hidden');
+                    modal.setAttribute('aria-hidden', 'true');
+                    document.body.classList.remove('overflow-hidden');
+                });
+            };
+
+            if (passwordModal && !passwordModal.classList.contains('hidden')) {
+                closePasswordModal(finishClose);
+            } else {
+                finishClose();
+            }
         }
 
         function openModal() {
             modal.classList.remove('hidden');
             modal.setAttribute('aria-hidden', 'false');
             document.body.classList.add('overflow-hidden');
+            requestAnimationFrame(function () {
+                requestAnimationFrame(playMeritOpenAnimation);
+            });
+        }
+
+        function closePasswordModal(afterClose) {
+            if (!passwordModal) {
+                if (typeof afterClose === 'function') afterClose();
+                return;
+            }
+            if (passwordModal.classList.contains('hidden')) {
+                if (typeof afterClose === 'function') afterClose();
+                return;
+            }
+
+            playPasswordCloseAnimation(function () {
+                passwordModal.classList.add('hidden');
+                passwordModal.setAttribute('aria-hidden', 'true');
+                if (confirmPasswordInput) confirmPasswordInput.value = '';
+                if (passwordModalError) {
+                    passwordModalError.textContent = '';
+                    passwordModalError.classList.add('hidden');
+                }
+                if (passwordConfirmBtn) passwordConfirmBtn.disabled = false;
+                if (typeof afterClose === 'function') afterClose();
+            });
+        }
+
+        function openPasswordModal() {
+            if (!passwordModal) return;
+
+            const showPasswordModal = function () {
+                passwordModal.classList.remove('hidden');
+                passwordModal.setAttribute('aria-hidden', 'false');
+                requestAnimationFrame(function () {
+                    requestAnimationFrame(playPasswordOpenAnimation);
+                });
+                window.setTimeout(function () {
+                    confirmPasswordInput?.focus();
+                }, ANIM_MS + 20);
+            };
+
+            if (passwordModal.classList.contains('hidden')) {
+                showPasswordModal();
+            } else {
+                closePasswordModal(showPasswordModal);
+            }
         }
 
         modal.querySelectorAll('[data-merit-modal-dismiss]').forEach(function (el) {
             el.addEventListener('click', closeModal);
         });
 
+        if (passwordModal) {
+            passwordModal.querySelectorAll('[data-merit-password-dismiss]').forEach(function (el) {
+                el.addEventListener('click', closePasswordModal);
+            });
+        }
+
         document.addEventListener('keydown', function (e) {
-            if (e.key === 'Escape' && !modal.classList.contains('hidden')) {
+            if (e.key !== 'Escape') return;
+            if (passwordModal && !passwordModal.classList.contains('hidden')) {
+                closePasswordModal();
+                return;
+            }
+            if (!modal.classList.contains('hidden')) {
                 closeModal();
             }
         });
@@ -649,6 +780,7 @@
             manageSection.classList.remove('hidden');
             if (saveBtn) saveBtn.classList.remove('hidden');
             if (formError) formError.classList.add('hidden');
+            closePasswordModal();
         }
 
         function bindNoticeCheckboxes() {
@@ -694,86 +826,125 @@
             btn.innerHTML = html;
         }
 
+        function validateMeritFormBeforeSave() {
+            if (warningCb && finalCb && warningCb.checked && finalCb.checked) {
+                if (formError) {
+                    formError.textContent = 'Rules violation warning and final notice cannot both be enabled.';
+                    formError.classList.remove('hidden');
+                }
+                return false;
+            }
+            if (formError) formError.classList.add('hidden');
+            return true;
+        }
+
+        function buildMeritPayload(confirmPassword) {
+            const payload = {
+                confirm_password: confirmPassword,
+                student_rules_warning: warningCb && warningCb.checked ? 1 : 0,
+                student_rules_marquee_enabled: finalCb && finalCb.checked ? 1 : 0,
+                student_rules_notice_message: document.getElementById('merit_modal_notice_message')?.value || '',
+            };
+            if (canEditAutomation && automationCb) {
+                payload.student_rules_allow_merit_automation = automationCb.checked ? 1 : 0;
+            }
+            if (canEditTerminated && terminatedCb) {
+                payload.student_terminated = terminatedCb.checked ? 1 : 0;
+            }
+            const manualInput = document.getElementById('merit_modal_manual_merits');
+            if (manualInput && !manualWrap.classList.contains('hidden')) {
+                payload.student_manual_merits = parseInt(manualInput.value, 10) || 0;
+            }
+            return payload;
+        }
+
+        function submitMeritChanges(confirmPassword) {
+            if (!currentUpdateUrl) return;
+
+            if (passwordConfirmBtn) passwordConfirmBtn.disabled = true;
+            if (saveBtn) saveBtn.disabled = true;
+            if (passwordModalError) passwordModalError.classList.add('hidden');
+            if (formError) formError.classList.add('hidden');
+
+            fetch(currentUpdateUrl, {
+                method: 'PATCH',
+                headers: {
+                    'Accept': 'application/json',
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': csrfToken,
+                    'X-Requested-With': 'XMLHttpRequest',
+                },
+                credentials: 'same-origin',
+                body: JSON.stringify(buildMeritPayload(confirmPassword)),
+            })
+                .then(function (res) {
+                    return res.json().then(function (json) {
+                        if (!res.ok) throw json;
+                        return json;
+                    });
+                })
+                .then(function (json) {
+                    const data = json.details || json;
+                    if (currentTriggerBtn && data.breakdown) {
+                        updateTableMeritCell(currentTriggerBtn, data.breakdown);
+                    }
+                    closeModal();
+                })
+                .catch(function (err) {
+                    let msg = 'Could not save. Please try again.';
+                    if (err && err.message) {
+                        msg = err.message;
+                    } else if (err && err.errors) {
+                        const first = Object.values(err.errors).flat()[0];
+                        if (first) msg = first;
+                    }
+                    if (passwordModal && !passwordModal.classList.contains('hidden') && passwordModalError) {
+                        passwordModalError.textContent = msg;
+                        passwordModalError.classList.remove('hidden');
+                        confirmPasswordInput?.focus();
+                    } else if (formError) {
+                        formError.textContent = msg;
+                        formError.classList.remove('hidden');
+                    }
+                })
+                .finally(function () {
+                    if (passwordConfirmBtn) passwordConfirmBtn.disabled = false;
+                    if (saveBtn) saveBtn.disabled = false;
+                });
+        }
+
         if (saveBtn && meritForm) {
             saveBtn.addEventListener('click', function () {
                 if (!currentUpdateUrl) return;
-                const confirmPassword = confirmPasswordInput ? confirmPasswordInput.value.trim() : '';
+                if (!validateMeritFormBeforeSave()) return;
+                openPasswordModal();
+            });
+        }
+
+        if (passwordConfirmBtn && confirmPasswordInput) {
+            passwordConfirmBtn.addEventListener('click', function () {
+                if (!currentUpdateUrl) return;
+                if (!validateMeritFormBeforeSave()) {
+                    closePasswordModal();
+                    return;
+                }
+                const confirmPassword = confirmPasswordInput.value.trim();
                 if (!confirmPassword) {
-                    if (formError) {
-                        formError.textContent = 'Enter your password to save changes.';
-                        formError.classList.remove('hidden');
+                    if (passwordModalError) {
+                        passwordModalError.textContent = 'Enter your password to save changes.';
+                        passwordModalError.classList.remove('hidden');
                     }
+                    confirmPasswordInput.focus();
                     return;
                 }
-                if (warningCb && finalCb && warningCb.checked && finalCb.checked) {
-                    if (formError) {
-                        formError.textContent = 'Rules violation warning and final notice cannot both be enabled.';
-                        formError.classList.remove('hidden');
-                    }
-                    return;
-                }
-                saveBtn.disabled = true;
-                if (formError) formError.classList.add('hidden');
+                submitMeritChanges(confirmPassword);
+            });
 
-                const payload = {
-                    confirm_password: confirmPassword,
-                    student_rules_warning: warningCb && warningCb.checked ? 1 : 0,
-                    student_rules_marquee_enabled: finalCb && finalCb.checked ? 1 : 0,
-                    student_rules_notice_message: document.getElementById('merit_modal_notice_message')?.value || '',
-                };
-                if (canEditAutomation && automationCb) {
-                    payload.student_rules_allow_merit_automation = automationCb.checked ? 1 : 0;
+            confirmPasswordInput.addEventListener('keydown', function (e) {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    passwordConfirmBtn.click();
                 }
-                if (canEditTerminated && terminatedCb) {
-                    payload.student_terminated = terminatedCb.checked ? 1 : 0;
-                }
-                const manualInput = document.getElementById('merit_modal_manual_merits');
-                if (manualInput && !manualWrap.classList.contains('hidden')) {
-                    payload.student_manual_merits = parseInt(manualInput.value, 10) || 0;
-                }
-
-                fetch(currentUpdateUrl, {
-                    method: 'PATCH',
-                    headers: {
-                        'Accept': 'application/json',
-                        'Content-Type': 'application/json',
-                        'X-CSRF-TOKEN': csrfToken,
-                        'X-Requested-With': 'XMLHttpRequest',
-                    },
-                    credentials: 'same-origin',
-                    body: JSON.stringify(payload),
-                })
-                    .then(function (res) {
-                        return res.json().then(function (json) {
-                            if (!res.ok) throw json;
-                            return json;
-                        });
-                    })
-                    .then(function (json) {
-                        const data = json.details || json;
-                        const student = data.student || {};
-                        subtitle.textContent = (student.name || '') + (student.email ? ' · ' + student.email : '');
-                        renderDetails(data);
-                        if (currentTriggerBtn && data.breakdown) {
-                            updateTableMeritCell(currentTriggerBtn, data.breakdown);
-                        }
-                    })
-                    .catch(function (err) {
-                        let msg = 'Could not save. Please try again.';
-                        if (err && err.message) {
-                            msg = err.message;
-                        } else if (err && err.errors) {
-                            const first = Object.values(err.errors).flat()[0];
-                            if (first) msg = first;
-                        }
-                        if (formError) {
-                            formError.textContent = msg;
-                            formError.classList.remove('hidden');
-                        }
-                    })
-                    .finally(function () {
-                        saveBtn.disabled = false;
-                    });
             });
         }
 
@@ -784,6 +955,7 @@
 
                 currentTriggerBtn = btn;
                 currentUpdateUrl = '';
+                closePasswordModal();
                 if (manageSection) manageSection.classList.add('hidden');
                 if (saveBtn) saveBtn.classList.add('hidden');
                 openModal();

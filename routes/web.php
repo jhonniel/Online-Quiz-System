@@ -124,6 +124,12 @@ Route::prefix('admin')->middleware(['auth', 'admin'])->group(function () {
             Route::post('/system/rules', [\App\Http\Controllers\Admin\SettingsController::class, 'updateRulesRegulations'])->name('admin.system.rules.update');
             Route::post('/system/rules/merit-notices', [\App\Http\Controllers\Admin\SettingsController::class, 'updateMeritNoticeSettings'])->name('admin.system.rules.merit-notices.update');
         });
+        Route::middleware(['admin.subfeature:system,calendar'])->group(function () {
+            Route::get('/system/calendar', [\App\Http\Controllers\Admin\HolidayCalendarController::class, 'index'])->name('admin.system.calendar.index');
+            Route::post('/system/calendar', [\App\Http\Controllers\Admin\HolidayCalendarController::class, 'store'])->name('admin.system.calendar.store');
+            Route::put('/system/calendar/{dtrHoliday}', [\App\Http\Controllers\Admin\HolidayCalendarController::class, 'update'])->name('admin.system.calendar.update');
+            Route::delete('/system/calendar/{dtrHoliday}', [\App\Http\Controllers\Admin\HolidayCalendarController::class, 'destroy'])->name('admin.system.calendar.destroy');
+        });
         Route::middleware(['admin.subfeature:system,api_monitoring'])->group(function () {
             Route::get('/system/api-monitoring', [\App\Http\Controllers\Admin\ApiMonitoringController::class, 'index'])->name('admin.system.api-monitoring.index');
             Route::get('/system/api-monitoring/metrics', [\App\Http\Controllers\Admin\ApiMonitoringController::class, 'metrics'])->name('admin.system.api-monitoring.metrics');

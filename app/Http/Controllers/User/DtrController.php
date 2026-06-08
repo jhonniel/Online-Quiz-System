@@ -7,6 +7,7 @@ use App\Models\Dtr;
 use App\Models\LeaveRequest;
 use App\Models\DtrTimeRequest;
 use App\Services\LeaveRequestIncompleteAttendanceOvertimeService;
+use App\Support\DtrHolidayCalendar;
 use App\Support\TimeRequestOvertimeLeaveImport;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -105,24 +106,16 @@ class DtrController extends Controller
         }
 
         // Fill missing weekdays for the current user:
-        // - HOLIDAY if no employee has any DTR data on that date
-        // - ABSENT if at least one employee has DTR data but this user has none
+        // - HOLIDAY if marked on System → Calendar (auto 8:00)
+        // - ABSENT otherwise
         if ($dateFrom && $dateTo) {
             $existingMap = [];
             foreach ($dtrs as $dtr) {
                 $existingMap[$dtr->date->format('Y-m-d')] = true;
             }
 
-            $dateHasAnyData = Dtr::whereDate('date', '>=', $dateFrom->toDateString())
-                ->whereDate('date', '<=', $dateTo->toDateString())
-                ->selectRaw('DATE(date) as d')
-                ->distinct()
-                ->pluck('d')
-                ->map(function ($d) {
-                    return Carbon::parse($d)->format('Y-m-d');
-                })
-                ->flip()
-                ->all();
+            $holidayMap = DtrHolidayCalendar::mapForRange($dateFrom->copy()->startOfDay(), $dateTo->copy()->startOfDay());
+            DtrHolidayCalendar::applyRegularHolidayCreditsToCollection($dtrs, $holidayMap);
 
             $syntheticEntries = collect();
             $period = new \Carbon\CarbonPeriod($dateFrom->copy()->startOfDay(), $dateTo->copy()->startOfDay());
@@ -136,7 +129,8 @@ class DtrController extends Controller
                     continue;
                 }
 
-                $isHoliday = !isset($dateHasAnyData[$dateKey]);
+                $holidayEntry = DtrHolidayCalendar::syntheticHolidayEntry($day, $holidayMap[$dateKey] ?? null);
+                $isHoliday = $holidayEntry !== null;
                 $syntheticStatus = $isHoliday ? 'holiday' : 'absent';
                 if ($selectedStatus !== null && $selectedStatus !== $syntheticStatus) {
                     continue;
@@ -145,12 +139,10 @@ class DtrController extends Controller
                 $entry = new Dtr([
                     'user_id' => $user->id,
                     'date' => $day->copy(),
-                    'total_hours' => $isHoliday ? 8.0 : 0,
+                    'total_hours' => $isHoliday ? $holidayEntry['total_hours'] : 0,
                     'overtime_hours' => 0,
                     'status' => $syntheticStatus,
-                    'remarks' => $isHoliday
-                        ? 'Auto-labeled holiday (no employee has DTR data for this date).'
-                        : 'Auto-labeled absent (no DTR entry for this date).',
+                    'remarks' => $isHoliday ? $holidayEntry['remarks'] : DtrHolidayCalendar::absentRemark(),
                 ]);
                 $entry->setRelation('user', $user);
                 $syntheticEntries->push($entry);
@@ -540,16 +532,8 @@ class DtrController extends Controller
                 $existingMap[$dtr->date->format('Y-m-d')] = true;
             }
 
-            $dateHasAnyData = Dtr::whereDate('date', '>=', $dateFrom->toDateString())
-                ->whereDate('date', '<=', $dateTo->toDateString())
-                ->selectRaw('DATE(date) as d')
-                ->distinct()
-                ->pluck('d')
-                ->map(function ($d) {
-                    return Carbon::parse($d)->format('Y-m-d');
-                })
-                ->flip()
-                ->all();
+            $holidayMap = DtrHolidayCalendar::mapForRange($dateFrom->copy()->startOfDay(), $dateTo->copy()->startOfDay());
+            DtrHolidayCalendar::applyRegularHolidayCreditsToCollection($dtrs, $holidayMap);
 
             $syntheticEntries = collect();
             $period = new \Carbon\CarbonPeriod($dateFrom->copy()->startOfDay(), $dateTo->copy()->startOfDay());
@@ -563,7 +547,8 @@ class DtrController extends Controller
                     continue;
                 }
 
-                $isHoliday = !isset($dateHasAnyData[$dateKey]);
+                $holidayEntry = DtrHolidayCalendar::syntheticHolidayEntry($day, $holidayMap[$dateKey] ?? null);
+                $isHoliday = $holidayEntry !== null;
                 $syntheticStatus = $isHoliday ? 'holiday' : 'absent';
                 if ($selectedStatus !== null && $selectedStatus !== $syntheticStatus) {
                     continue;
@@ -572,12 +557,10 @@ class DtrController extends Controller
                 $entry = new Dtr([
                     'user_id' => $user->id,
                     'date' => $day->copy(),
-                    'total_hours' => $isHoliday ? 8.0 : 0,
+                    'total_hours' => $isHoliday ? $holidayEntry['total_hours'] : 0,
                     'overtime_hours' => 0,
                     'status' => $syntheticStatus,
-                    'remarks' => $isHoliday
-                        ? 'Auto-labeled holiday (no employee has DTR data for this date).'
-                        : 'Auto-labeled absent (no DTR entry for this date).',
+                    'remarks' => $isHoliday ? $holidayEntry['remarks'] : DtrHolidayCalendar::absentRemark(),
                 ]);
                 $entry->setRelation('user', $user);
                 $syntheticEntries->push($entry);
