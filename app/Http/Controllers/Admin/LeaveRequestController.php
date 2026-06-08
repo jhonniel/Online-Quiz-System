@@ -5,9 +5,11 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Mail\LeaveRequestStatusUpdate;
 use App\Models\Department;
+use App\Models\DocumentExportVerification;
 use App\Models\Dtr;
 use App\Models\DtrDeficit;
 use App\Models\LeaveBalance;
+use App\Support\DocumentExportPdfBranding;
 use App\Support\WorkFromHomeQuota;
 use App\Models\LeaveRequest;
 use App\Models\LeaveRequestLog;
@@ -17,10 +19,13 @@ use App\Rules\ClickUpTasksUrlsOnly;
 use App\Services\LeaveRequestStaleResubmissionService;
 use App\Services\MailConfigService;
 use App\Support\StudentMeritRulesNotice;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Carbon\Carbon;
 use Carbon\CarbonPeriod;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\Request;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
@@ -45,70 +50,14 @@ class LeaveRequestController extends Controller
             $perPage = 20;
         }
 
-        $query = LeaveRequest::with([
+        $query = $this->buildEmployeeLeaveRequestsQuery($request, $user)->with([
             'user',
             'reviewer',
             'approvedBy.performer',
             'rejectedBy.performer',
             'resubmissionRequestedBy.performer',
             'logs' => fn ($q) => $q->where('action', 'filed_by_admin')->latest('id')->limit(1),
-        ])
-            ->whereHas('user', function ($q) {
-                $q->where('role', 'employee');
-            });
-
-        // Apply department restrictions if user has Employee Management with restrictions
-        if ($user->canAccessEmployeeManagement()) {
-            $allowedDepartmentIds = $user->getAllowedDepartmentIds();
-            if ($allowedDepartmentIds !== null) {
-                $query->whereHas('user', function ($q) use ($allowedDepartmentIds) {
-                    $q->whereIn('department_id', $allowedDepartmentIds);
-                });
-            }
-        }
-
-        // Filter by status
-        if ($request->has('status') && $request->status) {
-            $query->where('status', $request->status);
-        }
-
-        // Filter by type
-        if ($request->has('type') && $request->type) {
-            $query->where('type', $request->type);
-        }
-
-        // Filter by department (user-selected filter)
-        if ($request->has('department_id') && $request->department_id) {
-            $selectedDeptId = $request->department_id;
-            if ($user->canManageDepartment($selectedDeptId)) {
-                $query->whereHas('user', function ($q) use ($selectedDeptId) {
-                    $q->where('department_id', $selectedDeptId);
-                });
-            }
-        }
-
-        // Filter by employee
-        if ($request->has('employee') && $request->employee) {
-            $query->where('user_id', $request->employee);
-        }
-
-        // Search (employee name/email + request fields)
-        if ($search !== '') {
-            $query->where(function ($q) use ($search) {
-                if (ctype_digit($search)) {
-                    $q->orWhere('id', (int) $search)
-                        ->orWhere('user_id', (int) $search);
-                }
-
-                $q->orWhere('type', 'like', "%{$search}%")
-                    ->orWhere('status', 'like', "%{$search}%")
-                    ->orWhere('reason', 'like', "%{$search}%")
-                    ->orWhereHas('user', function ($uq) use ($search) {
-                        $uq->where('name', 'like', "%{$search}%")
-                            ->orWhere('email', 'like', "%{$search}%");
-                    });
-            });
-        }
+        ]);
 
         $leaveRequests = $query->orderBy('created_at', 'desc')
             ->paginate($perPage)
@@ -195,6 +144,405 @@ class LeaveRequestController extends Controller
         $departments = $departmentsQuery->orderBy('name')->get();
 
         return view('admin.leave-requests.index', compact('leaveRequests', 'stats', 'employees', 'departments', 'search', 'perPage'));
+    }
+
+    public function exportApprovedCsv(Request $request): StreamedResponse
+    {
+        $user = $this->requireAuthUser();
+        $leaveRequests = $this->approvedEmployeeLeaveRequestsForExport($request, $user);
+        $balanceContext = $this->buildEmployeeLeaveExportBalanceContext($leaveRequests);
+        $exportRows = $this->buildEmployeeLeaveExportSummaryRows($leaveRequests, $balanceContext);
+        $filename = 'employee_leave_requests_approved_'.now()->format('Y-m-d_His').'.csv';
+
+        return new StreamedResponse(function () use ($exportRows) {
+            $out = fopen('php://output', 'w');
+            fputcsv($out, [
+                'ID',
+                'Employee',
+                'Email',
+                'Department',
+                'Approved Requests',
+                'Days Accumulated',
+                'Available Balance',
+            ]);
+
+            foreach ($exportRows as $exportRow) {
+                fputcsv($out, $this->employeeLeaveExportSummaryRow($exportRow));
+            }
+
+            fclose($out);
+        }, 200, [
+            'Content-Type' => 'text/csv; charset=UTF-8',
+            'Content-Disposition' => 'attachment; filename="'.$filename.'"',
+        ]);
+    }
+
+    public function exportApprovedPdf(Request $request)
+    {
+        $user = $this->requireAuthUser();
+        $leaveRequests = $this->approvedEmployeeLeaveRequestsForExport($request, $user);
+        $balanceContext = $this->buildEmployeeLeaveExportBalanceContext($leaveRequests);
+        $exportRows = $this->buildEmployeeLeaveExportSummaryRows($leaveRequests, $balanceContext);
+        $exportMeta = $this->leaveRequestExportMeta($request);
+        $includeVerificationQr = $request->boolean('with_qr');
+        $verification = null;
+        $verificationQrDataUri = '';
+        $verificationQrSvg = '';
+
+        if ($includeVerificationQr) {
+            $verification = DocumentExportVerification::createForExport(
+                'employee_leave_requests_approved',
+                $user,
+                [
+                    'record_count' => $exportRows->count(),
+                    'filters' => array_filter([
+                        'type' => $exportMeta['types'] ?? null,
+                        'department' => $exportMeta['department'] ?? null,
+                        'employee' => $exportMeta['employee'] ?? null,
+                        'search' => $exportMeta['search'] ?? null,
+                    ]),
+                ]
+            );
+            \Illuminate\Support\Facades\URL::forceRootUrl($request->getSchemeAndHttpHost());
+            $verificationUrl = $verification->verificationUrl();
+            $verificationQrDataUri = DocumentExportPdfBranding::qrCodeDataUri($verificationUrl);
+            $verificationQrSvg = $verificationQrDataUri === ''
+                ? DocumentExportPdfBranding::qrCodeSvg($verificationUrl)
+                : '';
+        }
+
+        $branding = DocumentExportPdfBranding::forPdf();
+
+        $pdf = Pdf::loadView('admin.leave-requests.export-pdf', [
+            'exportRows' => $exportRows,
+            'totalApprovedRequests' => $leaveRequests->count(),
+            'totalDaysAccumulated' => $exportRows->sum('days_accumulated'),
+            'exportMeta' => $exportMeta,
+            'branding' => $branding,
+            'includeVerificationQr' => $includeVerificationQr,
+            'verification' => $verification,
+            'verificationQrDataUri' => $verificationQrDataUri,
+            'verificationQrSvg' => $verificationQrSvg,
+        ])->setPaper('a4', 'landscape');
+
+        $filename = 'employee_leave_requests_approved_'.now()->format('Y-m-d_His').'.pdf';
+
+        return $pdf->stream($filename);
+    }
+
+    /**
+     * @param  object{user_id: int, user: ?User, approved_request_count: int, days_accumulated: int, available_balance: string}  $exportRow
+     * @return list<string|int|null>
+     */
+    private function employeeLeaveExportSummaryRow(object $exportRow): array
+    {
+        return [
+            $exportRow->user_id,
+            $exportRow->user?->name ?? '',
+            $exportRow->user?->email ?? '',
+            $exportRow->user?->department?->name ?? '',
+            $exportRow->approved_request_count,
+            $exportRow->days_accumulated,
+            $exportRow->available_balance,
+        ];
+    }
+
+    /**
+     * @param  \Illuminate\Support\Collection<int, LeaveRequest>|\Illuminate\Database\Eloquent\Collection<int, LeaveRequest>  $leaveRequests
+     * @return \Illuminate\Support\Collection<int, object{user_id: int, user: ?User, approved_request_count: int, days_accumulated: int, available_balance: string}>
+     */
+    private function buildEmployeeLeaveExportSummaryRows($leaveRequests, array $balanceContext)
+    {
+        return $leaveRequests
+            ->groupBy('user_id')
+            ->map(function ($requests, $userId) use ($balanceContext) {
+                $first = $requests->first();
+
+                return (object) [
+                    'user_id' => (int) $userId,
+                    'user' => $first?->user,
+                    'approved_request_count' => $requests->count(),
+                    'days_accumulated' => $requests->sum(
+                        fn (LeaveRequest $request) => $this->leaveRequestInclusiveDayCount($request)
+                    ),
+                    'available_balance' => $this->leaveCreditsBalanceLabelForExport((int) $userId, $balanceContext),
+                ];
+            })
+            ->sortBy(fn (object $row) => strtolower((string) ($row->user?->name ?? '')))
+            ->values();
+    }
+
+    private function leaveCreditsBalanceLabelForExport(int $userId, array $balanceContext): string
+    {
+        $leaveCredits = $balanceContext['leave_credits'][$userId] ?? null;
+        if ($leaveCredits === null) {
+            return '';
+        }
+
+        return sprintf(
+            '%s / %s days',
+            rtrim(rtrim(number_format($leaveCredits['remaining'], 2, '.', ''), '0'), '.'),
+            rtrim(rtrim(number_format($leaveCredits['allowance'], 2, '.', ''), '0'), '.')
+        );
+    }
+
+    /**
+     * Preload per-employee leave credit and overtime balances for export rows.
+     *
+     * @param  \Illuminate\Support\Collection<int, LeaveRequest>|\Illuminate\Database\Eloquent\Collection<int, LeaveRequest>  $leaveRequests
+     * @return array{leave_credits: array<int, array{remaining: float, allowance: float}>, overtime: array<int, string>}
+     */
+    private function buildEmployeeLeaveExportBalanceContext($leaveRequests): array
+    {
+        $userIds = $leaveRequests->pluck('user_id')->unique()->filter()->values();
+        if ($userIds->isEmpty()) {
+            return ['leave_credits' => [], 'overtime' => []];
+        }
+
+        $currentYear = now()->year;
+        $defaultVacation = (float) Setting::get('default_vacation_balance', 15);
+        $defaultSick = (float) Setting::get('default_sick_leave_balance', 10);
+        $today = Carbon::today();
+
+        $usedLeaveByUser = [];
+        $approvedLeaveCreditRequests = LeaveRequest::whereIn('user_id', $userIds)
+            ->whereIn('type', ['leave', 'vacation_leave', 'sick_leave'])
+            ->where('status', 'approved')
+            ->whereYear('start_date', $currentYear)
+            ->get(['id', 'user_id', 'start_date', 'end_date']);
+
+        foreach ($approvedLeaveCreditRequests as $leaveCreditRequest) {
+            $usedLeaveByUser[$leaveCreditRequest->user_id] = ($usedLeaveByUser[$leaveCreditRequest->user_id] ?? 0)
+                + min(
+                    $this->leaveRequestInclusiveDayCount($leaveCreditRequest),
+                    self::MAX_LEAVE_DTR_DAYS_PER_REQUEST
+                );
+        }
+
+        $overtimeLeaveMinutesByUser = [];
+        $approvedOvertimeRequests = LeaveRequest::whereIn('user_id', $userIds)
+            ->where('type', 'overtime')
+            ->where('status', 'approved')
+            ->whereDate('start_date', '<=', $today)
+            ->get(['user_id', 'reason']);
+
+        foreach ($approvedOvertimeRequests as $overtimeRequest) {
+            $raw = (string) ($overtimeRequest->reason ?? '');
+            if (preg_match('/Total Overtime Hours:\s*([0-9]{2}:[0-9]{2})/', $raw, $matches)) {
+                [$hours, $minutes] = array_map('intval', explode(':', $matches[1]));
+                $overtimeLeaveMinutesByUser[$overtimeRequest->user_id] = ($overtimeLeaveMinutesByUser[$overtimeRequest->user_id] ?? 0)
+                    + ($hours * 60 + $minutes);
+            }
+        }
+
+        $offsetMinutesByUser = [];
+        $approvedOffsetRequests = LeaveRequest::whereIn('user_id', $userIds)
+            ->where('type', 'offset')
+            ->where('status', 'approved')
+            ->get(['user_id', 'reason', 'start_date', 'end_date', 'days']);
+
+        foreach ($approvedOffsetRequests as $offsetRequest) {
+            $raw = (string) ($offsetRequest->reason ?? '');
+            if (preg_match('/Hours to Deduct:\s*([0-9]{2}):([0-9]{2})/', $raw, $matches)) {
+                $offsetMinutes = ((int) $matches[1]) * 60 + ((int) $matches[2]);
+            } else {
+                $offsetMinutes = (int) round(((int) $offsetRequest->days * 8) * 60);
+            }
+
+            $offsetMinutesByUser[$offsetRequest->user_id] = ($offsetMinutesByUser[$offsetRequest->user_id] ?? 0) + $offsetMinutes;
+        }
+
+        $leaveCreditsByUser = [];
+        $overtimeByUser = [];
+
+        foreach ($userIds as $userId) {
+            $leaveBalance = LeaveBalance::firstOrCreateWithCarryover(
+                (int) $userId,
+                (int) $currentYear,
+                (float) $defaultVacation,
+                (float) $defaultSick
+            );
+
+            $allowance = (float) $leaveBalance->vacation_allowance + (float) $leaveBalance->sick_allowance;
+            $used = (float) ($usedLeaveByUser[$userId] ?? 0);
+
+            $leaveCreditsByUser[$userId] = [
+                'remaining' => max($allowance - $used, 0),
+                'allowance' => $allowance,
+            ];
+
+            $overtimeMinutes = (int) ($overtimeLeaveMinutesByUser[$userId] ?? 0)
+                - (int) ($offsetMinutesByUser[$userId] ?? 0);
+            $overtimeSign = $overtimeMinutes < 0 ? '-' : '';
+            $overtimeAbs = abs($overtimeMinutes);
+            $overtimeByUser[$userId] = $overtimeSign.sprintf(
+                '%02d:%02d',
+                intdiv($overtimeAbs, 60),
+                $overtimeAbs % 60
+            );
+        }
+
+        return [
+            'leave_credits' => $leaveCreditsByUser,
+            'overtime' => $overtimeByUser,
+        ];
+    }
+
+    /**
+     * Human-readable available balance for an export row (current balance at export time).
+     */
+    private function availableLeaveBalanceLabelForExport(LeaveRequest $leaveRequest, array $balanceContext): string
+    {
+        $userId = (int) $leaveRequest->user_id;
+        $type = (string) $leaveRequest->type;
+
+        if (in_array($type, ['leave', 'vacation_leave', 'sick_leave'], true)) {
+            $leaveCredits = $balanceContext['leave_credits'][$userId] ?? null;
+            if ($leaveCredits === null) {
+                return '';
+            }
+
+            return sprintf(
+                '%s / %s days',
+                rtrim(rtrim(number_format($leaveCredits['remaining'], 2, '.', ''), '0'), '.'),
+                rtrim(rtrim(number_format($leaveCredits['allowance'], 2, '.', ''), '0'), '.')
+            );
+        }
+
+        if ($type === 'work_from_home') {
+            $wfhBalance = WorkFromHomeQuota::balanceForMonth($userId, $leaveRequest->start_date?->copy());
+
+            return sprintf(
+                '%s / %s days (%s)',
+                rtrim(rtrim(number_format($wfhBalance['remaining'], 2, '.', ''), '0'), '.'),
+                $wfhBalance['allowance'],
+                $wfhBalance['month_label']
+            );
+        }
+
+        if (in_array($type, ['offset', 'overtime'], true)) {
+            $overtime = $balanceContext['overtime'][$userId] ?? '00:00';
+
+            return $overtime.' hours';
+        }
+
+        return '—';
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function leaveRequestExportMeta(Request $request): array
+    {
+        $type = trim((string) $request->input('type', ''));
+        $search = trim((string) $request->input('search', ''));
+        $departmentId = $request->input('department_id');
+        $employeeId = $request->input('employee');
+
+        $departmentName = null;
+        if ($departmentId) {
+            $departmentName = Department::query()->whereKey($departmentId)->value('name');
+        }
+
+        $employeeName = null;
+        if ($employeeId) {
+            $employeeName = User::query()->whereKey($employeeId)->value('name');
+        }
+
+        $typesLabel = 'Sick Leave & Vacation Leave';
+        if ($type === 'sick_leave') {
+            $typesLabel = LeaveRequest::labelForType('sick_leave');
+        } elseif ($type === 'vacation_leave') {
+            $typesLabel = LeaveRequest::labelForType('vacation_leave');
+        }
+
+        return [
+            'types' => $typesLabel,
+            'search' => $search !== '' ? $search : null,
+            'department' => $departmentName,
+            'employee' => $employeeName,
+        ];
+    }
+
+    /**
+     * @return \Illuminate\Database\Eloquent\Collection<int, LeaveRequest>
+     */
+    private function approvedEmployeeLeaveRequestsForExport(Request $request, User $user)
+    {
+        $query = $this->buildEmployeeLeaveRequestsQuery($request, $user, 'approved')
+            ->whereIn('type', ['sick_leave', 'vacation_leave']);
+
+        $type = trim((string) $request->input('type', ''));
+        if (in_array($type, ['sick_leave', 'vacation_leave'], true)) {
+            $query->where('type', $type);
+        }
+
+        return $query
+            ->with(['user.department'])
+            ->orderBy('start_date', 'desc')
+            ->orderBy('created_at', 'desc')
+            ->get();
+    }
+
+    private function buildEmployeeLeaveRequestsQuery(Request $request, User $user, ?string $forceStatus = null): Builder
+    {
+        $search = trim((string) $request->input('search', ''));
+
+        $query = LeaveRequest::query()
+            ->whereHas('user', function ($q) {
+                $q->where('role', 'employee');
+            });
+
+        if ($user->canAccessEmployeeManagement()) {
+            $allowedDepartmentIds = $user->getAllowedDepartmentIds();
+            if ($allowedDepartmentIds !== null) {
+                $query->whereHas('user', function ($q) use ($allowedDepartmentIds) {
+                    $q->whereIn('department_id', $allowedDepartmentIds);
+                });
+            }
+        }
+
+        if ($forceStatus !== null) {
+            $query->where('status', $forceStatus);
+        } elseif ($request->filled('status')) {
+            $query->where('status', $request->status);
+        }
+
+        if ($request->filled('type')) {
+            $query->where('type', $request->type);
+        }
+
+        if ($request->filled('department_id')) {
+            $selectedDeptId = $request->department_id;
+            if ($user->canManageDepartment($selectedDeptId)) {
+                $query->whereHas('user', function ($q) use ($selectedDeptId) {
+                    $q->where('department_id', $selectedDeptId);
+                });
+            }
+        }
+
+        if ($request->filled('employee')) {
+            $query->where('user_id', $request->employee);
+        }
+
+        if ($search !== '') {
+            $query->where(function ($q) use ($search) {
+                if (ctype_digit($search)) {
+                    $q->orWhere('id', (int) $search)
+                        ->orWhere('user_id', (int) $search);
+                }
+
+                $q->orWhere('type', 'like', "%{$search}%")
+                    ->orWhere('status', 'like', "%{$search}%")
+                    ->orWhere('reason', 'like', "%{$search}%")
+                    ->orWhereHas('user', function ($uq) use ($search) {
+                        $uq->where('name', 'like', "%{$search}%")
+                            ->orWhere('email', 'like', "%{$search}%");
+                    });
+            });
+        }
+
+        return $query;
     }
 
     /**

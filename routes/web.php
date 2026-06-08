@@ -69,6 +69,10 @@ Route::delete('/Say-it/post/{post}', [App\Http\Controllers\SayItController::clas
 // QR Code Scanning Route (Public) - Uses hashed token for one-time access
 Route::get('/qr/{token}', [App\Http\Controllers\QrCodeController::class, 'scan'])->name('qr.scan');
 
+// Document export verification (Public)
+Route::get('/verify/document/{token}', [App\Http\Controllers\DocumentExportVerificationController::class, 'show'])
+    ->name('document-export.verify');
+
 // Public Hiring Application Routes (dynamic URL based on admin settings)
 // The route will be registered dynamically in the controller based on settings
 Route::get('/hiring/accept/{token}', [App\Http\Controllers\HiringApplicationController::class, 'acceptWithToken'])->name('hiring.accept');
@@ -416,6 +420,8 @@ Route::prefix('admin')->middleware(['auth', 'admin'])->group(function () {
         Route::middleware(['admin.subfeature:employee_management,leave_requests'])->group(function () {
         // Leave Requests Management (Employees)
         Route::get('/leave-requests', [App\Http\Controllers\Admin\LeaveRequestController::class, 'index'])->name('admin.leave-requests.index');
+        Route::get('/leave-requests/export/csv', [App\Http\Controllers\Admin\LeaveRequestController::class, 'exportApprovedCsv'])->name('admin.leave-requests.export-csv');
+        Route::get('/leave-requests/export/pdf', [App\Http\Controllers\Admin\LeaveRequestController::class, 'exportApprovedPdf'])->name('admin.leave-requests.export-pdf');
         Route::post('/leave-requests/create-for-employee', [App\Http\Controllers\Admin\LeaveRequestController::class, 'storeForEmployee'])->name('admin.leave-requests.store-for-employee');
         Route::get('/leave-requests/{leaveRequest}', [App\Http\Controllers\Admin\LeaveRequestController::class, 'show'])->name('admin.leave-requests.show');
         Route::patch('/leave-requests/{leaveRequest}/type', [App\Http\Controllers\Admin\LeaveRequestController::class, 'updateType'])->name('admin.leave-requests.update-type');
@@ -457,6 +463,9 @@ Route::prefix('admin')->middleware(['auth', 'admin'])->group(function () {
         // Student Leave Requests Management
         Route::get('/student-leave-requests', [App\Http\Controllers\Admin\LeaveRequestController::class, 'studentIndex'])->name('admin.student-leave-requests.index');
         Route::get('/student-leave-calendar', [App\Http\Controllers\Admin\LeaveRequestController::class, 'studentCalendar'])->name('admin.student-leave-requests.calendar');
+        Route::get('/student-management/nda-files', [App\Http\Controllers\Admin\StudentNdaController::class, 'index'])->name('admin.student-nda-files.index');
+        Route::post('/student-management/nda-files/{studentNda}/allow-reupload', [App\Http\Controllers\Admin\StudentNdaController::class, 'allowReupload'])->name('admin.student-nda-files.allow-reupload');
+        Route::get('/student-management/nda-files/{studentNda}/preview', [App\Http\Controllers\Admin\StudentNdaController::class, 'preview'])->name('admin.student-nda-files.preview');
         Route::post('/student-leave-requests/create-for-student', [App\Http\Controllers\Admin\LeaveRequestController::class, 'storeForStudent'])->name('admin.student-leave-requests.store-for-student');
 
         // Student Time Requests Management
@@ -658,6 +667,12 @@ Route::middleware(['auth', 'student.not_terminated'])->group(function () {
     Route::patch('/technician/tickets/{ticket}', [App\Http\Controllers\User\TechnicianTicketController::class, 'update'])->name('user.technician-tickets.update');
     // TOR PDF for students
     Route::get('/tor', [UserDashboardController::class, 'tor'])->name('user.tor');
+
+    // Student NDA
+    Route::get('/nda', [App\Http\Controllers\User\StudentNdaController::class, 'index'])->name('user.nda.index');
+    Route::post('/nda/generate-pdf', [App\Http\Controllers\User\StudentNdaController::class, 'generatePdf'])->name('user.nda.generate-pdf');
+    Route::post('/nda', [App\Http\Controllers\User\StudentNdaController::class, 'store'])->name('user.nda.store');
+    Route::get('/nda/preview', [App\Http\Controllers\User\StudentNdaController::class, 'preview'])->name('user.nda.preview');
     Route::get('/quizzes', [UserQuizController::class, 'index'])->name('user.quizzes.index');
     Route::get('/quizzes/enter-code', [UserQuizController::class, 'enterCode'])->name('user.quizzes.enter-code');
     Route::post('/quizzes/validate-code', [UserQuizController::class, 'validateCode'])->name('user.quizzes.validate-code');

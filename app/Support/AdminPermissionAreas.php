@@ -30,6 +30,7 @@ final class AdminPermissionAreas
         'student_dtr' => 'Student DTR',
         'student_leave_requests' => 'Student Leave Requests',
         'student_leave_calendar' => 'Student Leave Calendar',
+        'student_nda_files' => 'NDA Files',
         'time_requests' => 'Time Requests',
     ];
 

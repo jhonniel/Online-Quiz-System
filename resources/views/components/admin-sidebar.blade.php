@@ -488,7 +488,7 @@
                 localStorage.setItem('nav-student-management', this.open);
             }
         }"
-        x-init="if ({{ request()->routeIs('admin.student-management.*') || request()->routeIs('admin.student-dtr.*') || request()->routeIs('admin.student-leave-requests.*') || request()->routeIs('admin.time-requests.*') ? 'true' : 'false' }}) { open = true; }">
+        x-init="if ({{ request()->routeIs('admin.student-management.*') || request()->routeIs('admin.student-dtr.*') || request()->routeIs('admin.student-leave-requests.*') || request()->routeIs('admin.student-nda-files.*') || request()->routeIs('admin.time-requests.*') ? 'true' : 'false' }}) { open = true; }">
             <button @click="toggle()"
                     class="w-full flex items-center justify-between px-3 py-2 text-xs font-semibold text-gray-400 uppercase tracking-wider hover:text-gray-300 transition-opacity duration-300"
                     :class="sidebarCollapsed ? 'opacity-0 h-0 overflow-hidden pointer-events-none' : 'opacity-100'">
@@ -560,6 +560,19 @@
                     </svg>
                     <span class="transition-opacity duration-300" :class="sidebarCollapsed ? 'opacity-0 w-0 overflow-hidden' : 'opacity-100'">
                         Student Leave Calendar
+                    </span>
+                </a>
+                @endif
+                @if(auth()->user()->canAccessStudentFeature('student_nda_files'))
+                <a href="{{ route('admin.student-nda-files.index') }}"
+                   class="flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors duration-200 {{ request()->routeIs('admin.student-nda-files.*') ? 'bg-indigo-700 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white' }}"
+                   :class="sidebarCollapsed ? 'justify-center' : ''"
+                   :title="sidebarCollapsed ? 'NDA Files' : ''">
+                    <svg class="h-5 w-5 flex-shrink-0" :class="sidebarCollapsed ? '' : 'mr-3'" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                    </svg>
+                    <span class="transition-opacity duration-300" :class="sidebarCollapsed ? 'opacity-0 w-0 overflow-hidden' : 'opacity-100'">
+                        NDA Files
                     </span>
                 </a>
                 @endif

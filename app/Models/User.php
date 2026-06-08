@@ -188,6 +188,11 @@ class User extends Authenticatable
         return $this->belongsTo(University::class);
     }
 
+    public function studentNda()
+    {
+        return $this->hasOne(StudentNda::class);
+    }
+
     public function department()
     {
         return $this->belongsTo(Department::class);

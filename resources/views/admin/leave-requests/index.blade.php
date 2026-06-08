@@ -94,8 +94,43 @@
         </div>
     </div>
 
+    @php
+        $leaveExportQuery = array_filter([
+            'department_id' => request('department_id'),
+            'type' => request('type'),
+            'employee' => request('employee'),
+            'search' => request('search', $search ?? ''),
+        ], fn ($value) => $value !== null && $value !== '');
+    @endphp
+
     <!-- Filters -->
     <div class="bg-white rounded-lg shadow border border-gray-200 p-4 sm:p-6">
+        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4 pb-4 border-b border-gray-100">
+            <div>
+                <h2 class="text-sm font-semibold text-gray-900">Export approved requests</h2>
+                <p class="text-xs text-gray-500 mt-0.5">Exports <strong>Sick Leave</strong> and <strong>Vacation Leave</strong> only, grouped per employee with approved request counts. Status is always <strong>Approved</strong>.</p>
+            </div>
+            <div class="flex flex-wrap items-center gap-3">
+                <a href="{{ route('admin.leave-requests.export-csv', $leaveExportQuery) }}"
+                   class="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg bg-green-600 text-sm font-medium text-white hover:bg-green-700">
+                    <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                    Export CSV
+                </a>
+                <label class="inline-flex items-center gap-2 text-sm text-gray-700 cursor-pointer">
+                    <input type="checkbox" id="leave-export-pdf-with-qr" class="rounded border-gray-300 text-red-600 focus:ring-red-500">
+                    <span>Include verification QR</span>
+                </label>
+                <a href="{{ route('admin.leave-requests.export-pdf', $leaveExportQuery) }}"
+                   id="leave-export-pdf-link"
+                   target="_blank"
+                   rel="noopener noreferrer"
+                   class="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg bg-red-600 text-sm font-medium text-white hover:bg-red-700">
+                    <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"/></svg>
+                    Export PDF
+                </a>
+            </div>
+        </div>
+
         <form method="GET" action="{{ url('/admin/leave-requests') }}" class="space-y-4">
             <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-4">
                 <div>
@@ -131,6 +166,9 @@
                         <option value="absent" {{ request('type') == 'absent' ? 'selected' : '' }}>Absent</option>
                         <option value="overtime" {{ request('type') == 'overtime' ? 'selected' : '' }}>Overtime</option>
                         <option value="offset" {{ request('type') == 'offset' ? 'selected' : '' }}>Offset</option>
+                        <option value="travel" {{ request('type') == 'travel' ? 'selected' : '' }}>Travel</option>
+                        <option value="additional_time" {{ request('type') == 'additional_time' ? 'selected' : '' }}>Additional Time</option>
+                        <option value="other" {{ request('type') == 'other' ? 'selected' : '' }}>Other</option>
                     </select>
                 </div>
 
@@ -362,6 +400,23 @@
                 t = setTimeout(() => form.submit(), 350);
             });
         }
+
+        const pdfLink = document.getElementById('leave-export-pdf-link');
+        const pdfWithQr = document.getElementById('leave-export-pdf-with-qr');
+        const syncPdfExportUrl = () => {
+            if (!pdfLink) {
+                return;
+            }
+            const url = new URL(pdfLink.href, window.location.origin);
+            if (pdfWithQr?.checked) {
+                url.searchParams.set('with_qr', '1');
+            } else {
+                url.searchParams.delete('with_qr');
+            }
+            pdfLink.href = url.pathname + url.search;
+        };
+        pdfWithQr?.addEventListener('change', syncPdfExportUrl);
+        pdfLink?.addEventListener('click', syncPdfExportUrl);
     });
 </script>
 @endsection
