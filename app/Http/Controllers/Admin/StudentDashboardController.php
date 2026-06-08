@@ -17,9 +17,11 @@ use Illuminate\Validation\Rule;
 use App\Models\LeaveRequestLog;
 use App\Models\User;
 use App\Models\Dtr;
+use App\Models\Department;
 use App\Models\QuizAttemptHistory;
 use App\Models\University;
 use Illuminate\Http\Request;
+use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
@@ -71,6 +73,63 @@ class StudentDashboardController extends Controller
         return $studentsQuery;
     }
 
+    /**
+     * @param  \Illuminate\Database\Eloquent\Builder<User>  $studentsQuery
+     */
+    private function applyStudentListSorting($studentsQuery, string $sortBy, string $sortDir): void
+    {
+        switch ($sortBy) {
+            case 'internship_start':
+                $studentsQuery->orderByRaw('dtr_agg.internship_start IS NULL')
+                    ->orderBy('dtr_agg.internship_start', $sortDir);
+                break;
+            case 'internship_end':
+                $studentsQuery->orderByRaw(
+                    'CASE WHEN users.required_training_hours > 0 AND COALESCE(dtr_agg.internship_total_hours, 0) >= users.required_training_hours THEN 0 ELSE 1 END ASC'
+                )->orderByRaw(
+                    'CASE WHEN users.required_training_hours > 0 AND COALESCE(dtr_agg.internship_total_hours, 0) >= users.required_training_hours THEN dtr_agg.internship_last ELSE NULL END '
+                    .($sortDir === 'desc' ? 'DESC' : 'ASC')
+                );
+                break;
+            case 'hours':
+                $studentsQuery->orderBy('internship_total_hours', $sortDir);
+                break;
+            default:
+                $studentsQuery->orderBy('users.name', $sortDir);
+                break;
+        }
+    }
+
+    /**
+     * @param  \Illuminate\Database\Eloquent\Builder<User>  $studentsQuery
+     * @return \Illuminate\Contracts\Pagination\LengthAwarePaginator
+     */
+    private function paginateStudentsWithMeritSort(Request $request, $studentsQuery, int $perPage, string $sortDir)
+    {
+        $allStudents = (clone $studentsQuery)->get();
+        $allIds = $allStudents->pluck('id')->all();
+        $meritBreakdownsAll = StudentViolationCounter::breakdownsForUserIds($allIds);
+
+        $sorted = $allStudents->sortBy(function ($student) use ($meritBreakdownsAll) {
+            return (int) ($meritBreakdownsAll[$student->id]['total'] ?? 0);
+        }, SORT_REGULAR, $sortDir === 'desc')->values();
+
+        $page = max(1, (int) $request->input('page', 1));
+        $total = $sorted->count();
+        $items = $sorted->slice(($page - 1) * $perPage, $perPage)->values();
+
+        return new LengthAwarePaginator(
+            $items,
+            $total,
+            $perPage,
+            $page,
+            [
+                'path' => $request->url(),
+                'query' => $request->query(),
+            ]
+        );
+    }
+
     public function students(Request $request)
     {
         // Check if user has student_management permission or is admin
@@ -85,6 +144,14 @@ class StudentDashboardController extends Controller
         StudentMeritRulesNotice::reconcileForStudents($allowedDepartmentIds);
 
         $search = trim((string) $request->input('search', ''));
+        $schoolId = trim((string) $request->input('school', ''));
+        $departmentFilter = trim((string) $request->input('department', ''));
+        $sortBy = trim((string) $request->input('sort', 'name'));
+        $sortDir = strtolower((string) $request->input('dir', 'asc')) === 'desc' ? 'desc' : 'asc';
+        $allowedSorts = ['name', 'merits', 'internship_start', 'internship_end', 'hours'];
+        if (! in_array($sortBy, $allowedSorts, true)) {
+            $sortBy = 'name';
+        }
         $perPage = (int) $request->input('per_page', 20);
         if (!in_array($perPage, [10, 20, 50, 100], true)) {
             $perPage = 20;
@@ -92,6 +159,23 @@ class StudentDashboardController extends Controller
 
         $studentsQuery = $this->studentManagementStudentsBaseQuery($user);
         $studentsQueryUnfilteredForExitConference = clone $studentsQuery;
+
+        if ($schoolId !== '' && ctype_digit($schoolId)) {
+            $studentsQuery->where('users.university_id', (int) $schoolId);
+        }
+
+        if ($departmentFilter !== '') {
+            if ($departmentFilter === 'unassigned') {
+                $studentsQuery->whereNull('users.department_id');
+            } elseif (ctype_digit($departmentFilter)) {
+                $departmentId = (int) $departmentFilter;
+                if (is_array($allowedDepartmentIds) && ! empty($allowedDepartmentIds) && ! in_array($departmentId, $allowedDepartmentIds, true)) {
+                    $studentsQuery->whereRaw('1 = 0');
+                } else {
+                    $studentsQuery->where('users.department_id', $departmentId);
+                }
+            }
+        }
 
         if ($search !== '') {
             $studentsQuery->where(function ($q) use ($search) {
@@ -211,10 +295,21 @@ class StudentDashboardController extends Controller
         }
         $statsRemainingBucketsMax = (int) max(max($statsRemainingBuckets), 1);
 
-        $students = $studentsQuery
-            ->orderBy('users.name')
-            ->paginate($perPage)
-            ->appends($request->query());
+        $schools = University::query()->orderBy('name')->get();
+        $departmentsQuery = Department::active()->orderBy('name');
+        if (is_array($allowedDepartmentIds) && ! empty($allowedDepartmentIds)) {
+            $departmentsQuery->whereIn('id', $allowedDepartmentIds);
+        }
+        $departments = $departmentsQuery->get();
+
+        if ($sortBy === 'merits') {
+            $students = $this->paginateStudentsWithMeritSort($request, $studentsQuery, $perPage, $sortDir);
+        } else {
+            $this->applyStudentListSorting($studentsQuery, $sortBy, $sortDir);
+            $students = $studentsQuery
+                ->paginate($perPage)
+                ->appends($request->query());
+        }
 
         $studentIdsOnPage = $students->getCollection()->pluck('id')->all();
         $violationBreakdowns = StudentViolationCounter::breakdownsForUserIds($studentIdsOnPage);
@@ -230,6 +325,12 @@ class StudentDashboardController extends Controller
         return view('admin.student-management.students', compact(
             'students',
             'search',
+            'schoolId',
+            'departmentFilter',
+            'schools',
+            'departments',
+            'sortBy',
+            'sortDir',
             'perPage',
             'statsTotalStudents',
             'statsWithLoggedTime',

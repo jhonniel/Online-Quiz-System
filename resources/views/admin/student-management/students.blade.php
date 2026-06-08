@@ -141,49 +141,146 @@
     </div>
 
     <!-- Filters -->
+    @php
+        $studentsListUrl = url('/admin/student-management/students');
+        $activeListFilters = array_filter([
+            'search' => request('search'),
+            'school' => request('school'),
+            'department' => request('department'),
+            'sort' => request('sort'),
+            'dir' => request('dir'),
+            'per_page' => request('per_page'),
+        ], fn ($value) => $value !== null && $value !== '');
+    @endphp
     <div class="bg-white shadow-sm rounded-lg border border-gray-200 p-4">
-        <form method="GET" action="{{ url('/admin/student-management/students') }}" class="flex items-center justify-between flex-wrap gap-4">
-            <div class="flex flex-col sm:flex-row sm:items-center gap-3 w-full sm:w-auto">
-                <div class="flex-1 min-w-[240px] max-w-md">
-                    <div class="relative">
-                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                            <svg class="h-4 w-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
-                            </svg>
-                        </div>
-                        <input type="text"
-                               name="search"
-                               value="{{ request('search', $search ?? '') }}"
-                               placeholder="{{ $showDepartmentColumn ? 'Search students (name, email, university, department, ID)...' : 'Search students (name, email, university, ID)...' }}"
-                               autocomplete="off"
-                               class="block w-full pl-9 pr-10 py-2 border border-gray-300 rounded-md shadow-sm text-sm focus:ring-indigo-500 focus:border-indigo-500">
-                        @if(request('search'))
-                            <a href="{{ url('/admin/student-management/students?' . http_build_query(array_filter(['per_page' => request('per_page')]))) }}"
-                               class="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600"
-                               title="Clear search">
-                                <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+        <form method="GET" action="{{ $studentsListUrl }}" id="students-list-filters" class="space-y-4">
+            <div class="flex flex-col xl:flex-row xl:items-end xl:justify-between gap-4">
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3 flex-1">
+                    <div class="sm:col-span-2 lg:col-span-3 xl:col-span-2">
+                        <label for="student_search" class="block text-xs font-semibold uppercase tracking-wide text-gray-500 mb-1">Search</label>
+                        <div class="relative">
+                            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                <svg class="h-4 w-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
                                 </svg>
-                            </a>
-                        @endif
+                            </div>
+                            <input type="text"
+                                   id="student_search"
+                                   name="search"
+                                   value="{{ request('search', $search ?? '') }}"
+                                   placeholder="{{ $showDepartmentColumn ? 'Name, email, university, department, ID…' : 'Name, email, university, ID…' }}"
+                                   autocomplete="off"
+                                   class="block w-full pl-9 pr-10 py-2 border border-gray-300 rounded-md shadow-sm text-sm focus:ring-indigo-500 focus:border-indigo-500">
+                            @if(request('search'))
+                                <a href="{{ $studentsListUrl . '?' . http_build_query(collect($activeListFilters)->except('search')->all()) }}"
+                                   class="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600"
+                                   title="Clear search">
+                                    <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                                    </svg>
+                                </a>
+                            @endif
+                        </div>
+                    </div>
+
+                    <div>
+                        <label for="student_school_filter" class="block text-xs font-semibold uppercase tracking-wide text-gray-500 mb-1">School / University</label>
+                        <select name="school" id="student_school_filter"
+                                class="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm text-sm focus:ring-indigo-500 focus:border-indigo-500">
+                            <option value="">All schools</option>
+                            @foreach(($schools ?? collect()) as $school)
+                                <option value="{{ $school->id }}" {{ (string) ($schoolId ?? '') === (string) $school->id ? 'selected' : '' }}>{{ $school->name }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+
+                    @if(($departments ?? collect())->isNotEmpty())
+                        <div>
+                            <label for="student_department_filter" class="block text-xs font-semibold uppercase tracking-wide text-gray-500 mb-1">Department</label>
+                            <select name="department" id="student_department_filter"
+                                    class="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm text-sm focus:ring-indigo-500 focus:border-indigo-500">
+                                <option value="">All departments</option>
+                                @if($showDepartmentColumn)
+                                    <option value="unassigned" {{ ($departmentFilter ?? '') === 'unassigned' ? 'selected' : '' }}>Unassigned</option>
+                                @endif
+                                @foreach($departments as $department)
+                                    <option value="{{ $department->id }}" {{ (string) ($departmentFilter ?? '') === (string) $department->id ? 'selected' : '' }}>{{ $department->name }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                    @endif
+
+                    <div>
+                        <label for="student_sort_filter" class="block text-xs font-semibold uppercase tracking-wide text-gray-500 mb-1">Sort by</label>
+                        <select name="sort" id="student_sort_filter"
+                                class="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm text-sm focus:ring-indigo-500 focus:border-indigo-500">
+                            <option value="name" {{ ($sortBy ?? 'name') === 'name' ? 'selected' : '' }}>Student name</option>
+                            <option value="merits" {{ ($sortBy ?? '') === 'merits' ? 'selected' : '' }}>Merits</option>
+                            <option value="internship_start" {{ ($sortBy ?? '') === 'internship_start' ? 'selected' : '' }}>Internship started</option>
+                            <option value="internship_end" {{ ($sortBy ?? '') === 'internship_end' ? 'selected' : '' }}>Internship ended</option>
+                            <option value="hours" {{ ($sortBy ?? '') === 'hours' ? 'selected' : '' }}>Hours</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label for="student_dir_filter" class="block text-xs font-semibold uppercase tracking-wide text-gray-500 mb-1">Order</label>
+                        <select name="dir" id="student_dir_filter"
+                                class="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm text-sm focus:ring-indigo-500 focus:border-indigo-500">
+                            <option value="asc" {{ ($sortDir ?? 'asc') === 'asc' ? 'selected' : '' }}>Ascending</option>
+                            <option value="desc" {{ ($sortDir ?? '') === 'desc' ? 'selected' : '' }}>Descending</option>
+                        </select>
                     </div>
                 </div>
 
-                <div class="flex items-center gap-2 flex-wrap">
-                    <label for="per_page" class="text-sm font-medium text-gray-700">Show:</label>
-                    <select name="per_page" id="per_page" onchange="this.form.submit()"
-                            class="px-3 py-2 border border-gray-300 rounded-md shadow-sm text-sm focus:ring-indigo-500 focus:border-indigo-500">
-                        <option value="10" {{ request('per_page', 20) == 10 ? 'selected' : '' }}>10</option>
-                        <option value="20" {{ request('per_page', 20) == 20 ? 'selected' : '' }}>20</option>
-                        <option value="50" {{ request('per_page', 20) == 50 ? 'selected' : '' }}>50</option>
-                        <option value="100" {{ request('per_page', 20) == 100 ? 'selected' : '' }}>100</option>
-                    </select>
-                    <span class="text-sm text-gray-500">per page</span>
+                <div class="flex flex-wrap items-center gap-3 shrink-0">
+                    <div class="flex items-center gap-2">
+                        <label for="per_page" class="text-sm font-medium text-gray-700 whitespace-nowrap">Show:</label>
+                        <select name="per_page" id="per_page"
+                                class="px-3 py-2 border border-gray-300 rounded-md shadow-sm text-sm focus:ring-indigo-500 focus:border-indigo-500">
+                            <option value="10" {{ request('per_page', 20) == 10 ? 'selected' : '' }}>10</option>
+                            <option value="20" {{ request('per_page', 20) == 20 ? 'selected' : '' }}>20</option>
+                            <option value="50" {{ request('per_page', 20) == 50 ? 'selected' : '' }}>50</option>
+                            <option value="100" {{ request('per_page', 20) == 100 ? 'selected' : '' }}>100</option>
+                        </select>
+                    </div>
+                    <button type="submit"
+                            class="inline-flex items-center px-4 py-2 rounded-md bg-indigo-600 text-sm font-medium text-white hover:bg-indigo-700">
+                        Apply
+                    </button>
+                    @if(!empty($activeListFilters))
+                        <a href="{{ $studentsListUrl }}"
+                           class="inline-flex items-center px-3 py-2 rounded-md border border-gray-300 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50">
+                            Clear all
+                        </a>
+                    @endif
                 </div>
             </div>
 
-            <div class="text-sm text-gray-500">
-                Showing {{ $students->firstItem() ?? 0 }}-{{ $students->lastItem() ?? 0 }} of {{ $students->total() }} students
+            <div class="flex flex-wrap items-center justify-between gap-3 text-sm text-gray-500 border-t border-gray-100 pt-3">
+                <p>
+                    Showing {{ $students->firstItem() ?? 0 }}–{{ $students->lastItem() ?? 0 }} of {{ $students->total() }} students
+                    @if(($sortBy ?? 'name') !== 'name' || ($sortDir ?? 'asc') !== 'asc')
+                        @php
+                            $sortLabels = [
+                                'name' => 'name',
+                                'merits' => 'merits',
+                                'internship_start' => 'internship started',
+                                'internship_end' => 'internship ended',
+                                'hours' => 'hours',
+                            ];
+                            $sortLabel = $sortLabels[$sortBy ?? 'name'] ?? 'name';
+                            $isDesc = ($sortDir ?? 'asc') === 'desc';
+                            if (($sortBy ?? 'name') === 'name') {
+                                $orderLabel = $isDesc ? 'Z → A' : 'A → Z';
+                            } elseif (in_array($sortBy ?? '', ['internship_start', 'internship_end'], true)) {
+                                $orderLabel = $isDesc ? 'latest first' : 'earliest first';
+                            } else {
+                                $orderLabel = $isDesc ? 'high → low' : 'low → high';
+                            }
+                        @endphp
+                        <span class="text-gray-400">· sorted by {{ $sortLabel }} ({{ $orderLabel }})</span>
+                    @endif
+                </p>
             </div>
         </form>
     </div>
@@ -296,7 +393,7 @@
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z"></path>
                                 </svg>
                                 <h3 class="mt-2 text-sm font-medium text-gray-900">No students found</h3>
-                                <p class="mt-1 text-sm text-gray-500">Try adjusting your search.</p>
+                                <p class="mt-1 text-sm text-gray-500">Try adjusting your search or filters.</p>
                             </td>
                         </tr>
                     @endforelse
@@ -437,6 +534,21 @@
 @endsection
 
 @section('scripts')
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const studentsFilterForm = document.getElementById('students-list-filters');
+        if (studentsFilterForm) {
+            ['student_school_filter', 'student_department_filter', 'student_sort_filter', 'student_dir_filter', 'per_page'].forEach(function (id) {
+                const el = document.getElementById(id);
+                if (el) {
+                    el.addEventListener('change', function () {
+                        studentsFilterForm.submit();
+                    });
+                }
+            });
+        }
+    });
+</script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script type="application/json" id="student-list-analytics-data">
 {!! json_encode([
