@@ -32,7 +32,7 @@
                             <span class="inline-flex items-center rounded-md bg-amber-50 px-2 py-1 text-xs font-semibold text-amber-800 ring-1 ring-inset ring-amber-600/20">Pending</span>
                         @endif
                         <span class="text-xs text-gray-500">
-                            Submitted {{ $attempt->created_at->format('M j, Y g:i A') }}
+                            Submitted {{ $attempt->created_at ? \Illuminate\Support\Carbon::parse($attempt->created_at)->format('M j, Y g:i A') : '—' }}
                         </span>
                     </div>
                 </div>
@@ -96,7 +96,7 @@
                         </div>
                     @endif
                     <p class="text-xs text-gray-500">
-                        Graded {{ $attempt->graded_at->format('M j, Y g:i A') }}
+                        Graded {{ \Illuminate\Support\Carbon::parse($attempt->graded_at)->format('M j, Y g:i A') }}
                         @if($attempt->grader)
                             by {{ $attempt->grader->name }}
                         @endif

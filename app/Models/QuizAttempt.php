@@ -21,6 +21,13 @@ class QuizAttempt extends Model
         'graded_at',
     ];
 
+    protected $casts = [
+        'is_correct' => 'boolean',
+        'started_at' => 'datetime',
+        'completed_at' => 'datetime',
+        'graded_at' => 'datetime',
+    ];
+
     public function quiz()
     {
         return $this->belongsTo(Quiz::class);
