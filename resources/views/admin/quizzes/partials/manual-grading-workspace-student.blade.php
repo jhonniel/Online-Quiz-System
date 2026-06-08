@@ -51,7 +51,10 @@
                         @endforeach
                     </section>
                 @empty
-                    <p class="text-sm text-gray-500 py-8 text-center">No manual grading answers found for this quiz yet.</p>
+                    <div class="rounded-xl border border-dashed border-gray-300 bg-white px-6 py-10 text-center">
+                        <p class="text-sm font-medium text-gray-900">No text answers to grade for this quiz</p>
+                        <p class="mt-2 text-sm text-gray-500">This quiz may be multiple-choice only, or the taker has not submitted free-text responses yet.</p>
+                    </div>
                 @endforelse
             </div>
         </div>
@@ -74,6 +77,7 @@
                 $studentName = $student->name ?? 'Unknown';
                 $takerTaken = (int) ($selectedStudentGroup['quizzes_taken'] ?? 0);
                 $takerAssigned = (int) ($selectedStudentGroup['quizzes_assigned'] ?? 0);
+                $takerSessions = (int) ($selectedStudentGroup['quiz_sessions'] ?? 0);
             @endphp
             <div class="max-w-6xl mx-auto w-full space-y-4 flex flex-col min-h-0 max-h-full" data-mg-step="quiz-picker">
                 <nav class="shrink-0 flex flex-wrap items-center gap-2 rounded-xl bg-white border border-gray-200 px-4 py-3 shadow-sm">
@@ -81,18 +85,20 @@
                     <span class="text-gray-300">/</span>
                     <span class="text-sm font-semibold text-gray-900">{{ $studentName }}</span>
                     <span class="ml-auto inline-flex items-center gap-2">
-                        <span class="text-xs font-semibold tabular-nums text-slate-700 bg-slate-100 border border-slate-200 px-2.5 py-1 rounded-full">{{ $takerTaken }}/{{ $takerAssigned }} quizzes taken</span>
+                        <span class="text-xs font-semibold tabular-nums text-slate-700 bg-slate-100 border border-slate-200 px-2.5 py-1 rounded-full">{{ $takerTaken }} {{ $takerTaken === 1 ? 'quiz' : 'quizzes' }} taken</span>
+                        @if($takerSessions > $takerTaken)
+                            <span class="text-xs font-medium text-slate-600 bg-white border border-slate-200 px-2.5 py-1 rounded-full">{{ $takerSessions }} sessions</span>
+                        @endif
                         <span class="text-xs font-medium text-indigo-700 bg-indigo-50 px-2.5 py-1 rounded-full">Step 2 — pick a quiz</span>
                     </span>
                 </nav>
 
                 @php
-                    $workspaceQuizzes = $selectedStudentGroup['quizzes']
-                        ->filter(fn ($g) => ($g['total_count'] ?? 0) > 0 || ($g['pending_count'] ?? 0) > 0);
+                    $workspaceQuizzes = $selectedStudentGroup['quizzes'];
                 @endphp
                 <div class="flex-1 min-h-0 overflow-y-auto mg-sidebar-scroll pr-1 -mr-1 max-h-[min(60vh,36rem)] lg:max-h-[calc(100vh-18rem)]">
                     @if($workspaceQuizzes->isEmpty())
-                        <p class="text-sm text-gray-500 py-8 text-center">No pending answers for this taker.</p>
+                        <p class="text-sm text-gray-500 py-8 text-center">This taker has not completed any quizzes yet.</p>
                     @else
                         <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-3 pb-2">
                             @foreach($workspaceQuizzes as $g)
@@ -101,6 +107,8 @@
                                     $qTitle = $q->title ?? 'Quiz';
                                     $qPending = (int) ($g['pending_count'] ?? 0);
                                     $qTotal = (int) ($g['total_count'] ?? 0);
+                                    $qSessions = (int) ($g['attempt_sessions'] ?? 1);
+                                    $qHasManual = (bool) ($g['has_manual_grading'] ?? ($qTotal > 0 || $qPending > 0));
                                 @endphp
                                 <button type="button"
                                         data-mg-action="select-quiz"
@@ -112,15 +120,30 @@
                                                 <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path></svg>
                                             </div>
                                             <h3 class="mt-3 text-base font-bold text-gray-900 group-hover:text-indigo-700">{{ $qTitle }}</h3>
-                                            <p class="mt-1 text-xs text-gray-500">View all attempts and grade pending answers</p>
+                                            <p class="mt-1 text-xs text-gray-500">
+                                                @if($qSessions > 1)
+                                                    Taken {{ $qSessions }} times
+                                                @else
+                                                    Taken once
+                                                @endif
+                                                @if($qHasManual)
+                                                    · manual answers to review
+                                                @else
+                                                    · auto-graded only
+                                                @endif
+                                            </p>
                                         </div>
                                         <span class="shrink-0 flex flex-col items-end gap-1">
                                             @if($qPending > 0)
                                                 <span class="rounded-full bg-amber-100 px-3 py-1 text-xs font-bold text-amber-800"
                                                       data-pending-badge="quiz-{{ (int) $student->id }}-{{ (int) $q->id }}">{{ $qPending }} to grade</span>
+                                            @elseif($qHasManual)
+                                                <span class="rounded-full bg-emerald-100 px-3 py-1 text-xs font-bold text-emerald-800">All graded</span>
+                                            @else
+                                                <span class="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600">No text answers</span>
                                             @endif
-                                            @if($qTotal > 0)
-                                                <span class="rounded-full bg-slate-100 px-2.5 py-0.5 text-[11px] font-semibold text-slate-600">{{ $qTotal }} total</span>
+                                            @if($qSessions > 1)
+                                                <span class="rounded-full bg-indigo-50 px-2.5 py-0.5 text-[11px] font-semibold text-indigo-700">{{ $qSessions }}× taken</span>
                                             @endif
                                         </span>
                                     </div>

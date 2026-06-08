@@ -17,15 +17,14 @@
             'quizCount' => $g['quizzes']->count(),
             'quizzesTaken' => (int) ($g['quizzes_taken'] ?? 0),
             'quizzesAssigned' => (int) ($g['quizzes_assigned'] ?? 0),
+            'quizSessions' => (int) ($g['quiz_sessions'] ?? 0),
             'pending' => (int) $g['pending_count'],
             'latestTs' => $latest ? \Illuminate\Support\Carbon::parse($latest)->timestamp : 0,
             'searchText' => strtolower($name.' '.($user->email ?? '').' '.($user->role ?? '').' '.$g['quizzes']->map(fn ($q) => $q['quiz']->title ?? '')->implode(' ')),
         ];
     })->values();
     $mgQuizzesForSelected = $selectedStudentGroup
-        ? $selectedStudentGroup['quizzes']
-            ->filter(fn ($g) => ($g['total_count'] ?? 0) > 0 || ($g['pending_count'] ?? 0) > 0)
-            ->map(function ($g) {
+        ? $selectedStudentGroup['quizzes']->map(function ($g) {
             $title = $g['quiz']->title ?? 'Quiz';
             $latest = $g['latest_attempt_at'] ?? null;
 
@@ -33,6 +32,8 @@
                 'id' => (int) $g['quiz']->id,
                 'title' => $title,
                 'pending' => (int) $g['pending_count'],
+                'attemptSessions' => (int) ($g['attempt_sessions'] ?? 1),
+                'hasManualGrading' => (bool) ($g['has_manual_grading'] ?? (($g['total_count'] ?? 0) > 0 || ($g['pending_count'] ?? 0) > 0)),
                 'latestTs' => $latest ? \Illuminate\Support\Carbon::parse($latest)->timestamp : 0,
             ];
         })->values()
@@ -108,8 +109,10 @@
                             <p class="text-xs truncate opacity-80" x-text="student.email"></p>
                             <p class="text-xs mt-0.5 tabular-nums"
                                :class="selectedUserId === student.id ? 'text-indigo-100' : 'text-gray-600'">
-                                <span class="font-semibold" x-text="student.quizzesTaken + '/' + student.quizzesAssigned"></span>
-                                <span class="opacity-80"> quizzes taken</span>
+                                <span class="font-semibold" x-text="student.quizzesTaken"></span>
+                                <span class="opacity-80" x-text="student.quizzesTaken === 1 ? ' quiz taken' : ' quizzes taken'"></span>
+                                <span x-show="student.quizSessions > student.quizzesTaken" class="opacity-70"
+                                      x-text="' · ' + student.quizSessions + ' sessions'"></span>
                             </p>
                             <p class="text-xs opacity-70">
                                 <span x-text="student.pending + ' to grade'"></span>
@@ -122,8 +125,8 @@
                                   :class="selectedUserId === student.id
                                       ? 'border-white/30 bg-white/15 text-white'
                                       : 'border-slate-200 bg-slate-50 text-slate-700'"
-                                  x-text="student.quizzesTaken + '/' + student.quizzesAssigned"
-                                  title="Quizzes taken / assigned"></span>
+                                  x-text="student.quizzesTaken"
+                                  title="Distinct quizzes completed"></span>
                             <span class="min-w-[1.75rem] text-center rounded-full px-2 py-0.5 text-xs font-bold tabular-nums"
                                   :class="selectedUserId === student.id ? 'bg-white/25 text-white' : 'bg-amber-100 text-amber-900'"
                                   :data-pending-badge="'student-' + student.id"
