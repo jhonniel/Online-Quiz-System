@@ -488,6 +488,7 @@ class QuizController extends Controller
                     'quiz_id' => $quiz->id,
                     'user_id' => auth()->id(),
                     'question_id' => $question->id,
+                    'attempt_number' => (int) $assignment->attempt_count + 1,
                     'answer_id' => null,
                     'user_answer' => $userAnswerValue,
                     'is_correct' => $isCorrect,

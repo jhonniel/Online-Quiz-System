@@ -5,7 +5,8 @@
         $studentGroup = $selectedQuizGroup['students']->first(fn ($g) => (int) $g['user']->id === (int) $selectedUserId);
         $student = $studentGroup['user'] ?? null;
         $studentName = $student->name ?? 'Unknown';
-        $pendingLeft = $studentGroup['pending_count'] ?? $gradingAttempts->count();
+        $pendingLeft = (int) ($studentGroup['pending_count'] ?? $gradingAttempts->whereNull('graded_at')->count());
+        $totalAttempts = (int) ($gradingAttemptGroups ?? collect())->count();
     @endphp
     @if($student)
         <div class="flex-1 flex flex-col min-h-0 p-4 sm:p-6 lg:p-8 max-w-6xl mx-auto w-full"
@@ -18,18 +19,41 @@
                 <button type="button" data-mg-action="back-to-students" class="text-sm font-medium text-blue-600 hover:text-blue-800 truncate max-w-[10rem]">{{ $quizTitle }}</button>
                 <span class="text-gray-300">/</span>
                 <span class="text-sm font-bold text-gray-900">{{ $studentName }}</span>
-                <span class="ml-auto text-xs font-semibold text-white bg-indigo-600 px-2.5 py-1 rounded-full">
-                    {{ $pendingLeft }} left
+                <span class="ml-auto inline-flex items-center gap-2">
+                    @if($totalAttempts > 0)
+                        <span class="text-xs font-semibold text-slate-700 bg-slate-100 border border-slate-200 px-2.5 py-1 rounded-full">{{ $totalAttempts }} {{ $totalAttempts === 1 ? 'attempt' : 'attempts' }}</span>
+                    @endif
+                    <span class="text-xs font-semibold text-white bg-indigo-600 px-2.5 py-1 rounded-full">{{ $pendingLeft }} to grade</span>
                 </span>
             </nav>
 
-            <div class="flex-1 min-h-0 overflow-y-auto mg-workspace-scroll space-y-4 pt-4 mt-1" data-grading-attempts>
-                @foreach($gradingAttempts as $attempt)
-                    @include('admin.quizzes.partials.manual-grading-attempt-card', [
-                        'attempt' => $attempt,
-                        'compactHeader' => true,
-                    ])
-                @endforeach
+            <div class="flex-1 min-h-0 overflow-y-auto mg-workspace-scroll space-y-6 pt-4 mt-1" data-grading-attempts>
+                @forelse(($gradingAttemptGroups ?? collect()) as $attemptNumber => $attemptGroup)
+                    <section class="space-y-4">
+                        <div class="flex flex-wrap items-center gap-2 rounded-lg border border-gray-200 bg-gray-50 px-4 py-2.5">
+                            <h3 class="text-sm font-bold text-gray-900">Attempt #{{ $attemptNumber }}</h3>
+                            @php
+                                $groupPending = $attemptGroup->whereNull('graded_at')->count();
+                                $groupGraded = $attemptGroup->whereNotNull('graded_at')->count();
+                            @endphp
+                            <span class="text-xs text-gray-500">{{ $attemptGroup->count() }} {{ $attemptGroup->count() === 1 ? 'answer' : 'answers' }}</span>
+                            @if($groupGraded > 0)
+                                <span class="inline-flex items-center rounded-full bg-emerald-100 px-2 py-0.5 text-[11px] font-semibold text-emerald-800">{{ $groupGraded }} graded</span>
+                            @endif
+                            @if($groupPending > 0)
+                                <span class="inline-flex items-center rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-semibold text-amber-800">{{ $groupPending }} pending</span>
+                            @endif
+                        </div>
+                        @foreach($attemptGroup as $attempt)
+                            @include('admin.quizzes.partials.manual-grading-attempt-card', [
+                                'attempt' => $attempt,
+                                'compactHeader' => true,
+                            ])
+                        @endforeach
+                    </section>
+                @empty
+                    <p class="text-sm text-gray-500 py-8 text-center">No manual grading answers found for this taker yet.</p>
+                @endforelse
             </div>
         </div>
     @endif
@@ -60,7 +84,7 @@
 
                 @php
                     $workspaceStudents = $selectedQuizGroup['students']
-                        ->filter(fn ($g) => ($g['pending_count'] ?? 0) > 0);
+                        ->filter(fn ($g) => ($g['total_count'] ?? 0) > 0 || ($g['pending_count'] ?? 0) > 0);
                 @endphp
                 <div class="flex-1 min-h-0 overflow-y-auto mg-sidebar-scroll pr-1 max-h-[min(60vh,36rem)] lg:max-h-[calc(100vh-18rem)]">
                     @if($workspaceStudents->isEmpty())
@@ -72,6 +96,7 @@
                                     $u = $g['user'];
                                     $uName = $u->name ?? 'Unknown';
                                     $uPending = (int) ($g['pending_count'] ?? 0);
+                                    $uTotal = (int) ($g['total_count'] ?? 0);
                                 @endphp
                                 <button type="button"
                                         data-mg-action="select-student"
@@ -88,7 +113,14 @@
                                                 <p class="text-xs text-gray-500 truncate">{{ $u->email ?? '' }}</p>
                                             </div>
                                         </div>
-                                        <span class="shrink-0 rounded-full bg-indigo-100 px-3 py-1 text-xs font-bold text-indigo-800">{{ $uPending }}</span>
+                                        <span class="shrink-0 flex flex-col items-end gap-1">
+                                            @if($uPending > 0)
+                                                <span class="rounded-full bg-amber-100 px-3 py-1 text-xs font-bold text-amber-800">{{ $uPending }} to grade</span>
+                                            @endif
+                                            @if($uTotal > 0)
+                                                <span class="rounded-full bg-slate-100 px-2.5 py-0.5 text-[11px] font-semibold text-slate-600">{{ $uTotal }} total</span>
+                                            @endif
+                                        </span>
                                     </div>
                                 </button>
                             @endforeach

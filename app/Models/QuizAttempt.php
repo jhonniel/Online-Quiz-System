@@ -10,6 +10,7 @@ class QuizAttempt extends Model
         'quiz_id',
         'user_id',
         'question_id',
+        'attempt_number',
         'answer_id',
         'user_answer',
         'is_correct',
@@ -42,5 +43,15 @@ class QuizAttempt extends Model
     public function answer()
     {
         return $this->belongsTo(Answer::class);
+    }
+
+    public function grader()
+    {
+        return $this->belongsTo(User::class, 'graded_by');
+    }
+
+    public function isGraded(): bool
+    {
+        return $this->graded_at !== null;
     }
 }

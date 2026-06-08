@@ -553,23 +553,39 @@ class QuizController extends Controller
         $start = $completedAt->copy()->subMinutes(15);
         $end = $completedAt->copy()->addMinute();
 
+        $attemptNumber = (int) ($history->attempt_number ?? 1);
+
         if ($quizAttempts !== null) {
             $liveScore = (int) $quizAttempts
                 ->where('user_id', $history->user_id)
-                ->filter(function ($attempt) use ($start, $end) {
-                    $createdAt = $attempt->created_at;
-                    if ($createdAt === null) {
-                        return false;
-                    }
-
-                    return $createdAt->between($start, $end);
-                })
+                ->where('attempt_number', $attemptNumber)
                 ->sum('points_earned');
+
+            if ($liveScore === 0) {
+                $liveScore = (int) $quizAttempts
+                    ->where('user_id', $history->user_id)
+                    ->filter(function ($attempt) use ($start, $end) {
+                        $createdAt = $attempt->created_at;
+                        if ($createdAt === null) {
+                            return false;
+                        }
+
+                        return $createdAt->between($start, $end);
+                    })
+                    ->sum('points_earned');
+            }
         } else {
             $liveScore = (int) QuizAttempt::where('quiz_id', $history->quiz_id)
                 ->where('user_id', $history->user_id)
-                ->whereBetween('created_at', [$start, $end])
+                ->where('attempt_number', $attemptNumber)
                 ->sum('points_earned');
+
+            if ($liveScore === 0) {
+                $liveScore = (int) QuizAttempt::where('quiz_id', $history->quiz_id)
+                    ->where('user_id', $history->user_id)
+                    ->whereBetween('created_at', [$start, $end])
+                    ->sum('points_earned');
+            }
         }
 
         return $liveScore > 0 ? $liveScore : (int) $history->score;
@@ -961,8 +977,13 @@ class QuizController extends Controller
             'last_attempt_at' => now(),
         ]);
 
-        // Delete current attempts to prepare for retake
-        $attempts->each->delete();
+        // Keep attempt rows so manual grading can show every quiz session (including retakes).
+        $attemptNumber = (int) $assignment->attempt_count + 1;
+        foreach ($attempts as $attempt) {
+            if (! $attempt->attempt_number) {
+                $attempt->update(['attempt_number' => $attemptNumber]);
+            }
+        }
     }
 
     public function manualGrading(Request $request)
@@ -1008,16 +1029,20 @@ class QuizController extends Controller
                 fn (array $group) => (int) $group['user']->id === $selectedUserId
             );
             if ($selectedUserId && $selectedQuizId) {
-                $gradingAttempts = $this->loadPendingManualGradingAttempts($selectedUserId, $selectedQuizId);
+                $gradingAttempts = $this->loadManualGradingAttempts($selectedUserId, $selectedQuizId);
             }
         } else {
             $selectedQuizGroup = collect($groupsByQuiz)->first(
                 fn (array $group) => (int) $group['quiz']->id === $selectedQuizId
             );
             if ($selectedUserId && $selectedQuizId) {
-                $gradingAttempts = $this->loadPendingManualGradingAttempts($selectedUserId, $selectedQuizId);
+                $gradingAttempts = $this->loadManualGradingAttempts($selectedUserId, $selectedQuizId);
             }
         }
+
+        $gradingAttemptGroups = $gradingAttempts
+            ->groupBy(fn ($attempt) => (int) ($attempt->attempt_number ?? 1))
+            ->sortKeysDesc();
 
         return compact(
             'groupsByStudent',
@@ -1027,6 +1052,7 @@ class QuizController extends Controller
             'selectedUserId',
             'selectedQuizId',
             'gradingAttempts',
+            'gradingAttemptGroups',
             'selectedStudentGroup',
             'selectedQuizGroup'
         );
@@ -1044,7 +1070,7 @@ class QuizController extends Controller
         $secondaryList = [];
         if ($data['viewMode'] === 'student' && $data['selectedStudentGroup']) {
             $secondaryList = collect($data['selectedStudentGroup']['quizzes'])
-                ->filter(fn ($g) => ($g['pending_count'] ?? 0) > 0)
+                ->filter(fn ($g) => ($g['total_count'] ?? 0) > 0 || ($g['pending_count'] ?? 0) > 0)
                 ->map(function ($g) {
                     $title = $g['quiz']->title ?? 'Quiz';
                     $latest = $g['latest_attempt_at'] ?? null;
@@ -1060,7 +1086,7 @@ class QuizController extends Controller
                 ->all();
         } elseif ($data['viewMode'] === 'quiz' && $data['selectedQuizGroup']) {
             $secondaryList = collect($data['selectedQuizGroup']['students'])
-                ->filter(fn ($g) => ($g['pending_count'] ?? 0) > 0)
+                ->filter(fn ($g) => ($g['total_count'] ?? 0) > 0 || ($g['pending_count'] ?? 0) > 0)
                 ->map(function ($g) {
                     $name = $g['user']->name ?? 'Unknown';
                     $latest = $g['latest_attempt_at'] ?? null;
@@ -1138,12 +1164,14 @@ class QuizController extends Controller
             return;
         }
 
-        $latestHistories = QuizAttemptHistory::query()
-            ->scorable()
+        $histories = QuizAttemptHistory::query()
             ->whereIn('quiz_id', $quizIds)
-            ->orderByDesc(DB::raw('COALESCE(completed_at, created_at)'))
-            ->get()
-            ->unique(fn ($history) => $history->user_id.'-'.$history->quiz_id);
+            ->where(function ($query) {
+                $query->scorable()
+                    ->orWhereIn('status', ['partial', 'completed', 'time_expired']);
+            })
+            ->orderBy('attempt_number')
+            ->get();
 
         $manualQuestionsByQuiz = Question::query()
             ->whereIn('quiz_id', $quizIds)
@@ -1153,7 +1181,7 @@ class QuizController extends Controller
             ->get(['id', 'quiz_id'])
             ->groupBy('quiz_id');
 
-        foreach ($latestHistories as $history) {
+        foreach ($histories as $history) {
             $answers = $history->answers;
             if (is_string($answers)) {
                 $answers = json_decode($answers, true);
@@ -1176,71 +1204,83 @@ class QuizController extends Controller
                     continue;
                 }
 
-                $hasUngraded = QuizAttempt::query()
+                $attemptNumber = (int) ($history->attempt_number ?? 1);
+                $hasRowForAttempt = QuizAttempt::query()
                     ->where('quiz_id', $history->quiz_id)
                     ->where('user_id', $history->user_id)
                     ->where('question_id', $questionId)
-                    ->whereNull('graded_at')
+                    ->where('attempt_number', $attemptNumber)
                     ->exists();
 
-                if ($hasUngraded) {
+                if ($hasRowForAttempt) {
                     continue;
                 }
 
-                $hasAnyRow = QuizAttempt::query()
-                    ->where('quiz_id', $history->quiz_id)
-                    ->where('user_id', $history->user_id)
-                    ->where('question_id', $questionId)
-                    ->exists();
-
-                if ($hasAnyRow) {
-                    continue;
+                $pointsEarned = (int) ($row['points_earned'] ?? 0);
+                $isCorrect = (bool) ($row['is_correct'] ?? false);
+                $gradedAt = null;
+                if ($history->status === 'completed' && ($pointsEarned > 0 || $isCorrect)) {
+                    $gradedAt = $history->completed_at ?? $history->created_at;
                 }
 
-                $this->createPendingManualGradingAttempt(
+                $this->createManualGradingAttempt(
                     $history->quiz_id,
                     $history->user_id,
                     $questionId,
+                    $attemptNumber,
                     (string) ($row['user_answer'] ?? ''),
-                    (bool) ($row['is_correct'] ?? false),
-                    (int) ($row['points_earned'] ?? 0),
+                    $isCorrect,
+                    $pointsEarned,
                     $history->started_at ?? $history->completed_at,
-                    $history->completed_at
+                    $history->completed_at,
+                    $gradedAt
                 );
             }
-
-            $this->syncManualAttemptsFromAssignment(
-                $history->quiz_id,
-                $history->user_id,
-                $manualQuestionsByQuiz->get($history->quiz_id, collect())->pluck('id')
-            );
         }
+
+        QuizAssignment::query()
+            ->whereIn('quiz_id', $quizIds)
+            ->where('status', 'in_progress')
+            ->whereNotNull('progress_answers')
+            ->get()
+            ->each(function (QuizAssignment $assignment) use ($manualQuestionsByQuiz) {
+                $this->syncManualAttemptsFromAssignment(
+                    (int) $assignment->quiz_id,
+                    (int) $assignment->user_id,
+                    (int) $assignment->attempt_count + 1,
+                    $manualQuestionsByQuiz->get($assignment->quiz_id, collect())->pluck('id')
+                );
+            });
     }
 
-    private function createPendingManualGradingAttempt(
+    private function createManualGradingAttempt(
         int $quizId,
         int $userId,
         int $questionId,
+        int $attemptNumber,
         string $userAnswer,
         bool $isCorrect,
         int $pointsEarned,
         $startedAt,
-        $completedAt
+        $completedAt,
+        $gradedAt = null
     ): void {
         QuizAttempt::create([
             'quiz_id' => $quizId,
             'user_id' => $userId,
             'question_id' => $questionId,
+            'attempt_number' => max(1, $attemptNumber),
             'answer_id' => null,
             'user_answer' => $userAnswer,
             'is_correct' => $isCorrect,
             'points_earned' => $pointsEarned,
             'started_at' => $startedAt ?? now(),
             'completed_at' => $completedAt ?? now(),
+            'graded_at' => $gradedAt,
         ]);
     }
 
-    private function syncManualAttemptsFromAssignment(int $quizId, int $userId, Collection $manualQuestionIds): void
+    private function syncManualAttemptsFromAssignment(int $quizId, int $userId, int $attemptNumber, Collection $manualQuestionIds): void
     {
         if ($manualQuestionIds->isEmpty()) {
             return;
@@ -1259,20 +1299,11 @@ class QuizController extends Controller
             return;
         }
 
+        $attemptNumber = max(1, $attemptNumber ?: ((int) $assignment->attempt_count + 1));
+
         foreach ($assignment->progress_answers as $questionId => $answer) {
             $questionId = (int) $questionId;
             if ($questionId <= 0 || ! $manualQuestionIds->contains($questionId)) {
-                continue;
-            }
-
-            $hasUngraded = QuizAttempt::query()
-                ->where('quiz_id', $quizId)
-                ->where('user_id', $userId)
-                ->where('question_id', $questionId)
-                ->whereNull('graded_at')
-                ->exists();
-
-            if ($hasUngraded) {
                 continue;
             }
 
@@ -1280,16 +1311,18 @@ class QuizController extends Controller
                 ->where('quiz_id', $quizId)
                 ->where('user_id', $userId)
                 ->where('question_id', $questionId)
+                ->where('attempt_number', $attemptNumber)
                 ->exists()) {
                 continue;
             }
 
             $userAnswer = is_array($answer) ? json_encode($answer) : (string) $answer;
 
-            $this->createPendingManualGradingAttempt(
+            $this->createManualGradingAttempt(
                 $quizId,
                 $userId,
                 $questionId,
+                $attemptNumber,
                 $userAnswer,
                 false,
                 0,
@@ -1439,25 +1472,42 @@ class QuizController extends Controller
     }
 
     /**
-     * @return \Illuminate\Support\Collection<string, object{user_id: int, quiz_id: int, pending_count: int, latest_attempt_at: ?string}>
+     * @return \Illuminate\Support\Collection<string, object{user_id: int, quiz_id: int, pending_count: int, total_count: int, latest_attempt_at: ?string}>
      */
-    private function pendingManualGradingAggregates(): Collection
+    private function manualGradingAggregates(): Collection
     {
-        return $this->pendingManualGradingQuery()
-            ->selectRaw('user_id, quiz_id, COUNT(*) as pending_count, MAX(created_at) as latest_attempt_at')
+        return QuizAttempt::query()
+            ->whereHas('question', function ($query) {
+                $this->applyManualGradingQuestionScope($query);
+            })
+            ->selectRaw('user_id, quiz_id, COUNT(*) as total_count, SUM(CASE WHEN graded_at IS NULL THEN 1 ELSE 0 END) as pending_count, MAX(created_at) as latest_attempt_at')
             ->groupBy('user_id', 'quiz_id')
             ->get()
             ->keyBy(fn ($row) => $row->user_id.'_'.$row->quiz_id);
     }
 
-    private function loadPendingManualGradingAttempts(int $userId, int $quizId)
+    private function pendingManualGradingAggregates(): Collection
     {
-        return $this->pendingManualGradingQuery()
+        return $this->manualGradingAggregates()
+            ->filter(fn ($row) => (int) ($row->pending_count ?? 0) > 0);
+    }
+
+    private function loadManualGradingAttempts(int $userId, int $quizId)
+    {
+        return QuizAttempt::query()
             ->where('user_id', $userId)
             ->where('quiz_id', $quizId)
-            ->with(['question' => fn ($q) => $q->orderBy('order'), 'user', 'quiz'])
+            ->whereHas('question', function ($query) {
+                $this->applyManualGradingQuestionScope($query);
+            })
+            ->with(['question', 'user', 'quiz', 'grader'])
+            ->orderByDesc('attempt_number')
+            ->orderBy('question_id')
             ->get()
-            ->sortBy(fn ($attempt) => $attempt->question->order ?? $attempt->question_id)
+            ->sortBy(fn ($attempt) => [
+                -(int) ($attempt->attempt_number ?? 1),
+                $attempt->question->order ?? $attempt->question_id,
+            ])
             ->values();
     }
 
@@ -1489,7 +1539,7 @@ class QuizController extends Controller
             }
             $quizExists = $studentGroup['quizzes']->contains(
                 fn (array $quizGroup) => (int) $quizGroup['quiz']->id === $quizId
-                    && ($quizGroup['pending_count'] ?? 0) > 0
+                    && (($quizGroup['total_count'] ?? 0) > 0 || ($quizGroup['pending_count'] ?? 0) > 0)
             );
 
             return $quizExists ? [$userId, $quizId] : [$userId, null];
@@ -1506,7 +1556,7 @@ class QuizController extends Controller
         }
         $studentExists = $quizGroup['students']->contains(
             fn (array $studentGroup) => (int) $studentGroup['user']->id === $userId
-                && ($studentGroup['pending_count'] ?? 0) > 0
+                && (($studentGroup['total_count'] ?? 0) > 0 || ($studentGroup['pending_count'] ?? 0) > 0)
         );
 
         return $studentExists ? [$userId, $quizId] : [null, $quizId];
@@ -1520,15 +1570,15 @@ class QuizController extends Controller
     private function buildManualGradingGroupsByStudent(): array
     {
         $participants = $this->manualGradingParticipantPairs();
-        $pendingByPair = $this->pendingManualGradingAggregates();
+        $aggregatesByPair = $this->manualGradingAggregates();
 
-        if ($participants->isEmpty() && $pendingByPair->isEmpty()) {
+        if ($participants->isEmpty() && $aggregatesByPair->isEmpty()) {
             return [];
         }
 
         $pairKeys = $participants
             ->map(fn ($row) => $row->user_id.'_'.$row->quiz_id)
-            ->merge($pendingByPair->keys())
+            ->merge($aggregatesByPair->keys())
             ->unique();
 
         $userIds = $pairKeys->map(fn ($key) => (int) explode('_', $key, 2)[0])->unique();
@@ -1545,7 +1595,7 @@ class QuizController extends Controller
         $quizProgressByUser = $this->manualGradingQuizProgressForUsers($userIds);
 
         return $userIds
-            ->map(function ($userId) use ($pairKeys, $users, $quizzes, $pendingByPair, $participantsByKey, $quizProgressByUser) {
+            ->map(function ($userId) use ($pairKeys, $users, $quizzes, $aggregatesByPair, $participantsByKey, $quizProgressByUser) {
                 $user = $users->get($userId);
                 if (! $user) {
                     return null;
@@ -1555,20 +1605,21 @@ class QuizController extends Controller
 
                 $quizRows = $pairKeys
                     ->filter(fn ($key) => (int) explode('_', $key, 2)[0] === (int) $userId)
-                    ->map(function ($key) use ($quizzes, $pendingByPair, $participantsByKey) {
+                    ->map(function ($key) use ($quizzes, $aggregatesByPair, $participantsByKey) {
                         [, $quizId] = explode('_', $key, 2);
                         $quiz = $quizzes->get((int) $quizId);
                         if (! $quiz) {
                             return null;
                         }
 
-                        $pending = $pendingByPair->get($key);
+                        $aggregate = $aggregatesByPair->get($key);
                         $participant = $participantsByKey->get($key);
 
                         return [
                             'quiz' => $quiz,
-                            'pending_count' => (int) ($pending->pending_count ?? 0),
-                            'latest_attempt_at' => $pending->latest_attempt_at
+                            'pending_count' => (int) ($aggregate->pending_count ?? 0),
+                            'total_count' => (int) ($aggregate->total_count ?? 0),
+                            'latest_attempt_at' => $aggregate->latest_attempt_at
                                 ?? $participant->latest_attempt_at
                                 ?? null,
                         ];
@@ -1609,15 +1660,15 @@ class QuizController extends Controller
     private function buildManualGradingGroupsByQuiz(): array
     {
         $participants = $this->manualGradingParticipantPairs();
-        $pendingByPair = $this->pendingManualGradingAggregates();
+        $aggregatesByPair = $this->manualGradingAggregates();
 
-        if ($participants->isEmpty() && $pendingByPair->isEmpty()) {
+        if ($participants->isEmpty() && $aggregatesByPair->isEmpty()) {
             return [];
         }
 
         $pairKeys = $participants
             ->map(fn ($row) => $row->user_id.'_'.$row->quiz_id)
-            ->merge($pendingByPair->keys())
+            ->merge($aggregatesByPair->keys())
             ->unique();
 
         $quizIds = $pairKeys->map(fn ($key) => (int) explode('_', $key, 2)[1])->unique();
@@ -1633,7 +1684,7 @@ class QuizController extends Controller
         $participantsByKey = $participants->keyBy(fn ($row) => $row->user_id.'_'.$row->quiz_id);
 
         return $quizIds
-            ->map(function ($quizId) use ($pairKeys, $users, $quizzes, $pendingByPair, $participantsByKey) {
+            ->map(function ($quizId) use ($pairKeys, $users, $quizzes, $aggregatesByPair, $participantsByKey) {
                 $quiz = $quizzes->get($quizId);
                 if (! $quiz) {
                     return null;
@@ -1641,20 +1692,21 @@ class QuizController extends Controller
 
                 $studentRows = $pairKeys
                     ->filter(fn ($key) => (int) explode('_', $key, 2)[1] === (int) $quizId)
-                    ->map(function ($key) use ($users, $pendingByPair, $participantsByKey) {
+                    ->map(function ($key) use ($users, $aggregatesByPair, $participantsByKey) {
                         [$userId] = explode('_', $key, 2);
                         $user = $users->get((int) $userId);
                         if (! $user) {
                             return null;
                         }
 
-                        $pending = $pendingByPair->get($key);
+                        $aggregate = $aggregatesByPair->get($key);
                         $participant = $participantsByKey->get($key);
 
                         return [
                             'user' => $user,
-                            'pending_count' => (int) ($pending->pending_count ?? 0),
-                            'latest_attempt_at' => $pending->latest_attempt_at
+                            'pending_count' => (int) ($aggregate->pending_count ?? 0),
+                            'total_count' => (int) ($aggregate->total_count ?? 0),
+                            'latest_attempt_at' => $aggregate->latest_attempt_at
                                 ?? $participant->latest_attempt_at
                                 ?? null,
                         ];
@@ -1821,9 +1873,17 @@ class QuizController extends Controller
 
         $liveCount = QuizAttempt::where('quiz_id', $history->quiz_id)
             ->where('user_id', $history->user_id)
-            ->whereBetween('created_at', [$start, $end])
+            ->where('attempt_number', (int) ($history->attempt_number ?? 1))
             ->where('is_correct', true)
             ->count();
+
+        if ($liveCount === 0) {
+            $liveCount = QuizAttempt::where('quiz_id', $history->quiz_id)
+                ->where('user_id', $history->user_id)
+                ->whereBetween('created_at', [$start, $end])
+                ->where('is_correct', true)
+                ->count();
+        }
 
         return $liveCount > 0 ? $liveCount : (int) $history->correct_answers;
     }

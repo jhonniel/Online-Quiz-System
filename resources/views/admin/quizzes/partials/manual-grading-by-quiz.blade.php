@@ -15,7 +15,7 @@
     })->values();
     $mgStudentsForSelected = $selectedQuizGroup
         ? $selectedQuizGroup['students']
-            ->filter(fn ($g) => ($g['pending_count'] ?? 0) > 0)
+            ->filter(fn ($g) => ($g['total_count'] ?? 0) > 0 || ($g['pending_count'] ?? 0) > 0)
             ->map(function ($g) {
             $name = $g['user']->name ?? 'Unknown';
             $latest = $g['latest_attempt_at'] ?? null;
