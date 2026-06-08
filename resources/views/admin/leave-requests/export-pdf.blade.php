@@ -4,10 +4,10 @@
     <meta charset="utf-8">
     <title>Approved Employee Leave Requests</title>
     <style>
-        @page { margin: 42mm 10mm {{ !empty($includeVerificationQr) ? '32mm' : '15mm' }} 10mm; }
-        body { font-family: DejaVu Sans, sans-serif; font-size: 9px; color: #111827; }
-        .brand-header { position: fixed; top: -36mm; left: 0; right: 0; min-height: 30mm; border-bottom: 1px solid #E5E7EB; }
-        .brand-inner { width: 100%; padding: 0 10mm; box-sizing: border-box; }
+        @page { margin: 12mm 10mm {{ !empty($includeVerificationQr) ? '28mm' : '12mm' }} 10mm; }
+        body { font-family: DejaVu Sans, sans-serif; font-size: 9px; color: #111827; margin: 0; padding: 0; }
+        .brand-header { border-bottom: 1px solid #E5E7EB; margin: 0 0 8px 0; padding: 0 0 6px 0; }
+        .brand-inner { width: 100%; box-sizing: border-box; }
         .brand-table { width: 100%; border-collapse: collapse; }
         .brand-logo-cell { width: 58px; vertical-align: top; padding: 0 8px 0 0; }
         .brand-text-cell { vertical-align: top; }
@@ -15,8 +15,8 @@
         .brand-logo { width: 52px; height: 52px; object-fit: contain; display: block; }
         .system-name { font-size: 15px; font-weight: bold; margin: 0; padding: 0; color: #111827; line-height: 1.2; }
         .system-address { font-size: 9px; color: #4B5563; line-height: 1.35; margin: 2px 0 0 0; padding: 0; }
-        .verify-footer { position: fixed; bottom: -26mm; left: 0; right: 0; height: 22mm; border-top: 1px solid #E5E7EB; color: #4B5563; font-size: 8px; }
-        .verify-inner { width: 100%; padding: 4px 10mm 0; box-sizing: border-box; }
+        .verify-footer { position: fixed; bottom: -22mm; left: 0; right: 0; height: 20mm; border-top: 1px solid #E5E7EB; color: #4B5563; font-size: 8px; }
+        .verify-inner { width: 100%; padding: 4px 0 0; box-sizing: border-box; }
         .verify-table { width: 100%; border-collapse: collapse; }
         .verify-qr { width: 72px; height: 72px; }
         .verify-title { font-size: 9px; font-weight: bold; color: #111827; margin: 0 0 2px 0; }
@@ -104,7 +104,7 @@
     <table class="data-table">
         <thead>
             <tr>
-                <th>ID</th>
+                <th>No.</th>
                 <th>Employee</th>
                 <th>Department</th>
                 <th>Approved Requests</th>
@@ -115,7 +115,7 @@
         <tbody>
             @forelse($exportRows as $row)
                 <tr>
-                    <td>{{ $row->user_id }}</td>
+                    <td>{{ $loop->iteration }}</td>
                     <td>
                         {{ $row->user?->name ?? '—' }}<br>
                         <span style="color:#6b7280;font-size:7px;">{{ $row->user?->email ?? '' }}</span>

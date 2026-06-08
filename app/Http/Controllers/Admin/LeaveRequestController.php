@@ -159,7 +159,7 @@ class LeaveRequestController extends Controller
         return new StreamedResponse(function () use ($exportRows) {
             $out = fopen('php://output', 'w');
             fputcsv($out, [
-                'ID',
+                'No.',
                 'Employee',
                 'Email',
                 'Department',
@@ -168,8 +168,8 @@ class LeaveRequestController extends Controller
                 'Available Balance',
             ]);
 
-            foreach ($exportRows as $exportRow) {
-                fputcsv($out, $this->employeeLeaveExportSummaryRow($exportRow));
+            foreach ($exportRows as $index => $exportRow) {
+                fputcsv($out, $this->employeeLeaveExportSummaryRow($exportRow, $index + 1));
             }
 
             fclose($out);
@@ -237,10 +237,10 @@ class LeaveRequestController extends Controller
      * @param  object{user_id: int, user: ?User, approved_request_count: int, days_accumulated: int, available_balance: string}  $exportRow
      * @return list<string|int|null>
      */
-    private function employeeLeaveExportSummaryRow(object $exportRow): array
+    private function employeeLeaveExportSummaryRow(object $exportRow, int $rowNumber): array
     {
         return [
-            $exportRow->user_id,
+            $rowNumber,
             $exportRow->user?->name ?? '',
             $exportRow->user?->email ?? '',
             $exportRow->user?->department?->name ?? '',
