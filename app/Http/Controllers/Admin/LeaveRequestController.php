@@ -109,6 +109,8 @@ class LeaveRequestController extends Controller
             });
         }
 
+        $this->applyEmployeeLeaveRequestDateRangeFilter($baseQuery, $request);
+
         $stats = [
             'total' => (clone $baseQuery)->count(),
             'pending' => (clone $baseQuery)->where('status', 'pending')->count(),
@@ -200,6 +202,7 @@ class LeaveRequestController extends Controller
                         'department' => $exportMeta['department'] ?? null,
                         'employee' => $exportMeta['employee'] ?? null,
                         'search' => $exportMeta['search'] ?? null,
+                        'date_range' => $exportMeta['date_range'] ?? null,
                     ]),
                 ]
             );
@@ -339,14 +342,14 @@ class LeaveRequestController extends Controller
         $approvedOffsetRequests = LeaveRequest::whereIn('user_id', $userIds)
             ->where('type', 'offset')
             ->where('status', 'approved')
-            ->get(['user_id', 'reason', 'start_date', 'end_date', 'days']);
+            ->get(['user_id', 'reason', 'start_date', 'end_date']);
 
         foreach ($approvedOffsetRequests as $offsetRequest) {
             $raw = (string) ($offsetRequest->reason ?? '');
             if (preg_match('/Hours to Deduct:\s*([0-9]{2}):([0-9]{2})/', $raw, $matches)) {
                 $offsetMinutes = ((int) $matches[1]) * 60 + ((int) $matches[2]);
             } else {
-                $offsetMinutes = (int) round(((int) $offsetRequest->days * 8) * 60);
+                $offsetMinutes = (int) round($this->leaveRequestInclusiveDayCount($offsetRequest) * 8 * 60);
             }
 
             $offsetMinutesByUser[$offsetRequest->user_id] = ($offsetMinutesByUser[$offsetRequest->user_id] ?? 0) + $offsetMinutes;
@@ -461,6 +464,7 @@ class LeaveRequestController extends Controller
             'search' => $search !== '' ? $search : null,
             'department' => $departmentName,
             'employee' => $employeeName,
+            'date_range' => $this->leaveRequestExportDateRangeLabel($request),
         ];
     }
 
@@ -542,7 +546,87 @@ class LeaveRequestController extends Controller
             });
         }
 
+        $this->applyEmployeeLeaveRequestDateRangeFilter($query, $request);
+
         return $query;
+    }
+
+    private function applyEmployeeLeaveRequestDateRangeFilter(Builder $query, Request $request): void
+    {
+        $dateFrom = $this->parseLeaveFilterDate($request->input('date_from'));
+        $dateTo = $this->parseLeaveFilterDate($request->input('date_to'));
+
+        if ($dateFrom === null && $dateTo === null) {
+            return;
+        }
+
+        if ($dateFrom !== null && $dateTo !== null && $dateTo->lt($dateFrom)) {
+            [$dateFrom, $dateTo] = [$dateTo, $dateFrom];
+        }
+
+        $query->where(function (Builder $outer) use ($dateFrom, $dateTo) {
+            if ($dateFrom !== null && $dateTo !== null) {
+                $outer->where(function (Builder $q) use ($dateFrom, $dateTo) {
+                    $q->whereDate('start_date', '<=', $dateTo->toDateString())
+                        ->where(function (Builder $q) use ($dateFrom) {
+                            $q->whereDate('end_date', '>=', $dateFrom->toDateString())
+                                ->orWhere(function (Builder $q) use ($dateFrom) {
+                                    $q->whereNull('end_date')
+                                        ->whereDate('start_date', '>=', $dateFrom->toDateString());
+                                });
+                        });
+                });
+
+                return;
+            }
+
+            if ($dateFrom !== null) {
+                $outer->where(function (Builder $q) use ($dateFrom) {
+                    $q->whereDate('end_date', '>=', $dateFrom->toDateString())
+                        ->orWhere(function (Builder $q) use ($dateFrom) {
+                            $q->whereNull('end_date')
+                                ->whereDate('start_date', '>=', $dateFrom->toDateString());
+                        });
+                });
+            }
+
+            if ($dateTo !== null) {
+                $outer->whereDate('start_date', '<=', $dateTo->toDateString());
+            }
+        });
+    }
+
+    private function parseLeaveFilterDate(mixed $value): ?Carbon
+    {
+        if (! is_string($value) || trim($value) === '') {
+            return null;
+        }
+
+        try {
+            return Carbon::parse($value)->startOfDay();
+        } catch (\Throwable) {
+            return null;
+        }
+    }
+
+    private function leaveRequestExportDateRangeLabel(Request $request): ?string
+    {
+        $from = trim((string) $request->input('date_from', ''));
+        $to = trim((string) $request->input('date_to', ''));
+
+        if ($from === '' && $to === '') {
+            return null;
+        }
+
+        if ($from !== '' && $to !== '') {
+            return Carbon::parse($from)->format('M d, Y').' - '.Carbon::parse($to)->format('M d, Y');
+        }
+
+        if ($from !== '') {
+            return 'From '.Carbon::parse($from)->format('M d, Y');
+        }
+
+        return 'Through '.Carbon::parse($to)->format('M d, Y');
     }
 
     /**

@@ -93,6 +93,9 @@
         @if(!empty($exportMeta['employee']))
             | Employee: {{ $exportMeta['employee'] }}
         @endif
+        @if(!empty($exportMeta['date_range']))
+            | Date Range: {{ $exportMeta['date_range'] }}
+        @endif
         @if(!empty($exportMeta['search']))
             | Search: "{{ $exportMeta['search'] }}"
         @endif

@@ -58,6 +58,12 @@
                     <dd class="text-gray-900 text-right">{{ $verification->metadata['filters']['employee'] }}</dd>
                 </div>
                 @endif
+                @if(!empty($verification->metadata['filters']['date_range']))
+                <div class="flex justify-between gap-4 border-b border-gray-100 pb-2">
+                    <dt class="text-gray-500">Date Range</dt>
+                    <dd class="text-gray-900 text-right">{{ $verification->metadata['filters']['date_range'] }}</dd>
+                </div>
+                @endif
             </dl>
 
             <p class="text-xs text-gray-500 mt-6 text-center">If the details above do not match your copy of the document, it may have been altered.</p>
