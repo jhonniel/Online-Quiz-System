@@ -60,28 +60,43 @@
         </p>
 
         <div class="mt-8 grid grid-cols-1 sm:grid-cols-3 gap-8 text-center">
-            <div>
+            <div class="flex flex-col items-center">
                 <p class="font-medium">Prepared by:</p>
-                <div class="mt-10">
-                    <p class="inline-block min-w-[11rem] border-b border-gray-900 px-2 font-semibold">
-                        {{ $payslip->prepared_by ?: ' ' }}
-                    </p>
+                <div class="flex w-full flex-col items-center">
+                    <div class="relative inline-block min-w-[11rem] max-w-[11rem] pt-4">
+                        <p class="relative z-0 border-b border-gray-900 px-2 font-semibold">
+                            {{ $payslip->prepared_by ?: ' ' }}
+                        </p>
+                    </div>
+                    <p class="mt-2 min-h-[1.25rem]">Admin Officer</p>
                 </div>
-                <p class="mt-2">Admin Officer</p>
             </div>
-            <div>
+            <div class="flex flex-col items-center">
                 <p class="font-medium">Approved by:</p>
-                <div class="mt-10">
-                    <p class="inline-block min-w-[11rem] border-b border-gray-900 px-2 font-semibold">
-                        {{ $payslip->approved_by ?: ' ' }}
-                    </p>
+                <div class="flex w-full flex-col items-center">
+                    <div class="relative inline-block min-w-[11rem] max-w-[11rem] pt-4">
+                        <p class="relative z-0 border-b border-gray-900 px-2 font-semibold">
+                            {{ $payslip->approved_by ?: ' ' }}
+                        </p>
+                    </div>
+                    <p class="mt-2 min-h-[1.25rem]">Proprietor</p>
                 </div>
-                <p class="mt-2">Proprietor</p>
             </div>
-            <div>
+            <div class="flex flex-col items-center">
                 <p class="font-medium">Received by:</p>
-                <div class="mt-10 mx-auto max-w-[12rem]">
-                    <div class="border-b border-gray-900 h-6"></div>
+                <div class="flex w-full flex-col items-center">
+                    @php($receivedBySignature = $payslip->isLinkedToEmployee() ? $payslip->receivedBySignatureDataUri() : null)
+                    <div class="relative inline-block min-w-[11rem] max-w-[11rem] pt-4">
+                        @if($receivedBySignature)
+                            <img src="{{ $receivedBySignature }}"
+                                 alt="Signature of {{ $payslip->employee_name }}"
+                                 class="pointer-events-none absolute -top-3 left-1/2 z-10 h-14 w-full max-w-[11rem] -translate-x-1/2 object-contain">
+                        @endif
+                        <p class="relative z-0 border-b border-gray-900 px-2 font-semibold">
+                            {{ $payslip->isLinkedToEmployee() ? $payslip->employee_name : ' ' }}
+                        </p>
+                    </div>
+                    <p class="mt-2 min-h-[1.25rem]">{{ $payslip->isLinkedToEmployee() ? ($payslip->position ?: '—') : ' ' }}</p>
                 </div>
             </div>
         </div>

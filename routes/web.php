@@ -411,6 +411,7 @@ Route::prefix('admin')->middleware(['auth', 'admin'])->group(function () {
             Route::patch('/payslip/{payslip}/link', [App\Http\Controllers\Admin\PayslipController::class, 'link'])->name('admin.payslip.link');
             Route::delete('/payslip/{payslip}', [App\Http\Controllers\Admin\PayslipController::class, 'destroy'])->name('admin.payslip.destroy');
             Route::post('/payslip/bulk-delete', [App\Http\Controllers\Admin\PayslipController::class, 'bulkDestroy'])->name('admin.payslip.bulk-destroy');
+            Route::post('/payslip/bulk-print', [App\Http\Controllers\Admin\PayslipController::class, 'bulkPrint'])->name('admin.payslip.bulk-print');
         });
 
         Route::middleware(['admin.subfeature:employee_management,employee_nda'])->get('/employee-documents/nda', fn (App\Http\Controllers\Admin\EmployeeDocumentController $controller, Illuminate\Http\Request $request) => $controller->index($request, 'nda'))->name('admin.employee-documents.nda');

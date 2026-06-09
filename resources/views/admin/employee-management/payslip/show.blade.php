@@ -16,20 +16,20 @@
 @endsection
 
 @section('content')
+@include('admin.employee-management.payslip.partials.print-styles')
+
 <div class="space-y-4">
-    <div class="flex justify-between items-center">
-        <a href="{{ route('admin.payslip.index') }}" class="text-sm text-indigo-600 hover:text-indigo-800">&larr; Back to payslips</a>
-    </div>
+    <a href="{{ route('admin.payslip.index') }}" class="print:hidden text-sm text-indigo-600 hover:text-indigo-800">&larr; Back to payslips</a>
 
     @if(session('success'))
-        <div class="rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-900">{{ session('success') }}</div>
+        <div class="print:hidden rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-900">{{ session('success') }}</div>
     @endif
     @if(session('error'))
-        <div class="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-900">{{ session('error') }}</div>
+        <div class="print:hidden rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-900">{{ session('error') }}</div>
     @endif
 
     @if(!$payslip->employee)
-        <div class="rounded-2xl border border-amber-200 bg-white shadow-sm overflow-hidden">
+        <div class="print:hidden rounded-2xl border border-amber-200 bg-white shadow-sm overflow-hidden">
             <div class="px-5 sm:px-6 py-4 border-b border-amber-100 bg-amber-50/80">
                 <div class="flex items-start gap-3">
                     <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-amber-100 text-amber-700">
@@ -54,6 +54,17 @@
         </div>
     @endif
 
-    @include('admin.employee-management.payslip.partials.sheet', ['payslip' => $payslip])
+    <div class="flex flex-col items-center gap-3 sm:flex-row sm:items-start sm:justify-center">
+        <div class="payslip-print-sheet payslip-print-sheet--single w-full max-w-3xl">
+            <div class="payslip-print-slot">
+                <div id="payslip-print-area" class="payslip-print-area w-full">
+                    @include('admin.employee-management.payslip.partials.sheet', ['payslip' => $payslip])
+                </div>
+            </div>
+        </div>
+        <div class="print:hidden shrink-0 sm:pt-2">
+            @include('admin.employee-management.payslip.partials.print-toolbar')
+        </div>
+    </div>
 </div>
 @endsection

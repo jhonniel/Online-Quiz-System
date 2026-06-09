@@ -143,6 +143,13 @@
                         <input type="checkbox" id="payslip-select-all" class="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500">
                         Select all
                     </label>
+                    <button type="button" id="payslip-bulk-print" disabled
+                            class="inline-flex items-center px-3 py-1.5 text-sm font-medium text-indigo-700 bg-indigo-50 border border-indigo-200 rounded-md hover:bg-indigo-100 disabled:opacity-50 disabled:cursor-not-allowed">
+                        <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/>
+                        </svg>
+                        <span id="payslip-bulk-print-label">Print selected</span>
+                    </button>
                     <button type="button" id="payslip-bulk-delete" disabled
                             class="inline-flex items-center px-3 py-1.5 text-sm font-medium text-red-700 bg-red-50 border border-red-200 rounded-md hover:bg-red-100 disabled:opacity-50 disabled:cursor-not-allowed">
                         <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
@@ -264,6 +271,8 @@ document.addEventListener('DOMContentLoaded', function () {
     const root = document.getElementById('payslip-groups');
     const expandAll = document.getElementById('payslip-expand-all');
     const collapseAll = document.getElementById('payslip-collapse-all');
+    const bulkPrintBtn = document.getElementById('payslip-bulk-print');
+    const bulkPrintLabel = document.getElementById('payslip-bulk-print-label');
     const bulkDeleteBtn = document.getElementById('payslip-bulk-delete');
     const bulkDeleteLabel = document.getElementById('payslip-bulk-delete-label');
     const globalSelectAll = document.getElementById('payslip-select-all');
@@ -272,8 +281,58 @@ document.addEventListener('DOMContentLoaded', function () {
         return Array.from(document.querySelectorAll('.payslip-checkbox'));
     }
 
+    function selectedPayslipIds() {
+        return payslipCheckboxes()
+            .filter(function (cb) { return cb.checked; })
+            .map(function (cb) { return cb.value; });
+    }
+
+    function submitPayslipBulkForm(action, target) {
+        const selectedIds = selectedPayslipIds();
+
+        if (selectedIds.length === 0) {
+            return false;
+        }
+
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = action;
+
+        if (target) {
+            form.target = target;
+        }
+
+        const csrfToken = document.createElement('input');
+        csrfToken.type = 'hidden';
+        csrfToken.name = '_token';
+        csrfToken.value = @json(csrf_token());
+        form.appendChild(csrfToken);
+
+        selectedIds.forEach(function (id) {
+            const input = document.createElement('input');
+            input.type = 'hidden';
+            input.name = 'payslip_ids[]';
+            input.value = id;
+            form.appendChild(input);
+        });
+
+        document.body.appendChild(form);
+        form.submit();
+        form.remove();
+
+        return true;
+    }
+
     function updateBulkDeleteState() {
-        const selectedCount = payslipCheckboxes().filter(function (cb) { return cb.checked; }).length;
+        const selectedCount = selectedPayslipIds().length;
+        if (bulkPrintBtn) {
+            bulkPrintBtn.disabled = selectedCount === 0;
+        }
+        if (bulkPrintLabel) {
+            bulkPrintLabel.textContent = selectedCount > 0
+                ? 'Print selected (' + selectedCount + ')'
+                : 'Print selected';
+        }
         if (bulkDeleteBtn) {
             bulkDeleteBtn.disabled = selectedCount === 0;
         }
@@ -325,10 +384,19 @@ document.addEventListener('DOMContentLoaded', function () {
         updateBulkDeleteState();
     });
 
+    bulkPrintBtn?.addEventListener('click', function () {
+        const selectedIds = selectedPayslipIds();
+
+        if (selectedIds.length === 0) {
+            alert('Please select at least one payslip to print.');
+            return;
+        }
+
+        submitPayslipBulkForm(@json(route('admin.payslip.bulk-print')), '_blank');
+    });
+
     bulkDeleteBtn?.addEventListener('click', function () {
-        const selectedIds = payslipCheckboxes()
-            .filter(function (cb) { return cb.checked; })
-            .map(function (cb) { return cb.value; });
+        const selectedIds = selectedPayslipIds();
 
         if (selectedIds.length === 0) {
             alert('Please select at least one payslip to delete.');
@@ -339,26 +407,7 @@ document.addEventListener('DOMContentLoaded', function () {
             return;
         }
 
-        const form = document.createElement('form');
-        form.method = 'POST';
-        form.action = @json(route('admin.payslip.bulk-destroy'));
-
-        const csrfToken = document.createElement('input');
-        csrfToken.type = 'hidden';
-        csrfToken.name = '_token';
-        csrfToken.value = @json(csrf_token());
-        form.appendChild(csrfToken);
-
-        selectedIds.forEach(function (id) {
-            const input = document.createElement('input');
-            input.type = 'hidden';
-            input.name = 'payslip_ids[]';
-            input.value = id;
-            form.appendChild(input);
-        });
-
-        document.body.appendChild(form);
-        form.submit();
+        submitPayslipBulkForm(@json(route('admin.payslip.bulk-destroy')));
     });
 
     const PAYSLIP_GROUP_STORAGE_KEY = 'admin-payslip-group-states';

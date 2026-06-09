@@ -88,7 +88,7 @@ class PayslipController extends Controller
     public function show(EmployeePayslip $payslip)
     {
         $this->authorizePayslip($payslip);
-        $payslip->load(['employee:id,name,email,department_id', 'employee.department', 'uploader']);
+        $payslip->load(['employee:id,name,email,department_id,e_signature_path', 'employee.department', 'uploader']);
 
         $employees = $this->scopedEmployeeQuery()
             ->with('department:id,name')
@@ -244,6 +244,36 @@ class PayslipController extends Controller
         return redirect()
             ->back()
             ->with('success', $message);
+    }
+
+    public function bulkPrint(Request $request)
+    {
+        $validated = $request->validate([
+            'payslip_ids' => 'required|array|min:1',
+            'payslip_ids.*' => 'integer|exists:employee_payslips,id',
+        ]);
+
+        $payslips = EmployeePayslip::query()
+            ->with(['employee:id,name,email,e_signature_path', 'employee.department:id,name'])
+            ->whereIn('id', $validated['payslip_ids'])
+            ->where(function ($q) {
+                $q->whereNull('user_id')
+                    ->orWhereHas('employee', function ($employeeQuery) {
+                        $this->applyEmployeeScope($employeeQuery);
+                    });
+            })
+            ->orderByDesc('period_end')
+            ->orderByDesc('period_start')
+            ->orderBy('employee_name')
+            ->get();
+
+        if ($payslips->isEmpty()) {
+            return redirect()
+                ->back()
+                ->with('error', 'No payslips were found to print.');
+        }
+
+        return view('admin.employee-management.payslip.bulk-print', compact('payslips'));
     }
 
     private function authorizePayslip(EmployeePayslip $payslip): void

@@ -65,6 +65,22 @@ class EmployeePayslip extends Model
         return $this->belongsTo(User::class, 'user_id');
     }
 
+    public function isLinkedToEmployee(): bool
+    {
+        return $this->user_id !== null;
+    }
+
+    public function receivedBySignatureDataUri(): ?string
+    {
+        $employee = $this->relationLoaded('employee') ? $this->employee : $this->employee()->first();
+
+        if (! $employee?->hasESignature()) {
+            return null;
+        }
+
+        return \App\Support\EmployeeSampleDocument::eSignatureDataUri($employee);
+    }
+
     public function uploader(): BelongsTo
     {
         return $this->belongsTo(User::class, 'uploaded_by');

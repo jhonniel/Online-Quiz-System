@@ -28,6 +28,8 @@ class PayslipController extends Controller
         abort_unless($user->role === 'employee', 403);
         abort_unless((int) $payslip->user_id === (int) $user->id, 403);
 
+        $payslip->load(['employee:id,e_signature_path']);
+
         return view('user.payslips.show', compact('payslip'));
     }
 }
