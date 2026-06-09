@@ -22,16 +22,7 @@
         <p class="mt-1 text-sm text-indigo-100">View employee {{ strtolower($label) }} documents and signed PDFs.</p>
     </div>
 
-    <div class="flex flex-wrap gap-2">
-        @foreach(['nda' => 'NDA', 'contract' => 'Contract', 'policy' => 'Policy'] as $docType => $docLabel)
-            @if(auth()->user()->canAccessEmployeeFeature('employee_'.$docType))
-                <a href="{{ route('admin.employee-documents.'.$docType) }}"
-                   class="inline-flex items-center px-4 py-2 rounded-md text-sm font-medium {{ $type === $docType ? 'bg-indigo-600 text-white' : 'bg-white border border-gray-300 text-gray-700 hover:bg-gray-50' }}">
-                    {{ $docLabel }}
-                </a>
-            @endif
-        @endforeach
-    </div>
+    @include('admin.employee-documents.partials.tabs', ['active' => $type])
 
     <div class="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden">
         <div class="px-6 py-4 border-b border-gray-200">

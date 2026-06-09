@@ -290,6 +290,105 @@ class ProfileController extends Controller
         ]);
     }
 
+    public function uploadP12Certificate(Request $request)
+    {
+        try {
+            $user = auth()->user();
+
+            if ($user->role !== 'employee') {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Only employees can upload a P12 certificate.',
+                ], 403);
+            }
+
+            $request->validate([
+                'p12_certificate' => 'required|file|max:5120',
+                'p12_certificate_password' => 'required|string|max:255',
+            ], [
+                'p12_certificate.required' => 'Please choose a P12 or PFX certificate file.',
+                'p12_certificate.max' => 'Certificate file must not be larger than 5MB.',
+                'p12_certificate_password.required' => 'Certificate password is required.',
+            ]);
+
+            if (! $request->hasFile('p12_certificate')) {
+                throw ValidationException::withMessages([
+                    'p12_certificate' => [$this->missingUploadMessage('p12_certificate', 'P12 certificate')],
+                ]);
+            }
+
+            $file = $request->file('p12_certificate');
+            $extension = strtolower($file->getClientOriginalExtension());
+
+            if (! in_array($extension, ['p12', 'pfx'], true)) {
+                throw ValidationException::withMessages([
+                    'p12_certificate' => ['Certificate must be a .p12 or .pfx file.'],
+                ]);
+            }
+
+            $password = (string) $request->input('p12_certificate_password');
+            $contents = file_get_contents($file->getRealPath());
+            $certs = [];
+
+            if (! is_string($contents) || $contents === '' || ! openssl_pkcs12_read($contents, $certs, $password)) {
+                throw ValidationException::withMessages([
+                    'p12_certificate_password' => ['The certificate file or password is invalid.'],
+                ]);
+            }
+
+            ['disk' => $assetDisk, 'p12_certificate_dir' => $p12Dir] = $this->assetStorageContext();
+            $path = $this->storeP12CertificateFile($user, $file, $assetDisk, $p12Dir, $extension);
+
+            $user->update([
+                'p12_certificate_path' => $path,
+                'p12_certificate_password' => $password,
+            ]);
+            $user->refresh();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'P12 certificate saved successfully!',
+                'type' => 'success',
+                'has_p12_certificate' => $user->hasP12Certificate(),
+            ]);
+        } catch (ValidationException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => collect($e->errors())->flatten()->first() ?: 'Validation failed',
+                'errors' => $e->errors(),
+            ], 422);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to save P12 certificate: '.$e->getMessage(),
+            ], 500);
+        }
+    }
+
+    public function removeP12Certificate()
+    {
+        $user = auth()->user();
+
+        if ($user->role !== 'employee') {
+            return response()->json([
+                'success' => false,
+                'message' => 'Only employees can remove a P12 certificate.',
+            ], 403);
+        }
+
+        $this->deleteStoredAsset($user->p12_certificate_path);
+        $user->update([
+            'p12_certificate_path' => null,
+            'p12_certificate_password' => null,
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'P12 certificate removed successfully!',
+            'type' => 'success',
+        ]);
+    }
+
     public function changePassword(Request $request)
     {
         try {
@@ -358,7 +457,7 @@ class ProfileController extends Controller
     }
 
     /**
-     * @return array{disk: string, root: string, profile_dir: string, cover_dir: string, e_signature_dir: string}
+     * @return array{disk: string, root: string, profile_dir: string, cover_dir: string, e_signature_dir: string, p12_certificate_dir: string}
      */
     private function assetStorageContext(): array
     {
@@ -374,6 +473,7 @@ class ProfileController extends Controller
             'profile_dir' => $assetRoot ? $assetRoot.'/profile-pictures' : 'profile-pictures',
             'cover_dir' => $assetRoot ? $assetRoot.'/cover-photos' : 'cover-photos',
             'e_signature_dir' => $assetRoot ? $assetRoot.'/e-signatures' : 'e-signatures',
+            'p12_certificate_dir' => $assetRoot ? $assetRoot.'/p12-certificates' : 'p12-certificates',
         ];
     }
 
@@ -386,6 +486,20 @@ class ProfileController extends Controller
 
         if (! is_string($storedPath) || $storedPath === '') {
             throw new \RuntimeException('Failed to upload e-signature to storage.');
+        }
+
+        return $storedPath;
+    }
+
+    private function storeP12CertificateFile(User $user, UploadedFile $file, string $disk, string $directory, string $extension): string
+    {
+        $this->deleteStoredAsset($user->p12_certificate_path);
+
+        $fileName = time().'_'.Str::random(10).'.'.strtolower($extension);
+        $storedPath = $file->storeAs($directory, $fileName, $disk);
+
+        if (! is_string($storedPath) || $storedPath === '') {
+            throw new \RuntimeException('Failed to upload P12 certificate to storage.');
         }
 
         return $storedPath;
@@ -409,15 +523,15 @@ class ProfileController extends Controller
         }
     }
 
-    private function missingUploadMessage(string $field): string
+    private function missingUploadMessage(string $field, string $label = 'E-signature'): string
     {
         $error = $_FILES[$field]['error'] ?? UPLOAD_ERR_NO_FILE;
 
         return match ((int) $error) {
-            UPLOAD_ERR_INI_SIZE, UPLOAD_ERR_FORM_SIZE => 'The e-signature file is too large for the server upload limit. Please use a PNG under 1.5MB.',
-            UPLOAD_ERR_PARTIAL => 'The e-signature upload was interrupted. Please try again.',
-            UPLOAD_ERR_NO_FILE => 'The e-signature file was not received. Please choose the PNG again and save.',
-            default => 'The e-signature file could not be uploaded. Please use a PNG under 1.5MB and try again.',
+            UPLOAD_ERR_INI_SIZE, UPLOAD_ERR_FORM_SIZE => "The {$label} file is too large for the server upload limit.",
+            UPLOAD_ERR_PARTIAL => "The {$label} upload was interrupted. Please try again.",
+            UPLOAD_ERR_NO_FILE => "The {$label} file was not received. Please choose the file again and save.",
+            default => "The {$label} file could not be uploaded. Please try again.",
         };
     }
 }

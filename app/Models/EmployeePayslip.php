@@ -37,6 +37,9 @@ class EmployeePayslip extends Model
         'net_pay',
         'prepared_by',
         'approved_by',
+        'signed_at',
+        'signed_document_path',
+        'storage_disk',
     ];
 
     protected $casts = [
@@ -60,6 +63,7 @@ class EmployeePayslip extends Model
         'thirteenth_month_pay' => 'decimal:2',
         'gross_pay' => 'decimal:2',
         'net_pay' => 'decimal:2',
+        'signed_at' => 'datetime',
     ];
 
     public function employee(): BelongsTo
@@ -70,6 +74,11 @@ class EmployeePayslip extends Model
     public function isLinkedToEmployee(): bool
     {
         return $this->user_id !== null;
+    }
+
+    public function isSigned(): bool
+    {
+        return $this->signed_at !== null && ! empty($this->signed_document_path);
     }
 
     public function receivedBySignatureDataUri(): ?string

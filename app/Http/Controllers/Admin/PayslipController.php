@@ -8,6 +8,7 @@ use App\Models\User;
 use App\Support\PayslipCsvImporter;
 use App\Support\PayslipGrouper;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 
 class PayslipController extends Controller
 {
@@ -96,6 +97,31 @@ class PayslipController extends Controller
             ->get(['id', 'name', 'email', 'department_id']);
 
         return view('admin.employee-management.payslip.show', compact('payslip', 'employees'));
+    }
+
+    public function signedPdf(Request $request, EmployeePayslip $payslip)
+    {
+        $this->authorizePayslip($payslip);
+        abort_unless($payslip->isSigned(), 404);
+
+        $disk = $this->resolveDiskForSignedPdf(
+            (string) $payslip->signed_document_path,
+            (string) ($payslip->storage_disk ?? '')
+        );
+        abort_if($disk === null, 404);
+
+        $contents = Storage::disk($disk)->get((string) $payslip->signed_document_path);
+        abort_if(! is_string($contents), 404);
+
+        $filename = 'payslip-'.$payslip->period_start->format('Y-m-d').'-signed.pdf';
+        $disposition = $request->boolean('download') ? 'attachment' : 'inline';
+
+        return response($contents, 200, [
+            'Content-Type' => 'application/pdf',
+            'Content-Disposition' => $disposition.'; filename="'.$filename.'"',
+            'Cache-Control' => 'no-store, no-cache, must-revalidate',
+            'Pragma' => 'no-cache',
+        ]);
     }
 
     public function import(Request $request, PayslipCsvImporter $importer)
@@ -343,5 +369,29 @@ class PayslipController extends Controller
             'Content-Type' => 'text/csv; charset=UTF-8',
             'Content-Disposition' => 'attachment; filename="'.$filename.'"',
         ]);
+    }
+
+    private function resolveDiskForSignedPdf(string $path, string $preferredDisk = ''): ?string
+    {
+        if ($path === '') {
+            return null;
+        }
+
+        foreach (array_values(array_unique(array_filter([
+            $preferredDisk,
+            'digitalocean',
+            'public',
+            'local',
+        ]))) as $disk) {
+            try {
+                if (Storage::disk($disk)->exists($path)) {
+                    return $disk;
+                }
+            } catch (\Throwable) {
+                continue;
+            }
+        }
+
+        return null;
     }
 }

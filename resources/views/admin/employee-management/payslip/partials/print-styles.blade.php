@@ -193,22 +193,35 @@
             grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
         }
 
-        .payslip-print-area [class*="min-w-"] {
+        .payslip-print-area [class*="min-w-"]:not(.payslip-sign-name-block) {
             min-width: 0 !important;
             max-width: 7rem !important;
             width: 100% !important;
         }
 
-        body.payslip-bulk-print .payslip-print-area [class*="min-w-"] {
+        .payslip-print-area .payslip-sign-name-block {
+            min-width: 0 !important;
+            max-width: 100% !important;
+            width: auto !important;
+        }
+
+        .payslip-print-area .payslip-esign-float {
+            width: 11rem !important;
+            max-width: 11rem !important;
+            height: 3.5rem !important;
+            object-fit: contain !important;
+        }
+
+        body.payslip-bulk-print .payslip-print-area [class*="min-w-"]:not(.payslip-sign-name-block) {
             max-width: 4.5rem !important;
         }
 
-        .payslip-print-area .h-14 {
+        .payslip-print-area .h-14:not(.payslip-esign-float) {
             height: 2.25rem !important;
             max-width: 7rem !important;
         }
 
-        body.payslip-bulk-print .payslip-print-area .h-14 {
+        body.payslip-bulk-print .payslip-print-area .h-14:not(.payslip-esign-float) {
             height: 2rem !important;
             max-width: 4.5rem !important;
         }

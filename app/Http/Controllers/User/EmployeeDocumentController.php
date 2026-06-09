@@ -5,6 +5,7 @@ namespace App\Http\Controllers\User;
 use App\Http\Controllers\Controller;
 use App\Models\EmployeeDocumentSignature;
 use App\Models\User;
+use App\Support\EmployeeNdaDocument;
 use App\Support\EmployeeSampleDocument;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -53,6 +54,9 @@ class EmployeeDocumentController extends Controller
             'label' => EmployeeSampleDocument::label($type),
             'title' => EmployeeSampleDocument::title($type),
             'paragraphs' => EmployeeSampleDocument::paragraphs($user, $type),
+            'ndaView' => $type === 'nda'
+                ? EmployeeNdaDocument::viewData($user, $signature?->signed_at)
+                : null,
             'signature' => $signature,
         ]);
     }
@@ -119,8 +123,9 @@ class EmployeeDocumentController extends Controller
             ->first();
 
         $isSigned = $signature?->isSigned() ?? false;
-        $signedAt = $isSigned ? $signature->signed_at : null;
-        $pdfBinary = EmployeeSampleDocument::renderPdfBinary($user, $type, $signedAt);
+        $pdfBinary = $isSigned
+            ? EmployeeSampleDocument::renderSignedPdfBinary($user, $type, $signature->signed_at)
+            : EmployeeSampleDocument::renderPdfBinary($user, $type, null);
 
         $filename = EmployeeSampleDocument::pdfFilename($type, $isSigned);
         $disposition = $request->boolean('download') ? 'attachment' : 'inline';

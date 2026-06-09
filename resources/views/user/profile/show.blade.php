@@ -148,6 +148,31 @@
                         </div>
                     @endif
                 </div>
+
+                @if($user->role === 'employee')
+                <div class="bg-gray-50 rounded-lg p-4 mb-6">
+                    <h3 class="text-sm font-medium text-gray-900 mb-3">P12 Digital Certificate</h3>
+                    @if($user->hasP12Certificate())
+                        <div class="flex items-center gap-3 text-green-700">
+                            <svg class="w-8 h-8 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
+                            </svg>
+                            <div>
+                                <p class="text-sm font-medium">Certificate on file</p>
+                                <p class="text-xs text-gray-500 mt-0.5">Used for digitally signing employee documents.</p>
+                            </div>
+                        </div>
+                    @else
+                        <div class="text-center text-gray-500 py-4">
+                            <svg class="w-8 h-8 mx-auto mb-2 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
+                            </svg>
+                            <p class="text-sm">No P12 certificate uploaded</p>
+                            <a href="{{ url('/profile/edit') }}" class="text-sm text-indigo-600 hover:text-indigo-800 mt-1 inline-block">Upload on Edit Profile</a>
+                        </div>
+                    @endif
+                </div>
+                @endif
             </div>
 
             @if($user->canAccessQrCode())

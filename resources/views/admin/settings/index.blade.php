@@ -901,6 +901,18 @@
                                     </select>
                                     <p class="mt-2 text-xs text-gray-500">Controls whether employees see the Documents menu (NDA, Contract, Policy) in their sidebar.</p>
                                 </div>
+
+                                <div>
+                                    <label for="employee_document_p12" class="block text-sm font-medium text-gray-700 mb-2">Employee Documents - P12 Certificate</label>
+                                    <input type="file" name="employee_document_p12" id="employee_document_p12" accept=".p12,.pfx"
+                                           class="block w-full text-sm text-gray-700 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-medium file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100">
+                                    @if(!empty($settings['employee_document_p12_path']))
+                                        <p class="mt-2 text-xs text-green-700">A P12/PFX certificate is uploaded. Signed employee documents will include a digital signature above the employee e-signature.</p>
+                                    @else
+                                        <p class="mt-2 text-xs text-gray-500">Optional. Upload a PKCS#12 (.p12/.pfx) file to digitally sign employee documents (TCPDF + FPDI).</p>
+                                    @endif
+                                    <p class="mt-1 text-xs text-gray-500">Set the certificate password in <code class="text-xs bg-gray-100 px-1 rounded">EMPLOYEE_DOCUMENT_P12_PASSWORD</code> in your <code class="text-xs bg-gray-100 px-1 rounded">.env</code> file.</p>
+                                </div>
                                 </div>
                             </div>
                         </div>

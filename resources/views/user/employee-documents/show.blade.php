@@ -9,7 +9,13 @@
             <div>
                 <a href="{{ route('user.employee-documents.index') }}" class="text-sm text-indigo-600 hover:text-indigo-800">&larr; Back to Documents</a>
                 <h1 class="mt-2 text-2xl font-bold text-gray-900">{{ $title }}</h1>
-                <p class="mt-1 text-sm text-gray-600">Sample {{ $label }} document for employee acknowledgment.</p>
+                <p class="mt-1 text-sm text-gray-600">
+                    @if($type === 'nda')
+                        Same Non-Disclosure Agreement format used for students. Sign with your profile e-signature.
+                    @else
+                        Sample {{ $label }} document for employee acknowledgment.
+                    @endif
+                </p>
             </div>
             <div class="flex flex-col items-end gap-2">
                 <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium {{ ($signature && $signature->isSigned()) ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700' }}">
@@ -40,21 +46,27 @@
         @enderror
 
         <div class="rounded-xl border border-gray-200 bg-white shadow-sm overflow-hidden">
-            <x-document-letterhead class="px-6 pt-6 pb-4 border-b border-gray-100" />
-            <div class="border-b border-gray-100 bg-gray-50 px-6 py-4">
-                <p class="text-sm font-semibold text-gray-900">{{ strtoupper($user->name) }}</p>
-                <p class="text-xs text-gray-500 mt-1">
-                    {{ $user->department?->name ?: 'General' }}
-                    @if($user->date_hired)
-                        · Hired {{ $user->date_hired->format('F j, Y') }}
-                    @endif
-                </p>
-            </div>
-            <div class="px-6 py-6 space-y-4 text-sm text-gray-800 leading-relaxed">
-                @foreach($paragraphs as $paragraph)
-                    <p class="text-justify">{{ $paragraph }}</p>
-                @endforeach
-            </div>
+            @if($type !== 'nda')
+                <x-document-letterhead class="px-6 pt-6 pb-4 border-b border-gray-100" />
+                <div class="border-b border-gray-100 bg-gray-50 px-6 py-4">
+                    <p class="text-sm font-semibold text-gray-900">{{ strtoupper($user->name) }}</p>
+                    <p class="text-xs text-gray-500 mt-1">
+                        {{ $user->department?->name ?: 'General' }}
+                        @if($user->date_hired)
+                            · Hired {{ $user->date_hired->format('F j, Y') }}
+                        @endif
+                    </p>
+                </div>
+            @endif
+            @if($type === 'nda' && $ndaView)
+                @include('user.employee-documents.partials.nda-content', $ndaView)
+            @else
+                <div class="px-6 py-6 space-y-4 text-sm text-gray-800 leading-relaxed">
+                    @foreach($paragraphs as $paragraph)
+                        <p class="text-justify">{{ $paragraph }}</p>
+                    @endforeach
+                </div>
+            @endif
             <div class="border-t border-gray-100 px-6 py-5 bg-gray-50">
                 <p class="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-3">Employee Signature</p>
                 @if($signature && $signature->isSigned())

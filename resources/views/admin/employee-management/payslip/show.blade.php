@@ -28,6 +28,37 @@
         <div class="print:hidden rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-900">{{ session('error') }}</div>
     @endif
 
+    @if($payslip->employee)
+        <div class="print:hidden rounded-lg border px-4 py-3 text-sm {{ $payslip->isSigned() ? 'border-green-200 bg-green-50 text-green-900' : 'border-amber-200 bg-amber-50 text-amber-900' }}">
+            <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                    <p class="font-semibold">
+                        Employee sign-off:
+                        {{ $payslip->isSigned() ? 'Signed' : 'Pending' }}
+                    </p>
+                    @if($payslip->isSigned())
+                        <p class="mt-0.5 text-xs opacity-90">Signed by employee on {{ $payslip->signed_at?->format('F j, Y h:i A') }}</p>
+                    @else
+                        <p class="mt-0.5 text-xs opacity-90">Waiting for the employee to generate and sign this payslip from their portal.</p>
+                    @endif
+                </div>
+                @if($payslip->isSigned())
+                    <div class="flex flex-wrap gap-2">
+                        <a href="{{ route('admin.payslip.signed', $payslip) }}"
+                           target="_blank"
+                           class="inline-flex items-center rounded-md border border-green-300 bg-white px-3 py-1.5 text-xs font-medium text-green-800 hover:bg-green-100">
+                            Open signed PDF
+                        </a>
+                        <a href="{{ route('admin.payslip.signed', ['payslip' => $payslip, 'download' => 1]) }}"
+                           class="inline-flex items-center rounded-md border border-green-300 bg-white px-3 py-1.5 text-xs font-medium text-green-800 hover:bg-green-100">
+                            Download signed PDF
+                        </a>
+                    </div>
+                @endif
+            </div>
+        </div>
+    @endif
+
     @if(!$payslip->employee)
         <div class="print:hidden rounded-2xl border border-amber-200 bg-white shadow-sm overflow-hidden">
             <div class="px-5 sm:px-6 py-4 border-b border-amber-100 bg-amber-50/80">

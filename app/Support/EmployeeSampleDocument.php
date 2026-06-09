@@ -49,13 +49,7 @@ final class EmployeeSampleDocument
         $dateHired = $user->date_hired?->format('F j, Y') ?? '_______________';
 
         return match ($type) {
-            'nda' => [
-                "This Non-Disclosure Agreement (\"Agreement\") is entered into by {$employee}, employed as {$position} under {$department}, and {$company}.",
-                'The Employee acknowledges access to confidential information including client data, source code, business processes, financial records, and internal communications.',
-                'The Employee agrees not to disclose, copy, or use such information outside official duties or without written authorization from management.',
-                'This obligation continues during employment and after separation, unless the information becomes public through no fault of the Employee.',
-                'Unauthorized disclosure may result in disciplinary action, termination, and applicable legal remedies.',
-            ],
+            'nda' => [],
             'contract' => [
                 "This Employment Contract (\"Contract\") is between {$company} and {$employee}, for the position of {$position} in the {$department} department.",
                 "The employment relationship is effective as of {$dateHired}, subject to company rules, performance standards, and applicable labor regulations.",
@@ -91,15 +85,21 @@ final class EmployeeSampleDocument
             'companyName' => trim((string) Setting::get('system_name', config('app.name', 'the Company'))),
             'signedAt' => $signedAt,
             'eSignatureDataUri' => self::eSignatureDataUri($user),
+            'digitalSignatureEnabled' => $signedAt !== null && EmployeeDocumentPdfSigner::isConfiguredForUser($user),
         ];
     }
 
     public static function renderPdfBinary(User $user, string $type, ?\DateTimeInterface $signedAt = null): string
     {
+        if ($type === 'nda') {
+            return EmployeeNdaDocument::renderPdfBinary($user, $signedAt);
+        }
+
         $data = self::pdfViewData($user, $type, $signedAt);
 
         if ($signedAt === null) {
             $data['eSignatureDataUri'] = null;
+            $data['digitalSignatureEnabled'] = false;
         }
 
         return Pdf::loadView('user.employee-documents.pdf', $data)
@@ -110,7 +110,20 @@ final class EmployeeSampleDocument
 
     public static function renderSignedPdfBinary(User $user, string $type, ?\DateTimeInterface $signedAt = null): string
     {
-        return self::renderPdfBinary($user, $type, $signedAt ?? now());
+        $signedAt ??= now();
+
+        if ($type === 'nda') {
+            return EmployeeNdaDocument::renderSignedPdfBinary($user, $signedAt);
+        }
+
+        $pdfBinary = self::renderPdfBinary($user, $type, $signedAt);
+
+        return EmployeeDocumentPdfSigner::sign($pdfBinary, $user, [
+            'name' => $user->hasP12Certificate() ? $user->name : (string) Setting::get('system_name', config('app.name', 'System')),
+            'reason' => 'Employee '.self::label($type).' signed by '.$user->name,
+            'contact' => (string) Setting::get('contact_phone', ''),
+            'location' => (string) Setting::get('contact_address', ''),
+        ]);
     }
 
     public static function pdfFilename(string $type, bool $signed = false): string

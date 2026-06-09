@@ -234,6 +234,7 @@
                                                                 <th class="px-4 py-2.5 text-left text-xs font-semibold text-gray-600 uppercase">Employee</th>
                                                                 <th class="px-4 py-2.5 text-left text-xs font-semibold text-gray-600 uppercase">Gross Pay</th>
                                                                 <th class="px-4 py-2.5 text-left text-xs font-semibold text-gray-600 uppercase">Net Pay</th>
+                                                                <th class="px-4 py-2.5 text-left text-xs font-semibold text-gray-600 uppercase">Employee Signed</th>
                                                                 <th class="px-4 py-2.5 text-left text-xs font-semibold text-gray-600 uppercase">Uploaded</th>
                                                                 <th class="px-4 py-2.5 text-right text-xs font-semibold text-gray-600 uppercase">Actions</th>
                                                             </tr>

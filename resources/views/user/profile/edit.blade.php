@@ -176,6 +176,73 @@
                     </div>
                 </div>
 
+                @if($user->role === 'employee')
+                <!-- P12 Digital Certificate -->
+                <div class="mb-8" id="p12-certificate-section">
+                    <h3 class="text-lg font-medium text-gray-900 mb-2">P12 Digital Certificate</h3>
+                    <p class="text-sm text-gray-500 mb-4">Upload your PKCS#12 (.p12 or .pfx) certificate for digitally signing employee documents. Stored securely on cloud storage.</p>
+                    <div class="flex flex-col sm:flex-row sm:items-start gap-6">
+                        <div class="flex-shrink-0">
+                            <div id="p12-certificate-status-card"
+                                 class="w-48 rounded-lg border-2 {{ $user->hasP12Certificate() ? 'border-green-200 bg-green-50' : 'border-dashed border-gray-300 bg-gray-50' }} p-4 flex items-center justify-center min-h-[6rem]">
+                                @if($user->hasP12Certificate())
+                                    <div class="text-center text-green-700">
+                                        <svg class="w-10 h-10 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
+                                        </svg>
+                                        <p class="text-sm font-medium">Certificate on file</p>
+                                    </div>
+                                @else
+                                    <div class="text-center text-gray-400 px-3">
+                                        <svg class="w-8 h-8 mx-auto mb-1 opacity-60" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
+                                        </svg>
+                                        <p class="text-xs">No certificate</p>
+                                    </div>
+                                @endif
+                            </div>
+                        </div>
+
+                        <div class="flex flex-col space-y-3 flex-1 max-w-md">
+                            <div>
+                                <label for="p12_certificate" class="block text-sm font-medium text-gray-700 mb-1">Certificate file</label>
+                                <input type="file"
+                                       id="p12_certificate"
+                                       name="p12_certificate"
+                                       accept=".p12,.pfx,application/x-pkcs12"
+                                       class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-medium file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100">
+                                <p class="mt-1 text-xs text-gray-500">.p12 or .pfx only, up to 5MB.</p>
+                            </div>
+                            <div>
+                                <label for="p12_certificate_password" class="block text-sm font-medium text-gray-700 mb-1">Certificate password</label>
+                                <input type="password"
+                                       id="p12_certificate_password"
+                                       name="p12_certificate_password"
+                                       autocomplete="new-password"
+                                       class="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                                       placeholder="Enter certificate password">
+                            </div>
+                            <div class="flex flex-wrap gap-2">
+                                <button type="button"
+                                        onclick="uploadP12Certificate()"
+                                        class="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                                    Save Certificate
+                                </button>
+                                @if($user->hasP12Certificate())
+                                    <button type="button"
+                                            id="remove-p12-certificate-btn"
+                                            onclick="removeP12Certificate()"
+                                            class="inline-flex items-center px-4 py-2 border border-red-300 rounded-md shadow-sm text-sm font-medium text-red-700 bg-white hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500">
+                                        Remove Certificate
+                                    </button>
+                                @endif
+                            </div>
+                            <p id="p12-certificate-status" class="text-xs text-gray-500 hidden"></p>
+                        </div>
+                    </div>
+                </div>
+                @endif
+
                 <!-- Basic Information -->
                 <div class="mb-8">
                     <h3 class="text-lg font-medium text-gray-900 mb-4">Basic Information</h3>
@@ -556,6 +623,165 @@ function removeProfilePicture() {
             ToastNotification.error('Failed to remove profile picture');
         });
     }
+}
+
+const P12_CERTIFICATE_MAX_BYTES = 5120 * 1024;
+
+function setP12CertificateStatus(message, tone = 'muted') {
+    const status = document.getElementById('p12-certificate-status');
+    if (!status) {
+        return;
+    }
+
+    status.textContent = message;
+    status.classList.remove('hidden', 'text-gray-500', 'text-green-600', 'text-red-600');
+    status.classList.add(tone === 'success' ? 'text-green-600' : tone === 'error' ? 'text-red-600' : 'text-gray-500');
+}
+
+function renderP12CertificateOnFile() {
+    const card = document.getElementById('p12-certificate-status-card');
+    if (!card) {
+        return;
+    }
+
+    card.className = 'w-48 rounded-lg border-2 border-green-200 bg-green-50 p-4 flex items-center justify-center min-h-[6rem]';
+    card.innerHTML = `<div class="text-center text-green-700">
+        <svg class="w-10 h-10 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
+        </svg>
+        <p class="text-sm font-medium">Certificate on file</p>
+    </div>`;
+
+    const section = document.getElementById('p12-certificate-section');
+    if (section && !document.getElementById('remove-p12-certificate-btn')) {
+        const actions = section.querySelector('.flex.flex-wrap.gap-2');
+        if (actions) {
+            const removeBtn = document.createElement('button');
+            removeBtn.type = 'button';
+            removeBtn.id = 'remove-p12-certificate-btn';
+            removeBtn.onclick = removeP12Certificate;
+            removeBtn.className = 'inline-flex items-center px-4 py-2 border border-red-300 rounded-md shadow-sm text-sm font-medium text-red-700 bg-white hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500';
+            removeBtn.textContent = 'Remove Certificate';
+            actions.appendChild(removeBtn);
+        }
+    }
+}
+
+function renderP12CertificateEmpty() {
+    const card = document.getElementById('p12-certificate-status-card');
+    if (!card) {
+        return;
+    }
+
+    card.className = 'w-48 rounded-lg border-2 border-dashed border-gray-300 bg-gray-50 p-4 flex items-center justify-center min-h-[6rem]';
+    card.innerHTML = `<div class="text-center text-gray-400 px-3">
+        <svg class="w-8 h-8 mx-auto mb-1 opacity-60" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
+        </svg>
+        <p class="text-xs">No certificate</p>
+    </div>`;
+
+    document.getElementById('remove-p12-certificate-btn')?.remove();
+}
+
+function uploadP12Certificate() {
+    const fileInput = document.getElementById('p12_certificate');
+    const passwordInput = document.getElementById('p12_certificate_password');
+
+    if (!fileInput?.files?.[0]) {
+        ToastNotification.error('Please choose a P12 or PFX certificate file.');
+        setP12CertificateStatus('Please choose a certificate file.', 'error');
+        return;
+    }
+
+    const file = fileInput.files[0];
+    const extension = file.name.split('.').pop()?.toLowerCase();
+    if (!['p12', 'pfx'].includes(extension || '')) {
+        ToastNotification.error('Certificate must be a .p12 or .pfx file.');
+        setP12CertificateStatus('Certificate must be a .p12 or .pfx file.', 'error');
+        return;
+    }
+
+    if (file.size > P12_CERTIFICATE_MAX_BYTES) {
+        ToastNotification.error('Certificate file must not be larger than 5MB.');
+        setP12CertificateStatus('Certificate file must not be larger than 5MB.', 'error');
+        return;
+    }
+
+    const password = passwordInput?.value || '';
+    if (!password) {
+        ToastNotification.error('Certificate password is required.');
+        setP12CertificateStatus('Certificate password is required.', 'error');
+        return;
+    }
+
+    const formData = new FormData();
+    formData.append('p12_certificate', file);
+    formData.append('p12_certificate_password', password);
+
+    setP12CertificateStatus('Saving certificate...');
+
+    fetch('{{ url("/profile/p12-certificate") }}', {
+        method: 'POST',
+        body: formData,
+        headers: {
+            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+            'Accept': 'application/json',
+            'X-Requested-With': 'XMLHttpRequest',
+        },
+    })
+    .then(response => response.json().then(data => ({ ok: response.ok, data })))
+    .then(({ ok, data }) => {
+        if (!ok || !data.success) {
+            const message = data.errors?.p12_certificate?.[0]
+                || data.errors?.p12_certificate_password?.[0]
+                || data.message
+                || 'Failed to save certificate.';
+            throw new Error(message);
+        }
+
+        renderP12CertificateOnFile();
+        fileInput.value = '';
+        if (passwordInput) {
+            passwordInput.value = '';
+        }
+        setP12CertificateStatus('Certificate saved.', 'success');
+        ToastNotification.success(data.message || 'P12 certificate saved successfully!');
+    })
+    .catch(error => {
+        setP12CertificateStatus(error.message || 'Failed to save certificate.', 'error');
+        ToastNotification.error(error.message || 'Failed to save certificate.');
+    });
+}
+
+function removeP12Certificate() {
+    if (!confirm('Are you sure you want to remove your P12 certificate?')) {
+        return;
+    }
+
+    fetch('{{ url("/profile/p12-certificate") }}', {
+        method: 'DELETE',
+        headers: {
+            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+            'Content-Type': 'application/json',
+        },
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            renderP12CertificateEmpty();
+            document.getElementById('p12_certificate').value = '';
+            const passwordInput = document.getElementById('p12_certificate_password');
+            if (passwordInput) {
+                passwordInput.value = '';
+            }
+            setP12CertificateStatus('Certificate removed.', 'success');
+            ToastNotification.success(data.message);
+        }
+    })
+    .catch(() => {
+        ToastNotification.error('Failed to remove P12 certificate');
+    });
 }
 
 // Remove E-Signature

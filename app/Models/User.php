@@ -61,6 +61,8 @@ class User extends Authenticatable
         'profile_picture',
         'cover_photo',
         'e_signature_path',
+        'p12_certificate_path',
+        'p12_certificate_password',
         'moa_document_path',
         'moa_uploaded_at',
         'moa_reupload_allowed',
@@ -94,6 +96,7 @@ class User extends Authenticatable
     protected $hidden = [
         'password',
         'remember_token',
+        'p12_certificate_password',
     ];
 
     /**
@@ -122,6 +125,7 @@ class User extends Authenticatable
         'student_absence_allowance' => 'float',
         'student_manual_merits' => 'integer',
         'date_hired' => 'date',
+        'p12_certificate_password' => 'encrypted',
         'ojt_target_end_date' => 'date',
         'ojt_requirement_met_at' => 'datetime',
         'ojt_completion_congratulations_sent_at' => 'datetime',
@@ -517,6 +521,11 @@ class User extends Authenticatable
     public function hasESignature(): bool
     {
         return ! empty($this->e_signature_path);
+    }
+
+    public function hasP12Certificate(): bool
+    {
+        return ! empty($this->p12_certificate_path) && ! empty($this->p12_certificate_password);
     }
 
     public function getMoaDocumentUrl(): string

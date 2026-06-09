@@ -408,6 +408,7 @@ Route::prefix('admin')->middleware(['auth', 'admin'])->group(function () {
             Route::post('/payslip/import', [App\Http\Controllers\Admin\PayslipController::class, 'import'])->name('admin.payslip.import');
             Route::get('/payslip/template', [App\Http\Controllers\Admin\PayslipController::class, 'downloadTemplate'])->name('admin.payslip.template');
             Route::get('/payslip/{payslip}', [App\Http\Controllers\Admin\PayslipController::class, 'show'])->name('admin.payslip.show');
+            Route::get('/payslip/{payslip}/signed', [App\Http\Controllers\Admin\PayslipController::class, 'signedPdf'])->name('admin.payslip.signed');
             Route::patch('/payslip/{payslip}/link', [App\Http\Controllers\Admin\PayslipController::class, 'link'])->name('admin.payslip.link');
             Route::delete('/payslip/{payslip}', [App\Http\Controllers\Admin\PayslipController::class, 'destroy'])->name('admin.payslip.destroy');
             Route::post('/payslip/bulk-delete', [App\Http\Controllers\Admin\PayslipController::class, 'bulkDestroy'])->name('admin.payslip.bulk-destroy');
@@ -417,6 +418,7 @@ Route::prefix('admin')->middleware(['auth', 'admin'])->group(function () {
         Route::middleware(['admin.subfeature:employee_management,employee_nda'])->get('/employee-documents/nda', fn (App\Http\Controllers\Admin\EmployeeDocumentController $controller, Illuminate\Http\Request $request) => $controller->index($request, 'nda'))->name('admin.employee-documents.nda');
         Route::middleware(['admin.subfeature:employee_management,employee_contract'])->get('/employee-documents/contract', fn (App\Http\Controllers\Admin\EmployeeDocumentController $controller, Illuminate\Http\Request $request) => $controller->index($request, 'contract'))->name('admin.employee-documents.contract');
         Route::middleware(['admin.subfeature:employee_management,employee_policy'])->get('/employee-documents/policy', fn (App\Http\Controllers\Admin\EmployeeDocumentController $controller, Illuminate\Http\Request $request) => $controller->index($request, 'policy'))->name('admin.employee-documents.policy');
+        Route::get('/employee-documents/signatures', [App\Http\Controllers\Admin\EmployeeDocumentController::class, 'signatures'])->name('admin.employee-documents.signatures');
         Route::get('/employee-documents/signatures/{signature}/preview', [App\Http\Controllers\Admin\EmployeeDocumentController::class, 'preview'])->name('admin.employee-documents.preview');
         Route::get('/employee-documents/{type}/employees/{employee}/preview', [App\Http\Controllers\Admin\EmployeeDocumentController::class, 'previewEmployee'])->name('admin.employee-documents.employee-preview')->where('type', 'nda|contract|policy');
 
@@ -727,6 +729,8 @@ Route::middleware(['auth', 'student.not_terminated'])->group(function () {
     // Employee document requests (certificates, etc.)
     Route::get('/payslips', [App\Http\Controllers\User\PayslipController::class, 'index'])->name('user.payslips.index');
     Route::get('/payslips/{payslip}', [App\Http\Controllers\User\PayslipController::class, 'show'])->name('user.payslips.show');
+    Route::post('/payslips/{payslip}/sign', [App\Http\Controllers\User\PayslipController::class, 'sign'])->name('user.payslips.sign');
+    Route::get('/payslips/{payslip}/signed', [App\Http\Controllers\User\PayslipController::class, 'signedPdf'])->name('user.payslips.signed');
 
     Route::get('/document-requests', [App\Http\Controllers\User\EmployeeFileRequestController::class, 'index'])->name('user.employee-file-requests.index');
     Route::post('/document-requests', [App\Http\Controllers\User\EmployeeFileRequestController::class, 'store'])->name('user.employee-file-requests.store');
@@ -804,6 +808,8 @@ Route::middleware(['auth', 'student.not_terminated'])->group(function () {
     Route::delete('/profile/cover', [App\Http\Controllers\User\ProfileController::class, 'removeCoverPhoto'])->name('profile.cover.remove');
     Route::post('/profile/e-signature', [App\Http\Controllers\User\ProfileController::class, 'uploadESignature'])->name('profile.e-signature.upload');
     Route::delete('/profile/e-signature', [App\Http\Controllers\User\ProfileController::class, 'removeESignature'])->name('profile.e-signature.remove');
+    Route::post('/profile/p12-certificate', [App\Http\Controllers\User\ProfileController::class, 'uploadP12Certificate'])->name('profile.p12-certificate.upload');
+    Route::delete('/profile/p12-certificate', [App\Http\Controllers\User\ProfileController::class, 'removeP12Certificate'])->name('profile.p12-certificate.remove');
 
     // Feedback Routes
     Route::resource('feedback', App\Http\Controllers\User\FeedbackController::class)->names('user.feedback');

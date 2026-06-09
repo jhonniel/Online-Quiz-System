@@ -64,8 +64,8 @@
             <div class="flex flex-col items-center">
                 <p class="font-medium">Prepared by:</p>
                 <div class="flex w-full flex-col items-center">
-                    <div class="relative inline-block min-w-[11rem] max-w-[11rem] pt-4">
-                        <p class="relative z-0 border-b border-gray-900 px-2 font-semibold">
+                    <div class="relative inline-block px-1 pt-4 payslip-sign-name-block">
+                        <p class="relative z-10 border-b border-gray-900 px-2 font-semibold whitespace-nowrap">
                             {{ $payslip->prepared_by ?: ' ' }}
                         </p>
                     </div>
@@ -75,8 +75,8 @@
             <div class="flex flex-col items-center">
                 <p class="font-medium">Approved by:</p>
                 <div class="flex w-full flex-col items-center">
-                    <div class="relative inline-block min-w-[11rem] max-w-[11rem] pt-4">
-                        <p class="relative z-0 border-b border-gray-900 px-2 font-semibold">
+                    <div class="relative inline-block px-1 pt-4 payslip-sign-name-block">
+                        <p class="relative z-10 border-b border-gray-900 px-2 font-semibold whitespace-nowrap">
                             {{ $payslip->approved_by ?: ' ' }}
                         </p>
                     </div>
@@ -87,13 +87,13 @@
                 <p class="font-medium">Received by:</p>
                 <div class="flex w-full flex-col items-center">
                     @php($receivedBySignature = $payslip->isLinkedToEmployee() ? $payslip->receivedBySignatureDataUri() : null)
-                    <div class="relative inline-block min-w-[11rem] max-w-[11rem] pt-4">
+                    <div class="relative inline-block px-1 pt-4 payslip-sign-name-block">
                         @if($receivedBySignature)
                             <img src="{{ $receivedBySignature }}"
                                  alt="Signature of {{ $payslip->employee_name }}"
-                                 class="pointer-events-none absolute -top-3 left-1/2 z-10 h-14 w-full max-w-[11rem] -translate-x-1/2 object-contain">
+                                 class="payslip-esign-float pointer-events-none absolute left-1/2 top-0 z-0 h-14 w-44 -translate-x-1/2 -translate-y-1 object-contain object-bottom">
                         @endif
-                        <p class="relative z-0 border-b border-gray-900 px-2 font-semibold">
+                        <p class="relative z-10 border-b border-gray-900 px-2 font-semibold whitespace-nowrap">
                             {{ $payslip->isLinkedToEmployee() ? $payslip->employee_name : ' ' }}
                         </p>
                     </div>

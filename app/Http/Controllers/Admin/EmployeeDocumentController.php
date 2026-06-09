@@ -11,6 +11,46 @@ use Illuminate\Support\Facades\Storage;
 
 class EmployeeDocumentController extends Controller
 {
+    public function signatures(Request $request)
+    {
+        abort_unless($this->requireAuthUser()->canAccessAnyEmployeeDocumentFeature(), 403);
+
+        $search = trim((string) $request->query('search', ''));
+        $status = (string) $request->query('status', '');
+
+        $query = User::query()
+            ->where('role', 'employee')
+            ->with('department:id,name');
+
+        $this->applyEmployeeScope($query);
+
+        if ($search !== '') {
+            $query->where(function ($userQuery) use ($search) {
+                $userQuery->where('name', 'like', "%{$search}%")
+                    ->orWhere('email', 'like', "%{$search}%");
+            });
+        }
+
+        if ($status === 'with_signature') {
+            $query->whereNotNull('e_signature_path')->where('e_signature_path', '!=', '');
+        } elseif ($status === 'without_signature') {
+            $query->where(function ($userQuery) {
+                $userQuery->whereNull('e_signature_path')->orWhere('e_signature_path', '=', '');
+            });
+        }
+
+        $employees = $query
+            ->orderBy('name')
+            ->paginate(24)
+            ->appends($request->query());
+
+        return view('admin.employee-documents.signatures', [
+            'employees' => $employees,
+            'search' => $search,
+            'status' => $status,
+        ]);
+    }
+
     public function index(Request $request, string $type)
     {
         abort_unless(EmployeeSampleDocument::isValidType($type), 404);

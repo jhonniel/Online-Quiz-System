@@ -275,6 +275,8 @@ class SettingsController extends Controller
         $settings['privacy_policy_pdf'] = ($privacyPolicyPdfSetting && $privacyPolicyPdfSetting->value !== null && trim($privacyPolicyPdfSetting->value) !== '') ? $privacyPolicyPdfSetting->value : null;
         $settings['file_storage_student_access'] = ($fileStorageStudentAccessSetting && $fileStorageStudentAccessSetting->value !== null && trim($fileStorageStudentAccessSetting->value) !== '') ? $fileStorageStudentAccessSetting->value : 'disabled';
         $settings['employee_documents_nav_enabled'] = ($employeeDocumentsNavSetting && $employeeDocumentsNavSetting->value !== null && trim($employeeDocumentsNavSetting->value) !== '') ? $employeeDocumentsNavSetting->value : 'enabled';
+        $employeeDocumentP12Setting = Setting::where('key', 'employee_document_p12_path')->first();
+        $settings['employee_document_p12_path'] = ($employeeDocumentP12Setting && $employeeDocumentP12Setting->value !== null && trim($employeeDocumentP12Setting->value) !== '') ? $employeeDocumentP12Setting->value : null;
 
         // Debug: Log what we're passing to the view - this will help us see what's happening
         \Log::info('Settings Controller - Final values being passed to view', [
@@ -539,6 +541,7 @@ class SettingsController extends Controller
             'privacy_policy_pdf' => 'nullable|file|mimes:pdf|max:10240',
             'file_storage_student_access' => 'nullable|string|in:enabled,disabled',
             'employee_documents_nav_enabled' => 'nullable|string|in:enabled,disabled',
+            'employee_document_p12' => 'nullable|file|max:5120|mimes:p12,pfx',
             'overtime_months_credited' => 'nullable|integer|in:12,9,6,3,1',
             'ojt_total_slots' => 'nullable|integer|min:0|max:1000000',
             'leave_immediate_supervisor' => 'nullable|string|max:255',
@@ -711,6 +714,25 @@ class SettingsController extends Controller
 
         $employeeDocumentsNavEnabled = $request->employee_documents_nav_enabled ?? 'enabled';
         Setting::set('employee_documents_nav_enabled', $employeeDocumentsNavEnabled, 'text', 'Show Documents section in employee navigation (enabled, disabled)');
+
+        $p12Dir = $assetRoot ? $assetRoot.'/employee-document-certificates' : 'employee-document-certificates';
+        if ($request->hasFile('employee_document_p12')) {
+            $oldP12 = Setting::get('employee_document_p12_path');
+            if ($oldP12) {
+                foreach ([$assetDisk, 'public', 'local'] as $disk) {
+                    try {
+                        if (Storage::disk($disk)->exists($oldP12)) {
+                            Storage::disk($disk)->delete($oldP12);
+                        }
+                    } catch (\Throwable) {
+                        continue;
+                    }
+                }
+            }
+
+            $p12Path = $request->file('employee_document_p12')->store($p12Dir, $assetDisk);
+            Setting::set('employee_document_p12_path', $p12Path, 'file', 'PKCS#12 certificate for employee document digital signatures');
+        }
 
         $minimumQuizScore = $request->minimum_quiz_score ?? '';
         Setting::set('minimum_quiz_score', $minimumQuizScore !== '' ? (int) $minimumQuizScore : 70, 'number', 'Minimum quiz score percentage required to pass');
@@ -1093,6 +1115,7 @@ class SettingsController extends Controller
         Cache::forget('setting.privacy_policy_pdf');
         Cache::forget('setting.file_storage_student_access');
         Cache::forget('setting.employee_documents_nav_enabled');
+        Cache::forget('setting.employee_document_p12_path');
         foreach ([
             'sayit_image_driver',
             'sayit_composer_ai_image_enabled',

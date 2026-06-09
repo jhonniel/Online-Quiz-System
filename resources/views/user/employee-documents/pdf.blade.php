@@ -4,13 +4,16 @@
     <meta charset="utf-8">
     <title>{{ $documentTitle }}</title>
     <style>
+        @page {
+            margin: 15mm 15mm 55mm 15mm;
+        }
         body {
             font-family: "DejaVu Sans", Arial, Helvetica, sans-serif;
             font-size: 11pt;
             color: #111827;
             line-height: 1.5;
             margin: 0;
-            padding: 36px 42px;
+            padding: 0;
         }
         .header {
             text-align: center;
@@ -36,20 +39,45 @@
             margin: 0 0 12px 0;
             text-align: justify;
         }
+        .signature-footer {
+            position: fixed;
+            left: 0;
+            right: 0;
+            bottom: 15mm;
+            padding: 0 15mm;
+        }
         .signature-block {
-            margin-top: 36px;
-            padding-top: 16px;
             border-top: 1px solid #d1d5db;
+            padding-top: 12px;
         }
         .signature-label {
             font-size: 9pt;
             text-transform: uppercase;
             color: #6b7280;
-            margin-bottom: 10px;
+            margin: 0 0 6px 0;
+        }
+        .digital-signature-slot {
+            min-height: 22mm;
+            margin-bottom: 4mm;
+            padding: 6px 8px;
+            border: 1px dashed #9ca3af;
+            background: #f9fafb;
+        }
+        .digital-signature-title {
+            font-size: 8pt;
+            font-weight: bold;
+            text-transform: uppercase;
+            color: #374151;
+            margin: 0 0 4px 0;
+        }
+        .digital-signature-note {
+            font-size: 8pt;
+            color: #6b7280;
+            margin: 0;
         }
         .signature-image {
-            height: 56px;
-            margin-bottom: 8px;
+            height: 14mm;
+            margin-bottom: 6px;
         }
         .signature-name {
             font-weight: bold;
@@ -79,19 +107,28 @@
         <p class="body-text">{{ $paragraph }}</p>
     @endforeach
 
-    <div class="signature-block">
-        <p class="signature-label">Employee E-Signature</p>
-        @if($signedAt && !empty($eSignatureDataUri))
-            <img src="{{ $eSignatureDataUri }}" alt="E-Signature" class="signature-image">
-            <p class="signature-name">{{ $employeeName }}</p>
-            <p class="signature-date">Signed on {{ $signedAt->format('F j, Y h:i A') }}</p>
-        @else
-            <div style="border-bottom: 1px solid #111827; width: 240px; height: 48px; margin: 12px 0 8px 0;"></div>
-            <p class="signature-name">{{ $employeeName }}</p>
-            @unless($signedAt)
-                <p class="signature-date">Unsigned</p>
-            @endunless
-        @endif
+    <div class="signature-footer">
+        <div class="signature-block">
+            @if(!empty($digitalSignatureEnabled))
+                <div class="digital-signature-slot">
+                    <p class="digital-signature-title">Digital Signature (P12)</p>
+                    <p class="digital-signature-note">Cryptographically signed by {{ $companyName }}</p>
+                </div>
+            @endif
+
+            <p class="signature-label">Employee E-Signature</p>
+            @if($signedAt && !empty($eSignatureDataUri))
+                <img src="{{ $eSignatureDataUri }}" alt="E-Signature" class="signature-image">
+                <p class="signature-name">{{ $employeeName }}</p>
+                <p class="signature-date">Signed on {{ $signedAt->format('F j, Y h:i A') }}</p>
+            @else
+                <div style="border-bottom: 1px solid #111827; width: 240px; height: 14mm; margin: 0 0 6px 0;"></div>
+                <p class="signature-name">{{ $employeeName }}</p>
+                @unless($signedAt)
+                    <p class="signature-date">Unsigned</p>
+                @endunless
+            @endif
+        </div>
     </div>
 </body>
 </html>

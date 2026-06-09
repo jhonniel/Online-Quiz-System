@@ -22,6 +22,16 @@
         </td>
         <td class="px-4 py-3 text-sm text-gray-700">{{ $payslip->formatMoney($payslip->gross_pay) }}</td>
         <td class="px-4 py-3 text-sm font-semibold text-gray-900">{{ $payslip->formatMoney($payslip->net_pay) }}</td>
+        <td class="px-4 py-3 text-sm">
+            @if(!$payslip->employee)
+                <span class="text-gray-400">—</span>
+            @elseif($payslip->isSigned())
+                <span class="inline-flex items-center rounded-full bg-green-50 px-2.5 py-0.5 text-xs font-medium text-green-700 border border-green-200">Signed</span>
+                <div class="text-xs text-gray-500 mt-1">{{ $payslip->signed_at?->format('M d, Y h:i A') }}</div>
+            @else
+                <span class="inline-flex items-center rounded-full bg-amber-50 px-2.5 py-0.5 text-xs font-medium text-amber-700 border border-amber-200">Pending</span>
+            @endif
+        </td>
         <td class="px-4 py-3 text-sm text-gray-500">{{ $payslip->created_at?->format('M d, Y') }}</td>
         <td class="px-4 py-3 text-sm text-right space-x-2 whitespace-nowrap">
             @if(!$payslip->employee)
@@ -33,6 +43,9 @@
                 </button>
             @endif
             <a href="{{ route('admin.payslip.show', $payslip) }}" class="text-indigo-600 hover:text-indigo-900 font-medium">View</a>
+            @if($payslip->isSigned())
+                <a href="{{ route('admin.payslip.signed', $payslip) }}" target="_blank" class="text-green-700 hover:text-green-900 font-medium">Signed PDF</a>
+            @endif
             <form action="{{ route('admin.payslip.destroy', $payslip) }}" method="POST" class="inline" onsubmit="return confirm('Delete this payslip?')">
                 @csrf
                 @method('DELETE')
