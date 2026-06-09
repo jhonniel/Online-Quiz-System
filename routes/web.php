@@ -173,7 +173,7 @@ Route::prefix('admin')->middleware(['auth', 'admin'])->group(function () {
     Route::middleware(['admin.permission:user_management'])->group(function () {
         Route::middleware(['admin.subfeature:user_management,users'])->group(function () {
         Route::get('users/api', [AdminUserController::class, 'api'])->name('admin.users.api');
-        Route::match(['get', 'post'], 'users/export/pdf', [AdminUserController::class, 'exportPdf'])->name('admin.users.export-pdf');
+        Route::get('users/export/pdf', [AdminUserController::class, 'exportPdf'])->name('admin.users.export-pdf');
         Route::post('users/import-employee-profile', [AdminUserController::class, 'importEmployeeProfile'])->name('admin.users.import-employee-profile');
         Route::get('users/employee-profile-template', [AdminUserController::class, 'downloadEmployeeProfileTemplate'])->name('admin.users.employee-profile-template');
         Route::resource('users', AdminUserController::class)->names([
@@ -199,7 +199,7 @@ Route::prefix('admin')->middleware(['auth', 'admin'])->group(function () {
 
         Route::middleware(['admin.subfeature:user_management,teachers'])->group(function () {
             Route::get('teachers-management/teachers', [AdminUserController::class, 'teachersManagement'])->name('admin.teachers-management.teachers');
-            Route::match(['get', 'post'], 'teachers-management/teachers/export/pdf', [AdminUserController::class, 'teachersManagementExportPdf'])->name('admin.teachers-management.export-pdf');
+            Route::get('teachers-management/teachers/export/pdf', [AdminUserController::class, 'teachersManagementExportPdf'])->name('admin.teachers-management.export-pdf');
         });
         Route::middleware(['admin.subfeature:user_management,teacher_moa'])->group(function () {
             Route::get('teachers-management/moa', [AdminTeacherMoaController::class, 'index'])->name('admin.teacher-moa.index');

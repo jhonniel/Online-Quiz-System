@@ -4,10 +4,10 @@
     <meta charset="utf-8">
     <title>{{ $exportMeta['title'] ?? 'Users List' }}</title>
     <style>
-        @page { margin: 24mm 10mm 14mm 10mm; }
+        @page { margin: 32mm 10mm 14mm 10mm; }
         body { font-family: DejaVu Sans, sans-serif; font-size: 9px; color: #111827; margin: 0; padding: 0; }
-        header { position: fixed; top: -20mm; left: 0; right: 0; height: 22mm; border-bottom: 1px solid #E5E7EB; }
-        footer { position: fixed; bottom: -10mm; left: 0; right: 0; height: 10mm; border-top: 1px solid #E5E7EB; color: #6B7280; font-size: 8px; }
+        header { position: fixed; top: -28mm; left: 0; right: 0; border-bottom: 1px solid #E5E7EB; padding-bottom: 4px; }
+        footer { position: fixed; bottom: -10mm; left: 0; right: 0; height: 10mm; color: #6B7280; font-size: 8px; }
         .header-inner, .footer-inner { width: 100%; box-sizing: border-box; }
         .brand-table { width: 100%; border-collapse: collapse; }
         .brand-logo-cell { width: 58px; vertical-align: top; padding: 0 8px 0 0; }
@@ -17,7 +17,7 @@
         .system-name { font-size: 14px; font-weight: bold; margin: 0; padding: 0; color: #111827; line-height: 1.2; }
         .system-address { font-size: 8px; color: #4B5563; line-height: 1.3; margin: 2px 0 0 0; padding: 0; }
         .footer-meta { font-size: 8px; color: #6B7280; margin: 0; padding: 3px 0 0; }
-        h1 { font-size: 13px; margin: 0 0 4px 0; }
+        .report-title { font-size: 13px; font-weight: bold; margin: 8px 0 0 0; padding: 0; color: #111827; line-height: 1.2; }
         .meta { font-size: 8px; color: #4b5563; margin-bottom: 8px; line-height: 1.4; }
         table.data-table { width: 100%; border-collapse: collapse; }
         table.data-table th, table.data-table td { border: 1px solid #d1d5db; padding: 3px 4px; text-align: left; vertical-align: top; }
@@ -48,6 +48,7 @@
                     </tr>
                 @endif
             </table>
+            <p class="report-title">{{ $exportMeta['title'] ?? 'Users List' }}</p>
         </div>
     </header>
 
@@ -59,7 +60,6 @@
         </div>
     </footer>
 
-    <h1>{{ $exportMeta['title'] ?? 'Users List' }}</h1>
     <div class="meta">
         Generated: {{ now()->format('M d, Y h:i A') }}
         | Total: {{ $users->count() }}

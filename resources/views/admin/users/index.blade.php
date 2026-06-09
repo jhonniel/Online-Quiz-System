@@ -288,21 +288,6 @@
                     </svg>
                     <span id="export-pdf-btn-label">Export PDF</span>
                 </button>
-                <form id="users-export-pdf-form" method="POST" action="{{ $isTeacherView ? route('admin.teachers-management.export-pdf') : route('admin.users.export-pdf') }}" target="_blank" class="hidden">
-                    @csrf
-                    @if(request('search', $search ?? ''))
-                        <input type="hidden" name="search" value="{{ request('search', $search ?? '') }}">
-                    @endif
-                    @if($schoolId ?? '')
-                        <input type="hidden" name="school" value="{{ $schoolId }}">
-                    @endif
-                    @if(!$isTeacherView && ($roleFilter ?? ''))
-                        <input type="hidden" name="role" value="{{ $roleFilter }}">
-                    @endif
-                    @if(!$isTeacherView && ($roleFilter ?? '') === 'employee' && ($departmentFilter ?? ''))
-                        <input type="hidden" name="department" value="{{ $departmentFilter }}">
-                    @endif
-                </form>
                 <button id="send-credentials-btn" type="button" disabled
                         class="inline-flex items-center justify-center gap-1.5 rounded-lg border border-transparent px-4 py-2 text-sm font-medium text-white shadow-sm bg-teal-600 hover:bg-teal-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-teal-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
                     <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -806,11 +791,22 @@
         const ojtDateInput = document.getElementById('ojt-date-input');
         const exportPdfBtn = document.getElementById('export-pdf-btn');
         const exportPdfBtnLabel = document.getElementById('export-pdf-btn-label');
-        const exportPdfForm = document.getElementById('users-export-pdf-form');
-        const usersExportPdfUrl = @json($usersExportPdfUrl);
+        const usersExportPdfBaseUrl = @json($usersExportPdfUrl);
+
+        function getPageUserCount() {
+            return new Set(Array.from(userCheckboxes).map(cb => cb.value)).size;
+        }
 
         function getSelectedUserIds() {
-            return Array.from(document.querySelectorAll('.user-checkbox:checked')).map(cb => cb.value);
+            return [...new Set(
+                Array.from(document.querySelectorAll('.user-checkbox:checked')).map(cb => cb.value)
+            )];
+        }
+
+        function syncUserCheckboxGroup(source) {
+            document.querySelectorAll('.user-checkbox[value="' + source.value + '"]').forEach(cb => {
+                cb.checked = source.checked;
+            });
         }
 
         function updateExportPdfButton() {
@@ -826,31 +822,23 @@
 
         exportPdfBtn?.addEventListener('click', function() {
             const selectedUserIds = getSelectedUserIds();
+            const exportUrl = new URL(usersExportPdfBaseUrl, window.location.origin);
 
-            if (selectedUserIds.length > 0 && exportPdfForm) {
-                exportPdfForm.querySelectorAll('input[name="user_ids[]"]').forEach(input => input.remove());
-
-                selectedUserIds.forEach(userId => {
-                    const input = document.createElement('input');
-                    input.type = 'hidden';
-                    input.name = 'user_ids[]';
-                    input.value = userId;
-                    exportPdfForm.appendChild(input);
+            if (selectedUserIds.length > 0) {
+                selectedUserIds.forEach(function(userId) {
+                    exportUrl.searchParams.append('user_ids[]', userId);
                 });
-
-                exportPdfForm.submit();
-                return;
             }
 
-            window.open(usersExportPdfUrl, '_blank', 'noopener,noreferrer');
+            window.open(exportUrl.toString(), '_blank', 'noopener,noreferrer');
         });
 
         updateExportPdfButton();
 
         // Update selected count and show/hide bulk action bar
         function updateSelection() {
-            const selectedCheckboxes = document.querySelectorAll('.user-checkbox:checked');
-            const count = selectedCheckboxes.length;
+            const count = getSelectedUserIds().length;
+            const pageUserCount = getPageUserCount();
 
             selectedCountSpan.textContent = count + ' user' + (count !== 1 ? 's' : '') + ' selected';
 
@@ -860,10 +848,10 @@
                 bulkActionBar.classList.add('hidden');
             }
 
-            // Update select all checkbox state
+            // Update select all checkbox state (one row per user; mobile + desktop share the same id)
             if (selectAllCheckbox) {
-                selectAllCheckbox.checked = count === userCheckboxes.length && count > 0;
-                selectAllCheckbox.indeterminate = count > 0 && count < userCheckboxes.length;
+                selectAllCheckbox.checked = count === pageUserCount && count > 0;
+                selectAllCheckbox.indeterminate = count > 0 && count < pageUserCount;
             }
 
             // Enable/disable assign button based on role selection
@@ -885,26 +873,31 @@
                     checkbox.checked = this.checked;
                 });
                 updateSelection();
+                updateSendCredentialsButton();
             });
         }
 
-        // Individual checkboxes
+        // Individual checkboxes (sync mobile + desktop pairs for the same user)
         userCheckboxes.forEach(checkbox => {
-            checkbox.addEventListener('change', updateSelection);
+            checkbox.addEventListener('change', function() {
+                syncUserCheckboxGroup(this);
+                updateSelection();
+                updateSendCredentialsButton();
+            });
         });
 
         // Role select change
         bulkRoleSelect.addEventListener('change', function() {
-            bulkAssignBtn.disabled = !this.value || document.querySelectorAll('.user-checkbox:checked').length === 0;
+            bulkAssignBtn.disabled = !this.value || getSelectedUserIds().length === 0;
         });
         if (bulkDepartmentSelect && bulkDepartmentAssignBtn) {
             bulkDepartmentSelect.addEventListener('change', function() {
-                bulkDepartmentAssignBtn.disabled = !this.value || document.querySelectorAll('.user-checkbox:checked').length === 0;
+                bulkDepartmentAssignBtn.disabled = !this.value || getSelectedUserIds().length === 0;
             });
         }
         if (bulkOjtDate && bulkOjtAssignBtn) {
             bulkOjtDate.addEventListener('change', function() {
-                bulkOjtAssignBtn.disabled = !this.value || document.querySelectorAll('.user-checkbox:checked').length === 0;
+                bulkOjtAssignBtn.disabled = !this.value || getSelectedUserIds().length === 0;
             });
         }
 
@@ -925,12 +918,12 @@
                 bulkOjtDate.value = '';
             }
             updateSelection();
+            updateSendCredentialsButton();
         });
 
         // Bulk assign role
         bulkAssignBtn.addEventListener('click', function() {
-            const selectedCheckboxes = document.querySelectorAll('.user-checkbox:checked');
-            const selectedUserIds = Array.from(selectedCheckboxes).map(cb => cb.value);
+            const selectedUserIds = getSelectedUserIds();
             const selectedRole = bulkRoleSelect.value;
 
             if (selectedUserIds.length === 0 || !selectedRole) {
@@ -961,8 +954,7 @@
 
         if (bulkDepartmentAssignBtn && bulkDepartmentForm && departmentInput && bulkDepartmentSelect) {
             bulkDepartmentAssignBtn.addEventListener('click', function() {
-                const selectedCheckboxes = document.querySelectorAll('.user-checkbox:checked');
-                const selectedUserIds = Array.from(selectedCheckboxes).map(cb => cb.value);
+                const selectedUserIds = getSelectedUserIds();
                 const selectedDepartmentId = bulkDepartmentSelect.value;
 
                 if (selectedUserIds.length === 0 || !selectedDepartmentId) {
@@ -993,8 +985,7 @@
 
         if (bulkOjtAssignBtn && bulkOjtForm && ojtDateInput && bulkOjtDate) {
             bulkOjtAssignBtn.addEventListener('click', function() {
-                const selectedCheckboxes = document.querySelectorAll('.user-checkbox:checked');
-                const selectedUserIds = Array.from(selectedCheckboxes).map(cb => cb.value);
+                const selectedUserIds = getSelectedUserIds();
                 const selectedDate = bulkOjtDate.value;
 
                 if (selectedUserIds.length === 0 || !selectedDate) {
@@ -1024,8 +1015,7 @@
         // Send Credentials Button
         const sendCredentialsBtn = document.getElementById('send-credentials-btn');
         sendCredentialsBtn.addEventListener('click', function() {
-            const selectedCheckboxes = document.querySelectorAll('.user-checkbox:checked');
-            const selectedUserIds = Array.from(selectedCheckboxes).map(cb => cb.value);
+            const selectedUserIds = getSelectedUserIds();
 
             if (selectedUserIds.length === 0) {
                 alert('Please select at least one user to send credentials.');
@@ -1037,27 +1027,8 @@
 
         // Update send credentials button state
         function updateSendCredentialsButton() {
-            const selectedCheckboxes = document.querySelectorAll('.user-checkbox:checked');
-            sendCredentialsBtn.disabled = selectedCheckboxes.length === 0;
+            sendCredentialsBtn.disabled = getSelectedUserIds().length === 0;
         }
-
-        // Update send credentials button when selection changes
-        userCheckboxes.forEach(checkbox => {
-            checkbox.addEventListener('change', function() {
-                updateSelection();
-                updateSendCredentialsButton();
-            });
-        });
-
-        if (selectAllCheckbox) {
-            selectAllCheckbox.addEventListener('change', function() {
-                updateSendCredentialsButton();
-            });
-        }
-
-        clearSelectionBtn.addEventListener('click', function() {
-            updateSendCredentialsButton();
-        });
 
         // Send credentials buttons (data attributes avoid inline Blade in onclick)
         document.querySelectorAll('[data-send-credentials]').forEach(function(btn) {

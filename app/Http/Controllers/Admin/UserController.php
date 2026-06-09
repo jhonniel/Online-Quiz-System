@@ -68,13 +68,9 @@ class UserController extends Controller
 
     public function exportPdf(Request $request)
     {
-        $request->validate([
-            'user_ids' => ['sometimes', 'array'],
-            'user_ids.*' => ['integer', 'exists:users,id'],
-        ]);
-
         $context = $this->usersIndexContext($request);
-        $userIds = collect($request->input('user_ids', []))
+
+        $userIds = collect((array) $request->input('user_ids', []))
             ->map(fn ($id) => (int) $id)
             ->filter(fn ($id) => $id > 0)
             ->unique()
@@ -82,6 +78,11 @@ class UserController extends Controller
             ->all();
 
         if ($userIds !== []) {
+            $request->validate([
+                'user_ids' => ['required', 'array', 'min:1'],
+                'user_ids.*' => ['integer', 'exists:users,id'],
+            ]);
+
             $isTeachersManagement = $context['isTeachersManagement'];
             $with = $isTeachersManagement ? ['university'] : ['university', 'department'];
 
@@ -94,6 +95,7 @@ class UserController extends Controller
         } else {
             $users = $this->filteredUsersQuery($request, $context)->get();
         }
+
         $exportMeta = $this->usersExportMeta($context, $userIds !== [] ? count($userIds) : null);
         $branding = DocumentExportPdfBranding::forPdf();
 
