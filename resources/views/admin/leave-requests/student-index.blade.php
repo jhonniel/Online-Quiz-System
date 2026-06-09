@@ -145,9 +145,7 @@
 
                 <div>
                     <label for="student-leave-filter-submit" class="block text-sm font-medium text-gray-700 mb-2 invisible" aria-hidden="true">Filter</label>
-                    <button type="submit" id="student-leave-filter-submit" class="w-full px-4 py-2 text-sm sm:text-base bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
-                        Filter
-                    </button>
+                    <x-admin-filter-button id="student-leave-filter-submit" :fullWidth="true" />
                 </div>
             </div>
 

@@ -77,9 +77,7 @@
                 </div>
             </div>
             <div class="flex items-center gap-2">
-                <button type="submit" class="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2">
-                    Apply Filters
-                </button>
+                <x-admin-filter-button>Apply Filters</x-admin-filter-button>
                 <a href="{{ url('/admin/time-report') }}" class="px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2">
                     Reset
                 </a>

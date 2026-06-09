@@ -243,10 +243,7 @@
                             <option value="100" {{ request('per_page', 20) == 100 ? 'selected' : '' }}>100</option>
                         </select>
                     </div>
-                    <button type="submit"
-                            class="inline-flex items-center px-4 py-2 rounded-md bg-indigo-600 text-sm font-medium text-white hover:bg-indigo-700">
-                        Apply
-                    </button>
+                    <x-admin-filter-button>Apply</x-admin-filter-button>
                     @if(!empty($activeListFilters))
                         <a href="{{ $studentsListUrl }}"
                            class="inline-flex items-center px-3 py-2 rounded-md border border-gray-300 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50">

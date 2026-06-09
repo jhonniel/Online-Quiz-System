@@ -44,7 +44,7 @@
                 To
                 <input type="date" name="chart_to" value="{{ $chartTo }}" class="mt-1 block rounded-lg border-gray-300 text-sm focus:ring-indigo-500 focus:border-indigo-500">
             </label>
-            <button type="submit" class="px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700">Apply range</button>
+            <x-admin-filter-button>Apply range</x-admin-filter-button>
         </form>
     </div>
 

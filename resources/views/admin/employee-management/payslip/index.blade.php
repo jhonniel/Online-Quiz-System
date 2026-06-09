@@ -178,7 +178,7 @@
                        class="rounded-md border-gray-300 text-sm shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
                 <input type="date" name="period_end" value="{{ request('period_end') }}" placeholder="Period to"
                        class="rounded-md border-gray-300 text-sm shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
-                <button type="submit" class="inline-flex justify-center px-4 py-2 rounded-lg text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 shadow-sm transition-colors">Filter</button>
+                <x-admin-filter-button />
             </form>
         </div>
 

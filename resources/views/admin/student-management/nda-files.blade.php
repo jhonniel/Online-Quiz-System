@@ -20,7 +20,7 @@
             <input type="text" name="search" value="{{ $search ?? '' }}" placeholder="Search student, name, or ID number"
                    class="w-full sm:max-w-md rounded-lg border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 text-sm">
             <div class="flex gap-2">
-                <button type="submit" class="inline-flex items-center justify-center px-4 py-2 rounded-md bg-indigo-600 text-white text-sm font-medium hover:bg-indigo-700">Search</button>
+                <x-admin-filter-button>Search</x-admin-filter-button>
                 <a href="{{ route('admin.student-nda-files.index') }}" class="inline-flex items-center justify-center px-4 py-2 rounded-md bg-gray-200 text-gray-700 text-sm font-medium hover:bg-gray-300">Clear</a>
             </div>
         </form>

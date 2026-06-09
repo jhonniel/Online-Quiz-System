@@ -217,9 +217,7 @@
 
                 <div class="shrink-0 w-24">
                     <label for="employee-leave-filter-submit" class="block text-xs font-medium text-gray-700 mb-1 invisible" aria-hidden="true">Filter</label>
-                    <button type="submit" id="employee-leave-filter-submit" class="w-full px-3 py-1.5 text-sm whitespace-nowrap bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
-                        Filter
-                    </button>
+                    <x-admin-filter-button id="employee-leave-filter-submit" :fullWidth="true" size="sm" />
                 </div>
             </div>
 

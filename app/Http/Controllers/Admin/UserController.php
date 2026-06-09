@@ -68,9 +68,33 @@ class UserController extends Controller
 
     public function exportPdf(Request $request)
     {
+        $request->validate([
+            'user_ids' => ['sometimes', 'array'],
+            'user_ids.*' => ['integer', 'exists:users,id'],
+        ]);
+
         $context = $this->usersIndexContext($request);
-        $users = $this->filteredUsersQuery($request, $context)->get();
-        $exportMeta = $this->usersExportMeta($context);
+        $userIds = collect($request->input('user_ids', []))
+            ->map(fn ($id) => (int) $id)
+            ->filter(fn ($id) => $id > 0)
+            ->unique()
+            ->values()
+            ->all();
+
+        if ($userIds !== []) {
+            $isTeachersManagement = $context['isTeachersManagement'];
+            $with = $isTeachersManagement ? ['university'] : ['university', 'department'];
+
+            $users = User::query()
+                ->with($with)
+                ->whereIn('id', $userIds)
+                ->when($isTeachersManagement, fn (Builder $q) => $q->where('role', 'teacher'))
+                ->orderBy('name')
+                ->get();
+        } else {
+            $users = $this->filteredUsersQuery($request, $context)->get();
+        }
+        $exportMeta = $this->usersExportMeta($context, $userIds !== [] ? count($userIds) : null);
         $branding = DocumentExportPdfBranding::forPdf();
 
         $pdf = Pdf::loadView('admin.users.export-pdf', [
@@ -193,7 +217,7 @@ class UserController extends Controller
      * }  $context
      * @return array<string, string|null>
      */
-    private function usersExportMeta(array $context): array
+    private function usersExportMeta(array $context, ?int $selectedCount = null): array
     {
         $schoolName = null;
         if ($context['schoolId'] !== null && $context['schoolId'] !== '') {
@@ -220,6 +244,7 @@ class UserController extends Controller
             'school' => $schoolName,
             'role' => $roleLabel,
             'department' => $departmentLabel,
+            'selected_count' => $selectedCount,
         ];
     }
 

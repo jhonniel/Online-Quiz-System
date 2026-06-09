@@ -75,6 +75,9 @@
         @if(!empty($exportMeta['search']))
             | Search: "{{ $exportMeta['search'] }}"
         @endif
+        @if(!empty($exportMeta['selected_count']))
+            | Selected export: {{ $exportMeta['selected_count'] }} user(s)
+        @endif
     </div>
 
     <table class="data-table">
@@ -84,14 +87,11 @@
                 <th>Name</th>
                 <th>Email</th>
                 <th>Contact Number</th>
-                <th>Role</th>
-                <th>University</th>
                 @if(empty($isTeachersManagement))
                     <th>Department</th>
                 @endif
                 <th>Status</th>
-                <th>Approval</th>
-                <th>Created</th>
+                <th>Date Hired</th>
             </tr>
         </thead>
         <tbody>
@@ -101,8 +101,6 @@
                     <td>{{ $user->name }}</td>
                     <td>{{ $user->email }}</td>
                     <td>{{ $user->contact_number ?: '—' }}</td>
-                    <td>{{ $user->getRoleLabel() }}</td>
-                    <td>{{ $user->university?->name ?? '—' }}</td>
                     @if(empty($isTeachersManagement))
                         <td>
                             @if(in_array($user->role, ['employee', 'student'], true) && $user->department)
@@ -113,12 +111,11 @@
                         </td>
                     @endif
                     <td>{{ $user->is_active ? 'Active' : 'Disabled' }}</td>
-                    <td>{{ $user->is_approved ? 'Approved' : 'Pending' }}</td>
-                    <td>{{ $user->created_at?->format('M d, Y') ?? '—' }}</td>
+                    <td>{{ $user->date_hired?->format('M d, Y') ?? '—' }}</td>
                 </tr>
             @empty
                 <tr>
-                    <td colspan="{{ empty($isTeachersManagement) ? 10 : 9 }}">No users match the current filters.</td>
+                    <td colspan="{{ empty($isTeachersManagement) ? 7 : 6 }}">No users match the current filters.</td>
                 </tr>
             @endforelse
         </tbody>

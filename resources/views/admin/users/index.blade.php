@@ -280,15 +280,29 @@
                 @endif
             @endif
             <div class="flex items-center gap-2 flex-shrink-0 lg:ml-auto">
-                <a href="{{ $usersExportPdfUrl }}"
-                   target="_blank"
-                   rel="noopener noreferrer"
-                   class="inline-flex items-center justify-center gap-1.5 rounded-lg border border-transparent px-4 py-2 text-sm font-medium text-white shadow-sm bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 transition-colors">
+                <button type="button" id="export-pdf-btn"
+                        title="Export all users matching current filters, or only selected users when checkboxes are checked"
+                        class="inline-flex items-center justify-center gap-1.5 rounded-lg border border-transparent px-4 py-2 text-sm font-medium text-white shadow-sm bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 transition-colors">
                     <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"/>
                     </svg>
-                    <span>Export PDF</span>
-                </a>
+                    <span id="export-pdf-btn-label">Export PDF</span>
+                </button>
+                <form id="users-export-pdf-form" method="POST" action="{{ $isTeacherView ? route('admin.teachers-management.export-pdf') : route('admin.users.export-pdf') }}" target="_blank" class="hidden">
+                    @csrf
+                    @if(request('search', $search ?? ''))
+                        <input type="hidden" name="search" value="{{ request('search', $search ?? '') }}">
+                    @endif
+                    @if($schoolId ?? '')
+                        <input type="hidden" name="school" value="{{ $schoolId }}">
+                    @endif
+                    @if(!$isTeacherView && ($roleFilter ?? ''))
+                        <input type="hidden" name="role" value="{{ $roleFilter }}">
+                    @endif
+                    @if(!$isTeacherView && ($roleFilter ?? '') === 'employee' && ($departmentFilter ?? ''))
+                        <input type="hidden" name="department" value="{{ $departmentFilter }}">
+                    @endif
+                </form>
                 <button id="send-credentials-btn" type="button" disabled
                         class="inline-flex items-center justify-center gap-1.5 rounded-lg border border-transparent px-4 py-2 text-sm font-medium text-white shadow-sm bg-teal-600 hover:bg-teal-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-teal-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
                     <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -790,6 +804,48 @@
         const bulkOjtAssignBtn = document.getElementById('bulk-ojt-assign-btn');
         const bulkOjtForm = document.getElementById('bulk-ojt-form');
         const ojtDateInput = document.getElementById('ojt-date-input');
+        const exportPdfBtn = document.getElementById('export-pdf-btn');
+        const exportPdfBtnLabel = document.getElementById('export-pdf-btn-label');
+        const exportPdfForm = document.getElementById('users-export-pdf-form');
+        const usersExportPdfUrl = @json($usersExportPdfUrl);
+
+        function getSelectedUserIds() {
+            return Array.from(document.querySelectorAll('.user-checkbox:checked')).map(cb => cb.value);
+        }
+
+        function updateExportPdfButton() {
+            if (!exportPdfBtnLabel) {
+                return;
+            }
+
+            const count = getSelectedUserIds().length;
+            exportPdfBtnLabel.textContent = count > 0
+                ? 'Export PDF (' + count + ' selected)'
+                : 'Export PDF';
+        }
+
+        exportPdfBtn?.addEventListener('click', function() {
+            const selectedUserIds = getSelectedUserIds();
+
+            if (selectedUserIds.length > 0 && exportPdfForm) {
+                exportPdfForm.querySelectorAll('input[name="user_ids[]"]').forEach(input => input.remove());
+
+                selectedUserIds.forEach(userId => {
+                    const input = document.createElement('input');
+                    input.type = 'hidden';
+                    input.name = 'user_ids[]';
+                    input.value = userId;
+                    exportPdfForm.appendChild(input);
+                });
+
+                exportPdfForm.submit();
+                return;
+            }
+
+            window.open(usersExportPdfUrl, '_blank', 'noopener,noreferrer');
+        });
+
+        updateExportPdfButton();
 
         // Update selected count and show/hide bulk action bar
         function updateSelection() {
@@ -818,6 +874,8 @@
             if (bulkOjtAssignBtn && bulkOjtDate) {
                 bulkOjtAssignBtn.disabled = !bulkOjtDate.value || count === 0;
             }
+
+            updateExportPdfButton();
         }
 
         // Select all checkbox
