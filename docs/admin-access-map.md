@@ -14,7 +14,17 @@ How **roles**, **`admin` middleware**, and **`admin_permissions`** flags combine
 | *(sub)* `error_logs` | Error Logs | `canAccessAnalyticsFeature('error_logs')` |
 | *(sub)* `user_activity` | User Activity (also allowed via `system`) | `canAccessAnalyticsFeature('user_activity')` |
 | *(sub)* `students_review` | Students Review | `canAccessAnalyticsFeature('students_review')` |
-| `employee_management` | Employee dashboard, admin DTR, time report, admin leave (employees); optional **employee department** scope | `canAccessEmployeeManagement()` |
+| `employee_management` | Employee dashboard, employee documents, DTR, time report, admin leave (employees); optional **employee department** scope | `canAccessEmployeeManagement()` |
+| *(sub)* `employee_dashboard` | Employee Dashboard (`/admin/employee-dashboard`) | `canAccessEmployeeFeature('employee_dashboard')` |
+| *(sub)* `file_request` | File Request (`/admin/file-request`) | `canAccessEmployeeFeature('file_request')` |
+| *(sub)* `payslip` | Payslip import & records (`/admin/payslip`) | `canAccessEmployeeFeature('payslip')` |
+| *(sub)* `employee_nda` | Employee NDA documents (`/admin/employee-documents/nda`) | `canAccessEmployeeFeature('employee_nda')` |
+| *(sub)* `employee_contract` | Employee contracts (`/admin/employee-documents/contract`) | `canAccessEmployeeFeature('employee_contract')` |
+| *(sub)* `employee_policy` | Employee policies (`/admin/employee-documents/policy`) | `canAccessEmployeeFeature('employee_policy')` |
+| *(sub)* `dtr` | Admin DTR | `canAccessEmployeeFeature('dtr')` |
+| *(sub)* `time_report` | Time Report | `canAccessEmployeeFeature('time_report')` |
+| *(sub)* `leave_requests` | Leave Requests | `canAccessEmployeeFeature('leave_requests')` |
+| *(sub)* `leave_calendar` | Leave Calendar | `canAccessEmployeeFeature('leave_calendar')` |
 | `student_management` | Student dashboard, student DTR/leave, time requests; optional **student department** scope | `canAccessStudentManagement()` |
 | `hiring_process` | Hiring process, positions, applications; optional **allowed positions** | `canAccessHiringProcess()` |
 | `communication` | Notifications, contact messages, tickets, live chat | `canAccessCommunication()` |
@@ -27,7 +37,70 @@ How **roles**, **`admin` middleware**, and **`admin_permissions`** flags combine
 | `system` | Settings, rules, API monitoring, **admin permissions CRUD**, landing page, stacks, user activity | `canAccessSystem()` |
 | `qr_code` | **No admin routes** — profile QR display + public `/qr/{token}` scan | `canAccessQrCode()` |
 
-Middleware on routes: `admin.permission:{flag}` → `User::hasAdminPermission('{flag}')`.
+Middleware on routes:
+
+- `admin.permission:{flag}` → `User::hasAdminPermission('{flag}')` (parent area)
+- `admin.subfeature:{area},{feature}` → `User::canAccessAdminSubFeature()` (see `CheckAdminSubFeature`)
+
+Employee Management sub-features are grouped in **Admin Permissions → Allowed areas**:
+
+| Group | Sub-features |
+|-------|----------------|
+| Dashboard | `employee_dashboard` |
+| Employee Documents | `file_request`, `payslip`, `employee_nda`, `employee_contract`, `employee_policy` |
+| Time & Attendance | `dtr`, `time_report` |
+| Leave | `leave_requests`, `leave_calendar` |
+
+Empty `allowed_employee_features` = all sub-features allowed (when parent `employee_management` is on).
+
+---
+
+## Employee Documents (admin)
+
+Admin sidebar section **Employee Documents** (above Employee Management). Each item requires the matching sub-feature.
+
+| Sub-feature | Route(s) | Notes |
+|-------------|----------|--------|
+| `file_request` | `/admin/file-request` | Send files to employees, fulfill/reject requests |
+| `payslip` | `/admin/payslip` | CSV import, template download, manual employee link, bulk delete |
+| `employee_nda` | `/admin/employee-documents/nda` | List employees, signed/pending NDA, view PDF |
+| `employee_contract` | `/admin/employee-documents/contract` | Same for employment contracts |
+| `employee_policy` | `/admin/employee-documents/policy` | Same for policy acknowledgments |
+
+Preview PDFs: `/admin/employee-documents/signatures/{id}/preview` and `/admin/employee-documents/{type}/employees/{employee}/preview` — gated in `EmployeeDocumentController` by document type permission.
+
+Sidebar visibility: `User::canAccessAnyEmployeeDocumentFeature()` (any of the five sub-features above).
+
+---
+
+## Employee Documents (employee portal)
+
+**Not** controlled by `admin_permissions`. Controlled by system setting:
+
+| Setting key | Location | Values |
+|-------------|----------|--------|
+| `employee_documents_nav_enabled` | Admin → Settings → Hiring Process tab | `enabled` (default) / `disabled` |
+
+When **disabled**: employees do not see the **Documents** nav (NDA, Contract, Policy); direct URLs return 403.
+
+Employee routes (role `employee` only):
+
+| Route | Purpose |
+|-------|---------|
+| `/documents` | Document list |
+| `/documents/{nda\|contract\|policy}` | View & e-sign |
+| `/documents/{type}/pdf` | Generate/view PDF |
+| `/documents/{type}/preview` | Signed PDF stream |
+
+**Payslips** and **Document Requests** remain separate employee nav items (not hidden by the setting above).
+
+---
+
+## Payslip linking
+
+CSV column `employee_email` links rows to employee accounts on import (email match, then name match).
+
+Unlinked rows: admin can link manually from `/admin/payslip` (requires `payslip` sub-feature). Linked payslips appear under employee **Payslips** (`/payslips`).
 
 ---
 
@@ -190,6 +263,8 @@ These use `auth` (+ `student.not_terminated` for most). **Not** controlled by `a
 - Dashboard, profile, friends, user chat, support chat/tickets (user side)
 - Quizzes (role rules in `canViewAssignedQuizzes()`)
 - User files, forum, evaluations, notifications, DTR/leave (user controllers)
+- Employee documents (NDA/Contract/Policy) — gated by `employee_documents_nav_enabled` setting
+- Employee payslips (`/payslips`) — visible when payslip records exist for `user_id`
 - Teacher: `/teacher/*` | Technician: `/technician/tickets`
 
 ---
@@ -200,9 +275,17 @@ These use `auth` (+ `student.not_terminated` for most). **Not** controlled by `a
 |-------|----------|
 | Admin entry | `app/Http/Middleware/AdminMiddleware.php` |
 | Per-feature gate | `app/Http/Middleware/CheckAdminPermission.php` |
-| Flag checks | `app/Models/User.php` — `hasAdminPermission`, `canAccess*`, `hasAnyAdminPermission` |
+| Sub-feature gate | `app/Http/Middleware/CheckAdminSubFeature.php` |
+| Permission areas & labels | `app/Support/AdminPermissionAreas.php` |
+| Flag checks | `app/Models/User.php` — `hasAdminPermission`, `canAccess*`, `hasAnyAdminPermission`, `canAccessEmployeeFeature` |
 | Routes | `routes/web.php` — `Route::prefix('admin')` groups |
-| Permission UI | `app/Http/Controllers/Admin/AdminPermissionController.php` |
+| Permission UI | `app/Http/Controllers/Admin/AdminPermissionController.php`, `resources/views/admin/admin-permissions/` |
+| Admin employee documents | `app/Http/Controllers/Admin/EmployeeDocumentController.php` |
+| Admin payslips | `app/Http/Controllers/Admin/PayslipController.php`, `app/Support/PayslipCsvImporter.php` |
+| User employee documents | `app/Http/Controllers/User/EmployeeDocumentController.php`, `app/Support/EmployeeSampleDocument.php` |
+| User payslips | `app/Http/Controllers/User/PayslipController.php` |
+| Employee documents nav setting | `app/Http/Controllers/Admin/SettingsController.php` — `employee_documents_nav_enabled` |
+| Admin sidebar | `resources/views/components/admin-sidebar.blade.php` |
 | QR | `app/Models/User.php` — `canAccessQrCode()`; `app/Http/Controllers/QrCodeController.php` |
 
 ---

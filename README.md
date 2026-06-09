@@ -4,10 +4,12 @@ A comprehensive Laravel-based online quiz platform with advanced features for ed
 
 ## 🆕 Latest Updates
 
-- ✅ **PHP 8.3 Compatible** - Fully tested and optimized for PHP 8.3 and 8.4
-- ✅ **Laravel 12.41.1** - Latest Laravel framework with all security updates
-- ✅ **Modern Dependencies** - All packages updated to latest compatible versions
-- ✅ **Optimized Setup** - Streamlined installation and configuration process
+- ✅ **Employee Documents (admin)** — New **Employee Documents** sidebar: File Request, Payslip, NDA, Contract, Policy with per-feature admin permissions
+- ✅ **Employee Documents (portal)** — Employees can view, e-sign, and download NDA, Contract, and Policy PDFs; admin can hide Documents nav in Settings
+- ✅ **Payslip management** — CSV import with `employee_email` linking, manual link UI, grouped records, and employee payslip portal
+- ✅ **Admin permissions** — Employee Management sub-features grouped (Dashboard, Employee Documents, Time & Attendance, Leave)
+- ✅ **PHP 8.3 Compatible** — Fully tested and optimized for PHP 8.3 and 8.4
+- ✅ **Laravel 12.41.1** — Latest Laravel framework with all security updates
 
 ## 📋 Table of Contents
 
@@ -19,6 +21,7 @@ A comprehensive Laravel-based online quiz platform with advanced features for ed
 - [Configuration](#-configuration)
 - [Usage](#-usage)
 - [Troubleshooting](#-troubleshooting)
+- [Documentation](#-documentation)
 - [API Documentation](#-api-documentation)
 - [Contributing](#-contributing)
 - [License](#-license)
@@ -36,6 +39,8 @@ A comprehensive Laravel-based online quiz platform with advanced features for ed
 
 ### 📊 Admin Dashboard & Management
 - **Comprehensive Admin Dashboard** with real-time statistics
+- **Employee Documents** — File Request, Payslip CSV import, NDA/Contract/Policy review (admin sidebar section)
+- **Granular Admin Permissions** — Sub-features under Employee Management (documents, DTR, leave, etc.)
 - **User Management** - Create, edit, delete, activate/deactivate users
 - **Quiz Management** - Full CRUD operations for quizzes
 - **Question Management** - Multiple choice questions with import/export
@@ -60,6 +65,8 @@ A comprehensive Laravel-based online quiz platform with advanced features for ed
 - **Topic-based Analytics** - Track performance by subject areas
 
 ### 👥 User Features
+- **Employee Documents** — NDA, Contract, Policy with e-signature and signed PDF storage (optional; admin can hide nav)
+- **Employee Payslips** — View payslips linked by admin import or manual link
 - **User Dashboard** with available quizzes and statistics
 - **Quiz Taking Interface** with one-question-at-a-time navigation
 - **Quiz Code Entry** via modal for easy access
@@ -1266,6 +1273,26 @@ The admin dashboard provides:
    - View individual attempts, scores, and time taken
    - Export results to PDF or Excel
 
+#### Employee Documents
+
+**1. File Request**
+   - **Employee Documents → File Request** (`file_request` permission)
+   - Send files to employees and manage document requests
+
+**2. Payslip**
+   - **Employee Documents → Payslip** (`payslip` permission)
+   - Download CSV template, import payslips (include `employee_email` for auto-linking)
+   - Manually link unlinked rows to employee accounts
+   - View grouped records by year, month, and cut-off period
+
+**3. NDA / Contract / Policy**
+   - **Employee Documents → NDA | Contract | Policy** (`employee_nda`, `employee_contract`, `employee_policy`)
+   - View all employees with signed or pending status
+   - Open signed or sample PDFs per employee
+
+**4. Admin permissions**
+   - **System → Admin Permissions** — Enable **Employee Management**, then select sub-features under **Employee Documents**
+
 #### Employee Management (DTR & Leave)
 
 **1. Daily Time Records (DTR)**
@@ -1309,6 +1336,11 @@ The admin dashboard provides:
    - Update system name, logo, and icon
    - Configure maintenance mode
    - Set default vacation and sick leave balances
+
+**1b. Employee Documents navigation (employees)**
+   - **System → Settings → Hiring Process** tab
+   - **Employee Documents - Navigation**: Show or hide Documents (NDA, Contract, Policy) in the employee sidebar
+   - Does not affect Document Requests or Payslips nav items
 
 **2. Email Configuration**
    - **System → Settings → Email**
@@ -1441,6 +1473,21 @@ Your dashboard shows:
    - Confirm new password
    - Click **Update Password**
 
+#### Employee Documents & Payslips (Employees)
+
+**1. Documents (NDA, Contract, Policy)**
+   - **Sidebar → Documents** (if enabled by admin in Settings)
+   - Read sample document, upload e-signature on profile if required, sign document
+   - View or download PDF before and after signing
+
+**2. Payslips**
+   - **Sidebar → Payslips**
+   - View payslips linked to your account by admin import or manual link
+
+**3. Document Requests**
+   - **Sidebar → Document Requests**
+   - Request and receive files from admin (separate from NDA/Contract/Policy)
+
 #### Daily Time Records (Employees)
 
 **1. View DTR Records**
@@ -1549,6 +1596,10 @@ Your dashboard shows:
 | View Reports | Analytics & Reports | Select report type → Filter → Export |
 | Configure Email | System → Settings → Email | Enter SMTP details → Save |
 | Manage DTR | Employee Management → DTR | Create/View/Export records |
+| Import payslips | Employee Documents → Payslip | Template → CSV import → link if needed |
+| Review signed NDAs | Employee Documents → NDA | Filter → View PDF |
+| Hide employee Documents nav | System → Settings → Hiring Process | Employee Documents - Navigation → Hide |
+| Grant document access | System → Admin Permissions | Employee Management → Employee Documents sub-features |
 
 #### Common User Tasks
 
@@ -1556,6 +1607,8 @@ Your dashboard shows:
 |------|----------|-------|
 | Take Quiz | Dashboard → Available Quizzes | Click quiz → Start → Answer → Submit |
 | Request Leave | Dashboard → Leave Requests | New Request → Fill form → Submit |
+| Sign NDA/Contract/Policy | Documents → choose type | Read → Sign (e-signature on profile) |
+| View payslip | Payslips | Open linked payslip for period |
 | Update Profile | Profile → Edit | Update info → Upload photos → Save |
 | Chat Support | Dashboard → Live Chat | New Ticket → Chat → Close |
 | Add Friend | Dashboard → Friends | Search → Send Request → Accept |
@@ -1582,6 +1635,19 @@ Your dashboard shows:
 - Participate in forums for community engagement
 - Check notifications regularly
 - Review quiz results to improve performance
+
+## 📚 Documentation
+
+| Document | Description |
+|----------|-------------|
+| [docs/admin-access-map.md](docs/admin-access-map.md) | Admin roles, permission flags, sub-features (including Employee Documents), routes, and code anchors |
+| [EXCEL_IMPORT_FORMAT.md](EXCEL_IMPORT_FORMAT.md) | Quiz/question import formats |
+| [QUICK_IMPORT_GUIDE.md](QUICK_IMPORT_GUIDE.md) | Quick import guide |
+| [docs/SPACES_CORS_SETUP.md](docs/SPACES_CORS_SETUP.md) | DigitalOcean Spaces CORS setup |
+
+**Payslip CSV columns** (admin template at `/admin/payslip/template`): `cutt_off_start`, `cutt_off_end`, `employee_name`, `employee_email`, `position`, `date_hired`, `rate_per_day`, deductions, earnings, `prepared_by`, `approved_by`. Total deduction is calculated automatically on import.
+
+---
 
 ## 🔌 API Documentation
 

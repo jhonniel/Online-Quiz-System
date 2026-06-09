@@ -19,13 +19,21 @@ final class AdminPermissionAreas
         'employee_dashboard' => 'Employee Dashboard',
         'file_request' => 'File Request',
         'payslip' => 'Payslip',
-        'employee_nda' => 'Employee NDA',
-        'employee_contract' => 'Employee Contract',
-        'employee_policy' => 'Employee Policy',
+        'employee_nda' => 'NDA',
+        'employee_contract' => 'Contract',
+        'employee_policy' => 'Policy',
         'dtr' => 'DTR (Time Records)',
         'time_report' => 'Time Report',
         'leave_requests' => 'Leave Requests',
         'leave_calendar' => 'Leave Calendar',
+    ];
+
+    /** @var array<string, list<string>> */
+    public const EMPLOYEE_FEATURE_GROUPS = [
+        'Dashboard' => ['employee_dashboard'],
+        'Employee Documents' => ['file_request', 'payslip', 'employee_nda', 'employee_contract', 'employee_policy'],
+        'Time & Attendance' => ['dtr', 'time_report'],
+        'Leave' => ['leave_requests', 'leave_calendar'],
     ];
 
     public const STUDENT_FEATURES = [
@@ -156,6 +164,19 @@ final class AdminPermissionAreas
         $area = self::area($areaKey);
 
         return $area ? array_keys($area['features']) : [];
+    }
+
+    /**
+     * Optional grouped layout for sub-feature checkboxes in Admin Permissions.
+     *
+     * @return array<string, list<string>>|null
+     */
+    public static function featureGroups(string $areaKey): ?array
+    {
+        return match ($areaKey) {
+            'employee_management' => self::EMPLOYEE_FEATURE_GROUPS,
+            default => null,
+        };
     }
 
     public static function requestInputName(string $areaKey): string

@@ -67,7 +67,7 @@
                 $items = [
                     ['key' => 'content_management', 'label' => 'Content Management', 'desc' => 'Quizzes, forum, and content creation'],
                     ['key' => 'analytics_reports', 'label' => 'Analytics & Reports', 'desc' => 'Analytics dashboard and reports'],
-                    ['key' => 'employee_management', 'label' => 'Employee Management', 'desc' => 'Employee DTR, leave requests, and time reports'],
+                    ['key' => 'employee_management', 'label' => 'Employee Management', 'desc' => 'Employee dashboard, documents, DTR, time reports, and leave'],
                     ['key' => 'student_management', 'label' => 'Student Management', 'desc' => 'Student dashboard, DTR, and leave requests'],
                     ['key' => 'hiring_process', 'label' => 'Hiring Process', 'desc' => 'Hiring positions and applications'],
                     ['key' => 'communication', 'label' => 'Communication', 'desc' => 'Live chat, contact messages, and notifications'],
