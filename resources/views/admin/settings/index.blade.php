@@ -888,6 +888,19 @@
                                     </select>
                                     <p class="mt-2 text-xs text-gray-500">Allow students to access File Storage feature. Employees always have access.</p>
                                 </div>
+
+                                <div>
+                                    <label for="employee_documents_nav_enabled" class="block text-sm font-medium text-gray-700 mb-2">Employee Documents - Navigation</label>
+                                    <select name="employee_documents_nav_enabled" id="employee_documents_nav_enabled"
+                                            class="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                                        @php
+                                            $employeeDocumentsNavValue = old('employee_documents_nav_enabled', $settings['employee_documents_nav_enabled'] ?? 'enabled');
+                                        @endphp
+                                        <option value="enabled" {{ $employeeDocumentsNavValue == 'enabled' ? 'selected' : '' }}>Show in employee navbar</option>
+                                        <option value="disabled" {{ $employeeDocumentsNavValue == 'disabled' ? 'selected' : '' }}>Hide from employee navbar</option>
+                                    </select>
+                                    <p class="mt-2 text-xs text-gray-500">Controls whether employees see the Documents menu (NDA, Contract, Policy) in their sidebar.</p>
+                                </div>
                                 </div>
                             </div>
                         </div>

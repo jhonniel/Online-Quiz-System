@@ -173,6 +173,9 @@ Route::prefix('admin')->middleware(['auth', 'admin'])->group(function () {
     Route::middleware(['admin.permission:user_management'])->group(function () {
         Route::middleware(['admin.subfeature:user_management,users'])->group(function () {
         Route::get('users/api', [AdminUserController::class, 'api'])->name('admin.users.api');
+        Route::get('users/export/pdf', [AdminUserController::class, 'exportPdf'])->name('admin.users.export-pdf');
+        Route::post('users/import-employee-profile', [AdminUserController::class, 'importEmployeeProfile'])->name('admin.users.import-employee-profile');
+        Route::get('users/employee-profile-template', [AdminUserController::class, 'downloadEmployeeProfileTemplate'])->name('admin.users.employee-profile-template');
         Route::resource('users', AdminUserController::class)->names([
             'index' => 'admin.users.index',
             'create' => 'admin.users.create',
@@ -196,6 +199,7 @@ Route::prefix('admin')->middleware(['auth', 'admin'])->group(function () {
 
         Route::middleware(['admin.subfeature:user_management,teachers'])->group(function () {
             Route::get('teachers-management/teachers', [AdminUserController::class, 'teachersManagement'])->name('admin.teachers-management.teachers');
+            Route::get('teachers-management/teachers/export/pdf', [AdminUserController::class, 'teachersManagementExportPdf'])->name('admin.teachers-management.export-pdf');
         });
         Route::middleware(['admin.subfeature:user_management,teacher_moa'])->group(function () {
             Route::get('teachers-management/moa', [AdminTeacherMoaController::class, 'index'])->name('admin.teacher-moa.index');
@@ -398,6 +402,22 @@ Route::prefix('admin')->middleware(['auth', 'admin'])->group(function () {
             Route::get('/file-request/history/{fileRequest}/download', [App\Http\Controllers\Admin\FileRequestController::class, 'download'])->name('admin.file-request.download');
             Route::delete('/file-request/history/{fileRequest}', [App\Http\Controllers\Admin\FileRequestController::class, 'destroy'])->name('admin.file-request.destroy');
         });
+
+        Route::middleware(['admin.subfeature:employee_management,payslip'])->group(function () {
+            Route::get('/payslip', [App\Http\Controllers\Admin\PayslipController::class, 'index'])->name('admin.payslip.index');
+            Route::post('/payslip/import', [App\Http\Controllers\Admin\PayslipController::class, 'import'])->name('admin.payslip.import');
+            Route::get('/payslip/template', [App\Http\Controllers\Admin\PayslipController::class, 'downloadTemplate'])->name('admin.payslip.template');
+            Route::get('/payslip/{payslip}', [App\Http\Controllers\Admin\PayslipController::class, 'show'])->name('admin.payslip.show');
+            Route::patch('/payslip/{payslip}/link', [App\Http\Controllers\Admin\PayslipController::class, 'link'])->name('admin.payslip.link');
+            Route::delete('/payslip/{payslip}', [App\Http\Controllers\Admin\PayslipController::class, 'destroy'])->name('admin.payslip.destroy');
+            Route::post('/payslip/bulk-delete', [App\Http\Controllers\Admin\PayslipController::class, 'bulkDestroy'])->name('admin.payslip.bulk-destroy');
+        });
+
+        Route::middleware(['admin.subfeature:employee_management,employee_nda'])->get('/employee-documents/nda', fn (App\Http\Controllers\Admin\EmployeeDocumentController $controller, Illuminate\Http\Request $request) => $controller->index($request, 'nda'))->name('admin.employee-documents.nda');
+        Route::middleware(['admin.subfeature:employee_management,employee_contract'])->get('/employee-documents/contract', fn (App\Http\Controllers\Admin\EmployeeDocumentController $controller, Illuminate\Http\Request $request) => $controller->index($request, 'contract'))->name('admin.employee-documents.contract');
+        Route::middleware(['admin.subfeature:employee_management,employee_policy'])->get('/employee-documents/policy', fn (App\Http\Controllers\Admin\EmployeeDocumentController $controller, Illuminate\Http\Request $request) => $controller->index($request, 'policy'))->name('admin.employee-documents.policy');
+        Route::get('/employee-documents/signatures/{signature}/preview', [App\Http\Controllers\Admin\EmployeeDocumentController::class, 'preview'])->name('admin.employee-documents.preview');
+        Route::get('/employee-documents/{type}/employees/{employee}/preview', [App\Http\Controllers\Admin\EmployeeDocumentController::class, 'previewEmployee'])->name('admin.employee-documents.employee-preview')->where('type', 'nda|contract|policy');
 
         Route::middleware(['admin.subfeature:employee_management,dtr'])->group(function () {
         // DTR Management (Employees)
@@ -704,10 +724,19 @@ Route::middleware(['auth', 'student.not_terminated'])->group(function () {
     Route::delete('/files/{file}', [UserFileController::class, 'destroy'])->name('user.files.destroy');
 
     // Employee document requests (certificates, etc.)
+    Route::get('/payslips', [App\Http\Controllers\User\PayslipController::class, 'index'])->name('user.payslips.index');
+    Route::get('/payslips/{payslip}', [App\Http\Controllers\User\PayslipController::class, 'show'])->name('user.payslips.show');
+
     Route::get('/document-requests', [App\Http\Controllers\User\EmployeeFileRequestController::class, 'index'])->name('user.employee-file-requests.index');
     Route::post('/document-requests', [App\Http\Controllers\User\EmployeeFileRequestController::class, 'store'])->name('user.employee-file-requests.store');
     Route::get('/document-requests/{employeeFileRequest}/view', [App\Http\Controllers\User\EmployeeFileRequestController::class, 'view'])->name('user.employee-file-requests.view');
     Route::get('/document-requests/{employeeFileRequest}/download', [App\Http\Controllers\User\EmployeeFileRequestController::class, 'download'])->name('user.employee-file-requests.download');
+
+    Route::get('/documents', [App\Http\Controllers\User\EmployeeDocumentController::class, 'index'])->name('user.employee-documents.index');
+    Route::get('/documents/{type}', [App\Http\Controllers\User\EmployeeDocumentController::class, 'show'])->name('user.employee-documents.show')->where('type', 'nda|contract|policy');
+    Route::post('/documents/{type}/sign', [App\Http\Controllers\User\EmployeeDocumentController::class, 'sign'])->name('user.employee-documents.sign')->where('type', 'nda|contract|policy');
+    Route::get('/documents/{type}/pdf', [App\Http\Controllers\User\EmployeeDocumentController::class, 'generatePdf'])->name('user.employee-documents.pdf')->where('type', 'nda|contract|policy');
+    Route::get('/documents/{type}/preview', [App\Http\Controllers\User\EmployeeDocumentController::class, 'preview'])->name('user.employee-documents.preview')->where('type', 'nda|contract|policy');
 
     // Chat Routes
     Route::get('/chat/messages', [ChatController::class, 'index'])->name('chat.messages');
@@ -772,6 +801,8 @@ Route::middleware(['auth', 'student.not_terminated'])->group(function () {
     Route::post('/profile/password/change', [App\Http\Controllers\User\ProfileController::class, 'changePassword'])->name('profile.password.change');
     Route::delete('/profile/picture', [App\Http\Controllers\User\ProfileController::class, 'removeProfilePicture'])->name('profile.picture.remove');
     Route::delete('/profile/cover', [App\Http\Controllers\User\ProfileController::class, 'removeCoverPhoto'])->name('profile.cover.remove');
+    Route::post('/profile/e-signature', [App\Http\Controllers\User\ProfileController::class, 'uploadESignature'])->name('profile.e-signature.upload');
+    Route::delete('/profile/e-signature', [App\Http\Controllers\User\ProfileController::class, 'removeESignature'])->name('profile.e-signature.remove');
 
     // Feedback Routes
     Route::resource('feedback', App\Http\Controllers\User\FeedbackController::class)->names('user.feedback');

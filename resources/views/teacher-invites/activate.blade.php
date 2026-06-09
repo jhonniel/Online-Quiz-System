@@ -25,16 +25,23 @@
         <form method="POST" action="{{ url('/teacher/invite/'.$token) }}" class="mt-6 space-y-4">
             @csrf
             <div>
-                <label for="name" class="block text-sm font-medium text-gray-700 mb-1">Name</label>
-                <input id="name" name="name" type="text" required value="{{ old('name') }}" class="w-full rounded-lg border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 text-sm">
+                <label for="name" class="block text-sm font-medium text-gray-700 mb-1">Name <span class="text-red-500">*</span></label>
+                <input id="name" name="name" type="text" required aria-required="true" value="{{ old('name') }}" class="w-full rounded-lg border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 text-sm">
                 @error('name')
                     <p class="mt-1 text-xs text-red-600">{{ $message }}</p>
                 @enderror
             </div>
             <div>
-                <label for="email" class="block text-sm font-medium text-gray-700 mb-1">Email</label>
-                <input id="email" name="email" type="email" required value="{{ old('email') }}" class="w-full rounded-lg border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 text-sm">
+                <label for="email" class="block text-sm font-medium text-gray-700 mb-1">Email <span class="text-red-500">*</span></label>
+                <input id="email" name="email" type="email" required aria-required="true" value="{{ old('email') }}" class="w-full rounded-lg border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 text-sm">
                 @error('email')
+                    <p class="mt-1 text-xs text-red-600">{{ $message }}</p>
+                @enderror
+            </div>
+            <div>
+                <label for="contact_number" class="block text-sm font-medium text-gray-700 mb-1">Contact Number <span class="text-red-500">*</span></label>
+                <input id="contact_number" name="contact_number" type="tel" required aria-required="true" value="{{ old('contact_number') }}" autocomplete="tel" placeholder="Phone number" class="w-full rounded-lg border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 text-sm">
+                @error('contact_number')
                     <p class="mt-1 text-xs text-red-600">{{ $message }}</p>
                 @enderror
             </div>

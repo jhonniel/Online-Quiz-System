@@ -13,7 +13,11 @@ use App\Models\LeaveBalance;
 use App\Models\University;
 use App\Models\User;
 use App\Services\MailConfigService;
+use App\Support\DocumentExportPdfBranding;
+use App\Support\EmployeeProfileCsvImporter;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Carbon\Carbon;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
@@ -30,29 +34,110 @@ class UserController extends Controller
         return $this->index($request);
     }
 
+    public function teachersManagementExportPdf(Request $request)
+    {
+        $request->merge(['role' => 'teacher']);
+
+        return $this->exportPdf($request);
+    }
+
     public function index(Request $request)
     {
-        $isTeachersManagement = $request->routeIs('admin.teachers-management.teachers');
-        $search = trim((string) $request->input('search', ''));
-        $dbDriver = DB::connection()->getDriverName();
-        $idLikeSql = $dbDriver === 'pgsql' ? 'CAST(id AS TEXT) LIKE ?' : 'CAST(id AS CHAR) LIKE ?';
+        $context = $this->usersIndexContext($request);
         $perPage = (int) $request->input('per_page', 10);
         if (! in_array($perPage, [10, 25, 50, 100], true)) {
             $perPage = 10;
         }
 
-        $schoolId = $request->input('school');
-        $roleFilter = $isTeachersManagement ? 'teacher' : trim((string) $request->input('role', ''));
-        $departmentFilter = $isTeachersManagement ? '' : trim((string) $request->input('department', ''));
-        $schools = University::active()->orderBy('name')->get();
-        $departments = $isTeachersManagement
-            ? collect()
-            : Department::active()->orderBy('name')->get();
+        $users = $this->filteredUsersQuery($request, $context)
+            ->paginate($perPage)
+            ->appends($request->query());
 
+        return view('admin.users.index', [
+            'users' => $users,
+            'search' => $context['search'],
+            'perPage' => $perPage,
+            'schools' => $context['schools'],
+            'schoolId' => $context['schoolId'],
+            'roleFilter' => $context['roleFilter'],
+            'departmentFilter' => $context['departmentFilter'],
+            'departments' => $context['departments'],
+            'isTeachersManagement' => $context['isTeachersManagement'],
+        ]);
+    }
+
+    public function exportPdf(Request $request)
+    {
+        $context = $this->usersIndexContext($request);
+        $users = $this->filteredUsersQuery($request, $context)->get();
+        $exportMeta = $this->usersExportMeta($context);
+        $branding = DocumentExportPdfBranding::forPdf();
+
+        $pdf = Pdf::loadView('admin.users.export-pdf', [
+            'users' => $users,
+            'exportMeta' => $exportMeta,
+            'branding' => $branding,
+            'isTeachersManagement' => $context['isTeachersManagement'],
+        ])->setPaper('a4', 'landscape');
+
+        $prefix = $context['isTeachersManagement'] ? 'teachers' : 'users';
+        $filename = $prefix.'_export_'.now()->format('Y-m-d_His').'.pdf';
+
+        return $pdf->stream($filename);
+    }
+
+    /**
+     * @return array{
+     *     isTeachersManagement: bool,
+     *     search: string,
+     *     schoolId: mixed,
+     *     roleFilter: string,
+     *     departmentFilter: string,
+     *     schools: \Illuminate\Support\Collection<int, University>,
+     *     departments: \Illuminate\Support\Collection<int, Department>
+     * }
+     */
+    private function usersIndexContext(Request $request): array
+    {
+        $isTeachersManagement = $request->routeIs('admin.teachers-management.*');
+        $schoolId = $request->input('school');
+
+        return [
+            'isTeachersManagement' => $isTeachersManagement,
+            'search' => trim((string) $request->input('search', '')),
+            'schoolId' => $schoolId,
+            'roleFilter' => $isTeachersManagement ? 'teacher' : trim((string) $request->input('role', '')),
+            'departmentFilter' => $isTeachersManagement ? '' : trim((string) $request->input('department', '')),
+            'schools' => University::active()->orderBy('name')->get(),
+            'departments' => $isTeachersManagement
+                ? collect()
+                : Department::active()->orderBy('name')->get(),
+        ];
+    }
+
+    /**
+     * @param  array{
+     *     isTeachersManagement: bool,
+     *     search: string,
+     *     schoolId: mixed,
+     *     roleFilter: string,
+     *     departmentFilter: string
+     * }  $context
+     */
+    private function filteredUsersQuery(Request $request, array $context): Builder
+    {
+        $search = $context['search'];
+        $schoolId = $context['schoolId'];
+        $roleFilter = $context['roleFilter'];
+        $departmentFilter = $context['departmentFilter'];
+        $isTeachersManagement = $context['isTeachersManagement'];
+        $dbDriver = DB::connection()->getDriverName();
+        $idLikeSql = $dbDriver === 'pgsql' ? 'CAST(id AS TEXT) LIKE ?' : 'CAST(id AS CHAR) LIKE ?';
         $with = $isTeachersManagement ? ['university'] : ['university', 'department'];
 
-        $query = User::with($with)
-            ->orderBy('is_approved', 'asc') // Show pending users first
+        $query = User::query()
+            ->with($with)
+            ->orderBy('is_approved', 'asc')
             ->orderBy('created_at', 'desc');
 
         if ($schoolId !== null && $schoolId !== '') {
@@ -76,7 +161,8 @@ class UserController extends Controller
                 $q->orWhereRaw($idLikeSql, ["%{$search}%"])
                     ->orWhere('name', 'like', "%{$search}%")
                     ->orWhere('email', 'like', "%{$search}%")
-                    ->orWhere('role', 'like', "%{$search}%");
+                    ->orWhere('role', 'like', "%{$search}%")
+                    ->orWhere('contact_number', 'like', "%{$search}%");
 
                 if (! $isTeachersManagement) {
                     $q->orWhereHas('department', function ($dq) use ($search) {
@@ -92,9 +178,49 @@ class UserController extends Controller
             });
         }
 
-        $users = $query->paginate($perPage)->appends($request->query());
+        return $query;
+    }
 
-        return view('admin.users.index', compact('users', 'search', 'perPage', 'schools', 'schoolId', 'roleFilter', 'departmentFilter', 'departments', 'isTeachersManagement'));
+    /**
+     * @param  array{
+     *     isTeachersManagement: bool,
+     *     search: string,
+     *     schoolId: mixed,
+     *     roleFilter: string,
+     *     departmentFilter: string,
+     *     schools: \Illuminate\Support\Collection<int, University>,
+     *     departments: \Illuminate\Support\Collection<int, Department>
+     * }  $context
+     * @return array<string, string|null>
+     */
+    private function usersExportMeta(array $context): array
+    {
+        $schoolName = null;
+        if ($context['schoolId'] !== null && $context['schoolId'] !== '') {
+            $schoolName = University::query()->whereKey($context['schoolId'])->value('name');
+        }
+
+        $roleLabel = null;
+        if ($context['roleFilter'] !== '') {
+            $roleLabel = (new User(['role' => $context['roleFilter']]))->getRoleLabel();
+        }
+
+        $departmentLabel = null;
+        if ($context['roleFilter'] === 'employee' && $context['departmentFilter'] !== '') {
+            if ($context['departmentFilter'] === 'unassigned') {
+                $departmentLabel = 'Unassigned';
+            } else {
+                $departmentLabel = Department::query()->whereKey($context['departmentFilter'])->value('name');
+            }
+        }
+
+        return [
+            'title' => $context['isTeachersManagement'] ? 'Teachers List' : 'Users List',
+            'search' => $context['search'] !== '' ? $context['search'] : null,
+            'school' => $schoolName,
+            'role' => $roleLabel,
+            'department' => $departmentLabel,
+        ];
     }
 
     public function api(Request $request)
@@ -469,6 +595,11 @@ class UserController extends Controller
             'student_terminated' => 'nullable|boolean',
             'student_manual_merits' => 'nullable|integer|min:0|max:9999',
             'student_rules_allow_merit_automation' => 'nullable|boolean',
+            'date_hired' => 'nullable|date',
+            'tin' => 'nullable|string|max:50',
+            'sss_number' => 'nullable|string|max:50',
+            'hdmf_number' => 'nullable|string|max:50',
+            'phic_number' => 'nullable|string|max:50',
         ]);
 
         // Custom validation for new university
@@ -573,6 +704,20 @@ class UserController extends Controller
             } else {
                 $data['student_rules_merit_automation_disabled'] = ! $allowMeritAutomation;
             }
+        }
+
+        if ($request->role === 'employee') {
+            $data['date_hired'] = $request->filled('date_hired') ? $request->date_hired : null;
+            $data['tin'] = $this->nullableProfileValue($request->input('tin'));
+            $data['sss_number'] = $this->nullableProfileValue($request->input('sss_number'));
+            $data['hdmf_number'] = $this->nullableProfileValue($request->input('hdmf_number'));
+            $data['phic_number'] = $this->nullableProfileValue($request->input('phic_number'));
+        } else {
+            $data['date_hired'] = null;
+            $data['tin'] = null;
+            $data['sss_number'] = null;
+            $data['hdmf_number'] = null;
+            $data['phic_number'] = null;
         }
 
         $user->update($data);
@@ -906,5 +1051,74 @@ class UserController extends Controller
             return redirect()->back()
                 ->with('error', 'Failed to send credentials emails: '.$e->getMessage());
         }
+    }
+
+    public function importEmployeeProfile(Request $request, EmployeeProfileCsvImporter $importer)
+    {
+        $request->validate([
+            'csv_file' => 'required|file|mimes:csv,txt|max:5120',
+        ]);
+
+        try {
+            $result = $importer->import($request->file('csv_file')->getRealPath());
+        } catch (\InvalidArgumentException $e) {
+            return redirect()
+                ->route('admin.users.index')
+                ->with('error', $e->getMessage());
+        } catch (\Throwable $e) {
+            return redirect()
+                ->route('admin.users.index')
+                ->with('error', 'Failed to import employee profiles: '.$e->getMessage());
+        }
+
+        $message = "Updated {$result['updated']} employee profile(s).";
+        if ($result['skipped'] > 0) {
+            $message .= " Skipped {$result['skipped']}.";
+        }
+
+        return redirect()
+            ->route('admin.users.index')
+            ->with('success', $message)
+            ->with('import_errors', $result['errors']);
+    }
+
+    public function downloadEmployeeProfileTemplate()
+    {
+        $rows = [
+            EmployeeProfileCsvImporter::HEADERS,
+            [
+                'employee@example.com',
+                'JHONNIEL R. YGAY',
+                '2023-01-15',
+                '123-456-789-000',
+                '34-1234567-8',
+                '1212-3456-7890',
+                '12-345678901-2',
+            ],
+        ];
+
+        $filename = 'employee_profile_import_template_'.date('Y-m-d').'.csv';
+        $handle = fopen('php://temp', 'r+');
+        fwrite($handle, "\xEF\xBB\xBF");
+
+        foreach ($rows as $row) {
+            fputcsv($handle, $row);
+        }
+
+        rewind($handle);
+        $csv = stream_get_contents($handle);
+        fclose($handle);
+
+        return response($csv, 200, [
+            'Content-Type' => 'text/csv; charset=UTF-8',
+            'Content-Disposition' => 'attachment; filename="'.$filename.'"',
+        ]);
+    }
+
+    private function nullableProfileValue(mixed $value): ?string
+    {
+        $normalized = trim((string) ($value ?? ''));
+
+        return $normalized !== '' ? $normalized : null;
     }
 }

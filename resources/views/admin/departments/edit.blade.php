@@ -74,6 +74,8 @@
                     @enderror
                 </div>
 
+                @include('admin.departments.partials.job-description-field', ['jobDescriptionValue' => old('job_description', $department->job_description)])
+
                 <!-- Supervisor Name -->
                 <div class="md:col-span-2">
                     <label for="supervisor_name" class="block text-sm font-medium text-gray-700 mb-2">

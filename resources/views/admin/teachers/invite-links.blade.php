@@ -6,7 +6,7 @@
 <div class="space-y-4 px-3 sm:px-4 lg:px-6">
     <div class="bg-white border border-gray-200 rounded-xl p-4 sm:p-5">
         <h1 class="text-lg sm:text-xl font-semibold text-gray-900">Teacher Invite Links</h1>
-        <p class="text-sm text-gray-600 mt-1">Generate a link for teacher account activation. Invitees will set their own name, email, and password.</p>
+        <p class="text-sm text-gray-600 mt-1">Generate a link for teacher account activation. Invitees will set their own name, email, contact number, and password.</p>
     </div>
 
     <div class="bg-white border border-gray-200 rounded-xl p-4 sm:p-5">
@@ -56,6 +56,7 @@
                     <tr>
                         <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Link</th>
                         <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">School</th>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Contact Number</th>
                         <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
                         <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Created By</th>
                         <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Created</th>
@@ -80,6 +81,9 @@
                             <td class="px-4 py-3 text-sm text-gray-700">
                                 {{ optional($invite->university)->name ?? 'Any school' }}
                             </td>
+                            <td class="px-4 py-3 text-sm text-gray-700">
+                                {{ optional($invite->usedByUser)->contact_number ?? '—' }}
+                            </td>
                             <td class="px-4 py-3 text-sm">
                                 <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium {{ $statusClass }}">{{ $status }}</span>
                             </td>
@@ -93,7 +97,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="5" class="px-4 py-8 text-center text-sm text-gray-500">No invite links yet.</td>
+                            <td colspan="6" class="px-4 py-8 text-center text-sm text-gray-500">No invite links yet.</td>
                         </tr>
                     @endforelse
                 </tbody>

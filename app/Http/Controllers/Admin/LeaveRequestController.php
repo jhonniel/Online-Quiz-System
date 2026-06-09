@@ -154,10 +154,31 @@ class LeaveRequestController extends Controller
         $leaveRequests = $this->approvedEmployeeLeaveRequestsForExport($request, $user);
         $balanceContext = $this->buildEmployeeLeaveExportBalanceContext($leaveRequests);
         $exportRows = $this->buildEmployeeLeaveExportSummaryRows($leaveRequests, $balanceContext);
+        $exportMeta = $this->leaveRequestExportMeta($request);
         $filename = 'employee_leave_requests_approved_'.now()->format('Y-m-d_His').'.csv';
 
-        return new StreamedResponse(function () use ($exportRows) {
+        return new StreamedResponse(function () use ($exportRows, $exportMeta) {
             $out = fopen('php://output', 'w');
+            fputcsv($out, ['Approved Sick & Vacation Leave Requests']);
+            fputcsv($out, ['Generated', now()->format('M d, Y h:i A')]);
+            fputcsv($out, ['Employees', $exportRows->count()]);
+            fputcsv($out, ['Types', $exportMeta['types'] ?? 'Sick Leave & Vacation Leave']);
+            if (! empty($exportMeta['department'])) {
+                fputcsv($out, ['Department', $exportMeta['department']]);
+            }
+            if (! empty($exportMeta['employee'])) {
+                fputcsv($out, ['Employee', $exportMeta['employee']]);
+            }
+            if (! empty($exportMeta['date_from'])) {
+                fputcsv($out, ['Date From', $exportMeta['date_from']]);
+            }
+            if (! empty($exportMeta['date_to'])) {
+                fputcsv($out, ['Date To', $exportMeta['date_to']]);
+            }
+            if (! empty($exportMeta['search'])) {
+                fputcsv($out, ['Search', $exportMeta['search']]);
+            }
+            fputcsv($out, []);
             fputcsv($out, [
                 'No.',
                 'Employee',
@@ -203,6 +224,8 @@ class LeaveRequestController extends Controller
                         'employee' => $exportMeta['employee'] ?? null,
                         'search' => $exportMeta['search'] ?? null,
                         'date_range' => $exportMeta['date_range'] ?? null,
+                        'date_from' => $exportMeta['date_from'] ?? null,
+                        'date_to' => $exportMeta['date_to'] ?? null,
                     ]),
                 ]
             );
@@ -464,6 +487,8 @@ class LeaveRequestController extends Controller
             'search' => $search !== '' ? $search : null,
             'department' => $departmentName,
             'employee' => $employeeName,
+            'date_from' => $this->leaveRequestExportDateLabel($request->input('date_from')),
+            'date_to' => $this->leaveRequestExportDateLabel($request->input('date_to')),
             'date_range' => $this->leaveRequestExportDateRangeLabel($request),
         ];
     }
@@ -609,24 +634,38 @@ class LeaveRequestController extends Controller
         }
     }
 
-    private function leaveRequestExportDateRangeLabel(Request $request): ?string
+    private function leaveRequestExportDateLabel(mixed $value): ?string
     {
-        $from = trim((string) $request->input('date_from', ''));
-        $to = trim((string) $request->input('date_to', ''));
-
-        if ($from === '' && $to === '') {
+        $raw = trim((string) ($value ?? ''));
+        if ($raw === '') {
             return null;
         }
 
-        if ($from !== '' && $to !== '') {
-            return Carbon::parse($from)->format('M d, Y').' - '.Carbon::parse($to)->format('M d, Y');
+        try {
+            return Carbon::parse($raw)->format('M d, Y');
+        } catch (\Throwable) {
+            return null;
+        }
+    }
+
+    private function leaveRequestExportDateRangeLabel(Request $request): ?string
+    {
+        $from = $this->leaveRequestExportDateLabel($request->input('date_from'));
+        $to = $this->leaveRequestExportDateLabel($request->input('date_to'));
+
+        if ($from === null && $to === null) {
+            return null;
         }
 
-        if ($from !== '') {
-            return 'From '.Carbon::parse($from)->format('M d, Y');
+        if ($from !== null && $to !== null) {
+            return $from.' - '.$to;
         }
 
-        return 'Through '.Carbon::parse($to)->format('M d, Y');
+        if ($from !== null) {
+            return 'From '.$from;
+        }
+
+        return 'Through '.$to;
     }
 
     /**

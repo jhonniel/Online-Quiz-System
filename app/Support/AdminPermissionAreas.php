@@ -18,6 +18,10 @@ final class AdminPermissionAreas
     public const EMPLOYEE_FEATURES = [
         'employee_dashboard' => 'Employee Dashboard',
         'file_request' => 'File Request',
+        'payslip' => 'Payslip',
+        'employee_nda' => 'Employee NDA',
+        'employee_contract' => 'Employee Contract',
+        'employee_policy' => 'Employee Policy',
         'dtr' => 'DTR (Time Records)',
         'time_report' => 'Time Report',
         'leave_requests' => 'Leave Requests',
@@ -138,6 +142,14 @@ final class AdminPermissionAreas
     {
         return self::areas()[$key] ?? null;
     }
+
+    public const EMPLOYEE_DOCUMENT_FEATURES = [
+        'file_request',
+        'payslip',
+        'employee_nda',
+        'employee_contract',
+        'employee_policy',
+    ];
 
     public static function featureKeys(string $areaKey): array
     {

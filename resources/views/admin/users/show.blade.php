@@ -105,6 +105,37 @@
                     </div>
                 </div>
             </div>
+
+            @if($user->role === 'employee')
+            <div class="bg-white rounded-xl sm:rounded-2xl shadow border border-gray-200 p-4 sm:p-6">
+                <div class="mb-4">
+                    <h2 class="text-base sm:text-lg font-bold text-gray-900">Employee Profile</h2>
+                    <p class="text-xs sm:text-sm text-gray-500 mt-0.5">Employment and government contribution details.</p>
+                </div>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
+                    <div>
+                        <p class="text-xs font-semibold text-gray-500 uppercase tracking-wide">Date Hired</p>
+                        <p class="mt-1 text-sm font-semibold text-gray-900">{{ $user->date_hired?->format('F j, Y') ?: '—' }}</p>
+                    </div>
+                    <div>
+                        <p class="text-xs font-semibold text-gray-500 uppercase tracking-wide">TIN</p>
+                        <p class="mt-1 text-sm font-semibold text-gray-900">{{ $user->tin ?: '—' }}</p>
+                    </div>
+                    <div>
+                        <p class="text-xs font-semibold text-gray-500 uppercase tracking-wide">SSS</p>
+                        <p class="mt-1 text-sm font-semibold text-gray-900">{{ $user->sss_number ?: '—' }}</p>
+                    </div>
+                    <div>
+                        <p class="text-xs font-semibold text-gray-500 uppercase tracking-wide">HDMF</p>
+                        <p class="mt-1 text-sm font-semibold text-gray-900">{{ $user->hdmf_number ?: '—' }}</p>
+                    </div>
+                    <div>
+                        <p class="text-xs font-semibold text-gray-500 uppercase tracking-wide">PHIC</p>
+                        <p class="mt-1 text-sm font-semibold text-gray-900">{{ $user->phic_number ?: '—' }}</p>
+                    </div>
+                </div>
+            </div>
+            @endif
         </div>
 
         <!-- Sidebar -->

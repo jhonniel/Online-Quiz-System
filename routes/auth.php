@@ -40,6 +40,8 @@ Route::middleware(['auth', 'student.not_terminated'])->group(function () {
     Route::post('profile/password/change', [UserProfileController::class, 'changePassword'])->name('profile.password.change');
     Route::delete('profile/picture', [UserProfileController::class, 'removeProfilePicture'])->name('profile.picture.remove');
     Route::delete('profile/cover', [UserProfileController::class, 'removeCoverPhoto'])->name('profile.cover.remove');
+    Route::post('profile/e-signature', [UserProfileController::class, 'uploadESignature'])->name('profile.e-signature.upload');
+    Route::delete('profile/e-signature', [UserProfileController::class, 'removeESignature'])->name('profile.e-signature.remove');
     Route::get('verify-email', EmailVerificationPromptController::class)
         ->name('verification.notice');
 

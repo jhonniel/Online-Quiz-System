@@ -134,10 +134,10 @@
         </div>
 
         <form method="GET" action="{{ url('/admin/leave-requests') }}" class="space-y-4">
-            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                <div>
-                    <label for="department_id" class="block text-sm font-medium text-gray-700 mb-2">Department</label>
-                    <select name="department_id" id="department_id" class="w-full px-3 sm:px-4 py-2 text-sm sm:text-base border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+            <div class="flex flex-nowrap items-end gap-2 w-full">
+                <div class="flex-1 min-w-0 basis-0">
+                    <label for="department_id" class="block text-xs font-medium text-gray-700 mb-1">Department</label>
+                    <select name="department_id" id="department_id" class="w-full px-2 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
                         <option value="">All Departments</option>
                         @foreach($departments ?? [] as $department)
                             <option value="{{ $department->id }}" {{ request('department_id') == $department->id ? 'selected' : '' }}>
@@ -147,9 +147,9 @@
                     </select>
                 </div>
 
-                <div>
-                    <label for="status" class="block text-sm font-medium text-gray-700 mb-2">Status</label>
-                    <select name="status" id="status" class="w-full px-3 sm:px-4 py-2 text-sm sm:text-base border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                <div class="flex-1 min-w-0 basis-0">
+                    <label for="status" class="block text-xs font-medium text-gray-700 mb-1">Status</label>
+                    <select name="status" id="status" class="w-full px-2 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
                         <option value="">All Status</option>
                         <option value="pending" {{ request('status') == 'pending' ? 'selected' : '' }}>Pending</option>
                         <option value="for_more_verification" {{ request('status') == 'for_more_verification' ? 'selected' : '' }}>For More Verification</option>
@@ -158,9 +158,9 @@
                     </select>
                 </div>
 
-                <div>
-                    <label for="type" class="block text-sm font-medium text-gray-700 mb-2">Type</label>
-                    <select name="type" id="type" class="w-full px-3 sm:px-4 py-2 text-sm sm:text-base border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                <div class="flex-1 min-w-0 basis-0">
+                    <label for="type" class="block text-xs font-medium text-gray-700 mb-1">Type</label>
+                    <select name="type" id="type" class="w-full px-2 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
                         <option value="">All Types</option>
                         <option value="vacation_leave" {{ request('type') == 'vacation_leave' ? 'selected' : '' }}>Vacation Leave</option>
                         <option value="sick_leave" {{ request('type') == 'sick_leave' ? 'selected' : '' }}>Sick Leave</option>
@@ -174,9 +174,9 @@
                     </select>
                 </div>
 
-                <div>
-                    <label for="employee" class="block text-sm font-medium text-gray-700 mb-2">Employee</label>
-                    <select name="employee" id="employee" class="w-full px-3 sm:px-4 py-2 text-sm sm:text-base border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                <div class="flex-1 min-w-0 basis-0">
+                    <label for="employee" class="block text-xs font-medium text-gray-700 mb-1">Employee</label>
+                    <select name="employee" id="employee" class="w-full px-2 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
                         <option value="">All Employees</option>
                         @foreach($employees as $employee)
                             <option value="{{ $employee->id }}" {{ request('employee') == $employee->id ? 'selected' : '' }}>
@@ -186,38 +186,38 @@
                     </select>
                 </div>
 
-                <div>
-                    <label for="date_from" class="block text-sm font-medium text-gray-700 mb-2">Date From</label>
+                <div class="flex-1 min-w-0 basis-0">
+                    <label for="date_from" class="block text-xs font-medium text-gray-700 mb-1">Date From</label>
                     <input type="date"
                            name="date_from"
                            id="date_from"
                            value="{{ request('date_from') }}"
-                           class="w-full px-3 sm:px-4 py-2 text-sm sm:text-base border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                           class="w-full px-2 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
                 </div>
 
-                <div>
-                    <label for="date_to" class="block text-sm font-medium text-gray-700 mb-2">Date To</label>
+                <div class="flex-1 min-w-0 basis-0">
+                    <label for="date_to" class="block text-xs font-medium text-gray-700 mb-1">Date To</label>
                     <input type="date"
                            name="date_to"
                            id="date_to"
                            value="{{ request('date_to') }}"
-                           class="w-full px-3 sm:px-4 py-2 text-sm sm:text-base border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                           class="w-full px-2 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
                 </div>
 
-                <div>
-                    <label for="search" class="block text-sm font-medium text-gray-700 mb-2">Search</label>
+                <div class="flex-[2.5] min-w-0 basis-0">
+                    <label for="search" class="block text-xs font-medium text-gray-700 mb-1">Search</label>
                     <input type="text"
                            name="search"
                            id="search"
                            value="{{ request('search', $search ?? '') }}"
-                           placeholder="Search employee/email/type/status/reason/ID..."
+                           placeholder="Search employee, email, type, status, reason, ID..."
                            autocomplete="off"
-                           class="w-full px-3 sm:px-4 py-2 text-sm sm:text-base border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                           class="w-full px-2 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
                 </div>
 
-                <div>
-                    <label for="employee-leave-filter-submit" class="block text-sm font-medium text-gray-700 mb-2 invisible" aria-hidden="true">Filter</label>
-                    <button type="submit" id="employee-leave-filter-submit" class="w-full px-4 py-2 text-sm sm:text-base bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                <div class="shrink-0 w-24">
+                    <label for="employee-leave-filter-submit" class="block text-xs font-medium text-gray-700 mb-1 invisible" aria-hidden="true">Filter</label>
+                    <button type="submit" id="employee-leave-filter-submit" class="w-full px-3 py-1.5 text-sm whitespace-nowrap bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
                         Filter
                     </button>
                 </div>

@@ -306,6 +306,53 @@
                         $leaveBalance ? ((float) $leaveBalance->vacation_allowance + (float) $leaveBalance->sick_allowance) : ''
                     );
                 @endphp
+                <div id="employee_profile_wrapper" class="bg-white rounded-xl sm:rounded-2xl shadow-lg border border-gray-200 overflow-hidden {{ old('role', $user->role) === 'employee' ? '' : 'hidden' }}">
+                    <div class="px-6 py-4 border-b border-gray-100 bg-gray-50/80">
+                        <h2 class="text-lg font-semibold text-gray-900">Employee Profile</h2>
+                        <p class="text-sm text-gray-500 mt-0.5">Employment start date and government contribution numbers</p>
+                    </div>
+                    <div class="p-5 sm:p-6 grid grid-cols-1 sm:grid-cols-2 gap-5">
+                        <div>
+                            <label for="date_hired" class="block text-sm font-semibold text-gray-700 mb-1.5">Date Hired</label>
+                            <input type="date" name="date_hired" id="date_hired"
+                                   value="{{ old('date_hired', $user->date_hired?->format('Y-m-d')) }}"
+                                   class="block w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 text-sm @error('date_hired') border-red-500 @enderror">
+                            @error('date_hired') <p class="mt-1 text-sm text-red-600">{{ $message }}</p> @enderror
+                        </div>
+                        <div>
+                            <label for="tin" class="block text-sm font-semibold text-gray-700 mb-1.5">TIN</label>
+                            <input type="text" name="tin" id="tin" maxlength="50"
+                                   value="{{ old('tin', $user->tin) }}"
+                                   class="block w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 text-sm @error('tin') border-red-500 @enderror"
+                                   placeholder="e.g. 123-456-789-000">
+                            @error('tin') <p class="mt-1 text-sm text-red-600">{{ $message }}</p> @enderror
+                        </div>
+                        <div>
+                            <label for="sss_number" class="block text-sm font-semibold text-gray-700 mb-1.5">SSS</label>
+                            <input type="text" name="sss_number" id="sss_number" maxlength="50"
+                                   value="{{ old('sss_number', $user->sss_number) }}"
+                                   class="block w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 text-sm @error('sss_number') border-red-500 @enderror"
+                                   placeholder="e.g. 34-1234567-8">
+                            @error('sss_number') <p class="mt-1 text-sm text-red-600">{{ $message }}</p> @enderror
+                        </div>
+                        <div>
+                            <label for="hdmf_number" class="block text-sm font-semibold text-gray-700 mb-1.5">HDMF (Pag-IBIG)</label>
+                            <input type="text" name="hdmf_number" id="hdmf_number" maxlength="50"
+                                   value="{{ old('hdmf_number', $user->hdmf_number) }}"
+                                   class="block w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 text-sm @error('hdmf_number') border-red-500 @enderror"
+                                   placeholder="e.g. 1212-3456-7890">
+                            @error('hdmf_number') <p class="mt-1 text-sm text-red-600">{{ $message }}</p> @enderror
+                        </div>
+                        <div class="sm:col-span-2">
+                            <label for="phic_number" class="block text-sm font-semibold text-gray-700 mb-1.5">PHIC</label>
+                            <input type="text" name="phic_number" id="phic_number" maxlength="50"
+                                   value="{{ old('phic_number', $user->phic_number) }}"
+                                   class="block w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 text-sm @error('phic_number') border-red-500 @enderror"
+                                   placeholder="e.g. 12-345678901-2">
+                            @error('phic_number') <p class="mt-1 text-sm text-red-600">{{ $message }}</p> @enderror
+                        </div>
+                    </div>
+                </div>
                 <div id="leave_balances_wrapper" class="bg-white rounded-xl sm:rounded-2xl shadow-lg border border-gray-200 overflow-hidden {{ old('role', $user->role) === 'employee' ? '' : 'hidden' }}">
                     <div class="px-6 py-4 border-b border-gray-100 bg-gray-50/80">
                         <h2 class="text-lg font-semibold text-gray-900">Leave Credits ({{ $currentYear }})</h2>
@@ -395,6 +442,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const requiredHoursWrapper = document.getElementById('required_training_hours_wrapper');
     const studentRulesComplianceWrapper = document.getElementById('student_rules_compliance_wrapper');
     const leaveBalancesWrapper = document.getElementById('leave_balances_wrapper');
+    const employeeProfileWrapper = document.getElementById('employee_profile_wrapper');
     const departmentWrapper = document.getElementById('department_wrapper');
     const departmentSelect = document.getElementById('department_id');
     const universityRequiredIndicator = document.getElementById('university_required_indicator');
@@ -432,6 +480,11 @@ document.addEventListener('DOMContentLoaded', function() {
             leaveBalancesWrapper.classList.toggle('hidden', roleSelect.value !== 'employee');
         }
     }
+    function toggleEmployeeProfile() {
+        if (roleSelect && employeeProfileWrapper) {
+            employeeProfileWrapper.classList.toggle('hidden', roleSelect.value !== 'employee');
+        }
+    }
     function toggleDepartment() {
         if (roleSelect && departmentWrapper && departmentSelect) {
             const show = roleSelect.value === 'employee' || roleSelect.value === 'student';
@@ -460,12 +513,14 @@ document.addEventListener('DOMContentLoaded', function() {
             toggleRequiredHours();
             toggleStudentRulesCompliance();
             toggleLeaveBalances();
+            toggleEmployeeProfile();
             toggleDepartment();
             toggleUniversityRequirement();
         });
         toggleRequiredHours();
         toggleStudentRulesCompliance();
         toggleLeaveBalances();
+        toggleEmployeeProfile();
         toggleDepartment();
         toggleUniversityRequirement();
     }

@@ -117,6 +117,65 @@
                     </div>
                 </div>
 
+                <!-- E-Signature Section -->
+                <div class="mb-8">
+                    <h3 class="text-lg font-medium text-gray-900 mb-2">E-Signature</h3>
+                    <p class="text-sm text-gray-500 mb-4">Upload a PNG image of your signature. It will be stored securely and can be used on documents.</p>
+                    <div class="flex flex-col sm:flex-row sm:items-start gap-6">
+                        <div class="flex-shrink-0">
+                            @if($user->hasESignature())
+                                <div class="rounded-lg border border-gray-200 bg-gray-50 p-3 inline-block">
+                                    <img id="e-signature-preview"
+                                         src="{{ $user->getESignatureUrl() }}"
+                                         alt="E-Signature"
+                                         class="max-h-24 max-w-xs object-contain">
+                                </div>
+                            @else
+                                <div id="e-signature-placeholder"
+                                     class="w-48 h-24 rounded-lg border-2 border-dashed border-gray-300 bg-gray-50 flex items-center justify-center">
+                                    <div class="text-center text-gray-400 px-3">
+                                        <svg class="w-8 h-8 mx-auto mb-1 opacity-60" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/>
+                                        </svg>
+                                        <p class="text-xs">No e-signature</p>
+                                    </div>
+                                </div>
+                            @endif
+                        </div>
+
+                        <div class="flex flex-col space-y-2">
+                            <label for="e_signature" class="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 cursor-pointer transition-colors duration-200">
+                                <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/>
+                                </svg>
+                                Upload E-Signature
+                            </label>
+                            <input type="file"
+                                   id="e_signature"
+                                   name="e_signature"
+                                   accept="image/png,.png"
+                                   class="hidden"
+                                   onchange="previewESignature(this)">
+                            <p class="text-xs text-gray-500">PNG only, up to 1.5MB. Saves automatically when selected.</p>
+                            <p id="e-signature-status" class="text-xs text-gray-500 hidden"></p>
+                            @error('e_signature')
+                                <p class="text-sm text-red-600">{{ $message }}</p>
+                            @enderror
+
+                            @if($user->hasESignature())
+                                <button type="button"
+                                        onclick="removeESignature()"
+                                        class="inline-flex items-center px-4 py-2 border border-red-300 rounded-md shadow-sm text-sm font-medium text-red-700 bg-white hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 transition-colors duration-200">
+                                    <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                                    </svg>
+                                    Remove E-Signature
+                                </button>
+                            @endif
+                        </div>
+                    </div>
+                </div>
+
                 <!-- Basic Information -->
                 <div class="mb-8">
                     <h3 class="text-lg font-medium text-gray-900 mb-4">Basic Information</h3>
@@ -350,6 +409,104 @@ function previewProfilePicture(input) {
     }
 }
 
+const E_SIGNATURE_MAX_BYTES = 1536 * 1024;
+
+function setESignatureStatus(message, tone = 'muted') {
+    const status = document.getElementById('e-signature-status');
+    if (!status) {
+        return;
+    }
+
+    status.textContent = message;
+    status.classList.remove('hidden', 'text-gray-500', 'text-green-600', 'text-red-600');
+    status.classList.add(tone === 'success' ? 'text-green-600' : tone === 'error' ? 'text-red-600' : 'text-gray-500');
+}
+
+function renderESignaturePreview(src) {
+    const preview = document.getElementById('e-signature-preview');
+    const placeholder = document.getElementById('e-signature-placeholder');
+
+    if (preview) {
+        preview.src = src;
+        return;
+    }
+
+    if (placeholder) {
+        placeholder.outerHTML = `<div class="rounded-lg border border-gray-200 bg-gray-50 p-3 inline-block">
+            <img id="e-signature-preview" src="${src}" alt="E-Signature" class="max-h-24 max-w-xs object-contain">
+        </div>`;
+    }
+}
+
+function uploadESignatureFile(file) {
+    const formData = new FormData();
+    formData.append('e_signature', file);
+
+    setESignatureStatus('Saving e-signature...');
+
+    return fetch('{{ url("/profile/e-signature") }}', {
+        method: 'POST',
+        body: formData,
+        headers: {
+            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+            'Accept': 'application/json',
+            'X-Requested-With': 'XMLHttpRequest',
+        },
+    })
+    .then(response => response.json().then(data => ({ ok: response.ok, data })))
+    .then(({ ok, data }) => {
+        if (!ok || !data.success) {
+            const message = data.errors?.e_signature?.[0] || data.message || 'Failed to save e-signature.';
+            throw new Error(message);
+        }
+
+        if (data.e_signature_url) {
+            renderESignaturePreview(data.e_signature_url);
+        }
+
+        setESignatureStatus('E-signature saved.', 'success');
+        ToastNotification.success(data.message || 'E-signature saved successfully!');
+        return data;
+    })
+    .catch(error => {
+        setESignatureStatus(error.message || 'Failed to save e-signature.', 'error');
+        ToastNotification.error(error.message || 'Failed to save e-signature.');
+        throw error;
+    });
+}
+
+// E-Signature Preview + immediate save
+function previewESignature(input) {
+    if (!input.files || !input.files[0]) {
+        return;
+    }
+
+    const file = input.files[0];
+    const isPng = file.type === 'image/png' || file.name.toLowerCase().endsWith('.png');
+    if (!isPng) {
+        ToastNotification.error('E-signature must be a PNG file.');
+        input.value = '';
+        setESignatureStatus('E-signature must be a PNG file.', 'error');
+        return;
+    }
+
+    if (file.size > E_SIGNATURE_MAX_BYTES) {
+        ToastNotification.error('E-signature must not be larger than 1.5MB.');
+        input.value = '';
+        setESignatureStatus('E-signature must not be larger than 1.5MB.', 'error');
+        return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        renderESignaturePreview(e.target.result);
+        uploadESignatureFile(file).catch(() => {
+            input.value = '';
+        });
+    };
+    reader.readAsDataURL(file);
+}
+
 // Cover Photo Preview
 function previewCoverPhoto(input) {
     if (input.files && input.files[0]) {
@@ -401,6 +558,55 @@ function removeProfilePicture() {
     }
 }
 
+// Remove E-Signature
+function removeESignature() {
+    if (!confirm('Are you sure you want to remove your e-signature?')) {
+        return;
+    }
+
+    fetch('{{ url("/profile/e-signature") }}', {
+        method: 'DELETE',
+        headers: {
+            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+            'Content-Type': 'application/json',
+        },
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            const preview = document.getElementById('e-signature-preview');
+            if (preview) {
+                preview.closest('.rounded-lg')?.remove();
+            }
+
+            const container = document.querySelector('#e_signature')?.closest('.mb-8')?.querySelector('.flex-shrink-0');
+            if (container && !document.getElementById('e-signature-placeholder')) {
+                container.innerHTML = `<div id="e-signature-placeholder"
+                     class="w-48 h-24 rounded-lg border-2 border-dashed border-gray-300 bg-gray-50 flex items-center justify-center">
+                    <div class="text-center text-gray-400 px-3">
+                        <svg class="w-8 h-8 mx-auto mb-1 opacity-60" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/>
+                        </svg>
+                        <p class="text-xs">No e-signature</p>
+                    </div>
+                </div>`;
+            }
+
+            const removeBtn = document.querySelector('[onclick="removeESignature()"]');
+            if (removeBtn) {
+                removeBtn.remove();
+            }
+
+            document.getElementById('e_signature').value = '';
+            ToastNotification.success(data.message);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        ToastNotification.error('Failed to remove e-signature');
+    });
+}
+
 // Remove Cover Photo
 function removeCoverPhoto() {
     if (confirm('Are you sure you want to remove your cover photo?')) {
@@ -445,6 +651,12 @@ document.getElementById('profile-form').addEventListener('submit', function(e) {
     const formData = new FormData(this);
     const submitButton = document.getElementById('save-profile-btn') || this.querySelector('button[type="submit"]');
     const originalText = submitButton.innerHTML;
+    const eSignatureInput = document.getElementById('e_signature');
+
+    if (eSignatureInput?.files?.[0]) {
+        formData.set('e_signature', eSignatureInput.files[0]);
+        formData.set('e_signature_expected', '1');
+    }
 
     // Ensure _method is set for PUT request
     if (!formData.has('_method')) {

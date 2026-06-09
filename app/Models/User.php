@@ -41,12 +41,18 @@ class User extends Authenticatable
     protected $fillable = [
         'name',
         'email',
+        'contact_number',
         'password',
         'role',
         'is_active',
         'is_approved',
         'university_id',
         'department_id',
+        'date_hired',
+        'tin',
+        'sss_number',
+        'hdmf_number',
+        'phic_number',
         'status',
         'last_activity',
         'last_seen',
@@ -54,6 +60,7 @@ class User extends Authenticatable
         'evaluation_forced_at',
         'profile_picture',
         'cover_photo',
+        'e_signature_path',
         'moa_document_path',
         'moa_uploaded_at',
         'moa_reupload_allowed',
@@ -114,6 +121,7 @@ class User extends Authenticatable
         'student_terminated' => 'boolean',
         'student_absence_allowance' => 'float',
         'student_manual_merits' => 'integer',
+        'date_hired' => 'date',
         'ojt_target_end_date' => 'date',
         'ojt_requirement_met_at' => 'datetime',
         'ojt_completion_congratulations_sent_at' => 'datetime',
@@ -196,6 +204,11 @@ class User extends Authenticatable
     public function department()
     {
         return $this->belongsTo(Department::class);
+    }
+
+    public function employeeDocumentSignatures()
+    {
+        return $this->hasMany(EmployeeDocumentSignature::class);
     }
 
     public function feedbacks()
@@ -494,6 +507,16 @@ class User extends Authenticatable
     public function getCoverPhotoUrl(): string
     {
         return $this->buildStorageUrl($this->cover_photo);
+    }
+
+    public function getESignatureUrl(): string
+    {
+        return $this->buildStorageUrl($this->e_signature_path);
+    }
+
+    public function hasESignature(): bool
+    {
+        return ! empty($this->e_signature_path);
     }
 
     public function getMoaDocumentUrl(): string
@@ -871,6 +894,30 @@ class User extends Authenticatable
     public function canAccessEmployeeFeature(string $feature): bool
     {
         return $this->canAccessAdminSubFeature('employee_management', $feature);
+    }
+
+    public function canAccessAnyEmployeeDocumentFeature(): bool
+    {
+        if ($this->isSuperAdmin()) {
+            return true;
+        }
+
+        if (! $this->canAccessEmployeeManagement()) {
+            return false;
+        }
+
+        foreach (AdminPermissionAreas::EMPLOYEE_DOCUMENT_FEATURES as $feature) {
+            if ($this->canAccessEmployeeFeature($feature)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    public static function employeeDocumentsNavEnabled(): bool
+    {
+        return (string) Setting::get('employee_documents_nav_enabled', 'enabled') !== 'disabled';
     }
 
     public function canAccessStudentFeature(string $feature): bool

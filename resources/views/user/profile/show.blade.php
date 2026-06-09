@@ -100,6 +100,54 @@
                         </div>
                     </div>
                 @endif
+
+                @if($user->role === 'employee')
+                <div class="bg-gray-50 rounded-lg p-4 mb-6">
+                    <h3 class="text-sm font-medium text-gray-900 mb-3">Employment Details</h3>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
+                        <div>
+                            <p class="text-xs font-semibold text-gray-500 uppercase tracking-wide">Date Hired</p>
+                            <p class="mt-1 text-gray-900">{{ $user->date_hired?->format('F j, Y') ?: '—' }}</p>
+                        </div>
+                        <div>
+                            <p class="text-xs font-semibold text-gray-500 uppercase tracking-wide">TIN</p>
+                            <p class="mt-1 text-gray-900">{{ $user->tin ?: '—' }}</p>
+                        </div>
+                        <div>
+                            <p class="text-xs font-semibold text-gray-500 uppercase tracking-wide">SSS</p>
+                            <p class="mt-1 text-gray-900">{{ $user->sss_number ?: '—' }}</p>
+                        </div>
+                        <div>
+                            <p class="text-xs font-semibold text-gray-500 uppercase tracking-wide">HDMF</p>
+                            <p class="mt-1 text-gray-900">{{ $user->hdmf_number ?: '—' }}</p>
+                        </div>
+                        <div>
+                            <p class="text-xs font-semibold text-gray-500 uppercase tracking-wide">PHIC</p>
+                            <p class="mt-1 text-gray-900">{{ $user->phic_number ?: '—' }}</p>
+                        </div>
+                    </div>
+                </div>
+                @endif
+
+                <!-- E-Signature -->
+                <div class="bg-gray-50 rounded-lg p-4 mb-6">
+                    <h3 class="text-sm font-medium text-gray-900 mb-3">E-Signature</h3>
+                    @if($user->hasESignature())
+                        <div class="inline-block rounded-lg border border-gray-200 bg-white p-4">
+                            <img src="{{ $user->getESignatureUrl() }}"
+                                 alt="E-Signature"
+                                 class="max-h-28 max-w-sm object-contain">
+                        </div>
+                    @else
+                        <div class="text-center text-gray-500 py-4">
+                            <svg class="w-8 h-8 mx-auto mb-2 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/>
+                            </svg>
+                            <p class="text-sm">No e-signature uploaded</p>
+                            <a href="{{ url('/profile/edit') }}" class="text-sm text-indigo-600 hover:text-indigo-800 mt-1 inline-block">Upload on Edit Profile</a>
+                        </div>
+                    @endif
+                </div>
             </div>
 
             @if($user->canAccessQrCode())

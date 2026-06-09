@@ -7,6 +7,15 @@
         ? 'Manage teacher accounts and invite links'
         : 'Manage system users, roles, and permissions';
     $usersIndexUrl = $isTeacherView ? url('/admin/teachers-management/teachers') : url('/admin/users');
+    $usersExportQuery = array_filter([
+        'search' => request('search', $search ?? ''),
+        'school' => $schoolId ?? '',
+        'role' => $isTeacherView ? '' : ($roleFilter ?? ''),
+        'department' => (!$isTeacherView && ($roleFilter ?? '') === 'employee') ? ($departmentFilter ?? '') : '',
+    ], fn ($value) => $value !== null && $value !== '');
+    $usersExportPdfUrl = $isTeacherView
+        ? route('admin.teachers-management.export-pdf', $usersExportQuery)
+        : route('admin.users.export-pdf', $usersExportQuery);
 @endphp
 
 @section('page-title', $managementTitle)
@@ -86,6 +95,17 @@
         </div>
     @endif
 
+    @if(session('import_errors') && count(session('import_errors')) > 0)
+        <div class="bg-amber-50 border border-amber-200 text-amber-900 px-4 py-3 rounded-lg text-sm sm:text-base" role="alert">
+            <p class="font-medium mb-2">Import warnings</p>
+            <ul class="list-disc list-inside space-y-1">
+                @foreach(session('import_errors') as $error)
+                    <li>{{ $error }}</li>
+                @endforeach
+            </ul>
+        </div>
+    @endif
+
     <!-- Quick Summary -->
     <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 flex-shrink-0">
         <div class="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
@@ -101,6 +121,41 @@
             <p class="mt-1 text-2xl font-semibold text-amber-700">{{ $users->getCollection()->where('is_approved', false)->count() }}</p>
         </div>
     </div>
+
+    @if(!$isTeacherView)
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-4 sm:p-5 flex-shrink-0">
+        <div class="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
+            <div class="min-w-0">
+                <h2 class="text-base font-semibold text-gray-900">Import Employee Profile</h2>
+                <p class="mt-1 text-sm text-gray-600">
+                    Upload a CSV to set employee date hired and government contribution numbers (TIN, SSS, HDMF, PHIC).
+                    Employees are matched by email or name.
+                </p>
+                <p class="mt-2 text-xs text-gray-500">
+                    Columns: email, employee_name, date_hired, tin, sss, hdmf, phic
+                </p>
+            </div>
+            <div class="flex flex-col sm:flex-row gap-2 shrink-0">
+                <a href="{{ route('admin.users.employee-profile-template') }}"
+                   class="inline-flex items-center justify-center px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 bg-white hover:bg-gray-50">
+                    Download Template
+                </a>
+            </div>
+        </div>
+        <form action="{{ route('admin.users.import-employee-profile') }}" method="POST" enctype="multipart/form-data" class="mt-4 flex flex-col sm:flex-row sm:items-end gap-3">
+            @csrf
+            <div class="flex-1">
+                <label for="employee_profile_csv" class="block text-sm font-medium text-gray-700 mb-1">CSV File</label>
+                <input type="file" name="csv_file" id="employee_profile_csv" accept=".csv,text/csv" required
+                       class="block w-full text-sm text-gray-700 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-medium file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100">
+                @error('csv_file')<p class="mt-1 text-sm text-red-600">{{ $message }}</p>@enderror
+            </div>
+            <button type="submit" class="inline-flex items-center justify-center px-4 py-2 rounded-lg text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700">
+                Import Employee Profiles
+            </button>
+        </form>
+    </div>
+    @endif
 
     <!-- Search and Filter Bar -->
     <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-4 flex-shrink-0">
@@ -225,6 +280,15 @@
                 @endif
             @endif
             <div class="flex items-center gap-2 flex-shrink-0 lg:ml-auto">
+                <a href="{{ $usersExportPdfUrl }}"
+                   target="_blank"
+                   rel="noopener noreferrer"
+                   class="inline-flex items-center justify-center gap-1.5 rounded-lg border border-transparent px-4 py-2 text-sm font-medium text-white shadow-sm bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 transition-colors">
+                    <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"/>
+                    </svg>
+                    <span>Export PDF</span>
+                </a>
                 <button id="send-credentials-btn" type="button" disabled
                         class="inline-flex items-center justify-center gap-1.5 rounded-lg border border-transparent px-4 py-2 text-sm font-medium text-white shadow-sm bg-teal-600 hover:bg-teal-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-teal-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
                     <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">

@@ -58,10 +58,16 @@
                     <dd class="text-gray-900 text-right">{{ $verification->metadata['filters']['employee'] }}</dd>
                 </div>
                 @endif
-                @if(!empty($verification->metadata['filters']['date_range']))
+                @if(!empty($verification->metadata['filters']['date_from']))
                 <div class="flex justify-between gap-4 border-b border-gray-100 pb-2">
-                    <dt class="text-gray-500">Date Range</dt>
-                    <dd class="text-gray-900 text-right">{{ $verification->metadata['filters']['date_range'] }}</dd>
+                    <dt class="text-gray-500">Date From</dt>
+                    <dd class="text-gray-900 text-right">{{ $verification->metadata['filters']['date_from'] }}</dd>
+                </div>
+                @endif
+                @if(!empty($verification->metadata['filters']['date_to']))
+                <div class="flex justify-between gap-4 border-b border-gray-100 pb-2">
+                    <dt class="text-gray-500">Date To</dt>
+                    <dd class="text-gray-900 text-right">{{ $verification->metadata['filters']['date_to'] }}</dd>
                 </div>
                 @endif
             </dl>

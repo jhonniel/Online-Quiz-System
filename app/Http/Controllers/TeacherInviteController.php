@@ -81,12 +81,14 @@ class TeacherInviteController extends Controller
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'string', 'email', 'max:255', 'unique:users,email'],
+            'contact_number' => ['required', 'string', 'max:50'],
             'password' => ['required', 'string', 'min:8', 'confirmed'],
         ]);
 
         $user = User::create([
             'name' => $validated['name'],
             'email' => $validated['email'],
+            'contact_number' => $validated['contact_number'],
             'password' => Hash::make($validated['password']),
             'role' => 'teacher',
             'university_id' => $invite->university_id,

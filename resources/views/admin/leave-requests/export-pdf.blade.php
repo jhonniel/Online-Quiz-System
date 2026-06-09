@@ -4,23 +4,31 @@
     <meta charset="utf-8">
     <title>Approved Employee Leave Requests</title>
     <style>
-        @page { margin: 12mm 10mm {{ !empty($includeVerificationQr) ? '28mm' : '12mm' }} 10mm; }
+        @page { margin: 24mm 10mm {{ !empty($includeVerificationQr) ? '24mm' : '14mm' }} 10mm; }
         body { font-family: DejaVu Sans, sans-serif; font-size: 9px; color: #111827; margin: 0; padding: 0; }
-        .brand-header { border-bottom: 1px solid #E5E7EB; margin: 0 0 8px 0; padding: 0 0 6px 0; }
-        .brand-inner { width: 100%; box-sizing: border-box; }
+        header { position: fixed; top: -20mm; left: 0; right: 0; height: 22mm; border-bottom: 1px solid #E5E7EB; }
+        footer { position: fixed; left: 0; right: 0; border-top: 1px solid #E5E7EB; color: #4B5563; font-size: 8px;
+            @if(!empty($includeVerificationQr))
+                bottom: -20mm; height: 22mm;
+            @else
+                bottom: -10mm; height: 10mm;
+            @endif
+        }
+        .header-inner, .footer-inner { width: 100%; box-sizing: border-box; }
+        .header-inner { padding: 0; }
+        .footer-inner { padding: {{ !empty($includeVerificationQr) ? '4px 0 0' : '3px 0 0' }}; }
         .brand-table { width: 100%; border-collapse: collapse; }
         .brand-logo-cell { width: 58px; vertical-align: top; padding: 0 8px 0 0; }
         .brand-text-cell { vertical-align: top; }
         .brand-address-cell { vertical-align: top; padding: 0; }
-        .brand-logo { width: 52px; height: 52px; object-fit: contain; display: block; }
-        .system-name { font-size: 15px; font-weight: bold; margin: 0; padding: 0; color: #111827; line-height: 1.2; }
-        .system-address { font-size: 9px; color: #4B5563; line-height: 1.35; margin: 2px 0 0 0; padding: 0; }
-        .verify-footer { position: fixed; bottom: -22mm; left: 0; right: 0; height: 20mm; border-top: 1px solid #E5E7EB; color: #4B5563; font-size: 8px; }
-        .verify-inner { width: 100%; padding: 4px 0 0; box-sizing: border-box; }
+        .brand-logo { width: 48px; height: 48px; object-fit: contain; display: block; }
+        .system-name { font-size: 14px; font-weight: bold; margin: 0; padding: 0; color: #111827; line-height: 1.2; }
+        .system-address { font-size: 8px; color: #4B5563; line-height: 1.3; margin: 2px 0 0 0; padding: 0; }
         .verify-table { width: 100%; border-collapse: collapse; }
-        .verify-qr { width: 72px; height: 72px; }
+        .verify-qr { width: 64px; height: 64px; }
         .verify-title { font-size: 9px; font-weight: bold; color: #111827; margin: 0 0 2px 0; }
         .verify-ref { font-family: DejaVu Sans Mono, monospace; font-size: 8px; color: #4338CA; margin: 0; }
+        .footer-meta { font-size: 8px; color: #6B7280; margin: 0; }
         h1 { font-size: 13px; margin: 0 0 4px 0; }
         .meta { font-size: 8px; color: #4b5563; margin-bottom: 8px; line-height: 1.4; }
         table.data-table { width: 100%; border-collapse: collapse; }
@@ -31,8 +39,8 @@
     </style>
 </head>
 <body>
-    <header class="brand-header">
-        <div class="brand-inner">
+    <header>
+        <div class="header-inner">
             <table class="brand-table">
                 <tr>
                     @if(!empty($branding['system_logo_data_uri']))
@@ -55,16 +63,16 @@
         </div>
     </header>
 
-    @if(!empty($includeVerificationQr))
-        <footer class="verify-footer">
-            <div class="verify-inner">
+    <footer>
+        <div class="footer-inner">
+            @if(!empty($includeVerificationQr))
                 <table class="verify-table">
                     <tr>
-                        <td style="width: 78px; vertical-align: middle;">
+                        <td style="width: 70px; vertical-align: middle;">
                             @if(!empty($verificationQrDataUri))
                                 <img src="{{ $verificationQrDataUri }}" alt="Verification QR" class="verify-qr">
                             @elseif(!empty($verificationQrSvg))
-                                <div class="verify-qr" style="width: 72px; height: 72px; overflow: hidden;">
+                                <div class="verify-qr" style="width: 64px; height: 64px; overflow: hidden;">
                                     {!! $verificationQrSvg !!}
                                 </div>
                             @endif
@@ -72,13 +80,17 @@
                         <td style="vertical-align: middle;">
                             <p class="verify-title">Scan to verify this document is authentic</p>
                             <p class="verify-ref">Reference: {{ $verification->reference_code ?? '—' }}</p>
-                            <p style="margin: 2px 0 0; font-size: 7px;">Generated {{ now()->format('M d, Y h:i A') }} • {{ $branding['system_name'] ?? 'System' }}</p>
+                            <p class="footer-meta">Generated {{ now()->format('M d, Y h:i A') }} • {{ $branding['system_name'] ?? 'System' }} • Page <span class="page"></span> of <span class="topage"></span></p>
                         </td>
                     </tr>
                 </table>
-            </div>
-        </footer>
-    @endif
+            @else
+                <p class="footer-meta">
+                    Generated {{ now()->format('M d, Y h:i A') }} • {{ $branding['system_name'] ?? 'System' }} • Page <span class="page"></span> of <span class="topage"></span>
+                </p>
+            @endif
+        </div>
+    </footer>
 
     <h1>Approved Sick &amp; Vacation Leave Requests</h1>
     <div class="meta">
@@ -93,8 +105,11 @@
         @if(!empty($exportMeta['employee']))
             | Employee: {{ $exportMeta['employee'] }}
         @endif
-        @if(!empty($exportMeta['date_range']))
-            | Date Range: {{ $exportMeta['date_range'] }}
+        @if(!empty($exportMeta['date_from']))
+            | Date From: {{ $exportMeta['date_from'] }}
+        @endif
+        @if(!empty($exportMeta['date_to']))
+            | Date To: {{ $exportMeta['date_to'] }}
         @endif
         @if(!empty($exportMeta['search']))
             | Search: "{{ $exportMeta['search'] }}"

@@ -379,6 +379,83 @@
         </div>
         @endif
 
+        <!-- Employee Documents -->
+        @if(auth()->user()->canAccessAnyEmployeeDocumentFeature())
+        <div class="mb-6" x-data="{
+            open: (localStorage.getItem('nav-employee-documents') || 'true') === 'true',
+            toggle() {
+                this.open = !this.open;
+                localStorage.setItem('nav-employee-documents', this.open);
+            }
+        }">
+            <button @click="toggle()"
+                    class="w-full flex items-center justify-between px-3 py-2 text-xs font-semibold text-gray-400 uppercase tracking-wider hover:text-gray-300 transition-opacity duration-300"
+                    :class="sidebarCollapsed ? 'opacity-0 h-0 overflow-hidden pointer-events-none' : 'opacity-100'">
+                <span>Employee Documents</span>
+                <svg class="w-4 h-4 transition-transform duration-200" :class="{ 'rotate-180': open }" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                </svg>
+            </button>
+            <div class="space-y-1" x-show="sidebarCollapsed ? true : open" x-transition:enter="transition ease-out duration-100" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100" x-transition:leave="transition ease-in duration-75" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0">
+                @if(auth()->user()->canAccessEmployeeFeature('file_request'))
+                <a href="{{ url('/admin/file-request') }}"
+                   class="flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors duration-200 {{ request()->routeIs('admin.file-request.*') ? 'bg-indigo-700 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white' }}"
+                   :class="sidebarCollapsed ? 'justify-center' : ''"
+                   :title="sidebarCollapsed ? 'File Request' : ''">
+                    <svg class="h-5 w-5 flex-shrink-0" :class="sidebarCollapsed ? '' : 'mr-3'" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                    </svg>
+                    <span class="transition-opacity duration-300" :class="sidebarCollapsed ? 'opacity-0 w-0 overflow-hidden' : 'opacity-100'">File Request</span>
+                </a>
+                @endif
+                @if(auth()->user()->canAccessEmployeeFeature('payslip'))
+                <a href="{{ url('/admin/payslip') }}"
+                   class="flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors duration-200 {{ request()->routeIs('admin.payslip.*') ? 'bg-indigo-700 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white' }}"
+                   :class="sidebarCollapsed ? 'justify-center' : ''"
+                   :title="sidebarCollapsed ? 'Payslip' : ''">
+                    <svg class="h-5 w-5 flex-shrink-0" :class="sidebarCollapsed ? '' : 'mr-3'" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8V6m0 12v-2m9-4a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                    </svg>
+                    <span class="transition-opacity duration-300" :class="sidebarCollapsed ? 'opacity-0 w-0 overflow-hidden' : 'opacity-100'">Payslip</span>
+                </a>
+                @endif
+                @if(auth()->user()->canAccessEmployeeFeature('employee_nda'))
+                <a href="{{ url('/admin/employee-documents/nda') }}"
+                   class="flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors duration-200 {{ request()->routeIs('admin.employee-documents.nda') ? 'bg-indigo-700 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white' }}"
+                   :class="sidebarCollapsed ? 'justify-center' : ''"
+                   :title="sidebarCollapsed ? 'NDA' : ''">
+                    <svg class="h-5 w-5 flex-shrink-0" :class="sidebarCollapsed ? '' : 'mr-3'" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                    </svg>
+                    <span class="transition-opacity duration-300" :class="sidebarCollapsed ? 'opacity-0 w-0 overflow-hidden' : 'opacity-100'">NDA</span>
+                </a>
+                @endif
+                @if(auth()->user()->canAccessEmployeeFeature('employee_contract'))
+                <a href="{{ url('/admin/employee-documents/contract') }}"
+                   class="flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors duration-200 {{ request()->routeIs('admin.employee-documents.contract') ? 'bg-indigo-700 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white' }}"
+                   :class="sidebarCollapsed ? 'justify-center' : ''"
+                   :title="sidebarCollapsed ? 'Contract' : ''">
+                    <svg class="h-5 w-5 flex-shrink-0" :class="sidebarCollapsed ? '' : 'mr-3'" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                    </svg>
+                    <span class="transition-opacity duration-300" :class="sidebarCollapsed ? 'opacity-0 w-0 overflow-hidden' : 'opacity-100'">Contract</span>
+                </a>
+                @endif
+                @if(auth()->user()->canAccessEmployeeFeature('employee_policy'))
+                <a href="{{ url('/admin/employee-documents/policy') }}"
+                   class="flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors duration-200 {{ request()->routeIs('admin.employee-documents.policy') ? 'bg-indigo-700 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white' }}"
+                   :class="sidebarCollapsed ? 'justify-center' : ''"
+                   :title="sidebarCollapsed ? 'Policy' : ''">
+                    <svg class="h-5 w-5 flex-shrink-0" :class="sidebarCollapsed ? '' : 'mr-3'" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                    </svg>
+                    <span class="transition-opacity duration-300" :class="sidebarCollapsed ? 'opacity-0 w-0 overflow-hidden' : 'opacity-100'">Policy</span>
+                </a>
+                @endif
+            </div>
+        </div>
+        @endif
+
         <!-- Employee Management -->
         @if(auth()->user()->canAccessAnyAdminSubFeature('employee_management'))
         <div class="mb-6" x-data="{
@@ -407,19 +484,6 @@
                     </svg>
                     <span class="transition-opacity duration-300" :class="sidebarCollapsed ? 'opacity-0 w-0 overflow-hidden' : 'opacity-100'">
                         Employee Dashboard
-                    </span>
-                </a>
-                @endif
-                @if(auth()->user()->canAccessEmployeeFeature('file_request'))
-                <a href="{{ url('/admin/file-request') }}"
-                   class="flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors duration-200 {{ request()->routeIs('admin.file-request.*') ? 'bg-indigo-700 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white' }}"
-                   :class="sidebarCollapsed ? 'justify-center' : ''"
-                   :title="sidebarCollapsed ? 'File Request' : ''">
-                    <svg class="h-5 w-5 flex-shrink-0" :class="sidebarCollapsed ? '' : 'mr-3'" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
-                    </svg>
-                    <span class="transition-opacity duration-300" :class="sidebarCollapsed ? 'opacity-0 w-0 overflow-hidden' : 'opacity-100'">
-                        File Request
                     </span>
                 </a>
                 @endif

@@ -1,0 +1,188 @@
+<?php
+
+namespace App\Http\Controllers\Admin;
+
+use App\Http\Controllers\Controller;
+use App\Models\EmployeeDocumentSignature;
+use App\Models\User;
+use App\Support\EmployeeSampleDocument;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
+
+class EmployeeDocumentController extends Controller
+{
+    public function index(Request $request, string $type)
+    {
+        abort_unless(EmployeeSampleDocument::isValidType($type), 404);
+        $this->authorizeDocumentType($type);
+
+        $search = trim((string) $request->query('search', ''));
+        $status = (string) $request->query('status', '');
+
+        $query = User::query()
+            ->where('role', 'employee')
+            ->with([
+                'department:id,name',
+                'employeeDocumentSignatures' => fn ($signatureQuery) => $signatureQuery->where('document_type', $type),
+            ]);
+
+        $this->applyEmployeeScope($query);
+
+        if ($search !== '') {
+            $query->where(function ($userQuery) use ($search) {
+                $userQuery->where('name', 'like', "%{$search}%")
+                    ->orWhere('email', 'like', "%{$search}%");
+            });
+        }
+
+        if ($status === 'signed') {
+            $query->whereHas('employeeDocumentSignatures', function ($signatureQuery) use ($type) {
+                $signatureQuery->where('document_type', $type)
+                    ->whereNotNull('signed_at')
+                    ->whereNotNull('signed_document_path')
+                    ->where('signed_document_path', '!=', '');
+            });
+        } elseif ($status === 'pending') {
+            $query->whereDoesntHave('employeeDocumentSignatures', function ($signatureQuery) use ($type) {
+                $signatureQuery->where('document_type', $type)
+                    ->whereNotNull('signed_at')
+                    ->whereNotNull('signed_document_path')
+                    ->where('signed_document_path', '!=', '');
+            });
+        }
+
+        $employees = $query
+            ->orderBy('name')
+            ->paginate(20)
+            ->appends($request->query());
+
+        return view('admin.employee-documents.index', [
+            'type' => $type,
+            'label' => EmployeeSampleDocument::label($type),
+            'title' => EmployeeSampleDocument::title($type),
+            'employees' => $employees,
+            'search' => $search,
+            'status' => $status,
+        ]);
+    }
+
+    public function preview(EmployeeDocumentSignature $signature)
+    {
+        $this->authorizeDocumentType($signature->document_type);
+        $signature->load('user');
+        abort_unless($signature->user?->role === 'employee', 404);
+        abort_unless($this->canAccessEmployee($signature->user), 403);
+        abort_unless($signature->isSigned(), 404);
+
+        return $this->streamStoredPdf(
+            (string) $signature->signed_document_path,
+            (string) ($signature->storage_disk ?? ''),
+            'employee-'.$signature->document_type.'-signed.pdf'
+        );
+    }
+
+    public function previewEmployee(Request $request, string $type, User $employee)
+    {
+        abort_unless(EmployeeSampleDocument::isValidType($type), 404);
+        $this->authorizeDocumentType($type);
+        abort_unless($employee->role === 'employee', 404);
+        abort_unless($this->canAccessEmployee($employee), 403);
+
+        $employee->loadMissing('department');
+
+        $signature = EmployeeDocumentSignature::query()
+            ->where('user_id', $employee->id)
+            ->where('document_type', $type)
+            ->first();
+
+        if ($signature?->isSigned()) {
+            return $this->streamStoredPdf(
+                (string) $signature->signed_document_path,
+                (string) ($signature->storage_disk ?? ''),
+                'employee-'.$type.'-signed.pdf'
+            );
+        }
+
+        $pdfBinary = EmployeeSampleDocument::renderPdfBinary($employee, $type, null);
+        $filename = EmployeeSampleDocument::pdfFilename($type, false);
+
+        return response($pdfBinary, 200, [
+            'Content-Type' => 'application/pdf',
+            'Content-Disposition' => 'inline; filename="'.$filename.'"',
+        ]);
+    }
+
+    private function authorizeDocumentType(string $type): void
+    {
+        $feature = match ($type) {
+            'nda' => 'employee_nda',
+            'contract' => 'employee_contract',
+            'policy' => 'employee_policy',
+            default => null,
+        };
+
+        abort_unless($feature !== null, 404);
+        abort_unless($this->requireAuthUser()->canAccessEmployeeFeature($feature), 403);
+    }
+
+    private function canAccessEmployee(?User $employee): bool
+    {
+        if (! $employee || $employee->role !== 'employee') {
+            return false;
+        }
+
+        $allowedDepartmentIds = $this->requireAuthUser()->getAllowedDepartmentIds();
+        if ($allowedDepartmentIds === null) {
+            return true;
+        }
+
+        return $employee->department_id === null || in_array($employee->department_id, $allowedDepartmentIds, true);
+    }
+
+    private function applyEmployeeScope($query): void
+    {
+        $allowedDepartmentIds = $this->requireAuthUser()->getAllowedDepartmentIds();
+        if ($allowedDepartmentIds !== null) {
+            $query->where(function ($q) use ($allowedDepartmentIds) {
+                $q->whereIn('department_id', $allowedDepartmentIds)
+                    ->orWhereNull('department_id');
+            });
+        }
+    }
+
+    private function streamStoredPdf(string $path, string $preferredDisk, string $filename)
+    {
+        $disk = $this->resolveDiskForPath($path, $preferredDisk);
+        abort_if($disk === null, 404);
+
+        $contents = Storage::disk($disk)->get($path);
+        abort_if(! is_string($contents), 404);
+
+        return response($contents, 200, [
+            'Content-Type' => 'application/pdf',
+            'Content-Disposition' => 'inline; filename="'.$filename.'"',
+        ]);
+    }
+
+    private function resolveDiskForPath(string $path, string $preferredDisk = ''): ?string
+    {
+        $candidateDisks = array_values(array_unique(array_filter([
+            $preferredDisk,
+            'digitalocean',
+            'public',
+            'local',
+        ])));
+
+        foreach ($candidateDisks as $disk) {
+            try {
+                if (Storage::disk($disk)->exists($path)) {
+                    return $disk;
+                }
+            } catch (\Throwable) {
+                continue;
+            }
+        }
+
+        return null;
+    }
+}

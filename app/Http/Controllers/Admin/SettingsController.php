@@ -257,6 +257,7 @@ class SettingsController extends Controller
         $hiringApplicationPublicAccessSetting = Setting::where('key', 'hiring_application_public_access')->first();
         $hiringApplicationUrlSetting = Setting::where('key', 'hiring_application_url')->first();
         $fileStorageStudentAccessSetting = Setting::where('key', 'file_storage_student_access')->first();
+        $employeeDocumentsNavSetting = Setting::where('key', 'employee_documents_nav_enabled')->first();
 
         // Set hiring process configuration values
         $settings['hiring_process_enabled'] = ($hiringProcessEnabledSetting && $hiringProcessEnabledSetting->value !== null && trim($hiringProcessEnabledSetting->value) !== '') ? $hiringProcessEnabledSetting->value : 'enabled';
@@ -273,6 +274,7 @@ class SettingsController extends Controller
         $privacyPolicyPdfSetting = Setting::where('key', 'privacy_policy_pdf')->first();
         $settings['privacy_policy_pdf'] = ($privacyPolicyPdfSetting && $privacyPolicyPdfSetting->value !== null && trim($privacyPolicyPdfSetting->value) !== '') ? $privacyPolicyPdfSetting->value : null;
         $settings['file_storage_student_access'] = ($fileStorageStudentAccessSetting && $fileStorageStudentAccessSetting->value !== null && trim($fileStorageStudentAccessSetting->value) !== '') ? $fileStorageStudentAccessSetting->value : 'disabled';
+        $settings['employee_documents_nav_enabled'] = ($employeeDocumentsNavSetting && $employeeDocumentsNavSetting->value !== null && trim($employeeDocumentsNavSetting->value) !== '') ? $employeeDocumentsNavSetting->value : 'enabled';
 
         // Debug: Log what we're passing to the view - this will help us see what's happening
         \Log::info('Settings Controller - Final values being passed to view', [
@@ -536,6 +538,7 @@ class SettingsController extends Controller
             'hiring_tor_pdf' => 'nullable|file|mimes:pdf|max:10240',
             'privacy_policy_pdf' => 'nullable|file|mimes:pdf|max:10240',
             'file_storage_student_access' => 'nullable|string|in:enabled,disabled',
+            'employee_documents_nav_enabled' => 'nullable|string|in:enabled,disabled',
             'overtime_months_credited' => 'nullable|integer|in:12,9,6,3,1',
             'ojt_total_slots' => 'nullable|integer|min:0|max:1000000',
             'leave_immediate_supervisor' => 'nullable|string|max:255',
@@ -705,6 +708,9 @@ class SettingsController extends Controller
         // Handle File Storage student access
         $fileStorageStudentAccess = $request->file_storage_student_access ?? 'disabled';
         Setting::set('file_storage_student_access', $fileStorageStudentAccess, 'text', 'File Storage access for students (enabled, disabled)');
+
+        $employeeDocumentsNavEnabled = $request->employee_documents_nav_enabled ?? 'enabled';
+        Setting::set('employee_documents_nav_enabled', $employeeDocumentsNavEnabled, 'text', 'Show Documents section in employee navigation (enabled, disabled)');
 
         $minimumQuizScore = $request->minimum_quiz_score ?? '';
         Setting::set('minimum_quiz_score', $minimumQuizScore !== '' ? (int) $minimumQuizScore : 70, 'number', 'Minimum quiz score percentage required to pass');
@@ -1086,6 +1092,7 @@ class SettingsController extends Controller
         Cache::forget('setting.hiring_tor_pdf');
         Cache::forget('setting.privacy_policy_pdf');
         Cache::forget('setting.file_storage_student_access');
+        Cache::forget('setting.employee_documents_nav_enabled');
         foreach ([
             'sayit_image_driver',
             'sayit_composer_ai_image_enabled',

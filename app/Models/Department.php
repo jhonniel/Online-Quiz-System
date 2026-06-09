@@ -11,6 +11,7 @@ class Department extends Model
         'name',
         'code',
         'description',
+        'job_description',
         'supervisor_name',
         'is_active',
     ];
@@ -33,6 +34,40 @@ class Department extends Model
     public function scopeActive($query)
     {
         return $query->where('is_active', true);
+    }
+
+    /**
+     * @return list<string>
+     */
+    public function jobDescriptionBullets(): array
+    {
+        if (! $this->job_description) {
+            return [];
+        }
+
+        $lines = preg_split('/\R/u', (string) $this->job_description) ?: [];
+
+        $bullets = [];
+        foreach ($lines as $line) {
+            $line = trim($line);
+            if ($line === '') {
+                continue;
+            }
+
+            $line = preg_replace('/^[\-*•]\s*/u', '', $line) ?? $line;
+            $line = trim($line);
+
+            if ($line !== '') {
+                $bullets[] = $line;
+            }
+        }
+
+        return $bullets;
+    }
+
+    public function hasJobDescription(): bool
+    {
+        return count($this->jobDescriptionBullets()) > 0;
     }
 }
 

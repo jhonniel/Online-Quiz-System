@@ -3,11 +3,14 @@
 namespace App\Http\Controllers\User;
 
 use App\Http\Controllers\Controller;
+use App\Models\User;
 use App\Support\UserThemeColor;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Storage;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use Illuminate\Validation\ValidationException;
 
 class ProfileController extends Controller
 {
@@ -43,6 +46,7 @@ class ProfileController extends Controller
                 'bio' => 'nullable|string|max:1000',
                 'profile_picture' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:2048',
                 'cover_photo' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:5120', // 5MB max for cover photo
+                'e_signature' => 'nullable|file|mimes:png|max:1536',
             ];
 
             if ($user->canCustomizeThemeColor()) {
@@ -56,6 +60,8 @@ class ProfileController extends Controller
                 'cover_photo.image' => 'Cover photo must be an image file.',
                 'cover_photo.mimes' => 'Cover photo must be a JPEG, PNG, JPG, GIF, or WEBP file.',
                 'cover_photo.max' => 'Cover photo must not be larger than 5MB.',
+                'e_signature.mimes' => 'E-signature must be a PNG file.',
+                'e_signature.max' => 'E-signature must not be larger than 1.5MB.',
                 'theme_color.regex' => 'Theme color must be a valid hex color (e.g. #4F46E5).',
             ]);
 
@@ -76,6 +82,7 @@ class ProfileController extends Controller
             $assetRoot = $spacesConfigured ? trim(env('DIGITALOCEAN_SPACES_ROOT_PATH', ''), '/') : '';
             $profileDir = $assetRoot ? $assetRoot . '/profile-pictures' : 'profile-pictures';
             $coverDir = $assetRoot ? $assetRoot . '/cover-photos' : 'cover-photos';
+            $eSignatureDir = $assetRoot ? $assetRoot . '/e-signatures' : 'e-signatures';
 
             // Handle profile picture upload (stored on Spaces when configured)
             if ($request->hasFile('profile_picture')) {
@@ -121,7 +128,23 @@ class ProfileController extends Controller
                 $data['cover_photo'] = $coverPhotoPath;
             }
 
+            if ($request->boolean('e_signature_expected') && ! $request->hasFile('e_signature')) {
+                throw ValidationException::withMessages([
+                    'e_signature' => [$this->missingUploadMessage('e_signature')],
+                ]);
+            }
+
+            if ($request->hasFile('e_signature')) {
+                $data['e_signature_path'] = $this->storeESignatureFile(
+                    $user,
+                    $request->file('e_signature'),
+                    $assetDisk,
+                    $eSignatureDir
+                );
+            }
+
             $user->update($data);
+            $user->refresh();
 
             // Check if request expects JSON response (AJAX/fetch)
             if ($request->expectsJson() || $request->ajax()) {
@@ -129,7 +152,8 @@ class ProfileController extends Controller
                     'success' => true,
                     'message' => 'Profile updated successfully!',
                     'type' => 'success',
-                    'redirect_url' => url('/profile')
+                    'redirect_url' => url('/profile'),
+                    'e_signature_url' => $user->hasESignature() ? $user->getESignatureUrl() : null,
                 ]);
             }
 
@@ -208,6 +232,64 @@ class ProfileController extends Controller
         ]);
     }
 
+    public function uploadESignature(Request $request)
+    {
+        try {
+            $user = auth()->user();
+
+            $request->validate([
+                'e_signature' => 'required|file|mimes:png|max:1536',
+            ], [
+                'e_signature.required' => 'Please choose a PNG e-signature file.',
+                'e_signature.mimes' => 'E-signature must be a PNG file.',
+                'e_signature.max' => 'E-signature must not be larger than 1.5MB.',
+            ]);
+
+            if (! $request->hasFile('e_signature')) {
+                throw ValidationException::withMessages([
+                    'e_signature' => [$this->missingUploadMessage('e_signature')],
+                ]);
+            }
+
+            ['disk' => $assetDisk, 'e_signature_dir' => $eSignatureDir] = $this->assetStorageContext();
+            $path = $this->storeESignatureFile($user, $request->file('e_signature'), $assetDisk, $eSignatureDir);
+            $user->update(['e_signature_path' => $path]);
+            $user->refresh();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'E-signature saved successfully!',
+                'type' => 'success',
+                'e_signature_url' => $user->getESignatureUrl(),
+            ]);
+        } catch (ValidationException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => collect($e->errors())->flatten()->first() ?: 'Validation failed',
+                'errors' => $e->errors(),
+            ], 422);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to save e-signature: '.$e->getMessage(),
+            ], 500);
+        }
+    }
+
+    public function removeESignature()
+    {
+        $user = auth()->user();
+
+        $this->deleteStoredAsset($user->e_signature_path);
+        $user->update(['e_signature_path' => null]);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'E-signature removed successfully!',
+            'type' => 'success',
+        ]);
+    }
+
     public function changePassword(Request $request)
     {
         try {
@@ -273,5 +355,69 @@ class ProfileController extends Controller
             return redirect()->back()
                 ->with('error', 'Failed to change password: ' . $e->getMessage());
         }
+    }
+
+    /**
+     * @return array{disk: string, root: string, profile_dir: string, cover_dir: string, e_signature_dir: string}
+     */
+    private function assetStorageContext(): array
+    {
+        $spacesConfigured = ! empty(env('DIGITALOCEAN_SPACES_KEY') ?: env('DO_SPACES_KEY'))
+            && ! empty(env('DIGITALOCEAN_SPACES_SECRET') ?: env('DO_SPACES_SECRET'))
+            && ! empty(env('DIGITALOCEAN_SPACES_BUCKET') ?: env('DO_SPACES_BUCKET'));
+        $assetDisk = $spacesConfigured ? 'digitalocean' : 'public';
+        $assetRoot = $spacesConfigured ? trim(env('DIGITALOCEAN_SPACES_ROOT_PATH', ''), '/') : '';
+
+        return [
+            'disk' => $assetDisk,
+            'root' => $assetRoot,
+            'profile_dir' => $assetRoot ? $assetRoot.'/profile-pictures' : 'profile-pictures',
+            'cover_dir' => $assetRoot ? $assetRoot.'/cover-photos' : 'cover-photos',
+            'e_signature_dir' => $assetRoot ? $assetRoot.'/e-signatures' : 'e-signatures',
+        ];
+    }
+
+    private function storeESignatureFile(User $user, UploadedFile $file, string $disk, string $directory): string
+    {
+        $this->deleteStoredAsset($user->e_signature_path);
+
+        $fileName = time().'_'.Str::random(10).'.png';
+        $storedPath = $file->storeAs($directory, $fileName, $disk);
+
+        if (! is_string($storedPath) || $storedPath === '') {
+            throw new \RuntimeException('Failed to upload e-signature to storage.');
+        }
+
+        return $storedPath;
+    }
+
+    private function deleteStoredAsset(?string $path): void
+    {
+        if (! $path) {
+            return;
+        }
+
+        foreach (['digitalocean', 'public'] as $storageDisk) {
+            try {
+                if (Storage::disk($storageDisk)->exists($path)) {
+                    Storage::disk($storageDisk)->delete($path);
+                    break;
+                }
+            } catch (\Throwable $e) {
+                // ignore
+            }
+        }
+    }
+
+    private function missingUploadMessage(string $field): string
+    {
+        $error = $_FILES[$field]['error'] ?? UPLOAD_ERR_NO_FILE;
+
+        return match ((int) $error) {
+            UPLOAD_ERR_INI_SIZE, UPLOAD_ERR_FORM_SIZE => 'The e-signature file is too large for the server upload limit. Please use a PNG under 1.5MB.',
+            UPLOAD_ERR_PARTIAL => 'The e-signature upload was interrupted. Please try again.',
+            UPLOAD_ERR_NO_FILE => 'The e-signature file was not received. Please choose the PNG again and save.',
+            default => 'The e-signature file could not be uploaded. Please use a PNG under 1.5MB and try again.',
+        };
     }
 }

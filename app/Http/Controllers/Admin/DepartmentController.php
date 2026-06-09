@@ -28,7 +28,8 @@ class DepartmentController extends Controller
                 $q->orWhere('name', 'like', "%{$search}%")
                     ->orWhere('code', 'like', "%{$search}%")
                     ->orWhere('supervisor_name', 'like', "%{$search}%")
-                    ->orWhere('description', 'like', "%{$search}%");
+                    ->orWhere('description', 'like', "%{$search}%")
+                    ->orWhere('job_description', 'like', "%{$search}%");
             });
         }
 
@@ -48,6 +49,7 @@ class DepartmentController extends Controller
             'name' => 'required|string|max:255|unique:departments,name',
             'code' => 'nullable|string|max:50|unique:departments,code',
             'description' => 'nullable|string',
+            'job_description' => 'nullable|string|max:10000',
             'supervisor_name' => 'nullable|string|max:255',
             'is_active' => 'boolean',
         ]);
@@ -56,6 +58,7 @@ class DepartmentController extends Controller
             'name' => $request->name,
             'code' => $request->code ?: Str::upper(Str::limit(Str::slug($request->name), 10, '')),
             'description' => $request->description,
+            'job_description' => $this->normalizeJobDescription($request->input('job_description')),
             'supervisor_name' => $request->supervisor_name,
             'is_active' => $request->has('is_active'),
         ]);
@@ -75,6 +78,7 @@ class DepartmentController extends Controller
             'name' => 'required|string|max:255|unique:departments,name,' . $department->id,
             'code' => 'nullable|string|max:50|unique:departments,code,' . $department->id,
             'description' => 'nullable|string',
+            'job_description' => 'nullable|string|max:10000',
             'supervisor_name' => 'nullable|string|max:255',
             'is_active' => 'boolean',
         ]);
@@ -83,6 +87,7 @@ class DepartmentController extends Controller
             'name' => $request->name,
             'code' => $request->code ?: Str::upper(Str::limit(Str::slug($request->name), 10, '')),
             'description' => $request->description,
+            'job_description' => $this->normalizeJobDescription($request->input('job_description')),
             'supervisor_name' => $request->supervisor_name,
             'is_active' => $request->has('is_active'),
         ]);
@@ -113,6 +118,32 @@ class DepartmentController extends Controller
 
         return redirect()->back()
             ->with('success', 'Department status updated successfully.');
+    }
+
+    private function normalizeJobDescription(?string $value): ?string
+    {
+        if ($value === null) {
+            return null;
+        }
+
+        $lines = preg_split('/\R/u', trim($value)) ?: [];
+        $normalized = [];
+
+        foreach ($lines as $line) {
+            $line = trim($line);
+            if ($line === '') {
+                continue;
+            }
+
+            $line = preg_replace('/^[\-*•]\s*/u', '', $line) ?? $line;
+            $line = trim($line);
+
+            if ($line !== '') {
+                $normalized[] = $line;
+            }
+        }
+
+        return $normalized === [] ? null : implode("\n", $normalized);
     }
 }
 

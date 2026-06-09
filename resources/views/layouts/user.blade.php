@@ -556,6 +556,17 @@
                                 Document Requests
                             </span>
                         </a>
+                        <a href="{{ url('/payslips') }}"
+                           class="group flex items-center px-2 py-2 text-sm font-medium rounded-md transition-colors duration-200 {{ request()->routeIs('user.payslips.*') ? 'bg-indigo-700 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white' }}"
+                           :class="sidebarCollapsed ? 'justify-center' : ''"
+                           :title="sidebarCollapsed ? 'Payslips' : ''">
+                            <svg class="h-5 w-5" :class="sidebarCollapsed ? '' : 'mr-3'" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8V6m0 12v-2m9-4a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                            </svg>
+                            <span class="transition-opacity duration-300" :class="sidebarCollapsed ? 'opacity-0 w-0 overflow-hidden' : 'opacity-100'">
+                                Payslips
+                            </span>
+                        </a>
                         @endif
 
                         <!-- Leave Requests (Employee & Student) -->
@@ -612,6 +623,49 @@
                                 Feedback
                             </span>
                         </a>
+
+                        @if(auth()->user()->role === 'employee' && \App\Models\User::employeeDocumentsNavEnabled())
+                        <div x-data="{ open: (localStorage.getItem('user-employee-documents') || 'false') === 'true' }"
+                             x-init="if ({{ request()->routeIs('user.employee-documents.*') ? 'true' : 'false' }}) { open = true; }"
+                             x-effect="localStorage.setItem('user-employee-documents', open)"
+                             class="space-y-1">
+                            <button @click="open = !open"
+                                    type="button"
+                                    class="w-full flex items-center justify-between px-2 py-2 text-sm font-medium rounded-md transition-colors duration-200 text-gray-300 hover:bg-gray-700 hover:text-white"
+                                    :class="sidebarCollapsed ? 'justify-center' : ''"
+                                    :title="sidebarCollapsed ? 'Documents' : ''">
+                                <span class="flex items-center" :class="sidebarCollapsed ? '' : ''">
+                                    <svg class="h-5 w-5" :class="sidebarCollapsed ? '' : 'mr-3'" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                                    </svg>
+                                    <span class="transition-opacity duration-300" :class="sidebarCollapsed ? 'opacity-0 w-0 overflow-hidden' : 'opacity-100'">Documents</span>
+                                </span>
+                                <svg class="h-4 w-4 transition-transform duration-200" :class="{ 'rotate-180': open, 'opacity-0 w-0 overflow-hidden': sidebarCollapsed }" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                                </svg>
+                            </button>
+                            <div x-show="sidebarCollapsed ? true : open" class="space-y-1" :class="sidebarCollapsed ? '' : 'ml-4'">
+                                <a href="{{ route('user.employee-documents.show', 'nda') }}"
+                                   class="group flex items-center px-2 py-2 text-sm font-medium rounded-md transition-colors duration-200 {{ request()->routeIs('user.employee-documents.show') && request()->route('type') === 'nda' ? 'bg-indigo-700 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white' }}"
+                                   :class="sidebarCollapsed ? 'justify-center' : ''"
+                                   :title="sidebarCollapsed ? 'NDA' : ''">
+                                    <span class="transition-opacity duration-300" :class="sidebarCollapsed ? 'opacity-0 w-0 overflow-hidden' : 'opacity-100'">NDA</span>
+                                </a>
+                                <a href="{{ route('user.employee-documents.show', 'contract') }}"
+                                   class="group flex items-center px-2 py-2 text-sm font-medium rounded-md transition-colors duration-200 {{ request()->routeIs('user.employee-documents.show') && request()->route('type') === 'contract' ? 'bg-indigo-700 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white' }}"
+                                   :class="sidebarCollapsed ? 'justify-center' : ''"
+                                   :title="sidebarCollapsed ? 'Contract' : ''">
+                                    <span class="transition-opacity duration-300" :class="sidebarCollapsed ? 'opacity-0 w-0 overflow-hidden' : 'opacity-100'">Contract</span>
+                                </a>
+                                <a href="{{ route('user.employee-documents.show', 'policy') }}"
+                                   class="group flex items-center px-2 py-2 text-sm font-medium rounded-md transition-colors duration-200 {{ request()->routeIs('user.employee-documents.show') && request()->route('type') === 'policy' ? 'bg-indigo-700 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white' }}"
+                                   :class="sidebarCollapsed ? 'justify-center' : ''"
+                                   :title="sidebarCollapsed ? 'Policy' : ''">
+                                    <span class="transition-opacity duration-300" :class="sidebarCollapsed ? 'opacity-0 w-0 overflow-hidden' : 'opacity-100'">Policy</span>
+                                </a>
+                            </div>
+                        </div>
+                        @endif
 
                         <!-- Term of Reference (TOR) - Student and Teacher -->
                         @if(in_array(auth()->user()->role, ['student', 'teacher'], true))
@@ -1053,6 +1107,14 @@
                             </svg>
                             Document Requests
                         </a>
+                        <a href="{{ url('/payslips') }}"
+                           @click="sidebarOpen = false"
+                           class="group flex items-center px-2 py-2 text-sm font-medium rounded-md transition-colors duration-200 {{ request()->routeIs('user.payslips.*') ? 'bg-indigo-700 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white' }}">
+                            <svg class="mr-3 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8V6m0 12v-2m9-4a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                            </svg>
+                            Payslips
+                        </a>
                         @endif
 
                         @if(in_array(auth()->user()->role, ['employee', 'student']))
@@ -1104,6 +1166,34 @@
                             </svg>
                             Feedback
                         </a>
+
+                        @if(auth()->user()->role === 'employee' && \App\Models\User::employeeDocumentsNavEnabled())
+                        <div x-data="{ open: (localStorage.getItem('user-employee-documents-mobile') || 'false') === 'true' }"
+                             x-init="if ({{ request()->routeIs('user.employee-documents.*') ? 'true' : 'false' }}) { open = true; }"
+                             x-effect="localStorage.setItem('user-employee-documents-mobile', open)"
+                             class="space-y-1">
+                            <button @click="open = !open" type="button"
+                                    class="w-full flex items-center justify-between px-2 py-2 text-sm font-medium rounded-md text-gray-300 hover:bg-gray-700 hover:text-white">
+                                <span class="flex items-center">
+                                    <svg class="mr-3 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                                    </svg>
+                                    Documents
+                                </span>
+                                <svg class="h-4 w-4 transition-transform duration-200" :class="{ 'rotate-180': open }" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                                </svg>
+                            </button>
+                            <div x-show="open" class="ml-4 space-y-1">
+                                <a href="{{ route('user.employee-documents.show', 'nda') }}" @click="sidebarOpen = false"
+                                   class="group flex items-center px-2 py-2 text-sm font-medium rounded-md transition-colors duration-200 {{ request()->routeIs('user.employee-documents.show') && request()->route('type') === 'nda' ? 'bg-indigo-700 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white' }}">NDA</a>
+                                <a href="{{ route('user.employee-documents.show', 'contract') }}" @click="sidebarOpen = false"
+                                   class="group flex items-center px-2 py-2 text-sm font-medium rounded-md transition-colors duration-200 {{ request()->routeIs('user.employee-documents.show') && request()->route('type') === 'contract' ? 'bg-indigo-700 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white' }}">Contract</a>
+                                <a href="{{ route('user.employee-documents.show', 'policy') }}" @click="sidebarOpen = false"
+                                   class="group flex items-center px-2 py-2 text-sm font-medium rounded-md transition-colors duration-200 {{ request()->routeIs('user.employee-documents.show') && request()->route('type') === 'policy' ? 'bg-indigo-700 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white' }}">Policy</a>
+                            </div>
+                        </div>
+                        @endif
 
                         @if(in_array(auth()->user()->role, ['student', 'teacher'], true))
                         <a href="{{ url('/tor') }}"

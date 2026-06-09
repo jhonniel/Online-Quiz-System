@@ -1,0 +1,312 @@
+<?php
+
+namespace App\Http\Controllers\Admin;
+
+use App\Http\Controllers\Controller;
+use App\Models\EmployeePayslip;
+use App\Models\User;
+use App\Support\PayslipCsvImporter;
+use App\Support\PayslipGrouper;
+use Illuminate\Http\Request;
+
+class PayslipController extends Controller
+{
+    public function index(Request $request)
+    {
+        $query = $this->scopedPayslipQuery($request);
+
+        if ($request->filled('year')) {
+            $year = (int) $request->input('year');
+            $query->whereYear('period_end', $year);
+        }
+
+        $payslips = $query
+            ->orderByDesc('period_end')
+            ->orderByDesc('period_start')
+            ->orderBy('employee_name')
+            ->get();
+
+        $groupedPayslips = PayslipGrouper::group($payslips);
+        $totalCount = $payslips->count();
+
+        $availableYears = $this->scopedPayslipQuery($request, applyYearFilter: false)
+            ->reorder()
+            ->pluck('period_end')
+            ->map(fn ($date) => (int) $date->format('Y'))
+            ->unique()
+            ->sortDesc()
+            ->values();
+
+        $employees = $this->scopedEmployeeQuery()
+            ->with('department:id,name')
+            ->orderBy('name')
+            ->get(['id', 'name', 'email', 'department_id']);
+
+        return view('admin.employee-management.payslip.index', compact(
+            'groupedPayslips',
+            'totalCount',
+            'availableYears',
+            'employees'
+        ));
+    }
+
+    private function scopedPayslipQuery(Request $request, bool $applyYearFilter = true)
+    {
+        $query = EmployeePayslip::query()
+            ->with(['employee:id,name,email,department_id', 'employee.department:id,name', 'uploader:id,name'])
+            ->where(function ($q) {
+                $q->whereNull('user_id')
+                    ->orWhereHas('employee', function ($employeeQuery) {
+                        $this->applyEmployeeScope($employeeQuery);
+                    });
+            });
+
+        if ($request->filled('search')) {
+            $search = trim((string) $request->input('search'));
+            $query->where(function ($q) use ($search) {
+                $q->where('employee_name', 'like', "%{$search}%")
+                    ->orWhere('employee_email', 'like', "%{$search}%")
+                    ->orWhereHas('employee', fn ($eq) => $eq->where('email', 'like', "%{$search}%"));
+            });
+        }
+
+        if ($request->filled('period_start')) {
+            $query->whereDate('period_start', '>=', $request->input('period_start'));
+        }
+
+        if ($request->filled('period_end')) {
+            $query->whereDate('period_end', '<=', $request->input('period_end'));
+        }
+
+        if ($applyYearFilter && $request->filled('year')) {
+            $query->whereYear('period_end', (int) $request->input('year'));
+        }
+
+        return $query;
+    }
+
+    public function show(EmployeePayslip $payslip)
+    {
+        $this->authorizePayslip($payslip);
+        $payslip->load(['employee:id,name,email,department_id', 'employee.department', 'uploader']);
+
+        $employees = $this->scopedEmployeeQuery()
+            ->with('department:id,name')
+            ->orderBy('name')
+            ->get(['id', 'name', 'email', 'department_id']);
+
+        return view('admin.employee-management.payslip.show', compact('payslip', 'employees'));
+    }
+
+    public function import(Request $request, PayslipCsvImporter $importer)
+    {
+        $request->validate([
+            'csv_file' => 'required|file|mimes:csv,txt|max:5120',
+        ]);
+
+        try {
+            $result = $importer->import($request->file('csv_file')->getRealPath(), (int) auth()->id());
+        } catch (\InvalidArgumentException $e) {
+            return redirect()
+                ->route('admin.payslip.index')
+                ->with('error', $e->getMessage());
+        } catch (\Throwable $e) {
+            return redirect()
+                ->route('admin.payslip.index')
+                ->with('error', 'Failed to import payslips: '.$e->getMessage());
+        }
+
+        $message = "Imported {$result['imported']} payslip(s)";
+        if ($result['updated'] > 0) {
+            $message .= ", updated {$result['updated']}";
+        }
+        if ($result['skipped'] > 0) {
+            $message .= ", skipped {$result['skipped']}";
+        }
+        $message .= '.';
+
+        return redirect()
+            ->route('admin.payslip.index')
+            ->with('success', $message)
+            ->with('import_errors', $result['errors']);
+    }
+
+    public function downloadTemplate()
+    {
+        $rows = [
+            PayslipCsvImporter::HEADERS,
+            [
+                '2025-11-26',
+                '2025-12-25',
+                'JHONNIEL R. YGAY',
+                'employee@example.com',
+                'SOFTWARE DEVELOPER',
+                '2023-01-15',
+                '3863.63',
+                '1750',
+                '500',
+                '200',
+                '0',
+                '0',
+                '7103.43',
+                '0',
+                '0',
+                '0',
+                '22',
+                '0',
+                '0',
+                '0',
+                '85000',
+                '75446.43',
+                'May Grace Acosta',
+                'Jason V. Labanon',
+            ],
+        ];
+
+        return $this->csvDownload($rows, 'payslip_import_template_'.date('Y-m-d').'.csv');
+    }
+
+    public function destroy(EmployeePayslip $payslip)
+    {
+        $this->authorizePayslip($payslip);
+        $payslip->delete();
+
+        return redirect()
+            ->route('admin.payslip.index')
+            ->with('success', 'Payslip deleted successfully.');
+    }
+
+    public function link(Request $request, EmployeePayslip $payslip)
+    {
+        $this->authorizePayslip($payslip);
+
+        $validated = $request->validate([
+            'employee_id' => 'required|integer|exists:users,id',
+        ]);
+
+        $employee = $this->scopedEmployeeQuery()
+            ->where('id', $validated['employee_id'])
+            ->first();
+
+        abort_unless($employee, 403, 'You do not have permission to link this employee.');
+
+        $duplicate = EmployeePayslip::query()
+            ->where('user_id', $employee->id)
+            ->where('period_start', $payslip->period_start)
+            ->where('period_end', $payslip->period_end)
+            ->where('id', '!=', $payslip->id)
+            ->exists();
+
+        if ($duplicate) {
+            return redirect()
+                ->back()
+                ->withInput()
+                ->with('error', 'This employee already has a payslip for the same cut-off period.');
+        }
+
+        $payslip->update([
+            'user_id' => $employee->id,
+            'employee_email' => $employee->email,
+        ]);
+
+        return redirect()
+            ->back()
+            ->with('success', 'Payslip linked to '.$employee->name.' successfully.');
+    }
+
+    public function bulkDestroy(Request $request)
+    {
+        $validated = $request->validate([
+            'payslip_ids' => 'required|array|min:1',
+            'payslip_ids.*' => 'integer|exists:employee_payslips,id',
+        ]);
+
+        $deletedCount = EmployeePayslip::query()
+            ->whereIn('id', $validated['payslip_ids'])
+            ->where(function ($q) {
+                $q->whereNull('user_id')
+                    ->orWhereHas('employee', function ($employeeQuery) {
+                        $this->applyEmployeeScope($employeeQuery);
+                    });
+            })
+            ->delete();
+
+        if ($deletedCount === 0) {
+            return redirect()
+                ->back()
+                ->with('error', 'No payslips were deleted.');
+        }
+
+        $message = $deletedCount === 1
+            ? '1 payslip deleted successfully.'
+            : "{$deletedCount} payslips deleted successfully.";
+
+        return redirect()
+            ->back()
+            ->with('success', $message);
+    }
+
+    private function authorizePayslip(EmployeePayslip $payslip): void
+    {
+        $payslip->loadMissing('employee');
+
+        if ($payslip->user_id && $payslip->employee) {
+            abort_unless($this->canAccessEmployee($payslip->employee), 403);
+        }
+    }
+
+    private function canAccessEmployee(?User $employee): bool
+    {
+        if (! $employee || $employee->role !== 'employee') {
+            return false;
+        }
+
+        $allowedDepartmentIds = $this->requireAuthUser()->getAllowedDepartmentIds();
+        if ($allowedDepartmentIds === null) {
+            return true;
+        }
+
+        return $employee->department_id === null || in_array($employee->department_id, $allowedDepartmentIds, true);
+    }
+
+    private function scopedEmployeeQuery()
+    {
+        $query = User::query()->where('role', 'employee');
+        $this->applyEmployeeScope($query);
+
+        return $query;
+    }
+
+    private function applyEmployeeScope($query): void
+    {
+        $allowedDepartmentIds = $this->requireAuthUser()->getAllowedDepartmentIds();
+        if ($allowedDepartmentIds !== null) {
+            $query->where(function ($q) use ($allowedDepartmentIds) {
+                $q->whereIn('department_id', $allowedDepartmentIds)
+                    ->orWhereNull('department_id');
+            });
+        }
+    }
+
+    /**
+     * @param  list<list<string>>  $rows
+     */
+    private function csvDownload(array $rows, string $filename)
+    {
+        $handle = fopen('php://temp', 'r+');
+        fwrite($handle, "\xEF\xBB\xBF");
+
+        foreach ($rows as $row) {
+            fputcsv($handle, $row);
+        }
+
+        rewind($handle);
+        $csv = stream_get_contents($handle);
+        fclose($handle);
+
+        return response($csv, 200, [
+            'Content-Type' => 'text/csv; charset=UTF-8',
+            'Content-Disposition' => 'attachment; filename="'.$filename.'"',
+        ]);
+    }
+}
