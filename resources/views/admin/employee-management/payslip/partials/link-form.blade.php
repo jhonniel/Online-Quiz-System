@@ -35,6 +35,8 @@
         @csrf
         @method('PATCH')
 
+        <p class="text-sm text-gray-500">Future imports with the same payslip employee name will auto-link to this account, even when the CSV has no email.</p>
+
         <div>
             <label for="payslip-detail-link-search" class="block text-sm font-medium text-gray-700 mb-2">Employee account</label>
 

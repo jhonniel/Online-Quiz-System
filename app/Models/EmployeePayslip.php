@@ -32,6 +32,7 @@ class EmployeePayslip extends Model
         'overtime_pay',
         'holiday_pay',
         'allowances',
+        'thirteenth_month_pay',
         'gross_pay',
         'net_pay',
         'prepared_by',
@@ -56,6 +57,7 @@ class EmployeePayslip extends Model
         'overtime_pay' => 'decimal:2',
         'holiday_pay' => 'decimal:2',
         'allowances' => 'decimal:2',
+        'thirteenth_month_pay' => 'decimal:2',
         'gross_pay' => 'decimal:2',
         'net_pay' => 'decimal:2',
     ];

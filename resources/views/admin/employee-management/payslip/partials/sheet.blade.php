@@ -45,6 +45,7 @@
                 <div class="flex justify-between gap-4"><span>Overtime pay</span><span>{{ $payslip->formatMoney($payslip->overtime_pay) }}</span></div>
                 <div class="flex justify-between gap-4"><span>Holidays pay</span><span>{{ $payslip->formatMoney($payslip->holiday_pay) }}</span></div>
                 <div class="flex justify-between gap-4"><span>Allowances</span><span>{{ $payslip->formatMoney($payslip->allowances) }}</span></div>
+                <div class="flex justify-between gap-4"><span>13th Month</span><span>{{ $payslip->formatMoney($payslip->thirteenth_month_pay) }}</span></div>
                 <div class="flex justify-between gap-4 font-bold border-t border-gray-200 pt-2"><span>Gross Pay</span><span>{{ $payslip->formatMoney($payslip->gross_pay) }}</span></div>
             </div>
         </div>

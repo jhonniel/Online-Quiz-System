@@ -10,6 +10,9 @@ use Illuminate\Support\Facades\DB;
 
 final class PayslipCsvImporter
 {
+    /** @var array<string, int>|null */
+    private ?array $linkedEmployeeIdsByName = null;
+
     /** @var list<string> */
     public const HEADERS = [
         'cutt_off_start',
@@ -32,6 +35,7 @@ final class PayslipCsvImporter
         'overtime_pay',
         'holiday_pay',
         'allowances',
+        'thirteenth_month_pay',
         'gross_pay',
         'net_pay',
         'prepared_by',
@@ -80,6 +84,20 @@ final class PayslipCsvImporter
                 }
 
                 $user = $this->resolveEmployee($data['employee_email'], $data['employee_name']);
+
+                if ($user !== null) {
+                    $profileIssue = $this->validateEmployeeProfileForPayslip($user, $data['employee_name'], $rowNumber);
+                    if ($profileIssue !== null) {
+                        $errors[] = $profileIssue;
+                        $skipped++;
+
+                        continue;
+                    }
+
+                    $data['date_hired'] = $user->date_hired->toDateString();
+                    $data['position'] = trim((string) $user->department?->name);
+                }
+
                 $data['user_id'] = $user?->id;
                 $data['uploaded_by'] = $uploadedByUserId;
                 $data['company_name'] = $companyName;
@@ -167,6 +185,9 @@ final class PayslipCsvImporter
             'government_loans' => 'govt_loans',
             'government_loan' => 'govt_loans',
             'loan' => 'loans',
+            '13th_month' => 'thirteenth_month_pay',
+            '13th_month_pay' => 'thirteenth_month_pay',
+            'thirteenth_month' => 'thirteenth_month_pay',
         ];
 
         return $aliases[$header] ?? $header;
@@ -234,6 +255,7 @@ final class PayslipCsvImporter
             'overtime_pay' => $this->parseAmount($value('overtime_pay')),
             'holiday_pay' => $this->parseAmount($value('holiday_pay')),
             'allowances' => $this->parseAmount($value('allowances')),
+            'thirteenth_month_pay' => $this->parseAmount($value('thirteenth_month_pay')),
             'gross_pay' => $this->parseAmount($value('gross_pay')),
             'net_pay' => $this->parseAmount($value('net_pay')),
             'prepared_by' => $value('prepared_by') ?: null,
@@ -269,11 +291,15 @@ final class PayslipCsvImporter
 
     private function resolveEmployee(?string $email, string $name): ?User
     {
+        $employeeColumns = ['id', 'name', 'email', 'date_hired', 'department_id'];
+        $baseQuery = User::query()
+            ->where('role', 'employee')
+            ->with('department:id,name');
+
         if ($email) {
-            $byEmail = User::query()
-                ->where('role', 'employee')
+            $byEmail = (clone $baseQuery)
                 ->whereRaw('LOWER(email) = ?', [strtolower($email)])
-                ->first();
+                ->first($employeeColumns);
 
             if ($byEmail) {
                 return $byEmail;
@@ -281,11 +307,70 @@ final class PayslipCsvImporter
         }
 
         $normalizedName = $this->normalizeName($name);
+        if ($normalizedName === '') {
+            return null;
+        }
 
-        return User::query()
-            ->where('role', 'employee')
-            ->get(['id', 'name'])
+        $linkedUserId = $this->linkedEmployeeIdsByName()[$normalizedName] ?? null;
+        if ($linkedUserId !== null) {
+            $byPriorLink = (clone $baseQuery)->find($linkedUserId, $employeeColumns);
+            if ($byPriorLink) {
+                return $byPriorLink;
+            }
+        }
+
+        return (clone $baseQuery)
+            ->get($employeeColumns)
             ->first(fn (User $user) => $this->normalizeName($user->name) === $normalizedName);
+    }
+
+    /**
+     * Names from previously linked payslips mapped to employee user IDs.
+     *
+     * @return array<string, int>
+     */
+    private function linkedEmployeeIdsByName(): array
+    {
+        if ($this->linkedEmployeeIdsByName !== null) {
+            return $this->linkedEmployeeIdsByName;
+        }
+
+        $map = [];
+        EmployeePayslip::query()
+            ->whereNotNull('user_id')
+            ->orderByDesc('updated_at')
+            ->get(['employee_name', 'user_id'])
+            ->each(function (EmployeePayslip $payslip) use (&$map): void {
+                $key = $this->normalizeName($payslip->employee_name);
+                if ($key !== '' && ! array_key_exists($key, $map)) {
+                    $map[$key] = (int) $payslip->user_id;
+                }
+            });
+
+        $this->linkedEmployeeIdsByName = $map;
+
+        return $map;
+    }
+
+    private function validateEmployeeProfileForPayslip(User $user, string $employeeName, int $rowNumber): ?string
+    {
+        $missing = [];
+
+        if ($user->date_hired === null) {
+            $missing[] = 'date hired';
+        }
+
+        if ($user->department_id === null || trim((string) $user->department?->name) === '') {
+            $missing[] = 'department';
+        }
+
+        if ($missing === []) {
+            return null;
+        }
+
+        $label = trim($employeeName) !== '' ? $employeeName : ($user->name ?: 'employee');
+
+        return 'Row '.$rowNumber.': '.$label.' is missing employee profile data ('.implode(', ', $missing).'). Update the user profile before importing payslips.';
     }
 
     private function normalizeName(string $name): string

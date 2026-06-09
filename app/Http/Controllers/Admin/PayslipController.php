@@ -156,6 +156,7 @@ class PayslipController extends Controller
                 '0',
                 '0',
                 '0',
+                '0',
                 '85000',
                 '75446.43',
                 'May Grace Acosta',
@@ -204,9 +205,13 @@ class PayslipController extends Controller
                 ->with('error', 'This employee already has a payslip for the same cut-off period.');
         }
 
+        $employee->loadMissing('department:id,name');
+
         $payslip->update([
             'user_id' => $employee->id,
             'employee_email' => $employee->email,
+            'date_hired' => $employee->date_hired,
+            'position' => $employee->department?->name,
         ]);
 
         return redirect()

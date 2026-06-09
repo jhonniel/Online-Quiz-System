@@ -35,7 +35,7 @@
         <div class="flex items-start justify-between gap-4 px-5 sm:px-6 py-4 border-b border-gray-100 bg-gray-50/80">
             <div class="min-w-0">
                 <h3 id="payslip-link-modal-title" class="text-base font-semibold text-gray-900">Link payslip to employee</h3>
-                <p class="mt-1 text-sm text-gray-500">Connect this payslip to an employee account so they can view it.</p>
+                <p class="mt-1 text-sm text-gray-500">Connect this payslip to an employee account so they can view it. Future imports with the same employee name will auto-link even without email.</p>
             </div>
             <button type="button" @click="closeLinkModal()" class="rounded-lg p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors" aria-label="Close">
                 <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
