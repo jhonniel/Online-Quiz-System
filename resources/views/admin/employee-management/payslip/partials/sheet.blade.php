@@ -84,9 +84,9 @@
                         @if($preparedBySignature)
                             <img src="{{ $preparedBySignature }}"
                                  alt="Signature of {{ $payslip->displayPreparedBy() }}"
-                                 class="payslip-esign-float pointer-events-none absolute left-1/2 top-0 z-0 h-14 w-40 max-w-[90%] -translate-x-1/2 -translate-y-1 object-contain object-bottom">
+                                 class="payslip-esign-float pointer-events-none absolute left-1/2 top-0 z-10 h-14 w-40 max-w-[90%] -translate-x-1/2 -translate-y-1 object-contain object-bottom">
                         @endif
-                        <p class="relative z-10 border-b border-gray-900 px-1 font-semibold payslip-sign-name payslip-fit-name payslip-name-line text-center mx-auto max-w-full"
+                        <p class="relative z-0 border-b border-gray-900 px-1 font-semibold payslip-sign-name payslip-fit-name payslip-name-line text-center mx-auto max-w-full"
                            style="font-size: {{ PayslipNameFit::fontSizeRem($payslip->displayPreparedBy(), 0.875) }}">
                             {{ $payslip->displayPreparedBy() ?: ' ' }}
                         </p>
@@ -102,9 +102,9 @@
                         @if($approvedBySignature)
                             <img src="{{ $approvedBySignature }}"
                                  alt="Signature of {{ $payslip->displayApprovedBy() }}"
-                                 class="payslip-esign-float pointer-events-none absolute left-1/2 top-0 z-0 h-14 w-40 max-w-[90%] -translate-x-1/2 -translate-y-1 object-contain object-bottom">
+                                 class="payslip-esign-float pointer-events-none absolute left-1/2 top-0 z-10 h-14 w-40 max-w-[90%] -translate-x-1/2 -translate-y-1 object-contain object-bottom">
                         @endif
-                        <p class="relative z-10 border-b border-gray-900 px-1 font-semibold payslip-sign-name payslip-fit-name payslip-name-line text-center mx-auto max-w-full"
+                        <p class="relative z-0 border-b border-gray-900 px-1 font-semibold payslip-sign-name payslip-fit-name payslip-name-line text-center mx-auto max-w-full"
                            style="font-size: {{ PayslipNameFit::fontSizeRem($payslip->displayApprovedBy(), 0.875) }}">
                             {{ $payslip->displayApprovedBy() ?: ' ' }}
                         </p>
@@ -120,9 +120,9 @@
                         @if($receivedBySignature)
                             <img src="{{ $receivedBySignature }}"
                                  alt="Signature of {{ $payslip->employee_name }}"
-                                 class="payslip-esign-float pointer-events-none absolute left-1/2 top-0 z-0 h-14 w-40 max-w-[90%] -translate-x-1/2 -translate-y-1 object-contain object-bottom">
+                                 class="payslip-esign-float pointer-events-none absolute left-1/2 top-0 z-10 h-14 w-40 max-w-[90%] -translate-x-1/2 -translate-y-1 object-contain object-bottom">
                         @endif
-                        <p class="relative z-10 border-b border-gray-900 px-1 font-semibold payslip-sign-name payslip-fit-name payslip-name-line text-center mx-auto max-w-full"
+                        <p class="relative z-0 border-b border-gray-900 px-1 font-semibold payslip-sign-name payslip-fit-name payslip-name-line text-center mx-auto max-w-full"
                            style="font-size: {{ PayslipNameFit::fontSizeRem($payslip->isLinkedToEmployee() ? $payslip->employee_name : '', 0.875) }}">
                             {{ $payslip->isLinkedToEmployee() ? $payslip->employee_name : ' ' }}
                         </p>

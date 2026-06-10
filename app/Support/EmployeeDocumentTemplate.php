@@ -103,11 +103,13 @@ final class EmployeeDocumentTemplate
             return View::make(self::DEFAULT_PARTIALS[$type], $viewData)->render();
         }
 
-        return self::replacePlaceholders(
+        $html = self::replacePlaceholders(
             $type,
             EmployeeDocumentTemplateSanitizer::sanitize($custom),
             $viewData
         );
+
+        return self::normalizeCustomBodyHtml($type, $html);
     }
 
     public static function storedTemplateHtml(string $type): string
@@ -223,11 +225,13 @@ final class EmployeeDocumentTemplate
             return self::bodyHtml($type, self::editorPreviewViewData($type));
         }
 
-        return self::replacePlaceholders(
+        $html = self::replacePlaceholders(
             $type,
             EmployeeDocumentTemplateSanitizer::sanitize($html),
             self::editorPreviewViewData($type)
         );
+
+        return self::normalizeCustomBodyHtml($type, $html);
     }
 
     /**
@@ -305,7 +309,7 @@ final class EmployeeDocumentTemplate
      */
     public static function replacePlaceholders(string $type, string $html, array $viewData): string
     {
-        $signature = self::signatureHtml($viewData);
+        $signature = self::signatureHtml($type, $viewData);
 
         $replacements = match ($type) {
             'nda' => [
@@ -354,7 +358,30 @@ final class EmployeeDocumentTemplate
             default => [],
         };
 
-        return str_replace(array_keys($replacements), array_values($replacements), $html);
+        return self::applyPlaceholderReplacements($html, $replacements);
+    }
+
+    public static function normalizeCustomBodyHtml(string $type, string $html): string
+    {
+        $html = DocumentLetterhead::repairBlockInHtml($html);
+
+        if (EmployeeDocumentFooter::supports($type)) {
+            $html = EmployeeDocumentFooter::injectIntoBodyHtml($type, $html);
+        }
+
+        return $html;
+    }
+
+    /**
+     * @param  array<string, string>  $replacements
+     */
+    private static function applyPlaceholderReplacements(string $html, array $replacements): string
+    {
+        foreach ($replacements as $placeholder => $value) {
+            $html = str_ireplace($placeholder, $value, $html);
+        }
+
+        return $html;
     }
 
     /**
@@ -373,10 +400,12 @@ final class EmployeeDocumentTemplate
     /**
      * @param  array<string, mixed>  $viewData
      */
-    private static function signatureHtml(array $viewData): string
+    private static function signatureHtml(string $type, array $viewData): string
     {
         if (! empty($viewData['eSignatureDataUri'])) {
-            return '<img src="'.e((string) $viewData['eSignatureDataUri']).'" alt="E-Signature" class="policy-signature-image">';
+            $class = $type === 'nda' ? 'signature-image' : 'policy-signature-image';
+
+            return '<img src="'.e((string) $viewData['eSignatureDataUri']).'" alt="E-Signature" class="'.$class.'">';
         }
 
         return '';

@@ -58,22 +58,6 @@
             vertical-align: bottom;
             margin-left: 4px;
         }
-        .document-page-shell {
-            position: relative;
-            min-height: 250mm;
-            padding-bottom: 14mm;
-            box-sizing: border-box;
-        }
-        .document-page-shell > .document-page-footer {
-            position: absolute;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            text-align: left;
-            font-size: 7.5pt;
-            color: #111827;
-            line-height: 1.3;
-        }
     </style>
 </head>
 <body>

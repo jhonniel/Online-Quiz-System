@@ -1,13 +1,23 @@
 @once
 <style>
-    .document-page-shell {
+    .document-page-shell:not(.agreement-page) {
+        position: relative;
+        box-sizing: border-box;
+    }
+
+    .document-page-shell:not(.agreement-page) > .document-page-footer {
+        position: static;
+        margin-top: 2.5rem;
+        padding-top: 0.75rem;
+    }
+
+    .agreement-page.document-page-shell {
         position: relative;
         min-height: 10.5in;
         padding-bottom: 2.75rem;
         box-sizing: border-box;
     }
 
-    .document-page-shell > .document-page-footer,
     .agreement-page > .agreement-page-footer {
         position: absolute;
         left: 0;
@@ -27,20 +37,18 @@
     }
 
     @media print {
-        .document-page-shell,
         .agreement-page.document-page-shell {
             min-height: 10in;
             page-break-after: always;
             break-after: page;
         }
 
-        .document-page-shell:last-child,
         .agreement-page.document-page-shell:last-child {
             page-break-after: auto;
             break-after: auto;
         }
 
-        .document-page-shell > .document-page-footer,
+        .document-page-shell:not(.agreement-page) > .document-page-footer,
         .agreement-page > .agreement-page-footer {
             position: fixed;
             left: 0;

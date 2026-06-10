@@ -166,11 +166,11 @@
             height: 36px;
             width: 176px;
             display: block;
-            z-index: 0;
+            z-index: 10;
         }
         .sign-line {
             position: relative;
-            z-index: 10;
+            z-index: 0;
             border-bottom: 1px solid #111827;
             padding: 0 2px 2px;
             font-weight: bold;

@@ -251,6 +251,11 @@
             max-width: 11rem !important;
             height: 3.5rem !important;
             object-fit: contain !important;
+            z-index: 10 !important;
+        }
+
+        .payslip-print-area .payslip-sign-name {
+            z-index: 0 !important;
         }
 
         .payslip-print-area .h-14:not(.payslip-esign-float) {

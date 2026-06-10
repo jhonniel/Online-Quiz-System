@@ -1,5 +1,5 @@
-<div class="nda-page document-page-shell">
-    @include('user.employee-documents.partials.document-page-letterhead')
+<div class="document-page-shell">
+@include('user.employee-documents.partials.document-page-letterhead')
     <p class="header-country">Republic of the Philippines</p>
 
     <p class="title">NON-DISCLOSURE AGREEMENT</p>

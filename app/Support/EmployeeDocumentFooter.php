@@ -123,4 +123,40 @@ final class EmployeeDocumentFooter
         return $name !== '' ? $name : 'Mini Clean Business Solutions';
     }
 
+    public static function injectIntoBodyHtml(string $type, string $html, int $pageNumber = 1, ?string $companyName = null): string
+    {
+        if (! self::supports($type)) {
+            return $html;
+        }
+
+        $footerInner = self::renderScreenFooterHtml($type, $pageNumber, $companyName);
+        $footerMarkup = '<div class="document-page-footer">'.$footerInner.'</div>';
+
+        $replaced = preg_replace(
+            '/<div class="document-page-footer">(?:\s|&nbsp;|&#160;)*<\/div>/i',
+            $footerMarkup,
+            $html,
+            1
+        );
+
+        if (is_string($replaced) && $replaced !== $html) {
+            return $replaced;
+        }
+
+        if (! str_contains($html, 'document-page-footer')) {
+            if (preg_match('/<div class="[^"]*document-page-shell[^"]*">/i', $html)) {
+                return preg_replace(
+                    '/<\/div>\s*$/',
+                    $footerMarkup.'</div>',
+                    $html,
+                    1
+                ) ?? ($html.$footerMarkup);
+            }
+
+            return $html.$footerMarkup;
+        }
+
+        return $html;
+    }
+
 }
