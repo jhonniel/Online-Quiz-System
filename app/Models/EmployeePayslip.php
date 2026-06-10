@@ -76,6 +76,39 @@ class EmployeePayslip extends Model
         return $this->user_id !== null;
     }
 
+    public function displayPosition(): ?string
+    {
+        if ($this->isLinkedToEmployee()) {
+            $employee = $this->relationLoaded('employee')
+                ? $this->employee
+                : $this->employee()->with('department:id,name')->first();
+
+            $department = trim((string) $employee?->department?->name);
+            if ($department !== '') {
+                return $department;
+            }
+        }
+
+        $stored = trim((string) ($this->position ?? ''));
+
+        return $stored !== '' ? $stored : null;
+    }
+
+    public function displayDateHired(): ?\Illuminate\Support\Carbon
+    {
+        if ($this->isLinkedToEmployee()) {
+            $employee = $this->relationLoaded('employee')
+                ? $this->employee
+                : $this->employee()->first(['id', 'date_hired']);
+
+            if ($employee?->date_hired) {
+                return $employee->date_hired;
+            }
+        }
+
+        return $this->date_hired;
+    }
+
     public function isSigned(): bool
     {
         return $this->signed_at !== null && ! empty($this->signed_document_path);

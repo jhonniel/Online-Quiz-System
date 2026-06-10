@@ -54,7 +54,7 @@ class PayslipController extends Controller
     private function scopedPayslipQuery(Request $request, bool $applyYearFilter = true)
     {
         $query = EmployeePayslip::query()
-            ->with(['employee:id,name,email,department_id', 'employee.department:id,name', 'uploader:id,name'])
+            ->with(['employee:id,name,email,department_id,date_hired', 'employee.department:id,name', 'uploader:id,name'])
             ->where(function ($q) {
                 $q->whereNull('user_id')
                     ->orWhereHas('employee', function ($employeeQuery) {
@@ -89,7 +89,7 @@ class PayslipController extends Controller
     public function show(EmployeePayslip $payslip)
     {
         $this->authorizePayslip($payslip);
-        $payslip->load(['employee:id,name,email,department_id,e_signature_path', 'employee.department', 'uploader']);
+        $payslip->load(['employee:id,name,email,department_id,date_hired,e_signature_path', 'employee.department', 'uploader']);
 
         $employees = $this->scopedEmployeeQuery()
             ->with('department:id,name')
@@ -143,11 +143,8 @@ class PayslipController extends Controller
         }
 
         $message = "Imported {$result['imported']} payslip(s)";
-        if ($result['updated'] > 0) {
-            $message .= ", updated {$result['updated']}";
-        }
         if ($result['skipped'] > 0) {
-            $message .= ", skipped {$result['skipped']}";
+            $message .= ", skipped {$result['skipped']} duplicate(s)";
         }
         $message .= '.';
 
@@ -166,8 +163,6 @@ class PayslipController extends Controller
                 '2025-12-25',
                 'JHONNIEL R. YGAY',
                 'employee@example.com',
-                'SOFTWARE DEVELOPER',
-                '2023-01-15',
                 '3863.63',
                 '1750',
                 '500',
@@ -233,12 +228,10 @@ class PayslipController extends Controller
 
         $employee->loadMissing('department:id,name');
 
-        $payslip->update([
+        $payslip->update(array_merge([
             'user_id' => $employee->id,
             'employee_email' => $employee->email,
-            'date_hired' => $employee->date_hired,
-            'position' => $employee->department?->name,
-        ]);
+        ], PayslipCsvImporter::profileFieldsFromEmployee($employee)));
 
         return redirect()
             ->back()
@@ -285,7 +278,7 @@ class PayslipController extends Controller
         ]);
 
         $payslips = EmployeePayslip::query()
-            ->with(['employee:id,name,email,e_signature_path', 'employee.department:id,name'])
+            ->with(['employee:id,name,email,date_hired,e_signature_path', 'employee.department:id,name'])
             ->whereIn('id', $validated['payslip_ids'])
             ->where(function ($q) {
                 $q->whereNull('user_id')

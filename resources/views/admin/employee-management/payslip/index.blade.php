@@ -19,7 +19,7 @@
 <div class="space-y-6" x-data="payslipLinkModal()">
     <div class="border-b border-indigo-800/20 bg-gradient-to-r from-indigo-600 via-violet-600 to-indigo-700 rounded-lg shadow-sm px-4 sm:px-6 py-5">
         <h1 class="text-xl sm:text-2xl font-bold text-white">Payslip Management</h1>
-        <p class="mt-1 text-sm text-indigo-100">Upload employee payslips via CSV using the standard payslip format. Rows without email can be linked manually; once linked, future imports recognize that employee name even when email is blank.</p>
+        <p class="mt-1 text-sm text-indigo-100">Upload employee payslips via CSV. Duplicate rows (same employee and cut-off period) are skipped. Position comes from profile department; date hired from profile.</p>
     </div>
 
     @if(session('success'))
@@ -92,7 +92,7 @@
                 <div class="rounded-xl border border-indigo-100 bg-indigo-50/50 px-4 py-3">
                     <p class="text-sm font-medium text-indigo-900">Employee linking</p>
                     <p class="mt-1 text-xs text-indigo-800/90 leading-relaxed">
-                        Include <strong>employee_email</strong> with each row for automatic linking. Unlinked payslips can be connected manually from the records table below.
+                        Include <strong>employee_email</strong> so rows match employee accounts. Position on the payslip comes from each employee's profile department. Unlinked rows can be connected manually below.
                     </p>
                 </div>
 
@@ -111,7 +111,7 @@
                     <div class="px-4 pb-4 pt-1 space-y-3 border-t border-gray-100">
                         <div>
                             <p class="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-1.5">Period & employee</p>
-                            <p class="text-xs text-gray-600 leading-relaxed">cutt_off_start, cutt_off_end, employee_name, employee_email (optional), position, date_hired. Linked or matched employees use department and date hired from their user profile.</p>
+                            <p class="text-xs text-gray-600 leading-relaxed">cutt_off_start, cutt_off_end, employee_name, employee_email (optional). Do not include position or date hired — when a row matches an employee account, <strong>Position</strong> is filled from their profile <strong>department</strong> and <strong>Date Hired</strong> from their profile.</p>
                         </div>
                         <div>
                             <p class="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-1.5">Earnings</p>

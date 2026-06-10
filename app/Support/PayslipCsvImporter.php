@@ -19,8 +19,6 @@ final class PayslipCsvImporter
         'cutt_off_end',
         'employee_name',
         'employee_email',
-        'position',
-        'date_hired',
         'rate_per_day',
         'sss',
         'phic',
@@ -43,7 +41,7 @@ final class PayslipCsvImporter
     ];
 
     /**
-     * @return array{imported: int, updated: int, skipped: int, errors: list<string>}
+     * @return array{imported: int, skipped: int, errors: list<string>}
      */
     public function import(string $path, int $uploadedByUserId): array
     {
@@ -61,7 +59,6 @@ final class PayslipCsvImporter
         $columnMap = $this->mapHeaders($headerRow);
         $companyName = trim((string) Setting::get('system_name', config('app.name', 'System')));
         $imported = 0;
-        $updated = 0;
         $skipped = 0;
         $errors = [];
         $rowNumber = 1;
@@ -94,8 +91,10 @@ final class PayslipCsvImporter
                         continue;
                     }
 
-                    $data['date_hired'] = $user->date_hired->toDateString();
-                    $data['position'] = trim((string) $user->department?->name);
+                    $data = array_merge($data, self::profileFieldsFromEmployee($user));
+                } else {
+                    $data['position'] = null;
+                    $data['date_hired'] = null;
                 }
 
                 $data['user_id'] = $user?->id;
@@ -113,18 +112,16 @@ final class PayslipCsvImporter
                     $data['loans'],
                 );
 
-                $matchAttributes = $user
-                    ? ['user_id' => $user->id, 'period_start' => $data['period_start'], 'period_end' => $data['period_end']]
-                    : ['employee_name' => $data['employee_name'], 'period_start' => $data['period_start'], 'period_end' => $data['period_end'], 'user_id' => null];
+                $existing = $this->findExistingPayslip($user, $data);
+                if ($existing !== null) {
+                    $skipped++;
+                    $errors[] = "Row {$rowNumber}: payslip already exists for {$data['employee_name']} ({$data['period_start']} to {$data['period_end']}), skipped.";
 
-                $existing = EmployeePayslip::query()->where($matchAttributes)->first();
-                if ($existing) {
-                    $existing->update($data);
-                    $updated++;
-                } else {
-                    EmployeePayslip::create($data);
-                    $imported++;
+                    continue;
                 }
+
+                EmployeePayslip::create($data);
+                $imported++;
             }
 
             DB::commit();
@@ -137,7 +134,7 @@ final class PayslipCsvImporter
 
         fclose($handle);
 
-        return compact('imported', 'updated', 'skipped', 'errors');
+        return compact('imported', 'skipped', 'errors');
     }
 
     /**
@@ -222,25 +219,11 @@ final class PayslipCsvImporter
             return null;
         }
 
-        $dateHired = null;
-        $dateHiredRaw = $value('date_hired');
-        if ($dateHiredRaw !== '' && ! in_array(strtolower($dateHiredRaw), ['-', 'n/a', 'na'], true)) {
-            try {
-                $dateHired = Carbon::parse($dateHiredRaw)->toDateString();
-            } catch (\Throwable $e) {
-                $errors[] = "Row {$rowNumber}: invalid date_hired.";
-
-                return null;
-            }
-        }
-
         return [
             'period_start' => $periodStart,
             'period_end' => $periodEnd,
             'employee_email' => $value('employee_email') ?: null,
             'employee_name' => $employeeName,
-            'position' => $value('position') ?: null,
-            'date_hired' => $dateHired,
             'rate_per_day' => $this->parseAmount($value('rate_per_day')),
             'sss' => $this->parseAmount($value('sss')),
             'phic' => $this->parseAmount($value('phic')),
@@ -370,11 +353,53 @@ final class PayslipCsvImporter
 
         $label = trim($employeeName) !== '' ? $employeeName : ($user->name ?: 'employee');
 
-        return 'Row '.$rowNumber.': '.$label.' is missing employee profile data ('.implode(', ', $missing).'). Update the user profile before importing payslips.';
+        return 'Row '.$rowNumber.': '.$label.' is missing employee profile data ('.implode(', ', $missing).'). Set department (payslip Position) and date hired on the user profile before importing.';
     }
 
     private function normalizeName(string $name): string
     {
         return strtoupper(trim(preg_replace('/\s+/', ' ', $name) ?? $name));
+    }
+
+    /**
+     * @param  array<string, mixed>  $data
+     */
+    private function findExistingPayslip(?User $user, array $data): ?EmployeePayslip
+    {
+        $matchPeriod = fn ($query) => $query
+            ->whereDate('period_start', $data['period_start'])
+            ->whereDate('period_end', $data['period_end']);
+
+        if ($user !== null) {
+            $byUser = EmployeePayslip::query()
+                ->where('user_id', $user->id)
+                ->where($matchPeriod)
+                ->first();
+
+            if ($byUser !== null) {
+                return $byUser;
+            }
+        }
+
+        return EmployeePayslip::query()
+            ->where('employee_name', $data['employee_name'])
+            ->whereNull('user_id')
+            ->where($matchPeriod)
+            ->first();
+    }
+
+    /**
+     * Payslip "position" is the employee's assigned department from their user profile.
+     *
+     * @return array{position: ?string, date_hired: ?string}
+     */
+    public static function profileFieldsFromEmployee(User $user): array
+    {
+        $user->loadMissing('department:id,name');
+
+        return [
+            'position' => trim((string) $user->department?->name) ?: null,
+            'date_hired' => $user->date_hired?->toDateString(),
+        ];
     }
 }

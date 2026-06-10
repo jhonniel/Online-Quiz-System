@@ -202,10 +202,10 @@
                 <tr>
                     <td>
                         <p>Employee Name: <strong>{{ strtoupper($payslip->employee_name) }}</strong></p>
-                        <p>Position: <strong>{{ strtoupper($payslip->position ?: '—') }}</strong></p>
+                        <p>Position: <strong>{{ strtoupper($payslip->displayPosition() ?: '—') }}</strong></p>
                     </td>
                     <td>
-                        <p>Date Hired: <strong>{{ $payslip->date_hired?->format('F j, Y') ?: '—' }}</strong></p>
+                        <p>Date Hired: <strong>{{ $payslip->displayDateHired()?->format('F j, Y') ?: '—' }}</strong></p>
                         <p>Rate per day: <strong>{{ $payslip->formatMoney($payslip->rate_per_day) }}</strong></p>
                     </td>
                 </tr>
@@ -275,7 +275,7 @@
                             @endif
                             <p class="sign-line">{{ $payslip->employee_name }}</p>
                         </div>
-                        <p class="sign-role">{{ $payslip->position ?: '—' }}</p>
+                        <p class="sign-role">{{ $payslip->displayPosition() ?: '—' }}</p>
                     </td>
                 </tr>
             </table>

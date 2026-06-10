@@ -10,10 +10,10 @@
         <div class="mt-2 grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1">
             <div class="space-y-1">
                 <p>Employee Name: <span class="font-semibold">{{ strtoupper($payslip->employee_name) }}</span></p>
-                <p>Position: <span class="font-semibold">{{ strtoupper($payslip->position ?: '—') }}</span></p>
+                <p>Position: <span class="font-semibold">{{ strtoupper($payslip->displayPosition() ?: '—') }}</span></p>
             </div>
             <div class="space-y-1">
-                <p>Date Hired: <span class="font-semibold">{{ $payslip->date_hired?->format('F j, Y') ?: '—' }}</span></p>
+                <p>Date Hired: <span class="font-semibold">{{ $payslip->displayDateHired()?->format('F j, Y') ?: '—' }}</span></p>
                 <p>Rate per day: <span class="font-semibold">{{ $payslip->formatMoney($payslip->rate_per_day) }}</span></p>
             </div>
         </div>
@@ -97,7 +97,7 @@
                             {{ $payslip->isLinkedToEmployee() ? $payslip->employee_name : ' ' }}
                         </p>
                     </div>
-                    <p class="mt-2 min-h-[1.25rem]">{{ $payslip->isLinkedToEmployee() ? ($payslip->position ?: '—') : ' ' }}</p>
+                    <p class="mt-2 min-h-[1.25rem]">{{ $payslip->isLinkedToEmployee() ? ($payslip->displayPosition() ?: '—') : ' ' }}</p>
                 </div>
             </div>
         </div>
