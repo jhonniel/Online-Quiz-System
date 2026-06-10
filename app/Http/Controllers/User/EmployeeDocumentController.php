@@ -5,6 +5,7 @@ namespace App\Http\Controllers\User;
 use App\Http\Controllers\Controller;
 use App\Models\EmployeeDocumentSignature;
 use App\Models\User;
+use App\Support\EmployeeDocumentSigning;
 use App\Support\EmployeeNdaDocument;
 use App\Support\EmployeeSampleDocument;
 use Illuminate\Http\Request;
@@ -43,10 +44,17 @@ class EmployeeDocumentController extends Controller
 
         $user->loadMissing('department');
 
-        $signature = EmployeeDocumentSignature::query()
+        $wasUnsigned = ! EmployeeDocumentSignature::query()
             ->where('user_id', $user->id)
             ->where('document_type', $type)
-            ->first();
+            ->whereNotNull('signed_at')
+            ->exists();
+
+        $signature = EmployeeDocumentSigning::ensureSigned($user, $type);
+
+        if ($wasUnsigned && $signature->isSigned()) {
+            session()->flash('success', EmployeeSampleDocument::label($type).' signed automatically with your profile e-signature.');
+        }
 
         return view('user.employee-documents.show', [
             'user' => $user,
@@ -55,7 +63,7 @@ class EmployeeDocumentController extends Controller
             'title' => EmployeeSampleDocument::title($type),
             'paragraphs' => EmployeeSampleDocument::paragraphs($user, $type),
             'ndaView' => $type === 'nda'
-                ? EmployeeNdaDocument::viewData($user, $signature?->signed_at)
+                ? EmployeeNdaDocument::viewData($user, $signature->signed_at)
                 : null,
             'signature' => $signature,
         ]);
@@ -87,23 +95,7 @@ class EmployeeDocumentController extends Controller
                 ]);
         }
 
-        $user->loadMissing('department');
-        $signedAt = now();
-        $pdfBinary = EmployeeSampleDocument::renderSignedPdfBinary($user, $type, $signedAt);
-        [$storedPath, $disk] = $this->storePdfFile($pdfBinary, $user->id, $type);
-
-        if ($existing && $existing->signed_document_path) {
-            $this->deleteFileIfExists((string) $existing->signed_document_path, (string) ($existing->storage_disk ?? ''));
-        }
-
-        EmployeeDocumentSignature::updateOrCreate(
-            ['user_id' => $user->id, 'document_type' => $type],
-            [
-                'signed_at' => $signedAt,
-                'signed_document_path' => $storedPath,
-                'storage_disk' => $disk,
-            ]
-        );
+        EmployeeDocumentSigning::sign($user, $type, $existing);
 
         return redirect()
             ->route('user.employee-documents.show', $type)
@@ -117,12 +109,9 @@ class EmployeeDocumentController extends Controller
 
         $user->loadMissing('department');
 
-        $signature = EmployeeDocumentSignature::query()
-            ->where('user_id', $user->id)
-            ->where('document_type', $type)
-            ->first();
+        $signature = EmployeeDocumentSigning::ensureSigned($user, $type);
 
-        $isSigned = $signature?->isSigned() ?? false;
+        $isSigned = $signature->isSigned();
         $pdfBinary = $isSigned
             ? EmployeeSampleDocument::renderSignedPdfBinary($user, $type, $signature->signed_at)
             : EmployeeSampleDocument::renderPdfBinary($user, $type, null);
@@ -141,12 +130,9 @@ class EmployeeDocumentController extends Controller
         $user = $this->requireEmployee($request);
         abort_unless(EmployeeSampleDocument::isValidType($type), 404);
 
-        $signature = EmployeeDocumentSignature::query()
-            ->where('user_id', $user->id)
-            ->where('document_type', $type)
-            ->first();
+        $signature = EmployeeDocumentSigning::ensureSigned($user, $type);
 
-        abort_unless($signature?->isSigned(), 404);
+        abort_unless($signature->isSigned(), 404);
 
         return $this->streamStoredPdf(
             (string) $signature->signed_document_path,
@@ -164,57 +150,6 @@ class EmployeeDocumentController extends Controller
         abort_unless($user && $user->role === 'employee', 403);
 
         return $user;
-    }
-
-    /**
-     * @return array{0: string, 1: string}
-     */
-    private function storePdfFile(string $pdfBinary, int $userId, string $type): array
-    {
-        $dir = 'employee-signed-documents';
-        $assetDisk = 'digitalocean';
-        $doConfigured = ! empty(env('DIGITALOCEAN_SPACES_KEY') ?: env('DO_SPACES_KEY'))
-            && ! empty(env('DIGITALOCEAN_SPACES_SECRET') ?: env('DO_SPACES_SECRET'))
-            && ! empty(env('DIGITALOCEAN_SPACES_BUCKET') ?: env('DO_SPACES_BUCKET'));
-
-        if ($doConfigured) {
-            $assetRoot = trim(env('DIGITALOCEAN_SPACES_ROOT_PATH', ''), '/');
-            $dir = $assetRoot ? $assetRoot.'/'.$dir : $dir;
-        }
-
-        $disk = $doConfigured ? $assetDisk : 'public';
-        $filename = $userId.'-'.$type.'-'.now()->format('YmdHis').'.pdf';
-        $path = $dir.'/'.$filename;
-
-        Storage::disk($disk)->put($path, $pdfBinary);
-
-        return [$path, $disk];
-    }
-
-    private function deleteFileIfExists(string $path, string $preferredDisk = ''): void
-    {
-        if ($path === '') {
-            return;
-        }
-
-        $disks = array_values(array_unique(array_filter([
-            $preferredDisk,
-            'digitalocean',
-            'public',
-            config('filesystems.default', 'local'),
-        ])));
-
-        foreach ($disks as $disk) {
-            try {
-                if (Storage::disk($disk)->exists($path)) {
-                    Storage::disk($disk)->delete($path);
-
-                    return;
-                }
-            } catch (\Throwable) {
-                continue;
-            }
-        }
     }
 
     private function streamStoredPdf(string $path, string $preferredDisk, string $filename)

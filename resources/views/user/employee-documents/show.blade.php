@@ -65,6 +65,12 @@
                     @foreach($paragraphs as $paragraph)
                         <p class="text-justify">{{ $paragraph }}</p>
                     @endforeach
+                    @if($user->hasESignature())
+                        <div class="pt-6 border-t border-gray-100">
+                            <p class="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-2">Employee E-Signature</p>
+                            <img src="{{ $user->getESignatureUrl() }}" alt="E-Signature" class="max-h-16 object-contain">
+                        </div>
+                    @endif
                 </div>
             @endif
             <div class="border-t border-gray-100 px-6 py-5 bg-gray-50">
@@ -93,7 +99,7 @@
                         <div>
                             @if($user->hasESignature())
                                 <img src="{{ $user->getESignatureUrl() }}" alt="E-Signature preview" class="max-h-16 object-contain opacity-80">
-                                <p class="mt-2 text-xs text-gray-500">Your profile e-signature will be applied when you sign.</p>
+                                <p class="mt-2 text-xs text-gray-500">Your profile e-signature is applied automatically when you open this document.</p>
                             @else
                                 <p class="text-sm text-amber-700">
                                     No e-signature on file.

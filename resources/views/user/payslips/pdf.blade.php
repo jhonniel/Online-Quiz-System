@@ -270,7 +270,7 @@
                     <td>
                         <p class="sign-label">Received by:</p>
                         <div class="sign-block">
-                            @if($signedAt && !empty($eSignatureDataUri))
+                            @if(!empty($eSignatureDataUri))
                                 <img src="{{ $eSignatureDataUri }}" alt="E-Signature" class="signature-image" style="object-fit: contain;">
                             @endif
                             <p class="sign-line">{{ $payslip->employee_name }}</p>

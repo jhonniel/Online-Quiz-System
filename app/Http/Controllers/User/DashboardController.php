@@ -12,7 +12,9 @@ use App\Models\LeaveRequest;
 use App\Models\LeaveRequestLog;
 use App\Models\News;
 use App\Models\QuizAssignment;
+use App\Models\EmployeeAnnouncementAcknowledgment;
 use App\Models\Setting;
+use App\Models\SystemAnnouncement;
 use App\Models\TicketReport;
 use App\Models\University;
 use App\Models\User;
@@ -443,6 +445,47 @@ class DashboardController extends Controller
         } catch (\Throwable $e) {
             Log::warning('Failed to log rules_regulations_acknowledged', [
                 'user_id' => $user->id,
+                'error' => $e->getMessage(),
+            ]);
+        }
+
+        return response()->json(['ok' => true]);
+    }
+
+    public function acknowledgeSystemAnnouncement(Request $request): JsonResponse
+    {
+        $user = $request->user();
+        abort_unless($user && $user->role === 'employee' && $user->is_active, 403);
+
+        $validated = $request->validate([
+            'announcement_id' => 'required|integer|exists:system_announcements,id',
+        ]);
+
+        $announcement = SystemAnnouncement::query()
+            ->published()
+            ->whereKey($validated['announcement_id'])
+            ->firstOrFail();
+
+        EmployeeAnnouncementAcknowledgment::query()->firstOrCreate(
+            [
+                'user_id' => $user->id,
+                'system_announcement_id' => $announcement->id,
+            ],
+            [
+                'acknowledged_at' => now(),
+            ]
+        );
+
+        try {
+            UserActivity::logActivity($user, 'action', 'system_announcement_acknowledged', [
+                'user_id' => $user->id,
+                'announcement_id' => $announcement->id,
+                'announcement_title' => $announcement->title,
+            ]);
+        } catch (\Throwable $e) {
+            Log::warning('Failed to log system_announcement_acknowledged', [
+                'user_id' => $user->id,
+                'announcement_id' => $announcement->id,
                 'error' => $e->getMessage(),
             ]);
         }

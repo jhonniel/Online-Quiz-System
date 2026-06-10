@@ -7,7 +7,7 @@
     <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
         <div>
             <h1 class="text-2xl font-bold text-gray-900">Documents</h1>
-            <p class="mt-1 text-sm text-gray-600">Review, generate PDF, and sign required employee documents using your profile e-signature.</p>
+            <p class="mt-1 text-sm text-gray-600">Review and download required documents. Your profile e-signature is applied automatically when you open each document.</p>
         </div>
 
         @if(session('success'))

@@ -95,14 +95,7 @@ final class EmployeeSampleDocument
             return EmployeeNdaDocument::renderPdfBinary($user, $signedAt);
         }
 
-        $data = self::pdfViewData($user, $type, $signedAt);
-
-        if ($signedAt === null) {
-            $data['eSignatureDataUri'] = null;
-            $data['digitalSignatureEnabled'] = false;
-        }
-
-        return Pdf::loadView('user.employee-documents.pdf', $data)
+        return Pdf::loadView('user.employee-documents.pdf', self::pdfViewData($user, $type, $signedAt))
             ->setPaper('a4', 'portrait')
             ->setOption('defaultFont', 'DejaVu Sans')
             ->output();

@@ -116,6 +116,9 @@
                     <div>
                         <p class="text-xs font-semibold text-gray-500 uppercase tracking-wide">Date Hired</p>
                         <p class="mt-1 text-sm font-semibold text-gray-900">{{ $user->date_hired?->format('F j, Y') ?: '—' }}</p>
+                        @if($employmentDuration = $user->activeEmploymentDurationLabel())
+                            <p class="mt-1 text-xs text-emerald-700 font-medium">{{ $employmentDuration }} employed (as of {{ now()->format('F j, Y') }})</p>
+                        @endif
                     </div>
                     <div>
                         <p class="text-xs font-semibold text-gray-500 uppercase tracking-wide">TIN</p>

@@ -117,10 +117,12 @@
             @endif
 
             <p class="signature-label">Employee E-Signature</p>
-            @if($signedAt && !empty($eSignatureDataUri))
+            @if(!empty($eSignatureDataUri))
                 <img src="{{ $eSignatureDataUri }}" alt="E-Signature" class="signature-image">
                 <p class="signature-name">{{ $employeeName }}</p>
-                <p class="signature-date">Signed on {{ $signedAt->format('F j, Y h:i A') }}</p>
+                @if($signedAt)
+                    <p class="signature-date">Signed on {{ $signedAt->format('F j, Y h:i A') }}</p>
+                @endif
             @else
                 <div style="border-bottom: 1px solid #111827; width: 240px; height: 14mm; margin: 0 0 6px 0;"></div>
                 <p class="signature-name">{{ $employeeName }}</p>

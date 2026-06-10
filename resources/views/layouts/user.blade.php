@@ -1566,6 +1566,9 @@
         @if(auth()->user()->role === 'student' && session('student_rules_regulations_pending') === true)
             @include('components.student-rules-regulations-modal')
         @endif
+        @if(auth()->user()->role === 'employee' && ($pendingEmployeeAnnouncement = auth()->user()->pendingSystemAnnouncement()))
+            @include('components.employee-system-announcement-modal', ['announcement' => $pendingEmployeeAnnouncement])
+        @endif
     @endauth
 
     @auth

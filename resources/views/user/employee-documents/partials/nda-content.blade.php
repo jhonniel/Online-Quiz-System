@@ -25,6 +25,12 @@
     </p>
 
     <div class="pt-4 text-center space-y-1">
+        @if(!empty($eSignatureDataUri))
+            <div class="relative mx-auto h-14 w-52">
+                <img src="{{ $eSignatureDataUri }}" alt="E-Signature" class="absolute inset-0 mx-auto h-14 w-52 object-contain object-bottom">
+            </div>
+            <div class="mx-auto mt-1 max-w-md border-t border-gray-900"></div>
+        @endif
         <p class="font-bold uppercase">{{ $fullNameUpper }}</p>
         <p class="font-bold uppercase">{{ strtoupper($branding['company_signature']) }}</p>
         <p class="font-bold uppercase pt-4">{{ $idNumberUpper }}</p>

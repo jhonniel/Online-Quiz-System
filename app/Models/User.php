@@ -142,6 +142,52 @@ class User extends Authenticatable
         });
     }
 
+    public function announcementAcknowledgments()
+    {
+        return $this->hasMany(EmployeeAnnouncementAcknowledgment::class);
+    }
+
+    public function pendingSystemAnnouncement(): ?SystemAnnouncement
+    {
+        if ($this->role !== 'employee' || ! $this->is_active) {
+            return null;
+        }
+
+        return SystemAnnouncement::query()
+            ->published()
+            ->whereDoesntHave('acknowledgments', function ($query) {
+                $query->where('user_id', $this->id);
+            })
+            ->orderBy('published_at')
+            ->orderBy('id')
+            ->first();
+    }
+
+    /**
+     * Employment length from date_hired through today, for active employees only.
+     */
+    public function activeEmploymentDurationLabel(): ?string
+    {
+        if ($this->role !== 'employee' || ! $this->is_active || $this->date_hired === null) {
+            return null;
+        }
+
+        $hired = $this->date_hired->copy()->startOfDay();
+        $today = now()->startOfDay();
+        $years = (int) $hired->diffInYears($today);
+
+        if ($years >= 1) {
+            return $years.' '.($years === 1 ? 'year' : 'years');
+        }
+
+        $months = (int) $hired->diffInMonths($today);
+        if ($months >= 1) {
+            return $months.' '.($months === 1 ? 'month' : 'months');
+        }
+
+        return 'Less than 1 month';
+    }
+
     // Relationships
     public function createdQuizzes()
     {

@@ -13,8 +13,10 @@ final class EmployeeNdaDocument
     /**
      * @return array<string, mixed>
      */
-    public static function viewData(User $user, ?\DateTimeInterface $signedAt = null, bool $includeSignatureAssets = false): array
+    public static function viewData(User $user, ?\DateTimeInterface $signedAt = null, ?bool $includeSignatureAssets = null): array
     {
+        $includeSignatureAssets ??= $signedAt !== null || $user->hasESignature();
+
         $agreementDate = $signedAt
             ? Carbon::instance($signedAt)
             : now();
@@ -45,9 +47,7 @@ final class EmployeeNdaDocument
 
     public static function renderPdfBinary(User $user, ?\DateTimeInterface $signedAt = null): string
     {
-        $includeSignature = $signedAt !== null;
-
-        return Pdf::loadView('user.employee-documents.nda-pdf', self::viewData($user, $signedAt, $includeSignature))
+        return Pdf::loadView('user.employee-documents.nda-pdf', self::viewData($user, $signedAt))
             ->setPaper([0, 0, 612, 1008], 'portrait')
             ->setOption('defaultFont', 'DejaVu Sans')
             ->setOption('isRemoteEnabled', true)

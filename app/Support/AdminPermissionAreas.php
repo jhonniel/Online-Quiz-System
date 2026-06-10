@@ -13,6 +13,7 @@ final class AdminPermissionAreas
         'forum' => 'Forum',
         'news' => 'News',
         'evaluations' => 'Evaluation Questions',
+        'announcements' => 'Announcement',
     ];
 
     public const EMPLOYEE_FEATURES = [

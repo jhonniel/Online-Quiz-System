@@ -345,6 +345,12 @@ Route::prefix('admin')->middleware(['auth', 'admin'])->group(function () {
             Route::get('evaluations/{evaluation}/submissions', [App\Http\Controllers\Admin\EvaluationController::class, 'submissions'])->name('admin.evaluations.submissions');
             Route::post('evaluations/force-send', [App\Http\Controllers\Admin\EvaluationController::class, 'forceSend'])->name('admin.evaluations.force-send');
         });
+
+        Route::middleware(['admin.subfeature:content_management,announcements'])->group(function () {
+            Route::resource('system-announcements', App\Http\Controllers\Admin\SystemAnnouncementController::class)->except(['show'])->names('admin.system-announcements');
+            Route::post('system-announcements/{system_announcement}/publish', [App\Http\Controllers\Admin\SystemAnnouncementController::class, 'publish'])->name('admin.system-announcements.publish');
+            Route::post('system-announcements/{system_announcement}/unpublish', [App\Http\Controllers\Admin\SystemAnnouncementController::class, 'unpublish'])->name('admin.system-announcements.unpublish');
+        });
     });
 
     // Analytics & Reports (parent: analytics_reports; sub-areas: admin.analytics:{feature})
@@ -678,6 +684,7 @@ Route::middleware(['auth'])->group(function () {
 Route::middleware(['auth', 'student.not_terminated'])->group(function () {
     Route::get('/dashboard', [UserDashboardController::class, 'index'])->name('user.dashboard');
     Route::post('/dashboard/rules-regulations/acknowledge', [UserDashboardController::class, 'acknowledgeRulesRegulations'])->name('user.rules-regulations.acknowledge');
+    Route::post('/dashboard/system-announcement/acknowledge', [UserDashboardController::class, 'acknowledgeSystemAnnouncement'])->name('user.system-announcement.acknowledge');
     Route::get('/teacher/students', [UserDashboardController::class, 'teacherStudents'])->name('user.teacher.students');
     Route::get('/teacher/students/{user}/merits', [UserDashboardController::class, 'teacherStudentMeritDetails'])->name('user.teacher.students.merits');
     Route::get('/teacher/news', [UserDashboardController::class, 'teacherNews'])->name('user.teacher.news');
