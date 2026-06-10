@@ -78,20 +78,48 @@ class EmployeePayslip extends Model
     }
 
     /**
-     * Position shown on payslips: the employee's assigned department position.
+     * Employee account this payslip belongs to (linked or matched by email).
      */
-    public function displayPosition(): ?string
+    public function resolvedEmployee(): ?User
     {
         if ($this->isLinkedToEmployee()) {
             $employee = $this->relationLoaded('employee')
                 ? $this->employee
-                : $this->employee()->with('departmentPosition:id,name')->first();
+                : $this->employee()->with(['department:id,name', 'departmentPosition:id,name,department_id'])->first([
+                    'id', 'name', 'email', 'department_id', 'department_position_id', 'date_hired',
+                ]);
 
-            $employee?->loadMissing('departmentPosition:id,name');
-            $label = trim((string) $employee?->payslipPositionLabel());
-            if ($label !== '') {
-                return $label;
+            if ($employee && ! array_key_exists('department_position_id', $employee->getAttributes())) {
+                $employee = $this->employee()->with(['department:id,name', 'departmentPosition:id,name,department_id'])->first([
+                    'id', 'name', 'email', 'department_id', 'department_position_id', 'date_hired',
+                ]);
             }
+
+            $employee?->loadMissing(['department:id,name', 'departmentPosition:id,name,department_id']);
+
+            return $employee;
+        }
+
+        $email = trim((string) ($this->employee_email ?? ''));
+        if ($email === '') {
+            return null;
+        }
+
+        return User::query()
+            ->where('role', 'employee')
+            ->whereRaw('LOWER(email) = ?', [strtolower($email)])
+            ->with(['department:id,name', 'departmentPosition:id,name,department_id'])
+            ->first(['id', 'name', 'email', 'department_id', 'department_position_id', 'date_hired']);
+    }
+
+    /**
+     * Position shown on payslips: the employee's assigned department position.
+     */
+    public function displayPosition(): ?string
+    {
+        $label = trim((string) ($this->resolvedEmployee()?->payslipPositionLabel() ?? ''));
+        if ($label !== '') {
+            return $label;
         }
 
         $stored = trim((string) ($this->position ?? ''));
@@ -104,13 +132,7 @@ class EmployeePayslip extends Model
      */
     public function syncProfileFieldsFromEmployee(?User $employee = null): void
     {
-        if (! $this->isLinkedToEmployee()) {
-            return;
-        }
-
-        $employee ??= $this->relationLoaded('employee')
-            ? $this->employee
-            : $this->employee()->with(['department:id,name', 'departmentPosition:id,name'])->first();
+        $employee ??= $this->resolvedEmployee();
 
         if (! $employee) {
             return;
@@ -118,26 +140,29 @@ class EmployeePayslip extends Model
 
         $fields = PayslipCsvImporter::profileFieldsFromEmployee($employee);
 
-        $this->forceFill([
+        $updates = [
             'position' => $fields['position'],
             'date_hired' => $fields['date_hired'],
-        ]);
+        ];
 
-        if ($this->isDirty(['position', 'date_hired'])) {
+        if (! $this->isLinkedToEmployee()) {
+            $updates['user_id'] = $employee->id;
+            $updates['employee_email'] = $employee->email;
+        }
+
+        $this->forceFill($updates);
+
+        if ($this->isDirty(['position', 'date_hired', 'user_id', 'employee_email'])) {
             $this->save();
         }
     }
 
     public function displayDateHired(): ?\Illuminate\Support\Carbon
     {
-        if ($this->isLinkedToEmployee()) {
-            $employee = $this->relationLoaded('employee')
-                ? $this->employee
-                : $this->employee()->first(['id', 'date_hired']);
+        $employee = $this->resolvedEmployee();
 
-            if ($employee?->date_hired) {
-                return $employee->date_hired;
-            }
+        if ($employee?->date_hired) {
+            return $employee->date_hired;
         }
 
         return $this->date_hired;

@@ -14,7 +14,7 @@ final class PayslipPdf
         User $employee,
         ?\DateTimeInterface $signedAt = null,
     ): string {
-        $employee->loadMissing(['department:id,name', 'departmentPosition:id,name']);
+        $employee->loadMissing(['department:id,name', 'departmentPosition:id,name,department_id']);
         $payslip->setRelation('employee', $employee);
         $payslip->syncProfileFieldsFromEmployee($employee);
 

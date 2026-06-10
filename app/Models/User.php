@@ -280,9 +280,18 @@ class User extends Authenticatable
 
     public function payslipPositionLabel(): ?string
     {
-        $this->loadMissing('departmentPosition:id,name');
+        $this->loadMissing('departmentPosition:id,name,department_id');
 
-        $label = trim((string) $this->departmentPosition?->name);
+        $position = $this->departmentPosition;
+        if ($position === null || $this->department_id === null) {
+            return null;
+        }
+
+        if ((int) $position->department_id !== (int) $this->department_id) {
+            return null;
+        }
+
+        $label = trim((string) $position->name);
 
         return $label !== '' ? $label : null;
     }

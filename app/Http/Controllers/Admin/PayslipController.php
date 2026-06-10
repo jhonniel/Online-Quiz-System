@@ -25,7 +25,8 @@ class PayslipController extends Controller
             ->orderByDesc('period_end')
             ->orderByDesc('period_start')
             ->orderBy('employee_name')
-            ->get();
+            ->get()
+            ->each(fn (EmployeePayslip $payslip) => $payslip->syncProfileFieldsFromEmployee());
 
         $groupedPayslips = PayslipGrouper::group($payslips);
         $totalCount = $payslips->count();
@@ -54,7 +55,7 @@ class PayslipController extends Controller
     private function scopedPayslipQuery(Request $request, bool $applyYearFilter = true)
     {
         $query = EmployeePayslip::query()
-            ->with(['employee:id,name,email,department_id,date_hired', 'employee.department:id,name', 'employee.departmentPosition:id,name', 'uploader:id,name'])
+            ->with(['employee:id,name,email,department_id,department_position_id,date_hired', 'employee.department:id,name', 'employee.departmentPosition:id,name,department_id', 'uploader:id,name'])
             ->where(function ($q) {
                 $q->whereNull('user_id')
                     ->orWhereHas('employee', function ($employeeQuery) {
@@ -89,7 +90,7 @@ class PayslipController extends Controller
     public function show(EmployeePayslip $payslip)
     {
         $this->authorizePayslip($payslip);
-        $payslip->load(['employee:id,name,email,department_id,date_hired,e_signature_path', 'employee.department:id,name', 'employee.departmentPosition:id,name', 'uploader']);
+        $payslip->load(['employee:id,name,email,department_id,department_position_id,date_hired,e_signature_path', 'employee.department:id,name', 'employee.departmentPosition:id,name,department_id', 'uploader']);
         $payslip->syncProfileFieldsFromEmployee();
 
         $employees = $this->scopedEmployeeQuery()
@@ -279,7 +280,7 @@ class PayslipController extends Controller
         ]);
 
         $payslips = EmployeePayslip::query()
-            ->with(['employee:id,name,email,date_hired,e_signature_path', 'employee.department:id,name', 'employee.departmentPosition:id,name'])
+            ->with(['employee:id,name,email,department_id,department_position_id,date_hired,e_signature_path', 'employee.department:id,name', 'employee.departmentPosition:id,name,department_id'])
             ->whereIn('id', $validated['payslip_ids'])
             ->where(function ($q) {
                 $q->whereNull('user_id')

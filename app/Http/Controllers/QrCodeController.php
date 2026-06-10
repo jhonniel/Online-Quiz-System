@@ -26,7 +26,11 @@ class QrCodeController extends Controller
         }
 
         // Get user with relationships
-        $user = $qrToken->user()->with(['department', 'university'])->first();
+        $user = $qrToken->user()->with([
+            'department:id,name',
+            'departmentPosition:id,name,department_id',
+            'university',
+        ])->first();
 
         // If user not found, show error
         if (! $user) {

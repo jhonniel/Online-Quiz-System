@@ -185,7 +185,7 @@
                                 </div>
                             </div>
                             
-                            <!-- Department Info -->
+                            <!-- Department & Position -->
                             <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
                                 <div class="p-4 rounded-xl bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-200 shadow-sm">
                                     <div class="flex items-center space-x-3 mb-2">
@@ -195,10 +195,13 @@
                                             </svg>
                                         </div>
                                         <div>
-                                            <p class="text-xs font-semibold text-gray-500 uppercase tracking-wide">Department</p>
+                                            <p class="text-xs font-semibold text-gray-500 uppercase tracking-wide">Position</p>
                                             <p class="text-base font-bold text-gray-900">
-                                                {{ $user->department ? $user->department->name : 'Not Assigned' }}
+                                                {{ $user->payslipPositionLabel() ?: 'Not Assigned' }}
                                             </p>
+                                            @if($user->department)
+                                                <p class="text-xs text-gray-600 mt-0.5">{{ $user->department->name }}</p>
+                                            @endif
                                         </div>
                                     </div>
                                 </div>

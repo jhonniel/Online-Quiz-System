@@ -17,10 +17,12 @@ class PayslipController extends Controller
         abort_unless($user->role === 'employee', 403);
 
         $payslips = EmployeePayslip::query()
+            ->with(['employee.department:id,name', 'employee.departmentPosition:id,name,department_id'])
             ->where('user_id', $user->id)
             ->orderByDesc('period_end')
             ->orderByDesc('id')
-            ->paginate(10);
+            ->paginate(10)
+            ->through(fn (EmployeePayslip $payslip) => tap($payslip, fn (EmployeePayslip $p) => $p->syncProfileFieldsFromEmployee($user)));
 
         return view('user.payslips.index', compact('payslips', 'user'));
     }
@@ -31,7 +33,7 @@ class PayslipController extends Controller
         abort_unless($user->role === 'employee', 403);
         abort_unless((int) $payslip->user_id === (int) $user->id, 403);
 
-        $payslip->load(['employee:id,name,department_id,date_hired,e_signature_path,p12_certificate_path', 'employee.department:id,name', 'employee.departmentPosition:id,name']);
+        $payslip->load(['employee:id,name,department_id,department_position_id,date_hired,e_signature_path,p12_certificate_path', 'employee.department:id,name', 'employee.departmentPosition:id,name,department_id']);
         $payslip->syncProfileFieldsFromEmployee($user);
 
         return view('user.payslips.show', compact('payslip', 'user'));
@@ -68,7 +70,9 @@ class PayslipController extends Controller
                 ]);
             }
 
-            $user->loadMissing('department:id,name,position');
+            $user->loadMissing(['department:id,name', 'departmentPosition:id,name,department_id']);
+            $payslip->load(['employee.department:id,name', 'employee.departmentPosition:id,name,department_id']);
+            $payslip->syncProfileFieldsFromEmployee($user);
 
             $signedAt = now();
             $pdfBinary = PayslipPdf::renderSignedPdfBinary($payslip, $user, $signedAt, $password);

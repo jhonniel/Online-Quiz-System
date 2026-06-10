@@ -399,7 +399,7 @@ final class PayslipCsvImporter
      */
     public static function profileFieldsFromEmployee(User $user): array
     {
-        $user->loadMissing(['department:id,name', 'departmentPosition:id,name']);
+        $user->loadMissing(['department:id,name', 'departmentPosition:id,name,department_id']);
 
         $position = trim((string) $user->payslipPositionLabel());
 
