@@ -264,8 +264,8 @@
                                 <a href="{{ route('user.employee-documents.show', 'contract') }}"
                                    class="group flex items-center px-2 py-2 text-sm font-medium rounded-md transition-colors duration-200 {{ request()->routeIs('user.employee-documents.show') && request()->route('type') === 'contract' ? 'bg-indigo-700 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white' }}"
                                    :class="sidebarCollapsed ? 'justify-center' : ''"
-                                   :title="sidebarCollapsed ? 'Contract' : ''">
-                                    <span class="transition-opacity duration-300" :class="sidebarCollapsed ? 'opacity-0 w-0 overflow-hidden' : 'opacity-100'">Contract</span>
+                                   :title="sidebarCollapsed ? 'Agreement' : ''">
+                                    <span class="transition-opacity duration-300" :class="sidebarCollapsed ? 'opacity-0 w-0 overflow-hidden' : 'opacity-100'">Agreement</span>
                                 </a>
                                 <a href="{{ route('user.employee-documents.show', 'policy') }}"
                                    class="group flex items-center px-2 py-2 text-sm font-medium rounded-md transition-colors duration-200 {{ request()->routeIs('user.employee-documents.show') && request()->route('type') === 'policy' ? 'bg-indigo-700 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white' }}"

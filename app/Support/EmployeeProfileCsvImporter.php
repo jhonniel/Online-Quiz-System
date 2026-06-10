@@ -8,6 +8,8 @@ use Illuminate\Support\Facades\DB;
 
 final class EmployeeProfileCsvImporter
 {
+    public const DEFAULT_PASSWORD = 'password';
+
     /** @var list<string> */
     public const HEADERS = [
         'email',
@@ -20,7 +22,7 @@ final class EmployeeProfileCsvImporter
     ];
 
     /**
-     * @return array{updated: int, skipped: int, errors: list<string>}
+     * @return array{created: int, updated: int, skipped: int, errors: list<string>}
      */
     public function import(string $path): array
     {
@@ -36,6 +38,7 @@ final class EmployeeProfileCsvImporter
         }
 
         $columnMap = $this->mapHeaders($headerRow);
+        $created = 0;
         $updated = 0;
         $skipped = 0;
         $errors = [];
@@ -51,7 +54,7 @@ final class EmployeeProfileCsvImporter
                     continue;
                 }
 
-                $value = fn (string $key): string => trim((string) ($row[$columnMap[$key]] ?? ''));
+                $value = fn (string $key): string => trim((string) ($row[$columnMap[$key] ?? -1] ?? ''));
 
                 $email = $value('email');
                 $employeeName = $value('employee_name');
@@ -63,48 +66,35 @@ final class EmployeeProfileCsvImporter
                     continue;
                 }
 
-                $user = $this->resolveEmployee($email, $employeeName);
-                if (! $user) {
-                    $errors[] = "Row {$rowNumber}: employee not found ({$email}{$employeeName}).";
+                $profilePayload = $this->buildProfilePayload($value, $rowNumber, $errors, $skipped);
+                if ($profilePayload === false) {
+                    continue;
+                }
+
+                $resolved = $this->resolveOrCreateEmployee($email, $employeeName, $rowNumber, $errors, $skipped);
+                if ($resolved === null) {
+                    continue;
+                }
+
+                ['user' => $user, 'wasCreated' => $wasCreated] = $resolved;
+
+                if ($profilePayload !== []) {
+                    $user->update($profilePayload);
+                }
+
+                if ($wasCreated) {
+                    $created++;
+
+                    continue;
+                }
+
+                if ($profilePayload === []) {
+                    $errors[] = "Row {$rowNumber}: employee already exists and no data to import.";
                     $skipped++;
 
                     continue;
                 }
 
-                $payload = [];
-
-                $dateHiredRaw = $value('date_hired');
-                if ($dateHiredRaw !== '' && ! in_array(strtolower($dateHiredRaw), ['-', 'n/a', 'na'], true)) {
-                    try {
-                        $payload['date_hired'] = Carbon::parse($dateHiredRaw)->toDateString();
-                    } catch (\Throwable $e) {
-                        $errors[] = "Row {$rowNumber}: invalid date_hired.";
-                        $skipped++;
-
-                        continue;
-                    }
-                }
-
-                foreach ([
-                    'tin' => 'tin',
-                    'sss' => 'sss_number',
-                    'hdmf' => 'hdmf_number',
-                    'phic' => 'phic_number',
-                ] as $csvKey => $dbKey) {
-                    $raw = $value($csvKey);
-                    if ($raw !== '' && ! in_array(strtolower($raw), ['-', 'n/a', 'na'], true)) {
-                        $payload[$dbKey] = $raw;
-                    }
-                }
-
-                if ($payload === []) {
-                    $errors[] = "Row {$rowNumber}: no profile data to import.";
-                    $skipped++;
-
-                    continue;
-                }
-
-                $user->update($payload);
                 $updated++;
             }
 
@@ -118,7 +108,100 @@ final class EmployeeProfileCsvImporter
 
         fclose($handle);
 
-        return compact('updated', 'skipped', 'errors');
+        return compact('created', 'updated', 'skipped', 'errors');
+    }
+
+    /**
+     * @param  callable(string): string  $value
+     * @param  list<string>  $errors
+     * @return array<string, mixed>|false
+     */
+    private function buildProfilePayload(callable $value, int $rowNumber, array &$errors, int &$skipped): array|false
+    {
+        $payload = [];
+
+        $employeeName = $value('employee_name');
+        if ($employeeName !== '') {
+            $payload['name'] = $employeeName;
+        }
+
+        $dateHiredRaw = $value('date_hired');
+        if ($dateHiredRaw !== '' && ! in_array(strtolower($dateHiredRaw), ['-', 'n/a', 'na'], true)) {
+            try {
+                $payload['date_hired'] = Carbon::parse($dateHiredRaw)->toDateString();
+            } catch (\Throwable) {
+                $errors[] = "Row {$rowNumber}: invalid date_hired.";
+                $skipped++;
+
+                return false;
+            }
+        }
+
+        foreach ([
+            'tin' => 'tin',
+            'sss' => 'sss_number',
+            'hdmf' => 'hdmf_number',
+            'phic' => 'phic_number',
+        ] as $csvKey => $dbKey) {
+            $raw = $value($csvKey);
+            if ($raw !== '' && ! in_array(strtolower($raw), ['-', 'n/a', 'na'], true)) {
+                $payload[$dbKey] = $raw;
+            }
+        }
+
+        return $payload;
+    }
+
+    /**
+     * @param  list<string>  $errors
+     * @return array{user: User, wasCreated: bool}|null
+     */
+    private function resolveOrCreateEmployee(string $email, string $employeeName, int $rowNumber, array &$errors, int &$skipped): ?array
+    {
+        if ($email !== '') {
+            $existingUser = User::query()
+                ->whereRaw('LOWER(email) = ?', [strtolower($email)])
+                ->first();
+
+            if ($existingUser) {
+                if ($existingUser->role !== 'employee') {
+                    $errors[] = "Row {$rowNumber}: email already belongs to a non-employee account ({$email}).";
+                    $skipped++;
+
+                    return null;
+                }
+
+                return ['user' => $existingUser, 'wasCreated' => false];
+            }
+
+            if ($employeeName === '') {
+                $errors[] = "Row {$rowNumber}: employee_name is required to create a new employee ({$email}).";
+                $skipped++;
+
+                return null;
+            }
+
+            $user = User::create([
+                'name' => $employeeName,
+                'email' => $email,
+                'password' => self::DEFAULT_PASSWORD,
+                'role' => 'employee',
+                'is_active' => true,
+                'is_approved' => true,
+            ]);
+
+            return ['user' => $user, 'wasCreated' => true];
+        }
+
+        $user = $this->resolveEmployeeByName($employeeName);
+        if (! $user) {
+            $errors[] = "Row {$rowNumber}: employee not found ({$employeeName}). Provide email to create a new employee account.";
+            $skipped++;
+
+            return null;
+        }
+
+        return ['user' => $user, 'wasCreated' => false];
     }
 
     /**
@@ -177,19 +260,8 @@ final class EmployeeProfileCsvImporter
         return true;
     }
 
-    private function resolveEmployee(string $email, string $name): ?User
+    private function resolveEmployeeByName(string $name): ?User
     {
-        if ($email !== '') {
-            $byEmail = User::query()
-                ->where('role', 'employee')
-                ->whereRaw('LOWER(email) = ?', [strtolower($email)])
-                ->first();
-
-            if ($byEmail) {
-                return $byEmail;
-            }
-        }
-
         if ($name === '') {
             return null;
         }

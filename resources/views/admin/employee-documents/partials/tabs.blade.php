@@ -1,5 +1,5 @@
 <div class="flex flex-wrap gap-2">
-    @foreach(['nda' => 'NDA', 'contract' => 'Contract', 'policy' => 'Policy'] as $docType => $docLabel)
+    @foreach(['nda' => 'NDA', 'contract' => 'Agreement', 'policy' => 'Policy'] as $docType => $docLabel)
         @if(auth()->user()->canAccessEmployeeFeature('employee_'.$docType))
             <a href="{{ route('admin.employee-documents.'.$docType) }}"
                class="inline-flex items-center px-4 py-2 rounded-md text-sm font-medium {{ ($active ?? '') === $docType ? 'bg-indigo-600 text-white' : 'bg-white border border-gray-300 text-gray-700 hover:bg-gray-50' }}">

@@ -20,7 +20,7 @@ final class AdminPermissionAreas
         'file_request' => 'File Request',
         'payslip' => 'Payslip',
         'employee_nda' => 'NDA',
-        'employee_contract' => 'Contract',
+        'employee_contract' => 'Agreement',
         'employee_policy' => 'Policy',
         'dtr' => 'DTR (Time Records)',
         'time_report' => 'Time Report',

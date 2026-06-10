@@ -153,7 +153,7 @@
                                 <label for="employee_management" class="block text-sm font-medium text-gray-900 cursor-pointer">
                                     Employee Management
                                 </label>
-                                <p class="mt-1 text-sm text-gray-500">Employee dashboard, documents (file request, payslip, NDA, contract, policy), DTR, time reports, and leave</p>
+                                <p class="mt-1 text-sm text-gray-500">Employee dashboard, documents (file request, payslip, NDA, agreement, policy), DTR, time reports, and leave</p>
 
                                 @include('admin.admin-permissions.partials.sub-feature-fields', [
                                     'areaKey' => 'employee_management',

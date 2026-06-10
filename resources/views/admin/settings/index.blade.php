@@ -899,7 +899,7 @@
                                         <option value="enabled" {{ $employeeDocumentsNavValue == 'enabled' ? 'selected' : '' }}>Show in employee navbar</option>
                                         <option value="disabled" {{ $employeeDocumentsNavValue == 'disabled' ? 'selected' : '' }}>Hide from employee navbar</option>
                                     </select>
-                                    <p class="mt-2 text-xs text-gray-500">Controls whether employees see the Documents menu (NDA, Contract, Policy) in their sidebar.</p>
+                                    <p class="mt-2 text-xs text-gray-500">Controls whether employees see the Documents menu (NDA, Agreement, Policy) in their sidebar.</p>
                                 </div>
 
                                 <div>

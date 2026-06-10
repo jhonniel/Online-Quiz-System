@@ -21,7 +21,7 @@ final class EmployeeSampleDocument
     {
         return match ($type) {
             'nda' => 'NDA',
-            'contract' => 'Contract',
+            'contract' => 'Agreement',
             'policy' => 'Policy',
             default => strtoupper($type),
         };
@@ -31,7 +31,7 @@ final class EmployeeSampleDocument
     {
         return match ($type) {
             'nda' => 'Non-Disclosure Agreement',
-            'contract' => 'Employment Contract',
+            'contract' => 'Employment Agreement',
             'policy' => 'Company Policy Acknowledgment',
             default => self::label($type),
         };
@@ -51,7 +51,7 @@ final class EmployeeSampleDocument
         return match ($type) {
             'nda' => [],
             'contract' => [
-                "This Employment Contract (\"Contract\") is between {$company} and {$employee}, for the position of {$position} in the {$department} department.",
+                "This Employment Agreement (\"Agreement\") is between {$company} and {$employee}, for the position of {$position} in the {$department} department.",
                 "The employment relationship is effective as of {$dateHired}, subject to company rules, performance standards, and applicable labor regulations.",
                 'Compensation, benefits, and work schedule shall follow the offer accepted by the Employee and policies issued by the Company from time to time.',
                 'The Employee agrees to perform assigned duties professionally, comply with attendance and reporting requirements, and follow lawful instructions from supervisors.',

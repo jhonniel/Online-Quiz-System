@@ -1098,7 +1098,10 @@ class UserController extends Controller
                 ->with('error', 'Failed to import employee profiles: '.$e->getMessage());
         }
 
-        $message = "Updated {$result['updated']} employee profile(s).";
+        $message = "Created {$result['created']} employee account(s) with default password \"".EmployeeProfileCsvImporter::DEFAULT_PASSWORD.'".';
+        if ($result['updated'] > 0) {
+            $message .= " Updated {$result['updated']} existing employee profile(s).";
+        }
         if ($result['skipped'] > 0) {
             $message .= " Skipped {$result['skipped']}.";
         }
