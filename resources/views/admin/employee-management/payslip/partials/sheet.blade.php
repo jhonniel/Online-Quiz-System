@@ -80,15 +80,19 @@
                 <p class="font-medium">Prepared by:</p>
                 <div class="flex w-full min-w-0 flex-col items-center">
                     @php($preparedBySignature = $payslip->preparedBySignatureDataUri())
-                    <div class="relative w-full min-w-0 max-w-full px-1 pt-4 payslip-sign-name-block payslip-fit-name-container">
-                        <p class="relative z-[1] border-b border-gray-900 px-1 font-semibold payslip-sign-name payslip-fit-name payslip-name-line text-center mx-auto max-w-full"
-                           style="font-size: {{ PayslipNameFit::fontSizeRem($payslip->displayPreparedBy(), 0.875) }}">
-                            {{ $payslip->displayPreparedBy() ?: ' ' }}
-                        </p>
+                    <div class="relative w-full min-w-0 max-w-full px-1 pt-4 payslip-sign-name-block">
+                        <div class="payslip-fit-name-container px-1">
+                            <p class="border-b border-gray-900 px-1 font-semibold payslip-sign-name payslip-fit-name payslip-name-line text-center mx-auto max-w-full"
+                               style="font-size: {{ PayslipNameFit::fontSizeRem($payslip->displayPreparedBy(), 0.875) }}">
+                                {{ $payslip->displayPreparedBy() ?: ' ' }}
+                            </p>
+                        </div>
                         @if($preparedBySignature)
-                            <img src="{{ $preparedBySignature }}"
-                                 alt="Signature of {{ $payslip->displayPreparedBy() }}"
-                                 class="payslip-esign-float pointer-events-none absolute left-1/2 top-0 z-20 h-14 w-40 max-w-[90%] -translate-x-1/2 -translate-y-1 object-contain object-bottom">
+                            <div class="payslip-esign-overlay" aria-hidden="true">
+                                <img src="{{ $preparedBySignature }}"
+                                     alt=""
+                                     class="payslip-esign-float">
+                            </div>
                         @endif
                     </div>
                     <p class="mt-2 min-h-[1.25rem]">Admin Officer</p>
@@ -98,15 +102,19 @@
                 <p class="font-medium">Approved by:</p>
                 <div class="flex w-full min-w-0 flex-col items-center">
                     @php($approvedBySignature = $payslip->approvedBySignatureDataUri())
-                    <div class="relative w-full min-w-0 max-w-full px-1 pt-4 payslip-sign-name-block payslip-fit-name-container">
-                        <p class="relative z-[1] border-b border-gray-900 px-1 font-semibold payslip-sign-name payslip-fit-name payslip-name-line text-center mx-auto max-w-full"
-                           style="font-size: {{ PayslipNameFit::fontSizeRem($payslip->displayApprovedBy(), 0.875) }}">
-                            {{ $payslip->displayApprovedBy() ?: ' ' }}
-                        </p>
+                    <div class="relative w-full min-w-0 max-w-full px-1 pt-4 payslip-sign-name-block">
+                        <div class="payslip-fit-name-container px-1">
+                            <p class="border-b border-gray-900 px-1 font-semibold payslip-sign-name payslip-fit-name payslip-name-line text-center mx-auto max-w-full"
+                               style="font-size: {{ PayslipNameFit::fontSizeRem($payslip->displayApprovedBy(), 0.875) }}">
+                                {{ $payslip->displayApprovedBy() ?: ' ' }}
+                            </p>
+                        </div>
                         @if($approvedBySignature)
-                            <img src="{{ $approvedBySignature }}"
-                                 alt="Signature of {{ $payslip->displayApprovedBy() }}"
-                                 class="payslip-esign-float pointer-events-none absolute left-1/2 top-0 z-20 h-14 w-40 max-w-[90%] -translate-x-1/2 -translate-y-1 object-contain object-bottom">
+                            <div class="payslip-esign-overlay" aria-hidden="true">
+                                <img src="{{ $approvedBySignature }}"
+                                     alt=""
+                                     class="payslip-esign-float">
+                            </div>
                         @endif
                     </div>
                     <p class="mt-2 min-h-[1.25rem]">Proprietor</p>
@@ -116,15 +124,19 @@
                 <p class="font-medium">Received by:</p>
                 <div class="flex w-full min-w-0 flex-col items-center">
                     @php($receivedBySignature = $payslip->isLinkedToEmployee() ? $payslip->receivedBySignatureDataUri() : null)
-                    <div class="relative w-full min-w-0 max-w-full px-1 pt-4 payslip-sign-name-block payslip-fit-name-container">
-                        <p class="relative z-[1] border-b border-gray-900 px-1 font-semibold payslip-sign-name payslip-fit-name payslip-name-line text-center mx-auto max-w-full"
-                           style="font-size: {{ PayslipNameFit::fontSizeRem($payslip->isLinkedToEmployee() ? $payslip->employee_name : '', 0.875) }}">
-                            {{ $payslip->isLinkedToEmployee() ? $payslip->employee_name : ' ' }}
-                        </p>
+                    <div class="relative w-full min-w-0 max-w-full px-1 pt-4 payslip-sign-name-block">
+                        <div class="payslip-fit-name-container px-1">
+                            <p class="border-b border-gray-900 px-1 font-semibold payslip-sign-name payslip-fit-name payslip-name-line text-center mx-auto max-w-full"
+                               style="font-size: {{ PayslipNameFit::fontSizeRem($payslip->isLinkedToEmployee() ? $payslip->employee_name : '', 0.875) }}">
+                                {{ $payslip->isLinkedToEmployee() ? $payslip->employee_name : ' ' }}
+                            </p>
+                        </div>
                         @if($receivedBySignature)
-                            <img src="{{ $receivedBySignature }}"
-                                 alt="Signature of {{ $payslip->employee_name }}"
-                                 class="payslip-esign-float pointer-events-none absolute left-1/2 top-0 z-20 h-14 w-40 max-w-[90%] -translate-x-1/2 -translate-y-1 object-contain object-bottom">
+                            <div class="payslip-esign-overlay" aria-hidden="true">
+                                <img src="{{ $receivedBySignature }}"
+                                     alt=""
+                                     class="payslip-esign-float">
+                            </div>
                         @endif
                     </div>
                     <div class="mt-2 min-h-[1.25rem] w-full min-w-0 max-w-full px-1 payslip-fit-name-container">

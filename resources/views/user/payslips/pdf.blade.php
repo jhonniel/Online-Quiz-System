@@ -157,16 +157,25 @@
             max-width: 100%;
             margin: 0 auto;
             padding-top: 14px;
+            min-height: 38px;
+        }
+        .sign-esign-overlay {
+            position: absolute;
+            top: 0;
+            right: 0;
+            bottom: 0;
+            left: 0;
+            z-index: 10;
         }
         .signature-image {
             position: absolute;
-            top: 0;
+            bottom: 0;
             left: 50%;
             margin-left: -88px;
             height: 40px;
             width: 176px;
             display: block;
-            z-index: 2;
+            z-index: 10;
         }
         .sign-line {
             position: relative;
@@ -274,7 +283,9 @@
                         <div class="sign-block">
                             <p class="sign-line" style="font-size: {{ PayslipNameFit::fontSizePt($payslip->displayPreparedBy(), 8.5) }}">{{ $payslip->displayPreparedBy() ?: ' ' }}</p>
                             @if(!empty($preparedBySignatureDataUri))
-                                <img src="{{ $preparedBySignatureDataUri }}" alt="E-Signature" class="signature-image" style="object-fit: contain;">
+                                <div class="sign-esign-overlay">
+                                    <img src="{{ $preparedBySignatureDataUri }}" alt="" class="signature-image" style="object-fit: contain;">
+                                </div>
                             @endif
                         </div>
                         <p class="sign-role">Admin Officer</p>
@@ -284,7 +295,9 @@
                         <div class="sign-block">
                             <p class="sign-line" style="font-size: {{ PayslipNameFit::fontSizePt($payslip->displayApprovedBy(), 8.5) }}">{{ $payslip->displayApprovedBy() ?: ' ' }}</p>
                             @if(!empty($approvedBySignatureDataUri))
-                                <img src="{{ $approvedBySignatureDataUri }}" alt="E-Signature" class="signature-image" style="object-fit: contain;">
+                                <div class="sign-esign-overlay">
+                                    <img src="{{ $approvedBySignatureDataUri }}" alt="" class="signature-image" style="object-fit: contain;">
+                                </div>
                             @endif
                         </div>
                         <p class="sign-role">Proprietor</p>
@@ -294,7 +307,9 @@
                         <div class="sign-block">
                             <p class="sign-line" style="font-size: {{ PayslipNameFit::fontSizePt($payslip->employee_name, 8.5) }}">{{ $payslip->employee_name }}</p>
                             @if(!empty($eSignatureDataUri))
-                                <img src="{{ $eSignatureDataUri }}" alt="E-Signature" class="signature-image" style="object-fit: contain;">
+                                <div class="sign-esign-overlay">
+                                    <img src="{{ $eSignatureDataUri }}" alt="" class="signature-image" style="object-fit: contain;">
+                                </div>
                             @endif
                         </div>
                         <p class="sign-role" style="font-size: {{ PayslipNameFit::fontSizePt($payslip->displayPosition(), 8) }}">{{ $payslip->displayPosition() ?: '—' }}</p>

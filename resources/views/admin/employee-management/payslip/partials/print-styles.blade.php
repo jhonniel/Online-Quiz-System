@@ -24,6 +24,8 @@
 
     .payslip-sign-name-block {
         position: relative;
+        isolation: isolate;
+        min-height: 3.5rem;
     }
 
     .payslip-sign-name-block .payslip-sign-name {
@@ -31,8 +33,24 @@
         z-index: 1;
     }
 
-    .payslip-sign-name-block .payslip-esign-float {
-        z-index: 20;
+    .payslip-esign-overlay {
+        position: absolute;
+        inset: 0;
+        z-index: 30;
+        pointer-events: none;
+    }
+
+    .payslip-esign-overlay .payslip-esign-float {
+        position: absolute;
+        left: 50%;
+        bottom: 0;
+        z-index: 30;
+        height: 3.5rem;
+        width: 10rem;
+        max-width: 90%;
+        transform: translateX(-50%);
+        object-fit: contain;
+        object-position: bottom center;
     }
 
     @media screen {
@@ -259,12 +277,16 @@
             overflow: hidden !important;
         }
 
-        .payslip-print-area .payslip-esign-float {
+        .payslip-print-area .payslip-esign-overlay {
+            z-index: 30 !important;
+        }
+
+        .payslip-print-area .payslip-esign-overlay .payslip-esign-float {
             width: 11rem !important;
             max-width: 11rem !important;
             height: 3.5rem !important;
             object-fit: contain !important;
-            z-index: 20 !important;
+            z-index: 30 !important;
         }
 
         .payslip-print-area .payslip-sign-name {
