@@ -277,7 +277,7 @@ final class PayslipCsvImporter
         $employeeColumns = ['id', 'name', 'email', 'date_hired', 'department_id', 'department_position_id'];
         $baseQuery = User::query()
             ->where('role', 'employee')
-            ->with(['department:id,name', 'departmentPosition:id,name']);
+            ->with(['department:id,name', 'departmentPosition:id,name,department_id']);
 
         if ($email) {
             $byEmail = (clone $baseQuery)
@@ -337,6 +337,8 @@ final class PayslipCsvImporter
 
     private function validateEmployeeProfileForPayslip(User $user, string $employeeName, int $rowNumber): ?string
     {
+        $user->loadMissing(['department:id,name', 'departmentPosition:id,name,department_id']);
+
         $missing = [];
 
         if ($user->date_hired === null) {
