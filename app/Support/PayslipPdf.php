@@ -62,7 +62,7 @@ final class PayslipPdf
         return [
             'payslip' => $payslip,
             'signedAt' => $signedAt,
-            'eSignatureDataUri' => EmployeeSampleDocument::eSignatureDataUri($employee),
+            'eSignatureDataUri' => $payslip->receivedBySignatureDataUri(),
         ];
     }
 }

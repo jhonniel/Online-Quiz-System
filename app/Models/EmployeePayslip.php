@@ -202,7 +202,13 @@ class EmployeePayslip extends Model
 
     public function receivedBySignatureDataUri(): ?string
     {
-        $employee = $this->relationLoaded('employee') ? $this->employee : $this->employee()->first();
+        if ($this->user_id === null) {
+            return null;
+        }
+
+        $employee = User::query()
+            ->whereKey($this->user_id)
+            ->first(['id', 'e_signature_path']);
 
         if (! $employee?->hasESignature()) {
             return null;

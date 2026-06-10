@@ -91,7 +91,8 @@
                             <div class="payslip-esign-overlay" aria-hidden="true">
                                 <img src="{{ $preparedBySignature }}"
                                      alt=""
-                                     class="payslip-esign-float">
+                                     class="payslip-esign-float"
+                                     style="position:absolute;left:50%;bottom:0;transform:translateX(-50%);height:3.5rem;width:10rem;max-width:90%;object-fit:contain;z-index:30;">
                             </div>
                         @endif
                     </div>
@@ -113,7 +114,8 @@
                             <div class="payslip-esign-overlay" aria-hidden="true">
                                 <img src="{{ $approvedBySignature }}"
                                      alt=""
-                                     class="payslip-esign-float">
+                                     class="payslip-esign-float"
+                                     style="position:absolute;left:50%;bottom:0;transform:translateX(-50%);height:3.5rem;width:10rem;max-width:90%;object-fit:contain;z-index:30;">
                             </div>
                         @endif
                     </div>
@@ -135,7 +137,8 @@
                             <div class="payslip-esign-overlay" aria-hidden="true">
                                 <img src="{{ $receivedBySignature }}"
                                      alt=""
-                                     class="payslip-esign-float">
+                                     class="payslip-esign-float"
+                                     style="position:absolute;left:50%;bottom:0;transform:translateX(-50%);height:3.5rem;width:10rem;max-width:90%;object-fit:contain;z-index:30;">
                             </div>
                         @endif
                     </div>
