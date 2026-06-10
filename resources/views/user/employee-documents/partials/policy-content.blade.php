@@ -1,5 +1,9 @@
 <div class="px-6 py-6 text-sm text-gray-900 leading-snug policy-document">
+    @include('user.employee-documents.partials.document-page-shell-styles')
     <style>
+        .policy-document .document-page-letterhead {
+            margin-bottom: 1rem;
+        }
         .policy-document .policy-title {
             text-align: center;
             font-weight: bold;

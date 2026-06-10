@@ -4,7 +4,8 @@
     $hasDateHired = trim($dateHired ?? '') !== '' && ($dateHired ?? '') !== '—';
 @endphp
 <div class="contract-document-body">
-    <div class="agreement-page">
+    <div class="agreement-page document-page-shell">
+        @include('user.employee-documents.partials.document-page-letterhead')
         <p class="agreement-main-title">Employment Agreement</p>
         <p class="agreement-subtitle">Terms of Employment</p>
 
@@ -41,7 +42,8 @@
         @include('user.employee-documents.partials.contract-page-footer', ['pageNumber' => 1])
     </div>
 
-    <div class="agreement-page">
+    <div class="agreement-page document-page-shell">
+        @include('user.employee-documents.partials.document-page-letterhead')
         <ul class="agreement-list">
             <li>Perform such other lawful and reasonable duties consistent with the Employer's business operations.</li>
         </ul>
@@ -85,7 +87,8 @@
         @include('user.employee-documents.partials.contract-page-footer', ['pageNumber' => 2])
     </div>
 
-    <div class="agreement-page">
+    <div class="agreement-page document-page-shell">
+        @include('user.employee-documents.partials.document-page-letterhead')
         <p class="body-text">
             and payslips shall serve as the official record of the Employee's compensation and payment history.
         </p>
@@ -134,7 +137,8 @@
         @include('user.employee-documents.partials.contract-page-footer', ['pageNumber' => 3])
     </div>
 
-    <div class="agreement-page">
+    <div class="agreement-page document-page-shell">
+        @include('user.employee-documents.partials.document-page-letterhead')
         <p class="section-heading">Maternity Benefits</p>
         <p class="body-text">Qualified female employees shall be entitled to maternity leave benefits in accordance with applicable laws and regulations of the Republic of the Philippines, including:</p>
         <ul class="agreement-list">
@@ -183,7 +187,8 @@
         @include('user.employee-documents.partials.contract-page-footer', ['pageNumber' => 4])
     </div>
 
-    <div class="agreement-page">
+    <div class="agreement-page document-page-shell">
+        @include('user.employee-documents.partials.document-page-letterhead')
         <p class="body-text">
             If applicable laws require higher compensation, the Employer shall provide such higher compensation. Employees shall likewise receive any holiday pay or premium pay required under applicable laws and regulations of the Republic of the Philippines.
         </p>
@@ -228,7 +233,8 @@
         @include('user.employee-documents.partials.contract-page-footer', ['pageNumber' => 5])
     </div>
 
-    <div class="agreement-page">
+    <div class="agreement-page document-page-shell">
+        @include('user.employee-documents.partials.document-page-letterhead')
         <p class="body-text">
             The Employee shall not claim ownership over any company work product and agrees to execute any documents necessary to confirm the Employer's ownership rights.
         </p>
@@ -277,7 +283,8 @@
         @include('user.employee-documents.partials.contract-page-footer', ['pageNumber' => 6])
     </div>
 
-    <div class="agreement-page">
+    <div class="agreement-page document-page-shell">
+        @include('user.employee-documents.partials.document-page-letterhead')
         <p class="body-text">
             Employee agrees to comply with such policies upon receipt or publication thereof, provided that no amendment shall diminish rights guaranteed under this Agreement or by applicable law.
         </p>

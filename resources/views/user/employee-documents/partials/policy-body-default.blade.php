@@ -1,3 +1,6 @@
+<div class="document-page-shell">
+@include('user.employee-documents.partials.document-page-letterhead')
+
 <p class="policy-title">Company Policy Acknowledgment</p>
 
 <p class="policy-field"><span class="policy-field-label">Employee Name:</span> {{ $employeeName }}</p>
@@ -37,4 +40,7 @@
     <p class="policy-sign-heading">Employee</p>
     <p class="policy-sign-row"><span class="policy-sign-label">Name:</span> {{ $employeeName }}</p>
     <p class="policy-sign-row policy-sign-row-signature"><span class="policy-sign-label">Signature:</span>@if(!empty($eSignatureDataUri)) <img src="{{ $eSignatureDataUri }}" alt="E-Signature" class="policy-signature-image">@elseif(!empty($signaturePlaceholder)) {{ $signaturePlaceholder }}@endif</p>
+</div>
+
+@include('user.employee-documents.partials.document-page-footer', ['documentType' => 'policy', 'pageNumber' => 1])
 </div>

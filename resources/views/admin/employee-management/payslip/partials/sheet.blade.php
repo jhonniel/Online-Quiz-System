@@ -79,7 +79,13 @@
             <div class="flex min-w-0 flex-col items-center">
                 <p class="font-medium">Prepared by:</p>
                 <div class="flex w-full min-w-0 flex-col items-center">
+                    @php($preparedBySignature = $payslip->preparedBySignatureDataUri())
                     <div class="relative w-full min-w-0 max-w-full px-1 pt-4 payslip-sign-name-block payslip-fit-name-container">
+                        @if($preparedBySignature)
+                            <img src="{{ $preparedBySignature }}"
+                                 alt="Signature of {{ $payslip->displayPreparedBy() }}"
+                                 class="payslip-esign-float pointer-events-none absolute left-1/2 top-0 z-0 h-14 w-40 max-w-[90%] -translate-x-1/2 -translate-y-1 object-contain object-bottom">
+                        @endif
                         <p class="relative z-10 border-b border-gray-900 px-1 font-semibold payslip-sign-name payslip-fit-name payslip-name-line text-center mx-auto max-w-full"
                            style="font-size: {{ PayslipNameFit::fontSizeRem($payslip->displayPreparedBy(), 0.875) }}">
                             {{ $payslip->displayPreparedBy() ?: ' ' }}
@@ -91,7 +97,13 @@
             <div class="flex min-w-0 flex-col items-center">
                 <p class="font-medium">Approved by:</p>
                 <div class="flex w-full min-w-0 flex-col items-center">
+                    @php($approvedBySignature = $payslip->approvedBySignatureDataUri())
                     <div class="relative w-full min-w-0 max-w-full px-1 pt-4 payslip-sign-name-block payslip-fit-name-container">
+                        @if($approvedBySignature)
+                            <img src="{{ $approvedBySignature }}"
+                                 alt="Signature of {{ $payslip->displayApprovedBy() }}"
+                                 class="payslip-esign-float pointer-events-none absolute left-1/2 top-0 z-0 h-14 w-40 max-w-[90%] -translate-x-1/2 -translate-y-1 object-contain object-bottom">
+                        @endif
                         <p class="relative z-10 border-b border-gray-900 px-1 font-semibold payslip-sign-name payslip-fit-name payslip-name-line text-center mx-auto max-w-full"
                            style="font-size: {{ PayslipNameFit::fontSizeRem($payslip->displayApprovedBy(), 0.875) }}">
                             {{ $payslip->displayApprovedBy() ?: ' ' }}

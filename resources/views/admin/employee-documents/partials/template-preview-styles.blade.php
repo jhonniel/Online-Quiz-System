@@ -1,4 +1,8 @@
 <style>
+    .document-preview .document-page-letterhead { margin-bottom: 1rem; }
+    .document-preview .document-page-shell { position: relative; min-height: 10.5in; padding-bottom: 2.75rem; box-sizing: border-box; }
+    .document-preview .document-page-shell > .document-page-footer,
+    .document-preview .agreement-page > .agreement-page-footer { position: absolute; left: 0; right: 0; bottom: 0; text-align: left; font-size: 0.75rem; color: #374151; line-height: 1.35; }
     .document-preview .policy-title { text-align: center; font-weight: bold; text-transform: uppercase; font-size: 1rem; margin-bottom: 1.25rem; }
     .document-preview .policy-field { margin-bottom: 0.5rem; }
     .document-preview .policy-field-label { font-weight: bold; }
@@ -31,9 +35,7 @@
     .document-preview .body-text-center { text-align: center; margin-bottom: 0.75rem; }
     .document-preview .field-line { display: inline-block; border-bottom: 1px solid #111827; }
     .document-preview .field-line--blank { min-width: 14rem; }
-    .document-preview .agreement-page-footer { display: flex; align-items: flex-end; justify-content: space-between; margin-top: 1rem; min-height: 1.75rem; }
-    .document-preview .footer-logo { height: 1.5rem; width: auto; }
-    .document-preview .footer-page-num { font-size: 0.8rem; }
+    .document-preview .agreement-page-footer { margin-top: 1rem; min-height: 1.75rem; }
     .document-preview .section-heading { font-weight: bold; margin-top: 0.75rem; margin-bottom: 0.5rem; }
     .document-preview .agreement-list { margin: 0 0 0.75rem 1.25rem; padding: 0; list-style-type: disc; }
     .document-preview .agreement-list li { margin-bottom: 0.35rem; text-align: justify; }

@@ -1,4 +1,5 @@
-<div class="nda-page">
+<div class="nda-page document-page-shell">
+    @include('user.employee-documents.partials.document-page-letterhead')
     <p class="header-country">Republic of the Philippines</p>
 
     <p class="title">NON-DISCLOSURE AGREEMENT</p>
@@ -54,4 +55,6 @@
         @endif
         <p class="ack-meta">{{ $agreementDateUpper }}</p>
     </div>
+
+    @include('user.employee-documents.partials.document-page-footer', ['documentType' => 'nda', 'pageNumber' => 1])
 </div>

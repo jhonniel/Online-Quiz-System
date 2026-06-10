@@ -199,6 +199,8 @@
     $companyAddress = trim((string) \App\Models\Setting::get('contact_address', ''));
     $employeeNameDisplay = strtoupper($payslip->employee_name);
     $positionDisplay = strtoupper($payslip->displayPosition() ?: '—');
+    $preparedBySignatureDataUri = $payslip->preparedBySignatureDataUri();
+    $approvedBySignatureDataUri = $payslip->approvedBySignatureDataUri();
 @endphp
     <div class="sheet">
         <div class="letterhead">
@@ -270,6 +272,9 @@
                     <td>
                         <p class="sign-label">Prepared by:</p>
                         <div class="sign-block">
+                            @if(!empty($preparedBySignatureDataUri))
+                                <img src="{{ $preparedBySignatureDataUri }}" alt="E-Signature" class="signature-image" style="object-fit: contain;">
+                            @endif
                             <p class="sign-line" style="font-size: {{ PayslipNameFit::fontSizePt($payslip->displayPreparedBy(), 8.5) }}">{{ $payslip->displayPreparedBy() ?: ' ' }}</p>
                         </div>
                         <p class="sign-role">Admin Officer</p>
@@ -277,6 +282,9 @@
                     <td>
                         <p class="sign-label">Approved by:</p>
                         <div class="sign-block">
+                            @if(!empty($approvedBySignatureDataUri))
+                                <img src="{{ $approvedBySignatureDataUri }}" alt="E-Signature" class="signature-image" style="object-fit: contain;">
+                            @endif
                             <p class="sign-line" style="font-size: {{ PayslipNameFit::fontSizePt($payslip->displayApprovedBy(), 8.5) }}">{{ $payslip->displayApprovedBy() ?: ' ' }}</p>
                         </div>
                         <p class="sign-role">Proprietor</p>

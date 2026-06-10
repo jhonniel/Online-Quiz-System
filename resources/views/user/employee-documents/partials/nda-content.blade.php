@@ -1,5 +1,9 @@
 <div class="px-6 py-6 text-sm text-gray-800 leading-relaxed nda-document">
+    @include('user.employee-documents.partials.document-page-shell-styles')
     <style>
+        .nda-document .document-page-letterhead {
+            margin-bottom: 1rem;
+        }
         .nda-document .header-country { text-align: center; margin-bottom: 1rem; }
         .nda-document .title { text-align: center; font-weight: bold; text-transform: uppercase; margin-bottom: 1.25rem; }
         .nda-document .body-text { margin-bottom: 0.875rem; text-align: justify; }

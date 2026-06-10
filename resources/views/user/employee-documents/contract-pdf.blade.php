@@ -5,7 +5,7 @@
     <title>{{ $documentTitle }}</title>
     <style>
         @page {
-            margin: 20mm 22mm 24mm 22mm;
+            margin: 38mm 22mm 28mm 22mm;
         }
         body {
             font-family: "DejaVu Sans", Arial, Helvetica, sans-serif;
@@ -15,13 +15,16 @@
             margin: 0;
             padding: 0;
         }
-        .agreement-page {
+        .agreement-page,
+        .document-page-shell {
             page-break-after: always;
             position: relative;
             min-height: 250mm;
             padding-bottom: 16mm;
+            box-sizing: border-box;
         }
-        .agreement-page:last-child {
+        .agreement-page:last-child,
+        .document-page-shell:last-child {
             page-break-after: auto;
         }
         .agreement-main-title {
@@ -75,19 +78,11 @@
             bottom: 0;
             height: 12mm;
         }
-        .footer-logo {
-            position: absolute;
-            left: 0;
-            bottom: 0;
-            height: 9mm;
-            width: auto;
-        }
-        .footer-page-num {
-            position: absolute;
-            right: 0;
-            bottom: 0;
-            font-size: 10pt;
-            color: #000000;
+        .document-page-footer {
+            text-align: left;
+            font-size: 7.5pt;
+            color: #111827;
+            line-height: 1.3;
         }
         .agreement-sign-block {
             margin-top: 20px;
@@ -115,6 +110,12 @@
     </style>
 </head>
 <body>
+    @include('user.employee-documents.partials.document-letterhead-pdf-fixed')
+    @include('user.employee-documents.partials.document-footer-pdf-script', [
+        'documentType' => 'contract',
+        'companyName' => $companyName ?? null,
+    ])
+
     @include('user.employee-documents.partials.contract-body')
 </body>
 </html>

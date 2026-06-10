@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\EmployeeDocumentSignature;
 use App\Models\User;
 use App\Support\AdminEmployeeDepartmentScope;
+use App\Support\EmployeeDocumentFooter;
 use App\Support\EmployeeDocumentTemplate;
 use App\Support\EmployeeSampleDocument;
 use App\Support\UserESignatureStorage;
@@ -174,10 +175,15 @@ class EmployeeDocumentController extends Controller
             'label' => EmployeeSampleDocument::label($type),
             'title' => EmployeeSampleDocument::title($type),
             'settingKey' => EmployeeDocumentTemplate::settingKey($type),
+            'footerSettingKey' => EmployeeDocumentFooter::settingKey($type),
             'templateHtml' => $templateHtml,
             'defaultTemplateHtml' => EmployeeDocumentTemplate::defaultTemplateHtmlForEditor($type),
+            'footerHtml' => EmployeeDocumentFooter::editorFooterHtml($type),
+            'defaultFooterHtml' => EmployeeDocumentFooter::defaultHtml($type),
             'hasCustomTemplate' => EmployeeDocumentTemplate::hasCustomTemplate($type),
+            'hasCustomFooter' => EmployeeDocumentFooter::hasCustomFooter($type),
             'placeholders' => EmployeeDocumentTemplate::placeholders($type),
+            'footerPlaceholders' => EmployeeDocumentFooter::PLACEHOLDERS,
             'previewHtml' => EmployeeDocumentTemplate::previewHtmlFromTemplate($type, $templateHtml),
             'previewPlaceholders' => EmployeeDocumentTemplate::previewPlaceholderMap($type),
         ]);
@@ -191,11 +197,14 @@ class EmployeeDocumentController extends Controller
 
         $request->validate([
             'template_html' => 'nullable|string|max:65000',
+            'footer_html' => 'nullable|string|max:2000',
         ]);
 
         $html = (string) ($request->input('template_html') ?? '');
         EmployeeDocumentTemplate::saveTemplateHtml($type, $html);
+        EmployeeDocumentFooter::saveFooterHtml($type, (string) ($request->input('footer_html') ?? ''));
         Cache::forget('setting.'.EmployeeDocumentTemplate::settingKey($type));
+        Cache::forget('setting.'.EmployeeDocumentFooter::settingKey($type));
 
         return redirect()
             ->route('admin.employee-documents.template', $type)

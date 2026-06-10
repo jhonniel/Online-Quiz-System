@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Support\EmployeeSampleDocument;
 use App\Support\PayslipCsvImporter;
 use App\Support\PayslipSignatorySettings;
 use Illuminate\Database\Eloquent\Model;
@@ -207,7 +208,29 @@ class EmployeePayslip extends Model
             return null;
         }
 
-        return \App\Support\EmployeeSampleDocument::eSignatureDataUri($employee);
+        return EmployeeSampleDocument::eSignatureDataUri($employee);
+    }
+
+    public function preparedBySignatureDataUri(): ?string
+    {
+        $user = PayslipSignatorySettings::adminOfficerUser();
+
+        if (! $user?->hasESignature()) {
+            return null;
+        }
+
+        return EmployeeSampleDocument::eSignatureDataUri($user);
+    }
+
+    public function approvedBySignatureDataUri(): ?string
+    {
+        $user = PayslipSignatorySettings::proprietorUser();
+
+        if (! $user?->hasESignature()) {
+            return null;
+        }
+
+        return EmployeeSampleDocument::eSignatureDataUri($user);
     }
 
     public function uploader(): BelongsTo

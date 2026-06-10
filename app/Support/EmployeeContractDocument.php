@@ -59,6 +59,7 @@ final class EmployeeContractDocument
             ->setPaper('a4', 'portrait')
             ->setOption('defaultFont', 'DejaVu Sans')
             ->setOption('isRemoteEnabled', true)
+            ->setOption('isPhpEnabled', true)
             ->output();
     }
 

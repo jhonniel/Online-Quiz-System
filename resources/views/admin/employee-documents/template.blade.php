@@ -100,6 +100,33 @@
                         <p class="mt-2 text-sm text-red-600">{{ $message }}</p>
                     @enderror
                 </div>
+
+                <div class="shrink-0 border-t border-slate-200 px-4 sm:px-6 lg:px-8 py-4 bg-slate-50/60">
+                    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-2">
+                        <div>
+                            <h3 class="text-sm font-semibold text-slate-900">Page footer</h3>
+                            <p class="text-xs text-slate-500 mt-0.5">Left-aligned on every page. Use <code class="font-mono text-[11px] bg-slate-100 px-1 rounded">@{{page_number}}</code> for incremental pages.</p>
+                        </div>
+                        <button type="button" id="btn-insert-default-footer"
+                                class="inline-flex items-center rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 shadow-sm hover:bg-slate-50 transition-colors">
+                            Restore default footer
+                        </button>
+                    </div>
+                    <div class="flex flex-wrap gap-2 mb-2">
+                        @foreach($footerPlaceholders as $placeholder)
+                            <button type="button"
+                                    class="footer-placeholder-btn inline-flex items-center rounded-md border border-slate-300 bg-white px-2.5 py-1 text-xs font-mono text-slate-700 shadow-sm hover:bg-slate-100 transition-colors"
+                                    data-placeholder="{{ $placeholder }}">
+                                {{ $placeholder }}
+                            </button>
+                        @endforeach
+                    </div>
+                    <textarea name="footer_html" id="footer_html" rows="2"
+                              class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm text-slate-900">{{ old('footer_html', $footerHtml) }}</textarea>
+                    @error('footer_html')
+                        <p class="mt-2 text-sm text-red-600">{{ $message }}</p>
+                    @enderror
+                </div>
             </div>
 
             <div class="flex flex-col min-h-[420px] xl:min-h-[calc(100dvh-18rem)] bg-slate-50/40">
@@ -116,6 +143,7 @@
                     <div class="rounded-xl border border-slate-200 bg-white p-5 sm:p-6 shadow-sm min-h-full text-sm text-gray-900 leading-snug document-preview">
                         @include('admin.employee-documents.partials.template-preview-styles', ['type' => $type])
                         <div id="document-preview">{!! $previewHtml !!}</div>
+                        <div id="document-footer-preview" class="document-page-footer mt-6 border-t border-dashed border-slate-200 pt-4"></div>
                     </div>
                 </div>
             </div>
@@ -123,7 +151,8 @@
 
         <div class="sticky bottom-0 z-10 shrink-0 border-t border-slate-200 bg-white/95 backdrop-blur px-4 sm:px-6 lg:px-8 py-3 flex flex-col-reverse sm:flex-row sm:items-center sm:justify-between gap-3 shadow-[0_-4px_12px_rgba(15,23,42,0.06)]">
             <p class="text-xs text-slate-500">
-                Stored as <code class="text-[11px] bg-slate-100 px-1 rounded font-mono">{{ $settingKey }}</code>
+                Body: <code class="text-[11px] bg-slate-100 px-1 rounded font-mono">{{ $settingKey }}</code>
+                · Footer: <code class="text-[11px] bg-slate-100 px-1 rounded font-mono">{{ $footerSettingKey }}</code>
             </p>
             <button type="submit"
                     class="inline-flex justify-center items-center gap-2 px-6 py-2.5 rounded-lg bg-indigo-600 text-white text-sm font-semibold shadow-sm hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors">
@@ -134,6 +163,14 @@
     </form>
 </div>
 
+@php
+    $footerPreviewPlaceholders = [
+        '{{page_number}}' => '1',
+        '{{company_name}}' => \App\Support\EmployeeDocumentFooter::defaultCompanyName(),
+        '{{document_title}}' => $title,
+    ];
+@endphp
+
 @push('scripts')
 <script src="https://cdn.jsdelivr.net/npm/tinymce@7/tinymce.min.js"></script>
 <script>
@@ -143,7 +180,11 @@
     const badge = document.getElementById('preview-badge');
     const statusEl = document.getElementById('preview-status');
     const defaultHtml = @json($defaultTemplateHtml);
+    const defaultFooterHtml = @json($defaultFooterHtml);
     const placeholderMap = @json($previewPlaceholders);
+    const footerTextarea = document.getElementById('footer_html');
+    const footerPreview = document.getElementById('document-footer-preview');
+    const footerPreviewMap = @json($footerPreviewPlaceholders);
 
     function stripScripts(html) {
         return html.replace(/<\s*script\b[^>]*>[\s\S]*?<\s*\/\s*script\s*>/gi, '');
@@ -155,6 +196,20 @@
             output = output.split(token).join(value);
         });
         return stripScripts(output);
+    }
+
+    function applyFooterPreviewPlaceholders(html) {
+        let output = html;
+        Object.entries(footerPreviewMap).forEach(([token, value]) => {
+            output = output.split(token).join(value);
+        });
+        return stripScripts(output);
+    }
+
+    function syncFooterPreview(html) {
+        if (!footerPreview) return;
+        const raw = (html ?? footerTextarea?.value ?? '').trim();
+        footerPreview.innerHTML = applyFooterPreviewPlaceholders(raw !== '' ? raw : defaultFooterHtml);
     }
 
     function syncPreview(html) {
@@ -171,6 +226,7 @@
             badge.className = 'text-[10px] font-bold uppercase tracking-wider px-2 py-1 rounded-md bg-indigo-100 text-indigo-800';
             statusEl.textContent = 'Preview with sample employee data.';
         }
+        syncFooterPreview();
     }
 
     let editorInstance = null;
@@ -223,6 +279,31 @@
             editorInstance.focus();
         });
     });
+
+    footerTextarea?.addEventListener('input', function () {
+        syncFooterPreview(footerTextarea.value);
+    });
+
+    document.getElementById('btn-insert-default-footer')?.addEventListener('click', function () {
+        if (!footerTextarea) return;
+        footerTextarea.value = defaultFooterHtml;
+        syncFooterPreview(defaultFooterHtml);
+        footerTextarea.focus();
+    });
+
+    document.querySelectorAll('.footer-placeholder-btn').forEach(function (button) {
+        button.addEventListener('click', function () {
+            if (!footerTextarea) return;
+            const token = button.getAttribute('data-placeholder') || '';
+            const start = footerTextarea.selectionStart ?? footerTextarea.value.length;
+            const end = footerTextarea.selectionEnd ?? footerTextarea.value.length;
+            footerTextarea.value = footerTextarea.value.slice(0, start) + token + footerTextarea.value.slice(end);
+            syncFooterPreview(footerTextarea.value);
+            footerTextarea.focus();
+        });
+    });
+
+    syncFooterPreview();
 })();
 </script>
 @endpush

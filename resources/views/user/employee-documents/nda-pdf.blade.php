@@ -6,14 +6,14 @@
     <style>
         @page {
             size: 8.5in 14in;
-            margin: 1in 1.15in 1in 1.15in;
+            margin: 1.35in 1.15in 1.15in 1.15in;
         }
         html {
             margin: 0;
             padding: 0;
         }
         body {
-            margin: 1in 1.15in;
+            margin: 0;
             padding: 0;
             font-family: "DejaVu Sans", Arial, Helvetica, sans-serif;
             font-size: 12pt;
@@ -114,9 +114,30 @@
         .ack-meta:last-child {
             margin-bottom: 0;
         }
+        .document-page-shell {
+            position: relative;
+            min-height: 11.5in;
+            padding-bottom: 0.45in;
+            box-sizing: border-box;
+        }
+        .document-page-shell > .document-page-footer {
+            position: absolute;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            text-align: left;
+            font-size: 9pt;
+            color: #111827;
+            line-height: 1.3;
+        }
     </style>
 </head>
 <body>
+    @include('user.employee-documents.partials.document-letterhead-pdf-fixed', ['topOffset' => '-1.05in'])
+    @include('user.employee-documents.partials.document-footer-pdf-script', [
+        'documentType' => 'nda',
+    ])
+
     @include('user.employee-documents.partials.nda-body')
 </body>
 </html>
