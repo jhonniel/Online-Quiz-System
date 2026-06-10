@@ -114,6 +114,14 @@
                 </div>
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
                     <div>
+                        <p class="text-xs font-semibold text-gray-500 uppercase tracking-wide">Department</p>
+                        <p class="mt-1 text-sm font-semibold text-gray-900">{{ $user->department?->name ?: '—' }}</p>
+                    </div>
+                    <div>
+                        <p class="text-xs font-semibold text-gray-500 uppercase tracking-wide">Position</p>
+                        <p class="mt-1 text-sm font-semibold text-gray-900">{{ $user->payslipPositionLabel() ?: '—' }}</p>
+                    </div>
+                    <div>
                         <p class="text-xs font-semibold text-gray-500 uppercase tracking-wide">Date Hired</p>
                         <p class="mt-1 text-sm font-semibold text-gray-900">{{ $user->date_hired?->format('F j, Y') ?: '—' }}</p>
                         @if($employmentDuration = $user->activeEmploymentDurationLabel())

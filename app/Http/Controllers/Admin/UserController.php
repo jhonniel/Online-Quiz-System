@@ -398,6 +398,8 @@ class UserController extends Controller
             abort(403, 'You do not have permission to view user profiles.');
         }
 
+        $user->load(['department:id,name', 'departmentPosition:id,name,department_id']);
+
         $balances = null;
         $overtimeFormatted = null;
         $overtimeWindowLabel = null;
