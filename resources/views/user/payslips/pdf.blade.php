@@ -21,6 +21,7 @@
             border: 1px solid #d1d5db;
             page-break-inside: avoid;
             page-break-after: avoid;
+            overflow: hidden;
         }
         .letterhead {
             text-align: center;
@@ -67,8 +68,8 @@
             vertical-align: top;
             padding: 0;
         }
-        .meta-grid p { margin: 0 0 4px; }
-        .meta-grid strong { white-space: nowrap; }
+        .meta-grid p { margin: 0 0 4px; overflow: hidden; }
+        .meta-grid strong { white-space: nowrap; display: inline-block; max-width: 100%; }
         .payslip-name-line { white-space: nowrap; }
         .columns {
             width: 100%;
@@ -142,7 +143,8 @@
             width: 33.33%;
             text-align: center;
             vertical-align: top;
-            padding: 0 6px;
+            padding: 0 4px;
+            overflow: hidden;
         }
         .sign-label {
             font-weight: 500;
@@ -170,27 +172,33 @@
             position: relative;
             z-index: 10;
             border-bottom: 1px solid #111827;
-            padding: 0 4px 2px;
+            padding: 0 2px 2px;
             font-weight: bold;
-            margin: 0;
+            margin: 0 auto;
             min-height: 14px;
+            max-width: 100%;
             white-space: nowrap;
-            font-size: 7.5pt;
             line-height: 1.2;
             text-align: center;
+            overflow: hidden;
         }
         .sign-role {
             margin: 8px 0 0;
-            font-size: 7.5pt;
             white-space: nowrap;
             line-height: 1.2;
+            overflow: hidden;
+            max-width: 100%;
         }
     </style>
 </head>
 <body>
 @php
+    use App\Support\PayslipNameFit;
+
     $companyName = trim((string) \App\Models\Setting::get('system_name', config('app.name', 'Laravel')));
     $companyAddress = trim((string) \App\Models\Setting::get('contact_address', ''));
+    $employeeNameDisplay = strtoupper($payslip->employee_name);
+    $positionDisplay = strtoupper($payslip->displayPosition() ?: '—');
 @endphp
     <div class="sheet">
         <div class="letterhead">
@@ -207,8 +215,8 @@
             <table class="meta-grid">
                 <tr>
                     <td>
-                        <p>Employee Name: <strong>{{ strtoupper($payslip->employee_name) }}</strong></p>
-                        <p>Position: <strong>{{ strtoupper($payslip->displayPosition() ?: '—') }}</strong></p>
+                        <p>Employee Name: <strong style="font-size: {{ PayslipNameFit::fontSizePt($employeeNameDisplay, 9) }}">{{ $employeeNameDisplay }}</strong></p>
+                        <p>Position: <strong style="font-size: {{ PayslipNameFit::fontSizePt($positionDisplay, 9) }}">{{ $positionDisplay }}</strong></p>
                     </td>
                     <td>
                         <p>Date Hired: <strong>{{ $payslip->displayDateHired()?->format('F j, Y') ?: '—' }}</strong></p>
@@ -262,14 +270,14 @@
                     <td>
                         <p class="sign-label">Prepared by:</p>
                         <div class="sign-block">
-                            <p class="sign-line">{{ $payslip->displayPreparedBy() ?: ' ' }}</p>
+                            <p class="sign-line" style="font-size: {{ PayslipNameFit::fontSizePt($payslip->displayPreparedBy(), 8.5) }}">{{ $payslip->displayPreparedBy() ?: ' ' }}</p>
                         </div>
                         <p class="sign-role">Admin Officer</p>
                     </td>
                     <td>
                         <p class="sign-label">Approved by:</p>
                         <div class="sign-block">
-                            <p class="sign-line">{{ $payslip->displayApprovedBy() ?: ' ' }}</p>
+                            <p class="sign-line" style="font-size: {{ PayslipNameFit::fontSizePt($payslip->displayApprovedBy(), 8.5) }}">{{ $payslip->displayApprovedBy() ?: ' ' }}</p>
                         </div>
                         <p class="sign-role">Proprietor</p>
                     </td>
@@ -279,9 +287,9 @@
                             @if(!empty($eSignatureDataUri))
                                 <img src="{{ $eSignatureDataUri }}" alt="E-Signature" class="signature-image" style="object-fit: contain;">
                             @endif
-                            <p class="sign-line">{{ $payslip->employee_name }}</p>
+                            <p class="sign-line" style="font-size: {{ PayslipNameFit::fontSizePt($payslip->employee_name, 8.5) }}">{{ $payslip->employee_name }}</p>
                         </div>
-                        <p class="sign-role">{{ $payslip->displayPosition() ?: '—' }}</p>
+                        <p class="sign-role" style="font-size: {{ PayslipNameFit::fontSizePt($payslip->displayPosition(), 8) }}">{{ $payslip->displayPosition() ?: '—' }}</p>
                     </td>
                 </tr>
             </table>

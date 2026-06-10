@@ -5,6 +5,23 @@
         white-space: nowrap;
     }
 
+    .payslip-fit-name-container {
+        width: 100%;
+        min-width: 0;
+        max-width: 100%;
+        overflow: hidden;
+    }
+
+    .payslip-fit-name {
+        display: block;
+        width: max-content;
+        max-width: 100%;
+        margin-left: auto;
+        margin-right: auto;
+        white-space: nowrap;
+        overflow: hidden;
+    }
+
     @media screen {
         .payslip-print-sheet--single {
             width: 100%;
@@ -128,7 +145,7 @@
             width: 100% !important;
             max-width: 277mm !important;
             box-sizing: border-box !important;
-            overflow: visible !important;
+            overflow: hidden !important;
         }
 
         body.payslip-bulk-print .payslip-print-area > div {
@@ -176,8 +193,12 @@
         }
 
         #payslip-print-area .gap-8,
-        .payslip-print-area .gap-8 {
-            gap: 0.5rem !important;
+        .payslip-print-area .gap-8,
+        #payslip-print-area .gap-6,
+        .payslip-print-area .gap-6,
+        #payslip-print-area .gap-4,
+        .payslip-print-area .gap-4 {
+            gap: 0.35rem !important;
         }
 
         #payslip-print-area .space-y-2 > :not([hidden]) ~ :not([hidden]),
@@ -195,15 +216,15 @@
             grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
         }
 
-        .payslip-print-area [class*="min-w-"]:not(.payslip-sign-name-block) {
-            min-width: 0 !important;
-            max-width: 7rem !important;
-            width: 100% !important;
-        }
-
         .payslip-print-area .payslip-signatures-grid > div {
             min-width: 0 !important;
             max-width: 100% !important;
+        }
+
+        .payslip-print-area .payslip-signatures-grid .flex.min-w-0 {
+            min-width: 0 !important;
+            max-width: 100% !important;
+            width: 100% !important;
         }
 
         .payslip-print-area .payslip-sign-name-block {
@@ -215,12 +236,14 @@
         .payslip-print-area .payslip-sign-name,
         .payslip-print-area .payslip-employee-name,
         .payslip-print-area .payslip-position-name,
+        .payslip-print-area .payslip-fit-name,
         .payslip-print-area .payslip-name-line {
             white-space: nowrap !important;
             word-break: normal !important;
             overflow-wrap: normal !important;
             line-height: 1.2 !important;
             max-width: 100% !important;
+            overflow: hidden !important;
         }
 
         .payslip-print-area .payslip-esign-float {
@@ -228,10 +251,6 @@
             max-width: 11rem !important;
             height: 3.5rem !important;
             object-fit: contain !important;
-        }
-
-        body.payslip-bulk-print .payslip-print-area [class*="min-w-"]:not(.payslip-sign-name-block) {
-            max-width: 4.5rem !important;
         }
 
         .payslip-print-area .h-14:not(.payslip-esign-float) {
@@ -288,18 +307,74 @@
         sheet.style.boxSizing = '';
     }
 
+    function fitPayslipNames(root) {
+        const scope = root || document;
+
+        scope.querySelectorAll('.payslip-fit-name').forEach(function (el) {
+            const container = el.closest('.payslip-fit-name-container')
+                || el.closest('.payslip-sign-name-block')
+                || el.parentElement;
+
+            if (!container) {
+                return;
+            }
+
+            if (!el.dataset.fitBaseSize && el.style.fontSize) {
+                el.dataset.fitBaseSize = el.style.fontSize;
+            }
+
+            const inlineBase = el.dataset.fitBaseSize;
+            if (inlineBase) {
+                el.style.fontSize = inlineBase;
+            } else if (el.dataset.fittedBaseSize) {
+                el.style.fontSize = el.dataset.fittedBaseSize;
+            } else {
+                el.dataset.fittedBaseSize = window.getComputedStyle(el).fontSize;
+            }
+
+            const maxWidth = container.clientWidth;
+            if (!maxWidth) {
+                return;
+            }
+
+            let size = parseFloat(window.getComputedStyle(el).fontSize) || 14;
+            const minSize = 7;
+
+            while (el.scrollWidth > maxWidth && size > minSize) {
+                size -= 0.5;
+                el.style.fontSize = size + 'px';
+            }
+        });
+    }
+
+    function resetPayslipNameFits(root) {
+        const scope = root || document;
+
+        scope.querySelectorAll('.payslip-fit-name').forEach(function (el) {
+            if (el.dataset.fitBaseSize) {
+                el.style.fontSize = el.dataset.fitBaseSize;
+            } else if (el.dataset.fittedBaseSize) {
+                el.style.fontSize = el.dataset.fittedBaseSize;
+            } else {
+                el.style.fontSize = '';
+            }
+        });
+    }
+
     function scalePayslipPrintAreas(areas) {
         const bulk = isBulkPayslipPrint();
         const dimensions = bulk ? getBulkSlotDimensionsMm() : getSinglePrintDimensionsMm();
         const maxWidthPx = mmToPx(dimensions.widthMm);
         const maxHeightPx = mmToPx(dimensions.heightMm);
-        const safety = 0.96;
+        const safety = 0.94;
 
         areas.forEach(function (area) {
             const sheet = area.firstElementChild;
             if (!sheet) {
                 return;
             }
+
+            fitPayslipNames(area);
 
             sheet.style.width = maxWidthPx + 'px';
             sheet.style.maxWidth = maxWidthPx + 'px';
@@ -326,6 +401,7 @@
         areas.forEach(function (area) {
             area.style.transform = 'scale(1)';
             clearPayslipMeasureStyles(area.firstElementChild);
+            resetPayslipNameFits(area);
         });
     }
 
@@ -349,5 +425,14 @@
             });
         });
     }
+
+    function initPayslipNameFits() {
+        document.querySelectorAll('.payslip-print-area, #payslip-print-area, .max-w-3xl.overflow-hidden').forEach(function (area) {
+            fitPayslipNames(area);
+        });
+    }
+
+    document.addEventListener('DOMContentLoaded', initPayslipNameFits);
+    window.addEventListener('resize', initPayslipNameFits);
 </script>
 @endonce

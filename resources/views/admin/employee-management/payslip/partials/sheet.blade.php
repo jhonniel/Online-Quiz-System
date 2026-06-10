@@ -1,4 +1,7 @@
-<div class="mx-auto max-w-3xl bg-white border border-gray-300 shadow-sm text-gray-900">
+@php
+    use App\Support\PayslipNameFit;
+@endphp
+<div class="mx-auto max-w-3xl overflow-hidden bg-white border border-gray-300 shadow-sm text-gray-900">
     <x-document-letterhead class="px-6 pt-5 pb-3" />
 
     <div class="border-y border-gray-900 bg-gray-200 px-6 py-1.5 text-center">
@@ -9,8 +12,20 @@
         <p class="font-bold">Period Covered: {{ $payslip->periodLabel() }}</p>
         <div class="mt-2 grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1">
             <div class="space-y-1">
-                <p class="payslip-name-line">Employee Name: <span class="font-semibold payslip-employee-name">{{ strtoupper($payslip->employee_name) }}</span></p>
-                <p class="payslip-name-line">Position: <span class="font-semibold payslip-position-name">{{ strtoupper($payslip->displayPosition() ?: '—') }}</span></p>
+                <p class="payslip-name-line grid grid-cols-[auto_minmax(0,1fr)] gap-x-1 items-baseline min-w-0">
+                    <span class="shrink-0">Employee Name:</span>
+                    <span class="payslip-fit-name-container min-w-0 overflow-hidden">
+                        <span class="font-semibold payslip-employee-name payslip-fit-name block max-w-full"
+                              style="font-size: {{ PayslipNameFit::fontSizeRem(strtoupper($payslip->employee_name), 0.875) }}">{{ strtoupper($payslip->employee_name) }}</span>
+                    </span>
+                </p>
+                <p class="payslip-name-line grid grid-cols-[auto_minmax(0,1fr)] gap-x-1 items-baseline min-w-0">
+                    <span class="shrink-0">Position:</span>
+                    <span class="payslip-fit-name-container min-w-0 overflow-hidden">
+                        <span class="font-semibold payslip-position-name payslip-fit-name block max-w-full"
+                              style="font-size: {{ PayslipNameFit::fontSizeRem(strtoupper($payslip->displayPosition() ?: '—'), 0.875) }}">{{ strtoupper($payslip->displayPosition() ?: '—') }}</span>
+                    </span>
+                </p>
             </div>
             <div class="space-y-1">
                 <p>Date Hired: <span class="font-semibold">{{ $payslip->displayDateHired()?->format('F j, Y') ?: '—' }}</span></p>
@@ -60,12 +75,13 @@
             I hereby declared that I received this payroll and I don't have any questions or further clarifications.
         </p>
 
-        <div class="mt-8 grid grid-cols-1 sm:grid-cols-3 gap-8 text-center payslip-signatures-grid">
+        <div class="mt-8 grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6 text-center payslip-signatures-grid">
             <div class="flex min-w-0 flex-col items-center">
                 <p class="font-medium">Prepared by:</p>
                 <div class="flex w-full min-w-0 flex-col items-center">
-                    <div class="relative w-full max-w-full px-1 pt-4 payslip-sign-name-block">
-                        <p class="relative z-10 border-b border-gray-900 px-2 font-semibold payslip-sign-name payslip-name-line text-center">
+                    <div class="relative w-full min-w-0 max-w-full px-1 pt-4 payslip-sign-name-block payslip-fit-name-container">
+                        <p class="relative z-10 border-b border-gray-900 px-1 font-semibold payslip-sign-name payslip-fit-name payslip-name-line text-center mx-auto max-w-full"
+                           style="font-size: {{ PayslipNameFit::fontSizeRem($payslip->displayPreparedBy(), 0.875) }}">
                             {{ $payslip->displayPreparedBy() ?: ' ' }}
                         </p>
                     </div>
@@ -75,8 +91,9 @@
             <div class="flex min-w-0 flex-col items-center">
                 <p class="font-medium">Approved by:</p>
                 <div class="flex w-full min-w-0 flex-col items-center">
-                    <div class="relative w-full max-w-full px-1 pt-4 payslip-sign-name-block">
-                        <p class="relative z-10 border-b border-gray-900 px-2 font-semibold payslip-sign-name payslip-name-line text-center">
+                    <div class="relative w-full min-w-0 max-w-full px-1 pt-4 payslip-sign-name-block payslip-fit-name-container">
+                        <p class="relative z-10 border-b border-gray-900 px-1 font-semibold payslip-sign-name payslip-fit-name payslip-name-line text-center mx-auto max-w-full"
+                           style="font-size: {{ PayslipNameFit::fontSizeRem($payslip->displayApprovedBy(), 0.875) }}">
                             {{ $payslip->displayApprovedBy() ?: ' ' }}
                         </p>
                     </div>
@@ -87,17 +104,21 @@
                 <p class="font-medium">Received by:</p>
                 <div class="flex w-full min-w-0 flex-col items-center">
                     @php($receivedBySignature = $payslip->isLinkedToEmployee() ? $payslip->receivedBySignatureDataUri() : null)
-                    <div class="relative w-full max-w-full px-1 pt-4 payslip-sign-name-block">
+                    <div class="relative w-full min-w-0 max-w-full px-1 pt-4 payslip-sign-name-block payslip-fit-name-container">
                         @if($receivedBySignature)
                             <img src="{{ $receivedBySignature }}"
                                  alt="Signature of {{ $payslip->employee_name }}"
-                                 class="payslip-esign-float pointer-events-none absolute left-1/2 top-0 z-0 h-14 w-44 max-w-full -translate-x-1/2 -translate-y-1 object-contain object-bottom">
+                                 class="payslip-esign-float pointer-events-none absolute left-1/2 top-0 z-0 h-14 w-40 max-w-[90%] -translate-x-1/2 -translate-y-1 object-contain object-bottom">
                         @endif
-                        <p class="relative z-10 border-b border-gray-900 px-2 font-semibold payslip-sign-name payslip-name-line text-center">
+                        <p class="relative z-10 border-b border-gray-900 px-1 font-semibold payslip-sign-name payslip-fit-name payslip-name-line text-center mx-auto max-w-full"
+                           style="font-size: {{ PayslipNameFit::fontSizeRem($payslip->isLinkedToEmployee() ? $payslip->employee_name : '', 0.875) }}">
                             {{ $payslip->isLinkedToEmployee() ? $payslip->employee_name : ' ' }}
                         </p>
                     </div>
-                    <p class="mt-2 min-h-[1.25rem] px-1 payslip-name-line payslip-position-name">{{ $payslip->isLinkedToEmployee() ? ($payslip->displayPosition() ?: '—') : ' ' }}</p>
+                    <div class="mt-2 min-h-[1.25rem] w-full min-w-0 max-w-full px-1 payslip-fit-name-container">
+                        <p class="payslip-name-line payslip-position-name payslip-fit-name max-w-full mx-auto text-center"
+                           style="font-size: {{ PayslipNameFit::fontSizeRem($payslip->isLinkedToEmployee() ? ($payslip->displayPosition() ?: '—') : '', 0.8125) }}">{{ $payslip->isLinkedToEmployee() ? ($payslip->displayPosition() ?: '—') : ' ' }}</p>
+                    </div>
                 </div>
             </div>
         </div>
