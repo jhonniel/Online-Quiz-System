@@ -70,19 +70,25 @@
                         <p id="payslip-sign-period" class="mt-1 text-sm text-gray-500"></p>
                     </div>
                     <form id="payslip-sign-form" class="px-6 py-5 space-y-4">
-                        <p class="text-sm text-gray-600">
-                            Enter your P12 certificate password to generate and cryptographically sign your payslip PDF.
-                        </p>
-                        <div>
-                            <label for="payslip_p12_password" class="block text-sm font-medium text-gray-700 mb-1">P12 Certificate Password</label>
-                            <input type="password"
-                                   id="payslip_p12_password"
-                                   name="p12_certificate_password"
-                                   autocomplete="off"
-                                   required
-                                   class="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
-                            <p id="payslip-sign-error" class="mt-2 text-sm text-red-600 hidden"></p>
-                        </div>
+                        @if($user->p12_certificate_path)
+                            <p class="text-sm text-gray-600">
+                                Enter your P12 certificate password to generate and cryptographically sign your payslip PDF.
+                            </p>
+                            <div>
+                                <label for="payslip_p12_password" class="block text-sm font-medium text-gray-700 mb-1">P12 Certificate Password</label>
+                                <input type="password"
+                                       id="payslip_p12_password"
+                                       name="p12_certificate_password"
+                                       autocomplete="off"
+                                       required
+                                       class="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
+                            </div>
+                        @else
+                            <p class="text-sm text-gray-600">
+                                Your uploaded e-signature will be placed on the <span class="font-medium">Received by</span> line when this payslip PDF is generated.
+                            </p>
+                        @endif
+                        <p id="payslip-sign-error" class="text-sm text-red-600 hidden"></p>
                         <div class="flex justify-end gap-3 pt-2">
                             <button type="button"
                                     onclick="closePayslipSignModal()"
@@ -102,15 +108,29 @@
 
         <script>
         let activePayslipSignId = null;
+        const payslipUserHasP12 = @json((bool) $user->p12_certificate_path);
+        const payslipUserHasESignature = @json($user->hasESignature());
 
         function openPayslipSignModal(payslipId, periodLabel, isResign = false) {
+            if (!payslipUserHasESignature) {
+                window.location.href = '{{ url('/profile/edit') }}';
+                return;
+            }
+
             activePayslipSignId = payslipId;
             document.getElementById('payslip-sign-period').textContent = periodLabel;
             document.getElementById('payslip-sign-submit').textContent = isResign ? 'Re-sign' : 'Generate and Sign';
-            document.getElementById('payslip_p12_password').value = '';
+            const passwordInput = document.getElementById('payslip_p12_password');
+            if (passwordInput) {
+                passwordInput.value = '';
+            }
             document.getElementById('payslip-sign-error').classList.add('hidden');
             document.getElementById('payslip-sign-modal').classList.remove('hidden');
-            document.getElementById('payslip_p12_password').focus();
+            if (passwordInput) {
+                passwordInput.focus();
+            } else {
+                document.getElementById('payslip-sign-submit').focus();
+            }
         }
 
         function closePayslipSignModal() {
@@ -125,7 +145,7 @@
                 return;
             }
 
-            const password = document.getElementById('payslip_p12_password').value;
+            const passwordInput = document.getElementById('payslip_p12_password');
             const errorEl = document.getElementById('payslip-sign-error');
             const submitBtn = document.getElementById('payslip-sign-submit');
             const originalText = submitBtn.textContent;
@@ -135,7 +155,9 @@
             submitBtn.textContent = 'Signing...';
 
             const formData = new FormData();
-            formData.append('p12_certificate_password', password);
+            if (payslipUserHasP12 && passwordInput) {
+                formData.append('p12_certificate_password', passwordInput.value);
+            }
 
             fetch(`/payslips/${activePayslipSignId}/sign`, {
                 method: 'POST',

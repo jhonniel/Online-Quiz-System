@@ -33,9 +33,13 @@ final class PayslipPdf
         EmployeePayslip $payslip,
         User $employee,
         \DateTimeInterface $signedAt,
-        string $p12Password,
+        ?string $p12Password = null,
     ): string {
         $pdfBinary = self::renderPdfBinary($payslip, $employee, $signedAt);
+
+        if (empty($employee->p12_certificate_path) || $p12Password === null || $p12Password === '') {
+            return $pdfBinary;
+        }
 
         return EmployeeDocumentPdfSigner::sign($pdfBinary, $employee, [
             'password' => $p12Password,

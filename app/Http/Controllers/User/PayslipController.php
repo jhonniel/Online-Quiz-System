@@ -50,24 +50,24 @@ class PayslipController extends Controller
                 return $this->signResponse($request, false, 'Upload your e-signature on your profile before signing payslips.', 422);
             }
 
-            if (empty($user->p12_certificate_path)) {
-                return $this->signResponse($request, false, 'Upload your P12 certificate on your profile before signing payslips.', 422);
-            }
+            $p12Password = null;
 
-            $request->validate([
-                'p12_certificate_password' => 'required|string|max:255',
-            ], [
-                'p12_certificate_password.required' => 'P12 certificate password is required.',
-            ]);
-
-            $password = (string) $request->input('p12_certificate_password');
-            $contents = $this->readP12Contents((string) $user->p12_certificate_path);
-            $certs = [];
-
-            if ($contents === null || ! openssl_pkcs12_read($contents, $certs, $password)) {
-                throw ValidationException::withMessages([
-                    'p12_certificate_password' => ['The P12 certificate password is incorrect.'],
+            if (! empty($user->p12_certificate_path)) {
+                $request->validate([
+                    'p12_certificate_password' => 'required|string|max:255',
+                ], [
+                    'p12_certificate_password.required' => 'P12 certificate password is required.',
                 ]);
+
+                $p12Password = (string) $request->input('p12_certificate_password');
+                $contents = $this->readP12Contents((string) $user->p12_certificate_path);
+                $certs = [];
+
+                if ($contents === null || ! openssl_pkcs12_read($contents, $certs, $p12Password)) {
+                    throw ValidationException::withMessages([
+                        'p12_certificate_password' => ['The P12 certificate password is incorrect.'],
+                    ]);
+                }
             }
 
             $user->loadMissing(['department:id,name', 'departmentPosition:id,name,department_id']);
@@ -75,7 +75,7 @@ class PayslipController extends Controller
             $payslip->syncProfileFieldsFromEmployee($user);
 
             $signedAt = now();
-            $pdfBinary = PayslipPdf::renderSignedPdfBinary($payslip, $user, $signedAt, $password);
+            $pdfBinary = PayslipPdf::renderSignedPdfBinary($payslip, $user, $signedAt, $p12Password);
 
             if ($payslip->signed_document_path) {
                 $this->deleteStoredPdf((string) $payslip->signed_document_path, (string) ($payslip->storage_disk ?? ''));
@@ -89,17 +89,21 @@ class PayslipController extends Controller
                 'storage_disk' => $disk,
             ]);
 
+            $successMessage = $p12Password !== null
+                ? 'Payslip generated and digitally signed successfully.'
+                : 'Payslip generated and signed with your e-signature.';
+
             if ($request->expectsJson() || $request->ajax()) {
                 return response()->json([
                     'success' => true,
-                    'message' => 'Payslip generated and signed successfully.',
+                    'message' => $successMessage,
                     'redirect_url' => route('user.payslips.show', $payslip),
                 ]);
             }
 
             return redirect()
                 ->route('user.payslips.show', $payslip)
-                ->with('success', 'Payslip generated and signed successfully.');
+                ->with('success', $successMessage);
         } catch (ValidationException $e) {
             if ($request->expectsJson() || $request->ajax()) {
                 return response()->json([

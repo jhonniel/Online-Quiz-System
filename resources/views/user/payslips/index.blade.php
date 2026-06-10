@@ -19,11 +19,13 @@
             Upload your <a href="{{ url('/profile/edit') }}" class="font-medium underline">e-signature on your profile</a> before signing payslips.
         </div>
     @endunless
-    @unless($user->p12_certificate_path)
-        <div class="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
-            Upload your <a href="{{ url('/profile/edit') }}" class="font-medium underline">P12 certificate on your profile</a> before signing payslips.
+    @if($user->hasESignature() && ! $user->p12_certificate_path)
+        <div class="rounded-lg border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-900">
+            You can sign payslips with your uploaded e-signature. Upload a
+            <a href="{{ url('/profile/edit') }}" class="font-medium underline">P12 certificate on your profile</a>
+            if you also want cryptographic digital signing.
         </div>
-    @endunless
+    @endif
 
     <div class="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden">
         <div class="overflow-x-auto">
@@ -31,8 +33,6 @@
                 <thead class="bg-gray-50">
                     <tr>
                         <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Period</th>
-                        <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Gross Pay</th>
-                        <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Net Pay</th>
                         <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Status</th>
                         <th class="px-4 py-3 text-right text-xs font-semibold text-gray-600 uppercase">Action</th>
                     </tr>
@@ -41,8 +41,6 @@
                     @forelse($payslips as $payslip)
                         <tr>
                             <td class="px-4 py-3 text-sm text-gray-900">{{ $payslip->periodLabel() }}</td>
-                            <td class="px-4 py-3 text-sm text-gray-700">{{ $payslip->formatMoney($payslip->gross_pay) }}</td>
-                            <td class="px-4 py-3 text-sm font-semibold text-gray-900">{{ $payslip->formatMoney($payslip->net_pay) }}</td>
                             <td class="px-4 py-3 text-sm">
                                 @if($payslip->isSigned())
                                     <span class="inline-flex items-center rounded-full bg-green-50 px-2.5 py-0.5 text-xs font-medium text-green-700 border border-green-200">Signed</span>
@@ -63,7 +61,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="5" class="px-4 py-8 text-center text-sm text-gray-500">No payslips available yet.</td>
+                            <td colspan="3" class="px-4 py-8 text-center text-sm text-gray-500">No payslips available yet.</td>
                         </tr>
                     @endforelse
                 </tbody>
@@ -84,19 +82,25 @@
                 <p id="payslip-sign-period" class="mt-1 text-sm text-gray-500"></p>
             </div>
             <form id="payslip-sign-form" class="px-6 py-5 space-y-4">
-                <p class="text-sm text-gray-600">
-                    Enter your P12 certificate password to generate and cryptographically sign your payslip PDF.
-                </p>
-                <div>
-                    <label for="payslip_p12_password" class="block text-sm font-medium text-gray-700 mb-1">P12 Certificate Password</label>
-                    <input type="password"
-                           id="payslip_p12_password"
-                           name="p12_certificate_password"
-                           autocomplete="off"
-                           required
-                           class="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
-                    <p id="payslip-sign-error" class="mt-2 text-sm text-red-600 hidden"></p>
-                </div>
+                @if($user->p12_certificate_path)
+                    <p class="text-sm text-gray-600">
+                        Enter your P12 certificate password to generate and cryptographically sign your payslip PDF.
+                    </p>
+                    <div>
+                        <label for="payslip_p12_password" class="block text-sm font-medium text-gray-700 mb-1">P12 Certificate Password</label>
+                        <input type="password"
+                               id="payslip_p12_password"
+                               name="p12_certificate_password"
+                               autocomplete="off"
+                               required
+                               class="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
+                    </div>
+                @else
+                    <p class="text-sm text-gray-600">
+                        Your uploaded e-signature will be placed on the <span class="font-medium">Received by</span> line when this payslip PDF is generated.
+                    </p>
+                @endif
+                <p id="payslip-sign-error" class="text-sm text-red-600 hidden"></p>
                 <div class="flex justify-end gap-3 pt-2">
                     <button type="button"
                             onclick="closePayslipSignModal()"
@@ -116,15 +120,29 @@
 
 <script>
 let activePayslipSignId = null;
+const payslipUserHasP12 = @json((bool) $user->p12_certificate_path);
+const payslipUserHasESignature = @json($user->hasESignature());
 
 function openPayslipSignModal(payslipId, periodLabel, isResign = false) {
+    if (!payslipUserHasESignature) {
+        window.location.href = '{{ url('/profile/edit') }}';
+        return;
+    }
+
     activePayslipSignId = payslipId;
     document.getElementById('payslip-sign-period').textContent = periodLabel;
     document.getElementById('payslip-sign-submit').textContent = isResign ? 'Re-sign' : 'Generate and Sign';
-    document.getElementById('payslip_p12_password').value = '';
+    const passwordInput = document.getElementById('payslip_p12_password');
+    if (passwordInput) {
+        passwordInput.value = '';
+    }
     document.getElementById('payslip-sign-error').classList.add('hidden');
     document.getElementById('payslip-sign-modal').classList.remove('hidden');
-    document.getElementById('payslip_p12_password').focus();
+    if (passwordInput) {
+        passwordInput.focus();
+    } else {
+        document.getElementById('payslip-sign-submit').focus();
+    }
 }
 
 function closePayslipSignModal() {
@@ -139,7 +157,7 @@ document.getElementById('payslip-sign-form').addEventListener('submit', function
         return;
     }
 
-    const password = document.getElementById('payslip_p12_password').value;
+    const passwordInput = document.getElementById('payslip_p12_password');
     const errorEl = document.getElementById('payslip-sign-error');
     const submitBtn = document.getElementById('payslip-sign-submit');
     const originalText = submitBtn.textContent;
@@ -149,7 +167,9 @@ document.getElementById('payslip-sign-form').addEventListener('submit', function
     submitBtn.textContent = 'Signing...';
 
     const formData = new FormData();
-    formData.append('p12_certificate_password', password);
+    if (payslipUserHasP12 && passwordInput) {
+        formData.append('p12_certificate_password', passwordInput.value);
+    }
 
     fetch(`/payslips/${activePayslipSignId}/sign`, {
         method: 'POST',
