@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\EmployeeDocumentSignature;
 use App\Models\User;
+use App\Support\AdminEmployeeDepartmentScope;
 use App\Support\EmployeeSampleDocument;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -167,27 +168,12 @@ class EmployeeDocumentController extends Controller
 
     private function canAccessEmployee(?User $employee): bool
     {
-        if (! $employee || $employee->role !== 'employee') {
-            return false;
-        }
-
-        $allowedDepartmentIds = $this->requireAuthUser()->getAllowedDepartmentIds();
-        if ($allowedDepartmentIds === null) {
-            return true;
-        }
-
-        return $employee->department_id === null || in_array($employee->department_id, $allowedDepartmentIds, true);
+        return AdminEmployeeDepartmentScope::canAccessEmployee($this->requireAuthUser(), $employee);
     }
 
     private function applyEmployeeScope($query): void
     {
-        $allowedDepartmentIds = $this->requireAuthUser()->getAllowedDepartmentIds();
-        if ($allowedDepartmentIds !== null) {
-            $query->where(function ($q) use ($allowedDepartmentIds) {
-                $q->whereIn('department_id', $allowedDepartmentIds)
-                    ->orWhereNull('department_id');
-            });
-        }
+        AdminEmployeeDepartmentScope::applyToEmployeeQuery($query, $this->requireAuthUser());
     }
 
     private function streamStoredPdf(string $path, string $preferredDisk, string $filename)

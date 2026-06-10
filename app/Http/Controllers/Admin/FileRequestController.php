@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\EmployeeFileRequest;
 use App\Models\EmployeeFileTemplate;
 use App\Models\User;
+use App\Support\AdminEmployeeDepartmentScope;
 use App\Support\EmployeeFileTemplateRenderer;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
@@ -277,56 +278,34 @@ class FileRequestController extends Controller
     private function authorizeAccess(): void
     {
         $user = auth()->user();
-        if (! $user->isAdmin() && ! $user->canAccessEmployeeManagement()) {
-            abort(403, 'Access denied. You do not have permission to access Employee Management.');
+
+        if ($user->isSuperAdmin()) {
+            return;
         }
+
+        if ($user->canAccessEmployeeFeature('file_request')) {
+            return;
+        }
+
+        abort(403, 'Access denied. You do not have permission to access File Request.');
     }
 
     private function scopedEmployeeQuery()
     {
-        $authUser = auth()->user();
         $query = User::query()->where('role', 'employee');
-        $allowedDepartmentIds = $authUser->canAccessEmployeeManagement()
-            ? $authUser->getAllowedDepartmentIds()
-            : null;
-
-        if ($allowedDepartmentIds !== null) {
-            $query->where(function ($q) use ($allowedDepartmentIds) {
-                $q->whereIn('department_id', $allowedDepartmentIds)
-                    ->orWhereNull('department_id');
-            });
-        }
+        AdminEmployeeDepartmentScope::applyToEmployeeQuery($query, auth()->user());
 
         return $query;
     }
 
     private function applyEmployeeScope($query): void
     {
-        $allowedDepartmentIds = auth()->user()->getAllowedDepartmentIds();
-        if ($allowedDepartmentIds !== null) {
-            $query->where(function ($q) use ($allowedDepartmentIds) {
-                $q->whereIn('department_id', $allowedDepartmentIds)
-                    ->orWhereNull('department_id');
-            });
-        }
+        AdminEmployeeDepartmentScope::applyToEmployeeQuery($query, auth()->user());
     }
 
     private function canAccessEmployee(?User $employee): bool
     {
-        if (! $employee || $employee->role !== 'employee') {
-            return false;
-        }
-
-        $allowedDepartmentIds = auth()->user()->getAllowedDepartmentIds();
-        if ($allowedDepartmentIds === null) {
-            return true;
-        }
-
-        if ($employee->department_id === null) {
-            return true;
-        }
-
-        return in_array((int) $employee->department_id, $allowedDepartmentIds, true);
+        return AdminEmployeeDepartmentScope::canAccessEmployee(auth()->user(), $employee);
     }
 
     private function respondWithFile(EmployeeFileRequest $fileRequest, bool $inline): \Symfony\Component\HttpFoundation\Response

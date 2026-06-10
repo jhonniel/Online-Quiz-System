@@ -121,7 +121,7 @@
                     <div class="px-4 pb-4 pt-1 space-y-3 border-t border-gray-100">
                         <div>
                             <p class="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-1.5">Period & employee</p>
-                            <p class="text-xs text-gray-600 leading-relaxed">cutt_off_start, cutt_off_end, employee_name, employee_email (recommended). Use the employee's exact login email so the row links to their profile. Do not include position or date hired — when a row matches an employee account, <strong>Position</strong> comes from the employee's assigned department position and <strong>Date Hired</strong> from their profile.</p>
+                            <p class="text-xs text-gray-600 leading-relaxed">cutt_off_start, cutt_off_end, employee_name, employee_email (recommended). Use the employee's exact login email so the row links to their profile. Do not include position or date hired — when a row matches an employee account, <strong>Position</strong> comes from the employee's assigned department position and <strong>Date Hired</strong> from their profile. Always start from the <strong>Download template</strong> link — do not rename columns; Excel “Save As CSV” is fine (comma or semicolon).</p>
                         </div>
                         <div>
                             <p class="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-1.5">Earnings</p>

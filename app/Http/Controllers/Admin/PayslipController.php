@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\EmployeePayslip;
 use App\Models\User;
+use App\Support\AdminEmployeeDepartmentScope;
 use App\Support\PayslipCsvImporter;
 use App\Support\PayslipGrouper;
 use Illuminate\Http\Request;
@@ -54,13 +55,22 @@ class PayslipController extends Controller
 
     private function scopedPayslipQuery(Request $request, bool $applyYearFilter = true)
     {
+        $admin = $this->requireAuthUser();
+        $restricted = AdminEmployeeDepartmentScope::isRestricted($admin);
+
         $query = EmployeePayslip::query()
             ->with(['employee:id,name,email,department_id,department_position_id,date_hired', 'employee.department:id,name', 'employee.departmentPosition:id,name,department_id', 'uploader:id,name'])
-            ->where(function ($q) {
-                $q->whereNull('user_id')
-                    ->orWhereHas('employee', function ($employeeQuery) {
-                        $this->applyEmployeeScope($employeeQuery);
+            ->where(function ($q) use ($restricted) {
+                if ($restricted) {
+                    $q->whereHas('employee', function ($employeeQuery) {
+                        AdminEmployeeDepartmentScope::applyToEmployeeQuery($employeeQuery, $this->requireAuthUser());
                     });
+                } else {
+                    $q->whereNull('user_id')
+                        ->orWhereHas('employee', function ($employeeQuery) {
+                            AdminEmployeeDepartmentScope::applyToEmployeeQuery($employeeQuery, $this->requireAuthUser());
+                        });
+                }
             });
 
         if ($request->filled('search')) {
@@ -255,10 +265,16 @@ class PayslipController extends Controller
         $deletedCount = EmployeePayslip::query()
             ->whereIn('id', $validated['payslip_ids'])
             ->where(function ($q) {
-                $q->whereNull('user_id')
-                    ->orWhereHas('employee', function ($employeeQuery) {
-                        $this->applyEmployeeScope($employeeQuery);
+                if (AdminEmployeeDepartmentScope::isRestricted($this->requireAuthUser())) {
+                    $q->whereHas('employee', function ($employeeQuery) {
+                        AdminEmployeeDepartmentScope::applyToEmployeeQuery($employeeQuery, $this->requireAuthUser());
                     });
+                } else {
+                    $q->whereNull('user_id')
+                        ->orWhereHas('employee', function ($employeeQuery) {
+                            AdminEmployeeDepartmentScope::applyToEmployeeQuery($employeeQuery, $this->requireAuthUser());
+                        });
+                }
             })
             ->delete();
 
@@ -288,10 +304,16 @@ class PayslipController extends Controller
             ->with(['employee:id,name,email,department_id,department_position_id,date_hired,e_signature_path', 'employee.department:id,name', 'employee.departmentPosition:id,name,department_id'])
             ->whereIn('id', $validated['payslip_ids'])
             ->where(function ($q) {
-                $q->whereNull('user_id')
-                    ->orWhereHas('employee', function ($employeeQuery) {
-                        $this->applyEmployeeScope($employeeQuery);
+                if (AdminEmployeeDepartmentScope::isRestricted($this->requireAuthUser())) {
+                    $q->whereHas('employee', function ($employeeQuery) {
+                        AdminEmployeeDepartmentScope::applyToEmployeeQuery($employeeQuery, $this->requireAuthUser());
                     });
+                } else {
+                    $q->whereNull('user_id')
+                        ->orWhereHas('employee', function ($employeeQuery) {
+                            AdminEmployeeDepartmentScope::applyToEmployeeQuery($employeeQuery, $this->requireAuthUser());
+                        });
+                }
             })
             ->orderByDesc('period_end')
             ->orderByDesc('period_start')
@@ -310,44 +332,34 @@ class PayslipController extends Controller
 
     private function authorizePayslip(EmployeePayslip $payslip): void
     {
+        $admin = $this->requireAuthUser();
         $payslip->loadMissing('employee');
 
         if ($payslip->user_id && $payslip->employee) {
-            abort_unless($this->canAccessEmployee($payslip->employee), 403);
+            abort_unless(AdminEmployeeDepartmentScope::canAccessEmployee($admin, $payslip->employee), 403);
+
+            return;
         }
+
+        abort_unless(! AdminEmployeeDepartmentScope::isRestricted($admin), 403, 'You do not have permission to access this payslip.');
     }
 
     private function canAccessEmployee(?User $employee): bool
     {
-        if (! $employee || $employee->role !== 'employee') {
-            return false;
-        }
-
-        $allowedDepartmentIds = $this->requireAuthUser()->getAllowedDepartmentIds();
-        if ($allowedDepartmentIds === null) {
-            return true;
-        }
-
-        return $employee->department_id === null || in_array($employee->department_id, $allowedDepartmentIds, true);
+        return AdminEmployeeDepartmentScope::canAccessEmployee($this->requireAuthUser(), $employee);
     }
 
     private function scopedEmployeeQuery()
     {
         $query = User::query()->where('role', 'employee');
-        $this->applyEmployeeScope($query);
+        AdminEmployeeDepartmentScope::applyToEmployeeQuery($query, $this->requireAuthUser());
 
         return $query;
     }
 
     private function applyEmployeeScope($query): void
     {
-        $allowedDepartmentIds = $this->requireAuthUser()->getAllowedDepartmentIds();
-        if ($allowedDepartmentIds !== null) {
-            $query->where(function ($q) use ($allowedDepartmentIds) {
-                $q->whereIn('department_id', $allowedDepartmentIds)
-                    ->orWhereNull('department_id');
-            });
-        }
+        AdminEmployeeDepartmentScope::applyToEmployeeQuery($query, $this->requireAuthUser());
     }
 
     /**

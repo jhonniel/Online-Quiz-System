@@ -5,6 +5,7 @@ namespace App\Support;
 use App\Models\EmployeePayslip;
 use App\Models\Setting;
 use App\Models\User;
+use App\Support\AdminEmployeeDepartmentScope;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 
@@ -15,6 +16,8 @@ final class PayslipCsvImporter
 
     /** @var list<int>|null null = all departments */
     private ?array $allowedDepartmentIds = null;
+
+    private string $csvDelimiter = ',';
 
     /** @var list<string> */
     public const HEADERS = [
@@ -48,19 +51,21 @@ final class PayslipCsvImporter
      */
     public function import(string $path, int $uploadedByUserId, ?User $admin = null): array
     {
-        $this->allowedDepartmentIds = $admin?->getAllowedDepartmentIds();
+        $this->allowedDepartmentIds = AdminEmployeeDepartmentScope::allowedDepartmentIds($admin);
         $this->linkedEmployeeIdsByName = null;
+        $this->csvDelimiter = $this->detectDelimiterFromFile($path);
         $handle = fopen($path, 'r');
         if ($handle === false) {
             throw new \RuntimeException('Unable to read the CSV file.');
         }
 
-        $headerRow = fgetcsv($handle);
+        $headerRow = fgetcsv($handle, 0, $this->csvDelimiter);
         if ($headerRow === false) {
             fclose($handle);
             throw new \RuntimeException('The CSV file is empty.');
         }
 
+        $headerRow = $this->sanitizeHeaderRow($headerRow);
         $columnMap = $this->mapHeaders($headerRow);
         $companyName = trim((string) Setting::get('system_name', config('app.name', 'System')));
         $imported = 0;
@@ -72,7 +77,7 @@ final class PayslipCsvImporter
         DB::beginTransaction();
 
         try {
-            while (($row = fgetcsv($handle)) !== false) {
+            while (($row = fgetcsv($handle, 0, $this->csvDelimiter)) !== false) {
                 $rowNumber++;
 
                 if ($this->isEmptyRow($row)) {
@@ -87,6 +92,13 @@ final class PayslipCsvImporter
                 }
 
                 $user = $this->resolveEmployee($data['employee_email'], $data['employee_name']);
+
+                if ($this->allowedDepartmentIds !== null && $user === null) {
+                    $errors[] = 'Row '.$rowNumber.': employee not found in your allowed departments. Use the exact login email for an employee you manage.';
+                    $skipped++;
+
+                    continue;
+                }
 
                 if ($user !== null && ! $this->adminCanImportForEmployee($user)) {
                     $label = trim($data['employee_name']) !== '' ? $data['employee_name'] : ($user->name ?: 'employee');
@@ -167,7 +179,13 @@ final class PayslipCsvImporter
 
         foreach (self::HEADERS as $required) {
             if (! array_key_exists($required, $map)) {
-                throw new \InvalidArgumentException('Missing required CSV column: '.$required);
+                $found = $map === []
+                    ? 'none (the file may use the wrong delimiter — save as CSV UTF-8 or use the system template)'
+                    : implode(', ', array_keys($map));
+
+                throw new \InvalidArgumentException(
+                    'Missing required CSV column: '.$required.'. Found columns: '.$found.'. Download the payslip template from this page and match the header row exactly.'
+                );
             }
         }
 
@@ -176,10 +194,12 @@ final class PayslipCsvImporter
 
     private function normalizeHeader(string $header): string
     {
-        $header = strtolower(trim($header));
-        $header = str_replace(["'", '’', '`'], '', $header);
+        $header = $this->stripBom(trim($header));
+        $header = strtolower($header);
+        $header = str_replace(["'", '’', '`', '"'], '', $header);
         $header = str_replace([' ', '-'], '_', $header);
         $header = preg_replace('/_+/', '_', $header) ?? $header;
+        $header = trim($header, '_');
 
         $aliases = [
             'period_start' => 'cutt_off_start',
@@ -188,8 +208,15 @@ final class PayslipCsvImporter
             'cutoff_end' => 'cutt_off_end',
             'cut_off_start' => 'cutt_off_start',
             'cut_off_end' => 'cutt_off_end',
+            'cutoff_period_start' => 'cutt_off_start',
+            'cutoff_period_end' => 'cutt_off_end',
+            'cut_off_period_start' => 'cutt_off_start',
+            'cut_off_period_end' => 'cutt_off_end',
+            'start_cut_off' => 'cutt_off_start',
+            'end_cut_off' => 'cutt_off_end',
             'email' => 'employee_email',
             'employee_email_address' => 'employee_email',
+            'employee_e_mail' => 'employee_email',
             'cash_advance' => 'ca',
             'govt_loan' => 'govt_loans',
             'govt_loans' => 'govt_loans',
@@ -199,9 +226,67 @@ final class PayslipCsvImporter
             '13th_month' => 'thirteenth_month_pay',
             '13th_month_pay' => 'thirteenth_month_pay',
             'thirteenth_month' => 'thirteenth_month_pay',
+            'employee' => 'employee_name',
+            'name' => 'employee_name',
+            'full_name' => 'employee_name',
         ];
 
         return $aliases[$header] ?? $header;
+    }
+
+    /**
+     * @param  list<string|null>  $headerRow
+     * @return list<string|null>
+     */
+    private function sanitizeHeaderRow(array $headerRow): array
+    {
+        return array_map(function ($header) {
+            if ($header === null) {
+                return null;
+            }
+
+            return $this->stripBom(trim((string) $header));
+        }, $headerRow);
+    }
+
+    private function stripBom(string $value): string
+    {
+        if (str_starts_with($value, "\xEF\xBB\xBF")) {
+            $value = substr($value, 3);
+        }
+
+        return $value;
+    }
+
+    private function detectDelimiterFromFile(string $path): string
+    {
+        $sample = @file_get_contents($path, false, null, 0, 8192);
+        if (! is_string($sample) || $sample === '') {
+            return ',';
+        }
+
+        $sample = str_replace(["\r\n", "\r"], "\n", $sample);
+        $firstLine = strtok($sample, "\n") ?: '';
+
+        return $this->detectDelimiter($firstLine);
+    }
+
+    private function detectDelimiter(string $line): string
+    {
+        $line = $this->stripBom($line);
+        $candidates = [',', ';', "\t"];
+        $best = ',';
+        $bestCount = -1;
+
+        foreach ($candidates as $delimiter) {
+            $count = substr_count($line, $delimiter);
+            if ($count > $bestCount) {
+                $bestCount = $count;
+                $best = $delimiter;
+            }
+        }
+
+        return $best;
     }
 
     /**
@@ -219,7 +304,18 @@ final class PayslipCsvImporter
         $periodEndRaw = $value('cutt_off_end');
 
         if ($employeeName === '' || $periodStartRaw === '' || $periodEndRaw === '') {
-            $errors[] = "Row {$rowNumber}: employee_name, cutt_off_start, and cutt_off_end are required.";
+            $missing = [];
+            if ($employeeName === '') {
+                $missing[] = 'employee_name';
+            }
+            if ($periodStartRaw === '') {
+                $missing[] = 'cutt_off_start';
+            }
+            if ($periodEndRaw === '') {
+                $missing[] = 'cutt_off_end';
+            }
+
+            $errors[] = 'Row '.$rowNumber.': missing required value(s): '.implode(', ', $missing).'. Check that dates are filled in and column headers match the template.';
 
             return null;
         }
@@ -392,8 +488,11 @@ final class PayslipCsvImporter
             return true;
         }
 
-        return $employee->department_id === null
-            || in_array((int) $employee->department_id, $this->allowedDepartmentIds, true);
+        if ($employee->department_id === null) {
+            return false;
+        }
+
+        return in_array((int) $employee->department_id, $this->allowedDepartmentIds, true);
     }
 
     private function normalizeName(string $name): string
