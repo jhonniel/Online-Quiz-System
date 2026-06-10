@@ -52,7 +52,7 @@ class PayslipController extends Controller
 
             $p12Password = null;
 
-            if (! empty($user->p12_certificate_path)) {
+            if ($user->hasP12Certificate()) {
                 $request->validate([
                     'p12_certificate_password' => 'required|string|max:255',
                 ], [

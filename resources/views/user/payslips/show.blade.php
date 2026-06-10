@@ -70,7 +70,7 @@
                         <p id="payslip-sign-period" class="mt-1 text-sm text-gray-500"></p>
                     </div>
                     <form id="payslip-sign-form" class="px-6 py-5 space-y-4">
-                        @if($user->p12_certificate_path)
+                        @if($user->hasP12Certificate())
                             <p class="text-sm text-gray-600">
                                 Enter your P12 certificate password to generate and cryptographically sign your payslip PDF.
                             </p>
@@ -108,7 +108,7 @@
 
         <script>
         let activePayslipSignId = null;
-        const payslipUserHasP12 = @json((bool) $user->p12_certificate_path);
+        const payslipUserHasP12 = @json($user->hasP12Certificate());
         const payslipUserHasESignature = @json($user->hasESignature());
 
         function openPayslipSignModal(payslipId, periodLabel, isResign = false) {

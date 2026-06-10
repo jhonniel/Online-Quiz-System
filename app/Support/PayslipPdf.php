@@ -37,7 +37,7 @@ final class PayslipPdf
     ): string {
         $pdfBinary = self::renderPdfBinary($payslip, $employee, $signedAt);
 
-        if (empty($employee->p12_certificate_path) || $p12Password === null || $p12Password === '') {
+        if (! $employee->hasP12Certificate() || $p12Password === null || $p12Password === '') {
             return $pdfBinary;
         }
 

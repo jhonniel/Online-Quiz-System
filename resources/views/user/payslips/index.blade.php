@@ -19,7 +19,7 @@
             Upload your <a href="{{ url('/profile/edit') }}" class="font-medium underline">e-signature on your profile</a> before signing payslips.
         </div>
     @endunless
-    @if($user->hasESignature() && ! $user->p12_certificate_path)
+    @if($user->hasESignature() && ! $user->hasP12Certificate())
         <div class="rounded-lg border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-900">
             You can sign payslips with your uploaded e-signature. Upload a
             <a href="{{ url('/profile/edit') }}" class="font-medium underline">P12 certificate on your profile</a>
@@ -82,7 +82,7 @@
                 <p id="payslip-sign-period" class="mt-1 text-sm text-gray-500"></p>
             </div>
             <form id="payslip-sign-form" class="px-6 py-5 space-y-4">
-                @if($user->p12_certificate_path)
+                @if($user->hasP12Certificate())
                     <p class="text-sm text-gray-600">
                         Enter your P12 certificate password to generate and cryptographically sign your payslip PDF.
                     </p>
@@ -120,7 +120,7 @@
 
 <script>
 let activePayslipSignId = null;
-const payslipUserHasP12 = @json((bool) $user->p12_certificate_path);
+const payslipUserHasP12 = @json($user->hasP12Certificate());
 const payslipUserHasESignature = @json($user->hasESignature());
 
 function openPayslipSignModal(payslipId, periodLabel, isResign = false) {
