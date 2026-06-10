@@ -22,6 +22,19 @@
         overflow: hidden;
     }
 
+    .payslip-sign-name-block {
+        position: relative;
+    }
+
+    .payslip-sign-name-block .payslip-sign-name {
+        position: relative;
+        z-index: 1;
+    }
+
+    .payslip-sign-name-block .payslip-esign-float {
+        z-index: 20;
+    }
+
     @media screen {
         .payslip-print-sheet--single {
             width: 100%;
@@ -251,11 +264,11 @@
             max-width: 11rem !important;
             height: 3.5rem !important;
             object-fit: contain !important;
-            z-index: 10 !important;
+            z-index: 20 !important;
         }
 
         .payslip-print-area .payslip-sign-name {
-            z-index: 0 !important;
+            z-index: 1 !important;
         }
 
         .payslip-print-area .h-14:not(.payslip-esign-float) {
