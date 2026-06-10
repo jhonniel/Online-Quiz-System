@@ -1194,14 +1194,16 @@ class User extends Authenticatable
             return false;
         }
 
-        // Prefer dedicated employee department restrictions. Fallback to legacy allowed_departments.
-        $allowedDepartments = $adminPermission->allowed_employee_departments ?? $adminPermission->allowed_departments;
-        if (empty($allowedDepartments)) {
+        $allowedDepartmentIds = $this->getAllowedDepartmentIds();
+        if ($allowedDepartmentIds === null) {
             return true;
         }
 
-        // Check if the department ID is in the allowed list
-        return in_array($departmentId, $allowedDepartments);
+        if ($departmentId === null) {
+            return false;
+        }
+
+        return in_array((int) $departmentId, $allowedDepartmentIds, true);
     }
 
     /**
@@ -1232,10 +1234,18 @@ class User extends Authenticatable
             return [];
         }
 
-        // Prefer dedicated employee department restrictions. Fallback to legacy allowed_departments.
-        $allowedDepartments = $adminPermission->allowed_employee_departments ?? $adminPermission->allowed_departments;
+        $employeeDepartments = $adminPermission->allowed_employee_departments;
+        $legacyDepartments = $adminPermission->allowed_departments;
 
-        return empty($allowedDepartments) ? null : $allowedDepartments;
+        if (! empty($employeeDepartments)) {
+            $allowedDepartments = $employeeDepartments;
+        } elseif (! empty($legacyDepartments)) {
+            $allowedDepartments = $legacyDepartments;
+        } else {
+            return null;
+        }
+
+        return array_values(array_unique(array_map('intval', $allowedDepartments)));
     }
 
     /**

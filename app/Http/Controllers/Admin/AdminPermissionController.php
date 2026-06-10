@@ -259,13 +259,13 @@ class AdminPermissionController extends Controller
 
         if ($hasAllowedEmployeeDepartments) {
             $permissions['allowed_employee_departments'] = $request->has('employee_management')
-                ? $employeeDepartments
+                ? array_values(array_unique(array_map('intval', $employeeDepartments)))
                 : null;
         }
 
         if ($hasAllowedStudentDepartments) {
             $permissions['allowed_student_departments'] = $request->has('student_management')
-                ? $studentDepartments
+                ? array_values(array_unique(array_map('intval', $studentDepartments)))
                 : null;
         }
 
