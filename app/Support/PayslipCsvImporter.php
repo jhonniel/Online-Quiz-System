@@ -13,6 +13,9 @@ final class PayslipCsvImporter
     /** @var array<string, int>|null */
     private ?array $linkedEmployeeIdsByName = null;
 
+    /** @var list<int>|null null = all departments */
+    private ?array $allowedDepartmentIds = null;
+
     /** @var list<string> */
     public const HEADERS = [
         'cutt_off_start',
@@ -41,10 +44,12 @@ final class PayslipCsvImporter
     ];
 
     /**
-     * @return array{imported: int, skipped: int, errors: list<string>}
+     * @return array{imported: int, skipped: int, errors: list<string>, warnings: list<string>}
      */
-    public function import(string $path, int $uploadedByUserId): array
+    public function import(string $path, int $uploadedByUserId, ?User $admin = null): array
     {
+        $this->allowedDepartmentIds = $admin?->getAllowedDepartmentIds();
+        $this->linkedEmployeeIdsByName = null;
         $handle = fopen($path, 'r');
         if ($handle === false) {
             throw new \RuntimeException('Unable to read the CSV file.');
@@ -61,6 +66,7 @@ final class PayslipCsvImporter
         $imported = 0;
         $skipped = 0;
         $errors = [];
+        $warnings = [];
         $rowNumber = 1;
 
         DB::beginTransaction();
@@ -81,6 +87,14 @@ final class PayslipCsvImporter
                 }
 
                 $user = $this->resolveEmployee($data['employee_email'], $data['employee_name']);
+
+                if ($user !== null && ! $this->adminCanImportForEmployee($user)) {
+                    $label = trim($data['employee_name']) !== '' ? $data['employee_name'] : ($user->name ?: 'employee');
+                    $errors[] = 'Row '.$rowNumber.': '.$label.' is outside your allowed departments.';
+                    $skipped++;
+
+                    continue;
+                }
 
                 if ($user !== null) {
                     $profileIssue = $this->validateEmployeeProfileForPayslip($user, $data['employee_name'], $rowNumber);
@@ -115,7 +129,7 @@ final class PayslipCsvImporter
                 $existing = $this->findExistingPayslip($user, $data);
                 if ($existing !== null) {
                     $skipped++;
-                    $errors[] = "Row {$rowNumber}: payslip already exists for {$data['employee_name']} ({$data['period_start']} to {$data['period_end']}), skipped.";
+                    $warnings[] = "Row {$rowNumber}: payslip already exists for {$data['employee_name']} ({$data['period_start']} to {$data['period_end']}), skipped.";
 
                     continue;
                 }
@@ -134,7 +148,7 @@ final class PayslipCsvImporter
 
         fclose($handle);
 
-        return compact('imported', 'skipped', 'errors');
+        return compact('imported', 'skipped', 'errors', 'warnings');
     }
 
     /**
@@ -287,6 +301,9 @@ final class PayslipCsvImporter
             if ($byEmail) {
                 return $byEmail;
             }
+
+            // Email provided but no matching account — import as unlinked; do not guess by name.
+            return null;
         }
 
         $normalizedName = $this->normalizeName($name);
@@ -337,7 +354,14 @@ final class PayslipCsvImporter
 
     private function validateEmployeeProfileForPayslip(User $user, string $employeeName, int $rowNumber): ?string
     {
-        $user->loadMissing(['department:id,name', 'departmentPosition:id,name,department_id']);
+        $user = User::query()
+            ->whereKey($user->id)
+            ->with(['department:id,name', 'departmentPosition:id,name,department_id'])
+            ->first(['id', 'name', 'email', 'department_id', 'department_position_id', 'date_hired']);
+
+        if (! $user) {
+            return 'Row '.$rowNumber.': matched employee account no longer exists.';
+        }
 
         $missing = [];
 
@@ -360,6 +384,16 @@ final class PayslipCsvImporter
         $label = trim($employeeName) !== '' ? $employeeName : ($user->name ?: 'employee');
 
         return 'Row '.$rowNumber.': '.$label.' is missing employee profile data ('.implode(', ', $missing).'). Set department, assigned position, and date hired on the user profile before importing.';
+    }
+
+    private function adminCanImportForEmployee(User $employee): bool
+    {
+        if ($this->allowedDepartmentIds === null) {
+            return true;
+        }
+
+        return $employee->department_id === null
+            || in_array((int) $employee->department_id, $this->allowedDepartmentIds, true);
     }
 
     private function normalizeName(string $name): string

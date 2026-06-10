@@ -133,7 +133,7 @@ class PayslipController extends Controller
         ]);
 
         try {
-            $result = $importer->import($request->file('csv_file')->getRealPath(), (int) auth()->id());
+            $result = $importer->import($request->file('csv_file')->getRealPath(), (int) auth()->id(), auth()->user());
         } catch (\InvalidArgumentException $e) {
             return redirect()
                 ->route('admin.payslip.index')
@@ -146,14 +146,19 @@ class PayslipController extends Controller
 
         $message = "Imported {$result['imported']} payslip(s)";
         if ($result['skipped'] > 0) {
-            $message .= ", skipped {$result['skipped']} duplicate(s)";
+            $message .= ", skipped {$result['skipped']} row(s)";
         }
         $message .= '.';
 
+        $flashKey = $result['imported'] > 0
+            ? 'success'
+            : (($result['errors'] ?? []) !== [] ? 'error' : 'success');
+
         return redirect()
             ->route('admin.payslip.index')
-            ->with('success', $message)
-            ->with('import_errors', $result['errors']);
+            ->with($flashKey, $message)
+            ->with('import_errors', $result['errors'] ?? [])
+            ->with('import_warnings', $result['warnings'] ?? []);
     }
 
     public function downloadTemplate()
@@ -228,7 +233,7 @@ class PayslipController extends Controller
                 ->with('error', 'This employee already has a payslip for the same cut-off period.');
         }
 
-        $employee->loadMissing(['department:id,name', 'departmentPosition:id,name']);
+        $employee->loadMissing(['department:id,name', 'departmentPosition:id,name,department_id']);
 
         $payslip->update(array_merge([
             'user_id' => $employee->id,

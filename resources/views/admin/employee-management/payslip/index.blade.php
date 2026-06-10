@@ -29,11 +29,21 @@
         <div class="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-900">{{ session('error') }}</div>
     @endif
     @if(session('import_errors') && count(session('import_errors')) > 0)
-        <div class="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
-            <p class="font-semibold mb-2">Import warnings</p>
+        <div class="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-900">
+            <p class="font-semibold mb-2">Import errors</p>
             <ul class="list-disc list-inside space-y-1">
                 @foreach(session('import_errors') as $error)
                     <li>{{ $error }}</li>
+                @endforeach
+            </ul>
+        </div>
+    @endif
+    @if(session('import_warnings') && count(session('import_warnings')) > 0)
+        <div class="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+            <p class="font-semibold mb-2">Import notes</p>
+            <ul class="list-disc list-inside space-y-1">
+                @foreach(session('import_warnings') as $warning)
+                    <li>{{ $warning }}</li>
                 @endforeach
             </ul>
         </div>
@@ -111,7 +121,7 @@
                     <div class="px-4 pb-4 pt-1 space-y-3 border-t border-gray-100">
                         <div>
                             <p class="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-1.5">Period & employee</p>
-                            <p class="text-xs text-gray-600 leading-relaxed">cutt_off_start, cutt_off_end, employee_name, employee_email (optional). Do not include position or date hired — when a row matches an employee account, <strong>Position</strong> comes from the employee's assigned department position and <strong>Date Hired</strong> from their profile.</p>
+                            <p class="text-xs text-gray-600 leading-relaxed">cutt_off_start, cutt_off_end, employee_name, employee_email (recommended). Use the employee's exact login email so the row links to their profile. Do not include position or date hired — when a row matches an employee account, <strong>Position</strong> comes from the employee's assigned department position and <strong>Date Hired</strong> from their profile.</p>
                         </div>
                         <div>
                             <p class="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-1.5">Earnings</p>
