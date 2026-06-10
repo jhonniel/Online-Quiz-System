@@ -14,6 +14,10 @@ final class PayslipPdf
         User $employee,
         ?\DateTimeInterface $signedAt = null,
     ): string {
+        $employee->loadMissing(['department:id,name', 'departmentPosition:id,name']);
+        $payslip->setRelation('employee', $employee);
+        $payslip->syncProfileFieldsFromEmployee($employee);
+
         $data = self::pdfViewData($payslip, $employee, $signedAt);
 
         return Pdf::loadView('user.payslips.pdf', $data)

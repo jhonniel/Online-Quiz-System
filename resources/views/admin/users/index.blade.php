@@ -343,6 +343,9 @@
                                 <option value="{{ $department->id }}">{{ $department->name }}</option>
                             @endforeach
                         </select>
+                        <select id="bulk-department-position-select" class="block flex-1 min-w-[180px] px-3 py-2.5 sm:py-2 border border-indigo-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm bg-white">
+                            <option value="">Select a position</option>
+                        </select>
                         <button id="bulk-department-assign-btn" type="button" disabled
                                 class="inline-flex items-center justify-center px-4 py-2.5 sm:py-2 border border-transparent rounded-lg text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed touch-manipulation min-h-[44px] sm:min-h-0">
                             <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -386,6 +389,7 @@
             <form id="bulk-department-form" method="POST" action="{{ url('/admin/users/bulk-assign-department') }}">
                 @csrf
                 <input type="hidden" name="department_id" id="department-input" value="">
+                <input type="hidden" name="department_position_id" id="department-position-input" value="">
             </form>
             @endif
             <form id="bulk-ojt-form" method="POST" action="{{ url('/admin/users/bulk-assign-ojt-target-end-date') }}">
@@ -786,6 +790,9 @@
         const bulkDepartmentAssignBtn = document.getElementById('bulk-department-assign-btn');
         const bulkDepartmentForm = document.getElementById('bulk-department-form');
         const departmentInput = document.getElementById('department-input');
+        const bulkDepartmentPositionSelect = document.getElementById('bulk-department-position-select');
+        const departmentPositionInput = document.getElementById('department-position-input');
+        const bulkDepartmentPositions = @json($departmentPositionMap ?? []);
         const bulkOjtDate = document.getElementById('bulk-ojt-date');
         const bulkOjtAssignBtn = document.getElementById('bulk-ojt-assign-btn');
         const bulkOjtForm = document.getElementById('bulk-ojt-form');
@@ -858,7 +865,8 @@
             // Enable/disable assign button based on role selection
             bulkAssignBtn.disabled = !bulkRoleSelect.value || count === 0;
             if (bulkDepartmentAssignBtn && bulkDepartmentSelect) {
-                bulkDepartmentAssignBtn.disabled = !bulkDepartmentSelect.value || count === 0;
+                const positions = bulkDepartmentPositions[bulkDepartmentSelect.value] || bulkDepartmentPositions[String(bulkDepartmentSelect.value)] || [];
+                bulkDepartmentAssignBtn.disabled = !bulkDepartmentSelect.value || count === 0 || positions.length === 0 || !(bulkDepartmentPositionSelect && bulkDepartmentPositionSelect.value);
             }
             if (bulkOjtAssignBtn && bulkOjtDate) {
                 bulkOjtAssignBtn.disabled = !bulkOjtDate.value || count === 0;
@@ -891,10 +899,28 @@
         bulkRoleSelect.addEventListener('change', function() {
             bulkAssignBtn.disabled = !this.value || getSelectedUserIds().length === 0;
         });
-        if (bulkDepartmentSelect && bulkDepartmentAssignBtn) {
-            bulkDepartmentSelect.addEventListener('change', function() {
-                bulkDepartmentAssignBtn.disabled = !this.value || getSelectedUserIds().length === 0;
+        function renderBulkDepartmentPositions() {
+            if (!bulkDepartmentPositionSelect || !bulkDepartmentSelect) {
+                return;
+            }
+
+            const departmentId = bulkDepartmentSelect.value;
+            const positions = bulkDepartmentPositions[departmentId] || bulkDepartmentPositions[String(departmentId)] || [];
+
+            bulkDepartmentPositionSelect.innerHTML = '<option value="">Select a position</option>';
+            positions.forEach((position) => {
+                const option = document.createElement('option');
+                option.value = String(position.id);
+                option.textContent = position.name;
+                bulkDepartmentPositionSelect.appendChild(option);
             });
+
+            updateSelection();
+        }
+
+        if (bulkDepartmentSelect && bulkDepartmentAssignBtn) {
+            bulkDepartmentSelect.addEventListener('change', renderBulkDepartmentPositions);
+            bulkDepartmentPositionSelect?.addEventListener('change', updateSelection);
         }
         if (bulkOjtDate && bulkOjtAssignBtn) {
             bulkOjtDate.addEventListener('change', function() {
@@ -914,6 +940,9 @@
             bulkRoleSelect.value = '';
             if (bulkDepartmentSelect) {
                 bulkDepartmentSelect.value = '';
+            }
+            if (bulkDepartmentPositionSelect) {
+                bulkDepartmentPositionSelect.innerHTML = '<option value="">Select a position</option>';
             }
             if (bulkOjtDate) {
                 bulkOjtDate.value = '';
@@ -957,14 +986,21 @@
             bulkDepartmentAssignBtn.addEventListener('click', function() {
                 const selectedUserIds = getSelectedUserIds();
                 const selectedDepartmentId = bulkDepartmentSelect.value;
+                const selectedPositionId = bulkDepartmentPositionSelect ? bulkDepartmentPositionSelect.value : '';
 
                 if (selectedUserIds.length === 0 || !selectedDepartmentId) {
                     alert('Please select at least one user and a department.');
                     return;
                 }
 
+                if (!selectedPositionId) {
+                    alert('Please select a position for employee assignments.');
+                    return;
+                }
+
                 const departmentLabel = bulkDepartmentSelect.options[bulkDepartmentSelect.selectedIndex]?.text || 'department';
-                const confirmMessage = `Assign "${departmentLabel}" department to ${selectedUserIds.length} selected user(s)?\n\nOnly employee and student roles will be updated.`;
+                const positionLabel = bulkDepartmentPositionSelect?.options[bulkDepartmentPositionSelect.selectedIndex]?.text || 'position';
+                const confirmMessage = `Assign "${departmentLabel}" / "${positionLabel}" to ${selectedUserIds.length} selected user(s)?\n\nEmployees receive the position. Students receive the department only.`;
 
                 if (!confirm(confirmMessage)) {
                     return;
@@ -980,6 +1016,9 @@
                 });
 
                 departmentInput.value = selectedDepartmentId;
+                if (departmentPositionInput) {
+                    departmentPositionInput.value = selectedPositionId;
+                }
                 bulkDepartmentForm.submit();
             });
         }

@@ -54,7 +54,7 @@ class PayslipController extends Controller
     private function scopedPayslipQuery(Request $request, bool $applyYearFilter = true)
     {
         $query = EmployeePayslip::query()
-            ->with(['employee:id,name,email,department_id,date_hired', 'employee.department:id,name', 'uploader:id,name'])
+            ->with(['employee:id,name,email,department_id,date_hired', 'employee.department:id,name', 'employee.departmentPosition:id,name', 'uploader:id,name'])
             ->where(function ($q) {
                 $q->whereNull('user_id')
                     ->orWhereHas('employee', function ($employeeQuery) {
@@ -89,7 +89,8 @@ class PayslipController extends Controller
     public function show(EmployeePayslip $payslip)
     {
         $this->authorizePayslip($payslip);
-        $payslip->load(['employee:id,name,email,department_id,date_hired,e_signature_path', 'employee.department', 'uploader']);
+        $payslip->load(['employee:id,name,email,department_id,date_hired,e_signature_path', 'employee.department:id,name', 'employee.departmentPosition:id,name', 'uploader']);
+        $payslip->syncProfileFieldsFromEmployee();
 
         $employees = $this->scopedEmployeeQuery()
             ->with('department:id,name')
@@ -226,7 +227,7 @@ class PayslipController extends Controller
                 ->with('error', 'This employee already has a payslip for the same cut-off period.');
         }
 
-        $employee->loadMissing('department:id,name');
+        $employee->loadMissing(['department:id,name', 'departmentPosition:id,name']);
 
         $payslip->update(array_merge([
             'user_id' => $employee->id,
@@ -278,7 +279,7 @@ class PayslipController extends Controller
         ]);
 
         $payslips = EmployeePayslip::query()
-            ->with(['employee:id,name,email,date_hired,e_signature_path', 'employee.department:id,name'])
+            ->with(['employee:id,name,email,date_hired,e_signature_path', 'employee.department:id,name', 'employee.departmentPosition:id,name'])
             ->whereIn('id', $validated['payslip_ids'])
             ->where(function ($q) {
                 $q->whereNull('user_id')
@@ -289,7 +290,8 @@ class PayslipController extends Controller
             ->orderByDesc('period_end')
             ->orderByDesc('period_start')
             ->orderBy('employee_name')
-            ->get();
+            ->get()
+            ->each(fn (EmployeePayslip $payslip) => $payslip->syncProfileFieldsFromEmployee());
 
         if ($payslips->isEmpty()) {
             return redirect()

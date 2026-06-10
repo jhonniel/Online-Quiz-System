@@ -72,7 +72,7 @@
                            id="departments-search-input"
                            name="search"
                            value="{{ request('search', $search ?? '') }}"
-                           placeholder="Search departments (name, code, supervisor, description, job description, ID)..."
+                           placeholder="Search departments (name, role/position, code, supervisor, description, ID)..."
                            autocomplete="off"
                            class="block w-full pl-9 pr-10 py-2 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 text-sm">
                     @if(request('search'))
@@ -110,6 +110,9 @@
                             Department Name
                         </th>
                         <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Role / Position
+                        </th>
+                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                             Code
                         </th>
                         <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -136,6 +139,19 @@
                                 <div class="text-sm font-medium text-gray-900">{{ $department->name }}</div>
                                 @if($department->description)
                                     <div class="text-sm text-gray-500">{{ Str::limit($department->description, 50) }}</div>
+                                @endif
+                            </td>
+                            <td class="px-6 py-4 text-sm text-gray-900 align-top max-w-xs">
+                                @if($department->positions->isNotEmpty())
+                                    <ul class="space-y-1">
+                                        @foreach($department->positions as $position)
+                                            <li class="inline-flex items-center rounded-full bg-indigo-50 px-2 py-0.5 text-xs font-medium text-indigo-800 border border-indigo-100 mr-1 mb-1">
+                                                {{ $position->name }}
+                                            </li>
+                                        @endforeach
+                                    </ul>
+                                @else
+                                    <span class="text-gray-400 italic">No positions</span>
                                 @endif
                             </td>
                             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
@@ -200,7 +216,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="7" class="px-6 py-12 text-center text-sm text-gray-500">
+                            <td colspan="8" class="px-6 py-12 text-center text-sm text-gray-500">
                                 <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path>
                                 </svg>

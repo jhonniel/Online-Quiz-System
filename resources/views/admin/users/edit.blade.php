@@ -137,6 +137,11 @@
                             @error('department_id') <p class="mt-1 text-sm text-red-600">{{ $message }}</p> @enderror
                         </div>
 
+                        @include('admin.users.partials.department-position-fields', [
+                            'selectedRole' => old('role', $user->role),
+                            'selectedPositionId' => old('department_position_id', $user->department_position_id),
+                        ])
+
                         <div id="required_training_hours_wrapper" class="{{ old('role', $user->role) === 'student' ? '' : 'hidden' }}">
                             <label for="required_training_hours" class="block text-sm font-semibold text-gray-700 mb-1.5">Required Training Hours</label>
                             <input type="number" name="required_training_hours" id="required_training_hours" step="0.01" min="0"

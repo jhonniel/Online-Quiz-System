@@ -31,7 +31,8 @@ class PayslipController extends Controller
         abort_unless($user->role === 'employee', 403);
         abort_unless((int) $payslip->user_id === (int) $user->id, 403);
 
-        $payslip->load(['employee:id,name,department_id,date_hired,e_signature_path,p12_certificate_path', 'employee.department:id,name']);
+        $payslip->load(['employee:id,name,department_id,date_hired,e_signature_path,p12_certificate_path', 'employee.department:id,name', 'employee.departmentPosition:id,name']);
+        $payslip->syncProfileFieldsFromEmployee($user);
 
         return view('user.payslips.show', compact('payslip', 'user'));
     }
@@ -66,6 +67,8 @@ class PayslipController extends Controller
                     'p12_certificate_password' => ['The P12 certificate password is incorrect.'],
                 ]);
             }
+
+            $user->loadMissing('department:id,name,position');
 
             $signedAt = now();
             $pdfBinary = PayslipPdf::renderSignedPdfBinary($payslip, $user, $signedAt, $password);

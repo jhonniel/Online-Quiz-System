@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Department;
+use App\Models\DepartmentPosition;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 
@@ -13,11 +14,13 @@ class DepartmentController extends Controller
     {
         $search = trim((string) $request->input('search', ''));
         $perPage = (int) $request->input('per_page', 20);
-        if (!in_array($perPage, [10, 20, 50, 100], true)) {
+        if (! in_array($perPage, [10, 20, 50, 100], true)) {
             $perPage = 20;
         }
 
-        $query = Department::withCount('users')->orderBy('name');
+        $query = Department::with(['positions' => fn ($q) => $q->active()->orderBy('sort_order')->orderBy('name')])
+            ->withCount('users')
+            ->orderBy('name');
 
         if ($search !== '') {
             $query->where(function ($q) use ($search) {
@@ -29,7 +32,8 @@ class DepartmentController extends Controller
                     ->orWhere('code', 'like', "%{$search}%")
                     ->orWhere('supervisor_name', 'like', "%{$search}%")
                     ->orWhere('description', 'like', "%{$search}%")
-                    ->orWhere('job_description', 'like', "%{$search}%");
+                    ->orWhere('job_description', 'like', "%{$search}%")
+                    ->orWhereHas('positions', fn ($positionQuery) => $positionQuery->where('name', 'like', "%{$search}%"));
             });
         }
 
@@ -47,6 +51,8 @@ class DepartmentController extends Controller
     {
         $request->validate([
             'name' => 'required|string|max:255|unique:departments,name',
+            'positions' => 'nullable|array|max:50',
+            'positions.*' => 'nullable|string|max:255',
             'code' => 'nullable|string|max:50|unique:departments,code',
             'description' => 'nullable|string',
             'job_description' => 'nullable|string|max:10000',
@@ -63,20 +69,26 @@ class DepartmentController extends Controller
             'is_active' => $request->has('is_active'),
         ]);
 
+        $this->syncPositions($department, $request->input('positions', []));
+
         return redirect('/admin/departments')
             ->with('success', 'Department created successfully.');
     }
 
     public function edit(Department $department)
     {
+        $department->load(['positions' => fn ($q) => $q->orderBy('sort_order')->orderBy('name')]);
+
         return view('admin.departments.edit', compact('department'));
     }
 
     public function update(Request $request, Department $department)
     {
         $request->validate([
-            'name' => 'required|string|max:255|unique:departments,name,' . $department->id,
-            'code' => 'nullable|string|max:50|unique:departments,code,' . $department->id,
+            'name' => 'required|string|max:255|unique:departments,name,'.$department->id,
+            'positions' => 'nullable|array|max:50',
+            'positions.*' => 'nullable|string|max:255',
+            'code' => 'nullable|string|max:50|unique:departments,code,'.$department->id,
             'description' => 'nullable|string',
             'job_description' => 'nullable|string|max:10000',
             'supervisor_name' => 'nullable|string|max:255',
@@ -92,13 +104,14 @@ class DepartmentController extends Controller
             'is_active' => $request->has('is_active'),
         ]);
 
+        $this->syncPositions($department, $request->input('positions', []));
+
         return redirect('/admin/departments')
             ->with('success', 'Department updated successfully.');
     }
 
     public function destroy(Department $department)
     {
-        // Check if department has users
         if ($department->users()->count() > 0) {
             return redirect('/admin/departments')
                 ->with('error', 'Cannot delete department with assigned employees. Please reassign employees first.');
@@ -113,11 +126,46 @@ class DepartmentController extends Controller
     public function toggleStatus(Department $department)
     {
         $department->update([
-            'is_active' => !$department->is_active,
+            'is_active' => ! $department->is_active,
         ]);
 
         return redirect()->back()
             ->with('success', 'Department status updated successfully.');
+    }
+
+    /**
+     * @param  list<mixed>|null  $positions
+     */
+    private function syncPositions(Department $department, ?array $positions): void
+    {
+        $names = collect($positions ?? [])
+            ->map(fn ($name) => trim((string) $name))
+            ->filter()
+            ->unique()
+            ->values();
+
+        $keptIds = [];
+
+        foreach ($names as $index => $name) {
+            $position = $department->positions()->firstOrNew(['name' => $name]);
+            $position->fill([
+                'sort_order' => $index,
+                'is_active' => true,
+            ]);
+            $position->save();
+            $keptIds[] = $position->id;
+        }
+
+        $department->positions()
+            ->whereNotIn('id', $keptIds)
+            ->get()
+            ->each(function (DepartmentPosition $position): void {
+                if ($position->users()->exists()) {
+                    $position->update(['is_active' => false]);
+                } else {
+                    $position->delete();
+                }
+            });
     }
 
     private function normalizeJobDescription(?string $value): ?string
@@ -146,4 +194,3 @@ class DepartmentController extends Controller
         return $normalized === [] ? null : implode("\n", $normalized);
     }
 }
-

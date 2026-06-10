@@ -48,6 +48,7 @@ class User extends Authenticatable
         'is_approved',
         'university_id',
         'department_id',
+        'department_position_id',
         'date_hired',
         'tin',
         'sss_number',
@@ -136,8 +137,24 @@ class User extends Authenticatable
     protected static function booted(): void
     {
         static::saving(function (User $user): void {
-            if ($user->role === 'teacher') {
+            if ($user->role === 'teacher' || ! in_array($user->role, ['employee', 'student'], true)) {
                 $user->department_id = null;
+                $user->department_position_id = null;
+            }
+
+            if ($user->department_id === null) {
+                $user->department_position_id = null;
+            }
+
+            if ($user->department_position_id !== null && $user->department_id !== null) {
+                $belongsToDepartment = DepartmentPosition::query()
+                    ->whereKey($user->department_position_id)
+                    ->where('department_id', $user->department_id)
+                    ->exists();
+
+                if (! $belongsToDepartment) {
+                    $user->department_position_id = null;
+                }
             }
         });
     }
@@ -254,6 +271,20 @@ class User extends Authenticatable
     public function department()
     {
         return $this->belongsTo(Department::class);
+    }
+
+    public function departmentPosition()
+    {
+        return $this->belongsTo(DepartmentPosition::class, 'department_position_id');
+    }
+
+    public function payslipPositionLabel(): ?string
+    {
+        $this->loadMissing('departmentPosition:id,name');
+
+        $label = trim((string) $this->departmentPosition?->name);
+
+        return $label !== '' ? $label : null;
     }
 
     public function employeeDocumentSignatures()

@@ -111,7 +111,7 @@
                     <div class="px-4 pb-4 pt-1 space-y-3 border-t border-gray-100">
                         <div>
                             <p class="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-1.5">Period & employee</p>
-                            <p class="text-xs text-gray-600 leading-relaxed">cutt_off_start, cutt_off_end, employee_name, employee_email (optional). Do not include position or date hired — when a row matches an employee account, <strong>Position</strong> is filled from their profile <strong>department</strong> and <strong>Date Hired</strong> from their profile.</p>
+                            <p class="text-xs text-gray-600 leading-relaxed">cutt_off_start, cutt_off_end, employee_name, employee_email (optional). Do not include position or date hired — when a row matches an employee account, <strong>Position</strong> comes from the employee's assigned department position and <strong>Date Hired</strong> from their profile.</p>
                         </div>
                         <div>
                             <p class="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-1.5">Earnings</p>

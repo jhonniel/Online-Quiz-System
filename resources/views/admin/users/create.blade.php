@@ -265,6 +265,11 @@
                         @enderror
                     </div>
 
+                    @include('admin.users.partials.department-position-fields', [
+                        'selectedRole' => old('role'),
+                        'selectedPositionId' => old('department_position_id'),
+                    ])
+
                     <!-- Required Training Hours (Students Only) -->
                     <div class="space-y-2" id="required_training_hours_wrapper"
                          @if(old('role') === 'student') style="" @else style="display:none;" @endif>

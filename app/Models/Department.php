@@ -28,6 +28,16 @@ class Department extends Model
         return $this->hasMany(User::class);
     }
 
+    public function positions(): HasMany
+    {
+        return $this->hasMany(DepartmentPosition::class)->orderBy('sort_order')->orderBy('name');
+    }
+
+    public function activePositions(): HasMany
+    {
+        return $this->positions()->where('is_active', true);
+    }
+
     /**
      * Scope to get only active departments
      */
@@ -68,6 +78,29 @@ class Department extends Model
     public function hasJobDescription(): bool
     {
         return count($this->jobDescriptionBullets()) > 0;
+    }
+
+    /**
+     * @return list<string>
+     */
+    public function positionNames(): array
+    {
+        if ($this->relationLoaded('positions')) {
+            return $this->positions
+                ->where('is_active', true)
+                ->pluck('name')
+                ->map(fn ($name) => trim((string) $name))
+                ->filter()
+                ->values()
+                ->all();
+        }
+
+        return $this->activePositions()
+            ->pluck('name')
+            ->map(fn ($name) => trim((string) $name))
+            ->filter()
+            ->values()
+            ->all();
     }
 }
 

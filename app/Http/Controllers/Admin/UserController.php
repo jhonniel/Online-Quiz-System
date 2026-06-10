@@ -13,8 +13,10 @@ use App\Models\LeaveBalance;
 use App\Models\University;
 use App\Models\User;
 use App\Services\MailConfigService;
+use App\Support\DepartmentPositionOptions;
 use App\Support\DocumentExportPdfBranding;
 use App\Support\EmployeeProfileCsvImporter;
+use App\Models\DepartmentPosition;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Builder;
@@ -62,6 +64,7 @@ class UserController extends Controller
             'roleFilter' => $context['roleFilter'],
             'departmentFilter' => $context['departmentFilter'],
             'departments' => $context['departments'],
+            'departmentPositionMap' => $context['departmentPositionMap'],
             'isTeachersManagement' => $context['isTeachersManagement'],
         ]);
     }
@@ -84,7 +87,7 @@ class UserController extends Controller
             ]);
 
             $isTeachersManagement = $context['isTeachersManagement'];
-            $with = $isTeachersManagement ? ['university'] : ['university', 'department'];
+            $with = $isTeachersManagement ? ['university'] : ['university', 'department', 'departmentPosition'];
 
             $users = User::query()
                 ->with($with)
@@ -138,6 +141,9 @@ class UserController extends Controller
             'departments' => $isTeachersManagement
                 ? collect()
                 : Department::active()->orderBy('name')->get(),
+            'departmentPositionMap' => $isTeachersManagement
+                ? collect()
+                : DepartmentPositionOptions::mapForActiveDepartments(),
         ];
     }
 
@@ -159,7 +165,7 @@ class UserController extends Controller
         $isTeachersManagement = $context['isTeachersManagement'];
         $dbDriver = DB::connection()->getDriverName();
         $idLikeSql = $dbDriver === 'pgsql' ? 'CAST(id AS TEXT) LIKE ?' : 'CAST(id AS CHAR) LIKE ?';
-        $with = $isTeachersManagement ? ['university'] : ['university', 'department'];
+        $with = $isTeachersManagement ? ['university'] : ['university', 'department', 'departmentPosition'];
 
         $query = User::query()
             ->with($with)
@@ -279,8 +285,9 @@ class UserController extends Controller
     {
         $universities = University::active()->orderBy('name')->get();
         $departments = Department::active()->orderBy('name')->get();
+        $departmentPositionMap = DepartmentPositionOptions::mapForActiveDepartments();
 
-        return view('admin.users.create', compact('universities', 'departments'));
+        return view('admin.users.create', compact('universities', 'departments', 'departmentPositionMap'));
     }
 
     public function store(Request $request)
@@ -304,6 +311,14 @@ class UserController extends Controller
                 }),
                 'exists:departments,id',
             ],
+            'department_position_id' => [
+                'nullable',
+                'integer',
+                Rule::exists('department_positions', 'id'),
+                Rule::requiredIf(function () use ($request) {
+                    return $request->role === 'employee';
+                }),
+            ],
             'is_active' => 'boolean',
             'required_training_hours' => 'nullable|numeric|min:0',
             'ojt_target_end_date' => 'nullable|date',
@@ -316,6 +331,10 @@ class UserController extends Controller
         // Custom validation for new university
         if ($request->university_id === 'new' && ! $request->filled('new_university_name')) {
             return back()->withErrors(['new_university_name' => 'Please enter a university name when adding a new university.'])->withInput();
+        }
+
+        if ($positionError = $this->validateDepartmentPositionAssignment($request)) {
+            return back()->withErrors($positionError)->withInput();
         }
 
         // Handle university assignment
@@ -340,6 +359,7 @@ class UserController extends Controller
             'role' => $request->role,
             'university_id' => $universityId,
             'department_id' => in_array($request->role, ['employee', 'student'], true) ? $request->department_id : null,
+            'department_position_id' => $this->resolvedDepartmentPositionId($request),
             'is_active' => $request->has('is_active'),
             'required_training_hours' => $request->required_training_hours,
             'ojt_target_end_date' => $request->role === 'student' && $request->filled('ojt_target_end_date')
@@ -570,10 +590,13 @@ class UserController extends Controller
             ? StudentMeritNoticeSettings::thresholds()
             : null;
 
+        $departmentPositionMap = DepartmentPositionOptions::mapForActiveDepartments();
+
         return view('admin.users.edit', compact(
             'user',
             'universities',
             'departments',
+            'departmentPositionMap',
             'studentMeritBreakdown',
             'studentMeritNoticeSettings'
         ));
@@ -599,6 +622,14 @@ class UserController extends Controller
                     return $request->role === 'employee';
                 }),
                 'exists:departments,id',
+            ],
+            'department_position_id' => [
+                'nullable',
+                'integer',
+                Rule::exists('department_positions', 'id'),
+                Rule::requiredIf(function () use ($request) {
+                    return $request->role === 'employee';
+                }),
             ],
             'is_active' => 'boolean',
             'theme_color_enabled' => 'boolean',
@@ -644,6 +675,10 @@ class UserController extends Controller
                 ->withInput();
         }
 
+        if ($positionError = $this->validateDepartmentPositionAssignment($request)) {
+            return back()->withErrors($positionError)->withInput();
+        }
+
         // Handle university assignment
         $universityId = null;
 
@@ -665,6 +700,7 @@ class UserController extends Controller
             'role' => $request->role,
             'university_id' => $universityId,
             'department_id' => in_array($request->role, ['employee', 'student'], true) ? $request->department_id : null,
+            'department_position_id' => $this->resolvedDepartmentPositionId($request),
             'is_active' => $request->has('is_active'),
             'theme_color_enabled' => $request->boolean('theme_color_enabled'),
         ];
@@ -918,6 +954,7 @@ class UserController extends Controller
             'user_ids' => 'required|array|min:1',
             'user_ids.*' => 'exists:users,id',
             'department_id' => 'required|exists:departments,id',
+            'department_position_id' => 'nullable|integer|exists:department_positions,id',
         ], [
             'user_ids.required' => 'Please select at least one user.',
             'user_ids.array' => 'Invalid user selection format.',
@@ -928,12 +965,49 @@ class UserController extends Controller
 
         $userIds = $request->input('user_ids', []);
         $departmentId = (int) $request->input('department_id');
+        $positionId = $request->filled('department_position_id') ? (int) $request->input('department_position_id') : null;
 
-        // Limit department assignment to Employee and Student roles.
-        $query = User::whereIn('id', $userIds)
-            ->whereIn('role', ['employee', 'student']);
+        if ($positionId !== null) {
+            $belongsToDepartment = DepartmentPosition::query()
+                ->whereKey($positionId)
+                ->where('department_id', $departmentId)
+                ->exists();
 
-        $updated = $query->update(['department_id' => $departmentId]);
+            if (! $belongsToDepartment) {
+                return redirect()->back()
+                    ->with('error', 'The selected position does not belong to the chosen department.');
+            }
+        }
+
+        $employeeIds = User::query()
+            ->whereIn('id', $userIds)
+            ->where('role', 'employee')
+            ->pluck('id');
+
+        if ($employeeIds->isNotEmpty() && $positionId === null) {
+            return redirect()->back()
+                ->with('error', 'Select a position when bulk-assigning a department to employees.');
+        }
+
+        $employeeUpdated = 0;
+        if ($employeeIds->isNotEmpty()) {
+            $employeeUpdated = User::query()
+                ->whereIn('id', $employeeIds)
+                ->update([
+                    'department_id' => $departmentId,
+                    'department_position_id' => $positionId,
+                ]);
+        }
+
+        $studentUpdated = User::query()
+            ->whereIn('id', $userIds)
+            ->where('role', 'student')
+            ->update([
+                'department_id' => $departmentId,
+                'department_position_id' => null,
+            ]);
+
+        $updated = $employeeUpdated + $studentUpdated;
         $selectedCount = count($userIds);
         $skipped = max($selectedCount - $updated, 0);
 
@@ -951,6 +1025,61 @@ class UserController extends Controller
         }
 
         return redirect()->back()->with('success', $message);
+    }
+
+    /**
+     * @return array<string, string>|null
+     */
+    private function validateDepartmentPositionAssignment(Request $request): ?array
+    {
+        if (! in_array($request->role, ['employee', 'student'], true)) {
+            return null;
+        }
+
+        if ($request->role === 'employee' && $request->filled('department_id')) {
+            $hasPositions = DepartmentPosition::query()
+                ->where('department_id', (int) $request->department_id)
+                ->active()
+                ->exists();
+
+            if (! $hasPositions) {
+                return ['department_position_id' => 'Add at least one position to this department before assigning employees.'];
+            }
+        }
+
+        if ($request->role === 'employee' && ! $request->filled('department_position_id')) {
+            return ['department_position_id' => 'Please select a position for this employee.'];
+        }
+
+        if (! $request->filled('department_position_id') || ! $request->filled('department_id')) {
+            return null;
+        }
+
+        $belongsToDepartment = DepartmentPosition::query()
+            ->whereKey((int) $request->department_position_id)
+            ->where('department_id', (int) $request->department_id)
+            ->exists();
+
+        if (! $belongsToDepartment) {
+            return ['department_position_id' => 'The selected position does not belong to the chosen department.'];
+        }
+
+        return null;
+    }
+
+    private function resolvedDepartmentPositionId(Request $request): ?int
+    {
+        if (! in_array($request->role, ['employee', 'student'], true)) {
+            return null;
+        }
+
+        if ($request->role !== 'employee') {
+            return null;
+        }
+
+        return $request->filled('department_position_id')
+            ? (int) $request->department_position_id
+            : null;
     }
 
     public function bulkAssignOjtTargetEndDate(Request $request)

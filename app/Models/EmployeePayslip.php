@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Support\PayslipCsvImporter;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
@@ -76,22 +77,55 @@ class EmployeePayslip extends Model
         return $this->user_id !== null;
     }
 
+    /**
+     * Position shown on payslips: the employee's assigned department position.
+     */
     public function displayPosition(): ?string
     {
         if ($this->isLinkedToEmployee()) {
             $employee = $this->relationLoaded('employee')
                 ? $this->employee
-                : $this->employee()->with('department:id,name')->first();
+                : $this->employee()->with('departmentPosition:id,name')->first();
 
-            $department = trim((string) $employee?->department?->name);
-            if ($department !== '') {
-                return $department;
+            $employee?->loadMissing('departmentPosition:id,name');
+            $label = trim((string) $employee?->payslipPositionLabel());
+            if ($label !== '') {
+                return $label;
             }
         }
 
         $stored = trim((string) ($this->position ?? ''));
 
         return $stored !== '' ? $stored : null;
+    }
+
+    /**
+     * Refresh stored position and date hired from the linked employee profile.
+     */
+    public function syncProfileFieldsFromEmployee(?User $employee = null): void
+    {
+        if (! $this->isLinkedToEmployee()) {
+            return;
+        }
+
+        $employee ??= $this->relationLoaded('employee')
+            ? $this->employee
+            : $this->employee()->with(['department:id,name', 'departmentPosition:id,name'])->first();
+
+        if (! $employee) {
+            return;
+        }
+
+        $fields = PayslipCsvImporter::profileFieldsFromEmployee($employee);
+
+        $this->forceFill([
+            'position' => $fields['position'],
+            'date_hired' => $fields['date_hired'],
+        ]);
+
+        if ($this->isDirty(['position', 'date_hired'])) {
+            $this->save();
+        }
     }
 
     public function displayDateHired(): ?\Illuminate\Support\Carbon

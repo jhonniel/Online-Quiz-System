@@ -36,6 +36,8 @@
                     @enderror
                 </div>
 
+                @include('admin.departments.partials.positions-field')
+
                 <!-- Code -->
                 <div>
                     <label for="code" class="block text-sm font-medium text-gray-700 mb-2">Code</label>

@@ -274,10 +274,10 @@ final class PayslipCsvImporter
 
     private function resolveEmployee(?string $email, string $name): ?User
     {
-        $employeeColumns = ['id', 'name', 'email', 'date_hired', 'department_id'];
+        $employeeColumns = ['id', 'name', 'email', 'date_hired', 'department_id', 'department_position_id'];
         $baseQuery = User::query()
             ->where('role', 'employee')
-            ->with('department:id,name');
+            ->with(['department:id,name', 'departmentPosition:id,name']);
 
         if ($email) {
             $byEmail = (clone $baseQuery)
@@ -347,13 +347,17 @@ final class PayslipCsvImporter
             $missing[] = 'department';
         }
 
+        if ($user->department_position_id === null || trim((string) $user->payslipPositionLabel()) === '') {
+            $missing[] = 'position';
+        }
+
         if ($missing === []) {
             return null;
         }
 
         $label = trim($employeeName) !== '' ? $employeeName : ($user->name ?: 'employee');
 
-        return 'Row '.$rowNumber.': '.$label.' is missing employee profile data ('.implode(', ', $missing).'). Set department (payslip Position) and date hired on the user profile before importing.';
+        return 'Row '.$rowNumber.': '.$label.' is missing employee profile data ('.implode(', ', $missing).'). Set department, assigned position, and date hired on the user profile before importing.';
     }
 
     private function normalizeName(string $name): string
@@ -389,16 +393,18 @@ final class PayslipCsvImporter
     }
 
     /**
-     * Payslip "position" is the employee's assigned department from their user profile.
+     * Payslip position uses the employee's assigned department position.
      *
      * @return array{position: ?string, date_hired: ?string}
      */
     public static function profileFieldsFromEmployee(User $user): array
     {
-        $user->loadMissing('department:id,name');
+        $user->loadMissing(['department:id,name', 'departmentPosition:id,name']);
+
+        $position = trim((string) $user->payslipPositionLabel());
 
         return [
-            'position' => trim((string) $user->department?->name) ?: null,
+            'position' => $position !== '' ? $position : null,
             'date_hired' => $user->date_hired?->toDateString(),
         ];
     }
