@@ -383,7 +383,7 @@ final class PayslipCsvImporter
 
     private function resolveEmployee(?string $email, string $name): ?User
     {
-        $employeeColumns = ['id', 'name', 'email', 'date_hired', 'department_id', 'department_position_id'];
+        $employeeColumns = ['id', 'name', 'email', 'role', 'date_hired', 'department_id', 'department_position_id'];
         $baseQuery = User::query()
             ->where('role', 'employee')
             ->with(['department:id,name', 'departmentPosition:id,name,department_id']);
@@ -464,7 +464,7 @@ final class PayslipCsvImporter
         $user = User::query()
             ->whereKey($user->id)
             ->with(['department:id,name', 'departmentPosition:id,name,department_id'])
-            ->first(['id', 'name', 'email', 'department_id', 'department_position_id', 'date_hired']);
+            ->first(['id', 'name', 'email', 'role', 'department_id', 'department_position_id', 'date_hired']);
 
         if (! $user) {
             return 'Row '.$rowNumber.': matched employee account no longer exists.';

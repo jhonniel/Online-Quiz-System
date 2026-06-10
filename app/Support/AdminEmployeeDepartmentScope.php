@@ -62,7 +62,7 @@ final class AdminEmployeeDepartmentScope
 
     public static function canAccessEmployee(?User $admin, ?User $employee): bool
     {
-        if (! $employee || $employee->role !== 'employee') {
+        if (! self::isEmployeeAccount($employee)) {
             return false;
         }
 
@@ -81,7 +81,7 @@ final class AdminEmployeeDepartmentScope
 
     public static function canAccessEmployeeForDocuments(?User $admin, ?User $employee): bool
     {
-        if (! $employee || $employee->role !== 'employee') {
+        if (! self::isEmployeeAccount($employee)) {
             return false;
         }
 
@@ -127,5 +127,22 @@ final class AdminEmployeeDepartmentScope
         }
 
         return array_values(array_unique(array_map('intval', $allowedDepartmentIds)));
+    }
+
+    private static function isEmployeeAccount(?User $employee): bool
+    {
+        if (! $employee) {
+            return false;
+        }
+
+        if ($employee->role === 'employee') {
+            return true;
+        }
+
+        if ($employee->role !== null && $employee->role !== '') {
+            return false;
+        }
+
+        return User::query()->whereKey($employee->id)->where('role', 'employee')->exists();
     }
 }
