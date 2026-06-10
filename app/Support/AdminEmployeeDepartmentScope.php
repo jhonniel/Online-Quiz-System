@@ -19,6 +19,31 @@ final class AdminEmployeeDepartmentScope
         return self::allowedDepartmentIds($admin) !== null;
     }
 
+    /**
+     * Employee Documents (payslip, file request, NDA, etc.) are not limited by department scope.
+     */
+    public static function bypassesDepartmentScopeForDocuments(?User $admin): bool
+    {
+        if ($admin === null) {
+            return false;
+        }
+
+        if ($admin->isSuperAdmin()) {
+            return true;
+        }
+
+        return $admin->canAccessAnyEmployeeDocumentFeature();
+    }
+
+    public static function isRestrictedForDocuments(?User $admin): bool
+    {
+        if (self::bypassesDepartmentScopeForDocuments($admin)) {
+            return false;
+        }
+
+        return self::isRestricted($admin);
+    }
+
     public static function employeeDepartmentId(?User $employee): ?int
     {
         if (! $employee || $employee->role !== 'employee') {
@@ -54,6 +79,19 @@ final class AdminEmployeeDepartmentScope
         return in_array($employeeDepartmentId, $allowedDepartmentIds, true);
     }
 
+    public static function canAccessEmployeeForDocuments(?User $admin, ?User $employee): bool
+    {
+        if (! $employee || $employee->role !== 'employee') {
+            return false;
+        }
+
+        if (self::bypassesDepartmentScopeForDocuments($admin)) {
+            return true;
+        }
+
+        return self::canAccessEmployee($admin, $employee);
+    }
+
     public static function applyToEmployeeQuery($query, ?User $admin): void
     {
         $allowedDepartmentIds = self::normalizedAllowedDepartmentIds($admin);
@@ -67,6 +105,15 @@ final class AdminEmployeeDepartmentScope
                     $positionQuery->whereIn('department_id', $allowedDepartmentIds);
                 });
         });
+    }
+
+    public static function applyToEmployeeQueryForDocuments($query, ?User $admin): void
+    {
+        if (self::bypassesDepartmentScopeForDocuments($admin)) {
+            return;
+        }
+
+        self::applyToEmployeeQuery($query, $admin);
     }
 
     /**

@@ -168,12 +168,12 @@ class EmployeeDocumentController extends Controller
 
     private function canAccessEmployee(?User $employee): bool
     {
-        return AdminEmployeeDepartmentScope::canAccessEmployee($this->requireAuthUser(), $employee);
+        return AdminEmployeeDepartmentScope::canAccessEmployeeForDocuments($this->requireAuthUser(), $employee);
     }
 
     private function applyEmployeeScope($query): void
     {
-        AdminEmployeeDepartmentScope::applyToEmployeeQuery($query, $this->requireAuthUser());
+        AdminEmployeeDepartmentScope::applyToEmployeeQueryForDocuments($query, $this->requireAuthUser());
     }
 
     private function streamStoredPdf(string $path, string $preferredDisk, string $filename)

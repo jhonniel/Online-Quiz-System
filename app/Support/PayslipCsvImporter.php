@@ -14,9 +14,6 @@ final class PayslipCsvImporter
     /** @var array<string, int>|null */
     private ?array $linkedEmployeeIdsByName = null;
 
-    /** @var list<int>|null null = all departments */
-    private ?array $allowedDepartmentIds = null;
-
     private ?User $importAdmin = null;
 
     private string $csvDelimiter = ',';
@@ -54,7 +51,6 @@ final class PayslipCsvImporter
     public function import(string $path, int $uploadedByUserId, ?User $admin = null): array
     {
         $this->importAdmin = $admin;
-        $this->allowedDepartmentIds = AdminEmployeeDepartmentScope::allowedDepartmentIds($admin);
         $this->linkedEmployeeIdsByName = null;
         $this->csvDelimiter = $this->detectDelimiterFromFile($path);
         $handle = fopen($path, 'r');
@@ -96,7 +92,7 @@ final class PayslipCsvImporter
 
                 $user = $this->resolveEmployee($data['employee_email'], $data['employee_name']);
 
-                if ($this->allowedDepartmentIds !== null && $user === null) {
+                if (AdminEmployeeDepartmentScope::isRestrictedForDocuments($this->importAdmin) && $user === null) {
                     $errors[] = 'Row '.$rowNumber.': employee not found in your allowed departments. Use the exact login email for an employee you manage.';
                     $skipped++;
 
@@ -105,12 +101,7 @@ final class PayslipCsvImporter
 
                 if ($user !== null && ! $this->adminCanImportForEmployee($user)) {
                     $label = trim($data['employee_name']) !== '' ? $data['employee_name'] : ($user->name ?: 'employee');
-                    $user->loadMissing('department:id,name', 'departmentPosition:id,name,department_id');
-                    $departmentLabel = trim((string) ($user->department?->name ?? $user->departmentPosition?->name ?? ''));
-                    if ($departmentLabel === '') {
-                        $departmentLabel = 'not assigned';
-                    }
-                    $errors[] = 'Row '.$rowNumber.': '.$label.' is outside your allowed departments (employee department: '.$departmentLabel.'). Use the exact login email for an employee in your assigned departments.';
+                    $errors[] = 'Row '.$rowNumber.': '.$label.' is outside your allowed departments.';
                     $skipped++;
 
                     continue;
@@ -397,8 +388,8 @@ final class PayslipCsvImporter
             ->where('role', 'employee')
             ->with(['department:id,name', 'departmentPosition:id,name,department_id']);
 
-        if ($this->importAdmin !== null && AdminEmployeeDepartmentScope::isRestricted($this->importAdmin)) {
-            AdminEmployeeDepartmentScope::applyToEmployeeQuery($baseQuery, $this->importAdmin);
+        if ($this->importAdmin !== null && AdminEmployeeDepartmentScope::isRestrictedForDocuments($this->importAdmin)) {
+            AdminEmployeeDepartmentScope::applyToEmployeeQueryForDocuments($baseQuery, $this->importAdmin);
         }
 
         if ($email) {
@@ -448,9 +439,9 @@ final class PayslipCsvImporter
             ->whereNotNull('user_id')
             ->orderByDesc('updated_at');
 
-        if ($this->importAdmin !== null && AdminEmployeeDepartmentScope::isRestricted($this->importAdmin)) {
+        if ($this->importAdmin !== null && AdminEmployeeDepartmentScope::isRestrictedForDocuments($this->importAdmin)) {
             $linkedPayslipQuery->whereHas('employee', function ($employeeQuery) {
-                AdminEmployeeDepartmentScope::applyToEmployeeQuery($employeeQuery, $this->importAdmin);
+                AdminEmployeeDepartmentScope::applyToEmployeeQueryForDocuments($employeeQuery, $this->importAdmin);
             });
         }
 
@@ -504,7 +495,7 @@ final class PayslipCsvImporter
 
     private function adminCanImportForEmployee(User $employee): bool
     {
-        return AdminEmployeeDepartmentScope::canAccessEmployee($this->importAdmin, $employee);
+        return AdminEmployeeDepartmentScope::canAccessEmployeeForDocuments($this->importAdmin, $employee);
     }
 
     private function normalizeName(string $name): string

@@ -293,19 +293,19 @@ class FileRequestController extends Controller
     private function scopedEmployeeQuery()
     {
         $query = User::query()->where('role', 'employee');
-        AdminEmployeeDepartmentScope::applyToEmployeeQuery($query, auth()->user());
+        AdminEmployeeDepartmentScope::applyToEmployeeQueryForDocuments($query, auth()->user());
 
         return $query;
     }
 
     private function applyEmployeeScope($query): void
     {
-        AdminEmployeeDepartmentScope::applyToEmployeeQuery($query, auth()->user());
+        AdminEmployeeDepartmentScope::applyToEmployeeQueryForDocuments($query, auth()->user());
     }
 
     private function canAccessEmployee(?User $employee): bool
     {
-        return AdminEmployeeDepartmentScope::canAccessEmployee(auth()->user(), $employee);
+        return AdminEmployeeDepartmentScope::canAccessEmployeeForDocuments(auth()->user(), $employee);
     }
 
     private function respondWithFile(EmployeeFileRequest $fileRequest, bool $inline): \Symfony\Component\HttpFoundation\Response
