@@ -1,5 +1,10 @@
 @once
 <style>
+    .payslip-name-line,
+    .payslip-print-area .payslip-name-line {
+        white-space: nowrap;
+    }
+
     @media screen {
         .payslip-print-sheet--single {
             width: 100%;
@@ -209,12 +214,12 @@
 
         .payslip-print-area .payslip-sign-name,
         .payslip-print-area .payslip-employee-name,
-        .payslip-print-area .payslip-position-name {
-            white-space: normal !important;
-            word-break: break-word !important;
-            overflow-wrap: anywhere !important;
-            hyphens: auto;
-            line-height: 1.25 !important;
+        .payslip-print-area .payslip-position-name,
+        .payslip-print-area .payslip-name-line {
+            white-space: nowrap !important;
+            word-break: normal !important;
+            overflow-wrap: normal !important;
+            line-height: 1.2 !important;
             max-width: 100% !important;
         }
 

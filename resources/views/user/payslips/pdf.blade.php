@@ -67,8 +67,9 @@
             vertical-align: top;
             padding: 0;
         }
-        .meta-grid p { margin: 0 0 4px; word-break: break-word; overflow-wrap: anywhere; }
-        .meta-grid strong { word-break: break-word; overflow-wrap: anywhere; }
+        .meta-grid p { margin: 0 0 4px; }
+        .meta-grid strong { white-space: nowrap; }
+        .payslip-name-line { white-space: nowrap; }
         .columns {
             width: 100%;
             border-collapse: collapse;
@@ -173,19 +174,16 @@
             font-weight: bold;
             margin: 0;
             min-height: 14px;
-            white-space: normal;
-            word-break: break-word;
-            overflow-wrap: anywhere;
-            font-size: 8pt;
-            line-height: 1.25;
+            white-space: nowrap;
+            font-size: 7.5pt;
+            line-height: 1.2;
             text-align: center;
         }
         .sign-role {
             margin: 8px 0 0;
-            font-size: 8pt;
-            word-break: break-word;
-            overflow-wrap: anywhere;
-            line-height: 1.25;
+            font-size: 7.5pt;
+            white-space: nowrap;
+            line-height: 1.2;
         }
     </style>
 </head>
