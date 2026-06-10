@@ -426,6 +426,18 @@
                                                 {{ $user->is_active ? 'Active' : 'Disabled' }}
                                             </span>
                                         </div>
+                                        @if(!$isTeacherView && in_array($user->role, ['employee', 'student'], true))
+                                            <p class="mt-1.5 text-xs text-gray-500 truncate">
+                                                @if($user->department)
+                                                    <span class="font-medium text-gray-700">{{ $user->department->name }}</span>
+                                                    @if($user->role === 'employee' && $user->payslipPositionLabel())
+                                                        <span class="text-gray-400"> · </span>{{ $user->payslipPositionLabel() }}
+                                                    @endif
+                                                @else
+                                                    <span class="text-amber-600">No department assigned</span>
+                                                @endif
+                                            </p>
+                                        @endif
                                     </div>
                                 </a>
                                 <div class="relative flex-shrink-0 z-[95]" x-data="{ open: false, menuStyle: '' }">
@@ -490,7 +502,7 @@
 
             <!-- Desktop: Table (visible from md up) -->
             <div class="hidden md:block overflow-x-auto overflow-y-visible flex-1 min-h-0 pb-24">
-                <table class="w-full min-w-[800px] border-collapse">
+                <table class="w-full min-w-[960px] border-collapse">
                     <thead class="bg-gray-50 border-b border-gray-200 sticky top-0 z-10">
                         <tr>
                             <th scope="col" class="px-3 py-3.5 text-left w-10">
@@ -502,7 +514,8 @@
                             <th scope="col" class="px-4 py-3.5 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Email</th>
                             <th scope="col" class="px-4 py-3.5 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider hidden lg:table-cell">University</th>
                             @if(!$isTeacherView)
-                            <th scope="col" class="px-4 py-3.5 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider hidden xl:table-cell">Department</th>
+                            <th scope="col" class="px-4 py-3.5 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider hidden lg:table-cell">Department</th>
+                            <th scope="col" class="px-4 py-3.5 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider hidden lg:table-cell">Position</th>
                             @endif
                             <th scope="col" class="px-4 py-3.5 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Status</th>
                             <th scope="col" class="px-4 py-3.5 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider hidden lg:table-cell">Approval</th>
@@ -540,10 +553,19 @@
                                     {{ $user->university ? $user->university->name : '—' }}
                                 </td>
                                 @if(!$isTeacherView)
-                                <td class="px-4 py-3 text-sm text-gray-600 hidden xl:table-cell truncate max-w-[120px]">
+                                <td class="px-4 py-3 text-sm text-gray-600 hidden lg:table-cell truncate max-w-[120px]">
                                     @if(in_array($user->role, ['employee', 'student'], true) && $user->department)
                                         {{ $user->department->name }}
                                     @elseif(in_array($user->role, ['employee', 'student'], true))
+                                        <span class="text-amber-600">—</span>
+                                    @else
+                                        —
+                                    @endif
+                                </td>
+                                <td class="px-4 py-3 text-sm text-gray-600 hidden lg:table-cell truncate max-w-[140px]">
+                                    @if($user->role === 'employee' && $user->payslipPositionLabel())
+                                        {{ $user->payslipPositionLabel() }}
+                                    @elseif($user->role === 'employee')
                                         <span class="text-amber-600">—</span>
                                     @else
                                         —
