@@ -245,14 +245,153 @@ class PayslipController extends Controller
 
         $employee->loadMissing(['department:id,name', 'departmentPosition:id,name,department_id']);
 
-        $payslip->update(array_merge([
-            'user_id' => $employee->id,
-            'employee_email' => $employee->email,
-        ], PayslipCsvImporter::profileFieldsFromEmployee($employee)));
+        $previousUserId = $payslip->user_id;
+        $profileFields = PayslipCsvImporter::profileFieldsFromEmployee($employee);
+
+        $targets = collect([$payslip])
+            ->merge($this->relatedPayslipsForLinking($payslip, $previousUserId))
+            ->unique('id');
+
+        $updatedCount = 0;
+        $skippedCount = 0;
+        $signatureResetCount = 0;
+        $reassignedAny = false;
+
+        foreach ($targets as $target) {
+            if ((int) $target->user_id === (int) $employee->id) {
+                continue;
+            }
+
+            $hasDuplicatePeriod = EmployeePayslip::query()
+                ->where('user_id', $employee->id)
+                ->where('period_start', $target->period_start)
+                ->where('period_end', $target->period_end)
+                ->where('id', '!=', $target->id)
+                ->exists();
+
+            if ($hasDuplicatePeriod) {
+                $skippedCount++;
+
+                continue;
+            }
+
+            $needsSignatureReset = $target->user_id !== null
+                && (int) $target->user_id !== (int) $employee->id;
+
+            if ($needsSignatureReset) {
+                $reassignedAny = true;
+            }
+
+            if ($needsSignatureReset && $target->signed_document_path) {
+                $this->deleteStoredSignedPdf(
+                    (string) $target->signed_document_path,
+                    (string) ($target->storage_disk ?? '')
+                );
+                $signatureResetCount++;
+            }
+
+            $target->update(array_merge([
+                'user_id' => $employee->id,
+                'employee_email' => $employee->email,
+                'signed_at' => $needsSignatureReset ? null : $target->signed_at,
+                'signed_document_path' => $needsSignatureReset ? null : $target->signed_document_path,
+                'storage_disk' => $needsSignatureReset ? null : $target->storage_disk,
+            ], $profileFields));
+
+            $updatedCount++;
+        }
+
+        if ($updatedCount === 0) {
+            $message = $skippedCount > 0
+                ? 'No payslips were updated. '.$skippedCount.' matching record(s) were skipped because '.$employee->name.' already has payslips for those cut-off periods.'
+                : 'Payslip is already linked to '.$employee->name.'.';
+
+            return redirect()
+                ->back()
+                ->with($skippedCount > 0 ? 'error' : 'success', $message);
+        }
+
+        $recordLabel = $updatedCount === 1 ? 'Payslip' : $updatedCount.' payslips';
+
+        if ($reassignedAny) {
+            $message = $recordLabel.' for '.$payslip->employee_name.' reassigned to '.$employee->name.'.';
+            if ($signatureResetCount > 0) {
+                $message .= ' '.$signatureResetCount.' signed record(s) were reset; the employee must sign again from their portal.';
+            }
+        } else {
+            $message = $recordLabel.' for '.$payslip->employee_name.' linked to '.$employee->name.' successfully.';
+        }
+
+        if ($skippedCount > 0) {
+            $message .= ' '.$skippedCount.' matching record(s) were skipped because '.$employee->name.' already has payslips for those cut-off periods.';
+        }
 
         return redirect()
             ->back()
-            ->with('success', 'Payslip linked to '.$employee->name.' successfully.');
+            ->with('success', $message);
+    }
+
+    /**
+     * Other payslips that share the same CSV employee name and the same prior link state.
+     *
+     * @return \Illuminate\Support\Collection<int, EmployeePayslip>
+     */
+    private function relatedPayslipsForLinking(EmployeePayslip $payslip, ?int $previousUserId)
+    {
+        $normalizedName = EmployeePayslip::normalizeEmployeeName($payslip->employee_name);
+        if ($normalizedName === '') {
+            return collect();
+        }
+
+        $query = EmployeePayslip::query()
+            ->where('id', '!=', $payslip->id);
+
+        if ($previousUserId !== null) {
+            $query->where(function ($q) use ($previousUserId) {
+                $q->where('user_id', $previousUserId)->orWhereNull('user_id');
+            });
+        } else {
+            $query->whereNull('user_id');
+        }
+
+        $admin = $this->requireAuthUser();
+        if (AdminEmployeeDepartmentScope::isRestrictedForDocuments($admin)) {
+            $query->where(function ($q) use ($admin) {
+                $q->whereNull('user_id')
+                    ->orWhereHas('employee', function ($employeeQuery) use ($admin) {
+                        AdminEmployeeDepartmentScope::applyToEmployeeQueryForDocuments($employeeQuery, $admin);
+                    });
+            });
+        }
+
+        return $query
+            ->get()
+            ->filter(fn (EmployeePayslip $other) => EmployeePayslip::normalizeEmployeeName($other->employee_name) === $normalizedName)
+            ->values();
+    }
+
+    private function deleteStoredSignedPdf(string $path, string $preferredDisk = ''): void
+    {
+        if ($path === '') {
+            return;
+        }
+
+        foreach (array_values(array_unique(array_filter([
+            $preferredDisk,
+            'digitalocean',
+            'public',
+            config('filesystems.default', 'local'),
+        ]))) as $disk) {
+            try {
+                if (Storage::disk($disk)->exists($path)) {
+                    Storage::disk($disk)->delete($path);
+
+                    return;
+                }
+            } catch (\Throwable) {
+                continue;
+            }
+        }
     }
 
     public function bulkDestroy(Request $request)

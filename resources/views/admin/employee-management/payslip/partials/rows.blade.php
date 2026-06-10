@@ -34,14 +34,12 @@
         </td>
         <td class="px-4 py-3 text-sm text-gray-500">{{ $payslip->created_at?->format('M d, Y') }}</td>
         <td class="px-4 py-3 text-sm text-right space-x-2 whitespace-nowrap">
-            @if(!$payslip->employee)
-                <button type="button"
-                        @click="openLinkModal(@js(route('admin.payslip.link', $payslip)), @js($payslip->employee_name), @js($payslip->employee_email), @js($payslip->periodLabel()))"
-                        class="inline-flex items-center gap-1 text-amber-700 hover:text-amber-900 font-medium">
-                    <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"/></svg>
-                    Link
-                </button>
-            @endif
+            <button type="button"
+                    @click="openLinkModal(@js(route('admin.payslip.link', $payslip)), @js($payslip->employee_name), @js($payslip->employee_email), @js($payslip->periodLabel()), @js($payslip->user_id))"
+                    class="inline-flex items-center gap-1 {{ $payslip->employee ? 'text-indigo-700 hover:text-indigo-900' : 'text-amber-700 hover:text-amber-900' }} font-medium">
+                <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"/></svg>
+                {{ $payslip->employee ? 'Reassign' : 'Link' }}
+            </button>
             <a href="{{ route('admin.payslip.show', $payslip) }}" class="text-indigo-600 hover:text-indigo-900 font-medium">View</a>
             @if($payslip->isSigned())
                 <a href="{{ route('admin.payslip.signed', $payslip) }}" target="_blank" class="text-green-700 hover:text-green-900 font-medium">Signed PDF</a>

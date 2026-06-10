@@ -501,7 +501,7 @@ final class PayslipCsvImporter
 
     private function normalizeName(string $name): string
     {
-        return strtoupper(trim(preg_replace('/\s+/', ' ', $name) ?? $name));
+        return EmployeePayslip::normalizeEmployeeName($name);
     }
 
     /**

@@ -59,16 +59,21 @@
         </div>
     @endif
 
-    @if(!$payslip->employee)
-        <div class="print:hidden rounded-2xl border border-amber-200 bg-white shadow-sm overflow-hidden">
-            <div class="px-5 sm:px-6 py-4 border-b border-amber-100 bg-amber-50/80">
+    <div class="print:hidden rounded-2xl border {{ $payslip->employee ? 'border-indigo-200' : 'border-amber-200' }} bg-white shadow-sm overflow-hidden">
+            <div class="px-5 sm:px-6 py-4 border-b {{ $payslip->employee ? 'border-indigo-100 bg-indigo-50/80' : 'border-amber-100 bg-amber-50/80' }}">
                 <div class="flex items-start gap-3">
-                    <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-amber-100 text-amber-700">
+                    <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full {{ $payslip->employee ? 'bg-indigo-100 text-indigo-700' : 'bg-amber-100 text-amber-700' }}">
                         <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"/></svg>
                     </div>
                     <div>
-                        <h2 class="text-base font-semibold text-gray-900">Link to employee account</h2>
-                        <p class="mt-1 text-sm text-gray-600">This payslip is not linked yet. The employee will not see it in their portal until you connect it to their account.</p>
+                        <h2 class="text-base font-semibold text-gray-900">{{ $payslip->employee ? 'Reassign employee account' : 'Link to employee account' }}</h2>
+                        <p class="mt-1 text-sm text-gray-600">
+                            @if($payslip->employee)
+                                This payslip is linked to <strong>{{ $payslip->employee->name }}</strong> ({{ $payslip->employee->email }}). Reassigning updates every payslip with the same employee name that is linked to this account or still unlinked.
+                            @else
+                                This payslip is not linked yet. Linking will also connect all other unlinked payslips with the same employee name (<strong>{{ $payslip->employee_name }}</strong>).
+                            @endif
+                        </p>
                         <div class="mt-3 flex flex-wrap gap-2 text-xs">
                             <span class="inline-flex items-center rounded-full bg-white px-2.5 py-1 font-medium text-gray-700 ring-1 ring-gray-200">{{ $payslip->employee_name }}</span>
                             @if($payslip->employee_email)
@@ -83,7 +88,6 @@
                 @include('admin.employee-management.payslip.partials.link-form', ['payslip' => $payslip, 'employees' => $employees])
             </div>
         </div>
-    @endif
 
     <div class="flex flex-col items-center gap-3 sm:flex-row sm:items-start sm:justify-center">
         <div class="payslip-print-sheet payslip-print-sheet--single w-full max-w-3xl">

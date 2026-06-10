@@ -159,16 +159,16 @@
             padding-top: 8px;
         }
         .signature-slot {
-            height: 38px;
-            margin-bottom: -30px;
+            height: 56px;
+            margin-bottom: -44px;
             text-align: center;
             position: relative;
             z-index: 2;
         }
         .signature-image {
             display: inline-block;
-            height: 38px;
-            max-width: 176px;
+            height: 56px;
+            max-width: 240px;
             width: auto;
             object-fit: contain;
             vertical-align: bottom;

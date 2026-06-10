@@ -25,7 +25,7 @@
     .payslip-sign-name-block {
         position: relative;
         isolation: isolate;
-        min-height: 3.5rem;
+        min-height: 5rem;
     }
 
     .payslip-sign-name-block .payslip-sign-name {
@@ -45,9 +45,9 @@
         left: 50%;
         bottom: 0;
         z-index: 30;
-        height: 3.5rem;
-        width: 10rem;
-        max-width: 90%;
+        height: 5rem;
+        width: 14rem;
+        max-width: 95%;
         transform: translateX(-50%);
         object-fit: contain;
         object-position: bottom center;
@@ -282,9 +282,9 @@
         }
 
         .payslip-print-area .payslip-esign-overlay .payslip-esign-float {
-            width: 11rem !important;
-            max-width: 11rem !important;
-            height: 3.5rem !important;
+            width: 15rem !important;
+            max-width: 15rem !important;
+            height: 5rem !important;
             object-fit: contain !important;
             z-index: 30 !important;
         }

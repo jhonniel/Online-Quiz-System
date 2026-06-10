@@ -37,7 +37,13 @@
         @csrf
         @method('PATCH')
 
-        <p class="text-sm text-gray-500">Future imports with the same payslip employee name will auto-link to this account, even when the CSV has no email.</p>
+        <p class="text-sm text-gray-500">
+            @if($payslip->employee)
+                Currently linked to <strong>{{ $payslip->employee->name }}</strong> ({{ $payslip->employee->email }}). All payslips with the same employee name (<strong>{{ $payslip->employee_name }}</strong>) that share this link will be reassigned together. Signed payslips are reset for the new employee.
+            @else
+                All unlinked payslips with the same employee name (<strong>{{ $payslip->employee_name }}</strong>) will be linked together. Future imports with that name will auto-link to this account, even when the CSV has no email.
+            @endif
+        </p>
 
         <div>
             <label for="payslip-detail-link-search" class="block text-sm font-medium text-gray-700 mb-2">Employee account</label>
@@ -88,7 +94,7 @@
                     :disabled="!employeeId"
                     class="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-lg text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed">
                 <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"/></svg>
-                Link payslip
+                {{ $payslip->employee ? 'Reassign payslip' : 'Link payslip' }}
             </button>
         </div>
     </form>

@@ -79,6 +79,11 @@ class EmployeePayslip extends Model
         return $this->user_id !== null;
     }
 
+    public static function normalizeEmployeeName(string $name): string
+    {
+        return strtoupper(trim(preg_replace('/\s+/', ' ', $name) ?? $name));
+    }
+
     /**
      * Employee account this payslip belongs to (linked or matched by email).
      */

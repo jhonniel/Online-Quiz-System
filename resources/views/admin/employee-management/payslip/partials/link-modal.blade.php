@@ -34,8 +34,8 @@
          @keydown.escape.window="closeLinkModal()">
         <div class="flex items-start justify-between gap-4 px-5 sm:px-6 py-4 border-b border-gray-100 bg-gray-50/80">
             <div class="min-w-0">
-                <h3 id="payslip-link-modal-title" class="text-base font-semibold text-gray-900">Link payslip to employee</h3>
-                <p class="mt-1 text-sm text-gray-500">Connect this payslip to an employee account so they can view it. Future imports with the same employee name will auto-link even without email.</p>
+                <h3 id="payslip-link-modal-title" class="text-base font-semibold text-gray-900" x-text="linkIsReassign ? 'Reassign payslip to employee' : 'Link payslip to employee'"></h3>
+                <p class="mt-1 text-sm text-gray-500" x-text="linkIsReassign ? 'All payslips with the same employee name that are linked to the current account (or still unlinked) will move to the new account. Signed payslips are reset so the new employee must sign again.' : 'All unlinked payslips with the same employee name will be linked together. Future imports with that name will auto-link even without email.'"></p>
             </div>
             <button type="button" @click="closeLinkModal()" class="rounded-lg p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors" aria-label="Close">
                 <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
@@ -113,7 +113,7 @@
                         :disabled="!linkEmployeeId"
                         class="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed">
                     <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"/></svg>
-                    Link payslip
+                    <span x-text="linkIsReassign ? 'Reassign payslip' : 'Link payslip'"></span>
                 </button>
             </div>
         </form>
@@ -141,6 +141,7 @@ function payslipFilterEmployees(employees, query) {
 function payslipLinkModal() {
     return {
         linkOpen: false,
+        linkIsReassign: false,
         linkFormAction: '',
         linkPayslipName: '',
         linkPayslipEmail: '',
@@ -154,13 +155,17 @@ function payslipLinkModal() {
         get selectedLinkEmployee() {
             return this.linkEmployees.find((employee) => String(employee.id) === String(this.linkEmployeeId)) || null;
         },
-        openLinkModal(action, name, email, period) {
+        openLinkModal(action, name, email, period, currentEmployeeId = '') {
             this.linkFormAction = action;
             this.linkPayslipName = name;
             this.linkPayslipEmail = email || '';
             this.linkPeriodLabel = period || '';
-            this.linkSearch = '';
-            this.linkEmployeeId = '';
+            this.linkIsReassign = Boolean(currentEmployeeId);
+            const currentEmployee = this.linkEmployees.find(
+                (employee) => String(employee.id) === String(currentEmployeeId)
+            );
+            this.linkEmployeeId = currentEmployee ? currentEmployee.id : '';
+            this.linkSearch = currentEmployee ? currentEmployee.name : '';
             this.linkOpen = true;
             document.body.classList.add('overflow-hidden');
         },
