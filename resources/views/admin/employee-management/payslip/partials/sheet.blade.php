@@ -9,8 +9,8 @@
         <p class="font-bold">Period Covered: {{ $payslip->periodLabel() }}</p>
         <div class="mt-2 grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1">
             <div class="space-y-1">
-                <p>Employee Name: <span class="font-semibold">{{ strtoupper($payslip->employee_name) }}</span></p>
-                <p>Position: <span class="font-semibold">{{ strtoupper($payslip->displayPosition() ?: '—') }}</span></p>
+                <p class="break-words">Employee Name: <span class="font-semibold payslip-employee-name">{{ strtoupper($payslip->employee_name) }}</span></p>
+                <p class="break-words">Position: <span class="font-semibold payslip-position-name">{{ strtoupper($payslip->displayPosition() ?: '—') }}</span></p>
             </div>
             <div class="space-y-1">
                 <p>Date Hired: <span class="font-semibold">{{ $payslip->displayDateHired()?->format('F j, Y') ?: '—' }}</span></p>
@@ -60,44 +60,44 @@
             I hereby declared that I received this payroll and I don't have any questions or further clarifications.
         </p>
 
-        <div class="mt-8 grid grid-cols-1 sm:grid-cols-3 gap-8 text-center">
-            <div class="flex flex-col items-center">
+        <div class="mt-8 grid grid-cols-1 sm:grid-cols-3 gap-8 text-center payslip-signatures-grid">
+            <div class="flex min-w-0 flex-col items-center">
                 <p class="font-medium">Prepared by:</p>
-                <div class="flex w-full flex-col items-center">
-                    <div class="relative inline-block px-1 pt-4 payslip-sign-name-block">
-                        <p class="relative z-10 border-b border-gray-900 px-2 font-semibold whitespace-nowrap">
-                            {{ $payslip->prepared_by ?: ' ' }}
+                <div class="flex w-full min-w-0 flex-col items-center">
+                    <div class="relative w-full max-w-full px-1 pt-4 payslip-sign-name-block">
+                        <p class="relative z-10 border-b border-gray-900 px-2 font-semibold payslip-sign-name text-center">
+                            {{ $payslip->displayPreparedBy() ?: ' ' }}
                         </p>
                     </div>
                     <p class="mt-2 min-h-[1.25rem]">Admin Officer</p>
                 </div>
             </div>
-            <div class="flex flex-col items-center">
+            <div class="flex min-w-0 flex-col items-center">
                 <p class="font-medium">Approved by:</p>
-                <div class="flex w-full flex-col items-center">
-                    <div class="relative inline-block px-1 pt-4 payslip-sign-name-block">
-                        <p class="relative z-10 border-b border-gray-900 px-2 font-semibold whitespace-nowrap">
-                            {{ $payslip->approved_by ?: ' ' }}
+                <div class="flex w-full min-w-0 flex-col items-center">
+                    <div class="relative w-full max-w-full px-1 pt-4 payslip-sign-name-block">
+                        <p class="relative z-10 border-b border-gray-900 px-2 font-semibold payslip-sign-name text-center">
+                            {{ $payslip->displayApprovedBy() ?: ' ' }}
                         </p>
                     </div>
                     <p class="mt-2 min-h-[1.25rem]">Proprietor</p>
                 </div>
             </div>
-            <div class="flex flex-col items-center">
+            <div class="flex min-w-0 flex-col items-center">
                 <p class="font-medium">Received by:</p>
-                <div class="flex w-full flex-col items-center">
+                <div class="flex w-full min-w-0 flex-col items-center">
                     @php($receivedBySignature = $payslip->isLinkedToEmployee() ? $payslip->receivedBySignatureDataUri() : null)
-                    <div class="relative inline-block px-1 pt-4 payslip-sign-name-block">
+                    <div class="relative w-full max-w-full px-1 pt-4 payslip-sign-name-block">
                         @if($receivedBySignature)
                             <img src="{{ $receivedBySignature }}"
                                  alt="Signature of {{ $payslip->employee_name }}"
-                                 class="payslip-esign-float pointer-events-none absolute left-1/2 top-0 z-0 h-14 w-44 -translate-x-1/2 -translate-y-1 object-contain object-bottom">
+                                 class="payslip-esign-float pointer-events-none absolute left-1/2 top-0 z-0 h-14 w-44 max-w-full -translate-x-1/2 -translate-y-1 object-contain object-bottom">
                         @endif
-                        <p class="relative z-10 border-b border-gray-900 px-2 font-semibold whitespace-nowrap">
+                        <p class="relative z-10 border-b border-gray-900 px-2 font-semibold payslip-sign-name text-center">
                             {{ $payslip->isLinkedToEmployee() ? $payslip->employee_name : ' ' }}
                         </p>
                     </div>
-                    <p class="mt-2 min-h-[1.25rem]">{{ $payslip->isLinkedToEmployee() ? ($payslip->displayPosition() ?: '—') : ' ' }}</p>
+                    <p class="mt-2 min-h-[1.25rem] break-words px-1">{{ $payslip->isLinkedToEmployee() ? ($payslip->displayPosition() ?: '—') : ' ' }}</p>
                 </div>
             </div>
         </div>

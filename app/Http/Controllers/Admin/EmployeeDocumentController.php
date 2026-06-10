@@ -6,8 +6,11 @@ use App\Http\Controllers\Controller;
 use App\Models\EmployeeDocumentSignature;
 use App\Models\User;
 use App\Support\AdminEmployeeDepartmentScope;
+use App\Support\EmployeeDocumentTemplate;
 use App\Support\EmployeeSampleDocument;
+use App\Support\UserESignatureStorage;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Storage;
 
 class EmployeeDocumentController extends Controller
@@ -50,6 +53,42 @@ class EmployeeDocumentController extends Controller
             'search' => $search,
             'status' => $status,
         ]);
+    }
+
+    public function uploadEmployeeESignature(Request $request, User $employee)
+    {
+        abort_unless($this->requireAuthUser()->canAccessAnyEmployeeDocumentFeature(), 403);
+        abort_unless($employee->role === 'employee', 404);
+        abort_unless($this->canAccessEmployee($employee), 403);
+
+        $validated = $request->validate([
+            'e_signature' => 'required|file|mimes:png|max:1536',
+        ], [
+            'e_signature.required' => 'Please choose a PNG e-signature file.',
+            'e_signature.mimes' => 'E-signature must be a PNG file.',
+            'e_signature.max' => 'E-signature must not be larger than 1.5MB.',
+        ]);
+
+        $path = UserESignatureStorage::store($employee, $validated['e_signature']);
+        $employee->update(['e_signature_path' => $path]);
+
+        return redirect()
+            ->route('admin.employee-documents.signatures', $request->only(['search', 'status', 'page']))
+            ->with('success', 'E-signature uploaded for '.$employee->name.'.');
+    }
+
+    public function removeEmployeeESignature(Request $request, User $employee)
+    {
+        abort_unless($this->requireAuthUser()->canAccessAnyEmployeeDocumentFeature(), 403);
+        abort_unless($employee->role === 'employee', 404);
+        abort_unless($this->canAccessEmployee($employee), 403);
+
+        UserESignatureStorage::delete($employee->e_signature_path);
+        $employee->update(['e_signature_path' => null]);
+
+        return redirect()
+            ->route('admin.employee-documents.signatures', $request->only(['search', 'status', 'page']))
+            ->with('success', 'E-signature removed for '.$employee->name.'.');
     }
 
     public function index(Request $request, string $type)
@@ -122,6 +161,47 @@ class EmployeeDocumentController extends Controller
         );
     }
 
+    public function editTemplate(string $type)
+    {
+        abort_unless(EmployeeSampleDocument::isValidType($type), 404);
+        abort_unless(EmployeeDocumentTemplate::supports($type), 404);
+        $this->authorizeDocumentType($type);
+
+        $templateHtml = EmployeeDocumentTemplate::editorTemplateHtml($type);
+
+        return view('admin.employee-documents.template', [
+            'type' => $type,
+            'label' => EmployeeSampleDocument::label($type),
+            'title' => EmployeeSampleDocument::title($type),
+            'settingKey' => EmployeeDocumentTemplate::settingKey($type),
+            'templateHtml' => $templateHtml,
+            'defaultTemplateHtml' => EmployeeDocumentTemplate::defaultTemplateHtmlForEditor($type),
+            'hasCustomTemplate' => EmployeeDocumentTemplate::hasCustomTemplate($type),
+            'placeholders' => EmployeeDocumentTemplate::placeholders($type),
+            'previewHtml' => EmployeeDocumentTemplate::previewHtmlFromTemplate($type, $templateHtml),
+            'previewPlaceholders' => EmployeeDocumentTemplate::previewPlaceholderMap($type),
+        ]);
+    }
+
+    public function updateTemplate(Request $request, string $type)
+    {
+        abort_unless(EmployeeSampleDocument::isValidType($type), 404);
+        abort_unless(EmployeeDocumentTemplate::supports($type), 404);
+        $this->authorizeDocumentType($type);
+
+        $request->validate([
+            'template_html' => 'nullable|string|max:65000',
+        ]);
+
+        $html = (string) ($request->input('template_html') ?? '');
+        EmployeeDocumentTemplate::saveTemplateHtml($type, $html);
+        Cache::forget('setting.'.EmployeeDocumentTemplate::settingKey($type));
+
+        return redirect()
+            ->route('admin.employee-documents.template', $type)
+            ->with('success', EmployeeSampleDocument::label($type).' template saved. Employees will see the updated content on their next view.');
+    }
+
     public function previewEmployee(Request $request, string $type, User $employee)
     {
         abort_unless(EmployeeSampleDocument::isValidType($type), 404);
@@ -159,6 +239,7 @@ class EmployeeDocumentController extends Controller
             'nda' => 'employee_nda',
             'contract' => 'employee_contract',
             'policy' => 'employee_policy',
+            'handbook' => 'employee_handbook',
             default => null,
         };
 

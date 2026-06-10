@@ -53,7 +53,7 @@
         }
 
         body.payslip-bulk-print .payslip-print-sheet {
-            overflow: hidden;
+            overflow: visible;
         }
 
         body:not(.payslip-bulk-print) .payslip-print-sheet--single {
@@ -87,10 +87,7 @@
             justify-content: center;
         }
 
-        body.payslip-bulk-print .payslip-print-slot {
-            overflow: hidden;
-        }
-
+        body.payslip-bulk-print .payslip-print-slot,
         body:not(.payslip-bulk-print) .payslip-print-slot {
             overflow: visible;
         }
@@ -126,7 +123,7 @@
             width: 100% !important;
             max-width: 277mm !important;
             box-sizing: border-box !important;
-            overflow: hidden !important;
+            overflow: visible !important;
         }
 
         body.payslip-bulk-print .payslip-print-area > div {
@@ -199,10 +196,26 @@
             width: 100% !important;
         }
 
+        .payslip-print-area .payslip-signatures-grid > div {
+            min-width: 0 !important;
+            max-width: 100% !important;
+        }
+
         .payslip-print-area .payslip-sign-name-block {
             min-width: 0 !important;
             max-width: 100% !important;
-            width: auto !important;
+            width: 100% !important;
+        }
+
+        .payslip-print-area .payslip-sign-name,
+        .payslip-print-area .payslip-employee-name,
+        .payslip-print-area .payslip-position-name {
+            white-space: normal !important;
+            word-break: break-word !important;
+            overflow-wrap: anywhere !important;
+            hyphens: auto;
+            line-height: 1.25 !important;
+            max-width: 100% !important;
         }
 
         .payslip-print-area .payslip-esign-float {

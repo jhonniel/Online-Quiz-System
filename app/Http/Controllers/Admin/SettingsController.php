@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Setting;
 use App\Models\User;
 use App\Support\EmployeeDocumentRequestTypes;
+use App\Support\PayslipSignatorySettings;
 use App\Services\MailConfigService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
@@ -298,10 +299,17 @@ class SettingsController extends Controller
         // Get system health information
         $health = $this->getSystemHealth();
 
+        $settings['payslip_admin_officer_user_id'] = PayslipSignatorySettings::adminOfficerUserId() ?? '';
+        $settings['payslip_proprietor_user_id'] = PayslipSignatorySettings::proprietorUserId() ?? '';
+
+        $payslipSignatoryUsers = PayslipSignatorySettings::selectableUsersQuery()
+            ->get(['id', 'name', 'email', 'role']);
+
         // Pass settings to view - ensure it's passed correctly
         return view('admin.settings.index', [
             'settings' => $settings,
             'health' => $health,
+            'payslipSignatoryUsers' => $payslipSignatoryUsers,
         ]);
     }
 
@@ -547,6 +555,8 @@ class SettingsController extends Controller
             'leave_immediate_supervisor' => 'nullable|string|max:255',
             'leave_hr_admin' => 'nullable|string|max:255',
             'leave_cto' => 'nullable|string|max:255',
+            'payslip_admin_officer_user_id' => 'nullable|integer|exists:users,id',
+            'payslip_proprietor_user_id' => 'nullable|integer|exists:users,id',
             'leave_admin_notification_email' => 'nullable|array',
             'leave_admin_notification_email.*' => 'nullable|email|max:255',
             'hiring_admin_notification_email' => 'nullable|array',
@@ -829,6 +839,17 @@ class SettingsController extends Controller
 
         $leaveCto = $request->leave_cto ?? 'NITISH KHEMANI';
         Setting::set('leave_cto', $leaveCto, 'text', 'Name for Chief Technology Officer in leave request letters');
+
+        $this->savePayslipSignatoryUserSetting(
+            'payslip_admin_officer_user_id',
+            $request->input('payslip_admin_officer_user_id'),
+            'User assigned as Admin Officer (Prepared by) on payslips'
+        );
+        $this->savePayslipSignatoryUserSetting(
+            'payslip_proprietor_user_id',
+            $request->input('payslip_proprietor_user_id'),
+            'User assigned as Proprietor (Approved by) on payslips'
+        );
 
         // Handle multiple admin notification emails for leave requests
         $adminEmails = $request->leave_admin_notification_email ?? [];
@@ -1455,5 +1476,21 @@ class SettingsController extends Controller
                 'message' => 'Failed to send test email: '.$e->getMessage().' (Check logs for details)',
             ], 500);
         }
+    }
+
+    private function savePayslipSignatoryUserSetting(string $key, mixed $userId, string $description): void
+    {
+        $id = (int) $userId;
+
+        if ($id <= 0) {
+            Setting::set($key, '', 'text', $description);
+
+            return;
+        }
+
+        $user = User::query()->find($id);
+        abort_unless(PayslipSignatorySettings::isSelectableUser($user), 422, 'Selected user is not an active employee or admin.');
+
+        Setting::set($key, (string) $id, 'number', $description);
     }
 }

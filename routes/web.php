@@ -424,9 +424,14 @@ Route::prefix('admin')->middleware(['auth', 'admin'])->group(function () {
         Route::middleware(['admin.subfeature:employee_management,employee_nda'])->get('/employee-documents/nda', fn (App\Http\Controllers\Admin\EmployeeDocumentController $controller, Illuminate\Http\Request $request) => $controller->index($request, 'nda'))->name('admin.employee-documents.nda');
         Route::middleware(['admin.subfeature:employee_management,employee_contract'])->get('/employee-documents/contract', fn (App\Http\Controllers\Admin\EmployeeDocumentController $controller, Illuminate\Http\Request $request) => $controller->index($request, 'contract'))->name('admin.employee-documents.contract');
         Route::middleware(['admin.subfeature:employee_management,employee_policy'])->get('/employee-documents/policy', fn (App\Http\Controllers\Admin\EmployeeDocumentController $controller, Illuminate\Http\Request $request) => $controller->index($request, 'policy'))->name('admin.employee-documents.policy');
+        Route::middleware(['admin.subfeature:employee_management,employee_handbook'])->get('/employee-documents/handbook', fn (App\Http\Controllers\Admin\EmployeeDocumentController $controller, Illuminate\Http\Request $request) => $controller->index($request, 'handbook'))->name('admin.employee-documents.handbook');
+        Route::get('/employee-documents/{type}/template', [App\Http\Controllers\Admin\EmployeeDocumentController::class, 'editTemplate'])->name('admin.employee-documents.template')->where('type', 'nda|contract|policy|handbook');
+        Route::post('/employee-documents/{type}/template', [App\Http\Controllers\Admin\EmployeeDocumentController::class, 'updateTemplate'])->name('admin.employee-documents.template.update')->where('type', 'nda|contract|policy|handbook');
         Route::get('/employee-documents/signatures', [App\Http\Controllers\Admin\EmployeeDocumentController::class, 'signatures'])->name('admin.employee-documents.signatures');
+        Route::post('/employee-documents/signatures/employees/{employee}/e-signature', [App\Http\Controllers\Admin\EmployeeDocumentController::class, 'uploadEmployeeESignature'])->name('admin.employee-documents.signatures.upload');
+        Route::delete('/employee-documents/signatures/employees/{employee}/e-signature', [App\Http\Controllers\Admin\EmployeeDocumentController::class, 'removeEmployeeESignature'])->name('admin.employee-documents.signatures.remove');
         Route::get('/employee-documents/signatures/{signature}/preview', [App\Http\Controllers\Admin\EmployeeDocumentController::class, 'preview'])->name('admin.employee-documents.preview');
-        Route::get('/employee-documents/{type}/employees/{employee}/preview', [App\Http\Controllers\Admin\EmployeeDocumentController::class, 'previewEmployee'])->name('admin.employee-documents.employee-preview')->where('type', 'nda|contract|policy');
+        Route::get('/employee-documents/{type}/employees/{employee}/preview', [App\Http\Controllers\Admin\EmployeeDocumentController::class, 'previewEmployee'])->name('admin.employee-documents.employee-preview')->where('type', 'nda|contract|policy|handbook');
 
         Route::middleware(['admin.subfeature:employee_management,dtr'])->group(function () {
         // DTR Management (Employees)
@@ -745,10 +750,10 @@ Route::middleware(['auth', 'student.not_terminated'])->group(function () {
     Route::get('/document-requests/{employeeFileRequest}/download', [App\Http\Controllers\User\EmployeeFileRequestController::class, 'download'])->name('user.employee-file-requests.download');
 
     Route::get('/documents', [App\Http\Controllers\User\EmployeeDocumentController::class, 'index'])->name('user.employee-documents.index');
-    Route::get('/documents/{type}', [App\Http\Controllers\User\EmployeeDocumentController::class, 'show'])->name('user.employee-documents.show')->where('type', 'nda|contract|policy');
-    Route::post('/documents/{type}/sign', [App\Http\Controllers\User\EmployeeDocumentController::class, 'sign'])->name('user.employee-documents.sign')->where('type', 'nda|contract|policy');
-    Route::get('/documents/{type}/pdf', [App\Http\Controllers\User\EmployeeDocumentController::class, 'generatePdf'])->name('user.employee-documents.pdf')->where('type', 'nda|contract|policy');
-    Route::get('/documents/{type}/preview', [App\Http\Controllers\User\EmployeeDocumentController::class, 'preview'])->name('user.employee-documents.preview')->where('type', 'nda|contract|policy');
+    Route::get('/documents/{type}', [App\Http\Controllers\User\EmployeeDocumentController::class, 'show'])->name('user.employee-documents.show')->where('type', 'nda|contract|policy|handbook');
+    Route::post('/documents/{type}/sign', [App\Http\Controllers\User\EmployeeDocumentController::class, 'sign'])->name('user.employee-documents.sign')->where('type', 'nda|contract|policy|handbook');
+    Route::get('/documents/{type}/pdf', [App\Http\Controllers\User\EmployeeDocumentController::class, 'generatePdf'])->name('user.employee-documents.pdf')->where('type', 'nda|contract|policy|handbook');
+    Route::get('/documents/{type}/preview', [App\Http\Controllers\User\EmployeeDocumentController::class, 'preview'])->name('user.employee-documents.preview')->where('type', 'nda|contract|policy|handbook');
 
     // Chat Routes
     Route::get('/chat/messages', [ChatController::class, 'index'])->name('chat.messages');

@@ -3,12 +3,10 @@
 namespace App\Support;
 
 use App\Models\Setting;
-use App\Models\StudentNda;
 use App\Models\User;
 use Barryvdh\DomPDF\Facade\Pdf;
-use Carbon\Carbon;
 
-final class EmployeeNdaDocument
+final class EmployeeHandbookDocument
 {
     /**
      * @return array<string, mixed>
@@ -17,26 +15,16 @@ final class EmployeeNdaDocument
     {
         $includeSignatureAssets ??= $signedAt !== null || $user->hasESignature();
 
-        $agreementDate = $signedAt
-            ? Carbon::instance($signedAt)
-            : now();
-
-        $idNumber = trim((string) ($user->tin ?: $user->sss_number ?: ''));
-        $validIdType = $user->tin
-            ? 'TIN'
-            : ($user->sss_number ? 'SSS' : 'VALID ID');
+        $user->loadMissing(['department:id,name', 'departmentPosition:id,name,department_id']);
 
         $data = [
-            'fullName' => $user->name,
-            'fullNameUpper' => strtoupper($user->name),
-            'idNumber' => $idNumber !== '' ? $idNumber : '—',
-            'idNumberUpper' => $idNumber !== '' ? strtoupper($idNumber) : '—',
-            'validIdType' => $validIdType,
-            'validIdTypeUpper' => strtoupper($validIdType),
-            'city' => self::defaultCity(),
-            'agreementDateFormal' => StudentNda::formatFormalDate($agreementDate),
-            'agreementDateUpper' => strtoupper($agreementDate->format('F d, Y')),
-            'branding' => StudentNdaDocument::branding(),
+            'employeeName' => $user->name,
+            'employeeNameUpper' => strtoupper($user->name),
+            'employeeAddress' => '',
+            'dateHired' => $user->date_hired?->format('F j, Y') ?? '',
+            'companyName' => trim((string) Setting::get('system_name', config('app.name', 'the Company'))),
+            'employerName' => self::employerName(),
+            'employerPosition' => self::employerPosition(),
             'signedAt' => $signedAt,
             'eSignatureDataUri' => $includeSignatureAssets ? EmployeeSampleDocument::eSignatureDataUri($user) : null,
             'digitalSignatureEnabled' => $includeSignatureAssets
@@ -44,15 +32,15 @@ final class EmployeeNdaDocument
                 && EmployeeDocumentPdfSigner::isConfiguredForUser($user),
         ];
 
-        $data['bodyHtml'] = EmployeeDocumentTemplate::bodyHtml('nda', $data);
+        $data['bodyHtml'] = EmployeeDocumentTemplate::bodyHtml('handbook', $data);
 
         return $data;
     }
 
     public static function renderPdfBinary(User $user, ?\DateTimeInterface $signedAt = null): string
     {
-        return Pdf::loadView('user.employee-documents.nda-pdf', self::viewData($user, $signedAt))
-            ->setPaper([0, 0, 612, 1008], 'portrait')
+        return Pdf::loadView('user.employee-documents.handbook-pdf', self::viewData($user, $signedAt))
+            ->setPaper('a4', 'portrait')
             ->setOption('defaultFont', 'DejaVu Sans')
             ->setOption('isRemoteEnabled', true)
             ->output();
@@ -65,17 +53,19 @@ final class EmployeeNdaDocument
 
         return EmployeeDocumentPdfSigner::sign($pdfBinary, $user, [
             'name' => $user->hasP12Certificate() ? $user->name : (string) Setting::get('system_name', config('app.name', 'System')),
-            'reason' => 'Employee NDA signed by '.$user->name,
+            'reason' => 'Employee Handbook signed by '.$user->name,
             'contact' => (string) Setting::get('contact_phone', ''),
             'location' => (string) Setting::get('contact_address', ''),
-            'visible_appearance' => false,
         ]);
     }
 
-    private static function defaultCity(): string
+    private static function employerName(): string
     {
-        $city = trim((string) Setting::get('nda_default_city', 'Davao'));
+        return PayslipSignatorySettings::documentEmployerName();
+    }
 
-        return $city !== '' ? $city : 'Davao';
+    private static function employerPosition(): string
+    {
+        return PayslipSignatorySettings::documentEmployerPosition();
     }
 }

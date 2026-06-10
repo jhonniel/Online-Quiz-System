@@ -273,6 +273,12 @@
                                    :title="sidebarCollapsed ? 'Policy' : ''">
                                     <span class="transition-opacity duration-300" :class="sidebarCollapsed ? 'opacity-0 w-0 overflow-hidden' : 'opacity-100'">Policy</span>
                                 </a>
+                                <a href="{{ route('user.employee-documents.show', 'handbook') }}"
+                                   class="group flex items-center px-2 py-2 text-sm font-medium rounded-md transition-colors duration-200 {{ request()->routeIs('user.employee-documents.show') && request()->route('type') === 'handbook' ? 'bg-indigo-700 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white' }}"
+                                   :class="sidebarCollapsed ? 'justify-center' : ''"
+                                   :title="sidebarCollapsed ? 'Hand Book' : ''">
+                                    <span class="transition-opacity duration-300" :class="sidebarCollapsed ? 'opacity-0 w-0 overflow-hidden' : 'opacity-100'">Hand Book</span>
+                                </a>
                             </div>
                         </div>
                         @endif

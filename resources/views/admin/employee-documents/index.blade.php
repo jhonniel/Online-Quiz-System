@@ -24,6 +24,20 @@
 
     @include('admin.employee-documents.partials.tabs', ['active' => $type])
 
+    <div class="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-indigo-100 bg-indigo-50 px-4 py-3">
+        <div>
+            <p class="text-sm font-semibold text-indigo-900">Document template</p>
+            <p class="text-xs text-indigo-700 mt-0.5">Edit the {{ strtolower($label) }} employees sign using the visual editor.</p>
+        </div>
+        <a href="{{ route('admin.employee-documents.template', $type) }}"
+           class="inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-700 transition-colors">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+            </svg>
+            Edit template
+        </a>
+    </div>
+
     <div class="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden">
         <div class="px-6 py-4 border-b border-gray-200">
             <form method="GET" class="grid grid-cols-1 md:grid-cols-4 gap-3">

@@ -12,11 +12,13 @@
     employeeId: @js((string) old('employee_id', $payslip->user_id ?? '')),
     employees: @json($employeeOptions),
     get filteredEmployees() {
-        const query = this.search.trim().toLowerCase();
-        if (!query) return this.employees;
+        const tokens = this.search.trim().toLowerCase().split(/\s+/).filter(Boolean);
+        if (tokens.length === 0) {
+            return this.employees;
+        }
         return this.employees.filter((employee) => {
             const haystack = [employee.name, employee.email, employee.department || ''].join(' ').toLowerCase();
-            return haystack.includes(query);
+            return tokens.every((token) => haystack.includes(token));
         });
     },
     get selectedEmployee() {

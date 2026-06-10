@@ -12,6 +12,8 @@
                 <p class="mt-1 text-sm text-gray-600">
                     @if($type === 'nda')
                         Same Non-Disclosure Agreement format used for students. Sign with your profile e-signature.
+                    @elseif($type === 'policy')
+                        Company Policy Acknowledgment. Sign with your profile e-signature.
                     @else
                         Sample {{ $label }} document for employee acknowledgment.
                     @endif
@@ -46,20 +48,14 @@
         @enderror
 
         <div class="rounded-xl border border-gray-200 bg-white shadow-sm overflow-hidden">
-            @if($type !== 'nda')
-                <x-document-letterhead class="px-6 pt-6 pb-4 border-b border-gray-100" />
-                <div class="border-b border-gray-100 bg-gray-50 px-6 py-4">
-                    <p class="text-sm font-semibold text-gray-900">{{ strtoupper($user->name) }}</p>
-                    <p class="text-xs text-gray-500 mt-1">
-                        {{ $user->department?->name ?: 'General' }}
-                        @if($user->date_hired)
-                            · Hired {{ $user->date_hired->format('F j, Y') }}
-                        @endif
-                    </p>
-                </div>
-            @endif
-            @if($type === 'nda' && $ndaView)
+            @if($type === 'contract' && $contractView)
+                @include('user.employee-documents.partials.contract-content', $contractView)
+            @elseif($type === 'nda' && $ndaView)
                 @include('user.employee-documents.partials.nda-content', $ndaView)
+            @elseif($type === 'policy' && $policyView)
+                @include('user.employee-documents.partials.policy-content', $policyView)
+            @elseif($type === 'handbook' && $handbookView)
+                @include('user.employee-documents.partials.handbook-content', $handbookView)
             @else
                 <div class="px-6 py-6 space-y-4 text-sm text-gray-800 leading-relaxed">
                     @foreach($paragraphs as $paragraph)

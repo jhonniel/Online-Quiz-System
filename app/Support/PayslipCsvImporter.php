@@ -6,6 +6,7 @@ use App\Models\EmployeePayslip;
 use App\Models\Setting;
 use App\Models\User;
 use App\Support\AdminEmployeeDepartmentScope;
+use App\Support\PayslipSignatorySettings;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 
@@ -350,8 +351,8 @@ final class PayslipCsvImporter
             'thirteenth_month_pay' => $this->parseAmount($value('thirteenth_month_pay')),
             'gross_pay' => $this->parseAmount($value('gross_pay')),
             'net_pay' => $this->parseAmount($value('net_pay')),
-            'prepared_by' => $value('prepared_by') ?: null,
-            'approved_by' => $value('approved_by') ?: null,
+            'prepared_by' => PayslipSignatorySettings::adminOfficerName() ?? ($value('prepared_by') ?: null),
+            'approved_by' => PayslipSignatorySettings::proprietorName() ?? ($value('approved_by') ?: null),
         ];
     }
 

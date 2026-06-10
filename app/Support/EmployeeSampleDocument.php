@@ -10,7 +10,7 @@ use Illuminate\Support\Facades\Storage;
 final class EmployeeSampleDocument
 {
     /** @var list<string> */
-    public const TYPES = ['nda', 'contract', 'policy'];
+    public const TYPES = ['nda', 'contract', 'policy', 'handbook'];
 
     public static function isValidType(string $type): bool
     {
@@ -23,6 +23,7 @@ final class EmployeeSampleDocument
             'nda' => 'NDA',
             'contract' => 'Agreement',
             'policy' => 'Policy',
+            'handbook' => 'Hand Book',
             default => strtoupper($type),
         };
     }
@@ -31,8 +32,9 @@ final class EmployeeSampleDocument
     {
         return match ($type) {
             'nda' => 'Non-Disclosure Agreement',
-            'contract' => 'Employment Agreement',
+            'contract' => 'Employment Agreement — Terms of Employment',
             'policy' => 'Company Policy Acknowledgment',
+            'handbook' => 'Employee Handbook Acknowledgment',
             default => self::label($type),
         };
     }
@@ -57,13 +59,8 @@ final class EmployeeSampleDocument
                 'The Employee agrees to perform assigned duties professionally, comply with attendance and reporting requirements, and follow lawful instructions from supervisors.',
                 'Either party may end this employment relationship according to notice periods and procedures defined by company policy and applicable law.',
             ],
-            'policy' => [
-                "This Company Policy Acknowledgment confirms that {$employee}, {$position}, has reviewed and understood {$company}'s workplace policies.",
-                'Policies include attendance and punctuality, leave procedures, acceptable use of company systems, data protection, and professional conduct.',
-                'The Employee agrees to report safety concerns, conflicts of interest, and policy violations through proper channels.',
-                'Failure to comply with company policies may result in corrective action up to and including termination of employment.',
-                'The Employee confirms that policy updates communicated by management shall be treated as binding upon receipt.',
-            ],
+            'policy' => [],
+            'handbook' => [],
             default => [],
         };
     }
@@ -95,6 +92,18 @@ final class EmployeeSampleDocument
             return EmployeeNdaDocument::renderPdfBinary($user, $signedAt);
         }
 
+        if ($type === 'policy') {
+            return EmployeePolicyDocument::renderPdfBinary($user, $signedAt);
+        }
+
+        if ($type === 'handbook') {
+            return EmployeeHandbookDocument::renderPdfBinary($user, $signedAt);
+        }
+
+        if ($type === 'contract') {
+            return EmployeeContractDocument::renderPdfBinary($user, $signedAt);
+        }
+
         return Pdf::loadView('user.employee-documents.pdf', self::pdfViewData($user, $type, $signedAt))
             ->setPaper('a4', 'portrait')
             ->setOption('defaultFont', 'DejaVu Sans')
@@ -107,6 +116,18 @@ final class EmployeeSampleDocument
 
         if ($type === 'nda') {
             return EmployeeNdaDocument::renderSignedPdfBinary($user, $signedAt);
+        }
+
+        if ($type === 'policy') {
+            return EmployeePolicyDocument::renderSignedPdfBinary($user, $signedAt);
+        }
+
+        if ($type === 'handbook') {
+            return EmployeeHandbookDocument::renderSignedPdfBinary($user, $signedAt);
+        }
+
+        if ($type === 'contract') {
+            return EmployeeContractDocument::renderSignedPdfBinary($user, $signedAt);
         }
 
         $pdfBinary = self::renderPdfBinary($user, $type, $signedAt);

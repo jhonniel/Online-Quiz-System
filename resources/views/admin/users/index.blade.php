@@ -184,7 +184,7 @@
                            id="search-input"
                            name="search"
                            value="{{ request('search', $search ?? '') }}"
-                           placeholder="Search users (name, email, role, dept, university, ID)..."
+                           placeholder="Search name, email, role, dept, position, university, or ID..."
                            autocomplete="off"
                            class="block w-full pl-9 pr-10 py-2 border border-gray-300 rounded-lg text-sm text-gray-900 bg-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
                     @if(request('search'))

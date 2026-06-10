@@ -133,7 +133,7 @@
                         </div>
                         <div>
                             <p class="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-1.5">Sign-off</p>
-                            <p class="text-xs text-gray-600 leading-relaxed">prepared_by, approved_by</p>
+                            <p class="text-xs text-gray-600 leading-relaxed">prepared_by, approved_by (optional — defaults to Admin Officer and Proprietor from Settings)</p>
                         </div>
                     </div>
                 </details>
@@ -176,7 +176,7 @@
                 </div>
             </div>
             <form method="GET" class="grid grid-cols-1 md:grid-cols-5 gap-3">
-                <input type="text" name="search" value="{{ request('search') }}" placeholder="Search employee..."
+                <input type="text" name="search" value="{{ request('search') }}" placeholder="Search name, email, department, or position..."
                        class="rounded-md border-gray-300 text-sm shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
                 <select name="year" class="rounded-md border-gray-300 text-sm shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
                     <option value="">All years</option>
@@ -267,6 +267,7 @@
     </div>
 
     @include('admin.employee-management.payslip.partials.link-modal', ['employees' => $employees])
+    @include('admin.employee-management.payslip.partials.delete-modal')
 </div>
 
 <style>
@@ -414,11 +415,17 @@ document.addEventListener('DOMContentLoaded', function () {
             return;
         }
 
-        if (!confirm('Delete ' + selectedIds.length + ' selected payslip(s)? This cannot be undone.')) {
-            return;
-        }
+        const count = selectedIds.length;
+        const message = count === 1
+            ? 'Delete 1 selected payslip?'
+            : 'Delete ' + count + ' selected payslips?';
 
-        submitPayslipBulkForm(@json(route('admin.payslip.bulk-destroy')));
+        openPayslipDeleteModal({
+            action: @json(route('admin.payslip.bulk-destroy')),
+            method: 'POST',
+            message: message,
+            payslipIds: selectedIds,
+        });
     });
 
     const PAYSLIP_GROUP_STORAGE_KEY = 'admin-payslip-group-states';

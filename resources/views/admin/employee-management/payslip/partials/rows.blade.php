@@ -46,11 +46,15 @@
             @if($payslip->isSigned())
                 <a href="{{ route('admin.payslip.signed', $payslip) }}" target="_blank" class="text-green-700 hover:text-green-900 font-medium">Signed PDF</a>
             @endif
-            <form action="{{ route('admin.payslip.destroy', $payslip) }}" method="POST" class="inline" onsubmit="return confirm('Delete this payslip?')">
-                @csrf
-                @method('DELETE')
-                <button type="submit" class="text-red-600 hover:text-red-900 font-medium">Delete</button>
-            </form>
+            <button type="button"
+                    onclick="openPayslipDeleteModal({
+                        action: @js(route('admin.payslip.destroy', $payslip)),
+                        method: 'DELETE',
+                        message: @js('Delete payslip for '.$payslip->employee_name.' ('.$payslip->periodLabel().')?')
+                    })"
+                    class="text-red-600 hover:text-red-900 font-medium">
+                Delete
+            </button>
         </td>
     </tr>
 @endforeach

@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Support\PayslipCsvImporter;
+use App\Support\PayslipSignatorySettings;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
@@ -134,25 +135,50 @@ class EmployeePayslip extends Model
     {
         $employee ??= $this->resolvedEmployee();
 
-        if (! $employee) {
-            return;
+        if ($employee) {
+            $fields = PayslipCsvImporter::profileFieldsFromEmployee($employee);
+
+            $updates = [
+                'position' => $fields['position'],
+                'date_hired' => $fields['date_hired'],
+            ];
+
+            if (! $this->isLinkedToEmployee()) {
+                $updates['user_id'] = $employee->id;
+                $updates['employee_email'] = $employee->email;
+            }
+
+            $this->forceFill($updates);
+
+            if ($this->isDirty(['position', 'date_hired', 'user_id', 'employee_email'])) {
+                $this->save();
+            }
         }
 
-        $fields = PayslipCsvImporter::profileFieldsFromEmployee($employee);
+        $this->syncSignatoryFieldsFromSettings();
+    }
 
-        $updates = [
-            'position' => $fields['position'],
-            'date_hired' => $fields['date_hired'],
-        ];
+    public function syncSignatoryFieldsFromSettings(): void
+    {
+        $updates = [];
 
-        if (! $this->isLinkedToEmployee()) {
-            $updates['user_id'] = $employee->id;
-            $updates['employee_email'] = $employee->email;
+        $preparedBy = PayslipSignatorySettings::adminOfficerName();
+        if ($preparedBy !== null) {
+            $updates['prepared_by'] = $preparedBy;
+        }
+
+        $approvedBy = PayslipSignatorySettings::proprietorName();
+        if ($approvedBy !== null) {
+            $updates['approved_by'] = $approvedBy;
+        }
+
+        if ($updates === []) {
+            return;
         }
 
         $this->forceFill($updates);
 
-        if ($this->isDirty(['position', 'date_hired', 'user_id', 'employee_email'])) {
+        if ($this->isDirty(['prepared_by', 'approved_by'])) {
             $this->save();
         }
     }
@@ -219,6 +245,30 @@ class EmployeePayslip extends Model
         }
 
         return round($total, 2);
+    }
+
+    public function displayPreparedBy(): ?string
+    {
+        $fromSettings = PayslipSignatorySettings::adminOfficerName();
+        if ($fromSettings !== null) {
+            return $fromSettings;
+        }
+
+        $stored = trim((string) ($this->prepared_by ?? ''));
+
+        return $stored !== '' ? $stored : null;
+    }
+
+    public function displayApprovedBy(): ?string
+    {
+        $fromSettings = PayslipSignatorySettings::proprietorName();
+        if ($fromSettings !== null) {
+            return $fromSettings;
+        }
+
+        $stored = trim((string) ($this->approved_by ?? ''));
+
+        return $stored !== '' ? $stored : null;
     }
 
     public function formatMoney(float|int|string|null $amount): string

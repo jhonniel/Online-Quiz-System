@@ -6,7 +6,10 @@ use App\Http\Controllers\Controller;
 use App\Models\EmployeeDocumentSignature;
 use App\Models\User;
 use App\Support\EmployeeDocumentSigning;
+use App\Support\EmployeeContractDocument;
+use App\Support\EmployeeHandbookDocument;
 use App\Support\EmployeeNdaDocument;
+use App\Support\EmployeePolicyDocument;
 use App\Support\EmployeeSampleDocument;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -64,6 +67,15 @@ class EmployeeDocumentController extends Controller
             'paragraphs' => EmployeeSampleDocument::paragraphs($user, $type),
             'ndaView' => $type === 'nda'
                 ? EmployeeNdaDocument::viewData($user, $signature->signed_at)
+                : null,
+            'policyView' => $type === 'policy'
+                ? EmployeePolicyDocument::viewData($user, $signature->signed_at)
+                : null,
+            'contractView' => $type === 'contract'
+                ? EmployeeContractDocument::viewData($user, $signature->signed_at)
+                : null,
+            'handbookView' => $type === 'handbook'
+                ? EmployeeHandbookDocument::viewData($user, $signature->signed_at)
                 : null,
             'signature' => $signature,
         ]);

@@ -67,7 +67,8 @@
             vertical-align: top;
             padding: 0;
         }
-        .meta-grid p { margin: 0 0 4px; }
+        .meta-grid p { margin: 0 0 4px; word-break: break-word; overflow-wrap: anywhere; }
+        .meta-grid strong { word-break: break-word; overflow-wrap: anywhere; }
         .columns {
             width: 100%;
             border-collapse: collapse;
@@ -148,7 +149,8 @@
         }
         .sign-block {
             position: relative;
-            display: inline-block;
+            display: block;
+            width: 100%;
             max-width: 100%;
             margin: 0 auto;
             padding-top: 14px;
@@ -167,17 +169,23 @@
             position: relative;
             z-index: 10;
             border-bottom: 1px solid #111827;
-            padding: 0 6px 2px;
+            padding: 0 4px 2px;
             font-weight: bold;
             margin: 0;
             min-height: 14px;
-            white-space: nowrap;
-            font-size: 8.5pt;
+            white-space: normal;
+            word-break: break-word;
+            overflow-wrap: anywhere;
+            font-size: 8pt;
+            line-height: 1.25;
             text-align: center;
         }
         .sign-role {
             margin: 8px 0 0;
-            font-size: 8.5pt;
+            font-size: 8pt;
+            word-break: break-word;
+            overflow-wrap: anywhere;
+            line-height: 1.25;
         }
     </style>
 </head>
@@ -256,14 +264,14 @@
                     <td>
                         <p class="sign-label">Prepared by:</p>
                         <div class="sign-block">
-                            <p class="sign-line">{{ $payslip->prepared_by ?: ' ' }}</p>
+                            <p class="sign-line">{{ $payslip->displayPreparedBy() ?: ' ' }}</p>
                         </div>
                         <p class="sign-role">Admin Officer</p>
                     </td>
                     <td>
                         <p class="sign-label">Approved by:</p>
                         <div class="sign-block">
-                            <p class="sign-line">{{ $payslip->approved_by ?: ' ' }}</p>
+                            <p class="sign-line">{{ $payslip->displayApprovedBy() ?: ' ' }}</p>
                         </div>
                         <p class="sign-role">Proprietor</p>
                     </td>

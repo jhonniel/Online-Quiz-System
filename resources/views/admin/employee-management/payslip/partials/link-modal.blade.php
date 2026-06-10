@@ -121,6 +121,23 @@
 </div>
 
 <script>
+function payslipFilterEmployees(employees, query) {
+    const tokens = String(query || '').trim().toLowerCase().split(/\s+/).filter(Boolean);
+    if (tokens.length === 0) {
+        return employees;
+    }
+
+    return employees.filter((employee) => {
+        const haystack = [
+            employee.name,
+            employee.email,
+            employee.department || '',
+        ].join(' ').toLowerCase();
+
+        return tokens.every((token) => haystack.includes(token));
+    });
+}
+
 function payslipLinkModal() {
     return {
         linkOpen: false,
@@ -132,20 +149,7 @@ function payslipLinkModal() {
         linkEmployeeId: '',
         linkEmployees: @json($employeeOptions),
         get filteredLinkEmployees() {
-            const query = this.linkSearch.trim().toLowerCase();
-            if (!query) {
-                return this.linkEmployees;
-            }
-
-            return this.linkEmployees.filter((employee) => {
-                const haystack = [
-                    employee.name,
-                    employee.email,
-                    employee.department || '',
-                ].join(' ').toLowerCase();
-
-                return haystack.includes(query);
-            });
+            return payslipFilterEmployees(this.linkEmployees, this.linkSearch);
         },
         get selectedLinkEmployee() {
             return this.linkEmployees.find((employee) => String(employee.id) === String(this.linkEmployeeId)) || null;

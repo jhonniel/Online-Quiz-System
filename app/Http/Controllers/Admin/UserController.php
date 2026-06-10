@@ -189,28 +189,54 @@ class UserController extends Controller
         }
 
         if ($search !== '') {
-            $query->where(function ($q) use ($search, $idLikeSql, $isTeachersManagement) {
-                $q->orWhereRaw($idLikeSql, ["%{$search}%"])
-                    ->orWhere('name', 'like', "%{$search}%")
-                    ->orWhere('email', 'like', "%{$search}%")
-                    ->orWhere('role', 'like', "%{$search}%")
-                    ->orWhere('contact_number', 'like', "%{$search}%");
-
-                if (! $isTeachersManagement) {
-                    $q->orWhereHas('department', function ($dq) use ($search) {
-                        $dq->where('name', 'like', "%{$search}%")
-                            ->orWhere('code', 'like', "%{$search}%");
-                    });
-                }
-
-                $q->orWhereHas('university', function ($uq) use ($search) {
-                    $uq->where('name', 'like', "%{$search}%")
-                        ->orWhere('code', 'like', "%{$search}%");
-                });
-            });
+            $this->applyUsersSearch($query, $search, $idLikeSql, $isTeachersManagement);
         }
 
         return $query;
+    }
+
+    private function applyUsersSearch(Builder $query, string $search, string $idLikeSql, bool $isTeachersManagement): void
+    {
+        $searchTokens = preg_split('/\s+/', $search, -1, PREG_SPLIT_NO_EMPTY) ?: [];
+
+        $query->where(function ($q) use ($search, $searchTokens, $idLikeSql, $isTeachersManagement) {
+            $q->where(fn ($termQ) => $this->applyUsersSearchTerm($termQ, $search, $idLikeSql, $isTeachersManagement));
+
+            if (count($searchTokens) > 1) {
+                $q->orWhere(function ($andQ) use ($searchTokens, $idLikeSql, $isTeachersManagement) {
+                    foreach ($searchTokens as $token) {
+                        $andQ->where(fn ($tokenQ) => $this->applyUsersSearchTerm($tokenQ, $token, $idLikeSql, $isTeachersManagement));
+                    }
+                });
+            }
+        });
+    }
+
+    private function applyUsersSearchTerm(Builder $query, string $term, string $idLikeSql, bool $isTeachersManagement): void
+    {
+        $like = "%{$term}%";
+
+        $query->where('name', 'like', $like)
+            ->orWhere('email', 'like', $like)
+            ->orWhere('role', 'like', $like)
+            ->orWhere('contact_number', 'like', $like)
+            ->orWhereRaw($idLikeSql, [$like]);
+
+        if (! $isTeachersManagement) {
+            $query->orWhereHas('department', function ($dq) use ($like) {
+                $dq->where('name', 'like', $like)
+                    ->orWhere('code', 'like', $like);
+            })->orWhereHas('departmentPosition', fn ($pq) => $pq->where('name', 'like', $like));
+        }
+
+        $query->orWhereHas('university', function ($uq) use ($like) {
+            $uq->where('name', 'like', $like)
+                ->orWhere('code', 'like', $like);
+        });
+
+        if (ctype_digit($term)) {
+            $query->orWhere('id', (int) $term);
+        }
     }
 
     /**

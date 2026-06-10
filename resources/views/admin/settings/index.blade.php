@@ -579,6 +579,64 @@
                             </div>
                         </div>
 
+                        <!-- Payslip Signatories -->
+                        <div class="form-section">
+                            <div class="flex items-center space-x-3 mb-6">
+                                <div class="flex-shrink-0 bg-amber-100 rounded-lg p-2">
+                                    <svg class="h-6 w-6 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                                    </svg>
+                                </div>
+                                <div>
+                                    <h3 class="text-lg font-semibold text-gray-900">Payslip Signatories</h3>
+                                    <p class="text-sm text-gray-500">Default names for Prepared by (Admin Officer) and Approved by (Proprietor) on employee payslips.</p>
+                                </div>
+                            </div>
+
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div>
+                                    <label for="payslip_admin_officer_user_id" class="block text-sm font-medium text-gray-700 mb-2">
+                                        Admin Officer (Prepared by)
+                                    </label>
+                                    <select name="payslip_admin_officer_user_id" id="payslip_admin_officer_user_id"
+                                            class="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                                        <option value="">— Not set —</option>
+                                        @foreach($payslipSignatoryUsers->groupBy('role') as $role => $users)
+                                            <optgroup label="{{ ucfirst($role) }}s">
+                                                @foreach($users as $user)
+                                                    <option value="{{ $user->id }}"
+                                                        {{ (string) old('payslip_admin_officer_user_id', $settings['payslip_admin_officer_user_id'] ?? '') === (string) $user->id ? 'selected' : '' }}>
+                                                        {{ $user->name }} ({{ $user->email }})
+                                                    </option>
+                                                @endforeach
+                                            </optgroup>
+                                        @endforeach
+                                    </select>
+                                    <p class="mt-2 text-xs text-gray-500">Always used as Prepared by (Admin Officer) on all payslips when set.</p>
+                                </div>
+                                <div>
+                                    <label for="payslip_proprietor_user_id" class="block text-sm font-medium text-gray-700 mb-2">
+                                        Proprietor (Approved by)
+                                    </label>
+                                    <select name="payslip_proprietor_user_id" id="payslip_proprietor_user_id"
+                                            class="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                                        <option value="">— Not set —</option>
+                                        @foreach($payslipSignatoryUsers->groupBy('role') as $role => $users)
+                                            <optgroup label="{{ ucfirst($role) }}s">
+                                                @foreach($users as $user)
+                                                    <option value="{{ $user->id }}"
+                                                        {{ (string) old('payslip_proprietor_user_id', $settings['payslip_proprietor_user_id'] ?? '') === (string) $user->id ? 'selected' : '' }}>
+                                                        {{ $user->name }} ({{ $user->email }})
+                                                    </option>
+                                                @endforeach
+                                            </optgroup>
+                                        @endforeach
+                                    </select>
+                                    <p class="mt-2 text-xs text-gray-500">Always used as Approved by (Proprietor) on all payslips when set. Also used as employer signatory on employee documents.</p>
+                                </div>
+                            </div>
+                        </div>
+
                         <!-- Default Leave Balances Section -->
                         <div class="form-section">
                             <div class="flex items-center space-x-3 mb-6">

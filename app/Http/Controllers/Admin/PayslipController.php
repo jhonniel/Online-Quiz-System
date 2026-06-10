@@ -8,8 +8,11 @@ use App\Models\User;
 use App\Support\AdminEmployeeDepartmentScope;
 use App\Support\PayslipCsvImporter;
 use App\Support\PayslipGrouper;
+use App\Support\PayslipSignatorySettings;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\ValidationException;
 
 class PayslipController extends Controller
 {
@@ -74,12 +77,7 @@ class PayslipController extends Controller
             });
 
         if ($request->filled('search')) {
-            $search = trim((string) $request->input('search'));
-            $query->where(function ($q) use ($search) {
-                $q->where('employee_name', 'like', "%{$search}%")
-                    ->orWhere('employee_email', 'like', "%{$search}%")
-                    ->orWhereHas('employee', fn ($eq) => $eq->where('email', 'like', "%{$search}%"));
-            });
+            $this->applyPayslipEmployeeSearch($query, trim((string) $request->input('search')));
         }
 
         if ($request->filled('period_start')) {
@@ -197,17 +195,19 @@ class PayslipController extends Controller
                 '0',
                 '85000',
                 '75446.43',
-                'May Grace Acosta',
-                'Jason V. Labanon',
+                PayslipSignatorySettings::adminOfficerName() ?? 'May Grace Acosta',
+                PayslipSignatorySettings::proprietorName() ?? 'Jason V. Labanon',
             ],
         ];
 
         return $this->csvDownload($rows, 'payslip_import_template_'.date('Y-m-d').'.csv');
     }
 
-    public function destroy(EmployeePayslip $payslip)
+    public function destroy(Request $request, EmployeePayslip $payslip)
     {
         $this->authorizePayslip($payslip);
+        $this->validateDeletePassword($request);
+
         $payslip->delete();
 
         return redirect()
@@ -261,6 +261,8 @@ class PayslipController extends Controller
             'payslip_ids' => 'required|array|min:1',
             'payslip_ids.*' => 'integer|exists:employee_payslips,id',
         ]);
+
+        $this->validateDeletePassword($request);
 
         $deletedCount = EmployeePayslip::query()
             ->whereIn('id', $validated['payslip_ids'])
@@ -330,6 +332,23 @@ class PayslipController extends Controller
         return view('admin.employee-management.payslip.bulk-print', compact('payslips'));
     }
 
+    private function validateDeletePassword(Request $request): void
+    {
+        $request->validate([
+            'confirm_password' => 'required|string',
+        ], [
+            'confirm_password.required' => 'Please enter your password to confirm deletion.',
+        ]);
+
+        $admin = $this->requireAuthUser();
+
+        if (! Hash::check((string) $request->input('confirm_password'), (string) $admin->password)) {
+            throw ValidationException::withMessages([
+                'confirm_password' => ['Your password is incorrect.'],
+            ]);
+        }
+    }
+
     private function authorizePayslip(EmployeePayslip $payslip): void
     {
         $admin = $this->requireAuthUser();
@@ -355,6 +374,50 @@ class PayslipController extends Controller
         AdminEmployeeDepartmentScope::applyToEmployeeQueryForDocuments($query, $this->requireAuthUser());
 
         return $query;
+    }
+
+    private function applyPayslipEmployeeSearch($query, string $search): void
+    {
+        if ($search === '') {
+            return;
+        }
+
+        $searchTokens = preg_split('/\s+/', $search, -1, PREG_SPLIT_NO_EMPTY) ?: [];
+
+        $query->where(function ($q) use ($search, $searchTokens) {
+            $q->where(fn ($termQ) => $this->applyPayslipEmployeeSearchTerm($termQ, $search));
+
+            if (count($searchTokens) > 1) {
+                $q->orWhere(function ($andQ) use ($searchTokens) {
+                    foreach ($searchTokens as $token) {
+                        $andQ->where(fn ($tokenQ) => $this->applyPayslipEmployeeSearchTerm($tokenQ, $token));
+                    }
+                });
+            }
+        });
+    }
+
+    private function applyPayslipEmployeeSearchTerm($query, string $term): void
+    {
+        $like = "%{$term}%";
+
+        $query->where('employee_name', 'like', $like)
+            ->orWhere('employee_email', 'like', $like)
+            ->orWhere('position', 'like', $like)
+            ->orWhereHas('employee', function ($eq) use ($like, $term) {
+                $eq->where('name', 'like', $like)
+                    ->orWhere('email', 'like', $like);
+
+                if (ctype_digit($term)) {
+                    $eq->orWhere('id', (int) $term);
+                }
+            })
+            ->orWhereHas('employee.department', fn ($dq) => $dq->where('name', 'like', $like));
+
+        if (ctype_digit($term)) {
+            $query->orWhere('user_id', (int) $term)
+                ->orWhere('id', (int) $term);
+        }
     }
 
     private function applyEmployeeScope($query): void

@@ -23,6 +23,7 @@ final class AdminPermissionAreas
         'employee_nda' => 'NDA',
         'employee_contract' => 'Agreement',
         'employee_policy' => 'Policy',
+        'employee_handbook' => 'Hand Book',
         'dtr' => 'DTR (Time Records)',
         'time_report' => 'Time Report',
         'leave_requests' => 'Leave Requests',
@@ -32,7 +33,7 @@ final class AdminPermissionAreas
     /** @var array<string, list<string>> */
     public const EMPLOYEE_FEATURE_GROUPS = [
         'Dashboard' => ['employee_dashboard'],
-        'Employee Documents' => ['file_request', 'payslip', 'employee_nda', 'employee_contract', 'employee_policy'],
+        'Employee Documents' => ['file_request', 'payslip', 'employee_nda', 'employee_contract', 'employee_policy', 'employee_handbook'],
         'Time & Attendance' => ['dtr', 'time_report'],
         'Leave' => ['leave_requests', 'leave_calendar'],
     ];
@@ -158,6 +159,7 @@ final class AdminPermissionAreas
         'employee_nda',
         'employee_contract',
         'employee_policy',
+        'employee_handbook',
     ];
 
     public static function featureKeys(string $areaKey): array

@@ -1,50 +1,19 @@
-<div class="px-6 py-6 space-y-4 text-sm text-gray-800 leading-relaxed">
-    <p class="text-center font-medium">Republic of the Philippines</p>
-    <p class="text-center font-bold uppercase tracking-wide">Non-Disclosure Agreement</p>
+<div class="px-6 py-6 text-sm text-gray-800 leading-relaxed nda-document">
+    <style>
+        .nda-document .header-country { text-align: center; margin-bottom: 1rem; }
+        .nda-document .title { text-align: center; font-weight: bold; text-transform: uppercase; margin-bottom: 1.25rem; }
+        .nda-document .body-text { margin-bottom: 0.875rem; text-align: justify; }
+        .nda-document .done-line { margin-top: 1.25rem; }
+        .nda-document .signature-block { margin-top: 2rem; text-align: center; }
+        .nda-document .signature-sign-area { height: 3.5rem; position: relative; }
+        .nda-document .signature-image { position: absolute; inset: 0; margin: auto; height: 2.5rem; width: 13rem; object-fit: contain; }
+        .nda-document .signature-line { border-top: 1px solid #111827; max-width: 24rem; margin: 0 auto; }
+        .nda-document .signature-meta { font-weight: bold; text-transform: uppercase; margin: 0.25rem 0; }
+        .nda-document .signature-id-group { margin-top: 1rem; }
+        .nda-document .ack-section { margin-top: 2rem; text-align: center; }
+        .nda-document .ack-title { font-weight: bold; text-transform: uppercase; margin-bottom: 1rem; }
+        .nda-document .ack-name { font-weight: bold; text-transform: uppercase; text-decoration: underline; }
+    </style>
 
-    <p class="text-justify">
-        This is to certify that I, <strong>{{ $fullNameUpper }}</strong>, of
-        <strong>{{ strtoupper($branding['company_inline']) }}</strong> understand that I cannot give out or share any official record
-        obtained or accessed from/thru and/or involving the development of the Systems, Websites and Social Media Content
-        for the clients contracted to <strong>{{ strtoupper($branding['company_inline']) }}</strong> without proper authority or unless
-        in connection with my official functions or in pursuance of official transactions and processes.
-    </p>
-
-    <p class="text-justify">
-        I understand that any unauthorized release or negligence in the handling of the abovementioned information is
-        considered a breach of confidence and prejudicial to the best interest of the Republic of the Philippines.
-    </p>
-
-    <p class="text-justify">
-        I further understand that any such breach may give rise to grounds for administrative or criminal liabilities as
-        provided under existing laws.
-    </p>
-
-    <p>
-        Done in the City of {{ $city }}, this {{ $agreementDateFormal }}.
-    </p>
-
-    <div class="pt-4 text-center space-y-1">
-        @if(!empty($eSignatureDataUri))
-            <div class="relative mx-auto h-14 w-52">
-                <img src="{{ $eSignatureDataUri }}" alt="E-Signature" class="absolute inset-0 mx-auto h-14 w-52 object-contain object-bottom">
-            </div>
-            <div class="mx-auto mt-1 max-w-md border-t border-gray-900"></div>
-        @endif
-        <p class="font-bold uppercase">{{ $fullNameUpper }}</p>
-        <p class="font-bold uppercase">{{ strtoupper($branding['company_signature']) }}</p>
-        <p class="font-bold uppercase pt-4">{{ $idNumberUpper }}</p>
-        <p class="font-bold uppercase">{{ $validIdTypeUpper }}</p>
-    </div>
-
-    <div class="pt-8 text-center space-y-1">
-        <p class="font-bold uppercase">Personally signed before me:</p>
-        <p class="font-bold uppercase underline">{{ $branding['signatory_name'] }}</p>
-        <p class="font-bold uppercase">{{ $branding['signatory_title'] }}</p>
-        <p class="font-bold uppercase">{{ $branding['company_line1'] }}</p>
-        @if(!empty($branding['company_line2']))
-            <p class="font-bold uppercase">{{ $branding['company_line2'] }}</p>
-        @endif
-        <p class="font-bold uppercase">{{ $agreementDateUpper }}</p>
-    </div>
+    @include('user.employee-documents.partials.nda-body')
 </div>
