@@ -29,8 +29,8 @@
     </div>
 
     <!-- Chat Interface -->
-    <div class="bg-white shadow-sm border-t border-b border-gray-200 overflow-hidden flex-1 flex flex-col">
-        <div class="flex flex-col lg:flex-row h-full">
+    <div class="bg-white shadow-sm border-t border-b border-gray-200 overflow-hidden flex-1 flex flex-col min-w-0">
+        <div class="flex flex-col lg:flex-row h-full min-w-0">
             <!-- Friends Sidebar -->
             <div class="w-full lg:w-1/3 border-r border-gray-200 flex flex-col">
                 <!-- Sidebar Header -->
@@ -193,7 +193,7 @@
                     </div>
 
             <!-- Chat Area -->
-            <div class="flex-1 flex flex-col">
+            <div class="flex-1 flex flex-col min-w-0">
                 <!-- No Chat Selected -->
                 <div id="no-chat-selected" class="flex-1 flex items-center justify-center text-gray-500">
                     <div class="text-center p-4">
@@ -206,7 +206,7 @@
                 </div>
 
                 <!-- Chat Interface -->
-                <div id="chat-area" class="hidden flex-1 flex flex-col">
+                <div id="chat-area" class="hidden flex-1 flex flex-col min-w-0">
                     <!-- Chat Header -->
                     <div class="flex items-center space-x-2 sm:space-x-3 p-3 sm:p-4 border-b border-gray-200 bg-gray-50">
                         <div class="relative">
@@ -231,7 +231,7 @@
                     </div>
 
                     <!-- Messages Area -->
-                    <div id="chat-messages" class="flex-1 overflow-y-auto p-3 sm:p-4 space-y-3 sm:space-y-4 bg-gray-50">
+                    <div id="chat-messages" class="flex-1 overflow-y-auto overflow-x-hidden p-3 sm:p-4 space-y-3 sm:space-y-4 bg-gray-50 min-w-0">
                         <!-- Messages will be loaded here -->
                     </div>
 
@@ -746,6 +746,31 @@
             displayMessages();
         }
 
+        function buildMessageBubbleHtml(message, isOwn) {
+            const time = new Date(message.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            let senderName = '';
+
+            if (currentChatType === 'group' && !isOwn && message.sender?.name) {
+                senderName = `<p class="text-xs font-semibold mb-1 text-gray-600 break-words">${escapeHtml(message.sender.name)}</p>`;
+            } else if (currentChatType === 'anonymous' && !isOwn && message.sender_alias) {
+                senderName = `<p class="text-xs font-semibold mb-1 text-gray-600 break-words">${escapeHtml(message.sender_alias)}</p>`;
+            }
+
+            const messageText = escapeHtml(message.message);
+            const bubbleClasses = getMessageBubbleClasses(isOwn);
+            const timeClasses = getMessageTimeClasses(isOwn);
+
+            return `
+                <div class="max-w-[85%] sm:max-w-sm lg:max-w-md min-w-0 w-fit ${isOwn ? 'ml-auto' : 'mr-auto'}">
+                    <div class="px-3 sm:px-4 py-2 rounded-lg ${bubbleClasses}">
+                        ${senderName}
+                        <p class="text-sm break-words whitespace-pre-wrap">${messageText}</p>
+                        <p class="text-xs mt-1 ${timeClasses}">${time}</p>
+                    </div>
+                </div>
+            `;
+        }
+
         function displayMessages() {
             const messagesDiv = document.getElementById('chat-messages');
             messagesDiv.innerHTML = '';
@@ -767,33 +792,11 @@
                     ? !!message.is_own
                     : message.sender_id == {{ auth()->id() }};
                 const messageDiv = document.createElement('div');
-                messageDiv.className = `flex ${isOwn ? 'justify-end' : 'justify-start'}`;
-
-                const time = new Date(message.created_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
-                let senderName = '';
-                if (currentChatType === 'group' && !isOwn && message.sender?.name) {
-                    senderName = `<p class="text-xs font-semibold mb-1 text-gray-600">${escapeHtml(message.sender.name)}</p>`;
-                } else if (currentChatType === 'anonymous' && !isOwn && message.sender_alias) {
-                    senderName = `<p class="text-xs font-semibold mb-1 text-gray-600">${escapeHtml(message.sender_alias)}</p>`;
-                }
-                const messageText = escapeHtml(message.message);
-                const bubbleClasses = getMessageBubbleClasses(isOwn);
-                const timeClasses = getMessageTimeClasses(isOwn);
-
-                messageDiv.innerHTML = `
-                    <div class="max-w-xs sm:max-w-sm lg:max-w-md">
-                        <div class="px-3 sm:px-4 py-2 rounded-lg ${bubbleClasses}">
-                            ${senderName}
-                            <p class="text-sm">${messageText}</p>
-                            <p class="text-xs mt-1 ${timeClasses}">${time}</p>
-                        </div>
-                    </div>
-                `;
-
+                messageDiv.className = `flex w-full min-w-0 ${isOwn ? 'justify-end' : 'justify-start'}`;
+                messageDiv.innerHTML = buildMessageBubbleHtml(message, isOwn);
                 messagesDiv.appendChild(messageDiv);
             });
 
-            // Scroll to bottom
             messagesDiv.scrollTop = messagesDiv.scrollHeight;
         }
 
@@ -814,21 +817,15 @@
             const sendButton = document.getElementById('send-button');
             sendButton.disabled = true;
 
-            // Add message to UI immediately
-            const messageDiv = document.createElement('div');
-            messageDiv.className = 'flex justify-end';
-            const time = new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
-            const optimisticMessage = escapeHtml(message);
-            messageDiv.innerHTML = `
-                <div class="max-w-xs sm:max-w-sm lg:max-w-md">
-                    <div class="px-3 sm:px-4 py-2 rounded-lg ${getMessageBubbleClasses(true)}">
-                        <p class="text-sm">${optimisticMessage}</p>
-                        <p class="text-xs mt-1 ${getMessageTimeClasses(true)}">${time}</p>
-                    </div>
-                </div>
-            `;
-            document.getElementById('chat-messages').appendChild(messageDiv);
-            document.getElementById('chat-messages').scrollTop = document.getElementById('chat-messages').scrollHeight;
+            const optimisticId = `temp-${Date.now()}`;
+            messages.push({
+                id: optimisticId,
+                message,
+                created_at: new Date().toISOString(),
+                is_own: true,
+                sender_id: currentUserId,
+            });
+            displayMessages();
 
             input.value = '';
             sendButton.disabled = true;
@@ -840,13 +837,18 @@
                 })
                 .then(data => {
                     if (data.error) {
+                        messages = messages.filter((entry) => entry.id !== optimisticId);
+                        displayMessages();
                         showNotification(data.error, 'error');
                     } else if (data.message) {
+                        messages = messages.filter((entry) => entry.id !== optimisticId);
                         appendSentMessage(data.message);
                     }
                     sendButton.disabled = input.value.trim() === '';
                 })
                 .catch(error => {
+                    messages = messages.filter((entry) => entry.id !== optimisticId);
+                    displayMessages();
                     console.error('Error sending anonymous message:', error);
                     showNotification(error.message || 'Error sending message', 'error');
                     sendButton.disabled = input.value.trim() === '';
@@ -867,11 +869,18 @@
             })
             .then(data => {
                 if (data.error) {
+                    messages = messages.filter((entry) => entry.id !== optimisticId);
+                    displayMessages();
                     showNotification(data.error, 'error');
+                } else if (data.message) {
+                    messages = messages.filter((entry) => entry.id !== optimisticId);
+                    appendSentMessage(data.message);
                 }
                 sendButton.disabled = input.value.trim() === '';
             })
             .catch(error => {
+                messages = messages.filter((entry) => entry.id !== optimisticId);
+                displayMessages();
                 console.error('Error sending message:', error);
                 showNotification(error.message || 'Error sending message', 'error');
                 sendButton.disabled = input.value.trim() === '';
