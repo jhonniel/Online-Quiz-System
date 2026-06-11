@@ -9,6 +9,7 @@ use App\Support\AdminEmployeeDepartmentScope;
 use App\Support\EmployeeDocumentFooter;
 use App\Support\EmployeeDocumentTemplate;
 use App\Support\EmployeeDocumentPositionRules;
+use App\Support\EmployeeHandbookMaterial;
 use App\Support\EmployeeSampleDocument;
 use App\Support\UserESignatureStorage;
 use Illuminate\Http\Request;
@@ -146,7 +147,38 @@ class EmployeeDocumentController extends Controller
             'employees' => $employees,
             'search' => $search,
             'status' => $status,
+            'handbookMaterialAvailable' => $type === 'handbook' && EmployeeHandbookMaterial::isAvailable(),
         ]);
+    }
+
+    public function uploadHandbookMaterial(Request $request)
+    {
+        $this->authorizeDocumentType('handbook');
+
+        $validated = $request->validate([
+            'handbook_material_pdf' => 'required|file|mimes:pdf|max:20480',
+        ], [
+            'handbook_material_pdf.required' => 'Please choose a PDF file to upload.',
+            'handbook_material_pdf.mimes' => 'The handbook must be a PDF file.',
+            'handbook_material_pdf.max' => 'The handbook PDF must not be larger than 20MB.',
+        ]);
+
+        EmployeeHandbookMaterial::storeUpload($validated['handbook_material_pdf']);
+
+        return redirect()
+            ->route('admin.employee-documents.handbook')
+            ->with('success', 'Employee Handbook PDF uploaded. Employees can now view it from their Documents menu.');
+    }
+
+    public function removeHandbookMaterial(Request $request)
+    {
+        $this->authorizeDocumentType('handbook');
+
+        EmployeeHandbookMaterial::deleteStored();
+
+        return redirect()
+            ->route('admin.employee-documents.handbook')
+            ->with('success', 'Employee Handbook PDF removed.');
     }
 
     public function preview(EmployeeDocumentSignature $signature)

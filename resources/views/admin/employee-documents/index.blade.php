@@ -24,6 +24,60 @@
 
     @include('admin.employee-documents.partials.tabs', ['active' => $type])
 
+    @if(session('success'))
+        <div class="rounded-md border border-green-200 bg-green-50 p-3 text-sm text-green-700">
+            {{ session('success') }}
+        </div>
+    @endif
+
+    @if($type === 'handbook')
+        <div class="rounded-lg border border-violet-200 bg-violet-50 px-4 sm:px-6 py-5 space-y-4">
+            <div>
+                <h2 class="text-sm font-semibold text-violet-950">Employee Handbook material (PDF)</h2>
+                <p class="mt-1 text-xs text-violet-900/80 leading-relaxed">
+                    Upload the complete handbook PDF for employees. It appears only on the employee Documents menu as a read-only viewer — separate from the handbook acknowledgment employees sign.
+                </p>
+            </div>
+
+            @if($handbookMaterialAvailable ?? false)
+                <div class="flex flex-wrap items-center gap-3">
+                    <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-green-100 text-green-700">PDF uploaded</span>
+                    <form action="{{ route('admin.employee-documents.handbook-material.remove') }}" method="POST"
+                          onsubmit="return confirm('Remove the uploaded handbook PDF? Employees will no longer be able to view it.');">
+                        @csrf
+                        @method('DELETE')
+                        <button type="submit"
+                                class="inline-flex items-center rounded-lg border border-red-300 bg-white px-3 py-1.5 text-xs font-semibold text-red-700 hover:bg-red-50 transition-colors">
+                            Remove PDF
+                        </button>
+                    </form>
+                </div>
+            @endif
+
+            <form action="{{ route('admin.employee-documents.handbook-material.upload') }}" method="POST" enctype="multipart/form-data" class="space-y-3">
+                @csrf
+                <div>
+                    <label for="handbook_material_pdf" class="block text-sm font-medium text-gray-700 mb-1.5">
+                        {{ ($handbookMaterialAvailable ?? false) ? 'Replace handbook PDF' : 'Upload handbook PDF' }}
+                    </label>
+                    <input type="file"
+                           name="handbook_material_pdf"
+                           id="handbook_material_pdf"
+                           accept=".pdf,application/pdf"
+                           class="block w-full text-sm text-gray-700 file:mr-4 file:rounded-md file:border-0 file:bg-violet-600 file:px-4 file:py-2 file:text-sm file:font-semibold file:text-white hover:file:bg-violet-700">
+                    <p class="mt-1 text-[11px] text-gray-500">PDF only, up to 20MB.</p>
+                    @error('handbook_material_pdf')
+                        <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                    @enderror
+                </div>
+                <button type="submit"
+                        class="inline-flex items-center rounded-lg bg-violet-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-violet-700 transition-colors">
+                    {{ ($handbookMaterialAvailable ?? false) ? 'Replace PDF' : 'Upload PDF' }}
+                </button>
+            </form>
+        </div>
+    @endif
+
     <div class="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-indigo-100 bg-indigo-50 px-4 py-3">
         <div>
             <p class="text-sm font-semibold text-indigo-900">Document template</p>

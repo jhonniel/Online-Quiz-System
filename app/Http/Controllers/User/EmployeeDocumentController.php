@@ -8,6 +8,7 @@ use App\Models\User;
 use App\Support\EmployeeDocumentSigning;
 use App\Support\EmployeeContractDocument;
 use App\Support\EmployeeHandbookDocument;
+use App\Support\EmployeeHandbookMaterial;
 use App\Support\EmployeeNdaDocument;
 use App\Support\EmployeePolicyDocument;
 use App\Support\EmployeeSampleDocument;
@@ -151,6 +152,27 @@ class EmployeeDocumentController extends Controller
             (string) ($signature->storage_disk ?? ''),
             'employee-'.$type.'-signed.pdf'
         );
+    }
+
+    public function handbookMaterial(Request $request)
+    {
+        $this->requireEmployee($request);
+
+        return view('user.employee-documents.handbook-material', [
+            'handbookAvailable' => EmployeeHandbookMaterial::isAvailable(),
+            'handbookPdfUrl' => EmployeeHandbookMaterial::isAvailable()
+                ? route('user.employee-documents.handbook-material.pdf')
+                : null,
+        ]);
+    }
+
+    public function streamHandbookMaterial(Request $request)
+    {
+        $this->requireEmployee($request);
+
+        $disposition = $request->boolean('download') ? 'attachment' : 'inline';
+
+        return EmployeeHandbookMaterial::streamResponse($disposition);
     }
 
     private function requireEmployee(Request $request): User
