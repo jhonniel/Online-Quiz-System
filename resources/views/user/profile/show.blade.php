@@ -284,7 +284,7 @@
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
                                 </svg>
                             </button>
-                            <div id="search-results" class="absolute z-[100] w-full mt-2 bg-white border border-gray-200 rounded-lg shadow-xl hidden max-h-80 overflow-y-auto">
+                            <div id="search-results" class="absolute z-[100] w-full min-w-[20rem] sm:min-w-[28rem] mt-2 bg-white border border-gray-200 rounded-lg shadow-xl hidden max-h-80 overflow-y-auto">
                                 <!-- Search results will be populated here -->
                             </div>
                         </div>
@@ -551,15 +551,15 @@
                     let action = '';
                     if (user.friendship_status === 'accepted') {
                         action = `
-                            <div class="flex flex-col gap-1.5 items-end">
-                                <a href="{{ url('/user-chat') }}?friend=${user.id}" class="inline-flex items-center px-3 py-1.5 rounded-md text-xs font-medium bg-indigo-500 text-white hover:bg-indigo-600">Chat</a>
+                            <div class="flex flex-col gap-1.5 items-stretch min-w-[7.5rem]">
+                                <a href="{{ url('/user-chat') }}?friend=${user.id}" class="inline-flex items-center justify-center px-3 py-1.5 rounded-md text-xs font-medium bg-indigo-500 text-white hover:bg-indigo-600">Chat</a>
                                 ${renderAnonymousChatButton(user)}
                             </div>
                         `;
                     } else if (user.friendship_status === 'pending') {
                         action = `
-                            <div class="flex flex-col gap-1.5 items-end">
-                                <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getStatusClass(user.friendship_status)}">${getStatusText(user.friendship_status)}</span>
+                            <div class="flex flex-col gap-1.5 items-stretch min-w-[7.5rem]">
+                                <span class="inline-flex items-center justify-center px-2 py-1 rounded-full text-xs font-medium ${getStatusClass(user.friendship_status)}">${getStatusText(user.friendship_status)}</span>
                                 ${renderAnonymousChatButton(user)}
                             </div>
                         `;
@@ -567,8 +567,8 @@
                         action = `<span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getStatusClass(user.friendship_status)}">${getStatusText(user.friendship_status)}</span>`;
                     } else {
                         action = `
-                            <div class="flex flex-col gap-1.5 items-end">
-                                <button type="button" class="js-add-friend inline-flex items-center px-3 py-1.5 rounded-md text-xs font-medium bg-indigo-500 text-white hover:bg-indigo-600" data-user-id="${user.id}" data-user-name="${safeAttrName}">Add Friend</button>
+                            <div class="flex flex-col gap-1.5 items-stretch min-w-[7.5rem]">
+                                <button type="button" class="js-add-friend inline-flex items-center justify-center px-3 py-1.5 rounded-md text-xs font-medium bg-indigo-500 text-white hover:bg-indigo-600" data-user-id="${user.id}" data-user-name="${safeAttrName}">Add Friend</button>
                                 ${renderAnonymousChatButton(user)}
                             </div>
                         `;
@@ -621,17 +621,13 @@
 
         const safeToken = encodeURIComponent(user.anonymous_chat_token);
         const safeName = (user.full_name || user.name || '').replace(/"/g, '&quot;');
-        const aliasHint = user.anonymous_chat_alias
-            ? `<span class="block text-[10px] text-purple-600 mt-0.5">They see you as an alias</span>`
-            : '';
-
         return `
             <button type="button"
-                    class="js-anonymous-chat inline-flex flex-col items-end px-3 py-1.5 rounded-md text-xs font-medium bg-purple-600 text-white hover:bg-purple-700"
+                    class="js-anonymous-chat inline-flex items-center justify-center px-3 py-1.5 rounded-md text-xs font-medium bg-purple-600 text-white hover:bg-purple-700 w-full"
                     data-token="${safeToken}"
-                    data-user-name="${safeName}">
-                <span>Anonymous Chat</span>
-                ${aliasHint}
+                    data-user-name="${safeName}"
+                    title="Message ${safeName} without revealing your name">
+                Anonymous Chat
             </button>
         `;
     }

@@ -13,7 +13,11 @@ final class AnonymousChatEligibility
             return false;
         }
 
-        if (! $target->is_active || $target->role === 'admin') {
+        if ($target->role === 'admin') {
+            return false;
+        }
+
+        if ($target->is_active === false || $target->is_active === 0) {
             return false;
         }
 

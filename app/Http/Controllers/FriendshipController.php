@@ -95,7 +95,7 @@ class FriendshipController extends Controller
             ->with(['university:id,name', 'department:id,name'])
             ->orderBy('name')
             ->limit(25)
-            ->get(['id', 'name', 'email', 'profile_picture', 'university_id', 'department_id', 'role']);
+            ->get(['id', 'name', 'email', 'profile_picture', 'university_id', 'department_id', 'role', 'is_active']);
 
         $payload = $users->map(function (User $user) use ($currentUserId) {
             $friendship = Friendship::query()
