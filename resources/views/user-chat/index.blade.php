@@ -1,7 +1,7 @@
 @extends('layouts.user')
 
 @section('content')
-<div class="h-full flex flex-col space-y-2 min-h-0">
+    <div class="h-full flex flex-col space-y-2 min-h-0" data-chat-realtime>
     <!-- Page Header -->
     <div class="bg-gradient-to-r from-indigo-500 to-indigo-600 rounded-lg shadow-sm p-4 flex-shrink-0 mx-2 sm:mx-3 lg:mx-4 xl:mx-6">
         <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
@@ -271,7 +271,6 @@
 @endsection
 
 @section('scripts')
-@vite(['resources/js/chat-realtime.js'])
 <script>
         const currentUserId = {{ auth()->id() }};
         const currentUserName = @json(auth()->user()->name);
@@ -332,12 +331,17 @@
                 }
             });
 
-            initChatRealtime();
+            function bootChatPage() {
+                initChatRealtime();
+                loadUnreadCounts();
+            }
 
-            // Load unread counts
-            loadUnreadCounts();
+            if (window.ChatRealtime) {
+                bootChatPage();
+            } else {
+                window.addEventListener('chat-realtime:ready', bootChatPage, { once: true });
+            }
 
-            // Polling disabled to reduce server load
             // Poll for new messages every 3 seconds
             // setInterval(loadUnreadCounts, 3000);
         });
