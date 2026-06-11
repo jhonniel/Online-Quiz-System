@@ -6,7 +6,6 @@ use App\Http\Controllers\Controller;
 use App\Http\Controllers\User\AccountTerminatedController;
 use App\Models\User;
 use App\Services\StudentOjtPostCompletionService;
-use App\Support\UserGeoLocationService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Schema;
@@ -33,9 +32,6 @@ class RoleLoginController extends Controller
         $request->validate([
             'email' => 'required|email',
             'password' => 'required',
-            'latitude' => 'nullable|numeric|between:-90,90',
-            'longitude' => 'nullable|numeric|between:-180,180',
-            'accuracy' => 'nullable|numeric|min:0|max:100000',
         ]);
 
         $credentials = $request->only('email', 'password');
@@ -45,20 +41,6 @@ class RoleLoginController extends Controller
             $request->session()->regenerate();
 
             $user = Auth::user();
-            if ($user instanceof User
-                && $request->filled('latitude')
-                && $request->filled('longitude')) {
-                UserGeoLocationService::record(
-                    $user,
-                    (float) $request->input('latitude'),
-                    (float) $request->input('longitude'),
-                    $request->filled('accuracy') ? (float) $request->input('accuracy') : null,
-                    'browser',
-                    'login',
-                );
-            } elseif ($user instanceof User) {
-                $request->session()->flash('request_geo_location', true);
-            }
 
             if ($user instanceof User && $user->isAdmin()) {
                 return redirect('/admin/dashboard');

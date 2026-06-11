@@ -411,10 +411,6 @@
             }
         }
     </script>
-    @auth
-        @include('components.user-location-prompt')
-    @endauth
-
     @include('components.seasonal-effects')
 </body>
 </html>

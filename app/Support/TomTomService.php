@@ -46,39 +46,159 @@ final class TomTomService
         }
 
         $cacheKey = 'user-map:ip:'.hash('sha256', $ip);
+        $cached = Cache::get($cacheKey);
 
-        return Cache::remember($cacheKey, now()->addDays(7), function () use ($ip) {
-            $response = Http::timeout(8)->get("http://ip-api.com/json/{$ip}", [
+        if ($cached !== null) {
+            return $cached === false ? null : $cached;
+        }
+
+        $result = self::fetchIpGeolocation($ip);
+        Cache::put(
+            $cacheKey,
+            $result ?? false,
+            now()->addDays($result !== null ? 7 : 1)
+        );
+
+        return $result;
+    }
+
+    /**
+     * @return array{lat: float, lng: float, label: string}|null
+     */
+    private static function fetchIpGeolocation(string $ip): ?array
+    {
+        $providers = [
+            fn () => self::geocodeIpViaIpWhoIs($ip),
+            fn () => self::geocodeIpViaIpApiCo($ip),
+            fn () => self::geocodeIpViaIpApiCom($ip),
+        ];
+
+        foreach ($providers as $provider) {
+            try {
+                $result = $provider();
+                if ($result !== null) {
+                    return $result;
+                }
+            } catch (\Throwable) {
+                continue;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * @return array{lat: float, lng: float, label: string}|null
+     */
+    private static function geocodeIpViaIpWhoIs(string $ip): ?array
+    {
+        $response = Http::connectTimeout(3)
+            ->timeout(4)
+            ->acceptJson()
+            ->get('https://ipwho.is/'.rawurlencode($ip));
+
+        if (! $response->successful()) {
+            return null;
+        }
+
+        $data = $response->json();
+        if (($data['success'] ?? false) !== true) {
+            return null;
+        }
+
+        return self::normalizeIpGeocodeResult(
+            $data['latitude'] ?? null,
+            $data['longitude'] ?? null,
+            [
+                $data['city'] ?? null,
+                $data['region'] ?? null,
+                $data['country'] ?? null,
+            ],
+            $ip
+        );
+    }
+
+    /**
+     * @return array{lat: float, lng: float, label: string}|null
+     */
+    private static function geocodeIpViaIpApiCo(string $ip): ?array
+    {
+        $response = Http::connectTimeout(3)
+            ->timeout(4)
+            ->acceptJson()
+            ->get('https://ipapi.co/'.rawurlencode($ip).'/json/');
+
+        if (! $response->successful()) {
+            return null;
+        }
+
+        $data = $response->json();
+        if (isset($data['error']) || isset($data['reason'])) {
+            return null;
+        }
+
+        return self::normalizeIpGeocodeResult(
+            $data['latitude'] ?? null,
+            $data['longitude'] ?? null,
+            [
+                $data['city'] ?? null,
+                $data['region'] ?? null,
+                $data['country_name'] ?? null,
+            ],
+            $ip
+        );
+    }
+
+    /**
+     * @return array{lat: float, lng: float, label: string}|null
+     */
+    private static function geocodeIpViaIpApiCom(string $ip): ?array
+    {
+        $response = Http::connectTimeout(2)
+            ->timeout(4)
+            ->acceptJson()
+            ->get('http://ip-api.com/json/'.rawurlencode($ip), [
                 'fields' => 'status,message,lat,lon,city,regionName,country',
             ]);
 
-            if (! $response->successful()) {
-                return null;
-            }
+        if (! $response->successful()) {
+            return null;
+        }
 
-            $data = $response->json();
-            if (($data['status'] ?? '') !== 'success') {
-                return null;
-            }
+        $data = $response->json();
+        if (($data['status'] ?? '') !== 'success') {
+            return null;
+        }
 
-            $lat = $data['lat'] ?? null;
-            $lng = $data['lon'] ?? null;
-            if (! is_numeric($lat) || ! is_numeric($lng)) {
-                return null;
-            }
-
-            $labelParts = array_filter([
+        return self::normalizeIpGeocodeResult(
+            $data['lat'] ?? null,
+            $data['lon'] ?? null,
+            [
                 $data['city'] ?? null,
                 $data['regionName'] ?? null,
                 $data['country'] ?? null,
-            ]);
+            ],
+            $ip
+        );
+    }
 
-            return [
-                'lat' => (float) $lat,
-                'lng' => (float) $lng,
-                'label' => $labelParts !== [] ? implode(', ', $labelParts) : $ip,
-            ];
-        });
+    /**
+     * @param  list<mixed>  $labelParts
+     * @return array{lat: float, lng: float, label: string}|null
+     */
+    private static function normalizeIpGeocodeResult(mixed $lat, mixed $lng, array $labelParts, string $ip): ?array
+    {
+        if (! is_numeric($lat) || ! is_numeric($lng)) {
+            return null;
+        }
+
+        $parts = array_values(array_filter($labelParts, fn ($part) => is_string($part) && trim($part) !== ''));
+
+        return [
+            'lat' => (float) $lat,
+            'lng' => (float) $lng,
+            'label' => $parts !== [] ? implode(', ', $parts) : $ip,
+        ];
     }
 
     /**

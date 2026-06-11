@@ -1593,10 +1593,6 @@
         @endif
     @endauth
 
-    @auth
-        @include('components.user-location-prompt')
-    @endauth
-
     <!-- Toast Notifications -->
     @include('components.toast')
 

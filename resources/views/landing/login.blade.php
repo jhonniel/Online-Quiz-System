@@ -246,39 +246,6 @@
     </div>
 </div>
 
-<div id="login-location-modal" class="hidden fixed inset-0 z-[90] overflow-y-auto">
-    <div class="flex min-h-full items-center justify-center p-4">
-        <div class="fixed inset-0 bg-gray-900/60"></div>
-        <div class="relative w-full max-w-md rounded-2xl bg-white shadow-xl p-6">
-            <div class="flex items-start gap-4">
-                <div class="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-teal-100 text-teal-700">
-                    <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path>
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path>
-                    </svg>
-                </div>
-                <div>
-                    <h3 class="text-lg font-semibold text-gray-900">Share your location</h3>
-                    <p class="mt-2 text-sm text-gray-600">
-                        Allow location access so the admin user map can show your position accurately. IP-based location is often approximate.
-                    </p>
-                    <p id="login-location-status" class="mt-3 hidden text-sm text-amber-700"></p>
-                </div>
-            </div>
-            <div class="mt-6 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
-                <button type="button" id="login-location-skip-btn"
-                        class="px-4 py-2 text-sm font-medium text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50">
-                    Continue without location
-                </button>
-                <button type="button" id="login-location-allow-btn"
-                        class="px-4 py-2 text-sm font-semibold text-white bg-teal-600 rounded-lg hover:bg-teal-700">
-                    Allow location
-                </button>
-            </div>
-        </div>
-    </div>
-</div>
-
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     const passwordInput = document.getElementById('password');
@@ -319,12 +286,6 @@ document.addEventListener('DOMContentLoaded', function() {
         updateRememberLabel();
         rememberCheckbox.addEventListener('change', updateRememberLabel);
     }
-    const locationModal = document.getElementById('login-location-modal');
-    const locationAllowBtn = document.getElementById('login-location-allow-btn');
-    const locationSkipBtn = document.getElementById('login-location-skip-btn');
-    const locationStatus = document.getElementById('login-location-status');
-    let pendingLoginSubmit = false;
-
     function setLoginLoading(isLoading) {
         if (!loginForm || !submitButton) return;
         submitButton.disabled = isLoading;
@@ -341,110 +302,11 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
-    function setGeoField(name, value) {
-        if (!loginForm) return;
-        let input = loginForm.querySelector(`input[name="${name}"]`);
-        if (!input) {
-            input = document.createElement('input');
-            input.type = 'hidden';
-            input.name = name;
-            loginForm.appendChild(input);
-        }
-        input.value = value;
-    }
-
-    function clearGeoFields() {
-        ['latitude', 'longitude', 'accuracy'].forEach((name) => {
-            loginForm?.querySelector(`input[name="${name}"]`)?.remove();
-        });
-    }
-
-    function submitLoginForm() {
-        if (!loginForm || pendingLoginSubmit) return;
-        pendingLoginSubmit = true;
-        setLoginLoading(true);
-        locationModal?.classList.add('hidden');
-        loginForm.submit();
-    }
-
-    function openLocationModal() {
-        locationStatus?.classList.add('hidden');
-        locationModal?.classList.remove('hidden');
-    }
-
-    function requestBrowserLocation(onSuccess, onFailure) {
-        if (!navigator.geolocation) {
-            onFailure('Location is not supported by this browser.');
-            return;
-        }
-
-        navigator.geolocation.getCurrentPosition(
-            (position) => {
-                onSuccess({
-                    latitude: position.coords.latitude,
-                    longitude: position.coords.longitude,
-                    accuracy: position.coords.accuracy,
-                });
-            },
-            (error) => {
-                let message = 'Unable to get your location.';
-                if (error.code === error.PERMISSION_DENIED) {
-                    message = 'Location permission was denied. You can continue without sharing location.';
-                } else if (error.code === error.TIMEOUT) {
-                    message = 'Location request timed out. Please try again or continue without location.';
-                }
-                onFailure(message);
-            },
-            {
-                enableHighAccuracy: true,
-                timeout: 12000,
-                maximumAge: 0,
-            }
-        );
-    }
-
     if (loginForm && submitButton) {
-        loginForm.addEventListener('submit', function(event) {
-            if (pendingLoginSubmit) {
-                return;
-            }
-            event.preventDefault();
-            openLocationModal();
+        loginForm.addEventListener('submit', function() {
+            setLoginLoading(true);
         });
     }
-
-    locationAllowBtn?.addEventListener('click', function() {
-        locationAllowBtn.disabled = true;
-        locationSkipBtn.disabled = true;
-        if (locationStatus) {
-            locationStatus.textContent = 'Getting your location...';
-            locationStatus.classList.remove('hidden');
-        }
-
-        requestBrowserLocation(
-            (coords) => {
-                setGeoField('latitude', coords.latitude);
-                setGeoField('longitude', coords.longitude);
-                if (coords.accuracy != null) {
-                    setGeoField('accuracy', coords.accuracy);
-                }
-                submitLoginForm();
-            },
-            (message) => {
-                if (locationStatus) {
-                    locationStatus.textContent = message;
-                    locationStatus.classList.remove('hidden');
-                }
-                locationAllowBtn.disabled = false;
-                locationSkipBtn.disabled = false;
-            }
-        );
-    });
-
-    locationSkipBtn?.addEventListener('click', function() {
-        clearGeoFields();
-        submitLoginForm();
-    });
 
     // Password toggle is handled by the dedicated standalone script above.
 });
