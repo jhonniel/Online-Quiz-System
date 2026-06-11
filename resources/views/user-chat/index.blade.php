@@ -353,6 +353,7 @@
             document.getElementById('no-chat-selected').classList.add('hidden');
             document.getElementById('chat-area').classList.remove('hidden');
             document.getElementById('chat-friend-name').textContent = friendName;
+            document.getElementById('chat-subtitle').classList.remove('hidden');
             document.getElementById('chat-subtitle').textContent = 'Direct message';
 
             clearChatSelection();
@@ -376,6 +377,7 @@
             document.getElementById('no-chat-selected').classList.add('hidden');
             document.getElementById('chat-area').classList.remove('hidden');
             document.getElementById('chat-friend-name').textContent = groupName;
+            document.getElementById('chat-subtitle').classList.remove('hidden');
             document.getElementById('chat-subtitle').textContent = 'Group chat';
 
             clearChatSelection();
@@ -397,12 +399,8 @@
             document.getElementById('no-chat-selected').classList.add('hidden');
             document.getElementById('chat-area').classList.remove('hidden');
             document.getElementById('chat-friend-name').textContent = currentAnonymousPeerAlias;
-
-            if (currentAnonymousPeerName) {
-                document.getElementById('chat-subtitle').textContent = 'Messaging ' + currentAnonymousPeerName + ' anonymously';
-            } else {
-                document.getElementById('chat-subtitle').textContent = 'Anonymous chat';
-            }
+            document.getElementById('chat-subtitle').classList.add('hidden');
+            document.getElementById('chat-subtitle').textContent = '';
 
             clearChatSelection();
             document.querySelector(`[data-anonymous-room-id="${roomId}"]`)?.classList.add('bg-purple-50', 'border-purple-300');
@@ -462,6 +460,7 @@
 
                     messages = data.messages;
                     if (data.group_chat?.members?.length) {
+                        document.getElementById('chat-subtitle').classList.remove('hidden');
                         document.getElementById('chat-subtitle').textContent = `${data.group_chat.members.length} members`;
                     }
                     displayMessages();
@@ -489,12 +488,8 @@
                     }
 
                     currentMyAnonymousAlias = data.room?.my_alias || 'Anonymous';
-                    if (currentAnonymousPeerName) {
-                        document.getElementById('chat-subtitle').textContent =
-                            'Messaging ' + currentAnonymousPeerName + '. You appear as ' + currentMyAnonymousAlias;
-                    } else {
-                        document.getElementById('chat-subtitle').textContent = 'You appear as ' + currentMyAnonymousAlias;
-                    }
+                    document.getElementById('chat-subtitle').classList.add('hidden');
+                    document.getElementById('chat-subtitle').textContent = '';
 
                     messages = data.messages || [];
                     displayMessages();
