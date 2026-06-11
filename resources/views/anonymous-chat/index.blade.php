@@ -258,10 +258,10 @@
 
             wrapper.innerHTML = `
                 <div class="max-w-md">
-                    <div class="px-3 py-2 rounded-lg ${message.is_own ? 'bg-indigo-600 text-white' : 'bg-white border border-gray-200 text-gray-900'}">
+                    <div class="px-3 py-2 rounded-lg ${message.is_own ? 'bg-black text-white' : 'bg-white border border-gray-300 text-gray-900'}">
                         ${senderLine}
                         <p class="text-sm">${escapeHtml(message.message)}</p>
-                        <p class="text-xs mt-1 ${message.is_own ? 'text-indigo-100' : 'text-gray-500'}">${time}</p>
+                        <p class="text-xs mt-1 ${message.is_own ? 'text-gray-300' : 'text-gray-500'}">${time}</p>
                     </div>
                 </div>
             `;

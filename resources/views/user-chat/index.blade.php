@@ -537,13 +537,15 @@
                     senderName = `<p class="text-xs font-semibold mb-1 text-gray-600">${escapeHtml(message.sender_alias)}</p>`;
                 }
                 const messageText = currentChatType === 'anonymous' ? escapeHtml(message.message) : message.message;
+                const bubbleClasses = getMessageBubbleClasses(isOwn);
+                const timeClasses = getMessageTimeClasses(isOwn);
 
                 messageDiv.innerHTML = `
                     <div class="max-w-xs sm:max-w-sm lg:max-w-md">
-                        <div class="px-3 sm:px-4 py-2 rounded-lg ${isOwn ? 'bg-indigo-600 text-white' : 'bg-white text-gray-900 border border-gray-200'}">
+                        <div class="px-3 sm:px-4 py-2 rounded-lg ${bubbleClasses}">
                             ${senderName}
                             <p class="text-sm">${messageText}</p>
-                            <p class="text-xs mt-1 ${isOwn ? 'text-indigo-100' : 'text-gray-500'}">${time}</p>
+                            <p class="text-xs mt-1 ${timeClasses}">${time}</p>
                         </div>
                     </div>
                 `;
@@ -572,11 +574,12 @@
             const messageDiv = document.createElement('div');
             messageDiv.className = 'flex justify-end';
             const time = new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+            const optimisticMessage = currentChatType === 'anonymous' ? escapeHtml(message) : message;
             messageDiv.innerHTML = `
                 <div class="max-w-xs sm:max-w-sm lg:max-w-md">
-                    <div class="px-3 sm:px-4 py-2 rounded-lg bg-indigo-600 text-white">
-                        <p class="text-sm">${message}</p>
-                        <p class="text-xs mt-1 text-indigo-100">${time}</p>
+                    <div class="px-3 sm:px-4 py-2 rounded-lg ${getMessageBubbleClasses(true)}">
+                        <p class="text-sm">${optimisticMessage}</p>
+                        <p class="text-xs mt-1 ${getMessageTimeClasses(true)}">${time}</p>
                     </div>
                 </div>
             `;
@@ -802,6 +805,26 @@
                 .replace(/>/g, '&gt;')
                 .replace(/"/g, '&quot;')
                 .replace(/'/g, '&#039;');
+        }
+
+        function getMessageBubbleClasses(isOwn) {
+            if (currentChatType === 'anonymous') {
+                return isOwn
+                    ? 'bg-black text-white'
+                    : 'bg-white text-gray-900 border border-gray-300';
+            }
+
+            return isOwn
+                ? 'bg-indigo-600 text-white'
+                : 'bg-white text-gray-900 border border-gray-200';
+        }
+
+        function getMessageTimeClasses(isOwn) {
+            if (currentChatType === 'anonymous') {
+                return isOwn ? 'text-gray-300' : 'text-gray-500';
+            }
+
+            return isOwn ? 'text-indigo-100' : 'text-gray-500';
         }
 
         function openStartAnonymousChatModal() {
