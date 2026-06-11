@@ -247,6 +247,11 @@ class SettingsController extends Controller
             $settings['mailgun_endpoint'] = 'api.mailgun.net';
         }
 
+        $tomtomApiKeySetting = Setting::where('key', 'tomtom_api_key')->first();
+        $settings['tomtom_api_key_configured'] = $tomtomApiKeySetting
+            && $tomtomApiKeySetting->value !== null
+            && trim((string) $tomtomApiKeySetting->value) !== '';
+
         // Hiring Process Configuration Settings - reload directly from database
         $hiringProcessEnabledSetting = Setting::where('key', 'hiring_process_enabled')->first();
         $hiringProcessDescriptionSetting = Setting::where('key', 'hiring_process_description')->first();
@@ -604,6 +609,7 @@ class SettingsController extends Controller
             'mailgun_domain' => 'nullable|string|max:255',
             'mailgun_secret' => 'nullable|string|max:255',
             'mailgun_endpoint' => 'nullable|string|max:255',
+            'tomtom_api_key' => 'nullable|string|max:255',
             'qr_code_prefix' => 'nullable|string|max:20',
             'app_timezone' => 'nullable|string|max:50',
             // Say-it image generation (Stable Diffusion Web UI / ComfyUI)
@@ -928,6 +934,15 @@ class SettingsController extends Controller
 
         $mailgunEndpoint = $request->mailgun_endpoint ?? 'api.mailgun.net';
         Setting::set('mailgun_endpoint', $mailgunEndpoint, 'text', 'Mailgun API endpoint');
+
+        if ($request->filled('tomtom_api_key')) {
+            Setting::set(
+                'tomtom_api_key',
+                trim((string) $request->tomtom_api_key),
+                'text',
+                'TomTom Maps API key for admin User Maps'
+            );
+        }
 
         // Contact Information Settings - save directly from request
         $contactEmail = $request->contact_email ?? '';

@@ -4,8 +4,11 @@ namespace App\Http\Controllers;
 
 use App\Events\Chat\DirectChatMessageSent;
 use App\Events\Chat\DirectChatMessagesRead;
+use App\Models\ChatMessageMedia;
 use App\Support\ChatBroadcast;
+use App\Support\ChatMediaService;
 use App\Support\ChatUnread;
+use App\Support\StoryService;
 use App\Models\AnonymousChatRoom;
 use App\Models\User;
 use App\Models\UserActivity;
@@ -99,7 +102,13 @@ class UserChatController extends Controller
             }
         }
 
-        return view('user-chat.index', compact('friends', 'groupChats', 'anonymousRooms'));
+        $storyFeed = StoryService::feedFor($user);
+        $storyRingMap = StoryService::ringMapFor(
+            $user,
+            $friends->map(fn (array $entry) => $entry['friend']->id)->all()
+        );
+
+        return view('user-chat.index', compact('friends', 'groupChats', 'anonymousRooms', 'storyFeed', 'storyRingMap'));
     }
 
     public function getChat(Request $request, $friendId): JsonResponse
@@ -120,10 +129,14 @@ class UserChatController extends Controller
         }
 
         $friend = User::findOrFail($friendId);
-        $messages = UserChatMessage::betweenUsers($currentUserId, $friendId)
-            ->with(['sender', 'receiver'])
-            ->orderBy('created_at', 'asc')
-            ->get();
+        $messages = ChatMediaService::attachMediaPayload(
+            ChatMessageMedia::TYPE_DIRECT,
+            UserChatMessage::betweenUsers($currentUserId, $friendId)
+                ->with(['sender', 'receiver'])
+                ->orderBy('created_at', 'asc')
+                ->get(),
+            auth()->user()
+        );
 
         // Mark messages as read when the conversation is opened.
         $markedIds = UserChatMessage::query()
@@ -149,9 +162,17 @@ class UserChatController extends Controller
 
     public function sendMessage(Request $request): JsonResponse
     {
+        $hasImage = $request->hasFile('image');
+        if ($hasImage) {
+            ChatMediaService::validateUploadRequest($request->all());
+        } else {
+            $request->validate([
+                'message' => 'required|string|max:1000',
+            ]);
+        }
+
         $request->validate([
             'receiver_id' => 'required|exists:users,id',
-            'message' => 'required|string|max:1000',
         ]);
 
         $currentUserId = auth()->id();
@@ -173,14 +194,30 @@ class UserChatController extends Controller
         $message = UserChatMessage::create([
             'sender_id' => $currentUserId,
             'receiver_id' => $receiverId,
-            'message' => $request->message,
+            'message' => (string) $request->input('message', ''),
         ]);
 
-        $message->load(['sender', 'receiver']);
+        if ($hasImage) {
+            ChatMediaService::storeForMessage(
+                ChatMessageMedia::TYPE_DIRECT,
+                $message->id,
+                $request->user(),
+                $request->file('image'),
+                (string) $request->input('image_mode')
+            );
+        }
+
+        $message = ChatMediaService::attachMediaPayload(
+            ChatMessageMedia::TYPE_DIRECT,
+            collect([$message->load(['sender', 'receiver'])]),
+            $request->user()
+        )->first();
 
         // Create notification for the message
         $sender = auth()->user();
-        $messagePreview = strlen($request->message) > 50 ? substr($request->message, 0, 50) . '...' : $request->message;
+        $messagePreview = $hasImage
+            ? 'Sent an image'
+            : (strlen((string) $request->message) > 50 ? substr((string) $request->message, 0, 50).'...' : (string) $request->message);
         \App\Models\Notification::createMessageNotification(
             $receiverId,
             $currentUserId,

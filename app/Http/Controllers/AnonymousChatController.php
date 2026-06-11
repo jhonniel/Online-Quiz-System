@@ -10,7 +10,9 @@ use App\Models\UserActivity;
 use App\Support\AnonymousChatAliasService;
 use App\Support\AnonymousChatEligibility;
 use App\Support\AnonymousChatToken;
+use App\Models\ChatMessageMedia;
 use App\Support\ChatBroadcast;
+use App\Support\ChatMediaService;
 use App\Support\ChatUnread;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -121,16 +123,18 @@ class AnonymousChatController extends Controller
         $user = $request->user();
         $peer = $anonymousChatRoom->peerUser($user);
 
-        $messages = $anonymousChatRoom->messages()
-            ->orderBy('created_at')
-            ->get()
-            ->map(fn (AnonymousChatMessage $message) => [
-                'id' => $message->id,
-                'sender_alias' => $anonymousChatRoom->senderAlias((int) $message->sender_id),
-                'message' => $message->message,
-                'created_at' => $message->created_at,
-                'is_own' => (int) $message->sender_id === $user->id,
-            ]);
+        $messages = ChatMediaService::attachMediaPayload(
+            ChatMessageMedia::TYPE_ANONYMOUS,
+            $anonymousChatRoom->messages()->orderBy('created_at')->get(),
+            $user
+        )->map(fn (AnonymousChatMessage $message) => [
+            'id' => $message->id,
+            'sender_alias' => $anonymousChatRoom->senderAlias((int) $message->sender_id),
+            'message' => $message->message,
+            'created_at' => $message->created_at,
+            'is_own' => (int) $message->sender_id === $user->id,
+            'media' => $message->media,
+        ]);
 
         ChatUnread::markAnonymousRead($anonymousChatRoom, $user->id);
 
@@ -150,9 +154,14 @@ class AnonymousChatController extends Controller
 
     public function sendMessage(Request $request, AnonymousChatRoom $anonymousChatRoom): JsonResponse
     {
-        $validated = $request->validate([
-            'message' => 'required|string|max:1000',
-        ]);
+        $hasImage = $request->hasFile('image');
+        if ($hasImage) {
+            $validated = ChatMediaService::validateUploadRequest($request->all());
+        } else {
+            $validated = $request->validate([
+                'message' => 'required|string|max:1000',
+            ]);
+        }
 
         $user = $request->user();
         $peer = $anonymousChatRoom->peerUser($user);
@@ -160,14 +169,31 @@ class AnonymousChatController extends Controller
         $message = AnonymousChatMessage::create([
             'anonymous_chat_room_id' => $anonymousChatRoom->id,
             'sender_id' => $user->id,
-            'message' => $validated['message'],
+            'message' => (string) ($validated['message'] ?? ''),
         ]);
+
+        if ($hasImage) {
+            ChatMediaService::storeForMessage(
+                ChatMessageMedia::TYPE_ANONYMOUS,
+                $message->id,
+                $user,
+                $request->file('image'),
+                (string) $request->input('image_mode')
+            );
+        }
+
+        $media = ChatMediaService::serializeForViewer(
+            ChatMediaService::findForMessage(ChatMessageMedia::TYPE_ANONYMOUS, $message->id),
+            $user
+        );
 
         $anonymousChatRoom->touch();
 
-        $preview = strlen($validated['message']) > 50
-            ? substr($validated['message'], 0, 50).'...'
-            : $validated['message'];
+        $preview = $hasImage
+            ? 'Sent an image'
+            : (strlen((string) ($validated['message'] ?? '')) > 50
+                ? substr((string) $validated['message'], 0, 50).'...'
+                : (string) ($validated['message'] ?? ''));
 
         $this->logActivity($user, 'message_sent', [
             'description' => 'Sent anonymous chat message to '.$peer?->name,
@@ -191,6 +217,7 @@ class AnonymousChatController extends Controller
                 'message' => $message->message,
                 'created_at' => $message->created_at,
                 'is_own' => true,
+                'media' => $media,
             ],
         ]);
     }

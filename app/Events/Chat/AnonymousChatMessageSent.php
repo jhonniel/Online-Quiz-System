@@ -4,7 +4,9 @@ namespace App\Events\Chat;
 
 use App\Models\AnonymousChatMessage;
 use App\Models\AnonymousChatRoom;
+use App\Models\ChatMessageMedia;
 use App\Support\ChatChannels;
+use App\Support\ChatMediaService;
 use Illuminate\Broadcasting\InteractsWithSockets;
 use Illuminate\Broadcasting\PrivateChannel;
 use Illuminate\Contracts\Broadcasting\ShouldBroadcast;
@@ -43,6 +45,9 @@ class AnonymousChatMessageSent implements ShouldBroadcast, ShouldQueue
             'message' => $this->message->message,
             'created_at' => $this->message->created_at?->toIso8601String(),
             'is_own' => false,
+            'media' => ChatMediaService::serializeForBroadcast(
+                ChatMediaService::findForMessage(ChatMessageMedia::TYPE_ANONYMOUS, (int) $this->message->id)
+            ),
         ];
     }
 

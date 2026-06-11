@@ -205,6 +205,25 @@
                                     <p class="mt-2 text-xs text-gray-500">Prefix for user QR code IDs (e.g., "QR" will generate "QR000001", "QR000002", etc.)</p>
                     </div>
 
+                                <div class="border-t border-gray-200 pt-6">
+                                    <h4 class="text-md font-semibold text-gray-900 mb-1">TomTom Maps</h4>
+                                    <p class="text-sm text-gray-500 mb-4">API key used by <a href="{{ url('/admin/user-maps') }}" class="text-indigo-600 hover:text-indigo-800 font-medium">User Maps</a> under User Management.</p>
+                                    <label for="tomtom_api_key" class="block text-sm font-medium text-gray-700 mb-2">TomTom API Key</label>
+                                    <input type="password"
+                                           name="tomtom_api_key"
+                                           id="tomtom_api_key"
+                                           autocomplete="off"
+                                           placeholder="{{ !empty($settings['tomtom_api_key_configured']) ? 'Leave blank to keep current key' : 'Enter TomTom API key' }}"
+                                           class="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition duration-200">
+                                    <p class="mt-2 text-xs text-gray-500">
+                                        @if(!empty($settings['tomtom_api_key_configured']))
+                                            A TomTom API key is currently saved.
+                                        @else
+                                            Get a key from the TomTom Developer Portal and restrict it to your domain.
+                                        @endif
+                                    </p>
+                                </div>
+
                                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
                                         <label for="system_logo" class="block text-sm font-medium text-gray-700 mb-2">

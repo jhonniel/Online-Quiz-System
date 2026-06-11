@@ -227,6 +227,11 @@ Route::prefix('admin')->middleware(['auth', 'admin'])->group(function () {
             Route::resource('departments', App\Http\Controllers\Admin\DepartmentController::class)->names('admin.departments');
             Route::patch('departments/{department}/toggle-status', [App\Http\Controllers\Admin\DepartmentController::class, 'toggleStatus'])->name('admin.departments.toggle-status');
         });
+
+        Route::middleware(['admin.subfeature:user_management,user_maps'])->group(function () {
+            Route::get('user-maps', [App\Http\Controllers\Admin\UserMapController::class, 'index'])->name('admin.user-maps.index');
+            Route::get('user-maps/data', [App\Http\Controllers\Admin\UserMapController::class, 'mapData'])->name('admin.user-maps.data');
+        });
     });
 
     // Content Management (sub-features gate sidebar areas; tasks/import remain parent-only)
@@ -814,6 +819,13 @@ Route::middleware(['auth', 'student.not_terminated'])->group(function () {
         Route::post('/user-chat/mark-read', [App\Http\Controllers\UserChatController::class, 'markAsRead'])->name('user-chat.mark-read');
         Route::get('/user-chat/recent', [App\Http\Controllers\UserChatController::class, 'getRecentChats'])->name('user-chat.recent');
         Route::get('/user-chat/sidebar-unread', [App\Http\Controllers\UserChatController::class, 'getSidebarUnread'])->name('user-chat.sidebar-unread');
+        Route::get('/chat-media/{chatMessageMedia}', [App\Http\Controllers\ChatMediaController::class, 'show'])->name('chat-media.show');
+        Route::post('/chat-media/{chatMessageMedia}/view', [App\Http\Controllers\ChatMediaController::class, 'markViewed'])->name('chat-media.view');
+        Route::get('/stories/feed', [App\Http\Controllers\UserStoryController::class, 'feed'])->name('stories.feed');
+        Route::post('/stories', [App\Http\Controllers\UserStoryController::class, 'store'])->name('stories.store');
+        Route::get('/stories/user/{user}', [App\Http\Controllers\UserStoryController::class, 'userStories'])->name('stories.user');
+        Route::get('/stories/{userStory}/media', [App\Http\Controllers\UserStoryController::class, 'media'])->name('stories.media');
+        Route::post('/stories/{userStory}/view', [App\Http\Controllers\UserStoryController::class, 'markViewed'])->name('stories.view');
         Route::get('/group-chats/{groupChat}/messages', [App\Http\Controllers\GroupChatController::class, 'messages'])->name('group-chats.messages');
         Route::post('/group-chats/{groupChat}/messages', [App\Http\Controllers\GroupChatController::class, 'sendMessage'])->name('group-chats.send');
     });

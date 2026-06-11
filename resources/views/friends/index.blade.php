@@ -53,6 +53,10 @@
         </div>
     </div>
 
+    <div class="bg-white shadow-sm rounded-lg border border-gray-200 p-4 flex-shrink-0 mx-2 sm:mx-3 lg:mx-4 xl:mx-6">
+        <x-story-bar :feed="$storyFeed" />
+    </div>
+
     <!-- Main Content -->
     <div class="flex-1 overflow-hidden mx-2 sm:mx-3 lg:mx-4 xl:mx-6">
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 h-full">
@@ -145,17 +149,14 @@
                                     <div class="bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-lg p-3 hover:shadow-md transition-all duration-200 group">
                                         <div class="flex items-center space-x-3">
                                             <div class="flex-shrink-0">
-                                                @if($friend->profile_picture)
-                                                    <img src="{{ $friend->getProfilePictureUrl() }}"
-                                                         alt="{{ $friend->name }}"
-                                                         class="w-10 h-10 rounded-full object-cover border-2 border-white shadow-sm">
-                                                @else
-                                                    <div class="w-10 h-10 bg-gradient-to-br from-green-400 to-emerald-600 rounded-full flex items-center justify-center border-2 border-white shadow-sm">
-                                                        <span class="text-white font-semibold text-sm">
-                                                            {{ $friend->getInitials() }}
-                                                        </span>
-                                                    </div>
-                                                @endif
+                                                @php($friendRing = $storyRingMap[$friend->id] ?? ['has_story' => false, 'has_unviewed' => false])
+                                                <x-profile-avatar
+                                                    :user="$friend"
+                                                    size="sm"
+                                                    :has-story="$friendRing['has_story']"
+                                                    :has-unviewed="$friendRing['has_unviewed']"
+                                                    :clickable="$friendRing['has_story']"
+                                                    :story-user-id="$friend->id" />
                                             </div>
                                             <div class="flex-1 min-w-0">
                                                 <p class="text-sm font-medium text-gray-900 truncate">{{ $friend->name }}</p>
@@ -504,28 +505,38 @@
                     currentFriendImageUrl = friend.profile_picture_url || null;
                     currentFriendImageName = friend.name || 'Friend';
 
+                    const ringClass = friend.has_story
+                        ? (friend.has_unviewed ? 'story-ring story-ring--unviewed' : 'story-ring')
+                        : '';
+                    const avatarClick = friend.has_story
+                        ? `window.StoryUI && window.StoryUI.openUser(${friend.id})`
+                        : 'openFriendImagePreview()';
+
                     if (friend.profile_picture_url) {
                         avatar.innerHTML = `
-                            <button type="button"
-                                    onclick="openFriendImagePreview()"
-                                    class="group relative rounded-full focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
-                                    title="View profile image">
-                                <img src="${escapeHtml(friend.profile_picture_url)}"
-                                     alt="${escapeHtml(friend.name)}"
-                                     class="w-32 h-32 rounded-full object-cover border-4 border-white shadow-lg group-hover:opacity-90 transition-opacity">
-                                <span class="absolute inset-0 flex items-center justify-center rounded-full bg-black/0 group-hover:bg-black/25 transition-colors">
-                                    <svg class="w-8 h-8 text-white opacity-0 group-hover:opacity-100 transition-opacity" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v3m0 0v3m0-3h3m-3 0H7"></path>
-                                    </svg>
-                                </span>
-                            </button>
+                            <div class="${ringClass} rounded-full p-[3px] inline-block">
+                                <button type="button"
+                                        onclick="${avatarClick}"
+                                        class="group relative rounded-full focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 block"
+                                        title="${friend.has_story ? 'View story' : 'View profile image'}">
+                                    <span class="block w-32 h-32 rounded-full overflow-hidden bg-white ring-4 ring-white shadow-lg">
+                                        <img src="${escapeHtml(friend.profile_picture_url)}"
+                                             alt="${escapeHtml(friend.name)}"
+                                             class="w-full h-full object-cover group-hover:opacity-90 transition-opacity">
+                                    </span>
+                                </button>
+                            </div>
                         `;
-                        imageBtn.classList.remove('hidden');
+                        imageBtn.classList.toggle('hidden', friend.has_story);
                         imageBtn.onclick = openFriendImagePreview;
                     } else {
                         avatar.innerHTML = `
-                            <div class="w-32 h-32 bg-gradient-to-br from-green-400 to-emerald-600 rounded-full flex items-center justify-center border-4 border-white shadow-lg">
-                                <span class="text-white font-semibold text-3xl">${escapeHtml(friend.initials)}</span>
+                            <div class="${ringClass} rounded-full p-[3px] inline-block">
+                                <button type="button"
+                                        ${friend.has_story ? `onclick="window.StoryUI && window.StoryUI.openUser(${friend.id})"` : ''}
+                                        class="block w-32 h-32 rounded-full overflow-hidden bg-gradient-to-br from-green-400 to-emerald-600 ring-4 ring-white shadow-lg flex items-center justify-center focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2">
+                                    <span class="text-white font-semibold text-3xl">${escapeHtml(friend.initials)}</span>
+                                </button>
                             </div>
                         `;
                         imageBtn.classList.add('hidden');
@@ -602,4 +613,6 @@
                 });
         });
     </script>
+
+    <x-story-ui />
 @endsection

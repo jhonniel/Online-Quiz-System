@@ -79,6 +79,7 @@ final class AdminPermissionAreas
         'teacher_excused' => 'Teacher Excused Requests',
         'universities' => 'Universities',
         'departments' => 'Departments',
+        'user_maps' => 'User Maps',
     ];
 
     public const SYSTEM_FEATURES = [

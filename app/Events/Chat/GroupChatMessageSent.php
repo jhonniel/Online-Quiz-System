@@ -2,8 +2,10 @@
 
 namespace App\Events\Chat;
 
+use App\Models\ChatMessageMedia;
 use App\Models\GroupChatMessage;
 use App\Support\ChatChannels;
+use App\Support\ChatMediaService;
 use Illuminate\Broadcasting\InteractsWithSockets;
 use Illuminate\Broadcasting\PrivateChannel;
 use Illuminate\Contracts\Broadcasting\ShouldBroadcast;
@@ -44,6 +46,9 @@ class GroupChatMessageSent implements ShouldBroadcast, ShouldQueue
                 'id' => $this->message->sender?->id,
                 'name' => $this->message->sender?->name,
             ],
+            'media' => ChatMediaService::serializeForBroadcast(
+                ChatMediaService::findForMessage(ChatMessageMedia::TYPE_GROUP, (int) $this->message->id)
+            ),
         ];
     }
 

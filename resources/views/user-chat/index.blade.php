@@ -48,6 +48,10 @@
                     </div>
                 </div>
 
+                <div class="px-3 pt-3 border-b border-gray-200">
+                    <x-story-bar :feed="$storyFeed" />
+                </div>
+
                 <!-- Chat Lists -->
                 <div class="flex-1 overflow-y-auto">
                     @if($groupChats->count() > 0)
@@ -137,17 +141,14 @@
                                  data-friend-name="{{ $friend->name }}">
                                 <div class="flex items-center space-x-2 sm:space-x-3">
                                     <div class="relative">
-                                        @if($friend->profile_picture)
-                                            <img src="{{ $friend->getProfilePictureUrl() }}"
-                                                 alt="{{ $friend->name }}"
-                                                 class="w-8 h-8 sm:w-10 sm:h-10 lg:w-12 lg:h-12 rounded-full object-cover">
-                                        @else
-                                            <div class="w-8 h-8 sm:w-10 sm:h-10 lg:w-12 lg:h-12 bg-indigo-100 rounded-full flex items-center justify-center">
-                                                <span class="text-indigo-600 font-semibold text-xs sm:text-sm">
-                                                    {{ $friend->getInitials() }}
-                                                </span>
-                                            </div>
-                                        @endif
+                                        @php($friendRing = $storyRingMap[$friend->id] ?? ['has_story' => false, 'has_unviewed' => false])
+                                        <x-profile-avatar
+                                            :user="$friend"
+                                            size="sm"
+                                            :has-story="$friendRing['has_story']"
+                                            :has-unviewed="$friendRing['has_unviewed']"
+                                            :clickable="$friendRing['has_story']"
+                                            :story-user-id="$friend->id" />
                                         <!-- Online indicator -->
                                         <div class="online-indicator absolute bottom-0 right-0 w-2 h-2 sm:w-3 sm:h-3 bg-gray-300 border-2 border-white rounded-full"></div>
                                     </div>
@@ -251,11 +252,23 @@
                     <div class="p-3 sm:p-4 border-t border-gray-200 bg-white">
                         <div class="flex space-x-2 sm:space-x-3">
                             <div class="flex-1 relative">
+                                <input type="file"
+                                       id="chat-image-input"
+                                       class="hidden"
+                                       accept="image/jpeg,image/jpg,image/png,image/gif,image/webp">
+                                <button type="button"
+                                        id="image-upload-button"
+                                        class="absolute left-2 sm:left-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-indigo-600"
+                                        title="Send image (max 2MB)">
+                                    <svg class="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                                    </svg>
+                                </button>
                                 <input type="text"
                                        id="message-input"
                                        placeholder="Type your message..."
-                                       class="w-full px-3 sm:px-4 py-2 sm:py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 pr-10 sm:pr-12 text-sm sm:text-base">
-                                <button id="emoji-button"
+                                       class="w-full pl-9 sm:pl-10 pr-10 sm:pr-12 py-2 sm:py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm sm:text-base">
+                                <button type="button" id="emoji-button"
                                         class="absolute right-2 sm:right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
                                         title="Add emoji">
                                     <svg class="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -271,7 +284,7 @@
                                 </svg>
                             </button>
                         </div>
-                        <p class="text-xs text-gray-500 mt-2">Press Enter to send message</p>
+                        <p class="text-xs text-gray-500 mt-2">Press Enter to send · Images up to 2MB (auto-delete in 24h)</p>
                     </div>
                 </div>
             </div>
@@ -297,12 +310,57 @@
     </div>
 </div>
 
+<div id="chat-image-modal" class="hidden fixed inset-0 z-50 overflow-y-auto">
+    <div class="flex min-h-full items-center justify-center p-4">
+        <div class="fixed inset-0 bg-gray-600/50" onclick="closeChatImageModal()"></div>
+        <div class="relative w-full max-w-md rounded-lg bg-white shadow-xl">
+            <div class="px-6 py-5 border-b border-gray-200">
+                <h3 class="text-lg font-semibold text-gray-900">Send image</h3>
+                <p class="text-sm text-gray-500 mt-1">Max 2MB · Deleted automatically after 24 hours</p>
+            </div>
+            <div class="px-6 py-5 space-y-4">
+                <img id="chat-image-preview" src="" alt="Preview" class="hidden max-h-48 mx-auto rounded-lg border border-gray-200 object-contain">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Who can see it?</label>
+                    <div class="space-y-2">
+                        <label class="flex items-start gap-3 p-3 border border-gray-200 rounded-lg cursor-pointer hover:bg-gray-50">
+                            <input type="radio" name="chat_image_mode" value="stay_24h" class="mt-1" checked>
+                            <span>
+                                <span class="block text-sm font-medium text-gray-900">Stay in chat (24h)</span>
+                                <span class="block text-xs text-gray-500">Visible in the thread until the timer ends.</span>
+                            </span>
+                        </label>
+                        <label class="flex items-start gap-3 p-3 border border-gray-200 rounded-lg cursor-pointer hover:bg-gray-50">
+                            <input type="radio" name="chat_image_mode" value="view_once" class="mt-1">
+                            <span>
+                                <span class="block text-sm font-medium text-gray-900">View once</span>
+                                <span class="block text-xs text-gray-500">Recipients open it one time, then it is hidden.</span>
+                            </span>
+                        </label>
+                    </div>
+                </div>
+                <input type="text"
+                       id="chat-image-caption"
+                       maxlength="1000"
+                       placeholder="Optional caption..."
+                       class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+            </div>
+            <div class="px-6 py-4 border-t border-gray-200 flex justify-end gap-2">
+                <button type="button" onclick="closeChatImageModal()" class="px-4 py-2 text-sm font-medium text-gray-700 border border-gray-300 rounded-md hover:bg-gray-50">Cancel</button>
+                <button type="button" id="chat-image-send-button" onclick="sendSelectedChatImage()" class="px-4 py-2 text-sm font-medium text-white bg-indigo-600 rounded-md hover:bg-indigo-700">Send image</button>
+            </div>
+        </div>
+    </div>
+</div>
+
     <!-- Loading overlay for chat messages -->
     <div id="loading-overlay" class="hidden fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
         <div class="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
             <p class="text-sm text-gray-500 text-center py-8">Loading messages...</p>
         </div>
     </div>
+
+    <x-story-ui />
 </div>
 @endsection
 
@@ -322,6 +380,9 @@
         let currentChatType = null;
         let messages = [];
         let typingTimeout = null;
+        let pendingChatImageFile = null;
+        let mediaTimerInterval = null;
+        const chatMediaBaseUrl = @json(url('/chat-media'));
         const knownPeerNameFromUrl = new URLSearchParams(window.location.search).get('peer_name');
 
         function chatJsonHeaders() {
@@ -364,6 +425,223 @@
             return data;
         }
 
+        async function chatUploadForm(url, formData) {
+            const response = await fetch(url, {
+                method: 'POST',
+                credentials: 'same-origin',
+                headers: {
+                    'Accept': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+                },
+                body: formData,
+            });
+
+            const contentType = response.headers.get('content-type') || '';
+            let data = null;
+
+            if (contentType.includes('application/json')) {
+                data = await response.json();
+            } else {
+                const text = await response.text();
+                throw new Error(text || `Request failed (${response.status})`);
+            }
+
+            if (!response.ok) {
+                const message = data.error
+                    || data.message
+                    || (data.errors ? Object.values(data.errors).flat().join(' ') : null)
+                    || `Request failed (${response.status})`;
+                throw new Error(message);
+            }
+
+            return data;
+        }
+
+        function formatMediaRemaining(expiresAt) {
+            const remainingMs = new Date(expiresAt).getTime() - Date.now();
+            if (remainingMs <= 0) {
+                return 'Expired';
+            }
+
+            const totalSeconds = Math.floor(remainingMs / 1000);
+            const hours = Math.floor(totalSeconds / 3600);
+            const minutes = Math.floor((totalSeconds % 3600) / 60);
+            const seconds = totalSeconds % 60;
+
+            return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+        }
+
+        function enrichMediaPayload(media, isOwn) {
+            if (!media) {
+                return null;
+            }
+
+            const expiresAt = media.expires_at;
+            if (expiresAt && new Date(expiresAt).getTime() <= Date.now()) {
+                return null;
+            }
+
+            const mode = media.mode || 'stay_24h';
+            const viewed = !!media.viewed;
+            const revealed = !!media._revealed;
+            let canView = isOwn || mode === 'stay_24h';
+
+            if (typeof media.can_view === 'boolean') {
+                canView = media.can_view;
+            }
+
+            if (mode === 'view_once' && !isOwn) {
+                canView = revealed || (canView && !viewed);
+            }
+
+            return {
+                ...media,
+                mode,
+                is_sender: isOwn,
+                viewed,
+                can_view: canView,
+                url: canView ? `${chatMediaBaseUrl}/${media.id}` : null,
+            };
+        }
+
+        function buildMediaHtml(media, isOwn) {
+            const payload = enrichMediaPayload(media, isOwn);
+            if (!payload) {
+                return '';
+            }
+
+            const timerText = formatMediaRemaining(payload.expires_at);
+            const modeLabel = payload.mode === 'view_once' ? '1 view' : '24h';
+
+            if (payload.mode === 'view_once' && !payload.is_sender && !payload.can_view && !payload._revealed) {
+                if (payload.viewed) {
+                    return `<div class="mt-1 rounded-md border border-dashed px-3 py-5 text-center text-xs opacity-80">Photo opened</div>`;
+                }
+
+                return `<button type="button" onclick="revealChatMedia(${payload.id})" class="mt-1 w-full rounded-md border border-dashed px-3 py-6 text-center text-xs hover:opacity-90">
+                    <span class="block font-semibold mb-1">Tap to view once</span>
+                    <span class="block opacity-80">${modeLabel} · deletes in ${timerText}</span>
+                </button>`;
+            }
+
+            if (payload.url) {
+                return `<div class="relative mt-1 max-w-full">
+                    <img src="${escapeHtml(payload.url)}" alt="Chat image" class="max-w-full rounded-md max-h-64 object-contain bg-black/5" loading="lazy">
+                    <div class="chat-media-timer absolute bottom-2 right-2 bg-black/75 text-white text-[10px] px-2 py-1 rounded" data-expires-at="${escapeHtml(payload.expires_at)}">${modeLabel} · ${timerText}</div>
+                </div>`;
+            }
+
+            return '';
+        }
+
+        function refreshMediaTimers() {
+            document.querySelectorAll('.chat-media-timer[data-expires-at]').forEach((element) => {
+                const expiresAt = element.dataset.expiresAt;
+                const modeLabel = element.textContent.startsWith('1 view') ? '1 view' : '24h';
+                element.textContent = `${modeLabel} · ${formatMediaRemaining(expiresAt)}`;
+            });
+        }
+
+        function startMediaTimerUpdates() {
+            if (mediaTimerInterval) {
+                clearInterval(mediaTimerInterval);
+            }
+
+            refreshMediaTimers();
+            mediaTimerInterval = setInterval(refreshMediaTimers, 1000);
+        }
+
+        function revealChatMedia(mediaId) {
+            const index = messages.findIndex((entry) => Number(entry.media?.id) === Number(mediaId));
+            if (index === -1) {
+                return;
+            }
+
+            messages[index].media._revealed = true;
+            messages[index].media.viewed = true;
+            displayMessages();
+        }
+
+        function closeChatImageModal() {
+            document.getElementById('chat-image-modal').classList.add('hidden');
+            pendingChatImageFile = null;
+            document.getElementById('chat-image-input').value = '';
+            document.getElementById('chat-image-caption').value = '';
+            const preview = document.getElementById('chat-image-preview');
+            preview.classList.add('hidden');
+            preview.removeAttribute('src');
+        }
+
+        function openChatImageModal(file) {
+            if (file.size > 2097152) {
+                showNotification('Images must be 2MB or smaller.', 'error');
+                return;
+            }
+
+            pendingChatImageFile = file;
+            const preview = document.getElementById('chat-image-preview');
+            preview.src = URL.createObjectURL(file);
+            preview.classList.remove('hidden');
+            document.getElementById('chat-image-modal').classList.remove('hidden');
+        }
+
+        function getSelectedImageMode() {
+            const selected = document.querySelector('input[name="chat_image_mode"]:checked');
+            return selected ? selected.value : 'stay_24h';
+        }
+
+        function getChatSendUrl() {
+            if (currentChatType === 'anonymous') {
+                return `{{ url('anonymous-chat') }}/${currentAnonymousRoomId}/messages`;
+            }
+
+            if (currentChatType === 'group') {
+                return `{{ url('group-chats') }}/${currentGroupId}/messages`;
+            }
+
+            return '{{ url("/user-chat/send") }}';
+        }
+
+        async function sendSelectedChatImage() {
+            if (!pendingChatImageFile || !currentChatType) {
+                showNotification('Select a conversation first.', 'error');
+                return;
+            }
+
+            const sendButton = document.getElementById('chat-image-send-button');
+            sendButton.disabled = true;
+
+            const formData = new FormData();
+            formData.append('image', pendingChatImageFile);
+            formData.append('image_mode', getSelectedImageMode());
+
+            const caption = document.getElementById('chat-image-caption').value.trim();
+            if (caption) {
+                formData.append('message', caption);
+            }
+
+            if (currentChatType === 'friend') {
+                formData.append('receiver_id', currentFriendId);
+            }
+
+            try {
+                const data = await chatUploadForm(getChatSendUrl(), formData);
+                closeChatImageModal();
+
+                if (data.error) {
+                    showNotification(data.error, 'error');
+                } else if (data.message) {
+                    appendSentMessage(data.message);
+                    loadUnreadCounts();
+                }
+            } catch (error) {
+                showNotification(error.message || 'Error sending image', 'error');
+            } finally {
+                sendButton.disabled = false;
+            }
+        }
+
         document.addEventListener('DOMContentLoaded', function() {
             document.querySelectorAll('.friend-item').forEach(item => {
                 item.addEventListener('click', function() {
@@ -393,6 +671,16 @@
             const messageInput = document.getElementById('message-input');
 
             sendButton.addEventListener('click', sendMessage);
+            document.getElementById('image-upload-button').addEventListener('click', () => {
+                document.getElementById('chat-image-input').click();
+            });
+            document.getElementById('chat-image-input').addEventListener('change', function() {
+                const file = this.files && this.files[0];
+                if (file) {
+                    openChatImageModal(file);
+                }
+                this.value = '';
+            });
             messageInput.addEventListener('keypress', function(e) {
                 if (e.key === 'Enter' && !e.shiftKey) {
                     e.preventDefault();
@@ -608,6 +896,10 @@
                 payload.sender_alias = payload.sender_alias || 'Anonymous';
             }
 
+            if (payload.media) {
+                payload.media = enrichMediaPayload(payload.media, false);
+            }
+
             if (messages.some((entry) => Number(entry.id) === Number(payload.id))) {
                 return;
             }
@@ -756,7 +1048,10 @@
                 senderName = `<p class="text-xs font-semibold mb-1 text-gray-600 break-words">${escapeHtml(message.sender_alias)}</p>`;
             }
 
-            const messageText = escapeHtml(message.message);
+            const captionHtml = message.message && String(message.message).trim()
+                ? `<p class="text-sm break-words whitespace-pre-wrap ${message.media ? 'mt-1' : ''}">${escapeHtml(message.message)}</p>`
+                : '';
+            const mediaHtml = buildMediaHtml(message.media, isOwn);
             const bubbleClasses = getMessageBubbleClasses(isOwn);
             const timeClasses = getMessageTimeClasses(isOwn);
 
@@ -764,7 +1059,8 @@
                 <div class="max-w-[85%] sm:max-w-sm lg:max-w-md min-w-0 w-fit ${isOwn ? 'ml-auto' : 'mr-auto'}">
                     <div class="px-3 sm:px-4 py-2 rounded-lg ${bubbleClasses}">
                         ${senderName}
-                        <p class="text-sm break-words whitespace-pre-wrap">${messageText}</p>
+                        ${mediaHtml}
+                        ${captionHtml}
                         <p class="text-xs mt-1 ${timeClasses}">${time}</p>
                     </div>
                 </div>
@@ -798,6 +1094,7 @@
             });
 
             messagesDiv.scrollTop = messagesDiv.scrollHeight;
+            startMediaTimerUpdates();
         }
 
         function sendMessage() {

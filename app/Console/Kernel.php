@@ -28,6 +28,14 @@ class Kernel extends ConsoleKernel
         $schedule->command('leave-requests:auto-reject-incomplete-attendance-overtime')
             ->hourly()
             ->withoutOverlapping();
+
+        $schedule->command('chat:purge-expired-media')
+            ->hourly()
+            ->withoutOverlapping();
+
+        $schedule->command('stories:purge-expired')
+            ->hourly()
+            ->withoutOverlapping();
     }
 
     /**

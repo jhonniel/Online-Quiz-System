@@ -991,6 +991,19 @@
                     </span>
                 </a>
                 @endif
+                @if(auth()->user()->canAccessUserManagementFeature('user_maps'))
+                <a href="{{ url('/admin/user-maps') }}"
+                   class="flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors duration-200 {{ request()->routeIs('admin.user-maps.*') ? 'bg-indigo-700 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white' }}"
+                   :class="sidebarCollapsed ? 'justify-center' : ''"
+                   :title="sidebarCollapsed ? 'User Maps' : ''">
+                    <svg class="h-5 w-5 flex-shrink-0" :class="sidebarCollapsed ? '' : 'mr-3'" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 20l-5.447-2.724A2 2 0 013 15.382V6.618a2 2 0 011.553-1.946L9 2m0 18l6-3m-6 3V2m6 15l5.447 2.724A2 2 0 0021 17.382V8.618a2 2 0 00-1.553-1.946L15 4m0 13V4m0 0L9 2"></path>
+                    </svg>
+                    <span class="transition-opacity duration-300" :class="sidebarCollapsed ? 'opacity-0 w-0 overflow-hidden' : 'opacity-100'">
+                        User Maps
+                    </span>
+                </a>
+                @endif
             </div>
         </div>
         @endif

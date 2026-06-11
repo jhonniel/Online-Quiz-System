@@ -4,6 +4,7 @@ namespace App\Http\Controllers\User;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use App\Support\StoryService;
 use App\Support\UserThemeColor;
 use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
@@ -27,7 +28,22 @@ class ProfileController extends Controller
         $friendsAsFriend = $user->acceptedFriends()->with('department:id,name')->get();
         $allFriends = $friendsAsUser->merge($friendsAsFriend)->unique('id');
 
-        return view('user.profile.show', compact('user', 'pendingRequests', 'sentRequests', 'allFriends'));
+        $storyFeed = StoryService::feedFor($user);
+        $selfHasStory = StoryService::hasActiveStory($user->id);
+        $storyRingMap = StoryService::ringMapFor(
+            $user,
+            $allFriends->pluck('id')->push($user->id)->unique()->values()->all()
+        );
+
+        return view('user.profile.show', compact(
+            'user',
+            'pendingRequests',
+            'sentRequests',
+            'allFriends',
+            'storyFeed',
+            'selfHasStory',
+            'storyRingMap'
+        ));
     }
 
     public function edit()

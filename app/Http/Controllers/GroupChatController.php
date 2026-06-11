@@ -3,7 +3,9 @@
 namespace App\Http\Controllers;
 
 use App\Events\Chat\GroupChatMessageSent;
+use App\Models\ChatMessageMedia;
 use App\Support\ChatBroadcast;
+use App\Support\ChatMediaService;
 use App\Support\ChatUnread;
 use App\Models\Friendship;
 use App\Models\GroupChat;
@@ -72,10 +74,14 @@ class GroupChatController extends Controller
 
         ChatUnread::markGroupRead($groupChat, $user->id);
 
-        $messages = $groupChat->messages()
-            ->with('sender:id,name')
-            ->orderBy('created_at')
-            ->get();
+        $messages = ChatMediaService::attachMediaPayload(
+            ChatMessageMedia::TYPE_GROUP,
+            $groupChat->messages()
+                ->with('sender:id,name')
+                ->orderBy('created_at')
+                ->get(),
+            $user
+        );
 
         return response()->json([
             'group_chat' => $groupChat->load(['members:id,name,email,profile_picture', 'creator:id,name']),
@@ -85,9 +91,14 @@ class GroupChatController extends Controller
 
     public function sendMessage(Request $request, GroupChat $groupChat): JsonResponse
     {
-        $validated = $request->validate([
-            'message' => 'required|string|max:1000',
-        ]);
+        $hasImage = $request->hasFile('image');
+        if ($hasImage) {
+            $validated = ChatMediaService::validateUploadRequest($request->all());
+        } else {
+            $validated = $request->validate([
+                'message' => 'required|string|max:1000',
+            ]);
+        }
 
         $user = $request->user();
 
@@ -98,15 +109,32 @@ class GroupChatController extends Controller
         $message = GroupChatMessage::create([
             'group_chat_id' => $groupChat->id,
             'sender_id' => $user->id,
-            'message' => $validated['message'],
+            'message' => (string) ($validated['message'] ?? ''),
         ]);
 
-        $message->load('sender:id,name');
+        if ($hasImage) {
+            ChatMediaService::storeForMessage(
+                ChatMessageMedia::TYPE_GROUP,
+                $message->id,
+                $user,
+                $request->file('image'),
+                (string) $request->input('image_mode')
+            );
+        }
+
+        $message = ChatMediaService::attachMediaPayload(
+            ChatMessageMedia::TYPE_GROUP,
+            collect([$message->load('sender:id,name')]),
+            $user
+        )->first();
+
         $groupChat->touch();
 
-        $preview = strlen($validated['message']) > 50
-            ? substr($validated['message'], 0, 50).'...'
-            : $validated['message'];
+        $preview = $hasImage
+            ? 'Sent an image'
+            : (strlen((string) ($validated['message'] ?? '')) > 50
+                ? substr((string) $validated['message'], 0, 50).'...'
+                : (string) ($validated['message'] ?? ''));
 
         $groupChat->members()
             ->where('users.id', '!=', $user->id)

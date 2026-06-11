@@ -29,9 +29,10 @@
     </div>
 
     <!-- Profile Card -->
-    <div class="bg-white shadow-sm rounded-lg border border-gray-200 mx-2 sm:mx-3 lg:mx-4 xl:mx-6 flex-1 overflow-hidden">
+    <div class="bg-white shadow-sm rounded-lg border border-gray-200 mx-2 sm:mx-3 lg:mx-4 xl:mx-6 flex-1 overflow-visible">
         <!-- Cover Photo Section -->
-        <div class="relative h-48 sm:h-56 lg:h-64 bg-gradient-to-r from-blue-400 via-purple-500 to-pink-500">
+        <div class="relative h-48 sm:h-56 lg:h-64 overflow-visible rounded-t-lg">
+            <div class="absolute inset-0 overflow-hidden rounded-t-lg bg-gradient-to-r from-blue-400 via-purple-500 to-pink-500">
             @if($user->hasCoverPhoto())
                 <img src="{{ $user->getCoverPhotoUrl() }}"
                      alt="Cover Photo"
@@ -46,30 +47,34 @@
                     </div>
                 </div>
             @endif
+            </div>
 
             <!-- Profile Picture Overlay -->
-            <div class="absolute -bottom-16 left-6">
-                <div class="relative">
-                    @if($user->profile_picture)
-                        <img src="{{ $user->getProfilePictureUrl() }}"
-                             alt="{{ $user->name }}"
-                             class="w-32 h-32 rounded-full border-4 border-white shadow-lg object-cover">
-                    @else
-                        <div class="w-32 h-32 bg-gradient-to-br from-indigo-400 to-indigo-600 rounded-full border-4 border-white shadow-lg flex items-center justify-center">
-                            <span class="text-white font-bold text-2xl">
-                                {{ $user->getInitials() }}
-                            </span>
-                        </div>
-                    @endif
-
-                    <!-- Online Status Indicator -->
-                    <div class="absolute bottom-2 right-2 w-6 h-6 bg-green-400 border-2 border-white rounded-full"></div>
+            <div class="absolute -bottom-16 left-6 z-10 overflow-visible">
+                <div class="relative overflow-visible">
+                    <x-profile-avatar
+                        :user="$user"
+                        size="xl"
+                        :has-story="$selfHasStory"
+                        :clickable="true"
+                        :story-user-id="$user->id" />
+                    <button type="button"
+                            onclick="window.StoryUI && window.StoryUI.openCreateModal()"
+                            class="absolute -bottom-1 -right-1 w-8 h-8 rounded-full bg-indigo-600 text-white border-2 border-white flex items-center justify-center shadow-md hover:bg-indigo-700 z-10"
+                            title="Add to your story">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v12m6-6H6"></path>
+                        </svg>
+                    </button>
+                    <div class="absolute bottom-2 left-2 w-6 h-6 bg-green-400 border-2 border-white rounded-full z-10"></div>
                 </div>
             </div>
         </div>
 
         <!-- Profile Content -->
         <div class="pt-20 pb-6 px-6">
+            <x-story-bar :feed="$storyFeed" />
+
             <!-- User Info -->
             <div class="mb-6">
                 <h2 class="text-2xl font-bold text-gray-900 mb-2">{{ $user->name }}</h2>
@@ -425,17 +430,14 @@
                                  data-friend-list-item data-search-text="{{ strtolower(trim($friend->name.' '.$friend->email.' '.($friend->department?->name ?? ''))) }}">
                                 <div class="flex items-center space-x-3">
                                     <div class="flex-shrink-0">
-                                        @if($friend->profile_picture)
-                                            <img src="{{ $friend->getProfilePictureUrl() }}"
-                                                 alt="{{ $friend->name }}"
-                                                 class="w-10 h-10 rounded-full object-cover border-2 border-white shadow-sm">
-                                        @else
-                                            <div class="w-10 h-10 bg-gradient-to-br from-green-400 to-emerald-600 rounded-full flex items-center justify-center border-2 border-white shadow-sm">
-                                                <span class="text-white font-semibold text-sm">
-                                                    {{ $friend->getInitials() }}
-                                                </span>
-                                            </div>
-                                        @endif
+                                        @php($friendRing = $storyRingMap[$friend->id] ?? ['has_story' => false, 'has_unviewed' => false])
+                                        <x-profile-avatar
+                                            :user="$friend"
+                                            size="sm"
+                                            :has-story="$friendRing['has_story']"
+                                            :has-unviewed="$friendRing['has_unviewed']"
+                                            :clickable="$friendRing['has_story']"
+                                            :story-user-id="$friend->id" />
                                     </div>
                                     <div class="flex-1 min-w-0">
                                         <p class="text-sm font-medium text-gray-900 truncate">{{ $friend->name }}</p>
@@ -982,4 +984,6 @@
         }
     });
 </script>
+
+<x-story-ui />
 @endsection

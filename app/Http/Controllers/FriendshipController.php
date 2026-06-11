@@ -7,6 +7,7 @@ use App\Models\User;
 use App\Support\AnonymousChatAliasService;
 use App\Support\AnonymousChatEligibility;
 use App\Support\AnonymousChatToken;
+use App\Support\StoryService;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\View\View;
@@ -27,7 +28,10 @@ class FriendshipController extends Controller
         $pendingRequests = $user->pendingFriendRequests()->with('user.department:id,name')->get();
         $sentRequests = $user->sentFriendRequests()->with('friend.department:id,name')->get();
 
-        return view('friends.index', compact('allFriends', 'pendingRequests', 'sentRequests'));
+        $storyFeed = StoryService::feedFor($user);
+        $storyRingMap = StoryService::ringMapFor($user, $allFriends->pluck('id')->all());
+
+        return view('friends.index', compact('allFriends', 'pendingRequests', 'sentRequests', 'storyFeed', 'storyRingMap'));
     }
 
     public function show(User $user): JsonResponse
@@ -57,6 +61,11 @@ class FriendshipController extends Controller
 
         $user->load('department:id,name');
 
+        $ring = StoryService::ringMapFor(auth()->user(), [$user->id])[$user->id] ?? [
+            'has_story' => false,
+            'has_unviewed' => false,
+        ];
+
         return response()->json([
             'friend' => [
                 'id' => $user->id,
@@ -65,6 +74,8 @@ class FriendshipController extends Controller
                 'department' => $user->department?->name,
                 'profile_picture_url' => $user->profile_picture ? $user->getProfilePictureUrl() : null,
                 'initials' => $user->getInitials(),
+                'has_story' => $ring['has_story'],
+                'has_unviewed' => $ring['has_unviewed'],
             ],
         ]);
     }
