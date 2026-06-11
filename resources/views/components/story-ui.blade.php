@@ -38,7 +38,8 @@
 </div>
 
 <div id="story-viewer" class="hidden fixed inset-0 z-[80] bg-black">
-    <div class="absolute top-0 left-0 right-0 z-20 p-4">
+    <div id="story-progress-bars" class="absolute top-0 left-0 right-0 z-30 flex gap-1 px-3 pt-3 pointer-events-none"></div>
+    <div class="absolute top-0 left-0 right-0 z-20 p-4 pt-8">
         <div class="flex items-center justify-between text-white gap-3">
             <div class="flex items-center gap-3 min-w-0">
                 <img id="story-viewer-avatar" src="" alt="" class="hidden w-9 h-9 rounded-full object-cover border border-white/30">
@@ -88,15 +89,74 @@ window.StoryUI = (function () {
     const storyFeedUsers = @json($storyFeedUsers);
     const csrf = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
 
-    function formatElapsed(iso) {
-        if (!iso) return '00:00:00';
-        const elapsedMs = Date.now() - new Date(iso).getTime();
-        if (elapsedMs < 0) return '00:00:00';
+    const STORY_LIFETIME_MS = 24 * 60 * 60 * 1000;
+
+    function formatStoryAge(iso) {
+        if (!iso) return '0s';
+        const elapsedMs = Math.max(0, Date.now() - new Date(iso).getTime());
         const totalSeconds = Math.floor(elapsedMs / 1000);
-        const hours = Math.floor(totalSeconds / 3600);
-        const minutes = Math.floor((totalSeconds % 3600) / 60);
-        const seconds = totalSeconds % 60;
-        return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+
+        if (totalSeconds < 60) {
+            return `${totalSeconds}s`;
+        }
+
+        const totalMinutes = Math.floor(totalSeconds / 60);
+        if (totalMinutes < 60) {
+            return `${totalMinutes}min`;
+        }
+
+        const totalHours = Math.floor(totalSeconds / 3600);
+        return `${totalHours}hr`;
+    }
+
+    function storyLifetimeProgress(iso) {
+        if (!iso) return 0;
+        const elapsedMs = Math.max(0, Date.now() - new Date(iso).getTime());
+        return Math.min(100, (elapsedMs / STORY_LIFETIME_MS) * 100);
+    }
+
+    function renderProgressBars() {
+        const container = document.getElementById('story-progress-bars');
+        if (!container) return;
+
+        container.innerHTML = '';
+
+        viewerStories.forEach((story, index) => {
+            const track = document.createElement('div');
+            track.className = 'story-progress-track h-0.5 flex-1 rounded-full bg-white/30 overflow-hidden';
+
+            const fill = document.createElement('div');
+            fill.className = 'story-progress-fill h-full bg-white rounded-full';
+            fill.dataset.storyIndex = String(index);
+
+            if (index < viewerIndex) {
+                fill.style.width = '100%';
+            } else if (index === viewerIndex) {
+                fill.style.width = storyLifetimeProgress(story.created_at) + '%';
+            } else {
+                fill.style.width = '0%';
+            }
+
+            track.appendChild(fill);
+            container.appendChild(track);
+        });
+    }
+
+    function updateProgressBars() {
+        const fills = document.querySelectorAll('#story-progress-bars .story-progress-fill');
+        fills.forEach((fill) => {
+            const index = Number(fill.dataset.storyIndex);
+            const story = viewerStories[index];
+            if (!story) return;
+
+            if (index < viewerIndex) {
+                fill.style.width = '100%';
+            } else if (index === viewerIndex) {
+                fill.style.width = storyLifetimeProgress(story.created_at) + '%';
+            } else {
+                fill.style.width = '0%';
+            }
+        });
     }
 
     function openCreateModal() {
@@ -154,7 +214,8 @@ window.StoryUI = (function () {
     function updateViewerTimer() {
         const story = viewerStories[viewerIndex];
         if (!story) return;
-        document.getElementById('story-viewer-timer').textContent = formatElapsed(story.created_at);
+        document.getElementById('story-viewer-timer').textContent = formatStoryAge(story.created_at);
+        updateProgressBars();
     }
 
     function updateNavButtons() {
@@ -200,6 +261,7 @@ window.StoryUI = (function () {
 
         document.getElementById('story-viewer-image').src = story.media_url;
         document.getElementById('story-viewer-caption').textContent = story.caption || '';
+        renderProgressBars();
         updateViewerTimer();
         updateNavButtons();
 
@@ -230,6 +292,8 @@ window.StoryUI = (function () {
         document.body.classList.remove('overflow-hidden');
         if (timerInterval) clearInterval(timerInterval);
         timerInterval = null;
+        const progressBars = document.getElementById('story-progress-bars');
+        if (progressBars) progressBars.innerHTML = '';
         viewerStories = [];
         viewerIndex = 0;
         viewerUser = null;

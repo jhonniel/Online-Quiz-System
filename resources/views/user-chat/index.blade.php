@@ -48,9 +48,11 @@
                     </div>
                 </div>
 
-                <div class="px-3 pt-3 border-b border-gray-200">
-                    <x-story-bar :feed="$storyFeed" />
-                </div>
+                @if($storyFeed->contains(fn ($entry) => (bool) ($entry['has_story'] ?? false)))
+                    <div class="px-3 pt-3 border-b border-gray-200">
+                        <x-story-bar :feed="$storyFeed" />
+                    </div>
+                @endif
 
                 <!-- Chat Lists -->
                 <div class="flex-1 overflow-y-auto">

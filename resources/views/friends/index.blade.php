@@ -53,9 +53,11 @@
         </div>
     </div>
 
-    <div class="bg-white shadow-sm rounded-lg border border-gray-200 p-4 flex-shrink-0 mx-2 sm:mx-3 lg:mx-4 xl:mx-6">
-        <x-story-bar :feed="$storyFeed" />
-    </div>
+    @if($storyFeed->contains(fn ($entry) => (bool) ($entry['has_story'] ?? false)))
+        <div class="bg-white shadow-sm rounded-lg border border-gray-200 p-4 flex-shrink-0 mx-2 sm:mx-3 lg:mx-4 xl:mx-6">
+            <x-story-bar :feed="$storyFeed" />
+        </div>
+    @endif
 
     <!-- Main Content -->
     <div class="flex-1 overflow-hidden mx-2 sm:mx-3 lg:mx-4 xl:mx-6">

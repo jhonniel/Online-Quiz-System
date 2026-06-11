@@ -190,9 +190,10 @@
 
             <div id="user-map" class="bg-slate-100"></div>
             <p class="mt-3 text-xs text-gray-500">
-                Pins use browser GPS when users share location at login (most accurate), otherwise IP addresses from
-                <a href="{{ url('/admin/user-activity') }}" class="text-indigo-600 hover:text-indigo-800">User Activity Logs</a>.
-                Green pulsing dots mean an online user. Private/local IPs are skipped.
+                Pins come from distinct IP addresses in
+                <a href="{{ url('/admin/user-activity') }}" class="text-indigo-600 hover:text-indigo-800">User Activity Logs</a>
+                (geocoded when public) and browser GPS shared at login. Local/private IPs (127.0.0.1) use GPS when available.
+                In production, set <code class="text-xs bg-gray-100 px-1 rounded">TRUSTED_PROXIES=*</code> so real client IPs are logged.
             </p>
         </div>
     </div>
@@ -266,9 +267,12 @@
                 ? `<p class="text-xs text-gray-400">+${marker.users.length - 5} more user(s)</p>`
                 : '';
 
-            const sourceLabel = marker.location_source === 'browser_gps'
-                ? '<span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">GPS (accurate)</span>'
-                : '<span class="text-xs text-gray-400">IP-based estimate</span>';
+            let sourceLabel = '<span class="text-xs text-gray-400">IP-based estimate</span>';
+            if (marker.location_source === 'browser_gps') {
+                sourceLabel = '<span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">GPS (accurate)</span>';
+            } else if (marker.location_source === 'activity_log_gps') {
+                sourceLabel = '<span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-800">Local IP + user GPS</span>';
+            }
 
             return `
                 <div class="text-sm space-y-1 min-w-[200px]">
@@ -368,9 +372,20 @@
                 renderMarkers(data.markers || []);
 
                 const mapped = data.stats?.mapped ?? 0;
-                let status = mapped > 0
-                    ? `Showing ${mapped} IP pin(s) from activity logs.`
-                    : 'No mappable public IPs for the current filters.';
+                const totalIps = data.stats?.total_ips ?? 0;
+                const unmapped = data.stats?.unmapped ?? 0;
+                const privateIps = data.stats?.private_ips ?? 0;
+
+                let status;
+                if (mapped > 0) {
+                    status = `Showing ${mapped} pin(s) from ${totalIps} activity log IP(s).`;
+                } else if (totalIps === 0) {
+                    status = 'No IP addresses found in User Activity Logs for the current filters.';
+                } else if (privateIps === totalIps) {
+                    status = `${totalIps} IP(s) in activity logs are private/local (e.g. 127.0.0.1) and cannot be geocoded. Set TRUSTED_PROXIES=* in production, or have users share location at login.`;
+                } else {
+                    status = `${unmapped} of ${totalIps} activity log IP(s) could not be geocoded.`;
+                }
                 if (data.stats?.capped) {
                     status += ' Showing the most recent 500 IPs.';
                 }

@@ -196,6 +196,15 @@
         overflow: visible;
     }
 
+    .story-progress-track {
+        min-width: 0;
+    }
+
+    .story-progress-fill {
+        width: 0%;
+        transition: width 0.35s linear;
+    }
+
     .story-bar-self-wrap {
         position: relative;
         display: inline-flex;

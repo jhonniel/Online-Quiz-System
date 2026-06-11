@@ -42,19 +42,14 @@ final class UserMapService
             ->selectRaw('ip_address, COUNT(*) as hit_count, MAX(created_at) as last_seen_at')
             ->groupBy('ip_address')
             ->orderByDesc('last_seen_at')
-            ->get();
+            ->get()
+            ->filter(fn ($row) => trim((string) $row->ip_address) !== '')
+            ->values();
 
-        $privateSkipped = 0;
-        $ipRows = $ipRows->filter(function ($row) use (&$privateSkipped) {
-            $ip = trim((string) $row->ip_address);
-            if ($ip === '' || TomTomService::isPrivateIp($ip)) {
-                $privateSkipped++;
-
-                return false;
-            }
-
-            return true;
-        })->values();
+        $totalIps = $ipRows->count();
+        $privateIpCount = $ipRows
+            ->filter(fn ($row) => TomTomService::isPrivateIp(trim((string) $row->ip_address)))
+            ->count();
 
         if (! empty($filters['online_only'])) {
             $onlineIps = (clone $baseQuery)
@@ -68,9 +63,12 @@ final class UserMapService
 
             $onlineIpSet = array_fill_keys($onlineIps, true);
             $ipRows = $ipRows->filter(fn ($row) => isset($onlineIpSet[trim((string) $row->ip_address)]))->values();
+            $totalIps = $ipRows->count();
+            $privateIpCount = $ipRows
+                ->filter(fn ($row) => TomTomService::isPrivateIp(trim((string) $row->ip_address)))
+                ->count();
         }
 
-        $totalIps = $ipRows->count();
         $ipRows = $ipRows->take(self::MAX_IPS);
 
         $ipAddresses = $ipRows->pluck('ip_address')->map(fn ($ip) => trim((string) $ip))->all();
@@ -83,13 +81,26 @@ final class UserMapService
             ->all();
         $locationBuckets = [];
         $markers = [];
-        $mapped = 0;
+        $mappedIpPins = 0;
         $onlinePins = 0;
+        $unmappedIps = 0;
 
         foreach ($ipRows as $row) {
             $ip = trim((string) $row->ip_address);
+            $isPrivate = TomTomService::isPrivateIp($ip);
             $coords = TomTomService::geocodeIp($ip);
+            $locationSource = 'activity_log';
+
+            if ($coords === null && $isPrivate) {
+                $coords = self::coordsForPrivateIp($ip, $usersByIp[$ip] ?? []);
+                if ($coords !== null) {
+                    $locationSource = 'activity_log_gps';
+                }
+            }
+
             if ($coords === null) {
+                $unmappedIps++;
+
                 continue;
             }
 
@@ -104,7 +115,7 @@ final class UserMapService
             $offsetIndex = $locationBuckets[$bucketKey] - 1;
             [$lat, $lng] = self::applyJitter($coords['lat'], $coords['lng'], $offsetIndex);
 
-            $mapped++;
+            $mappedIpPins++;
             if ($isOnline) {
                 $onlinePins++;
             }
@@ -123,7 +134,7 @@ final class UserMapService
                 'lat' => $lat,
                 'lng' => $lng,
                 'location_label' => $coords['label'],
-                'location_source' => 'activity_log',
+                'location_source' => $locationSource,
                 'is_online' => $isOnline,
                 'hit_count' => (int) $row->hit_count,
                 'last_seen_at' => Carbon::parse($row->last_seen_at)->toIso8601String(),
@@ -141,11 +152,11 @@ final class UserMapService
             'markers' => array_merge($gpsMarkers, $markers),
             'stats' => [
                 'total_ips' => $totalIps,
-                'mapped' => $mapped + count($gpsMarkers),
-                'unmapped' => max(0, $totalIps - $mapped),
+                'mapped' => $mappedIpPins + count($gpsMarkers),
+                'unmapped' => $unmappedIps,
                 'online' => $onlinePins + $onlineGpsPins,
                 'gps_pins' => count($gpsMarkers),
-                'private_skipped' => $privateSkipped,
+                'private_ips' => $privateIpCount,
                 'capped' => $totalIps > self::MAX_IPS,
             ],
             'filters' => [
@@ -419,6 +430,40 @@ final class UserMapService
         }
 
         return $markers;
+    }
+
+    /**
+     * Place private/local IPs using the latest browser GPS from users on that IP.
+     *
+     * @param  list<array<string, mixed>>  $users
+     * @return array{lat: float, lng: float, label: string}|null
+     */
+    private static function coordsForPrivateIp(string $ip, array $users): ?array
+    {
+        $userIds = collect($users)->pluck('id')->filter()->values()->all();
+
+        if ($userIds === []) {
+            return null;
+        }
+
+        $location = UserGeoLocation::query()
+            ->whereIn('user_id', $userIds)
+            ->orderByDesc('captured_at')
+            ->first();
+
+        if (! $location instanceof UserGeoLocation) {
+            return null;
+        }
+
+        $lat = (float) $location->latitude;
+        $lng = (float) $location->longitude;
+        $reverse = TomTomService::reverseGeocode($lat, $lng);
+
+        return [
+            'lat' => $lat,
+            'lng' => $lng,
+            'label' => ($reverse['label'] ?? sprintf('%.5f, %.5f', $lat, $lng)).' (local IP '.$ip.')',
+        ];
     }
 
     /**

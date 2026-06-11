@@ -73,8 +73,6 @@
 
         <!-- Profile Content -->
         <div class="pt-20 pb-6 px-6">
-            <x-story-bar :feed="$storyFeed" />
-
             <!-- User Info -->
             <div class="mb-6">
                 <h2 class="text-2xl font-bold text-gray-900 mb-2">{{ $user->name }}</h2>
