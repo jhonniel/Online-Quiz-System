@@ -71,8 +71,8 @@
             No payslip records found for {{ $year }}.
         </div>
     @else
-        <div id="payslip-summary-print-area" class="payslip-summary-print-area rounded-lg border border-gray-200 bg-white shadow-sm overflow-hidden">
-            <div class="overflow-x-auto print:overflow-visible">
+        <div id="payslip-summary-print-area" class="payslip-summary-print-area rounded-lg border border-gray-200 bg-white shadow-sm overflow-hidden print:overflow-visible">
+            <div class="overflow-x-auto print:overflow-visible payslip-summary-table-wrap">
                 <table class="min-w-full border-collapse text-xs sm:text-sm payslip-summary-table">
                     <thead class="payslip-summary-table-head">
                         @include('admin.employee-management.payslip.partials.summary-sheet-header', [
@@ -122,7 +122,14 @@
                                 <td class="border border-gray-200 px-3 py-2 text-right text-gray-900 tabular-nums">{{ $formatMoney($row['ca']) }}</td>
                                 <td class="border border-gray-200 px-3 py-2 text-right text-gray-900 tabular-nums">{{ $formatMoney($row['govt_loans']) }}</td>
                                 <td class="border border-gray-200 px-3 py-2 text-right text-gray-900 tabular-nums">{{ $formatMoney($row['loans']) }}</td>
-                                <td class="border border-gray-200 px-3 py-2 text-right font-semibold text-gray-900 tabular-nums">{{ $formatMoney($row['net_pay']) }}</td>
+                                <td class="border border-gray-200 px-3 py-2 text-right font-semibold text-gray-900 tabular-nums payslip-summary-net-pay-cell">
+                                    {{ $formatMoney($row['net_pay']) }}
+                                    @if(! empty($row['signature_data_uri']))
+                                        <img src="{{ $row['signature_data_uri'] }}"
+                                             alt=""
+                                             class="payslip-summary-signature-img">
+                                    @endif
+                                </td>
                             </tr>
                         @endforeach
                     </tbody>
@@ -152,6 +159,35 @@
 </div>
 
 <style>
+    .payslip-summary-print-area {
+        padding-right: 88px;
+    }
+
+    .payslip-summary-table-wrap,
+    .payslip-summary-table,
+    .payslip-summary-table tbody tr,
+    .payslip-summary-table td {
+        overflow: visible !important;
+    }
+
+    .payslip-summary-net-pay-cell {
+        position: relative;
+        overflow: visible !important;
+    }
+
+    .payslip-summary-signature-img {
+        position: absolute;
+        top: 50%;
+        left: 100%;
+        transform: translateY(-50%);
+        margin-left: 6px;
+        height: 36px;
+        max-width: 80px;
+        object-fit: contain;
+        pointer-events: none;
+        z-index: 1;
+    }
+
     @media print {
         @page {
             size: legal landscape;
@@ -183,6 +219,14 @@
             width: 100%;
             border: none !important;
             box-shadow: none !important;
+            overflow: visible !important;
+            padding-right: 88px !important;
+        }
+
+        .payslip-summary-table-wrap,
+        .payslip-summary-table,
+        .payslip-summary-table tbody tr,
+        .payslip-summary-table td {
             overflow: visible !important;
         }
 
@@ -243,6 +287,25 @@
             background-color: #f3f4f6 !important;
             page-break-inside: avoid;
             break-inside: avoid;
+        }
+
+        .payslip-summary-net-pay-cell {
+            position: relative !important;
+            overflow: visible !important;
+        }
+
+        .payslip-summary-signature-img {
+            position: absolute !important;
+            top: 50% !important;
+            left: 100% !important;
+            transform: translateY(-50%) !important;
+            margin-left: 6px !important;
+            display: block !important;
+            height: 36px !important;
+            max-width: 80px !important;
+            object-fit: contain !important;
+            pointer-events: none !important;
+            z-index: 1 !important;
         }
     }
 </style>

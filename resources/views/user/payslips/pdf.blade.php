@@ -23,25 +23,28 @@
             page-break-after: avoid;
             overflow: hidden;
         }
-        .letterhead {
+        .payslip-header {
             text-align: center;
             padding: 10px 16px 8px;
+            border-bottom: 1px solid #d1d5db;
         }
-        .letterhead-name {
+        .payslip-header-name {
             margin: 0;
             font-family: "DejaVu Serif", "Times New Roman", serif;
             font-size: 13pt;
+            font-weight: bold;
             color: #6b8e23;
             text-transform: uppercase;
             letter-spacing: 0.02em;
         }
-        .letterhead-address {
+        .payslip-header-address {
             margin: 4px 0 0;
             font-size: 8.5pt;
-            line-height: 1.3;
+            line-height: 1.35;
+            color: #374151;
         }
         .banner {
-            border-top: 1px solid #111827;
+            border-top: none;
             border-bottom: 1px solid #111827;
             background: #e5e7eb;
             text-align: center;
@@ -200,8 +203,8 @@
 @php
     use App\Support\PayslipNameFit;
 
-    $companyName = trim((string) \App\Models\Setting::get('system_name', config('app.name', 'Laravel')));
-    $companyAddress = trim((string) \App\Models\Setting::get('contact_address', ''));
+    $payslipCompanyName = trim((string) \App\Models\Setting::get('system_name', config('app.name', '')));
+    $payslipCompanyAddress = trim((string) \App\Models\Setting::get('contact_address', ''));
     $employeeNameDisplay = strtoupper($payslip->employee_name);
     $positionDisplay = strtoupper($payslip->displayPosition() ?: '—');
     $preparedBySignatureDataUri = $payslip->preparedBySignatureDataUri();
@@ -209,12 +212,16 @@
     $receivedBySignatureDataUri = $payslip->receivedBySignatureDataUri();
 @endphp
     <div class="sheet">
-        <div class="letterhead">
-            <p class="letterhead-name">{{ $companyName }}</p>
-            @if($companyAddress !== '')
-                <p class="letterhead-address">{{ $companyAddress }}</p>
-            @endif
-        </div>
+        @if($payslipCompanyName !== '' || $payslipCompanyAddress !== '')
+            <div class="payslip-header">
+                @if($payslipCompanyName !== '')
+                    <p class="payslip-header-name">{{ $payslipCompanyName }}</p>
+                @endif
+                @if($payslipCompanyAddress !== '')
+                    <p class="payslip-header-address">{{ $payslipCompanyAddress }}</p>
+                @endif
+            </div>
+        @endif
 
         <div class="banner">Payslip</div>
 

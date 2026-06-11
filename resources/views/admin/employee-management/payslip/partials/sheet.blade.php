@@ -2,7 +2,7 @@
     use App\Support\PayslipNameFit;
 @endphp
 <div class="mx-auto max-w-3xl overflow-hidden bg-white border border-gray-300 shadow-sm text-gray-900">
-    <x-document-letterhead class="px-6 pt-5 pb-3" />
+    @include('admin.employee-management.payslip.partials.payslip-header')
 
     <div class="border-y border-gray-900 bg-gray-200 px-6 py-1.5 text-center">
         <p class="text-sm font-bold uppercase tracking-wide text-gray-900">Payslip</p>

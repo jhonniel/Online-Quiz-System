@@ -5,34 +5,10 @@
         'email' => $employee->email,
         'department' => $employee->department?->name,
     ])->values();
+    $initialEmployeeId = (string) old('employee_id', $payslip->user_id ?? '');
 @endphp
 
-<div x-data="{
-    search: '',
-    employeeId: @js((string) old('employee_id', $payslip->user_id ?? '')),
-    employees: @json($employeeOptions),
-    get filteredEmployees() {
-        const tokens = this.search.trim().toLowerCase().split(/\s+/).filter(Boolean);
-        if (tokens.length === 0) {
-            return this.employees;
-        }
-        return this.employees.filter((employee) => {
-            const haystack = [employee.name, employee.email, employee.department || ''].join(' ').toLowerCase();
-            return tokens.every((token) => haystack.includes(token));
-        });
-    },
-    get selectedEmployee() {
-        return this.employees.find((employee) => String(employee.id) === String(this.employeeId)) || null;
-    },
-    selectEmployee(employee) {
-        this.employeeId = employee.id;
-        this.search = employee.name;
-    },
-    clearEmployee() {
-        this.employeeId = '';
-        this.search = '';
-    }
-}" class="space-y-4">
+<div x-data="payslipDetailLinkForm()" class="space-y-4">
     <form action="{{ route('admin.payslip.link', $payslip) }}" method="POST">
         @csrf
         @method('PATCH')
@@ -99,3 +75,42 @@
         </div>
     </form>
 </div>
+
+<script>
+function payslipDetailLinkForm() {
+    return {
+        search: '',
+        employeeId: @js($initialEmployeeId),
+        employees: @json($employeeOptions),
+        init() {
+            const currentEmployee = this.employees.find(
+                (employee) => String(employee.id) === String(this.employeeId)
+            );
+            if (currentEmployee) {
+                this.search = currentEmployee.name;
+            }
+        },
+        get filteredEmployees() {
+            const tokens = this.search.trim().toLowerCase().split(/\s+/).filter(Boolean);
+            if (tokens.length === 0) {
+                return this.employees;
+            }
+            return this.employees.filter((employee) => {
+                const haystack = [employee.name, employee.email, employee.department || ''].join(' ').toLowerCase();
+                return tokens.every((token) => haystack.includes(token));
+            });
+        },
+        get selectedEmployee() {
+            return this.employees.find((employee) => String(employee.id) === String(this.employeeId)) || null;
+        },
+        selectEmployee(employee) {
+            this.employeeId = employee.id;
+            this.search = employee.name;
+        },
+        clearEmployee() {
+            this.employeeId = '';
+            this.search = '';
+        },
+    };
+}
+</script>

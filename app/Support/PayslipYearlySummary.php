@@ -3,11 +3,14 @@
 namespace App\Support;
 
 use App\Models\EmployeePayslip;
+use App\Models\User;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 
 final class PayslipYearlySummary
 {
+    public const COLUMN_COUNT = 16;
+
     /** @var list<string> */
     public const CSV_HEADERS = [
         'Employee Name',
@@ -92,6 +95,8 @@ final class PayslipYearlySummary
             ->sortBy('employee_name', SORT_NATURAL | SORT_FLAG_CASE)
             ->values()
             ->all();
+
+        $rows = self::attachSignatureDataUris($rows);
 
         $totals = self::emptyTotals();
         foreach ($rows as $row) {
@@ -188,9 +193,46 @@ final class PayslipYearlySummary
         ];
     }
 
+    /**
+     * @param  list<array<string, mixed>>  $rows
+     * @return list<array<string, mixed>>
+     */
+    private static function attachSignatureDataUris(array $rows): array
+    {
+        $userIds = collect($rows)
+            ->pluck('user_id')
+            ->filter()
+            ->unique()
+            ->values()
+            ->all();
+
+        if ($userIds === []) {
+            return array_map(function (array $row) {
+                $row['signature_data_uri'] = null;
+
+                return $row;
+            }, $rows);
+        }
+
+        $users = User::query()
+            ->whereIn('id', $userIds)
+            ->get(['id', 'e_signature_path'])
+            ->keyBy('id');
+
+        return array_map(function (array $row) use ($users) {
+            $userId = $row['user_id'] ?? null;
+            $user = $userId !== null ? $users->get($userId) : null;
+            $row['signature_data_uri'] = $user instanceof User
+                ? EmployeeSampleDocument::eSignatureDataUri($user)
+                : null;
+
+            return $row;
+        }, $rows);
+    }
+
     public static function formatAmount(float|int|string|null $amount): string
     {
-        return number_format((float) $amount, 2, '.', '');
+        return number_format((float) $amount, 2, '.', ',');
     }
 
     private static function employeeGroupKey(EmployeePayslip $payslip): string
@@ -225,6 +267,8 @@ final class PayslipYearlySummary
             'loans' => 0.0,
             'net_pay' => 0.0,
             'payslip_count' => 0,
+            'user_id' => $payslip->user_id,
+            'signature_data_uri' => null,
         ];
     }
 
