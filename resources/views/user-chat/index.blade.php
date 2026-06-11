@@ -655,15 +655,19 @@
                 });
         }
 
-        function loadAnonymousMessages() {
+        function loadAnonymousMessages(silent = false) {
             if (!currentAnonymousRoomId) return;
 
-            showLoading();
+            if (!silent) {
+                showLoading();
+            }
 
             fetch(`{{ url('anonymous-chat') }}/${currentAnonymousRoomId}/messages`)
                 .then(response => response.json())
                 .then(data => {
-                    hideLoading();
+                    if (!silent) {
+                        hideLoading();
+                    }
 
                     if (data.error) {
                         showNotification(data.error, 'error');
@@ -678,10 +682,25 @@
                     displayMessages();
                 })
                 .catch(error => {
-                    hideLoading();
+                    if (!silent) {
+                        hideLoading();
+                    }
                     console.error('Error loading anonymous messages:', error);
                     showNotification('Error loading anonymous messages', 'error');
                 });
+        }
+
+        function appendSentMessage(message) {
+            if (!message) {
+                return;
+            }
+
+            if (messages.some((entry) => Number(entry.id) === Number(message.id))) {
+                return;
+            }
+
+            messages.push(message);
+            displayMessages();
         }
 
         function displayMessages() {
@@ -779,8 +798,8 @@
                 .then(data => {
                     if (data.error) {
                         showNotification(data.error, 'error');
-                    } else {
-                        loadAnonymousMessages();
+                    } else if (data.message) {
+                        appendSentMessage(data.message);
                     }
                     sendButton.disabled = input.value.trim() === '';
                 })
