@@ -71,7 +71,11 @@
                                             <p class="chat-item-title font-medium text-gray-900 truncate text-sm sm:text-base {{ $entry['has_new'] ? 'font-semibold' : '' }}">{{ $groupChat->name }}</p>
                                             <p class="chat-item-subtitle text-xs truncate {{ $entry['has_new'] ? 'text-purple-700 font-medium' : 'text-gray-500' }}">
                                                 @if($entry['has_new'])
-                                                    New message@if($entry['preview']): {{ $entry['preview'] }}@endif
+                                                    @if($entry['preview'])
+                                                        New message: {{ $entry['preview'] }}
+                                                    @else
+                                                        New message
+                                                    @endif
                                                 @else
                                                     {{ $groupChat->members_count }} members
                                                 @endif
@@ -105,7 +109,11 @@
                                             <p class="chat-item-title font-medium text-gray-900 truncate text-sm sm:text-base {{ $entry['has_new'] ? 'font-semibold' : '' }}">{{ $entry['peer_alias'] }}</p>
                                             <p class="chat-item-subtitle text-xs truncate {{ $entry['has_new'] ? 'text-purple-700 font-medium' : 'text-gray-500' }}">
                                                 @if($entry['has_new'])
-                                                    New message@if($entry['preview']): {{ $entry['preview'] }}@endif
+                                                    @if($entry['preview'])
+                                                        New message: {{ $entry['preview'] }}
+                                                    @else
+                                                        New message
+                                                    @endif
                                                 @else
                                                     Anonymous chat
                                                 @endif
@@ -147,7 +155,11 @@
                                         <p class="chat-item-title font-medium text-gray-900 truncate text-sm sm:text-base {{ $entry['has_new'] ? 'font-semibold' : '' }}">{{ $friend->name }}</p>
                                         <p class="chat-item-subtitle text-xs sm:text-sm truncate {{ $entry['has_new'] ? 'text-indigo-700 font-medium' : 'text-gray-500' }}">
                                             @if($entry['has_new'])
-                                                New message@if($entry['preview']): {{ $entry['preview'] }}@endif
+                                                @if($entry['preview'])
+                                                    New message: {{ $entry['preview'] }}
+                                                @else
+                                                    New message
+                                                @endif
                                             @else
                                                 Click to chat
                                             @endif
