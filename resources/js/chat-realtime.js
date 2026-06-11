@@ -168,7 +168,7 @@ window.ChatRealtime = {
         leaveActiveChannel();
     },
 
-    sendTypingSignal(displayName) {
+    sendTypingSignal(options = {}) {
         if (!activeChannel) {
             return;
         }
@@ -178,10 +178,15 @@ window.ChatRealtime = {
             return;
         }
 
+        const payload = typeof options === 'string'
+            ? { name: options, user_id: currentUserId, anonymous: false }
+            : options;
+
         lastTypingSentAt = now;
         activeChannel.whisper('typing', {
-            user_id: currentUserId,
-            name: displayName || 'Someone',
+            user_id: payload.anonymous ? null : (payload.user_id ?? currentUserId),
+            name: payload.name || 'Someone',
+            anonymous: Boolean(payload.anonymous),
         });
     },
 };

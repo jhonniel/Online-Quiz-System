@@ -39,10 +39,10 @@ class AnonymousChatMessageSent implements ShouldBroadcast, ShouldQueue
             'chat_type' => 'anonymous',
             'id' => $this->message->id,
             'room_id' => $this->room->id,
-            'sender_id' => $this->message->sender_id,
             'sender_alias' => $this->room->senderAlias((int) $this->message->sender_id),
             'message' => $this->message->message,
             'created_at' => $this->message->created_at?->toIso8601String(),
+            'is_own' => false,
         ];
     }
 

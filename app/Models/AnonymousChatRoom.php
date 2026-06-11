@@ -55,9 +55,20 @@ class AnonymousChatRoom extends Model
             ->first();
     }
 
+    public static function findForInitiator(int $initiatorId, int $targetId): ?self
+    {
+        [$userOneId, $userTwoId] = self::normalizePair($initiatorId, $targetId);
+
+        return self::query()
+            ->where('user_one_id', $userOneId)
+            ->where('user_two_id', $userTwoId)
+            ->where('created_by', $initiatorId)
+            ->first();
+    }
+
     public static function findOrCreateBetween(User $initiator, User $target): self
     {
-        $existing = self::findForUsers($initiator->id, $target->id);
+        $existing = self::findForInitiator($initiator->id, $target->id);
         if ($existing instanceof self) {
             return $existing->load(['participants', 'userOne', 'userTwo']);
         }
@@ -114,5 +125,10 @@ class AnonymousChatRoom extends Model
     public function senderAlias(int $senderId): string
     {
         return (string) ($this->aliasForUser($senderId) ?: 'Anonymous');
+    }
+
+    public function wasCreatedBy(int $userId): bool
+    {
+        return (int) $this->created_by === $userId;
     }
 }

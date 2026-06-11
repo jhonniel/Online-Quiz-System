@@ -9,10 +9,11 @@ use App\Models\User;
 use App\Models\UserActivity;
 use App\Support\AnonymousChatAliasService;
 use App\Support\AnonymousChatEligibility;
+use App\Support\AnonymousChatToken;
+use App\Support\ChatBroadcast;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Crypt;
 
 class AnonymousChatController extends Controller
 {
@@ -24,8 +25,9 @@ class AnonymousChatController extends Controller
             $params['anonymous_room'] = (int) $request->query('room');
         }
 
-        if ($request->filled('peer_name')) {
+        if ($request->filled('peer_name') && $request->query('starter') === '1') {
             $params['peer_name'] = (string) $request->query('peer_name');
+            $params['starter'] = 1;
         }
 
         return redirect()->route('user-chat.index', $params);
@@ -35,10 +37,7 @@ class AnonymousChatController extends Controller
     {
         $user = auth()->user();
         $existingPeerIds = AnonymousChatRoom::query()
-            ->where(function ($query) use ($user) {
-                $query->where('user_one_id', $user->id)
-                    ->orWhere('user_two_id', $user->id);
-            })
+            ->where('created_by', $user->id)
             ->get()
             ->map(fn (AnonymousChatRoom $room) => $room->peerUser($user)?->id)
             ->filter()
@@ -47,10 +46,10 @@ class AnonymousChatController extends Controller
         $targets = $this->eligibleTargetsQuery($user)
             ->whereNotIn('id', $existingPeerIds)
             ->orderBy('name')
-            ->limit(100)
+            ->limit(50)
             ->get(['id', 'name'])
             ->map(fn (User $target) => [
-                'token' => Crypt::encryptString((string) $target->id),
+                'token' => AnonymousChatToken::issue($user->id, $target->id),
                 'alias' => AnonymousChatAliasService::browseLabel($user->id, $target->id),
             ])
             ->values();
@@ -61,25 +60,29 @@ class AnonymousChatController extends Controller
     public function store(Request $request): JsonResponse
     {
         $validated = $request->validate([
-            'token' => 'required|string',
+            'token' => 'required|string|max:2048',
             'know_peer' => 'sometimes|boolean',
         ]);
 
         $user = $request->user();
+        $targetId = AnonymousChatToken::resolve($validated['token'], $user->id)
+            ?? AnonymousChatToken::resolveLegacy($validated['token']);
 
-        try {
-            $targetId = (int) Crypt::decryptString($validated['token']);
-        } catch (\Throwable) {
-            return response()->json(['error' => 'Invalid anonymous chat selection.'], 422);
+        if ($targetId === null) {
+            return response()->json(['error' => 'Invalid or expired anonymous chat selection.'], 422);
         }
 
         if ($targetId === $user->id) {
-            return response()->json(['error' => 'You cannot start an anonymous chat with yourself.'], 422);
+            return response()->json(['error' => 'Invalid anonymous chat selection.'], 422);
+        }
+
+        if (AnonymousChatEligibility::isBlockedBetween($user->id, $targetId)) {
+            return response()->json(['error' => 'Invalid anonymous chat selection.'], 422);
         }
 
         $target = $this->eligibleTargetsQuery($user)->where('id', $targetId)->first();
         if (! $target instanceof User) {
-            return response()->json(['error' => 'This user is not available for anonymous chat.'], 403);
+            return response()->json(['error' => 'Invalid anonymous chat selection.'], 422);
         }
 
         $room = AnonymousChatRoom::findOrCreateBetween($user, $target);
@@ -97,8 +100,11 @@ class AnonymousChatController extends Controller
         ]);
 
         $redirectParams = ['anonymous_room' => $room->id];
-        if ($request->boolean('know_peer') && $peer) {
-            $redirectParams['peer_name'] = $peer->name;
+        if ($request->boolean('know_peer')) {
+            $redirectParams['starter'] = 1;
+            if ($peer) {
+                $redirectParams['peer_name'] = $peer->name;
+            }
         }
 
         return response()->json([
@@ -112,31 +118,28 @@ class AnonymousChatController extends Controller
     public function messages(Request $request, AnonymousChatRoom $anonymousChatRoom): JsonResponse
     {
         $user = $request->user();
-
-        if (! $anonymousChatRoom->includesUser($user->id)) {
-            return response()->json(['error' => 'You are not part of this anonymous chat.'], 403);
-        }
-
         $peer = $anonymousChatRoom->peerUser($user);
 
         $messages = $anonymousChatRoom->messages()
-            ->with('sender:id')
             ->orderBy('created_at')
             ->get()
             ->map(fn (AnonymousChatMessage $message) => [
                 'id' => $message->id,
-                'sender_id' => $message->sender_id,
                 'sender_alias' => $anonymousChatRoom->senderAlias((int) $message->sender_id),
                 'message' => $message->message,
                 'created_at' => $message->created_at,
                 'is_own' => (int) $message->sender_id === $user->id,
             ]);
 
+        $isCreator = $anonymousChatRoom->wasCreatedBy($user->id);
+
         return response()->json([
             'room' => [
                 'id' => $anonymousChatRoom->id,
                 'peer_alias' => $peer ? $anonymousChatRoom->aliasForUser($peer->id) : 'Anonymous',
                 'my_alias' => $anonymousChatRoom->aliasForUser($user->id),
+                'is_creator' => $isCreator,
+                'peer_name' => $isCreator ? $peer?->name : null,
             ],
             'messages' => $messages,
         ]);
@@ -149,11 +152,6 @@ class AnonymousChatController extends Controller
         ]);
 
         $user = $request->user();
-
-        if (! $anonymousChatRoom->includesUser($user->id)) {
-            return response()->json(['error' => 'You are not part of this anonymous chat.'], 403);
-        }
-
         $peer = $anonymousChatRoom->peerUser($user);
 
         $message = AnonymousChatMessage::create([
@@ -180,13 +178,12 @@ class AnonymousChatController extends Controller
             'message_preview' => $preview,
         ]);
 
-        AnonymousChatMessageSent::dispatch($message, $anonymousChatRoom);
+        ChatBroadcast::dispatch(new AnonymousChatMessageSent($message, $anonymousChatRoom));
 
         return response()->json([
             'success' => true,
             'message' => [
                 'id' => $message->id,
-                'sender_id' => $message->sender_id,
                 'sender_alias' => $anonymousChatRoom->senderAlias($user->id),
                 'message' => $message->message,
                 'created_at' => $message->created_at,

@@ -6,9 +6,9 @@ use App\Models\Friendship;
 use App\Models\User;
 use App\Support\AnonymousChatAliasService;
 use App\Support\AnonymousChatEligibility;
+use App\Support\AnonymousChatToken;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Support\Facades\Crypt;
 use Illuminate\View\View;
 
 class FriendshipController extends Controller
@@ -123,7 +123,9 @@ class FriendshipController extends Controller
                 'friendship_status' => $friendship ? $friendship->status : 'none',
                 'friendship_id' => $friendship?->id,
                 'can_anonymous_chat' => $canAnonymousChat,
-                'anonymous_chat_token' => $canAnonymousChat ? Crypt::encryptString((string) $user->id) : null,
+                'anonymous_chat_token' => $canAnonymousChat && $viewer instanceof User
+                    ? AnonymousChatToken::issue($viewer->id, $user->id)
+                    : null,
                 'anonymous_chat_alias' => $canAnonymousChat && $viewer instanceof User
                     ? AnonymousChatAliasService::browseLabel($viewer->id, $user->id)
                     : null,

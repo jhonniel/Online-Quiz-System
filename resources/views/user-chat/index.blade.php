@@ -84,7 +84,8 @@
                                 <div class="anonymous-chat-item p-2 sm:p-3 border border-gray-200 rounded-lg cursor-pointer hover:bg-gray-50 transition-colors mb-2"
                                      data-anonymous-room-id="{{ $entry['room']->id }}"
                                      data-peer-alias="{{ $entry['peer_alias'] }}"
-                                     data-peer-name="{{ $entry['peer_name'] ?? '' }}">
+                                     data-peer-name="{{ $entry['is_creator'] ? ($entry['peer_name'] ?? '') : '' }}"
+                                     data-is-creator="{{ $entry['is_creator'] ? '1' : '0' }}">
                                     <div class="flex items-center space-x-2 sm:space-x-3">
                                         <div class="w-8 h-8 sm:w-10 sm:h-10 bg-purple-100 rounded-full flex items-center justify-center shrink-0">
                                             <svg class="w-4 h-4 sm:w-5 sm:h-5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -288,6 +289,46 @@
         let typingTimeout = null;
         const knownPeerNameFromUrl = new URLSearchParams(window.location.search).get('peer_name');
 
+        function chatJsonHeaders() {
+            return {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest',
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+            };
+        }
+
+        async function chatFetchJson(url, options = {}) {
+            const response = await fetch(url, {
+                credentials: 'same-origin',
+                ...options,
+                headers: {
+                    ...chatJsonHeaders(),
+                    ...(options.headers || {}),
+                },
+            });
+
+            const contentType = response.headers.get('content-type') || '';
+            let data = null;
+
+            if (contentType.includes('application/json')) {
+                data = await response.json();
+            } else {
+                const text = await response.text();
+                throw new Error(text || `Request failed (${response.status})`);
+            }
+
+            if (!response.ok) {
+                const message = data.error
+                    || data.message
+                    || (data.errors ? Object.values(data.errors).flat().join(' ') : null)
+                    || `Request failed (${response.status})`;
+                throw new Error(message);
+            }
+
+            return data;
+        }
+
         document.addEventListener('DOMContentLoaded', function() {
             document.querySelectorAll('.friend-item').forEach(item => {
                 item.addEventListener('click', function() {
@@ -306,7 +347,8 @@
                     selectAnonymous(
                         this.dataset.anonymousRoomId,
                         this.dataset.peerAlias,
-                        this.dataset.peerName || knownPeerNameFromUrl || ''
+                        this.dataset.peerName || '',
+                        this.dataset.isCreator === '1'
                     );
                 });
             });
@@ -327,7 +369,17 @@
             messageInput.addEventListener('input', function() {
                 sendButton.disabled = this.value.trim() === '';
                 if (window.ChatRealtime && currentChatType) {
-                    window.ChatRealtime.sendTypingSignal(currentUserName);
+                    if (currentChatType === 'anonymous') {
+                        window.ChatRealtime.sendTypingSignal({
+                            name: currentMyAnonymousAlias || 'Anonymous',
+                            anonymous: true,
+                        });
+                    } else {
+                        window.ChatRealtime.sendTypingSignal({
+                            name: currentUserName,
+                            userId: currentUserId,
+                        });
+                    }
                 }
             });
 
@@ -405,11 +457,11 @@
             }
         }
 
-        function selectAnonymous(roomId, peerAlias, peerName) {
+        function selectAnonymous(roomId, peerAlias, peerName, isCreator = false) {
             currentChatType = 'anonymous';
             currentAnonymousRoomId = roomId;
             currentAnonymousPeerAlias = peerAlias || 'Anonymous';
-            currentAnonymousPeerName = peerName || knownPeerNameFromUrl || '';
+            currentAnonymousPeerName = isCreator ? (peerName || knownPeerNameFromUrl || '') : '';
             currentFriendId = null;
             currentFriendName = null;
             currentGroupId = null;
@@ -483,7 +535,11 @@
         }
 
         function handleRealtimeMessage(payload) {
-            if (!payload || Number(payload.sender_id) === currentUserId) {
+            if (!payload) {
+                return;
+            }
+
+            if (payload.chat_type !== 'anonymous' && Number(payload.sender_id) === currentUserId) {
                 return;
             }
 
@@ -521,6 +577,10 @@
             const typingIndicator = document.getElementById('typing-indicator');
             const typingText = document.getElementById('typing-text');
             if (!typingIndicator || !typingText) {
+                return;
+            }
+
+            if (!payload.anonymous && Number(payload.user_id) === currentUserId) {
                 return;
             }
 
@@ -654,7 +714,7 @@
                 } else if (currentChatType === 'anonymous' && !isOwn && message.sender_alias) {
                     senderName = `<p class="text-xs font-semibold mb-1 text-gray-600">${escapeHtml(message.sender_alias)}</p>`;
                 }
-                const messageText = currentChatType === 'anonymous' ? escapeHtml(message.message) : message.message;
+                const messageText = escapeHtml(message.message);
                 const bubbleClasses = getMessageBubbleClasses(isOwn);
                 const timeClasses = getMessageTimeClasses(isOwn);
 
@@ -680,6 +740,10 @@
             const message = input.value.trim();
 
             if (!message) return;
+            if (!currentChatType) {
+                showNotification('Select a conversation first.', 'error');
+                return;
+            }
             if (currentChatType === 'anonymous' && !currentAnonymousRoomId) return;
             if (currentChatType === 'group' && !currentGroupId) return;
             if (currentChatType === 'friend' && !currentFriendId) return;
@@ -692,7 +756,7 @@
             const messageDiv = document.createElement('div');
             messageDiv.className = 'flex justify-end';
             const time = new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
-            const optimisticMessage = currentChatType === 'anonymous' ? escapeHtml(message) : message;
+            const optimisticMessage = escapeHtml(message);
             messageDiv.innerHTML = `
                 <div class="max-w-xs sm:max-w-sm lg:max-w-md">
                     <div class="px-3 sm:px-4 py-2 rounded-lg ${getMessageBubbleClasses(true)}">
@@ -708,15 +772,10 @@
             sendButton.disabled = true;
 
             if (currentChatType === 'anonymous') {
-                fetch(`{{ url('anonymous-chat') }}/${currentAnonymousRoomId}/messages`, {
+                chatFetchJson(`{{ url('anonymous-chat') }}/${currentAnonymousRoomId}/messages`, {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
-                    },
-                    body: JSON.stringify({ message })
+                    body: JSON.stringify({ message }),
                 })
-                .then(response => response.json())
                 .then(data => {
                     if (data.error) {
                         showNotification(data.error, 'error');
@@ -727,7 +786,7 @@
                 })
                 .catch(error => {
                     console.error('Error sending anonymous message:', error);
-                    showNotification('Error sending message', 'error');
+                    showNotification(error.message || 'Error sending message', 'error');
                     sendButton.disabled = input.value.trim() === '';
                 });
                 return;
@@ -740,26 +799,19 @@
                 ? { message }
                 : { receiver_id: currentFriendId, message };
 
-            fetch(sendUrl, {
+            chatFetchJson(sendUrl, {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
-                },
-                body: JSON.stringify(payload)
+                body: JSON.stringify(payload),
             })
-            .then(response => response.json())
             .then(data => {
                 if (data.error) {
                     showNotification(data.error, 'error');
                 }
-                // Re-enable send button
                 sendButton.disabled = input.value.trim() === '';
             })
             .catch(error => {
                 console.error('Error sending message:', error);
-                showNotification('Error sending message', 'error');
-                // Re-enable send button
+                showNotification(error.message || 'Error sending message', 'error');
                 sendButton.disabled = input.value.trim() === '';
             });
         }
@@ -882,6 +934,7 @@
         const friendId = urlParams.get('friend');
         const groupId = urlParams.get('group');
         const anonymousRoomId = urlParams.get('anonymous_room');
+        const isAnonymousStarter = urlParams.get('starter') === '1';
 
         if (anonymousRoomId) {
             const roomElement = document.querySelector(`[data-anonymous-room-id="${anonymousRoomId}"]`);
@@ -889,7 +942,8 @@
                 selectAnonymous(
                     anonymousRoomId,
                     roomElement.dataset.peerAlias,
-                    roomElement.dataset.peerName || knownPeerNameFromUrl || ''
+                    roomElement.dataset.peerName || knownPeerNameFromUrl || '',
+                    roomElement.dataset.isCreator === '1' || isAnonymousStarter
                 );
             } else {
                 fetch(`{{ url('anonymous-chat') }}/${anonymousRoomId}/messages`)
@@ -899,7 +953,8 @@
                             selectAnonymous(
                                 anonymousRoomId,
                                 data.room.peer_alias,
-                                knownPeerNameFromUrl || ''
+                                data.room.is_creator ? (data.room.peer_name || knownPeerNameFromUrl || '') : '',
+                                Boolean(data.room.is_creator || isAnonymousStarter)
                             );
                         }
                     });

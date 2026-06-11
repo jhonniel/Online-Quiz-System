@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Events\Chat\DirectChatMessageSent;
 use App\Events\Chat\DirectChatMessagesRead;
+use App\Support\ChatBroadcast;
 use App\Models\AnonymousChatRoom;
 use App\Models\User;
 use App\Models\UserActivity;
@@ -41,11 +42,13 @@ class UserChatController extends Controller
             ->get()
             ->map(function (AnonymousChatRoom $room) use ($user) {
                 $peer = $room->peerUser($user);
+                $isCreator = $room->wasCreatedBy($user->id);
 
                 return [
                     'room' => $room,
                     'peer_alias' => $peer ? (string) $room->aliasForUser($peer->id) : 'Anonymous',
-                    'peer_name' => $peer?->name,
+                    'peer_name' => $isCreator ? $peer?->name : null,
+                    'is_creator' => $isCreator,
                 ];
             });
 
@@ -74,9 +77,11 @@ class UserChatController extends Controller
 
         // Verify friendship
         $friendship = Friendship::where(function ($q) use ($currentUserId, $friendId) {
-            $q->where('user_id', $currentUserId)->where('friend_id', $friendId);
-        })->orWhere(function ($q) use ($currentUserId, $friendId) {
-            $q->where('user_id', $friendId)->where('friend_id', $currentUserId);
+            $q->where(function ($q) use ($currentUserId, $friendId) {
+                $q->where('user_id', $currentUserId)->where('friend_id', $friendId);
+            })->orWhere(function ($q) use ($currentUserId, $friendId) {
+                $q->where('user_id', $friendId)->where('friend_id', $currentUserId);
+            });
         })->where('status', 'accepted')->first();
 
         if (!$friendship) {
@@ -102,7 +107,7 @@ class UserChatController extends Controller
                 ->whereIn('id', $markedIds)
                 ->update(['is_read' => true, 'read_at' => now()]);
 
-            DirectChatMessagesRead::dispatch($currentUserId, (int) $friendId, $markedIds);
+            ChatBroadcast::dispatch(new DirectChatMessagesRead($currentUserId, (int) $friendId, $markedIds));
         }
 
         return response()->json([
@@ -123,9 +128,11 @@ class UserChatController extends Controller
 
         // Verify friendship
         $friendship = Friendship::where(function ($q) use ($currentUserId, $receiverId) {
-            $q->where('user_id', $currentUserId)->where('friend_id', $receiverId);
-        })->orWhere(function ($q) use ($currentUserId, $receiverId) {
-            $q->where('user_id', $receiverId)->where('friend_id', $currentUserId);
+            $q->where(function ($q) use ($currentUserId, $receiverId) {
+                $q->where('user_id', $currentUserId)->where('friend_id', $receiverId);
+            })->orWhere(function ($q) use ($currentUserId, $receiverId) {
+                $q->where('user_id', $receiverId)->where('friend_id', $currentUserId);
+            });
         })->where('status', 'accepted')->first();
 
         if (!$friendship) {
@@ -150,7 +157,7 @@ class UserChatController extends Controller
             $messagePreview
         );
 
-        DirectChatMessageSent::dispatch($message);
+        ChatBroadcast::dispatch(new DirectChatMessageSent($message));
 
         return response()->json([
             'success' => true,
@@ -183,7 +190,7 @@ class UserChatController extends Controller
                 ->whereIn('id', $markedIds)
                 ->update(['is_read' => true, 'read_at' => now()]);
 
-            DirectChatMessagesRead::dispatch((int) auth()->id(), (int) $request->sender_id, $markedIds);
+            ChatBroadcast::dispatch(new DirectChatMessagesRead((int) auth()->id(), (int) $request->sender_id, $markedIds));
         }
 
         return response()->json(['success' => true]);

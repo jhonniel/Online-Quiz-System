@@ -798,8 +798,6 @@ Route::middleware(['auth', 'student.not_terminated'])->group(function () {
     Route::get('/friends/users/{user}', [App\Http\Controllers\FriendshipController::class, 'show'])->name('friends.users.show');
     Route::get('/friends/search', [App\Http\Controllers\FriendshipController::class, 'search'])->name('friends.search');
     Route::post('/group-chats', [App\Http\Controllers\GroupChatController::class, 'store'])->name('group-chats.store');
-    Route::get('/group-chats/{groupChat}/messages', [App\Http\Controllers\GroupChatController::class, 'messages'])->name('group-chats.messages');
-    Route::post('/group-chats/{groupChat}/messages', [App\Http\Controllers\GroupChatController::class, 'sendMessage'])->name('group-chats.send');
     Route::post('/friends/send-request', [App\Http\Controllers\FriendshipController::class, 'sendRequest'])->name('friends.send-request');
     Route::post('/friends/{friendshipId}/accept', [App\Http\Controllers\FriendshipController::class, 'acceptRequest'])->name('friends.accept');
     Route::post('/friends/{friendshipId}/reject', [App\Http\Controllers\FriendshipController::class, 'rejectRequest'])->name('friends.reject');
@@ -809,18 +807,28 @@ Route::middleware(['auth', 'student.not_terminated'])->group(function () {
 
     // User Chat Routes
     Route::get('/user-chat', [App\Http\Controllers\UserChatController::class, 'index'])->name('user-chat.index');
-    Route::get('/user-chat/{friend}/messages', [App\Http\Controllers\UserChatController::class, 'getChat'])->name('user-chat.messages');
-    Route::post('/user-chat/send', [App\Http\Controllers\UserChatController::class, 'sendMessage'])->name('user-chat.send');
-    Route::get('/user-chat/unread-count', [App\Http\Controllers\UserChatController::class, 'getUnreadCount'])->name('user-chat.unread-count');
-    Route::post('/user-chat/mark-read', [App\Http\Controllers\UserChatController::class, 'markAsRead'])->name('user-chat.mark-read');
-    Route::get('/user-chat/recent', [App\Http\Controllers\UserChatController::class, 'getRecentChats'])->name('user-chat.recent');
+    Route::middleware('throttle:chat-messages')->group(function () {
+        Route::get('/user-chat/{friend}/messages', [App\Http\Controllers\UserChatController::class, 'getChat'])->name('user-chat.messages');
+        Route::post('/user-chat/send', [App\Http\Controllers\UserChatController::class, 'sendMessage'])->name('user-chat.send');
+        Route::get('/user-chat/unread-count', [App\Http\Controllers\UserChatController::class, 'getUnreadCount'])->name('user-chat.unread-count');
+        Route::post('/user-chat/mark-read', [App\Http\Controllers\UserChatController::class, 'markAsRead'])->name('user-chat.mark-read');
+        Route::get('/user-chat/recent', [App\Http\Controllers\UserChatController::class, 'getRecentChats'])->name('user-chat.recent');
+        Route::get('/group-chats/{groupChat}/messages', [App\Http\Controllers\GroupChatController::class, 'messages'])->name('group-chats.messages');
+        Route::post('/group-chats/{groupChat}/messages', [App\Http\Controllers\GroupChatController::class, 'sendMessage'])->name('group-chats.send');
+    });
 
     // Anonymous Chat Routes
     Route::get('/anonymous-chat', [App\Http\Controllers\AnonymousChatController::class, 'index'])->name('anonymous-chat.index');
-    Route::get('/anonymous-chat/targets', [App\Http\Controllers\AnonymousChatController::class, 'targets'])->name('anonymous-chat.targets');
-    Route::post('/anonymous-chat/start', [App\Http\Controllers\AnonymousChatController::class, 'store'])->name('anonymous-chat.start');
-    Route::get('/anonymous-chat/{anonymousChatRoom}/messages', [App\Http\Controllers\AnonymousChatController::class, 'messages'])->name('anonymous-chat.messages');
-    Route::post('/anonymous-chat/{anonymousChatRoom}/messages', [App\Http\Controllers\AnonymousChatController::class, 'sendMessage'])->name('anonymous-chat.send');
+    Route::get('/anonymous-chat/targets', [App\Http\Controllers\AnonymousChatController::class, 'targets'])
+        ->middleware('throttle:anonymous-chat-targets')
+        ->name('anonymous-chat.targets');
+    Route::post('/anonymous-chat/start', [App\Http\Controllers\AnonymousChatController::class, 'store'])
+        ->middleware('throttle:anonymous-chat-start')
+        ->name('anonymous-chat.start');
+    Route::middleware(['anonymous.chat.access', 'throttle:chat-messages'])->group(function () {
+        Route::get('/anonymous-chat/{anonymousChatRoom}/messages', [App\Http\Controllers\AnonymousChatController::class, 'messages'])->name('anonymous-chat.messages');
+        Route::post('/anonymous-chat/{anonymousChatRoom}/messages', [App\Http\Controllers\AnonymousChatController::class, 'sendMessage'])->name('anonymous-chat.send');
+    });
 
     // Status Routes
     Route::post('/status/update', [StatusController::class, 'updateStatus'])->name('status.update');

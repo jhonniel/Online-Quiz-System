@@ -33,14 +33,14 @@ class RouteServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        $this->configureRateLimiting();
+
         // Load routes FIRST before anything else
         $this->mapWebRoutes();
 
         if (file_exists(base_path('routes/api.php'))) {
             $this->mapApiRoutes();
         }
-
-        $this->configureRateLimiting();
 
         // Routes are registered in boot() before all providers finish; rebuild name/action lookups
         // so route() and Route::has() work for every named route (e.g. quizzes.results).
@@ -78,8 +78,24 @@ class RouteServiceProvider extends ServiceProvider
      */
     protected function configureRateLimiting(): void
     {
+        RateLimiter::for('api', function (Request $request) {
+            return Limit::perMinute(60)->by($request->user()?->id ?: $request->ip());
+        });
+
         RateLimiter::for('say-it-ai-image', function (Request $request) {
             return Limit::perMinute(8)->by($request->ip());
+        });
+
+        RateLimiter::for('chat-messages', function (Request $request) {
+            return Limit::perMinute(60)->by($request->user()?->id ?: $request->ip());
+        });
+
+        RateLimiter::for('anonymous-chat-start', function (Request $request) {
+            return Limit::perMinute(10)->by($request->user()?->id ?: $request->ip());
+        });
+
+        RateLimiter::for('anonymous-chat-targets', function (Request $request) {
+            return Limit::perMinute(20)->by($request->user()?->id ?: $request->ip());
         });
     }
 }

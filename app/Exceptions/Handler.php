@@ -3,10 +3,12 @@
 namespace App\Exceptions;
 
 use App\Models\ErrorLog;
+use Illuminate\Database\QueryException;
 use Illuminate\Foundation\Exceptions\Handler as ExceptionHandler;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Session\TokenMismatchException;
+use Illuminate\Validation\ValidationException;
 use Symfony\Component\HttpKernel\Exception\HttpExceptionInterface;
 use Throwable;
 
@@ -97,7 +99,7 @@ class Handler extends ExceptionHandler
                 ErrorLog::create([
                     'status_code' => $statusCode,
                     'exception_class' => get_class($e),
-                    'message' => substr((string) $e->getMessage(), 0, 1000),
+                    'message' => substr($this->publicSafeErrorMessage($e), 0, 1000),
                     'method' => substr((string) $request->method(), 0, 10),
                     'path' => substr($path, 0, 2048),
                     'user_id' => Auth::id(),
@@ -122,7 +124,51 @@ class Handler extends ExceptionHandler
             ]);
         }
 
-        return parent::render($request, $e);
+        if (! config('app.debug') && $this->shouldSanitizeJsonResponse($request, $e)) {
+            $status = $e instanceof HttpExceptionInterface ? $e->getStatusCode() : 500;
+
+            return response()->json([
+                'message' => $status >= 500 ? 'Server error.' : 'Request could not be completed.',
+            ], $status);
+        }
+
+        $response = parent::render($request, $e);
+
+        if (! config('app.debug') && $request->expectsJson() && $response->getStatusCode() >= 500) {
+            return response()->json(['message' => 'Server error.'], 500);
+        }
+
+        return $response;
+    }
+
+    private function shouldSanitizeJsonResponse($request, Throwable $e): bool
+    {
+        if (! $request->expectsJson()) {
+            return false;
+        }
+
+        if ($e instanceof ValidationException || $e instanceof TokenMismatchException) {
+            return false;
+        }
+
+        return $e instanceof QueryException
+            || ! $e instanceof HttpExceptionInterface
+            || $e->getStatusCode() >= 500;
+    }
+
+    private function publicSafeErrorMessage(Throwable $e): string
+    {
+        if ($e instanceof QueryException) {
+            return 'Database error';
+        }
+
+        $message = (string) $e->getMessage();
+
+        if (preg_match('/SQLSTATE\\[/i', $message)) {
+            return 'Database error';
+        }
+
+        return $message;
     }
 }
 
