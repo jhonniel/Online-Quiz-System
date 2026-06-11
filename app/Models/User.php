@@ -716,6 +716,14 @@ class User extends Authenticatable
         return $this->friendships()->where('status', 'pending');
     }
 
+    public function groupChats()
+    {
+        return $this->belongsToMany(GroupChat::class, 'group_chat_members', 'user_id', 'group_chat_id')
+            ->withPivot(['joined_at'])
+            ->withTimestamps()
+            ->orderByDesc('group_chats.updated_at');
+    }
+
     // User chat relationships
     public function sentMessages()
     {

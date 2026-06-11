@@ -793,7 +793,11 @@ Route::middleware(['auth', 'student.not_terminated'])->group(function () {
 
     // Friendship Routes
     Route::get('/friends', [App\Http\Controllers\FriendshipController::class, 'index'])->name('friends.index');
+    Route::get('/friends/users/{user}', [App\Http\Controllers\FriendshipController::class, 'show'])->name('friends.users.show');
     Route::get('/friends/search', [App\Http\Controllers\FriendshipController::class, 'search'])->name('friends.search');
+    Route::post('/group-chats', [App\Http\Controllers\GroupChatController::class, 'store'])->name('group-chats.store');
+    Route::get('/group-chats/{groupChat}/messages', [App\Http\Controllers\GroupChatController::class, 'messages'])->name('group-chats.messages');
+    Route::post('/group-chats/{groupChat}/messages', [App\Http\Controllers\GroupChatController::class, 'sendMessage'])->name('group-chats.send');
     Route::post('/friends/send-request', [App\Http\Controllers\FriendshipController::class, 'sendRequest'])->name('friends.send-request');
     Route::post('/friends/{friendshipId}/accept', [App\Http\Controllers\FriendshipController::class, 'acceptRequest'])->name('friends.accept');
     Route::post('/friends/{friendshipId}/reject', [App\Http\Controllers\FriendshipController::class, 'rejectRequest'])->name('friends.reject');

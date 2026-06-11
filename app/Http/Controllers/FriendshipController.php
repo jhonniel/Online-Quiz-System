@@ -15,16 +15,55 @@ class FriendshipController extends Controller
         $user = auth()->user();
 
         // Get friends from both directions (where user is user_id or friend_id)
-        $friendsAsUser = $user->friends()->get();
-        $friendsAsFriend = $user->acceptedFriends()->get();
+        $friendsAsUser = $user->friends()->with('department:id,name')->get();
+        $friendsAsFriend = $user->acceptedFriends()->with('department:id,name')->get();
 
         // Merge both collections and remove duplicates
-        $allFriends = $friendsAsUser->merge($friendsAsFriend)->unique('id');
+        $allFriends = $friendsAsUser->merge($friendsAsFriend)->unique('id')->values();
 
-        $pendingRequests = $user->pendingFriendRequests()->with('user')->get();
-        $sentRequests = $user->sentFriendRequests()->with('friend')->get();
+        $pendingRequests = $user->pendingFriendRequests()->with('user.department:id,name')->get();
+        $sentRequests = $user->sentFriendRequests()->with('friend.department:id,name')->get();
 
         return view('friends.index', compact('allFriends', 'pendingRequests', 'sentRequests'));
+    }
+
+    public function show(User $user): JsonResponse
+    {
+        $currentUserId = auth()->id();
+
+        if ($currentUserId === $user->id) {
+            return response()->json(['error' => 'Cannot view your own profile here.'], 400);
+        }
+
+        $isFriend = Friendship::query()
+            ->where('status', 'accepted')
+            ->where(function ($query) use ($currentUserId, $user) {
+                $query->where(function ($inner) use ($currentUserId, $user) {
+                    $inner->where('user_id', $currentUserId)
+                        ->where('friend_id', $user->id);
+                })->orWhere(function ($inner) use ($currentUserId, $user) {
+                    $inner->where('user_id', $user->id)
+                        ->where('friend_id', $currentUserId);
+                });
+            })
+            ->exists();
+
+        if (! $isFriend) {
+            return response()->json(['error' => 'You are not friends with this user.'], 403);
+        }
+
+        $user->load('department:id,name');
+
+        return response()->json([
+            'friend' => [
+                'id' => $user->id,
+                'name' => $user->name,
+                'email' => $user->email,
+                'department' => $user->department?->name,
+                'profile_picture_url' => $user->profile_picture ? $user->getProfilePictureUrl() : null,
+                'initials' => $user->getInitials(),
+            ],
+        ]);
     }
 
     public function search(Request $request): JsonResponse

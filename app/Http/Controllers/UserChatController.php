@@ -22,7 +22,12 @@ class UserChatController extends Controller
         // Merge both collections and remove duplicates
         $friends = $friendsAsUser->merge($friendsAsFriend)->unique('id');
 
-        return view('user-chat.index', compact('friends'));
+        $groupChats = $user->groupChats()
+            ->with(['members:id,name', 'creator:id,name'])
+            ->withCount('members')
+            ->get();
+
+        return view('user-chat.index', compact('friends', 'groupChats'));
     }
 
     public function getChat(Request $request, $friendId): JsonResponse

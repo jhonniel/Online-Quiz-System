@@ -33,15 +33,49 @@
         <div class="flex flex-col lg:flex-row h-full">
             <!-- Friends Sidebar -->
             <div class="w-full lg:w-1/3 border-r border-gray-200 flex flex-col">
-                <!-- Friends Header -->
+                <!-- Sidebar Header -->
                 <div class="p-3 sm:p-4 border-b border-gray-200 bg-gray-50">
-                    <h3 class="text-base sm:text-lg font-semibold text-gray-900">Your Friends</h3>
-                    <p class="text-xs sm:text-sm text-gray-500">Select a friend to start chatting</p>
+                    <div class="flex items-center justify-between gap-2">
+                        <div>
+                            <h3 class="text-base sm:text-lg font-semibold text-gray-900">Chats</h3>
+                            <p class="text-xs sm:text-sm text-gray-500">Friends and group chats</p>
+                        </div>
+                        <a href="{{ route('friends.index') }}"
+                           class="text-xs font-medium text-indigo-600 hover:text-indigo-800 whitespace-nowrap">My Friends</a>
+                    </div>
                 </div>
 
-                <!-- Friends List -->
+                <!-- Chat Lists -->
                 <div class="flex-1 overflow-y-auto">
-                    <div id="friends-list" class="p-2">
+                    @if($groupChats->count() > 0)
+                        <div class="px-3 pt-3 pb-1">
+                            <h4 class="text-xs font-semibold uppercase tracking-wide text-gray-500">Group Chats</h4>
+                        </div>
+                        <div id="group-chats-list" class="p-2 pt-0 border-b border-gray-200">
+                            @foreach($groupChats as $groupChat)
+                                <div class="group-chat-item p-2 sm:p-3 border border-gray-200 rounded-lg cursor-pointer hover:bg-gray-50 transition-colors mb-2"
+                                     data-group-id="{{ $groupChat->id }}"
+                                     data-group-name="{{ $groupChat->name }}">
+                                    <div class="flex items-center space-x-2 sm:space-x-3">
+                                        <div class="w-8 h-8 sm:w-10 sm:h-10 bg-purple-100 rounded-full flex items-center justify-center shrink-0">
+                                            <svg class="w-4 h-4 sm:w-5 sm:h-5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path>
+                                            </svg>
+                                        </div>
+                                        <div class="flex-1 min-w-0">
+                                            <p class="font-medium text-gray-900 truncate text-sm sm:text-base">{{ $groupChat->name }}</p>
+                                            <p class="text-xs text-gray-500 truncate">{{ $groupChat->members_count }} members</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            @endforeach
+                        </div>
+                    @endif
+
+                    <div class="px-3 pt-3 pb-1">
+                        <h4 class="text-xs font-semibold uppercase tracking-wide text-gray-500">Friends</h4>
+                    </div>
+                    <div id="friends-list" class="p-2 pt-0">
                         @foreach($friends as $friend)
                             <div class="friend-item p-2 sm:p-3 border border-gray-200 rounded-lg cursor-pointer hover:bg-gray-50 transition-colors mb-2"
                                  data-friend-id="{{ $friend->id }}"
@@ -101,8 +135,8 @@
                         <svg class="mx-auto h-16 w-16 sm:h-20 sm:w-20 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path>
                         </svg>
-                        <h3 class="mt-4 text-base sm:text-lg font-medium text-gray-900">Select a friend to start chatting</h3>
-                        <p class="mt-2 text-sm text-gray-500">Choose a friend from the list to begin your conversation.</p>
+                        <h3 class="mt-4 text-base sm:text-lg font-medium text-gray-900">Select a chat to start messaging</h3>
+                        <p class="mt-2 text-sm text-gray-500">Choose a friend or group chat from the list.</p>
                     </div>
                 </div>
 
@@ -117,8 +151,8 @@
                             <div class="absolute bottom-0 right-0 w-2 h-2 sm:w-3 sm:h-3 bg-green-400 border-2 border-white rounded-full"></div>
                         </div>
                         <div class="flex-1 min-w-0">
-                            <h3 id="chat-friend-name" class="font-medium text-gray-900 text-sm sm:text-base truncate">Friend Name</h3>
-                            <p class="text-xs sm:text-sm text-gray-500">Online</p>
+                            <h3 id="chat-friend-name" class="font-medium text-gray-900 text-sm sm:text-base truncate">Chat Name</h3>
+                            <p id="chat-subtitle" class="text-xs sm:text-sm text-gray-500">Online</p>
                         </div>
                         <div class="flex space-x-1 sm:space-x-2">
                             <button onclick="clearChat()"
@@ -193,16 +227,22 @@
 <script>
         let currentFriendId = null;
         let currentFriendName = null;
+        let currentGroupId = null;
+        let currentGroupName = null;
+        let currentChatType = null;
         let messages = [];
         let typingTimeout = null;
 
         document.addEventListener('DOMContentLoaded', function() {
-            // Friend selection
             document.querySelectorAll('.friend-item').forEach(item => {
                 item.addEventListener('click', function() {
-                    const friendId = this.dataset.friendId;
-                    const friendName = this.dataset.friendName;
-                    selectFriend(friendId, friendName);
+                    selectFriend(this.dataset.friendId, this.dataset.friendName);
+                });
+            });
+
+            document.querySelectorAll('.group-chat-item').forEach(item => {
+                item.addEventListener('click', function() {
+                    selectGroup(this.dataset.groupId, this.dataset.groupName);
                 });
             });
 
@@ -231,29 +271,55 @@
             // setInterval(loadUnreadCounts, 3000);
         });
 
+        function clearChatSelection() {
+            document.querySelectorAll('.friend-item, .group-chat-item').forEach(item => {
+                item.classList.remove('bg-indigo-50', 'border-indigo-300', 'bg-purple-50', 'border-purple-300');
+            });
+        }
+
         function selectFriend(friendId, friendName) {
+            currentChatType = 'friend';
             currentFriendId = friendId;
             currentFriendName = friendName;
+            currentGroupId = null;
+            currentGroupName = null;
 
-            // Update UI
             document.getElementById('no-chat-selected').classList.add('hidden');
             document.getElementById('chat-area').classList.remove('hidden');
             document.getElementById('chat-friend-name').textContent = friendName;
+            document.getElementById('chat-subtitle').textContent = 'Direct message';
 
-            // Update friend list selection
-            document.querySelectorAll('.friend-item').forEach(item => {
-                item.classList.remove('bg-indigo-50', 'border-indigo-300');
-            });
-            document.querySelector(`[data-friend-id="${friendId}"]`).classList.add('bg-indigo-50', 'border-indigo-300');
+            clearChatSelection();
+            document.querySelector(`[data-friend-id="${friendId}"]`)?.classList.add('bg-indigo-50', 'border-indigo-300');
 
-            // Load messages
             loadMessages();
-
-            // Mark messages as read
             markAsRead();
         }
 
+        function selectGroup(groupId, groupName) {
+            currentChatType = 'group';
+            currentGroupId = groupId;
+            currentGroupName = groupName;
+            currentFriendId = null;
+            currentFriendName = null;
+
+            document.getElementById('no-chat-selected').classList.add('hidden');
+            document.getElementById('chat-area').classList.remove('hidden');
+            document.getElementById('chat-friend-name').textContent = groupName;
+            document.getElementById('chat-subtitle').textContent = 'Group chat';
+
+            clearChatSelection();
+            document.querySelector(`[data-group-id="${groupId}"]`)?.classList.add('bg-purple-50', 'border-purple-300');
+
+            loadMessages();
+        }
+
         function loadMessages() {
+            if (currentChatType === 'group') {
+                loadGroupMessages();
+                return;
+            }
+
             if (!currentFriendId) return;
 
             showLoading();
@@ -275,6 +341,34 @@
                     hideLoading();
                     console.error('Error loading messages:', error);
                     showNotification('Error loading messages', 'error');
+                });
+        }
+
+        function loadGroupMessages() {
+            if (!currentGroupId) return;
+
+            showLoading();
+
+            fetch(`{{ url('group-chats') }}/${currentGroupId}/messages`)
+                .then(response => response.json())
+                .then(data => {
+                    hideLoading();
+
+                    if (data.error) {
+                        showNotification(data.error, 'error');
+                        return;
+                    }
+
+                    messages = data.messages;
+                    if (data.group_chat?.members?.length) {
+                        document.getElementById('chat-subtitle').textContent = `${data.group_chat.members.length} members`;
+                    }
+                    displayMessages();
+                })
+                .catch(error => {
+                    hideLoading();
+                    console.error('Error loading group messages:', error);
+                    showNotification('Error loading group messages', 'error');
                 });
         }
 
@@ -300,10 +394,14 @@
                 messageDiv.className = `flex ${isOwn ? 'justify-end' : 'justify-start'}`;
 
                 const time = new Date(message.created_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+                const senderName = currentChatType === 'group' && !isOwn && message.sender?.name
+                    ? `<p class="text-xs font-semibold mb-1 ${isOwn ? 'text-indigo-100' : 'text-gray-600'}">${message.sender.name}</p>`
+                    : '';
 
                 messageDiv.innerHTML = `
                     <div class="max-w-xs sm:max-w-sm lg:max-w-md">
                         <div class="px-3 sm:px-4 py-2 rounded-lg ${isOwn ? 'bg-indigo-600 text-white' : 'bg-white text-gray-900 border border-gray-200'}">
+                            ${senderName}
                             <p class="text-sm">${message.message}</p>
                             <p class="text-xs mt-1 ${isOwn ? 'text-indigo-100' : 'text-gray-500'}">${time}</p>
                         </div>
@@ -321,7 +419,7 @@
             const input = document.getElementById('message-input');
             const message = input.value.trim();
 
-            if (!message || !currentFriendId) return;
+            if (!message || (currentChatType !== 'group' && !currentFriendId) || (currentChatType === 'group' && !currentGroupId)) return;
 
             // Disable send button temporarily
             const sendButton = document.getElementById('send-button');
@@ -345,17 +443,20 @@
             input.value = '';
             sendButton.disabled = true;
 
-            // Send to server
-            fetch('{{ url("/user-chat/send") }}', {
+            const sendUrl = currentChatType === 'group'
+                ? `{{ url('group-chats') }}/${currentGroupId}/messages`
+                : '{{ url("/user-chat/send") }}';
+            const payload = currentChatType === 'group'
+                ? { message }
+                : { receiver_id: currentFriendId, message };
+
+            fetch(sendUrl, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                     'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
                 },
-                body: JSON.stringify({
-                    receiver_id: currentFriendId,
-                    message: message
-                })
+                body: JSON.stringify(payload)
             })
             .then(response => response.json())
             .then(data => {
@@ -487,14 +588,19 @@
             }
         }
 
-        // Auto-select friend from URL parameter
         const urlParams = new URLSearchParams(window.location.search);
         const friendId = urlParams.get('friend');
-        if (friendId) {
+        const groupId = urlParams.get('group');
+
+        if (groupId) {
+            const groupElement = document.querySelector(`[data-group-id="${groupId}"]`);
+            if (groupElement) {
+                selectGroup(groupId, groupElement.dataset.groupName);
+            }
+        } else if (friendId) {
             const friendElement = document.querySelector(`[data-friend-id="${friendId}"]`);
             if (friendElement) {
-                const friendName = friendElement.dataset.friendName;
-                selectFriend(friendId, friendName);
+                selectFriend(friendId, friendElement.dataset.friendName);
             }
         }
     </script>

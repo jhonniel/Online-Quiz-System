@@ -16,7 +16,18 @@
                     <p class="text-indigo-100 text-sm">Connect with friends and build your network</p>
                 </div>
             </div>
-            <div class="flex items-center space-x-2">
+            <div class="flex flex-wrap items-center gap-2">
+                @if($allFriends->count() > 0)
+                    <button type="button"
+                            onclick="openCreateGroupModal()"
+                            class="inline-flex items-center px-4 py-2 border border-white/30 rounded-md shadow-sm text-sm font-medium text-white bg-white/10 hover:bg-white/20 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-white transition-all duration-200">
+                        <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path>
+                        </svg>
+                        <span class="hidden sm:inline">Create Group Chat</span>
+                        <span class="sm:hidden">Group Chat</span>
+                    </button>
+                @endif
                 <a href="{{ url('/user-chat') }}"
                    class="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-all duration-200">
                     <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -155,8 +166,13 @@
                                                 </div>
                                             </div>
                                             <div class="flex flex-col space-y-1">
+                                                <button type="button"
+                                                        onclick="viewFriend({{ $friend->id }})"
+                                                        class="bg-white text-gray-700 border border-gray-300 px-3 py-1 rounded-md text-xs font-medium hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-colors duration-200">
+                                                    View
+                                                </button>
                                                 <a href="{{ url('/user-chat') }}?friend={{ $friend->id }}"
-                                                   class="bg-indigo-500 text-white px-3 py-1 rounded-md text-xs font-medium hover:bg-indigo-600 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-colors duration-200">
+                                                   class="bg-indigo-500 text-white px-3 py-1 rounded-md text-xs font-medium hover:bg-indigo-600 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-colors duration-200 text-center">
                                                     Chat
                                                 </a>
                                                 <button onclick="removeFriend({{ $friend->id }})"
@@ -189,6 +205,69 @@
 
         </div>
     </div>
+
+    <!-- View Friend Modal -->
+    <div id="view-friend-modal" class="hidden fixed inset-0 z-50 overflow-y-auto">
+        <div class="flex min-h-full items-center justify-center p-4">
+            <div class="fixed inset-0 bg-gray-600/50" onclick="closeViewFriendModal()"></div>
+            <div class="relative w-full max-w-md rounded-lg bg-white shadow-xl">
+                <div class="px-6 py-5 border-b border-gray-200">
+                    <h3 class="text-lg font-semibold text-gray-900">Friend Profile</h3>
+                </div>
+                <div class="px-6 py-5">
+                    <div class="flex flex-col items-center text-center">
+                        <div id="view-friend-avatar" class="mb-4"></div>
+                        <h4 id="view-friend-name" class="text-lg font-semibold text-gray-900"></h4>
+                        <p id="view-friend-email" class="text-sm text-gray-500 mt-1"></p>
+                        <p id="view-friend-department" class="text-sm text-gray-600 mt-2"></p>
+                    </div>
+                </div>
+                <div class="px-6 py-4 border-t border-gray-200 flex justify-end gap-2">
+                    <button type="button" onclick="closeViewFriendModal()" class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50">Close</button>
+                    <a id="view-friend-chat-link" href="#" class="px-4 py-2 text-sm font-medium text-white bg-indigo-600 rounded-md hover:bg-indigo-700">Chat</a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Create Group Chat Modal -->
+    @if($allFriends->count() > 0)
+    <div id="create-group-modal" class="hidden fixed inset-0 z-50 overflow-y-auto">
+        <div class="flex min-h-full items-center justify-center p-4">
+            <div class="fixed inset-0 bg-gray-600/50" onclick="closeCreateGroupModal()"></div>
+            <div class="relative w-full max-w-lg rounded-lg bg-white shadow-xl">
+                <div class="px-6 py-5 border-b border-gray-200">
+                    <h3 class="text-lg font-semibold text-gray-900">Create Group Chat</h3>
+                    <p class="text-sm text-gray-500 mt-1">Select friends to include in the group.</p>
+                </div>
+                <form id="create-group-form" class="px-6 py-5 space-y-4">
+                    <div>
+                        <label for="group-name" class="block text-sm font-medium text-gray-700">Group name</label>
+                        <input type="text" id="group-name" name="name" maxlength="100" required
+                               class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm"
+                               placeholder="e.g. Study Group">
+                    </div>
+                    <div>
+                        <p class="block text-sm font-medium text-gray-700 mb-2">Friends</p>
+                        <div class="max-h-56 overflow-y-auto space-y-2 border border-gray-200 rounded-md p-3">
+                            @foreach($allFriends as $friend)
+                                <label class="flex items-center gap-3 p-2 rounded-md hover:bg-gray-50 cursor-pointer">
+                                    <input type="checkbox" name="member_ids[]" value="{{ $friend->id }}" class="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500">
+                                    <span class="text-sm text-gray-900">{{ $friend->name }}</span>
+                                    <span class="text-xs text-gray-500 truncate">{{ $friend->department?->name }}</span>
+                                </label>
+                            @endforeach
+                        </div>
+                    </div>
+                    <div class="flex justify-end gap-2 pt-2">
+                        <button type="button" onclick="closeCreateGroupModal()" class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50">Cancel</button>
+                        <button type="submit" class="px-4 py-2 text-sm font-medium text-white bg-indigo-600 rounded-md hover:bg-indigo-700">Create Group</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    @endif
 
     <!-- Loading Overlay -->
     <div id="loading-overlay" class="hidden fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
@@ -354,13 +433,94 @@
             }
         }
 
-        // Hide search results when clicking outside
-        document.addEventListener('click', function(e) {
-            const searchResults = document.getElementById('search-results');
-            const searchInput = document.getElementById('friend-search');
-            if (!searchResults.contains(e.target) && !searchInput.contains(e.target)) {
-                searchResults.classList.add('hidden');
+        function viewFriend(friendId) {
+            showLoading();
+
+            fetch(`{{ url('friends/users') }}/${friendId}`)
+                .then(response => response.json())
+                .then(data => {
+                    hideLoading();
+
+                    if (data.error || !data.friend) {
+                        showNotification(data.error || 'Unable to load friend profile.', 'error');
+                        return;
+                    }
+
+                    const friend = data.friend;
+                    const avatar = document.getElementById('view-friend-avatar');
+                    if (friend.profile_picture_url) {
+                        avatar.innerHTML = `<img src="${friend.profile_picture_url}" alt="${friend.name}" class="w-20 h-20 rounded-full object-cover border-4 border-white shadow">`;
+                    } else {
+                        avatar.innerHTML = `<div class="w-20 h-20 bg-gradient-to-br from-green-400 to-emerald-600 rounded-full flex items-center justify-center border-4 border-white shadow"><span class="text-white font-semibold text-2xl">${friend.initials}</span></div>`;
+                    }
+
+                    document.getElementById('view-friend-name').textContent = friend.name;
+                    document.getElementById('view-friend-email').textContent = friend.email;
+                    document.getElementById('view-friend-department').textContent = friend.department ? `Department: ${friend.department}` : 'Department: —';
+                    document.getElementById('view-friend-chat-link').href = `{{ url('/user-chat') }}?friend=${friend.id}`;
+                    document.getElementById('view-friend-modal').classList.remove('hidden');
+                })
+                .catch(() => {
+                    hideLoading();
+                    showNotification('Unable to load friend profile.', 'error');
+                });
+        }
+
+        function closeViewFriendModal() {
+            document.getElementById('view-friend-modal').classList.add('hidden');
+        }
+
+        function openCreateGroupModal() {
+            document.getElementById('create-group-modal')?.classList.remove('hidden');
+        }
+
+        function closeCreateGroupModal() {
+            document.getElementById('create-group-modal')?.classList.add('hidden');
+        }
+
+        document.getElementById('create-group-form')?.addEventListener('submit', function (event) {
+            event.preventDefault();
+
+            const name = document.getElementById('group-name').value.trim();
+            const memberIds = Array.from(document.querySelectorAll('#create-group-form input[name="member_ids[]"]:checked'))
+                .map(input => parseInt(input.value, 10));
+
+            if (!name) {
+                showNotification('Enter a group name.', 'error');
+                return;
             }
+
+            if (memberIds.length === 0) {
+                showNotification('Select at least one friend.', 'error');
+                return;
+            }
+
+            showLoading();
+
+            fetch('{{ route('group-chats.store') }}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+                },
+                body: JSON.stringify({ name, member_ids: memberIds }),
+            })
+                .then(response => response.json())
+                .then(data => {
+                    hideLoading();
+
+                    if (!data.success) {
+                        showNotification(data.error || 'Unable to create group chat.', 'error');
+                        return;
+                    }
+
+                    showNotification('Group chat created!', 'success');
+                    window.location.href = data.redirect_url;
+                })
+                .catch(() => {
+                    hideLoading();
+                    showNotification('Unable to create group chat.', 'error');
+                });
         });
     </script>
 @endsection
