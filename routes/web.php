@@ -375,6 +375,8 @@ Route::prefix('admin')->middleware(['auth', 'admin'])->group(function () {
         Route::get('user-activity/sessions', [App\Http\Controllers\Admin\UserActivityController::class, 'sessions'])->name('admin.user-activity.sessions');
         Route::get('user-activity/statistics', [App\Http\Controllers\Admin\UserActivityController::class, 'statistics'])->name('admin.user-activity.statistics');
         Route::post('user-activity/cleanup', [App\Http\Controllers\Admin\UserActivityController::class, 'cleanup'])->name('admin.user-activity.cleanup');
+        Route::get('anonymous-chats', [App\Http\Controllers\Admin\AnonymousChatController::class, 'index'])->name('admin.anonymous-chats.index');
+        Route::get('anonymous-chats/{anonymousChatRoom}', [App\Http\Controllers\Admin\AnonymousChatController::class, 'show'])->name('admin.anonymous-chats.show');
     });
 
     // Key Performance Indicator (KPI) - Only for super admins
@@ -812,6 +814,13 @@ Route::middleware(['auth', 'student.not_terminated'])->group(function () {
     Route::get('/user-chat/unread-count', [App\Http\Controllers\UserChatController::class, 'getUnreadCount'])->name('user-chat.unread-count');
     Route::post('/user-chat/mark-read', [App\Http\Controllers\UserChatController::class, 'markAsRead'])->name('user-chat.mark-read');
     Route::get('/user-chat/recent', [App\Http\Controllers\UserChatController::class, 'getRecentChats'])->name('user-chat.recent');
+
+    // Anonymous Chat Routes
+    Route::get('/anonymous-chat', [App\Http\Controllers\AnonymousChatController::class, 'index'])->name('anonymous-chat.index');
+    Route::get('/anonymous-chat/targets', [App\Http\Controllers\AnonymousChatController::class, 'targets'])->name('anonymous-chat.targets');
+    Route::post('/anonymous-chat/start', [App\Http\Controllers\AnonymousChatController::class, 'store'])->name('anonymous-chat.start');
+    Route::get('/anonymous-chat/{anonymousChatRoom}/messages', [App\Http\Controllers\AnonymousChatController::class, 'messages'])->name('anonymous-chat.messages');
+    Route::post('/anonymous-chat/{anonymousChatRoom}/messages', [App\Http\Controllers\AnonymousChatController::class, 'sendMessage'])->name('anonymous-chat.send');
 
     // Status Routes
     Route::post('/status/update', [StatusController::class, 'updateStatus'])->name('status.update');

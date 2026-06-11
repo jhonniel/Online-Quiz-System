@@ -216,7 +216,12 @@
                 </div>
                 <div class="px-6 py-5">
                     <div class="flex flex-col items-center text-center">
-                        <div id="view-friend-avatar" class="mb-4"></div>
+                        <div id="view-friend-avatar" class="mb-3"></div>
+                        <button type="button"
+                                id="view-friend-image-btn"
+                                class="hidden mb-4 text-xs font-medium text-indigo-600 hover:text-indigo-800 underline">
+                            View profile image
+                        </button>
                         <h4 id="view-friend-name" class="text-lg font-semibold text-gray-900"></h4>
                         <p id="view-friend-email" class="text-sm text-gray-500 mt-1"></p>
                         <p id="view-friend-department" class="text-sm text-gray-600 mt-2"></p>
@@ -226,6 +231,25 @@
                     <button type="button" onclick="closeViewFriendModal()" class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50">Close</button>
                     <a id="view-friend-chat-link" href="#" class="px-4 py-2 text-sm font-medium text-white bg-indigo-600 rounded-md hover:bg-indigo-700">Chat</a>
                 </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Friend Profile Image Preview -->
+    <div id="view-friend-image-modal" class="hidden fixed inset-0 z-[60] overflow-y-auto">
+        <div class="flex min-h-full items-center justify-center p-4">
+            <div class="fixed inset-0 bg-black/70" onclick="closeFriendImagePreview()"></div>
+            <div class="relative max-w-lg w-full">
+                <button type="button"
+                        onclick="closeFriendImagePreview()"
+                        class="absolute -top-10 right-0 text-white hover:text-gray-200 text-sm font-medium">
+                    Close
+                </button>
+                <img id="view-friend-image-full"
+                     src=""
+                     alt="Friend profile image"
+                     class="w-full max-h-[80vh] object-contain rounded-lg shadow-2xl bg-white">
+                <p id="view-friend-image-caption" class="mt-3 text-center text-sm text-white"></p>
             </div>
         </div>
     </div>
@@ -433,6 +457,34 @@
             }
         }
 
+        let currentFriendImageUrl = null;
+        let currentFriendImageName = '';
+
+        function escapeHtml(value) {
+            return String(value)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#039;');
+        }
+
+        function openFriendImagePreview() {
+            if (!currentFriendImageUrl) {
+                return;
+            }
+
+            document.getElementById('view-friend-image-full').src = currentFriendImageUrl;
+            document.getElementById('view-friend-image-full').alt = `${currentFriendImageName} profile image`;
+            document.getElementById('view-friend-image-caption').textContent = currentFriendImageName;
+            document.getElementById('view-friend-image-modal').classList.remove('hidden');
+        }
+
+        function closeFriendImagePreview() {
+            document.getElementById('view-friend-image-modal').classList.add('hidden');
+            document.getElementById('view-friend-image-full').src = '';
+        }
+
         function viewFriend(friendId) {
             showLoading();
 
@@ -448,10 +500,36 @@
 
                     const friend = data.friend;
                     const avatar = document.getElementById('view-friend-avatar');
+                    const imageBtn = document.getElementById('view-friend-image-btn');
+                    currentFriendImageUrl = friend.profile_picture_url || null;
+                    currentFriendImageName = friend.name || 'Friend';
+
                     if (friend.profile_picture_url) {
-                        avatar.innerHTML = `<img src="${friend.profile_picture_url}" alt="${friend.name}" class="w-20 h-20 rounded-full object-cover border-4 border-white shadow">`;
+                        avatar.innerHTML = `
+                            <button type="button"
+                                    onclick="openFriendImagePreview()"
+                                    class="group relative rounded-full focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
+                                    title="View profile image">
+                                <img src="${escapeHtml(friend.profile_picture_url)}"
+                                     alt="${escapeHtml(friend.name)}"
+                                     class="w-32 h-32 rounded-full object-cover border-4 border-white shadow-lg group-hover:opacity-90 transition-opacity">
+                                <span class="absolute inset-0 flex items-center justify-center rounded-full bg-black/0 group-hover:bg-black/25 transition-colors">
+                                    <svg class="w-8 h-8 text-white opacity-0 group-hover:opacity-100 transition-opacity" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v3m0 0v3m0-3h3m-3 0H7"></path>
+                                    </svg>
+                                </span>
+                            </button>
+                        `;
+                        imageBtn.classList.remove('hidden');
+                        imageBtn.onclick = openFriendImagePreview;
                     } else {
-                        avatar.innerHTML = `<div class="w-20 h-20 bg-gradient-to-br from-green-400 to-emerald-600 rounded-full flex items-center justify-center border-4 border-white shadow"><span class="text-white font-semibold text-2xl">${friend.initials}</span></div>`;
+                        avatar.innerHTML = `
+                            <div class="w-32 h-32 bg-gradient-to-br from-green-400 to-emerald-600 rounded-full flex items-center justify-center border-4 border-white shadow-lg">
+                                <span class="text-white font-semibold text-3xl">${escapeHtml(friend.initials)}</span>
+                            </div>
+                        `;
+                        imageBtn.classList.add('hidden');
+                        imageBtn.onclick = null;
                     }
 
                     document.getElementById('view-friend-name').textContent = friend.name;
@@ -467,6 +545,7 @@
         }
 
         function closeViewFriendModal() {
+            closeFriendImagePreview();
             document.getElementById('view-friend-modal').classList.add('hidden');
         }
 

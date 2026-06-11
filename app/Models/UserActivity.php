@@ -157,6 +157,10 @@ class UserActivity extends Model
             return ucfirst(str_replace('_', ' ', $this->action));
         }
 
+        if ($this->activity_type === 'anonymous_chat') {
+            return 'Anonymous chat activity';
+        }
+
         return ucfirst(str_replace('_', ' ', (string) $this->activity_type));
     }
 
@@ -168,6 +172,33 @@ class UserActivity extends Model
     public function displayDetailLines(): array
     {
         $metadata = $this->metadata ?? [];
+
+        if ($this->activity_type === 'anonymous_chat') {
+            $lines = [];
+
+            if (! empty($metadata['peer_name']) && ! empty($metadata['peer_alias'])) {
+                $lines[] = 'Chatting with '.$metadata['peer_name'].' (shown to user as '.$metadata['peer_alias'].')';
+            } elseif (! empty($metadata['recipient_name']) && ! empty($metadata['recipient_alias'])) {
+                $lines[] = 'Recipient: '.$metadata['recipient_name'].' (alias '.$metadata['recipient_alias'].')';
+            } elseif (! empty($metadata['peer_name'])) {
+                $lines[] = 'Chatting with '.$metadata['peer_name'];
+            }
+
+            if (! empty($metadata['sender_alias'])) {
+                $lines[] = 'Sender alias: '.$metadata['sender_alias'];
+            }
+
+            if (! empty($metadata['message_preview'])) {
+                $lines[] = 'Message: '.$metadata['message_preview'];
+            }
+
+            if (! empty($metadata['room_id'])) {
+                $lines[] = 'Room #'.$metadata['room_id'];
+            }
+
+            return $lines;
+        }
+
         $changes = $metadata['changes'] ?? null;
         if (! is_array($changes) || $changes === []) {
             return [];
