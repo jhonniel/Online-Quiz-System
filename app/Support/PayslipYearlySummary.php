@@ -36,6 +36,11 @@ final class PayslipYearlySummary
         return 'Payroll Sheet Yr. '.$year;
     }
 
+    public static function cutoffSheetTitle(string $periodLabel): string
+    {
+        return 'Payroll Sheet — '.$periodLabel;
+    }
+
     /**
      * @param  Collection<int, EmployeePayslip>  $payslips
      */
@@ -125,14 +130,14 @@ final class PayslipYearlySummary
      * @param  array{rows: list<array<string, mixed>>, totals: array<string, float|int>}  $summary
      * @return list<list<string|int|float>>
      */
-    public static function csvRows(array $summary, int $year, string $companyName): array
+    public static function csvRows(array $summary, string $sheetTitle, string $companyName): array
     {
         $columnCount = count(self::CSV_HEADERS);
         $blankRow = array_fill(0, $columnCount, '');
 
         $rows = [
             array_pad([$companyName], $columnCount, ''),
-            array_pad([self::sheetTitle($year)], $columnCount, ''),
+            array_pad([$sheetTitle], $columnCount, ''),
             $blankRow,
             self::CSV_HEADERS,
         ];

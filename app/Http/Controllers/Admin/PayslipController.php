@@ -229,9 +229,64 @@ class PayslipController extends Controller
         $payslips = $this->payslipsForYearlySummary($request, $year);
         $summary = PayslipYearlySummary::build($payslips);
         $companyName = PayslipYearlySummary::resolveCompanyName($payslips);
-        $rows = PayslipYearlySummary::csvRows($summary, $year, $companyName);
+        $rows = PayslipYearlySummary::csvRows($summary, PayslipYearlySummary::sheetTitle($year), $companyName);
 
         return $this->csvDownload($rows, 'payslip_yearly_summary_'.$year.'_'.date('Y-m-d').'.csv');
+    }
+
+    public function cutoffSummary(Request $request)
+    {
+        $validated = $request->validate([
+            'period_start' => 'required|date',
+            'period_end' => 'required|date|after_or_equal:period_start',
+        ]);
+
+        $payslips = $this->payslipsForCutoffPeriod($validated['period_start'], $validated['period_end']);
+
+        if ($payslips->isEmpty()) {
+            return redirect()
+                ->route('admin.payslip.index')
+                ->with('error', 'No payslips were found for this cut-off period.');
+        }
+
+        $summary = PayslipYearlySummary::build($payslips);
+        $companyName = PayslipYearlySummary::resolveCompanyName($payslips);
+        $periodLabel = $payslips->first()->periodLabel();
+        $sheetTitle = PayslipYearlySummary::cutoffSheetTitle($periodLabel);
+
+        return view('admin.employee-management.payslip.cutoff-summary', compact(
+            'summary',
+            'companyName',
+            'sheetTitle',
+            'periodLabel',
+            'validated'
+        ));
+    }
+
+    public function cutoffSummaryCsv(Request $request)
+    {
+        $validated = $request->validate([
+            'period_start' => 'required|date',
+            'period_end' => 'required|date|after_or_equal:period_start',
+        ]);
+
+        $payslips = $this->payslipsForCutoffPeriod($validated['period_start'], $validated['period_end']);
+
+        if ($payslips->isEmpty()) {
+            return redirect()
+                ->route('admin.payslip.index')
+                ->with('error', 'No payslips were found for this cut-off period.');
+        }
+
+        $summary = PayslipYearlySummary::build($payslips);
+        $companyName = PayslipYearlySummary::resolveCompanyName($payslips);
+        $periodLabel = $payslips->first()->periodLabel();
+        $sheetTitle = PayslipYearlySummary::cutoffSheetTitle($periodLabel);
+        $rows = PayslipYearlySummary::csvRows($summary, $sheetTitle, $companyName);
+        $filename = 'payslip_cutoff_'
+            .$validated['period_start'].'_to_'.$validated['period_end'].'_'.date('Y-m-d').'.csv';
+
+        return $this->csvDownload($rows, $filename);
     }
 
     public function destroy(Request $request, EmployeePayslip $payslip)
@@ -485,49 +540,16 @@ class PayslipController extends Controller
         return view('admin.employee-management.payslip.bulk-print', compact('payslips'));
     }
 
-    public function monthPrint(Request $request)
+    /**
+     * @return \Illuminate\Support\Collection<int, EmployeePayslip>
+     */
+    private function payslipsForCutoffPeriod(string $periodStart, string $periodEnd)
     {
-        $validated = $request->validate([
-            'month' => 'required|date_format:Y-m',
-        ]);
-
-        [$year, $month] = array_map('intval', explode('-', $validated['month'], 2));
-
-        $payslips = $this->payslipsForPrint(
+        return $this->payslipsForPrint(
             EmployeePayslip::query()
-                ->whereYear('period_end', $year)
-                ->whereMonth('period_end', $month)
+                ->whereDate('period_start', $periodStart)
+                ->whereDate('period_end', $periodEnd)
         );
-
-        if ($payslips->isEmpty()) {
-            return redirect()
-                ->route('admin.payslip.index')
-                ->with('error', 'No payslips were found for this month.');
-        }
-
-        return view('admin.employee-management.payslip.bulk-print', compact('payslips'));
-    }
-
-    public function cutoffPrint(Request $request)
-    {
-        $validated = $request->validate([
-            'period_start' => 'required|date',
-            'period_end' => 'required|date|after_or_equal:period_start',
-        ]);
-
-        $payslips = $this->payslipsForPrint(
-            EmployeePayslip::query()
-                ->whereDate('period_start', $validated['period_start'])
-                ->whereDate('period_end', $validated['period_end'])
-        );
-
-        if ($payslips->isEmpty()) {
-            return redirect()
-                ->route('admin.payslip.index')
-                ->with('error', 'No payslips were found for this cut-off period.');
-        }
-
-        return view('admin.employee-management.payslip.bulk-print', compact('payslips'));
     }
 
     /**
