@@ -80,68 +80,77 @@
                 <p class="font-medium">Prepared by:</p>
                 <div class="flex w-full min-w-0 flex-col items-center">
                     @php($preparedBySignature = $payslip->preparedBySignatureDataUri())
-                    <div class="relative w-full min-w-0 max-w-full px-1 pt-4 payslip-sign-name-block">
-                        <div class="payslip-fit-name-container px-1">
-                            <p class="border-b border-gray-900 px-1 font-semibold payslip-sign-name payslip-fit-name payslip-name-line text-center mx-auto max-w-full"
-                               style="font-size: {{ PayslipNameFit::fontSizeRem($payslip->displayPreparedBy(), 0.875) }}">
-                                {{ $payslip->displayPreparedBy() ?: ' ' }}
-                            </p>
-                        </div>
-                        @if($preparedBySignature)
-                            <div class="payslip-esign-overlay" aria-hidden="true">
-                                <img src="{{ $preparedBySignature }}"
-                                     alt=""
-                                     class="payslip-esign-float">
+                    <div class="payslip-sign-name-block">
+                        <div class="payslip-sign-content">
+                            <div class="payslip-sign-line-wrap">
+                                <div class="payslip-fit-name-container payslip-sign-name-anchor">
+                                    <p class="border-b border-gray-900 px-1 font-semibold payslip-sign-name payslip-fit-name payslip-name-line text-center"
+                                       style="font-size: {{ PayslipNameFit::fontSizeRem($payslip->displayPreparedBy(), 0.875) }}">
+                                        {{ $payslip->displayPreparedBy() ?: ' ' }}
+                                    </p>
+                                    @if($preparedBySignature)
+                                        <img src="{{ $preparedBySignature }}"
+                                             alt=""
+                                             class="payslip-esign-float"
+                                             aria-hidden="true">
+                                    @endif
+                                </div>
                             </div>
-                        @endif
+                            <p class="payslip-sign-role">Admin Officer</p>
+                        </div>
                     </div>
-                    <p class="mt-2 min-h-[1.25rem]">Admin Officer</p>
                 </div>
             </div>
             <div class="flex min-w-0 flex-col items-center">
                 <p class="font-medium">Approved by:</p>
                 <div class="flex w-full min-w-0 flex-col items-center">
                     @php($approvedBySignature = $payslip->approvedBySignatureDataUri())
-                    <div class="relative w-full min-w-0 max-w-full px-1 pt-4 payslip-sign-name-block">
-                        <div class="payslip-fit-name-container px-1">
-                            <p class="border-b border-gray-900 px-1 font-semibold payslip-sign-name payslip-fit-name payslip-name-line text-center mx-auto max-w-full"
-                               style="font-size: {{ PayslipNameFit::fontSizeRem($payslip->displayApprovedBy(), 0.875) }}">
-                                {{ $payslip->displayApprovedBy() ?: ' ' }}
-                            </p>
-                        </div>
-                        @if($approvedBySignature)
-                            <div class="payslip-esign-overlay" aria-hidden="true">
-                                <img src="{{ $approvedBySignature }}"
-                                     alt=""
-                                     class="payslip-esign-float">
+                    <div class="payslip-sign-name-block">
+                        <div class="payslip-sign-content">
+                            <div class="payslip-sign-line-wrap">
+                                <div class="payslip-fit-name-container payslip-sign-name-anchor">
+                                    <p class="border-b border-gray-900 px-1 font-semibold payslip-sign-name payslip-fit-name payslip-name-line text-center"
+                                       style="font-size: {{ PayslipNameFit::fontSizeRem($payslip->displayApprovedBy(), 0.875) }}">
+                                        {{ $payslip->displayApprovedBy() ?: ' ' }}
+                                    </p>
+                                    @if($approvedBySignature)
+                                        <img src="{{ $approvedBySignature }}"
+                                             alt=""
+                                             class="payslip-esign-float"
+                                             aria-hidden="true">
+                                    @endif
+                                </div>
                             </div>
-                        @endif
+                            <p class="payslip-sign-role">Proprietor</p>
+                        </div>
                     </div>
-                    <p class="mt-2 min-h-[1.25rem]">Proprietor</p>
                 </div>
             </div>
             <div class="flex min-w-0 flex-col items-center">
                 <p class="font-medium">Received by:</p>
                 <div class="flex w-full min-w-0 flex-col items-center">
                     @php($receivedBySignature = $payslip->isLinkedToEmployee() ? $payslip->receivedBySignatureDataUri() : null)
-                    <div class="relative w-full min-w-0 max-w-full px-1 pt-4 payslip-sign-name-block">
-                        <div class="payslip-fit-name-container px-1">
-                            <p class="border-b border-gray-900 px-1 font-semibold payslip-sign-name payslip-fit-name payslip-name-line text-center mx-auto max-w-full"
-                               style="font-size: {{ PayslipNameFit::fontSizeRem($payslip->isLinkedToEmployee() ? $payslip->employee_name : '', 0.875) }}">
-                                {{ $payslip->isLinkedToEmployee() ? $payslip->employee_name : ' ' }}
-                            </p>
-                        </div>
-                        @if($receivedBySignature)
-                            <div class="payslip-esign-overlay" aria-hidden="true">
-                                <img src="{{ $receivedBySignature }}"
-                                     alt=""
-                                     class="payslip-esign-float">
+                    <div class="payslip-sign-name-block">
+                        <div class="payslip-sign-content">
+                            <div class="payslip-sign-line-wrap">
+                                <div class="payslip-fit-name-container payslip-sign-name-anchor">
+                                    <p class="border-b border-gray-900 px-1 font-semibold payslip-sign-name payslip-fit-name payslip-name-line text-center"
+                                       style="font-size: {{ PayslipNameFit::fontSizeRem($payslip->isLinkedToEmployee() ? $payslip->employee_name : '', 0.875) }}">
+                                        {{ $payslip->isLinkedToEmployee() ? $payslip->employee_name : ' ' }}
+                                    </p>
+                                    @if($receivedBySignature)
+                                        <img src="{{ $receivedBySignature }}"
+                                             alt=""
+                                             class="payslip-esign-float"
+                                             aria-hidden="true">
+                                    @endif
+                                </div>
                             </div>
-                        @endif
-                    </div>
-                    <div class="mt-2 min-h-[1.25rem] w-full min-w-0 max-w-full px-1 payslip-fit-name-container">
-                        <p class="payslip-name-line payslip-position-name payslip-fit-name max-w-full mx-auto text-center"
-                           style="font-size: {{ PayslipNameFit::fontSizeRem($payslip->isLinkedToEmployee() ? ($payslip->displayPosition() ?: '—') : '', 0.8125) }}">{{ $payslip->isLinkedToEmployee() ? ($payslip->displayPosition() ?: '—') : ' ' }}</p>
+                            <div class="payslip-fit-name-container">
+                                <p class="payslip-sign-role payslip-position-name payslip-fit-name text-center"
+                                   style="font-size: {{ PayslipNameFit::fontSizeRem($payslip->isLinkedToEmployee() ? ($payslip->displayPosition() ?: '—') : '', 0.8125) }}">{{ $payslip->isLinkedToEmployee() ? ($payslip->displayPosition() ?: '—') : ' ' }}</p>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>

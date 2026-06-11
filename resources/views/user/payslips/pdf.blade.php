@@ -153,24 +153,30 @@
             font-weight: 500;
             margin: 0 0 8px;
         }
+        .sign-content {
+            display: inline-block;
+            width: max-content;
+            max-width: 100%;
+            margin: 0 auto;
+            text-align: center;
+        }
         .sign-block {
             position: relative;
             display: block;
             width: 100%;
-            max-width: 100%;
-            margin: 0 auto;
-            padding-top: 8px;
+            padding-top: 4px;
+            text-align: center;
         }
         .signature-slot {
-            height: 56px;
-            margin-bottom: -44px;
+            height: 42px;
+            margin-bottom: -34px;
             text-align: center;
             position: relative;
             z-index: 2;
         }
         .signature-image {
             display: inline-block;
-            height: 56px;
+            height: 42px;
             max-width: 240px;
             width: auto;
             object-fit: contain;
@@ -191,11 +197,12 @@
             overflow: visible;
         }
         .sign-role {
-            margin: 8px 0 0;
+            margin: 3px auto 0;
             white-space: nowrap;
             line-height: 1.2;
             overflow: hidden;
             max-width: 100%;
+            text-align: center;
         }
     </style>
 </head>
@@ -284,39 +291,45 @@
                 <tr>
                     <td>
                         <p class="sign-label">Prepared by:</p>
-                        <div class="sign-block">
-                            @if(!empty($preparedBySignatureDataUri))
-                                <div class="signature-slot">
-                                    <img src="{{ $preparedBySignatureDataUri }}" alt="" class="signature-image">
-                                </div>
-                            @endif
-                            <p class="sign-line" style="font-size: {{ PayslipNameFit::fontSizePt($payslip->displayPreparedBy(), 8.5) }}">{{ $payslip->displayPreparedBy() ?: ' ' }}</p>
+                        <div class="sign-content">
+                            <div class="sign-block">
+                                @if(!empty($preparedBySignatureDataUri))
+                                    <div class="signature-slot">
+                                        <img src="{{ $preparedBySignatureDataUri }}" alt="" class="signature-image">
+                                    </div>
+                                @endif
+                                <p class="sign-line" style="font-size: {{ PayslipNameFit::fontSizePt($payslip->displayPreparedBy(), 8.5) }}">{{ $payslip->displayPreparedBy() ?: ' ' }}</p>
+                            </div>
+                            <p class="sign-role">Admin Officer</p>
                         </div>
-                        <p class="sign-role">Admin Officer</p>
                     </td>
                     <td>
                         <p class="sign-label">Approved by:</p>
-                        <div class="sign-block">
-                            @if(!empty($approvedBySignatureDataUri))
-                                <div class="signature-slot">
-                                    <img src="{{ $approvedBySignatureDataUri }}" alt="" class="signature-image">
-                                </div>
-                            @endif
-                            <p class="sign-line" style="font-size: {{ PayslipNameFit::fontSizePt($payslip->displayApprovedBy(), 8.5) }}">{{ $payslip->displayApprovedBy() ?: ' ' }}</p>
+                        <div class="sign-content">
+                            <div class="sign-block">
+                                @if(!empty($approvedBySignatureDataUri))
+                                    <div class="signature-slot">
+                                        <img src="{{ $approvedBySignatureDataUri }}" alt="" class="signature-image">
+                                    </div>
+                                @endif
+                                <p class="sign-line" style="font-size: {{ PayslipNameFit::fontSizePt($payslip->displayApprovedBy(), 8.5) }}">{{ $payslip->displayApprovedBy() ?: ' ' }}</p>
+                            </div>
+                            <p class="sign-role">Proprietor</p>
                         </div>
-                        <p class="sign-role">Proprietor</p>
                     </td>
                     <td>
                         <p class="sign-label">Received by:</p>
-                        <div class="sign-block">
-                            @if(!empty($receivedBySignatureDataUri))
-                                <div class="signature-slot">
-                                    <img src="{{ $receivedBySignatureDataUri }}" alt="" class="signature-image">
-                                </div>
-                            @endif
-                            <p class="sign-line" style="font-size: {{ PayslipNameFit::fontSizePt($payslip->employee_name, 8.5) }}">{{ $payslip->employee_name }}</p>
+                        <div class="sign-content">
+                            <div class="sign-block">
+                                @if(!empty($receivedBySignatureDataUri))
+                                    <div class="signature-slot">
+                                        <img src="{{ $receivedBySignatureDataUri }}" alt="" class="signature-image">
+                                    </div>
+                                @endif
+                                <p class="sign-line" style="font-size: {{ PayslipNameFit::fontSizePt($payslip->employee_name, 8.5) }}">{{ $payslip->employee_name }}</p>
+                            </div>
+                            <p class="sign-role" style="font-size: {{ PayslipNameFit::fontSizePt($payslip->displayPosition(), 8) }}">{{ $payslip->displayPosition() ?: '—' }}</p>
                         </div>
-                        <p class="sign-role" style="font-size: {{ PayslipNameFit::fontSizePt($payslip->displayPosition(), 8) }}">{{ $payslip->displayPosition() ?: '—' }}</p>
                     </td>
                 </tr>
             </table>

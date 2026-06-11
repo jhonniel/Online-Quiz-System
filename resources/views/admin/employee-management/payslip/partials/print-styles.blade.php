@@ -23,34 +23,70 @@
     }
 
     .payslip-sign-name-block {
+        display: flex;
+        justify-content: center;
+        width: 100%;
+        min-width: 0;
+        overflow: visible;
+        padding-top: 0.5rem;
+    }
+
+    .payslip-sign-content {
+        display: inline-flex;
+        flex-direction: column;
+        align-items: stretch;
+        width: max-content;
+        max-width: 100%;
+    }
+
+    .payslip-sign-line-wrap {
         position: relative;
-        isolation: isolate;
-        min-height: 5rem;
+        width: 100%;
+    }
+
+    .payslip-sign-content .payslip-fit-name-container {
+        width: 100%;
+    }
+
+    .payslip-sign-name-anchor {
+        position: relative;
+        overflow: visible !important;
+    }
+
+    .payslip-sign-content .payslip-fit-name {
+        width: 100%;
+        margin-left: 0;
+        margin-right: 0;
     }
 
     .payslip-sign-name-block .payslip-sign-name {
         position: relative;
         z-index: 1;
+        width: 100%;
     }
 
-    .payslip-esign-overlay {
-        position: absolute;
-        inset: 0;
-        z-index: 30;
-        pointer-events: none;
+    .payslip-sign-role {
+        position: relative;
+        z-index: 1;
+        margin: 0.25rem 0 0;
+        min-height: 1.25rem;
+        line-height: 1.25;
+        width: 100%;
+        text-align: center;
     }
 
-    .payslip-esign-overlay .payslip-esign-float {
+    .payslip-sign-name-anchor .payslip-esign-float {
         position: absolute;
         left: 50%;
         bottom: 0;
-        z-index: 30;
-        height: 5rem;
-        width: 14rem;
-        max-width: 95%;
-        transform: translateX(-50%);
+        z-index: 2;
+        height: 3rem;
+        width: 100%;
+        max-width: 14rem;
+        transform: translate(-50%, 42%);
         object-fit: contain;
         object-position: bottom center;
+        pointer-events: none;
     }
 
     @media screen {
@@ -277,16 +313,24 @@
             overflow: hidden !important;
         }
 
-        .payslip-print-area .payslip-esign-overlay {
-            z-index: 30 !important;
+        .payslip-print-area .payslip-sign-name-anchor {
+            overflow: visible !important;
         }
 
-        .payslip-print-area .payslip-esign-overlay .payslip-esign-float {
-            width: 15rem !important;
-            max-width: 15rem !important;
-            height: 5rem !important;
+        .payslip-print-area .payslip-sign-name-anchor .payslip-esign-float {
+            width: 100% !important;
+            max-width: 12rem !important;
+            height: 3rem !important;
+            left: 50% !important;
+            bottom: 0 !important;
+            transform: translate(-50%, 42%) !important;
             object-fit: contain !important;
-            z-index: 30 !important;
+            object-position: bottom center !important;
+            z-index: 2 !important;
+        }
+
+        .payslip-print-area .payslip-sign-role {
+            margin-top: 0.2rem !important;
         }
 
         .payslip-print-area .payslip-sign-name {
@@ -352,6 +396,7 @@
 
         scope.querySelectorAll('.payslip-fit-name').forEach(function (el) {
             const container = el.closest('.payslip-fit-name-container')
+                || el.closest('.payslip-sign-content')
                 || el.closest('.payslip-sign-name-block')
                 || el.parentElement;
 
@@ -401,6 +446,25 @@
         });
     }
 
+    function waitForPayslipSignatureImages(areas) {
+        const images = [];
+
+        areas.forEach(function (area) {
+            area.querySelectorAll('.payslip-esign-float').forEach(function (img) {
+                if (img.complete && img.naturalWidth > 0) {
+                    return;
+                }
+
+                images.push(new Promise(function (resolve) {
+                    img.addEventListener('load', resolve, { once: true });
+                    img.addEventListener('error', resolve, { once: true });
+                }));
+            });
+        });
+
+        return images.length === 0 ? Promise.resolve() : Promise.all(images);
+    }
+
     function scalePayslipPrintAreas(areas) {
         const bulk = isBulkPayslipPrint();
         const dimensions = bulk ? getBulkSlotDimensionsMm() : getSinglePrintDimensionsMm();
@@ -445,14 +509,7 @@
         });
     }
 
-    function printPayslip() {
-        const areas = getPayslipPrintAreas();
-
-        if (areas.length === 0) {
-            window.print();
-            return;
-        }
-
+    function runPayslipPrint(areas) {
         scalePayslipPrintAreas(areas);
 
         window.addEventListener('afterprint', function () {
@@ -463,6 +520,23 @@
             requestAnimationFrame(function () {
                 window.print();
             });
+        });
+    }
+
+    function printPayslip() {
+        const areas = getPayslipPrintAreas();
+
+        if (areas.length === 0) {
+            window.print();
+            return;
+        }
+
+        areas.forEach(function (area) {
+            fitPayslipNames(area);
+        });
+
+        waitForPayslipSignatureImages(areas).then(function () {
+            runPayslipPrint(areas);
         });
     }
 
