@@ -80,7 +80,7 @@
                 </div>
                 <div class="ml-4">
                     <h1 class="text-2xl font-bold text-white">User Maps</h1>
-                    <p class="text-indigo-100">View active users on a TomTom map by recent session IP or university location.</p>
+                    <p class="text-indigo-100">Pin every IP address recorded in User Activity Logs on the TomTom map.</p>
                 </div>
             </div>
             <a href="{{ url('/admin/settings?tab=general') }}"
@@ -100,11 +100,22 @@
 
     <div class="bg-white shadow-sm rounded-lg border border-gray-200 overflow-hidden">
         <div class="p-4 border-b border-gray-200 bg-gray-50/80">
-            <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-3">
+            <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-6 gap-3">
                 <div class="xl:col-span-2">
-                    <label for="user-map-search" class="block text-xs font-medium text-gray-600 mb-1">Search</label>
+                    <label for="user-map-search" class="block text-xs font-medium text-gray-600 mb-1">Search user</label>
                     <input type="text" id="user-map-search" placeholder="Name or email..."
                            class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                </div>
+                <div>
+                    <label for="user-map-ip" class="block text-xs font-medium text-gray-600 mb-1">IP address</label>
+                    <input type="text" id="user-map-ip" placeholder="e.g. 203.177..."
+                           class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                </div>
+                <div>
+                    <label for="user-map-activity-type" class="block text-xs font-medium text-gray-600 mb-1">Activity type</label>
+                    <select id="user-map-activity-type" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                        <option value="">All types</option>
+                    </select>
                 </div>
                 <div>
                     <label for="user-map-role" class="block text-xs font-medium text-gray-600 mb-1">Role</label>
@@ -132,6 +143,18 @@
                     </select>
                 </div>
             </div>
+            <div class="mt-3 grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div>
+                    <label for="user-map-date-from" class="block text-xs font-medium text-gray-600 mb-1">Activity from</label>
+                    <input type="date" id="user-map-date-from"
+                           class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                </div>
+                <div>
+                    <label for="user-map-date-to" class="block text-xs font-medium text-gray-600 mb-1">Activity to</label>
+                    <input type="date" id="user-map-date-to"
+                           class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                </div>
+            </div>
             <div class="mt-3 flex flex-wrap items-center gap-3">
                 <label class="inline-flex items-center gap-2 text-sm text-gray-700">
                     <input type="checkbox" id="user-map-online-only" class="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500">
@@ -148,8 +171,8 @@
         <div class="p-4">
             <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
                 <div class="rounded-lg border border-gray-200 p-3">
-                    <p class="text-xs text-gray-500">Matched users</p>
-                    <p id="stat-total-users" class="text-lg font-semibold text-gray-900">0</p>
+                    <p class="text-xs text-gray-500">Activity log IPs</p>
+                    <p id="stat-total-ips" class="text-lg font-semibold text-gray-900">0</p>
                 </div>
                 <div class="rounded-lg border border-gray-200 p-3">
                     <p class="text-xs text-gray-500">On map</p>
@@ -167,7 +190,9 @@
 
             <div id="user-map" class="bg-slate-100"></div>
             <p class="mt-3 text-xs text-gray-500">
-                Locations are estimated from each user&apos;s latest session/activity IP address, or their university location when IP geolocation is unavailable.
+                Pins use browser GPS when users share location at login (most accurate), otherwise IP addresses from
+                <a href="{{ url('/admin/user-activity') }}" class="text-indigo-600 hover:text-indigo-800">User Activity Logs</a>.
+                Green pulsing dots mean an online user. Private/local IPs are skipped.
             </p>
         </div>
     </div>
@@ -192,20 +217,20 @@
         }
 
         function updateStats(stats) {
-            document.getElementById('stat-total-users').textContent = stats.total_users ?? 0;
+            document.getElementById('stat-total-ips').textContent = stats.total_ips ?? 0;
             document.getElementById('stat-mapped').textContent = stats.mapped ?? 0;
             document.getElementById('stat-unmapped').textContent = stats.unmapped ?? 0;
             document.getElementById('stat-online').textContent = stats.online ?? 0;
         }
 
-        function fillSelect(id, items, labelKey = 'name') {
+        function fillSelect(id, items, labelKey = 'name', valueKey = 'id') {
             const select = document.getElementById(id);
             const current = select.value;
             select.querySelectorAll('option:not(:first-child)').forEach(option => option.remove());
             items.forEach(item => {
                 const option = document.createElement('option');
-                option.value = String(item.id);
-                option.textContent = item[labelKey];
+                option.value = typeof item === 'string' ? item : String(item[valueKey]);
+                option.textContent = typeof item === 'string' ? item : item[labelKey];
                 select.appendChild(option);
             });
             if (current) {
@@ -229,18 +254,34 @@
         function popupHtml(marker) {
             const onlineBadge = marker.is_online
                 ? '<span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">Online</span>'
-                : '<span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-700">Offline</span>';
+                : '<span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">Offline</span>';
+
+            const usersHtml = (marker.users || []).slice(0, 5).map(user => `
+                <div class="text-xs text-gray-600">
+                    ${escapeHtml(user.name)}${user.is_online ? ' <span class="text-green-600">(online)</span>' : ''}
+                </div>
+            `).join('');
+
+            const moreUsers = (marker.users || []).length > 5
+                ? `<p class="text-xs text-gray-400">+${marker.users.length - 5} more user(s)</p>`
+                : '';
+
+            const sourceLabel = marker.location_source === 'browser_gps'
+                ? '<span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">GPS (accurate)</span>'
+                : '<span class="text-xs text-gray-400">IP-based estimate</span>';
 
             return `
-                <div class="text-sm space-y-1 min-w-[180px]">
-                    <p class="font-semibold text-gray-900">${escapeHtml(marker.name)}</p>
-                    <p class="text-gray-600">${escapeHtml(marker.email)}</p>
-                    <p class="text-gray-500">${escapeHtml(marker.role_label || marker.role || '')}</p>
-                    ${marker.department ? `<p class="text-gray-500">${escapeHtml(marker.department)}</p>` : ''}
-                    ${marker.university ? `<p class="text-gray-500">${escapeHtml(marker.university)}</p>` : ''}
-                    <p class="text-xs text-gray-400">${escapeHtml(marker.location_label || '')}</p>
+                <div class="text-sm space-y-1 min-w-[200px]">
+                    <p class="font-semibold text-gray-900">${escapeHtml(marker.location_source === 'browser_gps' ? (marker.name || 'GPS location') : marker.ip_address)}</p>
+                    <p class="text-xs text-gray-500">${escapeHtml(marker.location_label || '')}</p>
+                    <div class="pt-1">${sourceLabel}</div>
+                    <p class="text-xs text-gray-500">${marker.hit_count ?? 0} log hit(s) · Last seen ${escapeHtml(marker.last_seen_human || '')}</p>
                     <div class="pt-1">${onlineBadge}</div>
-                    <a href="${escapeHtml(marker.admin_url)}" class="inline-block text-xs font-medium text-indigo-600 hover:text-indigo-800">View user</a>
+                    ${(marker.users || []).length ? `<div class="pt-2 space-y-1"><p class="text-xs font-medium text-gray-700">Users (${marker.user_count ?? 0})</p>${usersHtml}${moreUsers}</div>` : '<p class="text-xs text-gray-400 pt-1">No linked user account</p>'}
+                    <div class="pt-2 flex flex-col gap-1">
+                        <a href="${escapeHtml(marker.activity_log_url)}" class="text-xs font-medium text-indigo-600 hover:text-indigo-800">View activity logs</a>
+                        ${marker.admin_url ? `<a href="${escapeHtml(marker.admin_url)}" class="text-xs font-medium text-indigo-600 hover:text-indigo-800">View primary user</a>` : ''}
+                    </div>
                 </div>
             `;
         }
@@ -283,19 +324,27 @@
                 return;
             }
 
-            setStatus('Loading user locations...');
+            setStatus('Loading activity log IPs...');
 
             const params = new URLSearchParams();
             const search = document.getElementById('user-map-search').value.trim();
+            const ipAddress = document.getElementById('user-map-ip').value.trim();
+            const activityType = document.getElementById('user-map-activity-type').value;
             const role = document.getElementById('user-map-role').value;
             const departmentId = document.getElementById('user-map-department').value;
             const universityId = document.getElementById('user-map-university').value;
+            const dateFrom = document.getElementById('user-map-date-from').value;
+            const dateTo = document.getElementById('user-map-date-to').value;
             const onlineOnly = document.getElementById('user-map-online-only').checked;
 
             if (search) params.set('search', search);
+            if (ipAddress) params.set('ip_address', ipAddress);
+            if (activityType) params.set('activity_type', activityType);
             if (role) params.set('role', role);
             if (departmentId) params.set('department_id', departmentId);
             if (universityId) params.set('university_id', universityId);
+            if (dateFrom) params.set('date_from', dateFrom);
+            if (dateTo) params.set('date_to', dateTo);
             if (onlineOnly) params.set('online_only', '1');
 
             try {
@@ -314,11 +363,18 @@
 
                 fillSelect('user-map-department', data.filters?.departments || []);
                 fillSelect('user-map-university', data.filters?.universities || []);
+                fillSelect('user-map-activity-type', data.filters?.activity_types || [], null, null);
                 updateStats(data.stats || {});
                 renderMarkers(data.markers || []);
 
                 const mapped = data.stats?.mapped ?? 0;
-                setStatus(mapped > 0 ? `Showing ${mapped} user location(s).` : 'No mappable users for the current filters.');
+                let status = mapped > 0
+                    ? `Showing ${mapped} IP pin(s) from activity logs.`
+                    : 'No mappable public IPs for the current filters.';
+                if (data.stats?.capped) {
+                    status += ' Showing the most recent 500 IPs.';
+                }
+                setStatus(status);
             } catch (error) {
                 setStatus(error.message || 'Unable to load map data.');
             }
@@ -359,9 +415,13 @@
 
         document.getElementById('user-map-refresh').addEventListener('click', loadMapData);
         document.getElementById('user-map-search').addEventListener('input', scheduleLoad);
+        document.getElementById('user-map-ip').addEventListener('input', scheduleLoad);
+        document.getElementById('user-map-activity-type').addEventListener('change', loadMapData);
         document.getElementById('user-map-role').addEventListener('change', loadMapData);
         document.getElementById('user-map-department').addEventListener('change', loadMapData);
         document.getElementById('user-map-university').addEventListener('change', loadMapData);
+        document.getElementById('user-map-date-from').addEventListener('change', loadMapData);
+        document.getElementById('user-map-date-to').addEventListener('change', loadMapData);
         document.getElementById('user-map-online-only').addEventListener('change', loadMapData);
 
         if (document.readyState === 'loading') {

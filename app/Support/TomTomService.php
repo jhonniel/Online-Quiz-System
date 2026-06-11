@@ -130,6 +130,53 @@ final class TomTomService
         });
     }
 
+    /**
+     * @return array{lat: float, lng: float, label: string}|null
+     */
+    public static function reverseGeocode(float $lat, float $lng): ?array
+    {
+        $cacheKey = 'tomtom:reverse:'.round($lat, 5).':'.round($lng, 5);
+
+        return Cache::remember($cacheKey, now()->addDays(30), function () use ($lat, $lng) {
+            $key = self::apiKey();
+            if ($key === null) {
+                return [
+                    'lat' => $lat,
+                    'lng' => $lng,
+                    'label' => sprintf('%.5f, %.5f', $lat, $lng),
+                ];
+            }
+
+            $response = Http::timeout(8)->get(
+                sprintf('https://api.tomtom.com/search/2/reverseGeocode/%.6f,%.6f.json', $lat, $lng),
+                ['key' => $key]
+            );
+
+            if (! $response->successful()) {
+                return [
+                    'lat' => $lat,
+                    'lng' => $lng,
+                    'label' => sprintf('%.5f, %.5f', $lat, $lng),
+                ];
+            }
+
+            $result = data_get($response->json(), 'addresses.0');
+            if (! is_array($result)) {
+                return [
+                    'lat' => $lat,
+                    'lng' => $lng,
+                    'label' => sprintf('%.5f, %.5f', $lat, $lng),
+                ];
+            }
+
+            return [
+                'lat' => $lat,
+                'lng' => $lng,
+                'label' => (string) data_get($result, 'address.freeformAddress', sprintf('%.5f, %.5f', $lat, $lng)),
+            ];
+        });
+    }
+
     public static function isPrivateIp(string $ip): bool
     {
         if (! filter_var($ip, FILTER_VALIDATE_IP)) {

@@ -614,5 +614,5 @@
         });
     </script>
 
-    <x-story-ui />
+    <x-story-ui :feed="$storyFeed" />
 @endsection

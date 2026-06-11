@@ -32,6 +32,10 @@ class UserMapController extends Controller
             'role' => 'nullable|string|max:40',
             'department_id' => 'nullable|integer|min:1',
             'university_id' => 'nullable|integer|min:1',
+            'activity_type' => 'nullable|string|max:80',
+            'ip_address' => 'nullable|string|max:45',
+            'date_from' => 'nullable|date',
+            'date_to' => 'nullable|date',
             'online_only' => 'nullable|in:0,1,true,false',
         ]);
 
@@ -40,6 +44,10 @@ class UserMapController extends Controller
             'role' => $validated['role'] ?? null,
             'department_id' => $validated['department_id'] ?? null,
             'university_id' => $validated['university_id'] ?? null,
+            'activity_type' => $validated['activity_type'] ?? null,
+            'ip_address' => $validated['ip_address'] ?? null,
+            'date_from' => $validated['date_from'] ?? null,
+            'date_to' => $validated['date_to'] ?? null,
             'online_only' => filter_var($request->input('online_only', false), FILTER_VALIDATE_BOOLEAN),
         ]);
 

@@ -1,3 +1,14 @@
+@props(['feed' => collect()])
+
+@php
+    $storyFeedUsers = $feed->map(fn ($entry) => [
+        'id' => $entry['user']->id,
+        'name' => $entry['user']->name,
+        'is_self' => (bool) ($entry['is_self'] ?? false),
+        'has_story' => (bool) ($entry['has_story'] ?? true),
+    ])->values();
+@endphp
+
 <div id="story-create-modal" class="hidden fixed inset-0 z-[70] overflow-y-auto">
     <div class="flex min-h-full items-center justify-center p-4">
         <div class="fixed inset-0 bg-gray-900/60" onclick="window.StoryUI && window.StoryUI.closeCreateModal()"></div>
@@ -27,9 +38,8 @@
 </div>
 
 <div id="story-viewer" class="hidden fixed inset-0 z-[80] bg-black">
-    <div class="absolute top-0 left-0 right-0 z-20 p-4 space-y-3">
-        <div id="story-progress-bars" class="flex gap-1"></div>
-        <div class="flex items-center justify-between text-white">
+    <div class="absolute top-0 left-0 right-0 z-20 p-4">
+        <div class="flex items-center justify-between text-white gap-3">
             <div class="flex items-center gap-3 min-w-0">
                 <img id="story-viewer-avatar" src="" alt="" class="hidden w-9 h-9 rounded-full object-cover border border-white/30">
                 <div id="story-viewer-initials" class="hidden w-9 h-9 rounded-full bg-indigo-600 flex items-center justify-center text-xs font-semibold"></div>
@@ -38,19 +48,33 @@
                     <p id="story-viewer-timer" class="text-xs text-amber-200"></p>
                 </div>
             </div>
-            <button type="button" onclick="window.StoryUI && window.StoryUI.closeViewer()" class="text-white/90 hover:text-white p-2">
+            <button type="button" onclick="window.StoryUI && window.StoryUI.closeViewer()" class="text-white/90 hover:text-white p-2 shrink-0">
                 <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
                 </svg>
             </button>
         </div>
     </div>
-    <button type="button" class="absolute left-0 top-0 bottom-0 w-1/3 z-10" onclick="window.StoryUI && window.StoryUI.prev()" aria-label="Previous"></button>
-    <button type="button" class="absolute right-0 top-0 bottom-0 w-1/3 z-10" onclick="window.StoryUI && window.StoryUI.next()" aria-label="Next"></button>
-    <div class="absolute inset-0 flex items-center justify-center p-4 pt-24 pb-16">
+    <button type="button" class="absolute left-0 top-0 bottom-0 w-1/4 z-10" onclick="window.StoryUI && window.StoryUI.prev()" aria-label="Previous"></button>
+    <button type="button" class="absolute right-0 top-0 bottom-0 w-1/4 z-10" onclick="window.StoryUI && window.StoryUI.next()" aria-label="Next"></button>
+    <div class="absolute inset-0 flex items-center justify-center p-4 pt-20 pb-20">
         <img id="story-viewer-image" src="" alt="Story" class="max-w-full max-h-full object-contain select-none">
     </div>
-    <p id="story-viewer-caption" class="absolute bottom-6 left-0 right-0 text-center text-white text-sm px-6"></p>
+    <p id="story-viewer-caption" class="absolute bottom-16 left-0 right-0 text-center text-white text-sm px-6 pointer-events-none"></p>
+    <div class="absolute bottom-4 left-0 right-0 z-20 flex items-center justify-center gap-3 px-4">
+        <button type="button"
+                id="story-viewer-prev-btn"
+                onclick="window.StoryUI && window.StoryUI.prev()"
+                class="px-4 py-2 rounded-full bg-white/15 text-white text-sm font-medium hover:bg-white/25 backdrop-blur-sm">
+            Previous
+        </button>
+        <button type="button"
+                id="story-viewer-next-btn"
+                onclick="window.StoryUI && window.StoryUI.next()"
+                class="px-5 py-2 rounded-full bg-white text-gray-900 text-sm font-semibold hover:bg-gray-100 shadow-md">
+            Next
+        </button>
+    </div>
 </div>
 
 <script>
@@ -60,16 +84,19 @@ window.StoryUI = (function () {
     let viewerIndex = 0;
     let viewerUser = null;
     let timerInterval = null;
+    const authUserId = @json(auth()->id());
+    const storyFeedUsers = @json($storyFeedUsers);
     const csrf = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
 
-    function formatRemaining(iso) {
-        const remainingMs = new Date(iso).getTime() - Date.now();
-        if (remainingMs <= 0) return 'Expired';
-        const totalSeconds = Math.floor(remainingMs / 1000);
+    function formatElapsed(iso) {
+        if (!iso) return '00:00:00';
+        const elapsedMs = Date.now() - new Date(iso).getTime();
+        if (elapsedMs < 0) return '00:00:00';
+        const totalSeconds = Math.floor(elapsedMs / 1000);
         const hours = Math.floor(totalSeconds / 3600);
         const minutes = Math.floor((totalSeconds % 3600) / 60);
         const seconds = totalSeconds % 60;
-        return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')} left`;
+        return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
     }
 
     function openCreateModal() {
@@ -124,24 +151,44 @@ window.StoryUI = (function () {
         }
     }
 
-    function renderProgressBars() {
-        const container = document.getElementById('story-progress-bars');
-        container.innerHTML = '';
-        viewerStories.forEach((_, index) => {
-            const bar = document.createElement('div');
-            bar.className = 'h-1 flex-1 rounded-full bg-white/30 overflow-hidden';
-            const fill = document.createElement('div');
-            fill.className = 'h-full bg-amber-300 transition-all';
-            fill.style.width = index < viewerIndex ? '100%' : (index === viewerIndex ? '50%' : '0%');
-            bar.appendChild(fill);
-            container.appendChild(bar);
-        });
-    }
-
     function updateViewerTimer() {
         const story = viewerStories[viewerIndex];
         if (!story) return;
-        document.getElementById('story-viewer-timer').textContent = formatRemaining(story.expires_at);
+        document.getElementById('story-viewer-timer').textContent = formatElapsed(story.created_at);
+    }
+
+    function updateNavButtons() {
+        const prevBtn = document.getElementById('story-viewer-prev-btn');
+        const nextBtn = document.getElementById('story-viewer-next-btn');
+        const hasPrevStory = viewerIndex > 0;
+        const hasNextStory = viewerIndex < viewerStories.length - 1;
+        const hasNextUser = findNextFeedUserIndex(viewerUser?.id) !== -1;
+
+        prevBtn.disabled = !hasPrevStory;
+        prevBtn.classList.toggle('opacity-40', !hasPrevStory);
+        prevBtn.classList.toggle('cursor-not-allowed', !hasPrevStory);
+
+        nextBtn.textContent = hasNextStory || hasNextUser ? 'Next' : 'Close';
+    }
+
+    function findNextFeedUserIndex(currentUserId) {
+        const currentIndex = storyFeedUsers.findIndex(entry => Number(entry.id) === Number(currentUserId));
+        for (let i = currentIndex + 1; i < storyFeedUsers.length; i++) {
+            if (storyFeedUsers[i].has_story && !storyFeedUsers[i].is_self) {
+                return i;
+            }
+        }
+        return -1;
+    }
+
+    function findPrevFeedUserIndex(currentUserId) {
+        const currentIndex = storyFeedUsers.findIndex(entry => Number(entry.id) === Number(currentUserId));
+        for (let i = currentIndex - 1; i >= 0; i--) {
+            if (storyFeedUsers[i].has_story && !storyFeedUsers[i].is_self) {
+                return i;
+            }
+        }
+        return -1;
     }
 
     async function showCurrentStory() {
@@ -153,8 +200,8 @@ window.StoryUI = (function () {
 
         document.getElementById('story-viewer-image').src = story.media_url;
         document.getElementById('story-viewer-caption').textContent = story.caption || '';
-        renderProgressBars();
         updateViewerTimer();
+        updateNavButtons();
 
         if (!story.is_own && !story.viewed) {
             await fetch(@json(url('/stories')) + `/${story.id}/view`, {
@@ -188,7 +235,23 @@ window.StoryUI = (function () {
         viewerUser = null;
     }
 
-    async function openUser(userId) {
+    function applyViewerUser(user) {
+        viewerUser = user;
+        document.getElementById('story-viewer-name').textContent = viewerUser.name;
+        const avatar = document.getElementById('story-viewer-avatar');
+        const initials = document.getElementById('story-viewer-initials');
+        if (viewerUser.profile_picture_url) {
+            avatar.src = viewerUser.profile_picture_url;
+            avatar.classList.remove('hidden');
+            initials.classList.add('hidden');
+        } else {
+            avatar.classList.add('hidden');
+            initials.textContent = viewerUser.initials || '?';
+            initials.classList.remove('hidden');
+        }
+    }
+
+    async function openUser(userId, fromAdvance = false) {
         try {
             const response = await fetch(@json(url('/stories/user')) + `/${userId}`, {
                 credentials: 'same-origin',
@@ -203,49 +266,88 @@ window.StoryUI = (function () {
             }
 
             if (!data.stories || data.stories.length === 0) {
-                if (Number(userId) === @json(auth()->id())) {
+                if (!fromAdvance && Number(userId) === authUserId) {
                     openCreateModal();
+                    return;
+                }
+                if (fromAdvance) {
+                    await advanceToNextUser(userId);
+                    return;
                 }
                 return;
             }
 
-            viewerUser = data.user;
+            const wasOpen = !document.getElementById('story-viewer').classList.contains('hidden');
             viewerStories = data.stories;
             viewerIndex = 0;
+            applyViewerUser(data.user);
 
-            document.getElementById('story-viewer-name').textContent = viewerUser.name;
-            const avatar = document.getElementById('story-viewer-avatar');
-            const initials = document.getElementById('story-viewer-initials');
-            if (viewerUser.profile_picture_url) {
-                avatar.src = viewerUser.profile_picture_url;
-                avatar.classList.remove('hidden');
-                initials.classList.add('hidden');
+            if (wasOpen) {
+                await showCurrentStory();
             } else {
-                avatar.classList.add('hidden');
-                initials.textContent = viewerUser.initials || '?';
-                initials.classList.remove('hidden');
+                openViewer();
             }
-
-            openViewer();
         } catch (error) {
-            alert(error.message || 'Unable to load stories.');
+            if (!fromAdvance) {
+                alert(error.message || 'Unable to load stories.');
+            } else {
+                closeViewer();
+            }
         }
     }
 
-    function next() {
+    async function advanceToNextUser(afterUserId) {
+        const nextIndex = findNextFeedUserIndex(afterUserId);
+        if (nextIndex === -1) {
+            closeViewer();
+            return;
+        }
+        await openUser(storyFeedUsers[nextIndex].id, true);
+    }
+
+    async function advanceToPrevUser(beforeUserId) {
+        const prevIndex = findPrevFeedUserIndex(beforeUserId);
+        if (prevIndex === -1) {
+            return;
+        }
+        const response = await fetch(@json(url('/stories/user')) + `/${storyFeedUsers[prevIndex].id}`, {
+            credentials: 'same-origin',
+            headers: {
+                'Accept': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest',
+            },
+        });
+        const data = await response.json();
+        if (!response.ok || !data.stories?.length) {
+            return;
+        }
+        viewerStories = data.stories;
+        viewerIndex = viewerStories.length - 1;
+        applyViewerUser(data.user);
+        await showCurrentStory();
+    }
+
+    async function next() {
         if (viewerIndex < viewerStories.length - 1) {
             viewerIndex++;
-            showCurrentStory();
-        } else {
-            closeViewer();
-            window.location.reload();
+            await showCurrentStory();
+            return;
         }
+        if (viewerUser?.id) {
+            await advanceToNextUser(viewerUser.id);
+            return;
+        }
+        closeViewer();
     }
 
-    function prev() {
+    async function prev() {
         if (viewerIndex > 0) {
             viewerIndex--;
-            showCurrentStory();
+            await showCurrentStory();
+            return;
+        }
+        if (viewerUser?.id) {
+            await advanceToPrevUser(viewerUser.id);
         }
     }
 

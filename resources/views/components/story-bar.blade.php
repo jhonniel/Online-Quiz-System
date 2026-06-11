@@ -7,7 +7,7 @@
                 @php($storyUser = $entry['user'])
                 <div class="story-bar-item">
                     @if($entry['is_self'])
-                        <div class="relative overflow-visible">
+                        <div class="story-bar-self-wrap">
                             <x-profile-avatar
                                 :user="$storyUser"
                                 size="lg"
@@ -15,8 +15,8 @@
                                 :clickable="true"
                                 :story-user-id="$storyUser->id" />
                             <button type="button"
-                                    onclick="window.StoryUI && window.StoryUI.openCreateModal()"
-                                    class="absolute -bottom-1 -right-1 w-7 h-7 rounded-full bg-indigo-600 text-white border-2 border-white flex items-center justify-center shadow-md hover:bg-indigo-700"
+                                    onclick="event.stopPropagation(); window.StoryUI && window.StoryUI.openCreateModal()"
+                                    class="absolute bottom-0 right-0 translate-x-1/4 translate-y-1/4 w-7 h-7 rounded-full bg-indigo-600 text-white border-2 border-white flex items-center justify-center shadow-md hover:bg-indigo-700 z-10"
                                     title="Add to your story">
                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v12m6-6H6"></path>

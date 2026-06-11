@@ -472,9 +472,71 @@ class PayslipController extends Controller
             'payslip_ids.*' => 'integer|exists:employee_payslips,id',
         ]);
 
-        $payslips = EmployeePayslip::query()
+        $payslips = $this->payslipsForPrint(
+            EmployeePayslip::query()->whereIn('id', $validated['payslip_ids'])
+        );
+
+        if ($payslips->isEmpty()) {
+            return redirect()
+                ->back()
+                ->with('error', 'No payslips were found to print.');
+        }
+
+        return view('admin.employee-management.payslip.bulk-print', compact('payslips'));
+    }
+
+    public function monthPrint(Request $request)
+    {
+        $validated = $request->validate([
+            'month' => 'required|date_format:Y-m',
+        ]);
+
+        [$year, $month] = array_map('intval', explode('-', $validated['month'], 2));
+
+        $payslips = $this->payslipsForPrint(
+            EmployeePayslip::query()
+                ->whereYear('period_end', $year)
+                ->whereMonth('period_end', $month)
+        );
+
+        if ($payslips->isEmpty()) {
+            return redirect()
+                ->route('admin.payslip.index')
+                ->with('error', 'No payslips were found for this month.');
+        }
+
+        return view('admin.employee-management.payslip.bulk-print', compact('payslips'));
+    }
+
+    public function cutoffPrint(Request $request)
+    {
+        $validated = $request->validate([
+            'period_start' => 'required|date',
+            'period_end' => 'required|date|after_or_equal:period_start',
+        ]);
+
+        $payslips = $this->payslipsForPrint(
+            EmployeePayslip::query()
+                ->whereDate('period_start', $validated['period_start'])
+                ->whereDate('period_end', $validated['period_end'])
+        );
+
+        if ($payslips->isEmpty()) {
+            return redirect()
+                ->route('admin.payslip.index')
+                ->with('error', 'No payslips were found for this cut-off period.');
+        }
+
+        return view('admin.employee-management.payslip.bulk-print', compact('payslips'));
+    }
+
+    /**
+     * @return \Illuminate\Support\Collection<int, EmployeePayslip>
+     */
+    private function payslipsForPrint($query)
+    {
+        return $query
             ->with(['employee:id,name,email,department_id,department_position_id,date_hired,e_signature_path', 'employee.department:id,name', 'employee.departmentPosition:id,name,department_id'])
-            ->whereIn('id', $validated['payslip_ids'])
             ->where(function ($q) {
                 if (AdminEmployeeDepartmentScope::isRestrictedForDocuments($this->requireAuthUser())) {
                     $q->whereHas('employee', function ($employeeQuery) {
@@ -492,14 +554,6 @@ class PayslipController extends Controller
             ->orderBy('employee_name')
             ->get()
             ->each(fn (EmployeePayslip $payslip) => $payslip->syncProfileFieldsFromEmployee());
-
-        if ($payslips->isEmpty()) {
-            return redirect()
-                ->back()
-                ->with('error', 'No payslips were found to print.');
-        }
-
-        return view('admin.employee-management.payslip.bulk-print', compact('payslips'));
     }
 
     private function validateDeletePassword(Request $request): void

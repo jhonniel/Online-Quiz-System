@@ -51,7 +51,7 @@
 
             <!-- Profile Picture Overlay -->
             <div class="absolute -bottom-16 left-6 z-10 overflow-visible">
-                <div class="relative overflow-visible">
+                <div class="story-bar-self-wrap">
                     <x-profile-avatar
                         :user="$user"
                         size="xl"
@@ -59,8 +59,8 @@
                         :clickable="true"
                         :story-user-id="$user->id" />
                     <button type="button"
-                            onclick="window.StoryUI && window.StoryUI.openCreateModal()"
-                            class="absolute -bottom-1 -right-1 w-8 h-8 rounded-full bg-indigo-600 text-white border-2 border-white flex items-center justify-center shadow-md hover:bg-indigo-700 z-10"
+                            onclick="event.stopPropagation(); window.StoryUI && window.StoryUI.openCreateModal()"
+                            class="absolute bottom-0 right-0 translate-x-1/4 translate-y-1/4 w-8 h-8 rounded-full bg-indigo-600 text-white border-2 border-white flex items-center justify-center shadow-md hover:bg-indigo-700 z-10"
                             title="Add to your story">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v12m6-6H6"></path>
@@ -985,5 +985,5 @@
     });
 </script>
 
-<x-story-ui />
+<x-story-ui :feed="$storyFeed" />
 @endsection

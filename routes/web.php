@@ -422,6 +422,8 @@ Route::prefix('admin')->middleware(['auth', 'admin'])->group(function () {
             Route::get('/payslip/template', [App\Http\Controllers\Admin\PayslipController::class, 'downloadTemplate'])->name('admin.payslip.template');
             Route::get('/payslip/yearly-summary', [App\Http\Controllers\Admin\PayslipController::class, 'yearlySummary'])->name('admin.payslip.yearly-summary');
             Route::get('/payslip/yearly-summary/csv', [App\Http\Controllers\Admin\PayslipController::class, 'yearlySummaryCsv'])->name('admin.payslip.yearly-summary.csv');
+            Route::get('/payslip/month-print', [App\Http\Controllers\Admin\PayslipController::class, 'monthPrint'])->name('admin.payslip.month-print');
+            Route::get('/payslip/cutoff-print', [App\Http\Controllers\Admin\PayslipController::class, 'cutoffPrint'])->name('admin.payslip.cutoff-print');
             Route::get('/payslip/{payslip}', [App\Http\Controllers\Admin\PayslipController::class, 'show'])->name('admin.payslip.show');
             Route::get('/payslip/{payslip}/signed', [App\Http\Controllers\Admin\PayslipController::class, 'signedPdf'])->name('admin.payslip.signed');
             Route::patch('/payslip/{payslip}/link', [App\Http\Controllers\Admin\PayslipController::class, 'link'])->name('admin.payslip.link');
@@ -688,6 +690,9 @@ Route::prefix('admin')->middleware(['auth', 'admin'])->group(function () {
 
 // User Routes
 Route::middleware(['auth'])->group(function () {
+    Route::post('/user/location', [App\Http\Controllers\UserGeoLocationController::class, 'store'])
+        ->name('user.location.store');
+
     Route::get('/access', [\App\Http\Controllers\User\AccountTerminatedController::class, 'show'])
         ->name('user.account-terminated');
 

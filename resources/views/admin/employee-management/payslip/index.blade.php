@@ -213,14 +213,9 @@
                                     <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
                                     Summary
                                 </a>
-                                <a href="{{ route('admin.payslip.yearly-summary', ['year' => $yearGroup['key'], 'print' => 1]) }}"
-                                   target="_blank"
-                                   rel="noopener"
-                                   onclick="event.stopPropagation()"
-                                   class="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50">
-                                    <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/></svg>
-                                    Print
-                                </a>
+                                @include('admin.employee-management.payslip.partials.group-print-link', [
+                                    'href' => route('admin.payslip.yearly-summary', ['year' => $yearGroup['key'], 'print' => 1]),
+                                ])
                                 <a href="{{ route('admin.payslip.yearly-summary.csv', ['year' => $yearGroup['key']]) }}"
                                    onclick="event.stopPropagation()"
                                    class="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium text-indigo-700 bg-indigo-50 border border-indigo-200 rounded-md hover:bg-indigo-100">
@@ -241,6 +236,9 @@
                                             <span class="text-sm font-semibold text-gray-800">{{ $monthGroup['label'] }}</span>
                                             <span class="inline-flex items-center rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-700">{{ $monthGroup['count'] }} payslip(s)</span>
                                         </div>
+                                        @include('admin.employee-management.payslip.partials.group-print-link', [
+                                            'href' => route('admin.payslip.month-print', ['month' => $monthGroup['key']]),
+                                        ])
                                     </summary>
 
                                     <div class="bg-gray-50/50">
@@ -254,6 +252,12 @@
                                                         <span class="text-sm font-medium text-gray-800">Cut-off: {{ $cutoffGroup['label'] }}</span>
                                                         <span class="inline-flex items-center rounded-full bg-violet-100 px-2 py-0.5 text-xs font-medium text-violet-800">{{ $cutoffGroup['count'] }} employee(s)</span>
                                                     </div>
+                                                    @include('admin.employee-management.payslip.partials.group-print-link', [
+                                                        'href' => route('admin.payslip.cutoff-print', [
+                                                            'period_start' => $cutoffGroup['period_start'],
+                                                            'period_end' => $cutoffGroup['period_end'],
+                                                        ]),
+                                                    ])
                                                 </summary>
 
                                                 <div class="overflow-x-auto border-t border-gray-200 bg-white">

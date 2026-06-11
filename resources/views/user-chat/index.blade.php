@@ -360,7 +360,7 @@
         </div>
     </div>
 
-    <x-story-ui />
+    <x-story-ui :feed="$storyFeed" />
 </div>
 @endsection
 
