@@ -123,7 +123,7 @@
                                             </div>
                                         @endif
                                         <!-- Online indicator -->
-                                        <div class="absolute bottom-0 right-0 w-2 h-2 sm:w-3 sm:h-3 bg-green-400 border-2 border-white rounded-full"></div>
+                                        <div class="online-indicator absolute bottom-0 right-0 w-2 h-2 sm:w-3 sm:h-3 bg-gray-300 border-2 border-white rounded-full"></div>
                                     </div>
                                     <div class="flex-1 min-w-0">
                                         <p class="font-medium text-gray-900 truncate text-sm sm:text-base">{{ $friend->name }}</p>
@@ -271,7 +271,11 @@
 @endsection
 
 @section('scripts')
+@vite(['resources/js/chat-realtime.js'])
 <script>
+        const currentUserId = {{ auth()->id() }};
+        const currentUserName = @json(auth()->user()->name);
+        let onlineUserIds = new Set();
         let currentFriendId = null;
         let currentFriendName = null;
         let currentGroupId = null;
@@ -323,7 +327,12 @@
             // Enable/disable send button based on input
             messageInput.addEventListener('input', function() {
                 sendButton.disabled = this.value.trim() === '';
+                if (window.ChatRealtime && currentChatType) {
+                    window.ChatRealtime.sendTypingSignal(currentUserName);
+                }
             });
+
+            initChatRealtime();
 
             // Load unread counts
             loadUnreadCounts();
@@ -361,6 +370,9 @@
 
             loadMessages();
             markAsRead();
+            if (window.ChatRealtime) {
+                window.ChatRealtime.switchChannel('friend', Number(friendId));
+            }
         }
 
         function selectGroup(groupId, groupName) {
@@ -384,6 +396,9 @@
             document.querySelector(`[data-group-id="${groupId}"]`)?.classList.add('bg-purple-50', 'border-purple-300');
 
             loadMessages();
+            if (window.ChatRealtime) {
+                window.ChatRealtime.switchChannel('group', Number(groupId));
+            }
         }
 
         function selectAnonymous(roomId, peerAlias, peerName) {
@@ -406,6 +421,26 @@
             document.querySelector(`[data-anonymous-room-id="${roomId}"]`)?.classList.add('bg-purple-50', 'border-purple-300');
 
             loadMessages();
+            if (window.ChatRealtime) {
+                window.ChatRealtime.switchChannel('anonymous', Number(roomId));
+            }
+        }
+
+        function initChatRealtime() {
+            if (!window.ChatRealtime) {
+                return;
+            }
+
+            window.ChatRealtime.init({
+                userId: currentUserId,
+                onMessage: handleRealtimeMessage,
+                onTyping: handleRealtimeTyping,
+                onTypingStop: hideTypingIndicator,
+                onMessagesRead: handleRealtimeReadReceipt,
+                onPresenceSync: syncOnlineUsers,
+                onPresenceJoin: (user) => setFriendOnlineStatus(user.id, true),
+                onPresenceLeave: (user) => setFriendOnlineStatus(user.id, false),
+            });
         }
 
         function loadMessages() {
@@ -441,6 +476,90 @@
                     console.error('Error loading messages:', error);
                     showNotification('Error loading messages', 'error');
                 });
+        }
+
+        function handleRealtimeMessage(payload) {
+            if (!payload || Number(payload.sender_id) === currentUserId) {
+                return;
+            }
+
+            if (payload.chat_type === 'friend' && currentChatType === 'friend') {
+                const inConversation =
+                    (Number(payload.sender_id) === Number(currentFriendId) && Number(payload.receiver_id) === currentUserId)
+                    || (Number(payload.sender_id) === currentUserId && Number(payload.receiver_id) === Number(currentFriendId));
+                if (!inConversation) {
+                    return;
+                }
+            } else if (payload.chat_type === 'group' && currentChatType === 'group') {
+                if (Number(payload.group_chat_id) !== Number(currentGroupId)) {
+                    return;
+                }
+            } else if (payload.chat_type === 'anonymous' && currentChatType === 'anonymous') {
+                if (Number(payload.room_id) !== Number(currentAnonymousRoomId)) {
+                    return;
+                }
+                payload.is_own = false;
+                payload.sender_alias = payload.sender_alias || 'Anonymous';
+            } else {
+                return;
+            }
+
+            if (messages.some((entry) => Number(entry.id) === Number(payload.id))) {
+                return;
+            }
+
+            messages.push(payload);
+            displayMessages();
+            loadUnreadCounts();
+        }
+
+        function handleRealtimeTyping(payload) {
+            const typingIndicator = document.getElementById('typing-indicator');
+            const typingText = document.getElementById('typing-text');
+            if (!typingIndicator || !typingText) {
+                return;
+            }
+
+            typingText.textContent = `${payload.name || 'Someone'} is typing...`;
+            typingIndicator.classList.remove('hidden');
+        }
+
+        function hideTypingIndicator() {
+            document.getElementById('typing-indicator')?.classList.add('hidden');
+        }
+
+        function handleRealtimeReadReceipt(payload) {
+            if (currentChatType !== 'friend' || !currentFriendId) {
+                return;
+            }
+
+            if (Number(payload.reader_id) === Number(currentFriendId) && Number(payload.sender_id) === currentUserId) {
+                const subtitle = document.getElementById('chat-subtitle');
+                subtitle.classList.remove('hidden');
+                subtitle.textContent = 'Seen';
+            }
+        }
+
+        function syncOnlineUsers(users) {
+            onlineUserIds = new Set((users || []).map((user) => Number(user.id)));
+            document.querySelectorAll('.friend-item[data-friend-id]').forEach((item) => {
+                setFriendOnlineStatus(item.dataset.friendId, onlineUserIds.has(Number(item.dataset.friendId)));
+            });
+        }
+
+        function setFriendOnlineStatus(userId, isOnline) {
+            const item = document.querySelector(`.friend-item[data-friend-id="${userId}"]`);
+            if (!item) {
+                return;
+            }
+
+            const dot = item.querySelector('.online-indicator');
+            if (!dot) {
+                return;
+            }
+
+            dot.classList.toggle('bg-green-400', isOnline);
+            dot.classList.toggle('bg-gray-300', !isOnline);
         }
 
         function loadGroupMessages() {

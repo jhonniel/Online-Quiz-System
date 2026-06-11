@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Events\Chat\AnonymousChatMessageSent;
 use App\Models\AnonymousChatMessage;
 use App\Models\AnonymousChatRoom;
 use App\Models\User;
@@ -178,6 +179,8 @@ class AnonymousChatController extends Controller
             'recipient_alias' => $peer ? $anonymousChatRoom->aliasForUser($peer->id) : null,
             'message_preview' => $preview,
         ]);
+
+        AnonymousChatMessageSent::dispatch($message, $anonymousChatRoom);
 
         return response()->json([
             'success' => true,

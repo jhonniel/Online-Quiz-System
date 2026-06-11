@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers;
 
+use App\Events\Chat\DirectChatMessageSent;
+use App\Events\Chat\DirectChatMessagesRead;
 use App\Models\AnonymousChatRoom;
 use App\Models\User;
 use App\Models\UserActivity;
@@ -87,11 +89,21 @@ class UserChatController extends Controller
             ->orderBy('created_at', 'asc')
             ->get();
 
-        // Mark messages as read
-        UserChatMessage::where('sender_id', $friendId)
+        // Mark messages as read when the conversation is opened.
+        $markedIds = UserChatMessage::query()
+            ->where('sender_id', $friendId)
             ->where('receiver_id', $currentUserId)
             ->where('is_read', false)
-            ->update(['is_read' => true, 'read_at' => now()]);
+            ->pluck('id')
+            ->all();
+
+        if ($markedIds !== []) {
+            UserChatMessage::query()
+                ->whereIn('id', $markedIds)
+                ->update(['is_read' => true, 'read_at' => now()]);
+
+            DirectChatMessagesRead::dispatch($currentUserId, (int) $friendId, $markedIds);
+        }
 
         return response()->json([
             'friend' => $friend,
@@ -138,6 +150,8 @@ class UserChatController extends Controller
             $messagePreview
         );
 
+        DirectChatMessageSent::dispatch($message);
+
         return response()->json([
             'success' => true,
             'message' => $message,
@@ -157,10 +171,20 @@ class UserChatController extends Controller
             'sender_id' => 'required|exists:users,id',
         ]);
 
-        UserChatMessage::where('sender_id', $request->sender_id)
+        $markedIds = UserChatMessage::query()
+            ->where('sender_id', $request->sender_id)
             ->where('receiver_id', auth()->id())
             ->where('is_read', false)
-            ->update(['is_read' => true, 'read_at' => now()]);
+            ->pluck('id')
+            ->all();
+
+        if ($markedIds !== []) {
+            UserChatMessage::query()
+                ->whereIn('id', $markedIds)
+                ->update(['is_read' => true, 'read_at' => now()]);
+
+            DirectChatMessagesRead::dispatch((int) auth()->id(), (int) $request->sender_id, $markedIds);
+        }
 
         return response()->json(['success' => true]);
     }

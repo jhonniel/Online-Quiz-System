@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Events\Chat\GroupChatMessageSent;
 use App\Models\Friendship;
 use App\Models\GroupChat;
 use App\Models\GroupChatMessage;
@@ -114,6 +115,8 @@ class GroupChatController extends Controller
                     $preview
                 );
             });
+
+        GroupChatMessageSent::dispatch($message);
 
         return response()->json([
             'success' => true,
