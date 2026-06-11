@@ -49,7 +49,8 @@
                 <div id="chat-area" class="hidden flex-1 flex flex-col">
                     <div class="p-3 sm:p-4 border-b border-gray-200 bg-gray-50">
                         <h3 id="chat-peer-alias" class="font-medium text-gray-900"></h3>
-                        <p class="text-xs text-gray-500">You appear as <span id="chat-my-alias" class="font-medium"></span></p>
+                        <p id="chat-peer-real-name" class="hidden text-sm text-gray-700 mt-1"></p>
+                        <p class="text-xs text-gray-500 mt-1">You appear as <span id="chat-my-alias" class="font-medium"></span></p>
                     </div>
                     <div id="chat-messages" class="flex-1 overflow-y-auto p-4 space-y-3 bg-gray-50"></div>
                     <div class="p-3 sm:p-4 border-t border-gray-200 bg-white">
@@ -95,6 +96,7 @@
 @section('scripts')
 <script>
     let currentRoomId = null;
+    const knownPeerName = new URLSearchParams(window.location.search).get('peer_name');
 
     document.addEventListener('DOMContentLoaded', function () {
         document.querySelectorAll('.room-item').forEach(function (item) {
@@ -193,12 +195,28 @@
             });
     }
 
+    function updatePeerRealNameDisplay(peerAlias) {
+        const realNameEl = document.getElementById('chat-peer-real-name');
+        if (!realNameEl) {
+            return;
+        }
+
+        if (knownPeerName) {
+            realNameEl.textContent = 'Messaging ' + knownPeerName + '. They only see you as ' + (peerAlias || 'an anonymous alias') + '.';
+            realNameEl.classList.remove('hidden');
+        } else {
+            realNameEl.textContent = '';
+            realNameEl.classList.add('hidden');
+        }
+    }
+
     function selectRoom(roomId, peerAlias, myAlias) {
         currentRoomId = roomId;
 
         document.getElementById('no-room-selected').classList.add('hidden');
         document.getElementById('chat-area').classList.remove('hidden');
         document.getElementById('chat-peer-alias').textContent = peerAlias || 'Anonymous';
+        updatePeerRealNameDisplay(peerAlias || 'Anonymous');
         if (myAlias) {
             document.getElementById('chat-my-alias').textContent = myAlias;
         }
@@ -217,6 +235,7 @@
                 }
 
                 document.getElementById('chat-my-alias').textContent = data.room.my_alias || 'Anonymous';
+                updatePeerRealNameDisplay(data.room.peer_alias || 'Anonymous');
                 renderMessages(data.messages || []);
             });
     }

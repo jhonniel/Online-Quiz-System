@@ -12,8 +12,8 @@
                     </svg>
                 </div>
                 <div class="ml-3">
-                    <h1 class="text-lg sm:text-xl lg:text-2xl font-bold text-white">Chat with Friends</h1>
-                    <p class="text-indigo-100 text-sm">Connect and chat with your friends</p>
+                    <h1 class="text-lg sm:text-xl lg:text-2xl font-bold text-white">Chat</h1>
+                    <p class="text-indigo-100 text-sm">Message friends, groups, or chat anonymously</p>
                 </div>
             </div>
             <div class="flex items-center space-x-2">
@@ -38,10 +38,13 @@
                     <div class="flex items-center justify-between gap-2">
                         <div>
                             <h3 class="text-base sm:text-lg font-semibold text-gray-900">Chats</h3>
-                            <p class="text-xs sm:text-sm text-gray-500">Friends and group chats</p>
+                            <p class="text-xs sm:text-sm text-gray-500">Friends, groups, and anonymous</p>
                         </div>
-                        <a href="{{ route('friends.index') }}"
-                           class="text-xs font-medium text-indigo-600 hover:text-indigo-800 whitespace-nowrap">My Friends</a>
+                        <button type="button"
+                                onclick="openStartAnonymousChatModal()"
+                                class="text-xs font-medium text-purple-700 hover:text-purple-900 whitespace-nowrap">
+                            + Anonymous
+                        </button>
                     </div>
                 </div>
 
@@ -65,6 +68,32 @@
                                         <div class="flex-1 min-w-0">
                                             <p class="font-medium text-gray-900 truncate text-sm sm:text-base">{{ $groupChat->name }}</p>
                                             <p class="text-xs text-gray-500 truncate">{{ $groupChat->members_count }} members</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            @endforeach
+                        </div>
+                    @endif
+
+                    @if($anonymousRooms->count() > 0)
+                        <div class="px-3 pt-3 pb-1">
+                            <h4 class="text-xs font-semibold uppercase tracking-wide text-gray-500">Anonymous</h4>
+                        </div>
+                        <div id="anonymous-chats-list" class="p-2 pt-0 border-b border-gray-200">
+                            @foreach($anonymousRooms as $entry)
+                                <div class="anonymous-chat-item p-2 sm:p-3 border border-gray-200 rounded-lg cursor-pointer hover:bg-gray-50 transition-colors mb-2"
+                                     data-anonymous-room-id="{{ $entry['room']->id }}"
+                                     data-peer-alias="{{ $entry['peer_alias'] }}"
+                                     data-peer-name="{{ $entry['peer_name'] ?? '' }}">
+                                    <div class="flex items-center space-x-2 sm:space-x-3">
+                                        <div class="w-8 h-8 sm:w-10 sm:h-10 bg-purple-100 rounded-full flex items-center justify-center shrink-0">
+                                            <svg class="w-4 h-4 sm:w-5 sm:h-5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8h2a2 2 0 012 2v6a2 2 0 01-2 2h-2v4l-4-4H9a2 2 0 01-2-2v-1M9 12h6m-6-4h6m2-5H7a2 2 0 00-2 2v6a2 2 0 002 2h2v4l4-4h5a2 2 0 002-2V7a2 2 0 00-2-2z"></path>
+                                            </svg>
+                                        </div>
+                                        <div class="flex-1 min-w-0">
+                                            <p class="font-medium text-gray-900 truncate text-sm sm:text-base">{{ $entry['peer_alias'] }}</p>
+                                            <p class="text-xs text-gray-500 truncate">Anonymous chat</p>
                                         </div>
                                     </div>
                                 </div>
@@ -136,7 +165,7 @@
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path>
                         </svg>
                         <h3 class="mt-4 text-base sm:text-lg font-medium text-gray-900">Select a chat to start messaging</h3>
-                        <p class="mt-2 text-sm text-gray-500">Choose a friend or group chat from the list.</p>
+                        <p class="mt-2 text-sm text-gray-500">Choose a friend, group, or anonymous chat from the list.</p>
                     </div>
                 </div>
 
@@ -214,6 +243,24 @@
     </div>
 </div>
 
+<div id="start-anonymous-chat-modal" class="hidden fixed inset-0 z-50 overflow-y-auto">
+    <div class="flex min-h-full items-center justify-center p-4">
+        <div class="fixed inset-0 bg-gray-600/50" onclick="closeStartAnonymousChatModal()"></div>
+        <div class="relative w-full max-w-lg rounded-lg bg-white shadow-xl">
+            <div class="px-6 py-5 border-b border-gray-200">
+                <h3 class="text-lg font-semibold text-gray-900">Start Anonymous Chat</h3>
+                <p class="text-sm text-gray-500 mt-1">Pick someone to message. They will only see your anonymous alias.</p>
+            </div>
+            <div class="px-6 py-5 max-h-80 overflow-y-auto" id="anonymous-targets-list">
+                <p class="text-sm text-gray-500">Loading available chats...</p>
+            </div>
+            <div class="px-6 py-4 border-t border-gray-200 flex justify-end">
+                <button type="button" onclick="closeStartAnonymousChatModal()" class="px-4 py-2 text-sm font-medium text-gray-700 border border-gray-300 rounded-md hover:bg-gray-50">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
     <!-- Loading overlay for chat messages -->
     <div id="loading-overlay" class="hidden fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
         <div class="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
@@ -229,9 +276,14 @@
         let currentFriendName = null;
         let currentGroupId = null;
         let currentGroupName = null;
+        let currentAnonymousRoomId = null;
+        let currentAnonymousPeerAlias = null;
+        let currentAnonymousPeerName = null;
+        let currentMyAnonymousAlias = null;
         let currentChatType = null;
         let messages = [];
         let typingTimeout = null;
+        const knownPeerNameFromUrl = new URLSearchParams(window.location.search).get('peer_name');
 
         document.addEventListener('DOMContentLoaded', function() {
             document.querySelectorAll('.friend-item').forEach(item => {
@@ -243,6 +295,16 @@
             document.querySelectorAll('.group-chat-item').forEach(item => {
                 item.addEventListener('click', function() {
                     selectGroup(this.dataset.groupId, this.dataset.groupName);
+                });
+            });
+
+            document.querySelectorAll('.anonymous-chat-item').forEach(item => {
+                item.addEventListener('click', function() {
+                    selectAnonymous(
+                        this.dataset.anonymousRoomId,
+                        this.dataset.peerAlias,
+                        this.dataset.peerName || knownPeerNameFromUrl || ''
+                    );
                 });
             });
 
@@ -272,7 +334,7 @@
         });
 
         function clearChatSelection() {
-            document.querySelectorAll('.friend-item, .group-chat-item').forEach(item => {
+            document.querySelectorAll('.friend-item, .group-chat-item, .anonymous-chat-item').forEach(item => {
                 item.classList.remove('bg-indigo-50', 'border-indigo-300', 'bg-purple-50', 'border-purple-300');
             });
         }
@@ -283,6 +345,10 @@
             currentFriendName = friendName;
             currentGroupId = null;
             currentGroupName = null;
+            currentAnonymousRoomId = null;
+            currentAnonymousPeerAlias = null;
+            currentAnonymousPeerName = null;
+            currentMyAnonymousAlias = null;
 
             document.getElementById('no-chat-selected').classList.add('hidden');
             document.getElementById('chat-area').classList.remove('hidden');
@@ -302,6 +368,10 @@
             currentGroupName = groupName;
             currentFriendId = null;
             currentFriendName = null;
+            currentAnonymousRoomId = null;
+            currentAnonymousPeerAlias = null;
+            currentAnonymousPeerName = null;
+            currentMyAnonymousAlias = null;
 
             document.getElementById('no-chat-selected').classList.add('hidden');
             document.getElementById('chat-area').classList.remove('hidden');
@@ -314,7 +384,38 @@
             loadMessages();
         }
 
+        function selectAnonymous(roomId, peerAlias, peerName) {
+            currentChatType = 'anonymous';
+            currentAnonymousRoomId = roomId;
+            currentAnonymousPeerAlias = peerAlias || 'Anonymous';
+            currentAnonymousPeerName = peerName || knownPeerNameFromUrl || '';
+            currentFriendId = null;
+            currentFriendName = null;
+            currentGroupId = null;
+            currentGroupName = null;
+
+            document.getElementById('no-chat-selected').classList.add('hidden');
+            document.getElementById('chat-area').classList.remove('hidden');
+            document.getElementById('chat-friend-name').textContent = currentAnonymousPeerAlias;
+
+            if (currentAnonymousPeerName) {
+                document.getElementById('chat-subtitle').textContent = 'Messaging ' + currentAnonymousPeerName + ' anonymously';
+            } else {
+                document.getElementById('chat-subtitle').textContent = 'Anonymous chat';
+            }
+
+            clearChatSelection();
+            document.querySelector(`[data-anonymous-room-id="${roomId}"]`)?.classList.add('bg-purple-50', 'border-purple-300');
+
+            loadMessages();
+        }
+
         function loadMessages() {
+            if (currentChatType === 'anonymous') {
+                loadAnonymousMessages();
+                return;
+            }
+
             if (currentChatType === 'group') {
                 loadGroupMessages();
                 return;
@@ -372,6 +473,39 @@
                 });
         }
 
+        function loadAnonymousMessages() {
+            if (!currentAnonymousRoomId) return;
+
+            showLoading();
+
+            fetch(`{{ url('anonymous-chat') }}/${currentAnonymousRoomId}/messages`)
+                .then(response => response.json())
+                .then(data => {
+                    hideLoading();
+
+                    if (data.error) {
+                        showNotification(data.error, 'error');
+                        return;
+                    }
+
+                    currentMyAnonymousAlias = data.room?.my_alias || 'Anonymous';
+                    if (currentAnonymousPeerName) {
+                        document.getElementById('chat-subtitle').textContent =
+                            'Messaging ' + currentAnonymousPeerName + '. You appear as ' + currentMyAnonymousAlias;
+                    } else {
+                        document.getElementById('chat-subtitle').textContent = 'You appear as ' + currentMyAnonymousAlias;
+                    }
+
+                    messages = data.messages || [];
+                    displayMessages();
+                })
+                .catch(error => {
+                    hideLoading();
+                    console.error('Error loading anonymous messages:', error);
+                    showNotification('Error loading anonymous messages', 'error');
+                });
+        }
+
         function displayMessages() {
             const messagesDiv = document.getElementById('chat-messages');
             messagesDiv.innerHTML = '';
@@ -389,20 +523,26 @@
             }
 
             messages.forEach(message => {
-                const isOwn = message.sender_id == {{ auth()->id() }};
+                const isOwn = currentChatType === 'anonymous'
+                    ? !!message.is_own
+                    : message.sender_id == {{ auth()->id() }};
                 const messageDiv = document.createElement('div');
                 messageDiv.className = `flex ${isOwn ? 'justify-end' : 'justify-start'}`;
 
                 const time = new Date(message.created_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
-                const senderName = currentChatType === 'group' && !isOwn && message.sender?.name
-                    ? `<p class="text-xs font-semibold mb-1 ${isOwn ? 'text-indigo-100' : 'text-gray-600'}">${message.sender.name}</p>`
-                    : '';
+                let senderName = '';
+                if (currentChatType === 'group' && !isOwn && message.sender?.name) {
+                    senderName = `<p class="text-xs font-semibold mb-1 text-gray-600">${escapeHtml(message.sender.name)}</p>`;
+                } else if (currentChatType === 'anonymous' && !isOwn && message.sender_alias) {
+                    senderName = `<p class="text-xs font-semibold mb-1 text-gray-600">${escapeHtml(message.sender_alias)}</p>`;
+                }
+                const messageText = currentChatType === 'anonymous' ? escapeHtml(message.message) : message.message;
 
                 messageDiv.innerHTML = `
                     <div class="max-w-xs sm:max-w-sm lg:max-w-md">
                         <div class="px-3 sm:px-4 py-2 rounded-lg ${isOwn ? 'bg-indigo-600 text-white' : 'bg-white text-gray-900 border border-gray-200'}">
                             ${senderName}
-                            <p class="text-sm">${message.message}</p>
+                            <p class="text-sm">${messageText}</p>
                             <p class="text-xs mt-1 ${isOwn ? 'text-indigo-100' : 'text-gray-500'}">${time}</p>
                         </div>
                     </div>
@@ -419,7 +559,10 @@
             const input = document.getElementById('message-input');
             const message = input.value.trim();
 
-            if (!message || (currentChatType !== 'group' && !currentFriendId) || (currentChatType === 'group' && !currentGroupId)) return;
+            if (!message) return;
+            if (currentChatType === 'anonymous' && !currentAnonymousRoomId) return;
+            if (currentChatType === 'group' && !currentGroupId) return;
+            if (currentChatType === 'friend' && !currentFriendId) return;
 
             // Disable send button temporarily
             const sendButton = document.getElementById('send-button');
@@ -442,6 +585,32 @@
 
             input.value = '';
             sendButton.disabled = true;
+
+            if (currentChatType === 'anonymous') {
+                fetch(`{{ url('anonymous-chat') }}/${currentAnonymousRoomId}/messages`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+                    },
+                    body: JSON.stringify({ message })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.error) {
+                        showNotification(data.error, 'error');
+                    } else {
+                        loadAnonymousMessages();
+                    }
+                    sendButton.disabled = input.value.trim() === '';
+                })
+                .catch(error => {
+                    console.error('Error sending anonymous message:', error);
+                    showNotification('Error sending message', 'error');
+                    sendButton.disabled = input.value.trim() === '';
+                });
+                return;
+            }
 
             const sendUrl = currentChatType === 'group'
                 ? `{{ url('group-chats') }}/${currentGroupId}/messages`
@@ -591,8 +760,30 @@
         const urlParams = new URLSearchParams(window.location.search);
         const friendId = urlParams.get('friend');
         const groupId = urlParams.get('group');
+        const anonymousRoomId = urlParams.get('anonymous_room');
 
-        if (groupId) {
+        if (anonymousRoomId) {
+            const roomElement = document.querySelector(`[data-anonymous-room-id="${anonymousRoomId}"]`);
+            if (roomElement) {
+                selectAnonymous(
+                    anonymousRoomId,
+                    roomElement.dataset.peerAlias,
+                    roomElement.dataset.peerName || knownPeerNameFromUrl || ''
+                );
+            } else {
+                fetch(`{{ url('anonymous-chat') }}/${anonymousRoomId}/messages`)
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.room) {
+                            selectAnonymous(
+                                anonymousRoomId,
+                                data.room.peer_alias,
+                                knownPeerNameFromUrl || ''
+                            );
+                        }
+                    });
+            }
+        } else if (groupId) {
             const groupElement = document.querySelector(`[data-group-id="${groupId}"]`);
             if (groupElement) {
                 selectGroup(groupId, groupElement.dataset.groupName);
@@ -602,6 +793,77 @@
             if (friendElement) {
                 selectFriend(friendId, friendElement.dataset.friendName);
             }
+        }
+
+        function escapeHtml(value) {
+            return String(value)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#039;');
+        }
+
+        function openStartAnonymousChatModal() {
+            document.getElementById('start-anonymous-chat-modal').classList.remove('hidden');
+            loadAnonymousTargets();
+        }
+
+        function closeStartAnonymousChatModal() {
+            document.getElementById('start-anonymous-chat-modal').classList.add('hidden');
+        }
+
+        function loadAnonymousTargets() {
+            const list = document.getElementById('anonymous-targets-list');
+            list.innerHTML = '<p class="text-sm text-gray-500">Loading available chats...</p>';
+
+            fetch('{{ route('anonymous-chat.targets') }}')
+                .then(response => response.json())
+                .then(data => {
+                    if (!data.targets || data.targets.length === 0) {
+                        list.innerHTML = '<p class="text-sm text-gray-500">No new users available for anonymous chat right now.</p>';
+                        return;
+                    }
+
+                    list.innerHTML = data.targets.map(function (target) {
+                        return `
+                            <button type="button"
+                                    data-token="${encodeURIComponent(target.token)}"
+                                    onclick="startAnonymousChat(decodeURIComponent(this.dataset.token))"
+                                    class="w-full text-left p-3 mb-2 border border-gray-200 rounded-lg hover:bg-purple-50 hover:border-purple-200">
+                                <span class="font-medium text-gray-900">${escapeHtml(target.alias)}</span>
+                                <span class="block text-xs text-gray-500 mt-1">Tap to start anonymous chat</span>
+                            </button>
+                        `;
+                    }).join('');
+                })
+                .catch(function () {
+                    list.innerHTML = '<p class="text-sm text-red-600">Unable to load anonymous chat options.</p>';
+                });
+        }
+
+        function startAnonymousChat(token) {
+            fetch('{{ route('anonymous-chat.start') }}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+                },
+                body: JSON.stringify({ token }),
+            })
+                .then(response => response.json())
+                .then(data => {
+                    if (!data.success) {
+                        showNotification(data.error || 'Unable to start anonymous chat.', 'error');
+                        return;
+                    }
+
+                    closeStartAnonymousChatModal();
+                    window.location.href = data.redirect_url;
+                })
+                .catch(function () {
+                    showNotification('Unable to start anonymous chat.', 'error');
+                });
         }
     </script>
 @endsection

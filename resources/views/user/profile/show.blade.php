@@ -265,7 +265,7 @@
                         </div>
                         <div class="ml-2">
                             <h4 class="text-sm font-medium text-gray-900">Find New Friends</h4>
-                            <p class="text-xs text-gray-500">Partial match on full name, email, role, department, or university</p>
+                            <p class="text-xs text-gray-500">Search by name or email. You can add friends or message someone anonymously while still seeing their real name here.</p>
                         </div>
                     </div>
                     <div class="flex-1 max-w-md">
@@ -501,6 +501,7 @@
 <script>
     let searchTimeout;
     const friendSearchUrl = @json(route('friends.search'));
+    const anonymousChatStartUrl = @json(route('anonymous-chat.start'));
 
     function escapeHtml(text) {
         const div = document.createElement('div');
@@ -549,11 +550,28 @@
                            </div>`;
                     let action = '';
                     if (user.friendship_status === 'accepted') {
-                        action = `<a href="{{ url('/user-chat') }}?friend=${user.id}" class="inline-flex items-center px-3 py-1.5 rounded-md text-xs font-medium bg-indigo-500 text-white hover:bg-indigo-600">Chat</a>`;
+                        action = `
+                            <div class="flex flex-col gap-1.5 items-end">
+                                <a href="{{ url('/user-chat') }}?friend=${user.id}" class="inline-flex items-center px-3 py-1.5 rounded-md text-xs font-medium bg-indigo-500 text-white hover:bg-indigo-600">Chat</a>
+                                ${renderAnonymousChatButton(user)}
+                            </div>
+                        `;
                     } else if (user.friendship_status === 'pending') {
+                        action = `
+                            <div class="flex flex-col gap-1.5 items-end">
+                                <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getStatusClass(user.friendship_status)}">${getStatusText(user.friendship_status)}</span>
+                                ${renderAnonymousChatButton(user)}
+                            </div>
+                        `;
+                    } else if (user.friendship_status === 'blocked') {
                         action = `<span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getStatusClass(user.friendship_status)}">${getStatusText(user.friendship_status)}</span>`;
                     } else {
-                        action = `<button type="button" class="js-add-friend inline-flex items-center px-3 py-1.5 rounded-md text-xs font-medium bg-indigo-500 text-white hover:bg-indigo-600" data-user-id="${user.id}" data-user-name="${safeAttrName}">Add Friend</button>`;
+                        action = `
+                            <div class="flex flex-col gap-1.5 items-end">
+                                <button type="button" class="js-add-friend inline-flex items-center px-3 py-1.5 rounded-md text-xs font-medium bg-indigo-500 text-white hover:bg-indigo-600" data-user-id="${user.id}" data-user-name="${safeAttrName}">Add Friend</button>
+                                ${renderAnonymousChatButton(user)}
+                            </div>
+                        `;
                     }
                     return `
                         <div class="p-3 hover:bg-indigo-50 border-b border-gray-100 last:border-b-0">
@@ -585,6 +603,74 @@
                 );
             });
         });
+
+        resultsDiv.querySelectorAll('.js-anonymous-chat').forEach((btn) => {
+            btn.addEventListener('click', () => {
+                startAnonymousChatFromSearch(
+                    btn.getAttribute('data-token') || '',
+                    btn.getAttribute('data-user-name') || ''
+                );
+            });
+        });
+    }
+
+    function renderAnonymousChatButton(user) {
+        if (!user.can_anonymous_chat || !user.anonymous_chat_token) {
+            return '';
+        }
+
+        const safeToken = encodeURIComponent(user.anonymous_chat_token);
+        const safeName = (user.full_name || user.name || '').replace(/"/g, '&quot;');
+        const aliasHint = user.anonymous_chat_alias
+            ? `<span class="block text-[10px] text-purple-600 mt-0.5">They see you as an alias</span>`
+            : '';
+
+        return `
+            <button type="button"
+                    class="js-anonymous-chat inline-flex flex-col items-end px-3 py-1.5 rounded-md text-xs font-medium bg-purple-600 text-white hover:bg-purple-700"
+                    data-token="${safeToken}"
+                    data-user-name="${safeName}">
+                <span>Anonymous Chat</span>
+                ${aliasHint}
+            </button>
+        `;
+    }
+
+    function startAnonymousChatFromSearch(token, userName) {
+        if (!token) {
+            showNotification('Unable to start anonymous chat.', 'error');
+            return;
+        }
+
+        showLoading();
+
+        fetch(anonymousChatStartUrl, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+            },
+            body: JSON.stringify({
+                token: decodeURIComponent(token),
+                know_peer: true,
+            }),
+        })
+            .then(response => response.json())
+            .then(data => {
+                hideLoading();
+                if (!data.success) {
+                    showNotification(data.error || 'Unable to start anonymous chat.', 'error');
+                    return;
+                }
+
+                document.getElementById('search-results').classList.add('hidden');
+                document.getElementById('friend-search').value = '';
+                window.location.href = data.redirect_url;
+            })
+            .catch(function () {
+                hideLoading();
+                showNotification('Unable to start anonymous chat.', 'error');
+            });
     }
 
     // Clear search functionality

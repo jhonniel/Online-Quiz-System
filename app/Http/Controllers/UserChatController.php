@@ -2,7 +2,9 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\AnonymousChatRoom;
 use App\Models\User;
+use App\Models\UserActivity;
 use App\Models\UserChatMessage;
 use App\Models\Friendship;
 use Illuminate\Http\Request;
@@ -11,7 +13,7 @@ use Illuminate\View\View;
 
 class UserChatController extends Controller
 {
-    public function index(): View
+    public function index(Request $request): View
     {
         $user = auth()->user();
 
@@ -27,7 +29,41 @@ class UserChatController extends Controller
             ->withCount('members')
             ->get();
 
-        return view('user-chat.index', compact('friends', 'groupChats'));
+        $anonymousRooms = AnonymousChatRoom::query()
+            ->with(['participants', 'userOne:id,name', 'userTwo:id,name'])
+            ->where(function ($query) use ($user) {
+                $query->where('user_one_id', $user->id)
+                    ->orWhere('user_two_id', $user->id);
+            })
+            ->orderByDesc('updated_at')
+            ->get()
+            ->map(function (AnonymousChatRoom $room) use ($user) {
+                $peer = $room->peerUser($user);
+
+                return [
+                    'room' => $room,
+                    'peer_alias' => $peer ? (string) $room->aliasForUser($peer->id) : 'Anonymous',
+                    'peer_name' => $peer?->name,
+                ];
+            });
+
+        if ($request->filled('anonymous_room')) {
+            $room = AnonymousChatRoom::query()->find((int) $request->query('anonymous_room'));
+            if ($room instanceof AnonymousChatRoom && $room->includesUser($user->id)) {
+                $peer = $room->peerUser($user);
+                UserActivity::logActivity($user, 'anonymous_chat', 'room_opened', [
+                    'description' => 'Opened anonymous chat with '.$peer?->name,
+                    'room_id' => $room->id,
+                    'viewer_id' => $user->id,
+                    'viewer_name' => $user->name,
+                    'peer_id' => $peer?->id,
+                    'peer_name' => $peer?->name,
+                    'peer_alias' => $peer ? $room->aliasForUser($peer->id) : null,
+                ]);
+            }
+        }
+
+        return view('user-chat.index', compact('friends', 'groupChats', 'anonymousRooms'));
     }
 
     public function getChat(Request $request, $friendId): JsonResponse

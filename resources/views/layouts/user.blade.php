@@ -500,15 +500,6 @@
                             <span id="unread-message-count-mobile" class="hidden ml-auto bg-red-500 text-white text-xs rounded-full px-2 py-1 min-w-[20px] text-center">0</span>
                         </a>
 
-                        <a href="{{ route('anonymous-chat.index') }}"
-                           @click="sidebarOpen = false"
-                           class="group flex items-center px-2 py-2 text-sm font-medium rounded-md transition-colors duration-200 {{ request()->routeIs('anonymous-chat.*') ? 'bg-indigo-700 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white' }}">
-                            <svg class="mr-3 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8h2a2 2 0 012 2v6a2 2 0 01-2 2h-2v4l-4-4H9a2 2 0 01-2-2v-1M9 12h6m-6-4h6m2-5H7a2 2 0 00-2 2v6a2 2 0 002 2h2v4l4-4h5a2 2 0 002-2V7a2 2 0 00-2-2z"></path>
-                            </svg>
-                            Anonymous Chat
-                        </a>
-
                         <a href="{{ url('/forum') }}"
                            @click="sidebarOpen = false"
                            class="group flex items-center px-2 py-2 text-sm font-medium rounded-md transition-colors duration-200 {{ request()->routeIs('forum.index') || request()->routeIs('forum.show') || request()->routeIs('forum.saved') ? 'bg-indigo-700 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white' }}">

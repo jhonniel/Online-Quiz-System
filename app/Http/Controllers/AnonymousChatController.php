@@ -4,39 +4,30 @@ namespace App\Http\Controllers;
 
 use App\Models\AnonymousChatMessage;
 use App\Models\AnonymousChatRoom;
-use App\Models\Friendship;
 use App\Models\User;
 use App\Models\UserActivity;
 use App\Support\AnonymousChatAliasService;
+use App\Support\AnonymousChatEligibility;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Crypt;
-use Illuminate\View\View;
 
 class AnonymousChatController extends Controller
 {
-    public function index(Request $request): View
+    public function index(Request $request): RedirectResponse
     {
-        $user = auth()->user();
-        $rooms = $this->roomsForUser($user);
+        $params = [];
 
         if ($request->filled('room')) {
-            $room = AnonymousChatRoom::query()->find((int) $request->query('room'));
-            if ($room instanceof AnonymousChatRoom && $room->includesUser($user->id)) {
-                $peer = $room->peerUser($user);
-                $this->logActivity($user, 'room_opened', [
-                    'description' => 'Opened anonymous chat with '.$peer?->name,
-                    'room_id' => $room->id,
-                    'viewer_id' => $user->id,
-                    'viewer_name' => $user->name,
-                    'peer_id' => $peer?->id,
-                    'peer_name' => $peer?->name,
-                    'peer_alias' => $peer ? $room->aliasForUser($peer->id) : null,
-                ]);
-            }
+            $params['anonymous_room'] = (int) $request->query('room');
         }
 
-        return view('anonymous-chat.index', compact('rooms'));
+        if ($request->filled('peer_name')) {
+            $params['peer_name'] = (string) $request->query('peer_name');
+        }
+
+        return redirect()->route('user-chat.index', $params);
     }
 
     public function targets(): JsonResponse
@@ -70,6 +61,7 @@ class AnonymousChatController extends Controller
     {
         $validated = $request->validate([
             'token' => 'required|string',
+            'know_peer' => 'sometimes|boolean',
         ]);
 
         $user = $request->user();
@@ -103,11 +95,16 @@ class AnonymousChatController extends Controller
             'peer_alias' => $peer ? $room->aliasForUser($peer->id) : null,
         ]);
 
+        $redirectParams = ['anonymous_room' => $room->id];
+        if ($request->boolean('know_peer') && $peer) {
+            $redirectParams['peer_name'] = $peer->name;
+        }
+
         return response()->json([
             'success' => true,
             'room_id' => $room->id,
             'peer_alias' => $peer ? $room->aliasForUser($peer->id) : 'Anonymous',
-            'redirect_url' => route('anonymous-chat.index', ['room' => $room->id]),
+            'redirect_url' => route('user-chat.index', $redirectParams),
         ]);
     }
 
@@ -200,47 +197,13 @@ class AnonymousChatController extends Controller
      */
     private function eligibleTargetsQuery(User $user)
     {
-        $blockedIds = Friendship::query()
-            ->where('status', 'blocked')
-            ->where(function ($query) use ($user) {
-                $query->where('user_id', $user->id)
-                    ->orWhere('friend_id', $user->id);
-            })
-            ->get()
-            ->flatMap(fn (Friendship $friendship) => [$friendship->user_id, $friendship->friend_id])
-            ->unique()
-            ->reject(fn (int $id) => $id === $user->id)
-            ->values()
-            ->all();
+        $blockedIds = AnonymousChatEligibility::blockedUserIdsFor($user);
 
         return User::query()
             ->where('is_active', true)
             ->where('id', '!=', $user->id)
             ->whereNotIn('role', ['admin'])
             ->when($blockedIds !== [], fn ($query) => $query->whereNotIn('id', $blockedIds));
-    }
-
-    /**
-     * @return \Illuminate\Support\Collection<int, array{room: AnonymousChatRoom, peer_alias: string}>
-     */
-    private function roomsForUser(User $user)
-    {
-        return AnonymousChatRoom::query()
-            ->with(['participants', 'userOne:id,name', 'userTwo:id,name'])
-            ->where(function ($query) use ($user) {
-                $query->where('user_one_id', $user->id)
-                    ->orWhere('user_two_id', $user->id);
-            })
-            ->orderByDesc('updated_at')
-            ->get()
-            ->map(function (AnonymousChatRoom $room) use ($user) {
-                $peer = $room->peerUser($user);
-
-                return [
-                    'room' => $room,
-                    'peer_alias' => $peer ? (string) $room->aliasForUser($peer->id) : 'Anonymous',
-                ];
-            });
     }
 
     private function logActivity(User $user, string $action, array $metadata): void
