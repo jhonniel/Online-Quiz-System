@@ -210,11 +210,15 @@ class PayslipController extends Controller
         $year = $this->resolveSummaryYear($request, $availableYears);
         $payslips = $this->payslipsForYearlySummary($request, $year);
         $summary = PayslipYearlySummary::build($payslips);
+        $companyName = PayslipYearlySummary::resolveCompanyName($payslips);
+        $sheetTitle = PayslipYearlySummary::sheetTitle($year);
 
         return view('admin.employee-management.payslip.yearly-summary', compact(
             'summary',
             'year',
-            'availableYears'
+            'availableYears',
+            'companyName',
+            'sheetTitle'
         ));
     }
 
@@ -224,7 +228,8 @@ class PayslipController extends Controller
         $year = $this->resolveSummaryYear($request, $availableYears);
         $payslips = $this->payslipsForYearlySummary($request, $year);
         $summary = PayslipYearlySummary::build($payslips);
-        $rows = PayslipYearlySummary::csvRows($summary);
+        $companyName = PayslipYearlySummary::resolveCompanyName($payslips);
+        $rows = PayslipYearlySummary::csvRows($summary, $year, $companyName);
 
         return $this->csvDownload($rows, 'payslip_yearly_summary_'.$year.'_'.date('Y-m-d').'.csv');
     }

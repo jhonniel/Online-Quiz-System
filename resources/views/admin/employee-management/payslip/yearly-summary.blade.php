@@ -72,17 +72,14 @@
         </div>
     @else
         <div id="payslip-summary-print-area" class="payslip-summary-print-area rounded-lg border border-gray-200 bg-white shadow-sm overflow-hidden">
-            <div class="payslip-summary-print-header px-4 pt-4 pb-3 border-b border-gray-200">
-                <h1 class="text-lg font-bold text-gray-900">Payslip Yearly Summary — {{ $year }}</h1>
-                <p class="mt-1 text-sm text-gray-600">
-                    {{ number_format($summary['employee_count']) }} employee(s) · {{ number_format($summary['payslip_count']) }} payslip record(s)
-                    · Generated {{ now()->format('M d, Y h:i A') }}
-                </p>
-            </div>
             <div class="overflow-x-auto print:overflow-visible">
                 <table class="min-w-full border-collapse text-xs sm:text-sm payslip-summary-table">
-                    <thead>
-                        <tr class="bg-[#1e3a8a] text-white">
+                    <thead class="payslip-summary-table-head">
+                        @include('admin.employee-management.payslip.partials.summary-sheet-header', [
+                            'companyName' => $companyName,
+                            'sheetTitle' => $sheetTitle,
+                        ])
+                        <tr class="payslip-summary-columns-header-row bg-[#1e3a8a] text-white">
                             <th rowspan="2" class="border border-[#1e40af] px-3 py-2 text-left font-bold italic whitespace-nowrap">Employee Name</th>
                             <th rowspan="2" class="border border-[#1e40af] px-3 py-2 text-left font-bold italic whitespace-nowrap">Date Hired</th>
                             <th rowspan="2" class="border border-[#1e40af] px-3 py-2 text-right font-bold italic whitespace-nowrap">Total Basic Salary</th>
@@ -95,7 +92,7 @@
                             <th colspan="3" class="border border-[#1e40af] px-3 py-2 text-center font-bold italic uppercase tracking-wide">Company Loans</th>
                             <th rowspan="2" class="border border-[#1e40af] px-3 py-2 text-right font-bold italic whitespace-nowrap">Net Pay</th>
                         </tr>
-                        <tr class="bg-[#1e3a8a] text-white">
+                        <tr class="payslip-summary-columns-header-row bg-[#1e3a8a] text-white">
                             <th class="border border-[#1e40af] px-3 py-2 text-right font-bold italic whitespace-nowrap">SSS</th>
                             <th class="border border-[#1e40af] px-3 py-2 text-right font-bold italic whitespace-nowrap">HDMF</th>
                             <th class="border border-[#1e40af] px-3 py-2 text-right font-bold italic whitespace-nowrap">PHIC</th>
@@ -155,10 +152,6 @@
 </div>
 
 <style>
-    .payslip-summary-print-header {
-        display: none;
-    }
-
     @media print {
         @page {
             size: legal landscape;
@@ -193,13 +186,37 @@
             overflow: visible !important;
         }
 
-        .payslip-summary-print-header {
-            display: block !important;
-        }
-
         .payslip-summary-table {
             font-size: 9px !important;
             width: 100% !important;
+        }
+
+        .payslip-summary-table thead {
+            display: table-header-group;
+        }
+
+        .payslip-summary-table tfoot {
+            display: table-row-group;
+        }
+
+        .payslip-summary-sheet-header-row th {
+            background: #fff !important;
+            color: #1e3a8a !important;
+            border: none !important;
+            font-family: Georgia, 'Times New Roman', Times, serif !important;
+            font-weight: 700 !important;
+            font-style: italic !important;
+            text-align: center !important;
+        }
+
+        .payslip-summary-company-name {
+            font-size: 16px !important;
+            padding-top: 0 !important;
+        }
+
+        .payslip-summary-sheet-title {
+            font-size: 14px !important;
+            padding-bottom: 8px !important;
         }
 
         .payslip-summary-table th,
@@ -207,12 +224,13 @@
             padding: 4px 6px !important;
         }
 
-        .payslip-summary-table thead tr {
+        .payslip-summary-columns-header-row,
+        .payslip-summary-columns-header-row th {
             background-color: #1e3a8a !important;
             color: #fff !important;
         }
 
-        .payslip-summary-table thead th {
+        .payslip-summary-columns-header-row th {
             border-color: #1e40af !important;
         }
 

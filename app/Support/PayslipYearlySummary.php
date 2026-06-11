@@ -28,6 +28,26 @@ final class PayslipYearlySummary
         'Net Pay',
     ];
 
+    public static function sheetTitle(int $year): string
+    {
+        return 'Payroll Sheet Yr. '.$year;
+    }
+
+    /**
+     * @param  Collection<int, EmployeePayslip>  $payslips
+     */
+    public static function resolveCompanyName(Collection $payslips): string
+    {
+        $fromPayslip = $payslips
+            ->pluck('company_name')
+            ->map(fn ($name) => trim((string) $name))
+            ->first(fn (string $name) => $name !== '');
+
+        $name = $fromPayslip ?: EmployeeDocumentFooter::defaultCompanyName();
+
+        return strtoupper(trim($name));
+    }
+
     /**
      * @param  Collection<int, EmployeePayslip>  $payslips
      * @return array{rows: list<array<string, mixed>>, totals: array<string, float|int>, employee_count: int, payslip_count: int}
@@ -100,9 +120,17 @@ final class PayslipYearlySummary
      * @param  array{rows: list<array<string, mixed>>, totals: array<string, float|int>}  $summary
      * @return list<list<string|int|float>>
      */
-    public static function csvRows(array $summary): array
+    public static function csvRows(array $summary, int $year, string $companyName): array
     {
-        $rows = [self::CSV_HEADERS];
+        $columnCount = count(self::CSV_HEADERS);
+        $blankRow = array_fill(0, $columnCount, '');
+
+        $rows = [
+            array_pad([$companyName], $columnCount, ''),
+            array_pad([self::sheetTitle($year)], $columnCount, ''),
+            $blankRow,
+            self::CSV_HEADERS,
+        ];
 
         foreach ($summary['rows'] as $row) {
             $rows[] = self::csvRowValues($row);
