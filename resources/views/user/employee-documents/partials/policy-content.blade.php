@@ -36,6 +36,10 @@
             margin-bottom: 0.75rem;
             text-align: justify;
         }
+        .policy-document .policy-position-content {
+            margin: 0.75rem 0;
+            text-align: justify;
+        }
         .policy-document .policy-sign-block {
             margin-top: 1.25rem;
         }

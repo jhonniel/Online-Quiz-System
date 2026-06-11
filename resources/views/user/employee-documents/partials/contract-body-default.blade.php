@@ -25,28 +25,32 @@
         <p class="section-heading">Position</p>
         <p class="body-text">The Employee is employed as a <strong>{{ $position }}</strong> and agrees to faithfully perform the duties and responsibilities assigned by the Employer.</p>
 
+        @if(!empty($positionContentHtml))
+            <div class="agreement-position-content">{!! $positionContentHtml !!}</div>
+        @endif
+
         <p class="section-heading">Job Description</p>
         <p class="body-text">The Employee's duties and responsibilities include, but are not limited to:</p>
-        <ul class="agreement-list">
-            <li>Design, develop, test, maintain, and improve web, mobile, desktop, and other software applications;</li>
-            <li>Write clean, secure, maintainable, and well-documented source code;</li>
-            <li>Debug, troubleshoot, and resolve software issues;</li>
-            <li>Participate in system planning, deployment, testing, maintenance, and technical support;</li>
-            <li>Prepare and maintain technical documentation and project reports;</li>
-            <li>Participate in code reviews, quality assurance, and security improvements;</li>
-            <li>Collaborate with clients, project managers, designers, and other team members;</li>
-            <li>Protect confidential company and client information;</li>
-            <li>Perform general office, administrative, coordination, liaison, documentation, procurement, government transactions, client meetings, and other business-related tasks reasonably assigned by the Employer; and</li>
-        </ul>
+        @if(!empty($jobDescriptionDutiesPage1))
+            <ul class="agreement-list">
+                @foreach($jobDescriptionDutiesPage1 as $duty)
+                    <li>{{ $duty }}</li>
+                @endforeach
+            </ul>
+        @endif
 
         @include('user.employee-documents.partials.contract-page-footer', ['pageNumber' => 1])
     </div>
 
     <div class="agreement-page document-page-shell">
         @include('user.employee-documents.partials.document-page-letterhead')
-        <ul class="agreement-list">
-            <li>Perform such other lawful and reasonable duties consistent with the Employer's business operations.</li>
-        </ul>
+        @if(!empty($jobDescriptionDutiesPage2))
+            <ul class="agreement-list">
+                @foreach($jobDescriptionDutiesPage2 as $duty)
+                    <li>{{ $duty }}</li>
+                @endforeach
+            </ul>
+        @endif
         <p class="body-text">
             The Employee agrees to perform all assigned responsibilities with professionalism, competence, diligence, integrity, and the level of skill reasonably expected of a {{ $position }}.
         </p>

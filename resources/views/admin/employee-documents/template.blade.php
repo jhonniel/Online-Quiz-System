@@ -58,8 +58,36 @@
         </div>
     </div>
 
+    @php
+        $policyPositionSectionDescription = 'All employees see the standard policy list. Add extra policies and optional content below that only appear for selected positions. Use placeholders <code class="font-mono text-[11px] bg-white px-1 rounded border border-violet-200">{{position}}</code> and <code class="font-mono text-[11px] bg-white px-1 rounded border border-violet-200">{{position_policies_content}}</code> in the HTML template when needed.';
+        $contractPositionSectionDescription = 'All employees see the standard agreement text and default job description. Add position-specific job duties and optional extra clauses below. Use placeholders <code class="font-mono text-[11px] bg-white px-1 rounded border border-violet-200">{{job_description_list}}</code> and <code class="font-mono text-[11px] bg-white px-1 rounded border border-violet-200">{{position_content}}</code> in the HTML template when needed.';
+    @endphp
+
     <form action="{{ route('admin.employee-documents.template.update', $type) }}" method="POST" id="document-template-form" class="flex flex-col flex-1 min-h-0">
         @csrf
+
+        @if($type === 'policy')
+            @include('admin.employee-documents.partials.document-position-rules', [
+                'positionRulesFieldName' => 'policy_position_rules',
+                'documentPositionRules' => $documentPositionRules ?? [],
+                'showPoliciesField' => true,
+                'sectionTitle' => 'Position-specific policy content',
+                'sectionDescription' => $policyPositionSectionDescription,
+                'emptyMessage' => 'No position rules yet. Everyone will only see the standard policy list.',
+                'contentPlaceholder' => '<p>Additional responsibilities for this role...</p>',
+            ])
+        @elseif($type === 'contract')
+            @include('admin.employee-documents.partials.document-position-rules', [
+                'positionRulesFieldName' => 'contract_position_rules',
+                'documentPositionRules' => $documentPositionRules ?? [],
+                'showPoliciesField' => false,
+                'showJobDescriptionField' => true,
+                'sectionTitle' => 'Position-specific agreement content',
+                'sectionDescription' => $contractPositionSectionDescription,
+                'emptyMessage' => 'No position rules yet. Everyone will see the standard job description and agreement text.',
+                'contentPlaceholder' => '<p>Additional role-specific terms...</p>',
+            ])
+        @endif
 
         <div class="shrink-0 border-b border-slate-200 bg-slate-50 px-4 sm:px-6 lg:px-8 py-3">
             <p class="text-xs font-semibold uppercase tracking-wide text-slate-600 mb-2">Insert placeholders</p>

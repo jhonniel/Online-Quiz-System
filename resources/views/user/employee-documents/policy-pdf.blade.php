@@ -48,6 +48,10 @@
             margin: 0 0 10px 0;
             text-align: justify;
         }
+        .policy-position-content {
+            margin: 0 0 10px 0;
+            text-align: justify;
+        }
         .policy-sign-block {
             margin-top: 18px;
         }

@@ -5,6 +5,9 @@
 
 <p class="policy-field"><span class="policy-field-label">Employee Name:</span> {{ $employeeName }}</p>
 <p class="policy-field"><span class="policy-field-label">Employee Address:</span> {{ $employeeAddress }}</p>
+@if(!empty($position))
+    <p class="policy-field"><span class="policy-field-label">Position:</span> {{ $position }}</p>
+@endif
 <p class="policy-field"><span class="policy-field-label">Date Hired:</span> {{ $dateHired }}</p>
 
 <p class="policy-intro">
@@ -19,6 +22,10 @@
         <li><span class="policy-check" aria-hidden="true">&#9745;</span> {{ $policy }}</li>
     @endforeach
 </ul>
+@endif
+
+@if(!empty($positionContentHtml))
+    <div class="policy-position-content">{!! $positionContentHtml !!}</div>
 @endif
 
 <p class="policy-paragraph">

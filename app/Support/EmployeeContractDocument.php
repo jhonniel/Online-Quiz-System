@@ -8,6 +8,20 @@ use Barryvdh\DomPDF\Facade\Pdf;
 
 final class EmployeeContractDocument
 {
+    /** @var list<string> */
+    public const DEFAULT_JOB_DESCRIPTION_DUTIES = [
+        'Design, develop, test, maintain, and improve web, mobile, desktop, and other software applications',
+        'Write clean, secure, maintainable, and well-documented source code',
+        'Debug, troubleshoot, and resolve software issues',
+        'Participate in system planning, deployment, testing, maintenance, and technical support',
+        'Prepare and maintain technical documentation and project reports',
+        'Participate in code reviews, quality assurance, and security improvements',
+        'Collaborate with clients, project managers, designers, and other team members',
+        'Protect confidential company and client information',
+        'Perform general office, administrative, coordination, liaison, documentation, procurement, government transactions, client meetings, and other business-related tasks reasonably assigned by the Employer; and',
+        'Perform such other lawful and reasonable duties consistent with the Employer\'s business operations.',
+    ];
+
     /**
      * @return array<string, mixed>
      */
@@ -26,9 +40,16 @@ final class EmployeeContractDocument
         $employeeAddress = '';
         $dateHired = $user->date_hired?->format('F j, Y') ?? '';
 
+        $jobDescriptionDuties = self::jobDescriptionDutiesForUser($user);
+        $jobDescriptionPages = self::splitJobDescriptionDutiesAcrossPages($jobDescriptionDuties);
+
         $data = [
             'documentTitle' => EmployeeSampleDocument::title('contract'),
             'footerLogoDataUri' => self::footerLogoDataUri(),
+            'positionContentHtml' => EmployeeDocumentPositionRules::contentHtmlForUser($user, 'contract'),
+            'jobDescriptionDuties' => $jobDescriptionDuties,
+            'jobDescriptionDutiesPage1' => $jobDescriptionPages['page1'],
+            'jobDescriptionDutiesPage2' => $jobDescriptionPages['page2'],
             'employeeName' => $employeeName,
             'employeeAddress' => $employeeAddress,
             'employeeNameLine' => $employeeName !== '' ? $employeeName : '___________________________________________',
@@ -74,6 +95,32 @@ final class EmployeeContractDocument
             'contact' => (string) Setting::get('contact_phone', ''),
             'location' => (string) Setting::get('contact_address', ''),
         ]);
+    }
+
+    /**
+     * @return list<string>
+     */
+    public static function jobDescriptionDutiesForUser(User $user): array
+    {
+        $duties = EmployeeDocumentPositionRules::jobDescriptionDutiesForUser($user);
+
+        return $duties !== [] ? $duties : self::DEFAULT_JOB_DESCRIPTION_DUTIES;
+    }
+
+    /**
+     * @param  list<string>  $duties
+     * @return array{page1: list<string>, page2: list<string>}
+     */
+    public static function splitJobDescriptionDutiesAcrossPages(array $duties): array
+    {
+        if (count($duties) <= 1) {
+            return ['page1' => $duties, 'page2' => []];
+        }
+
+        return [
+            'page1' => array_values(array_slice($duties, 0, -1)),
+            'page2' => [array_values(array_slice($duties, -1))[0]],
+        ];
     }
 
     public static function footerLogoDataUri(): string

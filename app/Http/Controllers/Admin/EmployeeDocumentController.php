@@ -8,11 +8,13 @@ use App\Models\User;
 use App\Support\AdminEmployeeDepartmentScope;
 use App\Support\EmployeeDocumentFooter;
 use App\Support\EmployeeDocumentTemplate;
+use App\Support\EmployeeDocumentPositionRules;
 use App\Support\EmployeeSampleDocument;
 use App\Support\UserESignatureStorage;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\ValidationException;
 
 class EmployeeDocumentController extends Controller
 {
@@ -170,7 +172,7 @@ class EmployeeDocumentController extends Controller
 
         $templateHtml = EmployeeDocumentTemplate::editorTemplateHtml($type);
 
-        return view('admin.employee-documents.template', [
+        $viewData = [
             'type' => $type,
             'label' => EmployeeSampleDocument::label($type),
             'title' => EmployeeSampleDocument::title($type),
@@ -186,7 +188,22 @@ class EmployeeDocumentController extends Controller
             'footerPlaceholders' => EmployeeDocumentFooter::PLACEHOLDERS,
             'previewHtml' => EmployeeDocumentTemplate::previewHtmlFromTemplate($type, $templateHtml),
             'previewPlaceholders' => EmployeeDocumentTemplate::previewPlaceholderMap($type),
-        ]);
+        ];
+
+        if (EmployeeDocumentPositionRules::supports($type)) {
+            $fieldName = $type.'_position_rules';
+            $rules = old($fieldName);
+            if (! is_array($rules)) {
+                $rules = EmployeeDocumentPositionRules::all($type);
+            }
+
+            $viewData['documentPositionRules'] = array_map(
+                fn (array $rule): array => EmployeeDocumentPositionRules::normalizeRule($type, $rule),
+                array_values($rules)
+            );
+        }
+
+        return view('admin.employee-documents.template', $viewData);
     }
 
     public function updateTemplate(Request $request, string $type)
@@ -198,7 +215,27 @@ class EmployeeDocumentController extends Controller
         $request->validate([
             'template_html' => 'nullable|string|max:65000',
             'footer_html' => 'nullable|string|max:2000',
+            'policy_position_rules' => 'nullable|array|max:20',
+            'policy_position_rules.*.position_ids' => 'nullable|array',
+            'policy_position_rules.*.position_ids.*' => 'integer|exists:department_positions,id',
+            'policy_position_rules.*.policies_text' => 'nullable|string|max:10000',
+            'policy_position_rules.*.content_html' => 'nullable|string|max:20000',
+            'contract_position_rules' => 'nullable|array|max:20',
+            'contract_position_rules.*.position_ids' => 'nullable|array',
+            'contract_position_rules.*.position_ids.*' => 'integer|exists:department_positions,id',
+            'contract_position_rules.*.content_html' => 'nullable|string|max:20000',
+            'contract_position_rules.*.job_description_text' => 'nullable|string|max:20000',
         ]);
+
+        if (EmployeeDocumentPositionRules::supports($type)) {
+            $fieldName = $type.'_position_rules';
+            $this->validateDocumentPositionRules($request, $type, $fieldName);
+            EmployeeDocumentPositionRules::saveFromRequest(
+                $type,
+                is_array($request->input($fieldName)) ? $request->input($fieldName) : []
+            );
+            Cache::forget('setting.'.EmployeeDocumentPositionRules::settingKey($type));
+        }
 
         $html = (string) ($request->input('template_html') ?? '');
         EmployeeDocumentTemplate::saveTemplateHtml($type, $html);
@@ -240,6 +277,41 @@ class EmployeeDocumentController extends Controller
             'Content-Type' => 'application/pdf',
             'Content-Disposition' => 'inline; filename="'.$filename.'"',
         ]);
+    }
+
+    private function validateDocumentPositionRules(Request $request, string $documentType, string $fieldName): void
+    {
+        $rules = $request->input($fieldName, []);
+        if (! is_array($rules)) {
+            return;
+        }
+
+        $errors = [];
+
+        foreach ($rules as $index => $rule) {
+            if (! is_array($rule)) {
+                continue;
+            }
+
+            $normalized = EmployeeDocumentPositionRules::normalizeRule($documentType, $rule);
+            if ($normalized['position_ids'] === []) {
+                continue;
+            }
+
+            if ($documentType === 'policy'
+                && $normalized['policies'] === []
+                && $normalized['content_html'] === '') {
+                $errors["{$fieldName}.{$index}.policies_text"] = 'Add at least one extra policy line or position-specific content.';
+            }
+
+            if ($documentType === 'contract' && $normalized['job_description_duties'] === []) {
+                $errors["{$fieldName}.{$index}.job_description_text"] = 'Add at least one job description duty for the selected positions.';
+            }
+        }
+
+        if ($errors !== []) {
+            throw ValidationException::withMessages($errors);
+        }
     }
 
     private function authorizeDocumentType(string $type): void

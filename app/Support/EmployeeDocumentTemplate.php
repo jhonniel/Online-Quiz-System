@@ -49,6 +49,8 @@ final class EmployeeDocumentTemplate
             '{{employee_address}}',
             '{{date_hired}}',
             '{{position}}',
+            '{{position_content}}',
+            '{{job_description_list}}',
             '{{employer_name}}',
             '{{employer_position}}',
             '{{employee_signature}}',
@@ -56,8 +58,10 @@ final class EmployeeDocumentTemplate
         'policy' => [
             '{{employee_name}}',
             '{{employee_address}}',
+            '{{position}}',
             '{{date_hired}}',
             '{{policies_list}}',
+            '{{position_policies_content}}',
             '{{employer_name}}',
             '{{employer_position}}',
             '{{employee_signature}}',
@@ -168,6 +172,10 @@ final class EmployeeDocumentTemplate
                 'employeeAddressLine' => '{{employee_address}}',
                 'dateHiredLine' => '{{date_hired}}',
                 'position' => '{{position}}',
+                'positionContentHtml' => '{{position_content}}',
+                'jobDescriptionDuties' => EmployeeContractDocument::DEFAULT_JOB_DESCRIPTION_DUTIES,
+                'jobDescriptionDutiesPage1' => array_slice(EmployeeContractDocument::DEFAULT_JOB_DESCRIPTION_DUTIES, 0, -1),
+                'jobDescriptionDutiesPage2' => [EmployeeContractDocument::DEFAULT_JOB_DESCRIPTION_DUTIES[array_key_last(EmployeeContractDocument::DEFAULT_JOB_DESCRIPTION_DUTIES)]],
                 'dateHired' => '{{date_hired}}',
                 'companyName' => '{{company_name}}',
                 'employerAddress' => '{{employer_address}}',
@@ -182,9 +190,11 @@ final class EmployeeDocumentTemplate
             'policy' => [
                 'employeeName' => '{{employee_name}}',
                 'employeeAddress' => '{{employee_address}}',
+                'position' => '{{position}}',
                 'dateHired' => '{{date_hired}}',
                 'policies' => EmployeePolicyDocument::POLICIES,
                 'policiesHtml' => '{{policies_list}}',
+                'positionContentHtml' => '{{position_policies_content}}',
                 'employerName' => '{{employer_name}}',
                 'employerPosition' => '{{employer_position}}',
                 'signaturePlaceholder' => '{{employee_signature}}',
@@ -264,6 +274,8 @@ final class EmployeeDocumentTemplate
                 '{{employee_address}}' => (string) ($preview['employeeAddressLine'] ?? ''),
                 '{{date_hired}}' => (string) ($preview['dateHiredLine'] ?? ''),
                 '{{position}}' => (string) ($preview['position'] ?? ''),
+                '{{position_content}}' => (string) ($preview['positionContentHtml'] ?? ''),
+                '{{job_description_list}}' => self::renderJobDescriptionListHtml($preview['jobDescriptionDuties'] ?? EmployeeContractDocument::DEFAULT_JOB_DESCRIPTION_DUTIES),
                 '{{employer_name}}' => (string) ($preview['employerName'] ?? ''),
                 '{{employer_position}}' => (string) ($preview['employerPosition'] ?? ''),
                 '{{employee_signature}}' => '',
@@ -271,8 +283,10 @@ final class EmployeeDocumentTemplate
             'policy' => [
                 '{{employee_name}}' => (string) ($preview['employeeName'] ?? ''),
                 '{{employee_address}}' => (string) ($preview['employeeAddress'] ?? ''),
+                '{{position}}' => (string) ($preview['position'] ?? ''),
                 '{{date_hired}}' => (string) ($preview['dateHired'] ?? ''),
-                '{{policies_list}}' => self::renderPoliciesListHtml(EmployeePolicyDocument::POLICIES),
+                '{{policies_list}}' => self::renderPoliciesListHtml($preview['policies'] ?? EmployeePolicyDocument::POLICIES),
+                '{{position_policies_content}}' => (string) ($preview['positionContentHtml'] ?? ''),
                 '{{employer_name}}' => (string) ($preview['employerName'] ?? ''),
                 '{{employer_position}}' => (string) ($preview['employerPosition'] ?? ''),
                 '{{employee_signature}}' => '',
@@ -334,6 +348,8 @@ final class EmployeeDocumentTemplate
                 '{{employee_address}}' => e((string) ($viewData['employeeAddressLine'] ?? $viewData['employeeAddress'] ?? '')),
                 '{{date_hired}}' => e((string) ($viewData['dateHiredLine'] ?? $viewData['dateHired'] ?? '')),
                 '{{position}}' => e((string) ($viewData['position'] ?? '')),
+                '{{position_content}}' => (string) ($viewData['positionContentHtml'] ?? ''),
+                '{{job_description_list}}' => self::renderJobDescriptionListHtml($viewData['jobDescriptionDuties'] ?? EmployeeContractDocument::DEFAULT_JOB_DESCRIPTION_DUTIES),
                 '{{employer_name}}' => e((string) ($viewData['employerName'] ?? '')),
                 '{{employer_position}}' => e((string) ($viewData['employerPosition'] ?? '')),
                 '{{employee_signature}}' => $signature,
@@ -341,8 +357,10 @@ final class EmployeeDocumentTemplate
             'policy' => [
                 '{{employee_name}}' => e((string) ($viewData['employeeName'] ?? '')),
                 '{{employee_address}}' => e((string) ($viewData['employeeAddress'] ?? '')),
+                '{{position}}' => e((string) ($viewData['position'] ?? '')),
                 '{{date_hired}}' => e((string) ($viewData['dateHired'] ?? '')),
                 '{{policies_list}}' => self::renderPoliciesListHtml($viewData['policies'] ?? EmployeePolicyDocument::POLICIES),
+                '{{position_policies_content}}' => (string) ($viewData['positionContentHtml'] ?? ''),
                 '{{employer_name}}' => e((string) ($viewData['employerName'] ?? '')),
                 '{{employer_position}}' => e((string) ($viewData['employerPosition'] ?? '')),
                 '{{employee_signature}}' => $signature,
@@ -398,6 +416,19 @@ final class EmployeeDocumentTemplate
     }
 
     /**
+     * @param  list<string>  $duties
+     */
+    public static function renderJobDescriptionListHtml(array $duties): string
+    {
+        $items = array_map(
+            fn (string $duty) => '<li>'.e($duty).'</li>',
+            $duties
+        );
+
+        return '<ul class="agreement-list">'.implode('', $items).'</ul>';
+    }
+
+    /**
      * @param  array<string, mixed>  $viewData
      */
     private static function signatureHtml(string $type, array $viewData): string
@@ -436,6 +467,15 @@ final class EmployeeDocumentTemplate
   /** @return array<string, mixed> */
     private static function contractPreviewViewData(): array
     {
+        $sampleRule = EmployeeDocumentPositionRules::all('contract')[0] ?? null;
+        $positionContentHtml = is_array($sampleRule)
+            ? (string) ($sampleRule['content_html'] ?? '')
+            : '';
+        $jobDescriptionDuties = is_array($sampleRule) && ($sampleRule['job_description_duties'] ?? []) !== []
+            ? $sampleRule['job_description_duties']
+            : EmployeeContractDocument::DEFAULT_JOB_DESCRIPTION_DUTIES;
+        $jobDescriptionPages = EmployeeContractDocument::splitJobDescriptionDutiesAcrossPages($jobDescriptionDuties);
+
         return [
             'employeeName' => 'Juan Dela Cruz',
             'employeeAddress' => '',
@@ -443,6 +483,12 @@ final class EmployeeDocumentTemplate
             'employeeAddressLine' => '',
             'dateHiredLine' => 'January 15, 2024',
             'position' => 'Software Developer',
+            'positionContentHtml' => $positionContentHtml,
+            'jobDescriptionDuties' => $jobDescriptionPages['page1'] !== [] || $jobDescriptionPages['page2'] !== []
+                ? array_merge($jobDescriptionPages['page1'], $jobDescriptionPages['page2'])
+                : $jobDescriptionDuties,
+            'jobDescriptionDutiesPage1' => $jobDescriptionPages['page1'],
+            'jobDescriptionDutiesPage2' => $jobDescriptionPages['page2'],
             'dateHired' => 'January 15, 2024',
             'companyName' => trim((string) Setting::get('nda_company_name', Setting::get('system_name', 'Mini Clean Business Solutions'))) ?: 'Mini Clean Business Solutions',
             'employerAddress' => trim((string) Setting::get('contact_address', 'MS Land Complex Building 2, KM 3 McArthur Highway, Matina Crossing, Talomo District, Davao City')),
@@ -458,11 +504,22 @@ final class EmployeeDocumentTemplate
   /** @return array<string, mixed> */
     private static function policyPreviewViewData(): array
     {
+        $sampleRule = EmployeeDocumentPositionRules::all('policy')[0] ?? null;
+        $policies = EmployeePolicyDocument::POLICIES;
+        $positionContentHtml = '';
+
+        if (is_array($sampleRule)) {
+            $policies = array_values(array_unique(array_merge($policies, $sampleRule['policies'] ?? [])));
+            $positionContentHtml = (string) ($sampleRule['content_html'] ?? '');
+        }
+
         return [
             'employeeName' => 'Juan Dela Cruz',
             'employeeAddress' => '',
+            'position' => 'Software Developer',
             'dateHired' => 'January 15, 2024',
-            'policies' => EmployeePolicyDocument::POLICIES,
+            'policies' => $policies,
+            'positionContentHtml' => $positionContentHtml,
             'employerName' => self::employerName(),
             'employerPosition' => self::employerPosition(),
             'eSignatureDataUri' => null,

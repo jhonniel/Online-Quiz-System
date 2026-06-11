@@ -28,13 +28,17 @@ final class EmployeePolicyDocument
 
         $user->loadMissing(['department:id,name', 'departmentPosition:id,name,department_id']);
 
+        $positionExtras = EmployeePolicyPositionRules::extrasForUser($user);
+
         $data = [
             'employeeName' => $user->name,
             'employeeNameUpper' => strtoupper($user->name),
             'employeeAddress' => self::employeeAddress($user),
+            'position' => trim((string) ($user->departmentPosition?->name ?? '')),
             'dateHired' => $user->date_hired?->format('F j, Y') ?? '',
             'companyName' => trim((string) Setting::get('system_name', config('app.name', 'the Company'))),
-            'policies' => self::POLICIES,
+            'policies' => EmployeePolicyPositionRules::policiesForUser($user),
+            'positionContentHtml' => $positionExtras['content_html'],
             'employerName' => self::employerName(),
             'employerPosition' => self::employerPosition(),
             'signedAt' => $signedAt,

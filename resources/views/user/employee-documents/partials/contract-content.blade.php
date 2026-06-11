@@ -33,6 +33,7 @@
         .contract-document .agreement-sign-label { font-weight: bold; }
         .contract-document .agreement-sign-row-signature { min-height: 1.5rem; }
         .contract-document .agreement-signature-image { display: inline-block; height: 1.25rem; max-width: 5.5rem; width: auto; margin-left: 0.25rem; vertical-align: bottom; object-fit: contain; }
+        .contract-document .agreement-position-content { margin: 0.75rem 0; text-align: justify; }
     </style>
 
     @include('user.employee-documents.partials.contract-body')

@@ -49,6 +49,10 @@
             margin: 0 0 10px 0;
             text-align: justify;
         }
+        .agreement-position-content {
+            margin: 0 0 10px 0;
+            text-align: justify;
+        }
         .body-text-center {
             margin: 0 0 10px 0;
             text-align: center;
