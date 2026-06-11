@@ -719,7 +719,7 @@ class User extends Authenticatable
     public function groupChats()
     {
         return $this->belongsToMany(GroupChat::class, 'group_chat_members', 'user_id', 'group_chat_id')
-            ->withPivot(['joined_at'])
+            ->withPivot(['joined_at', 'last_read_at'])
             ->withTimestamps()
             ->orderByDesc('group_chats.updated_at');
     }

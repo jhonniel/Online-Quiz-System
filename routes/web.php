@@ -813,6 +813,7 @@ Route::middleware(['auth', 'student.not_terminated'])->group(function () {
         Route::get('/user-chat/unread-count', [App\Http\Controllers\UserChatController::class, 'getUnreadCount'])->name('user-chat.unread-count');
         Route::post('/user-chat/mark-read', [App\Http\Controllers\UserChatController::class, 'markAsRead'])->name('user-chat.mark-read');
         Route::get('/user-chat/recent', [App\Http\Controllers\UserChatController::class, 'getRecentChats'])->name('user-chat.recent');
+        Route::get('/user-chat/sidebar-unread', [App\Http\Controllers\UserChatController::class, 'getSidebarUnread'])->name('user-chat.sidebar-unread');
         Route::get('/group-chats/{groupChat}/messages', [App\Http\Controllers\GroupChatController::class, 'messages'])->name('group-chats.messages');
         Route::post('/group-chats/{groupChat}/messages', [App\Http\Controllers\GroupChatController::class, 'sendMessage'])->name('group-chats.send');
     });

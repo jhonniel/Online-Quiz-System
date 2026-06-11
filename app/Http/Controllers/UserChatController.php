@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Events\Chat\DirectChatMessageSent;
 use App\Events\Chat\DirectChatMessagesRead;
 use App\Support\ChatBroadcast;
+use App\Support\ChatUnread;
 use App\Models\AnonymousChatRoom;
 use App\Models\User;
 use App\Models\UserActivity;
@@ -25,12 +26,36 @@ class UserChatController extends Controller
         $friendsAsFriend = $user->acceptedFriends()->get();
 
         // Merge both collections and remove duplicates
-        $friends = $friendsAsUser->merge($friendsAsFriend)->unique('id');
+        $friends = $friendsAsUser->merge($friendsAsFriend)->unique('id')
+            ->map(function (User $friend) use ($user) {
+                $unread = ChatUnread::friendUnreadCount($user, $friend->id);
+
+                return [
+                    'friend' => $friend,
+                    'unread_count' => $unread,
+                    'preview' => ChatUnread::friendLatestPreview($user, $friend->id),
+                    'has_new' => $unread > 0,
+                ];
+            })
+            ->sortByDesc('unread_count')
+            ->values();
 
         $groupChats = $user->groupChats()
             ->with(['members:id,name', 'creator:id,name'])
             ->withCount('members')
-            ->get();
+            ->get()
+            ->map(function ($groupChat) use ($user) {
+                $unread = ChatUnread::groupUnreadCount($groupChat, $user->id);
+
+                return [
+                    'group' => $groupChat,
+                    'unread_count' => $unread,
+                    'preview' => ChatUnread::groupLatestPreview($groupChat),
+                    'has_new' => $unread > 0,
+                ];
+            })
+            ->sortByDesc('unread_count')
+            ->values();
 
         $anonymousRooms = AnonymousChatRoom::query()
             ->with(['participants', 'userOne:id,name', 'userTwo:id,name'])
@@ -43,14 +68,20 @@ class UserChatController extends Controller
             ->map(function (AnonymousChatRoom $room) use ($user) {
                 $peer = $room->peerUser($user);
                 $isCreator = $room->wasCreatedBy($user->id);
+                $unread = ChatUnread::anonymousUnreadCount($room, $user->id);
 
                 return [
                     'room' => $room,
                     'peer_alias' => $peer ? (string) $room->aliasForUser($peer->id) : 'Anonymous',
                     'peer_name' => $isCreator ? $peer?->name : null,
                     'is_creator' => $isCreator,
+                    'unread_count' => $unread,
+                    'preview' => ChatUnread::anonymousLatestPreview($room, $user->id),
+                    'has_new' => $unread > 0,
                 ];
-            });
+            })
+            ->sortByDesc('unread_count')
+            ->values();
 
         if ($request->filled('anonymous_room')) {
             $room = AnonymousChatRoom::query()->find((int) $request->query('anonymous_room'));
@@ -167,9 +198,14 @@ class UserChatController extends Controller
 
     public function getUnreadCount(): JsonResponse
     {
-        $unreadCount = auth()->user()->unreadMessageCount();
+        return response()->json([
+            'count' => ChatUnread::totalUnreadFor(auth()->user()),
+        ]);
+    }
 
-        return response()->json(['count' => $unreadCount]);
+    public function getSidebarUnread(): JsonResponse
+    {
+        return response()->json(ChatUnread::sidebarPayload(auth()->user()));
     }
 
     public function markAsRead(Request $request): JsonResponse

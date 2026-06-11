@@ -22,7 +22,7 @@ class GroupChat extends Model
     public function members(): BelongsToMany
     {
         return $this->belongsToMany(User::class, 'group_chat_members', 'group_chat_id', 'user_id')
-            ->withPivot(['joined_at'])
+            ->withPivot(['joined_at', 'last_read_at'])
             ->withTimestamps();
     }
 

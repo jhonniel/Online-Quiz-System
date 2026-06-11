@@ -55,10 +55,12 @@
                             <h4 class="text-xs font-semibold uppercase tracking-wide text-gray-500">Group Chats</h4>
                         </div>
                         <div id="group-chats-list" class="p-2 pt-0 border-b border-gray-200">
-                            @foreach($groupChats as $groupChat)
+                            @foreach($groupChats as $entry)
+                                @php($groupChat = $entry['group'])
                                 <div class="group-chat-item p-2 sm:p-3 border border-gray-200 rounded-lg cursor-pointer hover:bg-gray-50 transition-colors mb-2"
                                      data-group-id="{{ $groupChat->id }}"
-                                     data-group-name="{{ $groupChat->name }}">
+                                     data-group-name="{{ $groupChat->name }}"
+                                     data-members-count="{{ $groupChat->members_count }}">
                                     <div class="flex items-center space-x-2 sm:space-x-3">
                                         <div class="w-8 h-8 sm:w-10 sm:h-10 bg-purple-100 rounded-full flex items-center justify-center shrink-0">
                                             <svg class="w-4 h-4 sm:w-5 sm:h-5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -66,9 +68,16 @@
                                             </svg>
                                         </div>
                                         <div class="flex-1 min-w-0">
-                                            <p class="font-medium text-gray-900 truncate text-sm sm:text-base">{{ $groupChat->name }}</p>
-                                            <p class="text-xs text-gray-500 truncate">{{ $groupChat->members_count }} members</p>
+                                            <p class="chat-item-title font-medium text-gray-900 truncate text-sm sm:text-base {{ $entry['has_new'] ? 'font-semibold' : '' }}">{{ $groupChat->name }}</p>
+                                            <p class="chat-item-subtitle text-xs truncate {{ $entry['has_new'] ? 'text-purple-700 font-medium' : 'text-gray-500' }}">
+                                                @if($entry['has_new'])
+                                                    New message@if($entry['preview']): {{ $entry['preview'] }}@endif
+                                                @else
+                                                    {{ $groupChat->members_count }} members
+                                                @endif
+                                            </p>
                                         </div>
+                                        <span id="unread-group-{{ $groupChat->id }}" class="{{ $entry['unread_count'] > 0 ? '' : 'hidden' }} bg-red-500 text-white text-xs rounded-full px-2 py-1 min-w-[20px] text-center shrink-0">{{ $entry['unread_count'] > 99 ? '99+' : $entry['unread_count'] }}</span>
                                     </div>
                                 </div>
                             @endforeach
@@ -93,9 +102,16 @@
                                             </svg>
                                         </div>
                                         <div class="flex-1 min-w-0">
-                                            <p class="font-medium text-gray-900 truncate text-sm sm:text-base">{{ $entry['peer_alias'] }}</p>
-                                            <p class="text-xs text-gray-500 truncate">Anonymous chat</p>
+                                            <p class="chat-item-title font-medium text-gray-900 truncate text-sm sm:text-base {{ $entry['has_new'] ? 'font-semibold' : '' }}">{{ $entry['peer_alias'] }}</p>
+                                            <p class="chat-item-subtitle text-xs truncate {{ $entry['has_new'] ? 'text-purple-700 font-medium' : 'text-gray-500' }}">
+                                                @if($entry['has_new'])
+                                                    New message@if($entry['preview']): {{ $entry['preview'] }}@endif
+                                                @else
+                                                    Anonymous chat
+                                                @endif
+                                            </p>
                                         </div>
+                                        <span id="unread-anonymous-{{ $entry['room']->id }}" class="{{ $entry['unread_count'] > 0 ? '' : 'hidden' }} bg-red-500 text-white text-xs rounded-full px-2 py-1 min-w-[20px] text-center shrink-0">{{ $entry['unread_count'] > 99 ? '99+' : $entry['unread_count'] }}</span>
                                     </div>
                                 </div>
                             @endforeach
@@ -106,7 +122,8 @@
                         <h4 class="text-xs font-semibold uppercase tracking-wide text-gray-500">Friends</h4>
                     </div>
                     <div id="friends-list" class="p-2 pt-0">
-                        @foreach($friends as $friend)
+                        @foreach($friends as $entry)
+                            @php($friend = $entry['friend'])
                             <div class="friend-item p-2 sm:p-3 border border-gray-200 rounded-lg cursor-pointer hover:bg-gray-50 transition-colors mb-2"
                                  data-friend-id="{{ $friend->id }}"
                                  data-friend-name="{{ $friend->name }}">
@@ -127,10 +144,16 @@
                                         <div class="online-indicator absolute bottom-0 right-0 w-2 h-2 sm:w-3 sm:h-3 bg-gray-300 border-2 border-white rounded-full"></div>
                                     </div>
                                     <div class="flex-1 min-w-0">
-                                        <p class="font-medium text-gray-900 truncate text-sm sm:text-base">{{ $friend->name }}</p>
-                                        <p class="text-xs sm:text-sm text-gray-500 truncate hidden sm:block">Click to chat</p>
+                                        <p class="chat-item-title font-medium text-gray-900 truncate text-sm sm:text-base {{ $entry['has_new'] ? 'font-semibold' : '' }}">{{ $friend->name }}</p>
+                                        <p class="chat-item-subtitle text-xs sm:text-sm truncate {{ $entry['has_new'] ? 'text-indigo-700 font-medium' : 'text-gray-500' }}">
+                                            @if($entry['has_new'])
+                                                New message@if($entry['preview']): {{ $entry['preview'] }}@endif
+                                            @else
+                                                Click to chat
+                                            @endif
+                                        </p>
                                     </div>
-                                    <span id="unread-{{ $friend->id }}" class="hidden bg-red-500 text-white text-xs rounded-full px-2 py-1 min-w-[20px] text-center">0</span>
+                                    <span id="unread-{{ $friend->id }}" class="{{ $entry['unread_count'] > 0 ? '' : 'hidden' }} bg-red-500 text-white text-xs rounded-full px-2 py-1 min-w-[20px] text-center shrink-0">{{ $entry['unread_count'] > 99 ? '99+' : $entry['unread_count'] }}</span>
                                 </div>
                             </div>
                         @endforeach
@@ -424,6 +447,7 @@
             clearChatSelection();
             document.querySelector(`[data-friend-id="${friendId}"]`)?.classList.add('bg-indigo-50', 'border-indigo-300');
 
+            clearSidebarUnread('friend', friendId);
             loadMessages();
             markAsRead();
             if (window.ChatRealtime) {
@@ -451,6 +475,7 @@
             clearChatSelection();
             document.querySelector(`[data-group-id="${groupId}"]`)?.classList.add('bg-purple-50', 'border-purple-300');
 
+            clearSidebarUnread('group', groupId);
             loadMessages();
             if (window.ChatRealtime) {
                 window.ChatRealtime.switchChannel('group', Number(groupId));
@@ -476,6 +501,7 @@
             clearChatSelection();
             document.querySelector(`[data-anonymous-room-id="${roomId}"]`)?.classList.add('bg-purple-50', 'border-purple-300');
 
+            clearSidebarUnread('anonymous', roomId);
             loadMessages();
             if (window.ChatRealtime) {
                 window.ChatRealtime.switchChannel('anonymous', Number(roomId));
@@ -534,6 +560,23 @@
                 });
         }
 
+        function isActiveConversation(payload) {
+            if (payload.chat_type === 'friend' && currentChatType === 'friend') {
+                return (Number(payload.sender_id) === Number(currentFriendId) && Number(payload.receiver_id) === currentUserId)
+                    || (Number(payload.sender_id) === currentUserId && Number(payload.receiver_id) === Number(currentFriendId));
+            }
+
+            if (payload.chat_type === 'group' && currentChatType === 'group') {
+                return Number(payload.group_chat_id) === Number(currentGroupId);
+            }
+
+            if (payload.chat_type === 'anonymous' && currentChatType === 'anonymous') {
+                return Number(payload.room_id) === Number(currentAnonymousRoomId);
+            }
+
+            return false;
+        }
+
         function handleRealtimeMessage(payload) {
             if (!payload) {
                 return;
@@ -543,25 +586,14 @@
                 return;
             }
 
-            if (payload.chat_type === 'friend' && currentChatType === 'friend') {
-                const inConversation =
-                    (Number(payload.sender_id) === Number(currentFriendId) && Number(payload.receiver_id) === currentUserId)
-                    || (Number(payload.sender_id) === currentUserId && Number(payload.receiver_id) === Number(currentFriendId));
-                if (!inConversation) {
-                    return;
-                }
-            } else if (payload.chat_type === 'group' && currentChatType === 'group') {
-                if (Number(payload.group_chat_id) !== Number(currentGroupId)) {
-                    return;
-                }
-            } else if (payload.chat_type === 'anonymous' && currentChatType === 'anonymous') {
-                if (Number(payload.room_id) !== Number(currentAnonymousRoomId)) {
-                    return;
-                }
+            if (!isActiveConversation(payload)) {
+                loadUnreadCounts();
+                return;
+            }
+
+            if (payload.chat_type === 'anonymous') {
                 payload.is_own = false;
                 payload.sender_alias = payload.sender_alias || 'Anonymous';
-            } else {
-                return;
             }
 
             if (messages.some((entry) => Number(entry.id) === Number(payload.id))) {
@@ -570,7 +602,6 @@
 
             messages.push(payload);
             displayMessages();
-            loadUnreadCounts();
         }
 
         function handleRealtimeTyping(payload) {
@@ -835,23 +866,131 @@
             });
         }
 
+        function formatUnreadCount(count) {
+            return count > 99 ? '99+' : String(count);
+        }
+
+        function updateSidebarItem(item, { unreadCount, preview, hasNew, defaultSubtitle }) {
+            if (!item) {
+                return;
+            }
+
+            const title = item.querySelector('.chat-item-title');
+            const subtitle = item.querySelector('.chat-item-subtitle');
+
+            if (title) {
+                title.classList.toggle('font-semibold', hasNew);
+            }
+
+            if (subtitle) {
+                subtitle.classList.toggle('text-gray-500', !hasNew);
+                subtitle.classList.toggle('text-indigo-700', hasNew && item.classList.contains('friend-item'));
+                subtitle.classList.toggle('font-medium', hasNew);
+                subtitle.classList.toggle('text-purple-700', hasNew && !item.classList.contains('friend-item'));
+
+                if (hasNew) {
+                    subtitle.textContent = preview ? `New message: ${preview}` : 'New message';
+                } else if (defaultSubtitle) {
+                    subtitle.textContent = defaultSubtitle;
+                }
+            }
+        }
+
+        function applySidebarUnread(data) {
+            (data.friends || []).forEach((entry) => {
+                const item = document.querySelector(`.friend-item[data-friend-id="${entry.id}"]`);
+                const badge = document.getElementById(`unread-${entry.id}`);
+
+                if (badge) {
+                    if (entry.unread_count > 0) {
+                        badge.textContent = formatUnreadCount(entry.unread_count);
+                        badge.classList.remove('hidden');
+                    } else {
+                        badge.classList.add('hidden');
+                    }
+                }
+
+                updateSidebarItem(item, {
+                    unreadCount: entry.unread_count,
+                    preview: entry.preview,
+                    hasNew: entry.has_new,
+                    defaultSubtitle: 'Click to chat',
+                });
+            });
+
+            (data.groups || []).forEach((entry) => {
+                const item = document.querySelector(`.group-chat-item[data-group-id="${entry.id}"]`);
+                const badge = document.getElementById(`unread-group-${entry.id}`);
+                const membersCount = item?.dataset.membersCount || '';
+
+                if (badge) {
+                    if (entry.unread_count > 0) {
+                        badge.textContent = formatUnreadCount(entry.unread_count);
+                        badge.classList.remove('hidden');
+                    } else {
+                        badge.classList.add('hidden');
+                    }
+                }
+
+                updateSidebarItem(item, {
+                    unreadCount: entry.unread_count,
+                    preview: entry.preview,
+                    hasNew: entry.has_new,
+                    defaultSubtitle: membersCount ? `${membersCount} members` : 'Group chat',
+                });
+            });
+
+            (data.anonymous || []).forEach((entry) => {
+                const item = document.querySelector(`.anonymous-chat-item[data-anonymous-room-id="${entry.room_id}"]`);
+                const badge = document.getElementById(`unread-anonymous-${entry.room_id}`);
+
+                if (badge) {
+                    if (entry.unread_count > 0) {
+                        badge.textContent = formatUnreadCount(entry.unread_count);
+                        badge.classList.remove('hidden');
+                    } else {
+                        badge.classList.add('hidden');
+                    }
+                }
+
+                updateSidebarItem(item, {
+                    unreadCount: entry.unread_count,
+                    preview: entry.preview,
+                    hasNew: entry.has_new,
+                    defaultSubtitle: 'Anonymous chat',
+                });
+            });
+        }
+
         function loadUnreadCounts() {
-            fetch('{{ url("/user-chat/recent") }}')
+            fetch('{{ url("/user-chat/sidebar-unread") }}')
                 .then(response => response.json())
-                .then(friends => {
-                    friends.forEach(friend => {
-                        const unreadElement = document.getElementById(`unread-${friend.id}`);
-                        if (friend.unread_count > 0) {
-                            unreadElement.textContent = friend.unread_count;
-                            unreadElement.classList.remove('hidden');
-                        } else {
-                            unreadElement.classList.add('hidden');
-                        }
-                    });
+                .then(data => {
+                    applySidebarUnread(data);
                 })
                 .catch(error => {
                     console.error('Error loading unread counts:', error);
                 });
+        }
+
+        function clearSidebarUnread(type, id) {
+            if (type === 'friend') {
+                const badge = document.getElementById(`unread-${id}`);
+                const item = document.querySelector(`.friend-item[data-friend-id="${id}"]`);
+                if (badge) badge.classList.add('hidden');
+                updateSidebarItem(item, { hasNew: false, defaultSubtitle: 'Click to chat' });
+            } else if (type === 'group') {
+                const badge = document.getElementById(`unread-group-${id}`);
+                const item = document.querySelector(`.group-chat-item[data-group-id="${id}"]`);
+                const membersCount = item?.dataset.membersCount || '';
+                if (badge) badge.classList.add('hidden');
+                updateSidebarItem(item, { hasNew: false, defaultSubtitle: membersCount ? `${membersCount} members` : 'Group chat' });
+            } else if (type === 'anonymous') {
+                const badge = document.getElementById(`unread-anonymous-${id}`);
+                const item = document.querySelector(`.anonymous-chat-item[data-anonymous-room-id="${id}"]`);
+                if (badge) badge.classList.add('hidden');
+                updateSidebarItem(item, { hasNew: false, defaultSubtitle: 'Anonymous chat' });
+            }
         }
 
         function markAsRead() {

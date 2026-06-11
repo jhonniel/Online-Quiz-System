@@ -11,6 +11,7 @@ use App\Support\AnonymousChatAliasService;
 use App\Support\AnonymousChatEligibility;
 use App\Support\AnonymousChatToken;
 use App\Support\ChatBroadcast;
+use App\Support\ChatUnread;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -130,6 +131,8 @@ class AnonymousChatController extends Controller
                 'created_at' => $message->created_at,
                 'is_own' => (int) $message->sender_id === $user->id,
             ]);
+
+        ChatUnread::markAnonymousRead($anonymousChatRoom, $user->id);
 
         $isCreator = $anonymousChatRoom->wasCreatedBy($user->id);
 

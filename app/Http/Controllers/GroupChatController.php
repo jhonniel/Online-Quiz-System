@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Events\Chat\GroupChatMessageSent;
 use App\Support\ChatBroadcast;
+use App\Support\ChatUnread;
 use App\Models\Friendship;
 use App\Models\GroupChat;
 use App\Models\GroupChatMessage;
@@ -68,6 +69,8 @@ class GroupChatController extends Controller
         if (! $groupChat->hasMember($user->id)) {
             return response()->json(['error' => 'You are not a member of this group chat.'], 403);
         }
+
+        ChatUnread::markGroupRead($groupChat, $user->id);
 
         $messages = $groupChat->messages()
             ->with('sender:id,name')
