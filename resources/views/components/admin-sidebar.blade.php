@@ -80,17 +80,21 @@
          @sidebar-collapse-changed.window="sidebarCollapsed = $event.detail">
 
     <!-- Sidebar Header -->
-    <div class="flex items-center justify-between h-16 px-6 bg-gray-800 flex-shrink-0">
-        <div class="flex items-center space-x-2" :class="sidebarCollapsed ? 'justify-center' : ''">
+    <div class="flex items-center justify-between h-16 px-6 bg-gray-800 flex-shrink-0 min-w-0 gap-2" data-sidebar-brand-root>
+        <div class="flex items-center min-w-0 flex-1 gap-2 overflow-hidden" :class="sidebarCollapsed ? 'justify-center' : ''">
             @if($settings['system_logo'])
                 <img src="{{ $settings['system_logo_url'] ?? '' }}"
                      alt="{{ $settings['system_name'] }}"
-                     class="h-8 w-auto object-contain">
+                     class="h-8 w-auto flex-shrink-0 object-contain">
             @endif
-            <span class="text-white font-bold text-lg transition-opacity duration-300"
-                  :class="sidebarCollapsed ? 'opacity-0 w-0 overflow-hidden' : 'opacity-100'">
-                {{ $settings['system_name'] }}
-            </span>
+            <div class="brand-name-fit-container min-w-0 flex-1 overflow-hidden transition-opacity duration-300"
+                 :class="sidebarCollapsed ? 'opacity-0 w-0' : 'opacity-100'">
+                <span class="brand-name-fit text-white font-bold leading-tight"
+                      data-fit-min-size="9"
+                      style="font-size: {{ \App\Support\BrandNameFit::fontSizeRem($settings['system_name'] ?? '') }}">
+                    {{ $settings['system_name'] }}
+                </span>
+            </div>
         </div>
         <button type="button"
                 @click.stop="sidebarOpen = false"
@@ -160,4 +164,5 @@
         </div>
     </div>
 </div>
+@include('components.brand-name-fit')
 </div>

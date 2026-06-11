@@ -146,6 +146,7 @@
     @php
         $layoutOffsetMobilePx = $studentRulesBannerRows === 2 ? 80 : ($studentRulesBannerRows === 1 ? 40 : 0);
         $layoutOffsetDesktopPx = $studentRulesBannerRows === 2 ? 96 : ($studentRulesBannerRows === 1 ? 44 : 0);
+        $sidebarBrandFontSize = \App\Support\BrandNameFit::fontSizeRem($settings['system_name'] ?? '');
     @endphp
     @if($studentRulesBannerRows > 0)
         <div class="fixed top-0 left-0 right-0 z-[190] flex flex-col shadow-md" aria-label="Student notices">
@@ -220,17 +221,21 @@
         <div class="hidden lg:flex lg:flex-shrink-0">
             <div class="flex flex-col transition-all duration-300" :class="sidebarCollapsed ? 'w-16' : 'w-64'">
                 <!-- Sidebar Header -->
-                <div class="flex items-center h-16 flex-shrink-0 px-4 bg-indigo-600">
-                    <div class="flex items-center" :class="sidebarCollapsed ? 'justify-center' : ''">
+                <div class="flex items-center h-16 flex-shrink-0 px-4 bg-indigo-600 min-w-0" data-sidebar-brand-root>
+                    <div class="flex items-center min-w-0 flex-1 gap-2 overflow-hidden" :class="sidebarCollapsed ? 'justify-center' : ''">
                         @if($settings['system_logo'])
                             <img src="{{ $settings['system_logo_url'] ?? '' }}"
                                  alt="{{ $settings['system_name'] }}"
-                                 class="h-8 w-auto object-contain" :class="sidebarCollapsed ? '' : 'mr-2'">
+                                 class="h-8 w-auto flex-shrink-0 object-contain">
                         @endif
-                        <span class="text-white font-semibold text-lg transition-opacity duration-300"
-                              :class="sidebarCollapsed ? 'opacity-0 w-0 overflow-hidden' : 'opacity-100'">
-                            {{ $settings['system_name'] }}
-                        </span>
+                        <div class="brand-name-fit-container min-w-0 flex-1 overflow-hidden transition-opacity duration-300"
+                             :class="sidebarCollapsed ? 'opacity-0 w-0' : 'opacity-100'">
+                            <span class="brand-name-fit text-white font-semibold leading-tight"
+                                  data-fit-min-size="9"
+                                  style="font-size: {{ $sidebarBrandFontSize }}">
+                                {{ $settings['system_name'] }}
+                            </span>
+                        </div>
                     </div>
                 </div>
 
@@ -327,16 +332,22 @@
                  class="fixed inset-y-0 left-0 z-50 w-64 bg-gray-800">
                 <div class="flex flex-col h-full">
                     <!-- Mobile sidebar header -->
-                    <div class="flex items-center justify-between h-16 px-4 bg-indigo-600">
-                        <div class="flex items-center">
+                    <div class="flex items-center justify-between h-16 px-4 bg-indigo-600 min-w-0 gap-2" data-sidebar-brand-root>
+                        <div class="flex items-center min-w-0 flex-1 gap-2 overflow-hidden">
                             @if($settings['system_logo'])
                                 <img src="{{ $settings['system_logo_url'] ?? '' }}"
                                      alt="{{ $settings['system_name'] }}"
-                                     class="h-8 w-auto object-contain">
+                                     class="h-8 w-auto flex-shrink-0 object-contain">
                             @endif
-                            <span class="ml-2 text-white font-semibold text-lg">{{ $settings['system_name'] }}</span>
+                            <div class="brand-name-fit-container min-w-0 flex-1 overflow-hidden">
+                                <span class="brand-name-fit text-white font-semibold leading-tight"
+                                      data-fit-min-size="9"
+                                      style="font-size: {{ $sidebarBrandFontSize }}">
+                                    {{ $settings['system_name'] }}
+                                </span>
+                            </div>
                         </div>
-                        <button @click="sidebarOpen = false" class="text-white hover:text-gray-300 focus:outline-none">
+                        <button @click="sidebarOpen = false" class="flex-shrink-0 text-white hover:text-gray-300 focus:outline-none">
                             <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
                             </svg>
@@ -649,14 +660,17 @@
             <div class="flex items-center justify-between h-16 px-3 sm:px-4 bg-white border-b border-gray-200 gap-2 min-w-0">
                 <div class="flex items-center space-x-2 sm:space-x-3 min-w-0 flex-1">
                     <!-- Mobile menu button -->
-                    <button type="button" @click="sidebarOpen = !sidebarOpen" class="lg:hidden shrink-0 text-gray-500 hover:text-gray-700 focus:outline-none touch-manipulation" aria-label="Open menu">
+                    <button type="button"
+                            @click="sidebarOpen = !sidebarOpen; if (sidebarOpen) { window.setTimeout(function () { if (typeof scheduleBrandNameFit === 'function') { scheduleBrandNameFit(); } }, 350); }"
+                            class="lg:hidden shrink-0 text-gray-500 hover:text-gray-700 focus:outline-none touch-manipulation"
+                            aria-label="Open menu">
                         <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
                         </svg>
                     </button>
 
                     <!-- Desktop sidebar toggle button -->
-                    <button @click="sidebarCollapsed = !sidebarCollapsed" class="hidden lg:flex items-center justify-center w-8 h-8 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-md transition-colors duration-200">
+                    <button @click="sidebarCollapsed = !sidebarCollapsed; window.dispatchEvent(new CustomEvent('sidebar-collapse-changed', { detail: sidebarCollapsed }))" class="hidden lg:flex items-center justify-center w-8 h-8 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-md transition-colors duration-200">
                         <svg class="w-4 h-4 transition-transform duration-200" :class="{ 'rotate-180': sidebarCollapsed }" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 19l-7-7 7-7m8 14l-7-7 7-7"></path>
                         </svg>
@@ -1583,6 +1597,7 @@
     @include('components.toast')
 
     <!-- Seasonal Effects -->
+    @include('components.brand-name-fit')
     @include('components.seasonal-effects')
 </body>
 </html>
