@@ -9,6 +9,7 @@ use App\Support\AdminEmployeeDepartmentScope;
 use App\Support\PayslipCsvImporter;
 use App\Support\PayslipGrouper;
 use App\Support\PayslipSignatorySettings;
+use App\Support\PayslipYearlySummary;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Storage;
@@ -201,6 +202,31 @@ class PayslipController extends Controller
         ];
 
         return $this->csvDownload($rows, 'payslip_import_template_'.date('Y-m-d').'.csv');
+    }
+
+    public function yearlySummary(Request $request)
+    {
+        $availableYears = $this->availablePayslipYears();
+        $year = $this->resolveSummaryYear($request, $availableYears);
+        $payslips = $this->payslipsForYearlySummary($request, $year);
+        $summary = PayslipYearlySummary::build($payslips);
+
+        return view('admin.employee-management.payslip.yearly-summary', compact(
+            'summary',
+            'year',
+            'availableYears'
+        ));
+    }
+
+    public function yearlySummaryCsv(Request $request)
+    {
+        $availableYears = $this->availablePayslipYears();
+        $year = $this->resolveSummaryYear($request, $availableYears);
+        $payslips = $this->payslipsForYearlySummary($request, $year);
+        $summary = PayslipYearlySummary::build($payslips);
+        $rows = PayslipYearlySummary::csvRows($summary);
+
+        return $this->csvDownload($rows, 'payslip_yearly_summary_'.$year.'_'.date('Y-m-d').'.csv');
     }
 
     public function destroy(Request $request, EmployeePayslip $payslip)
@@ -562,6 +588,48 @@ class PayslipController extends Controller
     private function applyEmployeeScope($query): void
     {
         AdminEmployeeDepartmentScope::applyToEmployeeQueryForDocuments($query, $this->requireAuthUser());
+    }
+
+    /**
+     * @return \Illuminate\Support\Collection<int, int>
+     */
+    private function availablePayslipYears()
+    {
+        return $this->scopedPayslipQuery(request(), applyYearFilter: false)
+            ->reorder()
+            ->pluck('period_end')
+            ->map(fn ($date) => (int) $date->format('Y'))
+            ->unique()
+            ->sortDesc()
+            ->values();
+    }
+
+    /**
+     * @param  \Illuminate\Support\Collection<int, int>  $availableYears
+     */
+    private function resolveSummaryYear(Request $request, $availableYears): int
+    {
+        $year = (int) $request->input('year', 0);
+
+        if ($year >= 2000 && $year <= 2100) {
+            return $year;
+        }
+
+        $firstAvailable = $availableYears->first();
+
+        return $firstAvailable !== null ? (int) $firstAvailable : (int) now()->format('Y');
+    }
+
+    /**
+     * @return \Illuminate\Support\Collection<int, EmployeePayslip>
+     */
+    private function payslipsForYearlySummary(Request $request, int $year)
+    {
+        return $this->scopedPayslipQuery($request, applyYearFilter: false)
+            ->whereYear('period_end', $year)
+            ->orderBy('employee_name')
+            ->get()
+            ->each(fn (EmployeePayslip $payslip) => $payslip->syncProfileFieldsFromEmployee());
     }
 
     /**

@@ -413,6 +413,8 @@ Route::prefix('admin')->middleware(['auth', 'admin'])->group(function () {
             Route::get('/payslip', [App\Http\Controllers\Admin\PayslipController::class, 'index'])->name('admin.payslip.index');
             Route::post('/payslip/import', [App\Http\Controllers\Admin\PayslipController::class, 'import'])->name('admin.payslip.import');
             Route::get('/payslip/template', [App\Http\Controllers\Admin\PayslipController::class, 'downloadTemplate'])->name('admin.payslip.template');
+            Route::get('/payslip/yearly-summary', [App\Http\Controllers\Admin\PayslipController::class, 'yearlySummary'])->name('admin.payslip.yearly-summary');
+            Route::get('/payslip/yearly-summary/csv', [App\Http\Controllers\Admin\PayslipController::class, 'yearlySummaryCsv'])->name('admin.payslip.yearly-summary.csv');
             Route::get('/payslip/{payslip}', [App\Http\Controllers\Admin\PayslipController::class, 'show'])->name('admin.payslip.show');
             Route::get('/payslip/{payslip}/signed', [App\Http\Controllers\Admin\PayslipController::class, 'signedPdf'])->name('admin.payslip.signed');
             Route::patch('/payslip/{payslip}/link', [App\Http\Controllers\Admin\PayslipController::class, 'link'])->name('admin.payslip.link');
