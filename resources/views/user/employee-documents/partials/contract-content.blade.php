@@ -31,8 +31,8 @@
         .contract-document .agreement-sign-heading { font-weight: bold; text-transform: uppercase; margin-bottom: 0.75rem; }
         .contract-document .agreement-sign-row { margin-bottom: 0.5rem; }
         .contract-document .agreement-sign-label { font-weight: bold; }
-        .contract-document .agreement-sign-row-signature { min-height: 2.5rem; }
-        .contract-document .agreement-signature-image { display: inline-block; max-height: 2.5rem; margin-left: 0.25rem; vertical-align: bottom; object-fit: contain; }
+        .contract-document .agreement-sign-row-signature { min-height: 1.5rem; }
+        .contract-document .agreement-signature-image { display: inline-block; height: 1.25rem; max-width: 5.5rem; width: auto; margin-left: 0.25rem; vertical-align: bottom; object-fit: contain; }
     </style>
 
     @include('user.employee-documents.partials.contract-body')

@@ -10,6 +10,7 @@
                 <p class="mt-1 text-xs text-gray-500 text-center">Please read this announcement.</p>
             </div>
             <div class="px-5 py-4 text-sm text-gray-700 leading-relaxed max-h-[320px] overflow-y-auto custom-scrollbar employee-announcement-content" x-html="formatPreview(content)"></div>
+            @include('admin.system-announcements.partials.feature-links-preview')
             <div class="border-t border-gray-100 px-5 py-4 bg-gray-50 space-y-3">
                 <div class="flex items-start gap-3 opacity-60">
                     <div class="mt-0.5 w-4 h-4 rounded border border-gray-300 bg-white"></div>

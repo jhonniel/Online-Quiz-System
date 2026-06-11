@@ -403,7 +403,11 @@ final class EmployeeDocumentTemplate
     private static function signatureHtml(string $type, array $viewData): string
     {
         if (! empty($viewData['eSignatureDataUri'])) {
-            $class = $type === 'nda' ? 'signature-image' : 'policy-signature-image';
+            $class = match ($type) {
+                'nda' => 'signature-image',
+                'contract' => 'agreement-signature-image',
+                default => 'policy-signature-image',
+            };
 
             return '<img src="'.e((string) $viewData['eSignatureDataUri']).'" alt="E-Signature" class="'.$class.'">';
         }

@@ -29,7 +29,7 @@
     <div class="signature-block">
         <div class="signature-sign-area">
             @if(!empty($eSignatureDataUri))
-                <img src="{{ $eSignatureDataUri }}" alt="E-Signature" class="signature-image" style="object-fit: contain;">
+                <img src="{{ $eSignatureDataUri }}" alt="E-Signature" class="signature-image">
             @elseif(!empty($signaturePlaceholder))
                 {{ $signaturePlaceholder }}
             @endif

@@ -1,11 +1,30 @@
 @php
     $editorTitle = old('title', $titleValue ?? '');
     $editorContent = old('content', $contentValue ?? '');
+    $editorFeatureLinks = old('feature_links', $featureLinksValue ?? []);
+    if (! is_array($editorFeatureLinks)) {
+        $editorFeatureLinks = [];
+    }
 @endphp
 <div
     x-data="{
         title: @js($editorTitle),
         content: @js($editorContent),
+        featureLinks: @js(array_values($editorFeatureLinks)),
+        addFeatureLink() {
+            this.featureLinks.push({ url: '', label: '' });
+        },
+        removeFeatureLink(index) {
+            this.featureLinks.splice(index, 1);
+        },
+        featureLinkPreviews() {
+            return this.featureLinks
+                .map((link) => ({
+                    href: (link.url || '').trim(),
+                    label: (link.label || '').trim() || 'Open feature',
+                }))
+                .filter((link) => link.href !== '');
+        },
         formatPreview(text) {
             const lines = (text || '').split(/\r?\n/);
             let html = '';

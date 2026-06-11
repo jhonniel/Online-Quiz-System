@@ -73,6 +73,7 @@
     @component('admin.system-announcements.partials.editor-alpine-root', [
         'titleValue' => $announcement->title,
         'contentValue' => $announcement->content,
+        'featureLinksValue' => $announcement->feature_links ?? [],
     ])
     <div class="grid grid-cols-1 xl:grid-cols-5 gap-6 items-start">
         <div class="xl:col-span-3 space-y-6">
@@ -137,6 +138,16 @@
                     <div class="flex justify-between gap-3 py-3">
                         <dt class="text-gray-500">Published at</dt>
                         <dd class="font-medium text-gray-900 text-right">{{ $announcement->published_at?->format('M d, Y g:i A') ?: '—' }}</dd>
+                    </div>
+                    <div class="flex justify-between gap-3 py-3">
+                        <dt class="text-gray-500">Feature links</dt>
+                        <dd class="font-medium text-gray-900 text-right text-xs max-w-[14rem]">
+                            @if($announcement->hasFeatureLinks())
+                                {{ $announcement->featureLinksCount() }}
+                            @else
+                                —
+                            @endif
+                        </dd>
                     </div>
                     <div class="flex justify-between gap-3 py-3">
                         <dt class="text-gray-500">Agreements</dt>

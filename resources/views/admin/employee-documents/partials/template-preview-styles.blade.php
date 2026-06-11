@@ -44,4 +44,7 @@
     .document-preview .agreement-sign-heading { font-weight: bold; text-transform: uppercase; margin-bottom: 0.5rem; }
     .document-preview .agreement-sign-row { margin-bottom: 0.35rem; }
     .document-preview .agreement-sign-label { font-weight: bold; }
+    .document-preview .signature-image { height: 1.5rem; max-width: 7rem; width: auto; object-fit: contain; }
+    .document-preview .policy-signature-image,
+    .document-preview .agreement-signature-image { display: inline-block; height: 1.25rem; max-width: 5.5rem; width: auto; vertical-align: bottom; object-fit: contain; }
 </style>

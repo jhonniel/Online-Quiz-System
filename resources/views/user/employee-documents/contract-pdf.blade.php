@@ -99,11 +99,12 @@
             font-weight: bold;
         }
         .agreement-sign-row-signature {
-            min-height: 18px;
+            min-height: 14px;
         }
         .agreement-signature-image {
-            height: 14px;
-            max-width: 160px;
+            height: 16px;
+            max-width: 85px;
+            width: auto;
             vertical-align: bottom;
             margin-left: 4px;
         }

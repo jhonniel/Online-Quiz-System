@@ -27,15 +27,16 @@
             text-align: center;
         }
         .nda-document .signature-sign-area {
-            height: 3.5rem;
+            height: 2.25rem;
             position: relative;
         }
         .nda-document .signature-image {
             position: absolute;
             inset: 0;
             margin: auto;
-            height: 2.5rem;
-            width: 13rem;
+            height: 1.5rem;
+            max-width: 7rem;
+            width: auto;
             object-fit: contain;
         }
         .nda-document .signature-line {

@@ -93,6 +93,19 @@
                 class="flex-1 min-h-0 overflow-y-auto px-5 py-4 custom-scrollbar text-sm text-gray-700 leading-relaxed space-y-4"
             >
                 <div class="employee-announcement-content space-y-3">{!! $announcementContent !!}</div>
+                @if($announcement->hasFeatureLinks())
+                    <div class="pt-2 flex flex-wrap gap-2">
+                        @foreach($announcement->resolvedFeatureLinks() as $featureLink)
+                            <a href="{{ $featureLink['href'] }}"
+                               class="inline-flex items-center gap-2 rounded-lg border border-indigo-200 bg-indigo-50 px-4 py-2.5 text-sm font-semibold text-indigo-700 hover:bg-indigo-100 transition-colors">
+                                <svg class="h-4 w-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path>
+                                </svg>
+                                {{ $featureLink['label'] }}
+                            </a>
+                        @endforeach
+                    </div>
+                @endif
             </div>
             <div class="flex-shrink-0 border-t border-gray-100 px-5 py-4 space-y-3">
                 <label class="flex items-start gap-3 cursor-pointer select-none">

@@ -84,7 +84,14 @@
                                         </svg>
                                     </div>
                                     <div class="min-w-0">
-                                        <p class="text-sm font-semibold text-gray-900 truncate">{{ $announcement->title }}</p>
+                                        <div class="flex items-center gap-2 min-w-0">
+                                            <p class="text-sm font-semibold text-gray-900 truncate">{{ $announcement->title }}</p>
+                                            @if($announcement->hasFeatureLinks())
+                                                <span class="shrink-0 inline-flex items-center rounded-full bg-indigo-50 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-indigo-700 border border-indigo-100">
+                                                    {{ $announcement->featureLinksCount() }} {{ Str::plural('link', $announcement->featureLinksCount()) }}
+                                                </span>
+                                            @endif
+                                        </div>
                                         <p class="text-xs text-gray-500 mt-1 line-clamp-2">{{ Str::limit(strip_tags($announcement->content), 140) }}</p>
                                         @if($announcement->creator)
                                             <p class="text-[11px] text-gray-400 mt-1.5">By {{ $announcement->creator->name }} · {{ $announcement->created_at?->format('M d, Y') }}</p>

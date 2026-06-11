@@ -26,6 +26,8 @@
         @error('content')<p class="mt-1.5 text-sm text-red-600">{{ $message }}</p>@enderror
     </div>
 
+    @include('admin.system-announcements.partials.feature-links-editor')
+
     <div class="xl:hidden">
         <p class="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-2">Employee popup preview</p>
         <div class="rounded-xl border border-gray-200 bg-white shadow-sm overflow-hidden">
@@ -34,6 +36,10 @@
                 <p class="text-[11px] text-gray-500 text-center mt-0.5">Please read this announcement.</p>
             </div>
             <div class="px-4 py-3 text-sm text-gray-700 leading-relaxed max-h-48 overflow-y-auto employee-announcement-content" x-html="formatPreview(content)"></div>
+            @include('admin.system-announcements.partials.feature-links-preview', [
+                'wrapperClass' => 'px-4 pb-3',
+                'linkClass' => 'inline-flex items-center gap-1.5 rounded-lg border border-indigo-200 bg-indigo-50 px-3 py-2 text-xs font-semibold text-indigo-700',
+            ])
         </div>
     </div>
 </div>

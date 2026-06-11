@@ -37,6 +37,7 @@
     @component('admin.system-announcements.partials.editor-alpine-root', [
         'titleValue' => old('title', ''),
         'contentValue' => old('content', ''),
+        'featureLinksValue' => old('feature_links', []),
     ])
     <div class="grid grid-cols-1 xl:grid-cols-5 gap-6 items-start">
         <div class="xl:col-span-3">

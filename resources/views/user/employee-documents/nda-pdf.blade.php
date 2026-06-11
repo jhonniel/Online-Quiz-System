@@ -44,17 +44,18 @@
             text-align: center;
         }
         .signature-sign-area {
-            height: 56px;
+            height: 36px;
             position: relative;
         }
         .signature-image {
             position: absolute;
             left: 50%;
             top: 50%;
-            margin-left: -105px;
-            margin-top: -20px;
-            height: 40px;
-            width: 210px;
+            margin-left: -50px;
+            margin-top: -12px;
+            height: 24px;
+            max-width: 100px;
+            width: auto;
             z-index: 0;
         }
         .signature-line {

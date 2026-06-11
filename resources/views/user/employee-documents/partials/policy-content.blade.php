@@ -51,11 +51,13 @@
             font-weight: bold;
         }
         .policy-document .policy-sign-row-signature {
-            min-height: 2.5rem;
+            min-height: 1.5rem;
         }
         .policy-document .policy-signature-image {
             display: inline-block;
-            max-height: 2.5rem;
+            height: 1.25rem;
+            max-width: 5.5rem;
+            width: auto;
             margin-left: 0.25rem;
             vertical-align: bottom;
             object-fit: contain;
