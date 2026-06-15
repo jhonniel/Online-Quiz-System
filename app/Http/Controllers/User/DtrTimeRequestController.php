@@ -49,6 +49,12 @@ class DtrTimeRequestController extends Controller
             abort(403, 'Only students can create time requests.');
         }
 
+        if (! $user->canStudentRecordAttendance()) {
+            return back()->withErrors([
+                'nda' => 'You must upload a signed NDA and have it approved by an administrator before recording attendance.',
+            ])->withInput();
+        }
+
         $days = $request->input('days', []);
         $filteredDays = [];
 

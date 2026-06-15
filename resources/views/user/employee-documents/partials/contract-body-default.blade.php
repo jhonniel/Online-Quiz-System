@@ -31,7 +31,9 @@
 
         <p class="section-heading">Job Description</p>
         <p class="body-text">The Employee's duties and responsibilities include, but are not limited to:</p>
-        @if(!empty($jobDescriptionDutiesPage1))
+        @if(!empty($jobDescriptionListHtml))
+            {!! $jobDescriptionListHtml !!}
+        @elseif(!empty($jobDescriptionDutiesPage1))
             <ul class="agreement-list">
                 @foreach($jobDescriptionDutiesPage1 as $duty)
                     <li>{{ $duty }}</li>

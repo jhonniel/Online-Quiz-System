@@ -5,7 +5,10 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Setting;
 use App\Models\User;
+use App\Support\EmployeeDocumentMaterial;
 use App\Support\EmployeeDocumentRequestTypes;
+use App\Support\EmployeeHandbookMaterial;
+use App\Support\EmployeePolicyMaterial;
 use App\Support\PayslipSignatorySettings;
 use App\Services\MailConfigService;
 use Illuminate\Http\Request;
@@ -14,6 +17,7 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\View;
+use Illuminate\Validation\ValidationException;
 
 class SettingsController extends Controller
 {
@@ -300,6 +304,8 @@ class SettingsController extends Controller
         ]);
 
         $settings['employee_document_request_types'] = EmployeeDocumentRequestTypes::all();
+        $settings['handbook_materials'] = EmployeeHandbookMaterial::all();
+        $settings['policy_materials'] = EmployeePolicyMaterial::all();
 
         // Get system health information
         $health = $this->getSystemHealth();
@@ -596,6 +602,24 @@ class SettingsController extends Controller
             'employee_document_request_types.*.key' => 'nullable|string|max:80|regex:/^[a-z0-9_]*$/',
             'employee_document_request_types.*.enabled' => 'nullable',
             'employee_document_request_types.*.sort' => 'nullable|integer|min:0|max:999',
+            'handbook_materials' => 'nullable|array|max:50',
+            'handbook_materials.*.id' => 'nullable|string|max:64',
+            'handbook_materials.*.name' => 'nullable|string|max:120',
+            'handbook_materials.*.sort' => 'nullable|integer|min:0|max:999',
+            'handbook_materials_remove' => 'nullable|array|max:50',
+            'handbook_materials_remove.*' => 'string|max:64',
+            'handbook_materials_new' => 'nullable|array|max:15',
+            'handbook_materials_new.*.name' => 'nullable|string|max:120',
+            'handbook_materials_new.*.pdf' => 'nullable|file|mimes:pdf|max:20480',
+            'policy_materials' => 'nullable|array|max:50',
+            'policy_materials.*.id' => 'nullable|string|max:64',
+            'policy_materials.*.name' => 'nullable|string|max:120',
+            'policy_materials.*.sort' => 'nullable|integer|min:0|max:999',
+            'policy_materials_remove' => 'nullable|array|max:50',
+            'policy_materials_remove.*' => 'string|max:64',
+            'policy_materials_new' => 'nullable|array|max:15',
+            'policy_materials_new.*.name' => 'nullable|string|max:120',
+            'policy_materials_new.*.pdf' => 'nullable|file|mimes:pdf|max:20480',
             // Landing Page - Employees
             // Email Configuration
             'mail_mailer' => 'nullable|string|in:smtp,sendmail,mailgun,ses,postmark,resend,log,array',
@@ -895,6 +919,9 @@ class SettingsController extends Controller
             );
         }
 
+        $this->syncDocumentMaterialsFromRequest($request, 'handbook');
+        $this->syncDocumentMaterialsFromRequest($request, 'policy');
+
         // Email Configuration Settings
         $mailMailer = $request->input('mail_mailer', (string) env('MAIL_MAILER', 'smtp'));
         Setting::set('mail_mailer', $mailMailer, 'text', 'Email mailer driver (smtp, sendmail, mailgun, ses, postmark, resend, log, array)');
@@ -1152,6 +1179,8 @@ class SettingsController extends Controller
         Cache::forget('setting.file_storage_student_access');
         Cache::forget('setting.employee_documents_nav_enabled');
         Cache::forget('setting.employee_document_p12_path');
+        Cache::forget('setting.'.EmployeeHandbookMaterial::SETTING_KEY);
+        Cache::forget('setting.'.EmployeePolicyMaterial::SETTING_KEY);
         foreach ([
             'sayit_image_driver',
             'sayit_composer_ai_image_enabled',
@@ -1507,5 +1536,51 @@ class SettingsController extends Controller
         abort_unless(PayslipSignatorySettings::isSelectableUser($user), 422, 'Selected user is not an active employee or admin.');
 
         Setting::set($key, (string) $id, 'number', $description);
+    }
+
+    private function syncDocumentMaterialsFromRequest(Request $request, string $type): void
+    {
+        abort_unless(EmployeeDocumentMaterial::supports($type), 404);
+
+        $fieldPrefix = $type.'_materials';
+
+        if (! $request->has($fieldPrefix) && ! $request->has($fieldPrefix.'_new') && ! $request->has($fieldPrefix.'_remove')) {
+            return;
+        }
+
+        $newUploads = [];
+        $newRows = $request->input($fieldPrefix.'_new', []);
+        $newFiles = $request->file($fieldPrefix.'_new', []);
+
+        if (is_array($newRows)) {
+            foreach ($newRows as $index => $row) {
+                if (! is_array($row)) {
+                    continue;
+                }
+
+                $name = trim((string) ($row['name'] ?? ''));
+                $pdf = is_array($newFiles) ? ($newFiles[$index]['pdf'] ?? null) : null;
+
+                if ($pdf !== null && $name === '') {
+                    throw ValidationException::withMessages([
+                        "{$fieldPrefix}_new.{$index}.name" => 'Enter a display name for each new '.$type.' PDF.',
+                    ]);
+                }
+
+                if ($name !== '' && $pdf !== null) {
+                    $newUploads[] = [
+                        'name' => $name,
+                        'pdf' => $pdf,
+                    ];
+                }
+            }
+        }
+
+        EmployeeDocumentMaterial::syncFromAdminInput(
+            $type,
+            is_array($request->input($fieldPrefix)) ? $request->input($fieldPrefix) : [],
+            is_array($request->input($fieldPrefix.'_remove')) ? $request->input($fieldPrefix.'_remove') : [],
+            $newUploads
+        );
     }
 }

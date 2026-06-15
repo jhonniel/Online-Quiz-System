@@ -248,6 +248,7 @@
                             <option value="admin" {{ (isset($roleFilter) && $roleFilter === 'admin') ? 'selected' : '' }}>Administrator</option>
                             <option value="student" {{ (isset($roleFilter) && $roleFilter === 'student') ? 'selected' : '' }}>Student</option>
                             <option value="employee" {{ (isset($roleFilter) && $roleFilter === 'employee') ? 'selected' : '' }}>Employee</option>
+                            <option value="hr" {{ (isset($roleFilter) && $roleFilter === 'hr') ? 'selected' : '' }}>HR</option>
                             <option value="teacher" {{ (isset($roleFilter) && $roleFilter === 'teacher') ? 'selected' : '' }}>Teacher</option>
                             <option value="technician" {{ (isset($roleFilter) && $roleFilter === 'technician') ? 'selected' : '' }}>Technician</option>
                             <option value="applicant" {{ (isset($roleFilter) && $roleFilter === 'applicant') ? 'selected' : '' }}>Applicant</option>
@@ -319,6 +320,7 @@
                             <option value="admin">Administrator</option>
                             <option value="student">Student</option>
                             <option value="employee">Employee</option>
+                            <option value="hr">HR</option>
                             <option value="teacher">Teacher</option>
                             <option value="technician">Technician</option>
                             <option value="applicant">Applicant</option>
@@ -426,11 +428,11 @@
                                                 {{ $user->is_active ? 'Active' : 'Disabled' }}
                                             </span>
                                         </div>
-                                        @if(!$isTeacherView && in_array($user->role, ['employee', 'student'], true))
+                                        @if(!$isTeacherView && in_array($user->role, ['employee', 'hr', 'student'], true))
                                             <p class="mt-1.5 text-xs text-gray-500 truncate">
                                                 @if($user->department)
                                                     <span class="font-medium text-gray-700">{{ $user->department->name }}</span>
-                                                    @if($user->role === 'employee' && $user->payslipPositionLabel())
+                                                    @if($user->isStaffMember() && $user->payslipPositionLabel())
                                                         <span class="text-gray-400"> · </span>{{ $user->payslipPositionLabel() }}
                                                     @endif
                                                 @else
@@ -554,18 +556,18 @@
                                 </td>
                                 @if(!$isTeacherView)
                                 <td class="px-4 py-3 text-sm text-gray-600 hidden lg:table-cell truncate max-w-[120px]">
-                                    @if(in_array($user->role, ['employee', 'student'], true) && $user->department)
+                                    @if(in_array($user->role, ['employee', 'hr', 'student'], true) && $user->department)
                                         {{ $user->department->name }}
-                                    @elseif(in_array($user->role, ['employee', 'student'], true))
+                                    @elseif(in_array($user->role, ['employee', 'hr', 'student'], true))
                                         <span class="text-amber-600">—</span>
                                     @else
                                         —
                                     @endif
                                 </td>
                                 <td class="px-4 py-3 text-sm text-gray-600 hidden lg:table-cell truncate max-w-[140px]">
-                                    @if($user->role === 'employee' && $user->payslipPositionLabel())
+                                    @if($user->isStaffMember() && $user->payslipPositionLabel())
                                         {{ $user->payslipPositionLabel() }}
-                                    @elseif($user->role === 'employee')
+                                    @elseif($user->isStaffMember())
                                         <span class="text-amber-600">—</span>
                                     @else
                                         —

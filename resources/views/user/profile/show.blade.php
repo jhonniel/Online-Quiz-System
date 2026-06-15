@@ -104,7 +104,7 @@
                     </div>
                 @endif
 
-                @if($user->role === 'employee')
+                @if($user->isStaffMember())
                 <div class="bg-gray-50 rounded-lg p-4 mb-6">
                     <h3 class="text-sm font-medium text-gray-900 mb-3">Employment Details</h3>
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
@@ -152,7 +152,7 @@
                     @endif
                 </div>
 
-                @if($user->role === 'employee')
+                @if($user->isStaffMember())
                 <div class="bg-gray-50 rounded-lg p-4 mb-6">
                     <h3 class="text-sm font-medium text-gray-900 mb-3">P12 Digital Certificate</h3>
                     @if($user->hasP12Certificate())

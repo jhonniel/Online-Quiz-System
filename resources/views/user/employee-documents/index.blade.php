@@ -7,7 +7,7 @@
     <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
         <div>
             <h1 class="text-2xl font-bold text-gray-900">Documents</h1>
-            <p class="mt-1 text-sm text-gray-600">Review and download required documents. Your profile e-signature is applied automatically when you open each document.</p>
+            <p class="mt-1 text-sm text-gray-600">Review and sign required documents with your profile e-signature.</p>
         </div>
 
         @if(session('success'))
@@ -31,7 +31,7 @@
                     @if($document['signed'] && $document['signed_at'])
                         <p class="mt-3 text-xs text-gray-500">Signed {{ $document['signed_at']->format('M d, Y h:i A') }}</p>
                     @else
-                        <p class="mt-3 text-xs text-gray-500">Sample document — review and sign with your e-signature.</p>
+                        <p class="mt-3 text-xs text-gray-500">Open the document and sign with your e-signature.</p>
                     @endif
                     <div class="mt-4 flex flex-wrap gap-2">
                         <a href="{{ route('user.employee-documents.show', $document['type']) }}"

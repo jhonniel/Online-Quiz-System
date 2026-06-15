@@ -84,6 +84,7 @@
         <thead>
             <tr>
                 <th>No.</th>
+                <th>QR Code ID</th>
                 <th>Name</th>
                 <th>Email</th>
                 <th>Contact Number</th>
@@ -98,6 +99,7 @@
             @forelse($users as $user)
                 <tr>
                     <td>{{ $loop->iteration }}</td>
+                    <td>{{ $user->qr_code_id ?: '—' }}</td>
                     <td>{{ $user->name }}</td>
                     <td>{{ $user->email }}</td>
                     <td>{{ $user->contact_number ?: '—' }}</td>
@@ -115,7 +117,7 @@
                 </tr>
             @empty
                 <tr>
-                    <td colspan="{{ empty($isTeachersManagement) ? 7 : 6 }}">No users match the current filters.</td>
+                    <td colspan="{{ empty($isTeachersManagement) ? 8 : 7 }}">No users match the current filters.</td>
                 </tr>
             @endforelse
         </tbody>

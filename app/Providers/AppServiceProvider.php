@@ -47,6 +47,7 @@ class AppServiceProvider extends ServiceProvider
 
         // Default avoids undefined Blade variable before web middleware merges the real payload.
         View::share('leaveResubmissionModalPayload', []);
+        View::share('studentComplianceModalPayload', []);
 
         // Route model binding for DtrTimeRequest
         Route::bind('dtrTimeRequest', function ($value) {

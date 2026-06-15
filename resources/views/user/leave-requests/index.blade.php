@@ -106,7 +106,7 @@
             </div>
         </div>
 
-        @if(auth()->user()->role === 'employee')
+        @if(auth()->user()->isStaffMember())
             <div class="bg-white rounded-lg shadow p-4 border border-indigo-200 sm:col-span-2 lg:col-span-2">
                 <div class="flex items-center min-h-[4.5rem]">
                     <div class="flex-shrink-0 bg-indigo-100 rounded-lg p-3">

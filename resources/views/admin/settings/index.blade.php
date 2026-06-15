@@ -979,6 +979,10 @@
                                     <p class="mt-2 text-xs text-gray-500">Controls whether employees see the Documents menu (NDA, Agreement, Policy) in their sidebar.</p>
                                 </div>
 
+                                @include('admin.settings.partials.handbook-materials')
+
+                                @include('admin.settings.partials.policy-materials')
+
                                 <div>
                                     <label for="employee_document_p12" class="block text-sm font-medium text-gray-700 mb-2">Employee Documents - P12 Certificate</label>
                                     <input type="file" name="employee_document_p12" id="employee_document_p12" accept=".p12,.pfx"

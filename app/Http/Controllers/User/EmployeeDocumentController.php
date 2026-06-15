@@ -5,15 +5,18 @@ namespace App\Http\Controllers\User;
 use App\Http\Controllers\Controller;
 use App\Models\EmployeeDocumentSignature;
 use App\Models\User;
-use App\Support\EmployeeDocumentSigning;
 use App\Support\EmployeeContractDocument;
+use App\Support\EmployeeDocumentSigning;
 use App\Support\EmployeeHandbookDocument;
 use App\Support\EmployeeHandbookMaterial;
 use App\Support\EmployeeNdaDocument;
 use App\Support\EmployeePolicyDocument;
+use App\Support\EmployeePolicyMaterial;
 use App\Support\EmployeeSampleDocument;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\ValidationException;
 
 class EmployeeDocumentController extends Controller
 {
@@ -48,17 +51,7 @@ class EmployeeDocumentController extends Controller
 
         $user->loadMissing('department');
 
-        $wasUnsigned = ! EmployeeDocumentSignature::query()
-            ->where('user_id', $user->id)
-            ->where('document_type', $type)
-            ->whereNotNull('signed_at')
-            ->exists();
-
         $signature = EmployeeDocumentSigning::ensureSigned($user, $type);
-
-        if ($wasUnsigned && $signature->isSigned()) {
-            session()->flash('success', EmployeeSampleDocument::label($type).' signed automatically with your profile e-signature.');
-        }
 
         return view('user.employee-documents.show', [
             'user' => $user,
@@ -108,7 +101,40 @@ class EmployeeDocumentController extends Controller
                 ]);
         }
 
-        EmployeeDocumentSigning::sign($user, $type, $existing);
+        $p12Password = null;
+
+        if ($user->hasP12Certificate()) {
+            $request->validate([
+                'p12_certificate_password' => 'required|string|max:255',
+            ], [
+                'p12_certificate_password.required' => 'P12 certificate password is required.',
+            ]);
+
+            $p12Password = (string) $request->input('p12_certificate_password');
+            $contents = $this->readP12Contents((string) $user->p12_certificate_path);
+            $certs = [];
+
+            if ($contents === null || ! openssl_pkcs12_read($contents, $certs, $p12Password)) {
+                throw ValidationException::withMessages([
+                    'p12_certificate_password' => ['The P12 certificate password is incorrect.'],
+                ]);
+            }
+        } else {
+            $request->validate([
+                'password' => 'required|string',
+            ], [
+                'password.required' => 'Enter your password to confirm signing.',
+            ]);
+
+            if (! Hash::check((string) $request->input('password'), (string) $user->password)) {
+                throw ValidationException::withMessages([
+                    'password' => ['Your password is incorrect.'],
+                ]);
+            }
+        }
+
+        $user->loadMissing('department');
+        EmployeeDocumentSigning::sign($user, $type, $existing, $p12Password);
 
         return redirect()
             ->route('user.employee-documents.show', $type)
@@ -143,9 +169,12 @@ class EmployeeDocumentController extends Controller
         $user = $this->requireEmployee($request);
         abort_unless(EmployeeSampleDocument::isValidType($type), 404);
 
-        $signature = EmployeeDocumentSigning::ensureSigned($user, $type);
+        $signature = EmployeeDocumentSignature::query()
+            ->where('user_id', $user->id)
+            ->where('document_type', $type)
+            ->first();
 
-        abort_unless($signature->isSigned(), 404);
+        abort_unless($signature?->isSigned(), 404);
 
         return $this->streamStoredPdf(
             (string) $signature->signed_document_path,
@@ -154,25 +183,56 @@ class EmployeeDocumentController extends Controller
         );
     }
 
-    public function handbookMaterial(Request $request)
+    public function handbookMaterial(Request $request, string $id)
+    {
+        return $this->showDocumentMaterial($request, 'handbook', $id);
+    }
+
+    public function streamHandbookMaterial(Request $request, string $id)
+    {
+        return $this->streamDocumentMaterial($request, 'handbook', $id);
+    }
+
+    public function policyMaterial(Request $request, string $id)
+    {
+        return $this->showDocumentMaterial($request, 'policy', $id);
+    }
+
+    public function streamPolicyMaterial(Request $request, string $id)
+    {
+        return $this->streamDocumentMaterial($request, 'policy', $id);
+    }
+
+    private function showDocumentMaterial(Request $request, string $type, string $id)
     {
         $this->requireEmployee($request);
 
-        return view('user.employee-documents.handbook-material', [
-            'handbookAvailable' => EmployeeHandbookMaterial::isAvailable(),
-            'handbookPdfUrl' => EmployeeHandbookMaterial::isAvailable()
-                ? route('user.employee-documents.handbook-material.pdf')
-                : null,
+        $material = $type === 'handbook'
+            ? EmployeeHandbookMaterial::find($id)
+            : EmployeePolicyMaterial::find($id);
+        abort_if($material === null, 404);
+
+        $routePrefix = 'user.employee-documents.'.$type.'-material';
+
+        return view('user.employee-documents.document-material', [
+            'material' => $material,
+            'subtitle' => $type === 'handbook'
+                ? 'Employee handbook material — read-only PDF viewer.'
+                : 'Company policy material — read-only PDF viewer.',
+            'pdfUrl' => route($routePrefix.'.pdf', $material['id']),
+            'downloadUrl' => route($routePrefix.'.pdf', ['id' => $material['id'], 'download' => 1]),
         ]);
     }
 
-    public function streamHandbookMaterial(Request $request)
+    private function streamDocumentMaterial(Request $request, string $type, string $id)
     {
         $this->requireEmployee($request);
 
         $disposition = $request->boolean('download') ? 'attachment' : 'inline';
 
-        return EmployeeHandbookMaterial::streamResponse($disposition);
+        return $type === 'handbook'
+            ? EmployeeHandbookMaterial::streamResponseForId($id, $disposition)
+            : EmployeePolicyMaterial::streamResponseForId($id, $disposition);
     }
 
     private function requireEmployee(Request $request): User
@@ -181,9 +241,27 @@ class EmployeeDocumentController extends Controller
 
         /** @var User|null $user */
         $user = $request->user();
-        abort_unless($user && $user->role === 'employee', 403);
+        abort_unless($user && $user->isStaffMember(), 403);
 
         return $user;
+    }
+
+    private function readP12Contents(string $path): ?string
+    {
+        foreach (['digitalocean', 'public', 'local', config('filesystems.default', 'local')] as $diskName) {
+            try {
+                $disk = Storage::disk($diskName);
+                if ($disk->exists($path)) {
+                    $contents = $disk->get($path);
+
+                    return is_string($contents) && $contents !== '' ? $contents : null;
+                }
+            } catch (\Throwable) {
+                continue;
+            }
+        }
+
+        return null;
     }
 
     private function streamStoredPdf(string $path, string $preferredDisk, string $filename)

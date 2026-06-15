@@ -150,6 +150,7 @@
                                 <option value="admin" {{ old('role') == 'admin' ? 'selected' : '' }}>Administrator</option>
                                 <option value="student" {{ old('role') == 'student' ? 'selected' : '' }}>Student</option>
                                 <option value="employee" {{ old('role') == 'employee' ? 'selected' : '' }}>Employee</option>
+                                <option value="hr" {{ old('role') == 'hr' ? 'selected' : '' }}>HR</option>
                                 <option value="teacher" {{ old('role') == 'teacher' ? 'selected' : '' }}>Teacher</option>
                                 <option value="technician" {{ old('role') == 'technician' ? 'selected' : '' }}>Technician</option>
                                 <option value="applicant" {{ old('role') == 'applicant' ? 'selected' : '' }}>Applicant</option>
@@ -673,11 +674,12 @@ document.addEventListener('DOMContentLoaded', function() {
         toggleUniversityRequirement();
     }
 
-    // Show Leave Balances only for employees
+    // Show Leave Balances only for staff (employee, HR)
     const leaveBalancesWrapper = document.getElementById('leave_balances_wrapper');
+    const isStaffRole = (role) => role === 'employee' || role === 'hr';
     if (roleSelect && leaveBalancesWrapper) {
         function toggleLeaveBalances() {
-            if (roleSelect.value === 'employee') {
+            if (isStaffRole(roleSelect.value)) {
                 leaveBalancesWrapper.style.display = '';
             } else {
                 leaveBalancesWrapper.style.display = 'none';
@@ -695,14 +697,14 @@ document.addEventListener('DOMContentLoaded', function() {
     const departmentRequiredIndicator = document.getElementById('department_required_indicator');
     if (roleSelect && departmentWrapper) {
         function toggleDepartment() {
-            const show = roleSelect.value === 'employee' || roleSelect.value === 'student';
+            const show = isStaffRole(roleSelect.value) || roleSelect.value === 'student';
             if (show) {
                 departmentWrapper.style.display = '';
                 if (departmentSelect) {
-                    departmentSelect.required = roleSelect.value === 'employee';
+                    departmentSelect.required = isStaffRole(roleSelect.value);
                 }
                 if (departmentRequiredIndicator) {
-                    departmentRequiredIndicator.style.display = roleSelect.value === 'employee' ? '' : 'none';
+                    departmentRequiredIndicator.style.display = isStaffRole(roleSelect.value) ? '' : 'none';
                 }
             } else {
                 departmentWrapper.style.display = 'none';

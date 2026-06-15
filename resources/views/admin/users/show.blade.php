@@ -106,7 +106,7 @@
                 </div>
             </div>
 
-            @if($user->role === 'employee')
+            @if($user->isStaffMember())
             <div class="bg-white rounded-xl sm:rounded-2xl shadow border border-gray-200 p-4 sm:p-6">
                 <div class="mb-4">
                     <h2 class="text-base sm:text-lg font-bold text-gray-900">Employee Profile</h2>
@@ -190,7 +190,7 @@
             </div>
 
             <!-- Leave balances & overtime (employees only) -->
-            @if(isset($balances) && $user->role === 'employee')
+            @if(isset($balances) && $user->isStaffMember())
                 <div class="bg-white rounded-xl sm:rounded-2xl shadow border border-gray-200 p-4 sm:p-6 space-y-4 sm:space-y-6">
                     <div>
                         <h3 class="text-base sm:text-lg font-bold text-gray-900">Leave & Overtime Summary</h3>

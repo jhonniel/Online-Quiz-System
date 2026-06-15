@@ -94,7 +94,7 @@ class LeaveRequestController extends Controller
         $studentTime = null;
         $approvedAbsentCount = 0;
 
-        if ($user->role === 'employee') {
+        if ($user->isStaffMember()) {
             // Overtime balance is based on approved overtime leave requests (DTR overtime is ignored)
             // minus approved offset leave requests ("Hours to Deduct" in the reason field).
             // Overtime Credited Window is ONLY used for expiration logic, NOT for counting
@@ -213,7 +213,7 @@ class LeaveRequestController extends Controller
         }
 
         $balances = null;
-        if ($user->role === 'employee') {
+        if ($user->isStaffMember()) {
             $balances = $this->getEmployeeLeaveBalances($user);
         }
 
@@ -261,7 +261,7 @@ class LeaveRequestController extends Controller
         $allowedTypes = $user->role === 'student'
             ? ['additional_time', 'absent', 'overtime', 'other']
             : ['vacation_leave', 'sick_leave', 'work_from_home', 'absent', 'overtime', 'offset'];
-        if ($user->role === 'employee') {
+        if ($user->isStaffMember()) {
             $allowedTypes[] = 'travel';
         }
 
@@ -351,7 +351,7 @@ class LeaveRequestController extends Controller
             return redirect()->back()->withErrors($requestTypeInputValidationError)->withInput();
         }
 
-        if ($user->role === 'employee' && $validated['type'] === 'work_from_home') {
+        if ($user->isStaffMember() && $validated['type'] === 'work_from_home') {
             $wfhQuotaError = WorkFromHomeQuota::validateEmployeeRequest(
                 (int) $user->id,
                 (string) $validated['start_date'],
@@ -444,7 +444,7 @@ class LeaveRequestController extends Controller
         }
 
         // Balance check: Vacation Leave, Sick Leave, Offset only (employees)
-        if (in_array($validated['type'], ['vacation_leave', 'sick_leave', 'offset']) && $user->role === 'employee') {
+        if (in_array($validated['type'], ['vacation_leave', 'sick_leave', 'offset']) && $user->isStaffMember()) {
             $startDate = \Carbon\Carbon::parse($validated['start_date']);
             $endDate = $validated['end_date']
                 ? \Carbon\Carbon::parse($validated['end_date'])
@@ -957,7 +957,7 @@ class LeaveRequestController extends Controller
         $allowedTypes = $user->role === 'student'
             ? ['additional_time', 'absent', 'overtime', 'other']
             : ['vacation_leave', 'sick_leave', 'work_from_home', 'absent', 'overtime', 'offset'];
-        if ($user->role === 'employee') {
+        if ($user->isStaffMember()) {
             $allowedTypes[] = 'travel';
         }
 
@@ -1046,7 +1046,7 @@ class LeaveRequestController extends Controller
             return redirect()->back()->withErrors($requestTypeInputValidationError)->withInput();
         }
 
-        if ($user->role === 'employee' && $validated['type'] === 'work_from_home') {
+        if ($user->isStaffMember() && $validated['type'] === 'work_from_home') {
             $wfhQuotaError = WorkFromHomeQuota::validateEmployeeRequest(
                 (int) $user->id,
                 (string) $validated['start_date'],
@@ -1147,7 +1147,7 @@ class LeaveRequestController extends Controller
 
         // Balance check for employee resubmissions:
         // Vacation Leave and Sick Leave share the same Leave Credits pool.
-        if ($user->role === 'employee' && in_array($validated['type'], ['vacation_leave', 'sick_leave'], true)) {
+        if ($user->isStaffMember() && in_array($validated['type'], ['vacation_leave', 'sick_leave'], true)) {
             $startDate = \Carbon\Carbon::parse($validated['start_date']);
             $endDate = $validated['end_date']
                 ? \Carbon\Carbon::parse($validated['end_date'])

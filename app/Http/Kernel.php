@@ -41,6 +41,7 @@ class Kernel extends HttpKernel
             \App\Http\Middleware\VerifyCsrfToken::class,
             \Illuminate\Routing\Middleware\SubstituteBindings::class,
             \App\Http\Middleware\ShareLeaveResubmissionModalPayload::class,
+            \App\Http\Middleware\ShareStudentComplianceModalPayload::class,
             \App\Http\Middleware\SystemHealthMetrics::class,
             \App\Http\Middleware\TrackUserActivity::class,
             \App\Http\Middleware\RejectTerminatedStudent::class,

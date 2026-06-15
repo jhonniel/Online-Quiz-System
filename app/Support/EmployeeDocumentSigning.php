@@ -9,7 +9,7 @@ use Illuminate\Support\Facades\Storage;
 final class EmployeeDocumentSigning
 {
     /**
-     * Sign the document when the employee has a profile e-signature and it is not signed yet.
+     * Load the signature record for a document without auto-signing.
      */
     public static function ensureSigned(User $user, string $type): EmployeeDocumentSignature
     {
@@ -20,21 +20,13 @@ final class EmployeeDocumentSigning
             ->where('document_type', $type)
             ->first();
 
-        if ($existing?->isSigned()) {
-            return $existing;
-        }
-
-        if (! $user->hasESignature()) {
-            return $existing ?? EmployeeDocumentSignature::make([
-                'user_id' => $user->id,
-                'document_type' => $type,
-            ]);
-        }
-
-        return self::sign($user, $type, $existing);
+        return $existing ?? EmployeeDocumentSignature::make([
+            'user_id' => $user->id,
+            'document_type' => $type,
+        ]);
     }
 
-    public static function sign(User $user, string $type, ?EmployeeDocumentSignature $existing = null): EmployeeDocumentSignature
+    public static function sign(User $user, string $type, ?EmployeeDocumentSignature $existing = null, ?string $p12Password = null): EmployeeDocumentSignature
     {
         abort_unless(EmployeeSampleDocument::isValidType($type), 404);
 
@@ -53,7 +45,7 @@ final class EmployeeDocumentSigning
 
         $user->loadMissing('department');
         $signedAt = now();
-        $pdfBinary = EmployeeSampleDocument::renderSignedPdfBinary($user, $type, $signedAt);
+        $pdfBinary = EmployeeSampleDocument::renderSignedPdfBinary($user, $type, $signedAt, $p12Password);
         [$storedPath, $disk] = self::storePdfFile($pdfBinary, $user->id, $type);
 
         if ($existing && $existing->signed_document_path) {

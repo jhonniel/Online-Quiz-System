@@ -80,6 +80,7 @@
                                 <option value="admin" {{ old('role', $user->role) == 'admin' ? 'selected' : '' }}>Administrator</option>
                                 <option value="student" {{ old('role', $user->role) == 'student' ? 'selected' : '' }}>Student</option>
                                 <option value="employee" {{ old('role', $user->role) == 'employee' ? 'selected' : '' }}>Employee</option>
+                                <option value="hr" {{ old('role', $user->role) == 'hr' ? 'selected' : '' }}>HR</option>
                                 <option value="teacher" {{ old('role', $user->role) == 'teacher' ? 'selected' : '' }}>Teacher</option>
                                 <option value="technician" {{ old('role', $user->role) == 'technician' ? 'selected' : '' }}>Technician</option>
                                 <option value="applicant" {{ old('role', $user->role) == 'applicant' ? 'selected' : '' }}>Applicant</option>
@@ -121,7 +122,7 @@
                         </div>
 
                         <div id="department_wrapper" class="{{ in_array(old('role', $user->role), ['employee', 'student'], true) ? '' : 'hidden' }}">
-                            <label for="department_id" class="block text-sm font-semibold text-gray-700 mb-1.5">Department <span class="text-red-500 {{ old('role', $user->role) === 'employee' ? '' : 'hidden' }}" id="department_required_indicator">*</span></label>
+                            <label for="department_id" class="block text-sm font-semibold text-gray-700 mb-1.5">Department <span class="text-red-500 {{ in_array(old('role', $user->role), ['employee', 'hr'], true) ? '' : 'hidden' }}" id="department_required_indicator">*</span></label>
                             <select name="department_id" id="department_id"
                                     class="block w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 text-sm @error('department_id') border-red-500 @enderror">
                                 <option value="">Select a department</option>
@@ -480,24 +481,25 @@ document.addEventListener('DOMContentLoaded', function() {
             studentRulesComplianceWrapper.classList.toggle('hidden', roleSelect.value !== 'student');
         }
     }
+    const isStaffRole = (role) => role === 'employee' || role === 'hr';
     function toggleLeaveBalances() {
         if (roleSelect && leaveBalancesWrapper) {
-            leaveBalancesWrapper.classList.toggle('hidden', roleSelect.value !== 'employee');
+            leaveBalancesWrapper.classList.toggle('hidden', !isStaffRole(roleSelect.value));
         }
     }
     function toggleEmployeeProfile() {
         if (roleSelect && employeeProfileWrapper) {
-            employeeProfileWrapper.classList.toggle('hidden', roleSelect.value !== 'employee');
+            employeeProfileWrapper.classList.toggle('hidden', !isStaffRole(roleSelect.value));
         }
     }
     function toggleDepartment() {
         if (roleSelect && departmentWrapper && departmentSelect) {
-            const show = roleSelect.value === 'employee' || roleSelect.value === 'student';
+            const show = isStaffRole(roleSelect.value) || roleSelect.value === 'student';
             departmentWrapper.classList.toggle('hidden', !show);
-            departmentSelect.required = roleSelect.value === 'employee';
+            departmentSelect.required = isStaffRole(roleSelect.value);
             const departmentRequiredIndicator = document.getElementById('department_required_indicator');
             if (departmentRequiredIndicator) {
-                departmentRequiredIndicator.classList.toggle('hidden', roleSelect.value !== 'employee');
+                departmentRequiredIndicator.classList.toggle('hidden', !isStaffRole(roleSelect.value));
             }
             if (!show) departmentSelect.value = '';
         }

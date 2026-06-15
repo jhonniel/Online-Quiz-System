@@ -345,7 +345,7 @@
     </div>
     @endif
 
-    @if(auth()->user()->role === 'employee' && !empty($employeeLeaveSummary))
+    @if(auth()->user()->isStaffMember() && !empty($employeeLeaveSummary))
     <div class="p-4 pt-2 flex-shrink-0 space-y-4">
         <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-5 gap-4">
             <div class="bg-white border border-gray-200 rounded-lg p-4 shadow-sm">
@@ -407,7 +407,7 @@
     </div>
     @endif
 
-    @if(auth()->user()->role === 'employee' && isset($employeeResubmissionRequests) && $employeeResubmissionRequests->isNotEmpty())
+    @if(auth()->user()->isStaffMember() && isset($employeeResubmissionRequests) && $employeeResubmissionRequests->isNotEmpty())
     <div class="p-4 pt-0 flex-shrink-0">
         <div class="bg-rose-50 border border-rose-200 rounded-lg p-4" role="status">
             <div class="flex items-start justify-between gap-3">

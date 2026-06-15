@@ -107,11 +107,19 @@ final class EmployeeDocumentTemplate
             return View::make(self::DEFAULT_PARTIALS[$type], $viewData)->render();
         }
 
+        $sanitizedCustom = EmployeeDocumentTemplateSanitizer::sanitize($custom);
+
         $html = self::replacePlaceholders(
             $type,
-            EmployeeDocumentTemplateSanitizer::sanitize($custom),
+            $sanitizedCustom,
             $viewData
         );
+
+        $html = match ($type) {
+            'contract' => self::injectContractDynamicSections($html, $viewData, $sanitizedCustom),
+            'policy' => self::injectPolicyDynamicSections($html, $viewData, $sanitizedCustom),
+            default => $html,
+        };
 
         return self::normalizeCustomBodyHtml($type, $html);
     }
@@ -173,6 +181,7 @@ final class EmployeeDocumentTemplate
                 'dateHiredLine' => '{{date_hired}}',
                 'position' => '{{position}}',
                 'positionContentHtml' => '{{position_content}}',
+                'jobDescriptionListHtml' => '{{job_description_list}}',
                 'jobDescriptionDuties' => EmployeeContractDocument::DEFAULT_JOB_DESCRIPTION_DUTIES,
                 'jobDescriptionDutiesPage1' => array_slice(EmployeeContractDocument::DEFAULT_JOB_DESCRIPTION_DUTIES, 0, -1),
                 'jobDescriptionDutiesPage2' => [EmployeeContractDocument::DEFAULT_JOB_DESCRIPTION_DUTIES[array_key_last(EmployeeContractDocument::DEFAULT_JOB_DESCRIPTION_DUTIES)]],
@@ -426,6 +435,88 @@ final class EmployeeDocumentTemplate
         );
 
         return '<ul class="agreement-list">'.implode('', $items).'</ul>';
+    }
+
+    /**
+     * Older saved agreement templates may not include dynamic placeholders.
+     *
+     * @param  array<string, mixed>  $viewData
+     */
+    private static function injectContractDynamicSections(string $html, array $viewData, string $originalCustom): string
+    {
+        if (! str_contains(strtolower($originalCustom), 'position_content')) {
+            $positionHtml = trim((string) ($viewData['positionContentHtml'] ?? ''));
+            if ($positionHtml !== '') {
+                $block = '<div class="agreement-position-content">'.$positionHtml.'</div>';
+                $replaced = preg_replace(
+                    '/(<p class="section-heading">Position<\/p>\s*<p class="body-text">.*?<\/p>)/is',
+                    '$1'.$block,
+                    $html,
+                    1
+                );
+                if (is_string($replaced)) {
+                    $html = $replaced;
+                }
+            }
+        }
+
+        if (! str_contains(strtolower($originalCustom), 'job_description_list')) {
+            $duties = $viewData['jobDescriptionDuties'] ?? EmployeeContractDocument::DEFAULT_JOB_DESCRIPTION_DUTIES;
+            if ($duties !== []) {
+                $listHtml = self::renderJobDescriptionListHtml($duties);
+                $replaced = preg_replace(
+                    '/(<p class="section-heading">Job Description<\/p>\s*<p class="body-text">.*?<\/p>\s*)<ul class="agreement-list">.*?<\/ul>/is',
+                    '$1'.$listHtml,
+                    $html,
+                    1
+                );
+                if (is_string($replaced)) {
+                    $html = $replaced;
+                }
+            }
+        }
+
+        return $html;
+    }
+
+    /**
+     * @param  array<string, mixed>  $viewData
+     */
+    private static function injectPolicyDynamicSections(string $html, array $viewData, string $originalCustom): string
+    {
+        if (! str_contains(strtolower($originalCustom), 'position_policies_content')) {
+            $positionHtml = trim((string) ($viewData['positionContentHtml'] ?? ''));
+            if ($positionHtml !== '') {
+                $block = '<div class="policy-position-content">'.$positionHtml.'</div>';
+                $replaced = preg_replace(
+                    '/(<ul class="policy-list">.*?<\/ul>)/is',
+                    '$1'.$block,
+                    $html,
+                    1
+                );
+                if (is_string($replaced)) {
+                    $html = $replaced;
+                }
+            }
+        }
+
+        if (! str_contains(strtolower($originalCustom), 'policies_list')) {
+            $policies = $viewData['policies'] ?? EmployeePolicyDocument::POLICIES;
+            if ($policies !== []) {
+                $listHtml = self::renderPoliciesListHtml($policies);
+                $replaced = preg_replace(
+                    '/<ul class="policy-list">.*?<\/ul>/is',
+                    $listHtml,
+                    $html,
+                    1
+                );
+                if (is_string($replaced)) {
+                    $html = $replaced;
+                }
+            }
+        }
+
+        return $html;
     }
 
     /**

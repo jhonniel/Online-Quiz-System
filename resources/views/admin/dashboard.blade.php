@@ -977,7 +977,7 @@
                                     <span class="sm:hidden">{{ \Illuminate\Support\Str::limit($leaveRequest->typeLabel, 15) }} • </span>
                                     {{ \Carbon\Carbon::parse($leaveRequest->start_date)->format('M d') }} -
                                     {{ \Carbon\Carbon::parse($leaveRequest->end_date)->format('M d, Y') }}
-                                    @if($leaveRequest->user->role === 'employee')
+                                    @if($leaveRequest->user->isStaffMember())
                                         <span class="text-blue-600">(Emp)</span>
                                     @else
                                         <span class="text-purple-600">(Stu)</span>
@@ -987,7 +987,7 @@
                         </div>
                         <div class="text-left sm:text-right flex-shrink-0">
                             <p class="text-xs text-gray-500">{{ $leaveRequest->created_at->diffForHumans() }}</p>
-                            @if($leaveRequest->user->role === 'employee')
+                            @if($leaveRequest->user->isStaffMember())
                                 <a href="{{ url('/admin/leave-requests/' . $leaveRequest->id) }}" class="text-xs text-indigo-600 hover:text-indigo-800 inline-block mt-1">View →</a>
                             @else
                                 <a href="{{ route('admin.leave-requests.show', ['leaveRequest' => $leaveRequest->id, 'from' => 'student']) }}" class="text-xs text-purple-600 hover:text-purple-800 inline-block mt-1">View →</a>

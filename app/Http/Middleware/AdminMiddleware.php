@@ -57,11 +57,11 @@ class AdminMiddleware
         if ($user->isAdmin()) {
             // Admins always have access
             $hasAccess = true;
-        } elseif ($isAllowedTaskRoute && ($user->isEmployee() || $user->isStudent())) {
-            // Students and employees can access task routes (My Tasks, Group Tasks, and related actions)
+        } elseif ($isAllowedTaskRoute && ($user->isStaffMember() || $user->isStudent())) {
+            // Staff and students can access task routes (My Tasks, Group Tasks, and related actions)
             $hasAccess = true;
-        } elseif ($user->isEmployee()) {
-            // Employees need at least one admin permission for other routes
+        } elseif ($user->isStaffMember()) {
+            // Staff need at least one admin permission for other routes
             $hasAccess = $user->hasAnyAdminPermission();
         } elseif ($user->adminPermission) {
             // Other roles (students, applicants, etc.) can access if they have an adminPermission record

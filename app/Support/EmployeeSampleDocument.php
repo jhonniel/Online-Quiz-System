@@ -81,7 +81,7 @@ final class EmployeeSampleDocument
             'dateHired' => $user->date_hired?->format('F j, Y') ?? '—',
             'companyName' => trim((string) Setting::get('system_name', config('app.name', 'the Company'))),
             'signedAt' => $signedAt,
-            'eSignatureDataUri' => self::eSignatureDataUri($user),
+            'eSignatureDataUri' => $signedAt !== null ? self::eSignatureDataUri($user) : null,
             'digitalSignatureEnabled' => $signedAt !== null && EmployeeDocumentPdfSigner::isConfiguredForUser($user),
         ];
     }
@@ -110,24 +110,24 @@ final class EmployeeSampleDocument
             ->output();
     }
 
-    public static function renderSignedPdfBinary(User $user, string $type, ?\DateTimeInterface $signedAt = null): string
+    public static function renderSignedPdfBinary(User $user, string $type, ?\DateTimeInterface $signedAt = null, ?string $p12Password = null): string
     {
         $signedAt ??= now();
 
         if ($type === 'nda') {
-            return EmployeeNdaDocument::renderSignedPdfBinary($user, $signedAt);
+            return EmployeeNdaDocument::renderSignedPdfBinary($user, $signedAt, $p12Password);
         }
 
         if ($type === 'policy') {
-            return EmployeePolicyDocument::renderSignedPdfBinary($user, $signedAt);
+            return EmployeePolicyDocument::renderSignedPdfBinary($user, $signedAt, $p12Password);
         }
 
         if ($type === 'handbook') {
-            return EmployeeHandbookDocument::renderSignedPdfBinary($user, $signedAt);
+            return EmployeeHandbookDocument::renderSignedPdfBinary($user, $signedAt, $p12Password);
         }
 
         if ($type === 'contract') {
-            return EmployeeContractDocument::renderSignedPdfBinary($user, $signedAt);
+            return EmployeeContractDocument::renderSignedPdfBinary($user, $signedAt, $p12Password);
         }
 
         $pdfBinary = self::renderPdfBinary($user, $type, $signedAt);
@@ -137,6 +137,7 @@ final class EmployeeSampleDocument
             'reason' => 'Employee '.self::label($type).' signed by '.$user->name,
             'contact' => (string) Setting::get('contact_phone', ''),
             'location' => (string) Setting::get('contact_address', ''),
+            'password' => $p12Password,
         ]);
     }
 

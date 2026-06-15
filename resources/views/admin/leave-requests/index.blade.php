@@ -164,6 +164,7 @@
                         <option value="">All Types</option>
                         <option value="vacation_leave" {{ request('type') == 'vacation_leave' ? 'selected' : '' }}>Vacation Leave</option>
                         <option value="sick_leave" {{ request('type') == 'sick_leave' ? 'selected' : '' }}>Sick Leave</option>
+                        @unless($hrLeaveTypesOnly ?? false)
                         <option value="work_from_home" {{ request('type') == 'work_from_home' ? 'selected' : '' }}>Work From Home</option>
                         <option value="absent" {{ request('type') == 'absent' ? 'selected' : '' }}>Absent</option>
                         <option value="overtime" {{ request('type') == 'overtime' ? 'selected' : '' }}>Overtime</option>
@@ -171,6 +172,7 @@
                         <option value="travel" {{ request('type') == 'travel' ? 'selected' : '' }}>Travel</option>
                         <option value="additional_time" {{ request('type') == 'additional_time' ? 'selected' : '' }}>Additional Time</option>
                         <option value="other" {{ request('type') == 'other' ? 'selected' : '' }}>Other</option>
+                        @endunless
                     </select>
                 </div>
 

@@ -287,7 +287,7 @@ class DashboardController extends Controller
             $studentMeritDetails = StudentViolationCounter::detailsForUser($user->fresh());
         }
 
-        if ($user->role === 'employee') {
+        if ($user->isStaffMember()) {
             $employeeLeaveBaseQuery = LeaveRequest::query()
                 ->where('user_id', $user->id);
 
@@ -420,8 +420,32 @@ class DashboardController extends Controller
     /**
      * Display the Term of Reference (TOR) PDF in an iframe
      */
-    public function tor()
+    public function tor(Request $request)
     {
+        $user = $request->user();
+        if ($user && $user->isStudent()) {
+            $request->session()->put('student_tor_acknowledged', true);
+
+            $alreadyLogged = UserActivity::query()
+                ->where('user_id', $user->id)
+                ->where('action', 'student_tor_reviewed')
+                ->exists();
+
+            if (! $alreadyLogged) {
+                try {
+                    UserActivity::logActivity($user, 'action', 'student_tor_reviewed', [
+                        'user_id' => $user->id,
+                        'user_name' => $user->name,
+                    ]);
+                } catch (\Throwable $e) {
+                    Log::warning('Failed to log student_tor_reviewed', [
+                        'user_id' => $user->id,
+                        'error' => $e->getMessage(),
+                    ]);
+                }
+            }
+        }
+
         return view('user.tor');
     }
 
@@ -455,7 +479,7 @@ class DashboardController extends Controller
     public function acknowledgeSystemAnnouncement(Request $request): JsonResponse
     {
         $user = $request->user();
-        abort_unless($user && $user->role === 'employee' && $user->is_active, 403);
+        abort_unless($user && $user->isStaffMember() && $user->is_active, 403);
 
         $validated = $request->validate([
             'announcement_id' => 'required|integer|exists:system_announcements,id',

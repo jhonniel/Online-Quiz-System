@@ -24,7 +24,7 @@ final class EmployeePolicyDocument
      */
     public static function viewData(User $user, ?\DateTimeInterface $signedAt = null, ?bool $includeSignatureAssets = null): array
     {
-        $includeSignatureAssets ??= $signedAt !== null || $user->hasESignature();
+        $includeSignatureAssets ??= $signedAt !== null;
 
         $user->loadMissing(['department:id,name', 'departmentPosition:id,name,department_id']);
 
@@ -63,7 +63,7 @@ final class EmployeePolicyDocument
             ->output();
     }
 
-    public static function renderSignedPdfBinary(User $user, ?\DateTimeInterface $signedAt = null): string
+    public static function renderSignedPdfBinary(User $user, ?\DateTimeInterface $signedAt = null, ?string $p12Password = null): string
     {
         $signedAt ??= now();
         $pdfBinary = self::renderPdfBinary($user, $signedAt);
@@ -73,6 +73,7 @@ final class EmployeePolicyDocument
             'reason' => 'Employee Policy signed by '.$user->name,
             'contact' => (string) Setting::get('contact_phone', ''),
             'location' => (string) Setting::get('contact_address', ''),
+            'password' => $p12Password,
         ]);
     }
 

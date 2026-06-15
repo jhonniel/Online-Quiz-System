@@ -156,6 +156,21 @@ class LeaveRequest extends Model
     }
 
     /**
+     * Leave types HR users may view on admin employee leave requests.
+     *
+     * @return list<string>
+     */
+    public static function hrViewableTypes(): array
+    {
+        return ['vacation_leave', 'sick_leave'];
+    }
+
+    public static function isHrViewableType(?string $type): bool
+    {
+        return in_array($type, self::hrViewableTypes(), true);
+    }
+
+    /**
      * Get the type label.
      */
     public function getTypeLabelAttribute(): string

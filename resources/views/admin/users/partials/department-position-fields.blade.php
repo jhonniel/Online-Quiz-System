@@ -1,7 +1,7 @@
 <div id="department_position_wrapper" class="{{ in_array(old('role', $selectedRole ?? ''), ['employee', 'student'], true) ? '' : 'hidden' }}">
     <label for="department_position_id" class="block text-sm font-semibold text-gray-700 mb-1.5">
         Position
-        <span class="text-red-500 {{ old('role', $selectedRole ?? '') === 'employee' ? '' : 'hidden' }}" id="department_position_required_indicator">*</span>
+        <span class="text-red-500 {{ in_array(old('role', $selectedRole ?? ''), ['employee', 'hr'], true) ? '' : 'hidden' }}" id="department_position_required_indicator">*</span>
     </label>
     <select name="department_position_id" id="department_position_id"
             class="block w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 text-sm @error('department_position_id') border-red-500 @enderror">

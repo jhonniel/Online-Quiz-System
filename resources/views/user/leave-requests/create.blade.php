@@ -66,7 +66,7 @@
                                 <option value="vacation_leave" {{ old('type') == 'vacation_leave' ? 'selected' : '' }}>Vacation Leave</option>
                                 <option value="sick_leave" {{ old('type') == 'sick_leave' ? 'selected' : '' }}>Sick Leave</option>
                                 <option value="work_from_home" {{ old('type') == 'work_from_home' ? 'selected' : '' }}>Work From Home</option>
-                                @if(auth()->user()->role === 'employee')
+                                @if(auth()->user()->isStaffMember())
                                     <option value="travel" {{ old('type') == 'travel' ? 'selected' : '' }}>Travel</option>
                                 @endif
                                 <option value="absent" {{ old('type') == 'absent' ? 'selected' : '' }}>Absent</option>
@@ -211,7 +211,7 @@
                     </div>
 
                     <!-- Travel Details (visible only when Request Type = Travel, employees only) -->
-                    @if(auth()->user()->role === 'employee')
+                    @if(auth()->user()->isStaffMember())
                     <div id="travel-section" class="space-y-4 hidden">
                         <div class="border-t border-gray-200 pt-4 mt-4">
                             <h2 class="text-sm font-semibold text-gray-900 mb-2">Travel Details</h2>

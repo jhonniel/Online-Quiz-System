@@ -6,21 +6,27 @@ use App\Http\Controllers\Controller;
 use App\Mail\StudentRulesNoticeMail;
 use App\Mail\UserCredentials;
 use App\Models\Department;
-use App\Support\StudentMeritNoticeSettings;
-use App\Support\StudentMeritRulesNotice;
-use App\Support\StudentViolationCounter;
+use App\Models\DepartmentPosition;
+use App\Models\Dtr;
+use App\Models\DtrDeficit;
 use App\Models\LeaveBalance;
+use App\Models\LeaveRequest;
+use App\Models\QuizAssignment;
+use App\Models\Setting;
 use App\Models\University;
 use App\Models\User;
 use App\Services\MailConfigService;
 use App\Support\DepartmentPositionOptions;
 use App\Support\DocumentExportPdfBranding;
-use App\Support\EmployeeProfileCsvImporter;
-use App\Models\DepartmentPosition;
+use App\Support\StudentMeritNoticeSettings;
+use App\Support\StudentMeritRulesNotice;
+use App\Support\StudentViolationCounter;
+use App\Support\UserRoles;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
@@ -99,6 +105,12 @@ class UserController extends Controller
             $users = $this->filteredUsersQuery($request, $context)->get();
         }
 
+        $users->each(function (User $user): void {
+            if (blank($user->qr_code_id)) {
+                $user->generateQrCodeId();
+            }
+        });
+
         $exportMeta = $this->usersExportMeta($context, $userIds !== [] ? count($userIds) : null);
         $branding = DocumentExportPdfBranding::forPdf();
 
@@ -122,8 +134,8 @@ class UserController extends Controller
      *     schoolId: mixed,
      *     roleFilter: string,
      *     departmentFilter: string,
-     *     schools: \Illuminate\Support\Collection<int, University>,
-     *     departments: \Illuminate\Support\Collection<int, Department>
+     *     schools: Collection<int, University>,
+     *     departments: Collection<int, Department>
      * }
      */
     private function usersIndexContext(Request $request): array
@@ -246,8 +258,8 @@ class UserController extends Controller
      *     schoolId: mixed,
      *     roleFilter: string,
      *     departmentFilter: string,
-     *     schools: \Illuminate\Support\Collection<int, University>,
-     *     departments: \Illuminate\Support\Collection<int, Department>
+     *     schools: Collection<int, University>,
+     *     departments: Collection<int, Department>
      * }  $context
      * @return array<string, string|null>
      */
@@ -293,7 +305,7 @@ class UserController extends Controller
         // If quiz_id is provided, include assignment information
         if ($request->has('quiz_id')) {
             $quizId = $request->quiz_id;
-            $assignedUserIds = \App\Models\QuizAssignment::where('quiz_id', $quizId)
+            $assignedUserIds = QuizAssignment::where('quiz_id', $quizId)
                 ->pluck('user_id')
                 ->toArray();
 
@@ -322,7 +334,7 @@ class UserController extends Controller
             'name' => 'required|string|max:255',
             'email' => 'required|string|email|max:255|unique:users',
             'password' => 'required|string|min:8|confirmed',
-            'role' => 'required|string|in:admin,user,student,employee,teacher,applicant,technician',
+            'role' => 'required|string|'.UserRoles::validationRule(),
             'university_id' => [
                 'nullable',
                 Rule::requiredIf(function () use ($request) {
@@ -333,7 +345,7 @@ class UserController extends Controller
             'department_id' => [
                 'nullable',
                 Rule::requiredIf(function () use ($request) {
-                    return $request->role === 'employee';
+                    return UserRoles::isStaff($request->role);
                 }),
                 'exists:departments,id',
             ],
@@ -342,7 +354,7 @@ class UserController extends Controller
                 'integer',
                 Rule::exists('department_positions', 'id'),
                 Rule::requiredIf(function () use ($request) {
-                    return $request->role === 'employee';
+                    return UserRoles::isStaff($request->role);
                 }),
             ],
             'is_active' => 'boolean',
@@ -384,7 +396,7 @@ class UserController extends Controller
             'password' => Hash::make($request->password),
             'role' => $request->role,
             'university_id' => $universityId,
-            'department_id' => in_array($request->role, ['employee', 'student'], true) ? $request->department_id : null,
+            'department_id' => in_array($request->role, [...UserRoles::STAFF, 'student'], true) ? $request->department_id : null,
             'department_position_id' => $this->resolvedDepartmentPositionId($request),
             'is_active' => $request->has('is_active'),
             'required_training_hours' => $request->required_training_hours,
@@ -397,10 +409,10 @@ class UserController extends Controller
         ]);
 
         // Handle leave balances for employees
-        if ($request->role === 'employee' && ($request->filled('leave_allowance') || $request->filled('vacation_allowance') || $request->filled('sick_allowance'))) {
+        if (UserRoles::isStaff($request->role) && ($request->filled('leave_allowance') || $request->filled('vacation_allowance') || $request->filled('sick_allowance'))) {
             $currentYear = now()->year;
-            $defaultVacation = (float) \App\Models\Setting::get('default_vacation_balance', 0);
-            $defaultSick = (float) \App\Models\Setting::get('default_sick_leave_balance', 0);
+            $defaultVacation = (float) Setting::get('default_vacation_balance', 0);
+            $defaultSick = (float) Setting::get('default_sick_leave_balance', 0);
             $combinedDefault = $defaultVacation + $defaultSick;
             $combined = $request->filled('leave_allowance') ? (float) $request->leave_allowance : null;
 
@@ -432,7 +444,7 @@ class UserController extends Controller
         $totalDeficitFormatted = null;
         $totalDeficitHours = 0;
 
-        if ($user->role === 'employee') {
+        if ($user->isStaffMember()) {
             $currentYear = now()->year;
             $months = $user->overtime_months_credited ?? 12;
 
@@ -444,31 +456,31 @@ class UserController extends Controller
                 $overtimeWindowLabel = "Last {$months} month(s)";
             }
 
-            $defaultVacation = (float) \App\Models\Setting::get('default_vacation_balance', 15);
-            $defaultSick = (float) \App\Models\Setting::get('default_sick_leave_balance', 10);
+            $defaultVacation = (float) Setting::get('default_vacation_balance', 15);
+            $defaultSick = (float) Setting::get('default_sick_leave_balance', 10);
 
-            $leaveBalance = \App\Models\LeaveBalance::firstOrCreateWithCarryover(
+            $leaveBalance = LeaveBalance::firstOrCreateWithCarryover(
                 (int) $user->id,
                 (int) $currentYear,
                 (float) $defaultVacation,
                 (float) $defaultSick
             );
 
-            $usedVacation = \App\Models\LeaveRequest::where('user_id', $user->id)
+            $usedVacation = LeaveRequest::where('user_id', $user->id)
                 ->where('type', 'vacation_leave')
                 ->where('status', 'approved')
                 ->whereYear('start_date', $currentYear)
                 ->get()
                 ->sum->days;
 
-            $usedSick = \App\Models\LeaveRequest::where('user_id', $user->id)
+            $usedSick = LeaveRequest::where('user_id', $user->id)
                 ->where('type', 'sick_leave')
                 ->where('status', 'approved')
                 ->whereYear('start_date', $currentYear)
                 ->get()
                 ->sum->days;
 
-            $usedLeave = \App\Models\LeaveRequest::where('user_id', $user->id)
+            $usedLeave = LeaveRequest::where('user_id', $user->id)
                 ->whereIn('type', ['leave', 'vacation_leave', 'sick_leave'])
                 ->where('status', 'approved')
                 ->whereYear('start_date', $currentYear)
@@ -501,7 +513,7 @@ class UserController extends Controller
             $totalOvertimeHours = 0;
 
             // Get approved overtime leave requests for completed weeks only (count all, window only for expiration)
-            $approvedOvertimeRequests = \App\Models\LeaveRequest::where('user_id', $user->id)
+            $approvedOvertimeRequests = LeaveRequest::where('user_id', $user->id)
                 ->where('type', 'overtime')
                 ->where('status', 'approved')
                 ->whereDate('start_date', '<=', $today) // completed weeks only
@@ -526,10 +538,10 @@ class UserController extends Controller
             }
 
             // Get deficit hours for completed weeks starting from the user's first DTR week (for display only)
-            $firstDtr = \App\Models\Dtr::where('user_id', $user->id)->orderBy('date', 'asc')->first();
+            $firstDtr = Dtr::where('user_id', $user->id)->orderBy('date', 'asc')->first();
             if ($firstDtr) {
                 $firstWeekStart = $firstDtr->date->copy()->startOfWeek()->toDateString();
-                $totalDeficitHours = \App\Models\DtrDeficit::where('user_id', $user->id)
+                $totalDeficitHours = DtrDeficit::where('user_id', $user->id)
                     ->where('is_applied', true)
                     ->where('week_end_date', '<', $today->toDateString()) // Only completed weeks
                     ->where('week_start_date', '>=', $firstWeekStart)
@@ -562,7 +574,7 @@ class UserController extends Controller
         ]);
 
         // Apply setting globally to all employees
-        User::where('role', 'employee')->update([
+        User::whereIn('role', UserRoles::STAFF)->update([
             'overtime_months_credited' => $request->overtime_months_credited,
         ]);
 
@@ -636,7 +648,7 @@ class UserController extends Controller
             'name' => 'required|string|max:255',
             'email' => ['required', 'string', 'email', 'max:255', Rule::unique('users')->ignore($user->id)],
             'password' => 'nullable|string|min:8|confirmed',
-            'role' => 'required|string|in:admin,user,student,employee,teacher,applicant,technician',
+            'role' => 'required|string|'.UserRoles::validationRule(),
             'university_id' => [
                 'nullable',
                 Rule::requiredIf(function () use ($request) {
@@ -647,7 +659,7 @@ class UserController extends Controller
             'department_id' => [
                 'nullable',
                 Rule::requiredIf(function () use ($request) {
-                    return $request->role === 'employee';
+                    return UserRoles::isStaff($request->role);
                 }),
                 'exists:departments,id',
             ],
@@ -656,7 +668,7 @@ class UserController extends Controller
                 'integer',
                 Rule::exists('department_positions', 'id'),
                 Rule::requiredIf(function () use ($request) {
-                    return $request->role === 'employee';
+                    return UserRoles::isStaff($request->role);
                 }),
             ],
             'is_active' => 'boolean',
@@ -727,7 +739,7 @@ class UserController extends Controller
             'email' => $request->email,
             'role' => $request->role,
             'university_id' => $universityId,
-            'department_id' => in_array($request->role, ['employee', 'student'], true) ? $request->department_id : null,
+            'department_id' => in_array($request->role, [...UserRoles::STAFF, 'student'], true) ? $request->department_id : null,
             'department_position_id' => $this->resolvedDepartmentPositionId($request),
             'is_active' => $request->has('is_active'),
             'theme_color_enabled' => $request->boolean('theme_color_enabled'),
@@ -797,7 +809,7 @@ class UserController extends Controller
             }
         }
 
-        if ($request->role === 'employee') {
+        if (UserRoles::isStaff($request->role)) {
             $data['date_hired'] = $request->filled('date_hired') ? $request->date_hired : null;
             $data['tin'] = $this->nullableProfileValue($request->input('tin'));
             $data['sss_number'] = $this->nullableProfileValue($request->input('sss_number'));
@@ -836,10 +848,10 @@ class UserController extends Controller
         }
 
         // Handle leave balances for employees
-        if ($request->role === 'employee' && ($request->has('leave_allowance') || $request->has('vacation_allowance') || $request->has('sick_allowance'))) {
+        if (UserRoles::isStaff($request->role) && ($request->has('leave_allowance') || $request->has('vacation_allowance') || $request->has('sick_allowance'))) {
             $currentYear = now()->year;
-            $defaultVacation = (float) \App\Models\Setting::get('default_vacation_balance', 0);
-            $defaultSick = (float) \App\Models\Setting::get('default_sick_leave_balance', 0);
+            $defaultVacation = (float) Setting::get('default_vacation_balance', 0);
+            $defaultSick = (float) Setting::get('default_sick_leave_balance', 0);
 
             $leaveBalance = LeaveBalance::firstOrCreateWithCarryover(
                 (int) $user->id,
@@ -916,7 +928,7 @@ class UserController extends Controller
         $request->validate([
             'user_ids' => 'required|array',
             'user_ids.*' => 'exists:users,id',
-            'role' => 'required|string|in:admin,user,student,employee,teacher,applicant,technician',
+            'role' => 'required|string|'.UserRoles::validationRule(),
         ], [
             'user_ids.required' => 'Please select at least one user.',
             'user_ids.array' => 'Invalid user selection format.',
@@ -950,7 +962,7 @@ class UserController extends Controller
         }
 
         $payload = ['role' => $role];
-        if (! in_array($role, ['employee', 'student'], true)) {
+        if (! in_array($role, [...UserRoles::STAFF, 'student'], true)) {
             $payload['department_id'] = null;
         }
 
@@ -961,6 +973,7 @@ class UserController extends Controller
                 'admin' => 'Administrator',
                 'student' => 'Student',
                 'employee' => 'Employee',
+                'hr' => 'HR',
                 'teacher' => 'Teacher',
                 'applicant' => 'Applicant',
                 'technician' => 'Technician',
@@ -1009,7 +1022,7 @@ class UserController extends Controller
 
         $employeeIds = User::query()
             ->whereIn('id', $userIds)
-            ->where('role', 'employee')
+            ->whereIn('role', UserRoles::STAFF)
             ->pluck('id');
 
         if ($employeeIds->isNotEmpty() && $positionId === null) {
@@ -1060,11 +1073,11 @@ class UserController extends Controller
      */
     private function validateDepartmentPositionAssignment(Request $request): ?array
     {
-        if (! in_array($request->role, ['employee', 'student'], true)) {
+        if (! in_array($request->role, [...UserRoles::STAFF, 'student'], true)) {
             return null;
         }
 
-        if ($request->role === 'employee' && $request->filled('department_id')) {
+        if (UserRoles::isStaff($request->role) && $request->filled('department_id')) {
             $hasPositions = DepartmentPosition::query()
                 ->where('department_id', (int) $request->department_id)
                 ->active()
@@ -1075,8 +1088,8 @@ class UserController extends Controller
             }
         }
 
-        if ($request->role === 'employee' && ! $request->filled('department_position_id')) {
-            return ['department_position_id' => 'Please select a position for this employee.'];
+        if (UserRoles::isStaff($request->role) && ! $request->filled('department_position_id')) {
+            return ['department_position_id' => 'Please select a position for this staff member.'];
         }
 
         if (! $request->filled('department_position_id') || ! $request->filled('department_id')) {
@@ -1097,11 +1110,11 @@ class UserController extends Controller
 
     private function resolvedDepartmentPositionId(Request $request): ?int
     {
-        if (! in_array($request->role, ['employee', 'student'], true)) {
+        if (! in_array($request->role, [...UserRoles::STAFF, 'student'], true)) {
             return null;
         }
 
-        if ($request->role !== 'employee') {
+        if (! UserRoles::isStaff($request->role)) {
             return null;
         }
 

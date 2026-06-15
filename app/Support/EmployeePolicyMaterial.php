@@ -4,19 +4,16 @@ namespace App\Support;
 
 use Symfony\Component\HttpFoundation\Response;
 
-final class EmployeeHandbookMaterial
+final class EmployeePolicyMaterial
 {
-    public const SETTING_KEY = 'employee_handbook_material_pdfs';
-
-    /** @deprecated Legacy single-PDF setting key */
-    public const LEGACY_SETTING_KEY = 'employee_handbook_material_pdf';
+    public const SETTING_KEY = 'employee_policy_material_pdfs';
 
     /**
      * @return list<array{id: string, name: string, path: string, disk: string, sort: int}>
      */
     public static function all(): array
     {
-        return EmployeeDocumentMaterial::all('handbook');
+        return EmployeeDocumentMaterial::all('policy');
     }
 
     /**
@@ -24,7 +21,7 @@ final class EmployeeHandbookMaterial
      */
     public static function available(): array
     {
-        return EmployeeDocumentMaterial::available('handbook');
+        return EmployeeDocumentMaterial::available('policy');
     }
 
     /**
@@ -32,7 +29,7 @@ final class EmployeeHandbookMaterial
      */
     public static function find(string $id): ?array
     {
-        return EmployeeDocumentMaterial::find('handbook', $id);
+        return EmployeeDocumentMaterial::find('policy', $id);
     }
 
     /**
@@ -42,16 +39,11 @@ final class EmployeeHandbookMaterial
      */
     public static function syncFromAdminInput(array $nameUpdates, array $removeIds, array $newUploads): void
     {
-        EmployeeDocumentMaterial::syncFromAdminInput('handbook', $nameUpdates, $removeIds, $newUploads);
+        EmployeeDocumentMaterial::syncFromAdminInput('policy', $nameUpdates, $removeIds, $newUploads);
     }
 
     public static function streamResponseForId(string $id, string $disposition = 'inline'): Response
     {
-        return EmployeeDocumentMaterial::streamResponseForId('handbook', $id, $disposition);
-    }
-
-    public static function resolveDiskForPath(string $path, string $preferredDisk = ''): ?string
-    {
-        return EmployeeDocumentMaterial::resolveDiskForPath($path, $preferredDisk);
+        return EmployeeDocumentMaterial::streamResponseForId('policy', $id, $disposition);
     }
 }

@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\StudentNda;
 use App\Models\User;
 use App\Support\StudentNdaDocument;
+use App\Support\StudentNdaStorage;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 
@@ -16,7 +17,13 @@ class StudentNdaController extends Controller
         $user = $this->requireStudent();
 
         $nda = StudentNda::query()->where('user_id', $user->id)->first();
-        $previewUrl = ($nda && $nda->hasSignedUpload())
+
+        if ($nda) {
+            $nda->purgeRejectedSignedDocument();
+            $nda->refresh();
+        }
+
+        $previewUrl = ($nda && $nda->hasViewableSignedUpload())
             ? route('user.nda.preview')
             : '';
 
@@ -31,6 +38,14 @@ class StudentNdaController extends Controller
     public function generatePdf(Request $request)
     {
         $user = $this->requireStudent();
+
+        $existing = StudentNda::query()->where('user_id', $user->id)->first();
+        if ($existing && ! $existing->canEditNdaDetails()) {
+            return redirect()->route('user.nda.index')->withErrors([
+                'full_name' => 'Your NDA is approved and can no longer be edited or regenerated.',
+            ]);
+        }
+
         $validated = $request->validate(StudentNdaDocument::validationRules());
         $nda = StudentNdaDocument::fromInput($validated);
         $nda->user_id = $user->id;
@@ -66,6 +81,12 @@ class StudentNdaController extends Controller
             ]);
         }
 
+        if (! StudentNdaStorage::isConfigured()) {
+            return redirect()->back()->withErrors([
+                'signed_pdf' => StudentNdaStorage::notConfiguredMessage(),
+            ]);
+        }
+
         $validated = $request->validate(array_merge(
             StudentNdaDocument::validationRules(),
             ['signed_pdf' => ['required', 'file', 'mimes:pdf', 'max:10240']]
@@ -80,10 +101,13 @@ class StudentNdaController extends Controller
         }
 
         if ($existing && $existing->hasSignedUpload()) {
-            $this->deleteFileIfExists((string) $existing->signed_document_path, (string) ($existing->storage_disk ?? ''));
+            StudentNdaStorage::delete(
+                (string) $existing->signed_document_path,
+                (string) ($existing->storage_disk ?? '')
+            );
         }
 
-        [$storedPath, $disk] = $this->storePdfFile($validated['signed_pdf']);
+        [$storedPath, $disk] = StudentNdaStorage::store($validated['signed_pdf']);
 
         StudentNda::updateOrCreate(
             ['user_id' => $user->id],
@@ -97,18 +121,22 @@ class StudentNdaController extends Controller
                 'storage_disk' => $disk,
                 'signed_uploaded_at' => now(),
                 'reupload_allowed' => false,
+                'approval_status' => StudentNda::STATUS_PENDING,
+                'reviewed_by' => null,
+                'reviewed_at' => null,
+                'review_notes' => null,
             ]
         );
 
         return redirect()->route('user.nda.index')
-            ->with('success', 'Signed NDA uploaded successfully.');
+            ->with('success', 'Signed NDA uploaded successfully. An administrator must approve it before you can record attendance.');
     }
 
     public function preview()
     {
         $user = $this->requireStudent();
         $nda = StudentNda::query()->where('user_id', $user->id)->first();
-        abort_unless($nda && $nda->hasSignedUpload(), 404);
+        abort_unless($nda && $nda->hasViewableSignedUpload(), 404);
 
         return $this->streamStoredPdf(
             (string) $nda->signed_document_path,
@@ -126,83 +154,14 @@ class StudentNdaController extends Controller
         return $user;
     }
 
-    /**
-     * @return array{0: string, 1: string}
-     */
-    private function storePdfFile(\Illuminate\Http\UploadedFile $file): array
-    {
-        $dir = 'student-nda-documents';
-        $assetDisk = 'digitalocean';
-        $doConfigured = ! empty(env('DIGITALOCEAN_SPACES_KEY') ?: env('DO_SPACES_KEY'))
-            && ! empty(env('DIGITALOCEAN_SPACES_SECRET') ?: env('DO_SPACES_SECRET'))
-            && ! empty(env('DIGITALOCEAN_SPACES_BUCKET') ?: env('DO_SPACES_BUCKET'));
-
-        if ($doConfigured) {
-            $assetRoot = trim(env('DIGITALOCEAN_SPACES_ROOT_PATH', ''), '/');
-            $dir = $assetRoot ? $assetRoot.'/'.$dir : $dir;
-        }
-
-        $disk = $doConfigured ? $assetDisk : 'public';
-
-        return [(string) $file->store($dir, $disk), $disk];
-    }
-
-    private function deleteFileIfExists(string $path, string $preferredDisk = ''): void
-    {
-        if ($path === '') {
-            return;
-        }
-
-        $disks = array_values(array_unique(array_filter([
-            $preferredDisk,
-            'digitalocean',
-            'public',
-            config('filesystems.default', 'local'),
-        ])));
-
-        foreach ($disks as $disk) {
-            try {
-                if (Storage::disk($disk)->exists($path)) {
-                    Storage::disk($disk)->delete($path);
-
-                    return;
-                }
-            } catch (\Throwable) {
-                continue;
-            }
-        }
-    }
-
     private function streamStoredPdf(string $path, string $preferredDisk, string $filename)
     {
-        $disk = $this->resolveDiskForPath($path, $preferredDisk);
+        $disk = StudentNdaStorage::resolveDiskForPath($path, $preferredDisk);
         abort_if($disk === null, 404);
 
         return Storage::disk($disk)->response($path, $filename, [
             'Content-Type' => 'application/pdf',
             'Content-Disposition' => 'inline; filename="'.$filename.'"',
         ]);
-    }
-
-    private function resolveDiskForPath(string $path, string $preferredDisk = ''): ?string
-    {
-        $candidateDisks = array_values(array_unique(array_filter([
-            $preferredDisk,
-            'digitalocean',
-            'public',
-            'local',
-        ])));
-
-        foreach ($candidateDisks as $disk) {
-            try {
-                if (Storage::disk($disk)->exists($path)) {
-                    return $disk;
-                }
-            } catch (\Throwable) {
-                continue;
-            }
-        }
-
-        return null;
     }
 }

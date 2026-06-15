@@ -70,6 +70,30 @@
         </div>
     @endif
 
+    @if(auth()->user()->role === 'student' && empty($canStudentRecordAttendance))
+        <div class="mx-2 sm:mx-3 lg:mx-4 xl:mx-6 mt-4 rounded-lg border p-4 {{ ($studentNda && $studentNda->isPendingApproval()) ? 'border-amber-200 bg-amber-50' : (($studentNda && $studentNda->isRejected()) ? 'border-red-200 bg-red-50' : 'border-indigo-200 bg-indigo-50') }}">
+            <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+                <div>
+                    <p class="text-sm font-semibold text-gray-900">NDA required before recording attendance</p>
+                    @if(! $studentNda || (! $studentNda->hasSignedUpload() && ! $studentNda->isRejected()))
+                        <p class="text-sm text-gray-700 mt-1">Upload your signed Non-Disclosure Agreement (NDA) and wait for administrator approval before you can use Record Attendance.</p>
+                    @elseif($studentNda->isPendingApproval())
+                        <p class="text-sm text-gray-700 mt-1">Your signed NDA was uploaded on {{ $studentNda->signed_uploaded_at?->format('M d, Y h:i A') }} and is waiting for administrator review.</p>
+                    @elseif($studentNda->isRejected())
+                        <p class="text-sm text-gray-700 mt-1">Your NDA was rejected and the signed file was removed. Please upload a corrected signed PDF and wait for approval.</p>
+                        @if($studentNda->review_notes)
+                            <p class="text-sm text-red-700 mt-2"><span class="font-medium">Admin note:</span> {{ $studentNda->review_notes }}</p>
+                        @endif
+                    @endif
+                </div>
+                <a href="{{ route('user.nda.index') }}"
+                   class="inline-flex items-center justify-center px-4 py-2 rounded-lg bg-indigo-600 text-white text-sm font-medium hover:bg-indigo-700 whitespace-nowrap">
+                    Go to NDA
+                </a>
+            </div>
+        </div>
+    @endif
+
 
     <!-- Filter Form -->
     <div class="bg-white rounded-lg shadow border border-gray-200 p-4 mx-2 sm:mx-3 lg:mx-4 xl:mx-6 mt-4">
@@ -250,13 +274,24 @@
                 </div>
                 <div class="flex items-center gap-3">
                     @if(auth()->user()->role === 'student')
-                        <button onclick="openRecordAttendanceModal()"
+                        @if(! empty($canStudentRecordAttendance))
+                        <button type="button" onclick="openRecordAttendanceModal()"
                                 class="inline-flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm font-medium">
                             <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
                             </svg>
                             Record Attendance
                         </button>
+                        @else
+                        <button type="button" disabled
+                                title="Upload and get your NDA approved first"
+                                class="inline-flex items-center px-4 py-2 bg-gray-300 text-gray-600 rounded-lg cursor-not-allowed text-sm font-medium">
+                            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+                            </svg>
+                            Record Attendance
+                        </button>
+                        @endif
                     @endif
                 </div>
             </div>

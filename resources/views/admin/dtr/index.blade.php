@@ -255,6 +255,9 @@
     </div>
 
     <!-- DTR Table -->
+    @php
+        $hrDtrLimitedView = auth()->user()?->isHr() ?? false;
+    @endphp
     <div class="bg-white rounded-2xl shadow-xl border border-gray-200 overflow-hidden">
         <div class="px-6 py-4 border-b border-gray-200 bg-gray-50">
             <h2 class="text-lg font-semibold text-gray-900">Time Records</h2>
@@ -321,11 +324,15 @@
                                                 <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
                                                 <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Worked Hours</th>
                                                 <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Added Time From Note</th>
+                                                @unless($hrDtrLimitedView)
                                                 <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total Hours</th>
                                                 <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Overtime</th>
+                                                @endunless
                                                 <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Activity %</th>
                                                 <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                                                @unless($hrDtrLimitedView)
                                                 <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Remarks</th>
+                                                @endunless
                                             </tr>
                                         </thead>
                                         <tbody class="bg-white divide-y divide-gray-200">
@@ -358,6 +365,7 @@
                                                             {{ $extraMinutes > 0 ? $extraFormatted : '00:00' }}
                                                         </div>
                                                     </td>
+                                                    @unless($hrDtrLimitedView)
                                                     <td class="px-3 py-2 whitespace-nowrap">
                                                         @php
                                                             $totalMinutes = (int) round(($dtr->total_hours ?? 0) * 60);
@@ -380,6 +388,7 @@
                                                             {{ $otMinutes > 0 ? $otFormatted : '00:00' }}
                                                         </div>
                                                     </td>
+                                                    @endunless
                                                     <td class="px-3 py-2 whitespace-nowrap">
                                                         <div class="text-sm font-medium text-indigo-700">
                                                             {{ $dtr->activity_percentage !== null ? number_format((float) $dtr->activity_percentage, 2) . '%' : '-' }}
@@ -415,7 +424,23 @@
                                                         <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full {{ $statusClass }}">
                                                             {{ $statusLabel }}
                                                         </span>
+                                                        @if($hrDtrLimitedView && $dtr->exists && $dtr->id)
+                                                            <div class="mt-2 flex items-center gap-2">
+                                                                <a href="{{ url('/admin/dtr/' . $dtr->id . '/edit') }}"
+                                                                   class="inline-flex items-center px-2.5 py-1.5 border border-indigo-200 text-xs font-medium rounded-md text-indigo-700 bg-indigo-50 hover:bg-indigo-100">
+                                                                    Edit
+                                                                </a>
+                                                                <form action="{{ url('/admin/dtr/' . $dtr->id) }}" method="POST" class="inline" onsubmit="return confirm('Are you sure you want to delete this DTR record? This action cannot be undone.');">
+                                                                    @csrf
+                                                                    @method('DELETE')
+                                                                    <button type="submit" class="inline-flex items-center px-2.5 py-1.5 border border-red-200 text-xs font-medium rounded-md text-red-700 bg-red-50 hover:bg-red-100">
+                                                                        Delete
+                                                                    </button>
+                                                                </form>
+                                                            </div>
+                                                        @endif
                                                     </td>
+                                                    @unless($hrDtrLimitedView)
                                                     <td class="px-3 py-2">
                                                         <div class="flex items-center space-x-3">
                                                             <div class="text-sm text-gray-500 max-w-xs truncate" title="{{ $dtr->remarks }}">
@@ -438,6 +463,7 @@
                                                             @endif
                                                         </div>
                                                     </td>
+                                                    @endunless
                                                 </tr>
                                             @endforeach
                                         </tbody>
@@ -509,24 +535,28 @@
                                                 </td>
                                                 <td class="px-3 py-3 whitespace-nowrap" colspan="2">
                                                     <div class="flex items-center space-x-3 flex-wrap gap-y-2">
+                                                        @unless($hrDtrLimitedView)
                                                         <div>
                                                             <div class="text-xs text-gray-600 font-medium mb-1">Weekly Total</div>
                                                             <div class="text-base font-bold text-indigo-900 bg-white px-3 py-1 rounded-lg border border-indigo-200 inline-block">
                                                                 {{ $weeklyTotalMinutes > 0 ? $weeklyTotalFormatted : '00:00' }}
                                                             </div>
                                                         </div>
+                                                        @endunless
                                                         <div>
                                                             <div class="text-xs text-gray-600 font-medium mb-1">Base</div>
                                                             <div class="text-sm font-semibold text-gray-700 bg-white px-2 py-1 rounded border border-gray-200 inline-block">
                                                                 40:00
                                                             </div>
                                                         </div>
+                                                        @unless($hrDtrLimitedView)
                                                         <div>
                                                             <div class="text-xs text-gray-600 font-medium mb-1">Overtime</div>
                                                             <div class="text-sm font-bold {{ $weeklyOvertimeMinutes > 0 ? 'text-orange-600' : 'text-gray-600' }} bg-white px-2 py-1 rounded border {{ $weeklyOvertimeMinutes > 0 ? 'border-orange-200' : 'border-gray-200' }} inline-block">
                                                                 {{ $weeklyOvertimeMinutes > 0 ? $weeklyOvertimeFormatted : '00:00' }}
                                                             </div>
                                                         </div>
+                                                        @endunless
                                                         <div>
                                                             <div class="text-xs text-gray-600 font-medium mb-1">Deficit</div>
                                                             @if($showDeficit)
@@ -539,6 +569,7 @@
                                                                 </div>
                                                             @endif
                                                         </div>
+                                                        @unless($hrDtrLimitedView)
                                                         <div>
                                                             <div class="text-xs text-gray-600 font-medium mb-1">Balance (Deficit - Overtime)</div>
                                                             @if($showDeficit)
@@ -551,9 +582,10 @@
                                                                 </div>
                                                             @endif
                                                         </div>
+                                                        @endunless
                                                     </div>
                                                 </td>
-                                                <td class="px-3 py-3 whitespace-nowrap" colspan="4">
+                                                <td class="px-3 py-3 whitespace-nowrap" colspan="{{ $hrDtrLimitedView ? 2 : 4 }}">
                                                     <div class="text-xs text-indigo-600 font-medium">
                                                         {{ $week['label'] }} • @if($showDeficit){{ $deficitMinutes > 0 ? 'Deficit: ' . $deficitFormatted . ' hours' : 'No deficit' }}@else<span class="text-gray-500">Current week - deficit will be calculated after week ends</span>@endif
                                                     </div>

@@ -436,8 +436,6 @@ Route::prefix('admin')->middleware(['auth', 'admin'])->group(function () {
         Route::middleware(['admin.subfeature:employee_management,employee_contract'])->get('/employee-documents/contract', fn (App\Http\Controllers\Admin\EmployeeDocumentController $controller, Illuminate\Http\Request $request) => $controller->index($request, 'contract'))->name('admin.employee-documents.contract');
         Route::middleware(['admin.subfeature:employee_management,employee_policy'])->get('/employee-documents/policy', fn (App\Http\Controllers\Admin\EmployeeDocumentController $controller, Illuminate\Http\Request $request) => $controller->index($request, 'policy'))->name('admin.employee-documents.policy');
         Route::middleware(['admin.subfeature:employee_management,employee_handbook'])->get('/employee-documents/handbook', fn (App\Http\Controllers\Admin\EmployeeDocumentController $controller, Illuminate\Http\Request $request) => $controller->index($request, 'handbook'))->name('admin.employee-documents.handbook');
-        Route::middleware(['admin.subfeature:employee_management,employee_handbook'])->post('/employee-documents/handbook/material', [App\Http\Controllers\Admin\EmployeeDocumentController::class, 'uploadHandbookMaterial'])->name('admin.employee-documents.handbook-material.upload');
-        Route::middleware(['admin.subfeature:employee_management,employee_handbook'])->delete('/employee-documents/handbook/material', [App\Http\Controllers\Admin\EmployeeDocumentController::class, 'removeHandbookMaterial'])->name('admin.employee-documents.handbook-material.remove');
         Route::get('/employee-documents/{type}/template', [App\Http\Controllers\Admin\EmployeeDocumentController::class, 'editTemplate'])->name('admin.employee-documents.template')->where('type', 'nda|contract|policy|handbook');
         Route::post('/employee-documents/{type}/template', [App\Http\Controllers\Admin\EmployeeDocumentController::class, 'updateTemplate'])->name('admin.employee-documents.template.update')->where('type', 'nda|contract|policy|handbook');
         Route::get('/employee-documents/signatures', [App\Http\Controllers\Admin\EmployeeDocumentController::class, 'signatures'])->name('admin.employee-documents.signatures');
@@ -511,6 +509,8 @@ Route::prefix('admin')->middleware(['auth', 'admin'])->group(function () {
         Route::get('/student-leave-requests', [App\Http\Controllers\Admin\LeaveRequestController::class, 'studentIndex'])->name('admin.student-leave-requests.index');
         Route::get('/student-leave-calendar', [App\Http\Controllers\Admin\LeaveRequestController::class, 'studentCalendar'])->name('admin.student-leave-requests.calendar');
         Route::get('/student-management/nda-files', [App\Http\Controllers\Admin\StudentNdaController::class, 'index'])->name('admin.student-nda-files.index');
+        Route::post('/student-management/nda-files/{studentNda}/approve', [App\Http\Controllers\Admin\StudentNdaController::class, 'approve'])->name('admin.student-nda-files.approve');
+        Route::post('/student-management/nda-files/{studentNda}/reject', [App\Http\Controllers\Admin\StudentNdaController::class, 'reject'])->name('admin.student-nda-files.reject');
         Route::post('/student-management/nda-files/{studentNda}/allow-reupload', [App\Http\Controllers\Admin\StudentNdaController::class, 'allowReupload'])->name('admin.student-nda-files.allow-reupload');
         Route::get('/student-management/nda-files/{studentNda}/preview', [App\Http\Controllers\Admin\StudentNdaController::class, 'preview'])->name('admin.student-nda-files.preview');
         Route::post('/student-leave-requests/create-for-student', [App\Http\Controllers\Admin\LeaveRequestController::class, 'storeForStudent'])->name('admin.student-leave-requests.store-for-student');
@@ -770,8 +770,10 @@ Route::middleware(['auth', 'student.not_terminated'])->group(function () {
     Route::post('/documents/{type}/sign', [App\Http\Controllers\User\EmployeeDocumentController::class, 'sign'])->name('user.employee-documents.sign')->where('type', 'nda|contract|policy|handbook');
     Route::get('/documents/{type}/pdf', [App\Http\Controllers\User\EmployeeDocumentController::class, 'generatePdf'])->name('user.employee-documents.pdf')->where('type', 'nda|contract|policy|handbook');
     Route::get('/documents/{type}/preview', [App\Http\Controllers\User\EmployeeDocumentController::class, 'preview'])->name('user.employee-documents.preview')->where('type', 'nda|contract|policy|handbook');
-    Route::get('/documents/handbook-material', [App\Http\Controllers\User\EmployeeDocumentController::class, 'handbookMaterial'])->name('user.employee-documents.handbook-material');
-    Route::get('/documents/handbook-material/pdf', [App\Http\Controllers\User\EmployeeDocumentController::class, 'streamHandbookMaterial'])->name('user.employee-documents.handbook-material.pdf');
+    Route::get('/documents/handbook-material/{id}', [App\Http\Controllers\User\EmployeeDocumentController::class, 'handbookMaterial'])->name('user.employee-documents.handbook-material');
+    Route::get('/documents/handbook-material/{id}/pdf', [App\Http\Controllers\User\EmployeeDocumentController::class, 'streamHandbookMaterial'])->name('user.employee-documents.handbook-material.pdf');
+    Route::get('/documents/policy-material/{id}', [App\Http\Controllers\User\EmployeeDocumentController::class, 'policyMaterial'])->name('user.employee-documents.policy-material');
+    Route::get('/documents/policy-material/{id}/pdf', [App\Http\Controllers\User\EmployeeDocumentController::class, 'streamPolicyMaterial'])->name('user.employee-documents.policy-material.pdf');
 
     // Chat Routes
     Route::get('/chat/messages', [ChatController::class, 'index'])->name('chat.messages');

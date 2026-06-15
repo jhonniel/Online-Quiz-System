@@ -90,7 +90,10 @@ class LeaveRequestController extends Controller
             $baseQuery->where('user_id', $request->employee);
         }
         if ($request->has('type') && $request->type) {
-            $baseQuery->where('type', $request->type);
+            $type = (string) $request->type;
+            if (! $user->isHr() || LeaveRequest::isHrViewableType($type)) {
+                $baseQuery->where('type', $type);
+            }
         }
         if ($search !== '') {
             $baseQuery->where(function ($q) use ($search) {
@@ -110,6 +113,8 @@ class LeaveRequestController extends Controller
         }
 
         $this->applyEmployeeLeaveRequestDateRangeFilter($baseQuery, $request);
+
+        $this->applyHrLeaveTypeScope($baseQuery, $user);
 
         $stats = [
             'total' => (clone $baseQuery)->count(),
@@ -145,7 +150,8 @@ class LeaveRequestController extends Controller
 
         $departments = $departmentsQuery->orderBy('name')->get();
 
-        return view('admin.leave-requests.index', compact('leaveRequests', 'stats', 'employees', 'departments', 'search', 'perPage'));
+        return view('admin.leave-requests.index', compact('leaveRequests', 'stats', 'employees', 'departments', 'search', 'perPage'))
+            ->with('hrLeaveTypesOnly', $user->isHr());
     }
 
     public function exportApprovedCsv(Request $request): StreamedResponse
@@ -538,8 +544,13 @@ class LeaveRequestController extends Controller
         }
 
         if ($request->filled('type')) {
-            $query->where('type', $request->type);
+            $type = (string) $request->type;
+            if (! $user->isHr() || LeaveRequest::isHrViewableType($type)) {
+                $query->where('type', $type);
+            }
         }
+
+        $this->applyHrLeaveTypeScope($query, $user);
 
         if ($request->filled('department_id')) {
             $selectedDeptId = $request->department_id;
@@ -673,6 +684,8 @@ class LeaveRequestController extends Controller
      */
     public function show(Request $request, LeaveRequest $leaveRequest)
     {
+        $this->assertCanAccessEmployeeLeaveRequest($leaveRequest);
+
         $leaveRequest->load(['user.department', 'reviewer', 'dtrTimeRequest', 'logs.performer']);
         $teacherExcusedBatchmates = LeaveRequest::siblingsInTeacherExcusedFiling($leaveRequest);
         $backLink = $this->adminLeaveRequestBackLink($request, $leaveRequest);
@@ -869,6 +882,14 @@ class LeaveRequestController extends Controller
             ->all();
 
         $authUser = $this->authUser();
+
+        if ($authUser?->isHr()) {
+            $leaveTypeOptions = array_values(array_filter(
+                $leaveTypeOptions,
+                fn (array $option) => LeaveRequest::isHrViewableType($option['value'])
+            ));
+        }
+
         $canEditLeaveRequestDetails = $authUser !== null
             && $this->userCanManageLeaveRequest($leaveRequest, $authUser);
 
@@ -900,6 +921,10 @@ class LeaveRequestController extends Controller
         }
 
         $allowedTypes = LeaveRequest::adminSelectableTypesForRole($leaveRequest->user->role);
+        $authUser = $this->requireAuthUser();
+        if ($authUser->isHr()) {
+            $allowedTypes = array_values(array_intersect($allowedTypes, LeaveRequest::hrViewableTypes()));
+        }
 
         $validated = $request->validate([
             'type' => ['required', Rule::in($allowedTypes)],
@@ -1142,6 +1167,8 @@ class LeaveRequestController extends Controller
             $leaveQuery->where('user_id', $employeeId);
         }
 
+        $this->applyHrLeaveTypeScope($leaveQuery, $user);
+
         $leaveRequests = $leaveQuery->get();
 
         // Prepare map of day => leave entries
@@ -1233,6 +1260,7 @@ class LeaveRequestController extends Controller
             'departments' => $departments,
             'selectedEmployeeId' => $employeeId,
             'selectedDepartmentId' => $departmentId,
+            'hrLeaveTypesOnly' => $user->isHr(),
         ]);
     }
 
@@ -1244,17 +1272,19 @@ class LeaveRequestController extends Controller
         $user = $this->requireAuthUser();
 
         // Admin-side filing for employees: allow any leave type and any date (including past dates).
-        $allowedTypes = [
-            'vacation_leave',
-            'sick_leave',
-            'work_from_home',
-            'absent',
-            'overtime',
-            'offset',
-            'additional_time',
-            'travel',
-            'other',
-        ];
+        $allowedTypes = $user->isHr()
+            ? LeaveRequest::hrViewableTypes()
+            : [
+                'vacation_leave',
+                'sick_leave',
+                'work_from_home',
+                'absent',
+                'overtime',
+                'offset',
+                'additional_time',
+                'travel',
+                'other',
+            ];
 
         $validated = $request->validate([
             'user_ids' => [
@@ -1424,6 +1454,8 @@ class LeaveRequestController extends Controller
      */
     public function approve(Request $request, LeaveRequest $leaveRequest)
     {
+        $this->assertCanAccessEmployeeLeaveRequest($leaveRequest);
+
         $request->validate([
             'admin_notes' => 'nullable|string|max:1000',
         ]);
@@ -1515,6 +1547,8 @@ class LeaveRequestController extends Controller
      */
     public function forceAccept(Request $request, LeaveRequest $leaveRequest)
     {
+        $this->assertCanAccessEmployeeLeaveRequest($leaveRequest);
+
         // Only allow force accept for offset requests
         if ($leaveRequest->type !== 'offset') {
             return $this->redirectToAdminLeaveRequestShow($leaveRequest)
@@ -1594,6 +1628,8 @@ class LeaveRequestController extends Controller
      */
     public function reject(Request $request, LeaveRequest $leaveRequest)
     {
+        $this->assertCanAccessEmployeeLeaveRequest($leaveRequest);
+
         $request->validate([
             'admin_notes' => 'nullable|string|max:1000',
         ]);
@@ -1661,6 +1697,8 @@ class LeaveRequestController extends Controller
      */
     public function verify(Request $request, LeaveRequest $leaveRequest)
     {
+        $this->assertCanAccessEmployeeLeaveRequest($leaveRequest);
+
         $request->validate([
             'admin_notes' => 'required|string|max:1000',
         ]);
@@ -1724,6 +1762,8 @@ class LeaveRequestController extends Controller
      */
     public function resubmit(Request $request, LeaveRequest $leaveRequest)
     {
+        $this->assertCanAccessEmployeeLeaveRequest($leaveRequest);
+
         $request->validate([
             'admin_notes' => 'nullable|string|max:1000',
         ]);
@@ -2372,6 +2412,29 @@ class LeaveRequestController extends Controller
         }
     }
 
+    private function applyHrLeaveTypeScope(Builder $query, User $user): void
+    {
+        if ($user->isHr()) {
+            $query->whereIn('type', LeaveRequest::hrViewableTypes());
+        }
+    }
+
+    private function assertCanAccessEmployeeLeaveRequest(LeaveRequest $leaveRequest): User
+    {
+        $authUser = $this->requireAuthUser();
+        $leaveRequest->loadMissing('user');
+
+        if (! $leaveRequest->user) {
+            abort(404, 'Leave request user not found.');
+        }
+
+        if ($authUser->isHr() && ! LeaveRequest::isHrViewableType($leaveRequest->type)) {
+            abort(403, 'You do not have permission to access this leave request type.');
+        }
+
+        return $authUser;
+    }
+
     /**
      * Whether the user may edit type/dates on an employee leave request details page.
      * Matches route access (Leave Requests sub-feature), not the broader Employee Management parent alone.
@@ -2399,11 +2462,7 @@ class LeaveRequestController extends Controller
      */
     private function assertCanManageLeaveRequestSubject(LeaveRequest $leaveRequest): void
     {
-        $authUser = $this->requireAuthUser();
-
-        if (! $leaveRequest->user) {
-            abort(404, 'Leave request user not found.');
-        }
+        $authUser = $this->assertCanAccessEmployeeLeaveRequest($leaveRequest);
 
         if (! $this->userCanManageLeaveRequest($leaveRequest, $authUser)) {
             abort(403, 'You do not have permission to manage this leave request.');
@@ -2893,6 +2952,8 @@ class LeaveRequestController extends Controller
      */
     public function destroy(LeaveRequest $leaveRequest)
     {
+        $this->assertCanAccessEmployeeLeaveRequest($leaveRequest);
+
         // Check if this request was filed by an admin
         $filedByAdminLog = $leaveRequest->logs()
             ->where('action', 'filed_by_admin')

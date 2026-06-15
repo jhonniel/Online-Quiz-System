@@ -15,7 +15,7 @@ final class EmployeeNdaDocument
      */
     public static function viewData(User $user, ?\DateTimeInterface $signedAt = null, ?bool $includeSignatureAssets = null): array
     {
-        $includeSignatureAssets ??= $signedAt !== null || $user->hasESignature();
+        $includeSignatureAssets ??= $signedAt !== null;
 
         $agreementDate = $signedAt
             ? Carbon::instance($signedAt)
@@ -59,7 +59,7 @@ final class EmployeeNdaDocument
             ->output();
     }
 
-    public static function renderSignedPdfBinary(User $user, ?\DateTimeInterface $signedAt = null): string
+    public static function renderSignedPdfBinary(User $user, ?\DateTimeInterface $signedAt = null, ?string $p12Password = null): string
     {
         $signedAt ??= now();
         $pdfBinary = self::renderPdfBinary($user, $signedAt);
@@ -70,6 +70,7 @@ final class EmployeeNdaDocument
             'contact' => (string) Setting::get('contact_phone', ''),
             'location' => (string) Setting::get('contact_address', ''),
             'visible_appearance' => false,
+            'password' => $p12Password,
         ]);
     }
 

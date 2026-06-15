@@ -137,7 +137,7 @@ class User extends Authenticatable
     protected static function booted(): void
     {
         static::saving(function (User $user): void {
-            if ($user->role === 'teacher' || ! in_array($user->role, ['employee', 'student'], true)) {
+            if ($user->role === 'teacher' || ! in_array($user->role, ['employee', 'hr', 'student'], true)) {
                 $user->department_id = null;
                 $user->department_position_id = null;
             }
@@ -166,7 +166,7 @@ class User extends Authenticatable
 
     public function pendingSystemAnnouncement(): ?SystemAnnouncement
     {
-        if ($this->role !== 'employee' || ! $this->is_active) {
+        if (! $this->isStaffMember() || ! $this->is_active) {
             return null;
         }
 
@@ -185,7 +185,7 @@ class User extends Authenticatable
      */
     public function activeEmploymentDurationLabel(): ?string
     {
-        if ($this->role !== 'employee' || ! $this->is_active || $this->date_hired === null) {
+        if (! $this->isStaffMember() || ! $this->is_active || $this->date_hired === null) {
             return null;
         }
 
@@ -268,6 +268,18 @@ class User extends Authenticatable
         return $this->hasOne(StudentNda::class);
     }
 
+    /** Whether a student may use Record Attendance (signed NDA approved by admin). */
+    public function canStudentRecordAttendance(): bool
+    {
+        if (! $this->isStudent()) {
+            return true;
+        }
+
+        $this->loadMissing('studentNda');
+
+        return $this->studentNda?->isApprovedForAttendance() ?? false;
+    }
+
     public function department()
     {
         return $this->belongsTo(Department::class);
@@ -337,6 +349,17 @@ class User extends Authenticatable
         return $this->role === 'employee';
     }
 
+    public function isHr()
+    {
+        return $this->role === 'hr';
+    }
+
+    /** Employee or HR — internal staff with department workflows. */
+    public function isStaffMember(): bool
+    {
+        return in_array($this->role, ['employee', 'hr'], true);
+    }
+
     public function isApplicant()
     {
         return $this->role === 'applicant';
@@ -368,6 +391,7 @@ class User extends Authenticatable
             'admin' => 'Administrator',
             'student' => 'Student',
             'employee' => 'Employee',
+            'hr' => 'HR',
             'teacher' => 'Teacher',
             'applicant' => 'Applicant',
             'technician' => 'Technician',
@@ -382,6 +406,7 @@ class User extends Authenticatable
             'admin' => 'bg-purple-100 text-purple-800',
             'student' => 'bg-blue-100 text-blue-800',
             'employee' => 'bg-green-100 text-green-800',
+            'hr' => 'bg-teal-100 text-teal-800',
             'teacher' => 'bg-sky-100 text-sky-800',
             'applicant' => 'bg-yellow-100 text-yellow-800',
             'technician' => 'bg-cyan-100 text-cyan-800',
@@ -1413,7 +1438,7 @@ class User extends Authenticatable
      */
     public function canAccessQrCode(): bool
     {
-        if ($this->isEmployee()) {
+        if ($this->isStaffMember()) {
             return true;
         }
 

@@ -9,7 +9,6 @@ use App\Support\AdminEmployeeDepartmentScope;
 use App\Support\EmployeeDocumentFooter;
 use App\Support\EmployeeDocumentTemplate;
 use App\Support\EmployeeDocumentPositionRules;
-use App\Support\EmployeeHandbookMaterial;
 use App\Support\EmployeeSampleDocument;
 use App\Support\UserESignatureStorage;
 use Illuminate\Http\Request;
@@ -62,7 +61,7 @@ class EmployeeDocumentController extends Controller
     public function uploadEmployeeESignature(Request $request, User $employee)
     {
         abort_unless($this->requireAuthUser()->canAccessAnyEmployeeDocumentFeature(), 403);
-        abort_unless($employee->role === 'employee', 404);
+        abort_unless($employee->isStaffMember(), 404);
         abort_unless($this->canAccessEmployee($employee), 403);
 
         $validated = $request->validate([
@@ -84,7 +83,7 @@ class EmployeeDocumentController extends Controller
     public function removeEmployeeESignature(Request $request, User $employee)
     {
         abort_unless($this->requireAuthUser()->canAccessAnyEmployeeDocumentFeature(), 403);
-        abort_unless($employee->role === 'employee', 404);
+        abort_unless($employee->isStaffMember(), 404);
         abort_unless($this->canAccessEmployee($employee), 403);
 
         UserESignatureStorage::delete($employee->e_signature_path);
@@ -147,45 +146,14 @@ class EmployeeDocumentController extends Controller
             'employees' => $employees,
             'search' => $search,
             'status' => $status,
-            'handbookMaterialAvailable' => $type === 'handbook' && EmployeeHandbookMaterial::isAvailable(),
         ]);
-    }
-
-    public function uploadHandbookMaterial(Request $request)
-    {
-        $this->authorizeDocumentType('handbook');
-
-        $validated = $request->validate([
-            'handbook_material_pdf' => 'required|file|mimes:pdf|max:20480',
-        ], [
-            'handbook_material_pdf.required' => 'Please choose a PDF file to upload.',
-            'handbook_material_pdf.mimes' => 'The handbook must be a PDF file.',
-            'handbook_material_pdf.max' => 'The handbook PDF must not be larger than 20MB.',
-        ]);
-
-        EmployeeHandbookMaterial::storeUpload($validated['handbook_material_pdf']);
-
-        return redirect()
-            ->route('admin.employee-documents.handbook')
-            ->with('success', 'Employee Handbook PDF uploaded. Employees can now view it from their Documents menu.');
-    }
-
-    public function removeHandbookMaterial(Request $request)
-    {
-        $this->authorizeDocumentType('handbook');
-
-        EmployeeHandbookMaterial::deleteStored();
-
-        return redirect()
-            ->route('admin.employee-documents.handbook')
-            ->with('success', 'Employee Handbook PDF removed.');
     }
 
     public function preview(EmployeeDocumentSignature $signature)
     {
         $this->authorizeDocumentType($signature->document_type);
         $signature->load('user');
-        abort_unless($signature->user?->role === 'employee', 404);
+        abort_unless($signature->user?->isStaffMember(), 404);
         abort_unless($this->canAccessEmployee($signature->user), 403);
         abort_unless($signature->isSigned(), 404);
 
@@ -284,7 +252,7 @@ class EmployeeDocumentController extends Controller
     {
         abort_unless(EmployeeSampleDocument::isValidType($type), 404);
         $this->authorizeDocumentType($type);
-        abort_unless($employee->role === 'employee', 404);
+        abort_unless($employee->isStaffMember(), 404);
         abort_unless($this->canAccessEmployee($employee), 403);
 
         $employee->loadMissing('department');

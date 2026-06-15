@@ -135,7 +135,7 @@ final class AdminEmployeeDepartmentScope
             return false;
         }
 
-        if ($employee->role === 'employee') {
+        if ($employee->isStaffMember()) {
             return true;
         }
 
@@ -143,6 +143,6 @@ final class AdminEmployeeDepartmentScope
             return false;
         }
 
-        return User::query()->whereKey($employee->id)->where('role', 'employee')->exists();
+        return User::query()->whereKey($employee->id)->whereIn('role', ['employee', 'hr'])->exists();
     }
 }

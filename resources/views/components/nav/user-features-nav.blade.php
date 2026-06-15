@@ -125,7 +125,7 @@
                         @endif
 
                         <!-- DTR (Employee Only) -->
-                        @if(in_array(auth()->user()->role, ['employee', 'student']))
+                        @if(in_array(auth()->user()->role, ['employee', 'hr', 'student']))
                         <a href="{{ url('/dtr') }}"
                            class="group flex items-center px-2 py-2 text-sm font-medium rounded-md transition-colors duration-200 {{ request()->routeIs('user.dtr.*') ? 'bg-indigo-700 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white' }}"
                            :class="sidebarCollapsed ? 'justify-center' : ''"
@@ -140,7 +140,7 @@
                         @endif
 
                         <!-- File Storage (Employee & Student) -->
-                        @if(in_array(auth()->user()->role, ['employee', 'student']))
+                        @if(in_array(auth()->user()->role, ['employee', 'hr', 'student']))
                         <a href="{{ url('/files') }}"
                            class="group flex items-center px-2 py-2 text-sm font-medium rounded-md transition-colors duration-200 {{ request()->routeIs('user.files.*') ? 'bg-indigo-700 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white' }}"
                            :class="sidebarCollapsed ? 'justify-center' : ''"
@@ -154,7 +154,7 @@
                         </a>
                         @endif
 
-                        @if(auth()->user()->role === 'employee')
+                        @if(auth()->user()->isStaffMember())
                         <a href="{{ url('/document-requests') }}"
                            class="group flex items-center px-2 py-2 text-sm font-medium rounded-md transition-colors duration-200 {{ request()->routeIs('user.employee-file-requests.*') ? 'bg-indigo-700 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white' }}"
                            :class="sidebarCollapsed ? 'justify-center' : ''"
@@ -180,7 +180,7 @@
                         @endif
 
                         <!-- Leave Requests (Employee & Student) -->
-                        @if(in_array(auth()->user()->role, ['employee', 'student']))
+                        @if(in_array(auth()->user()->role, ['employee', 'hr', 'student']))
                         <a href="{{ url('/leave-requests') }}"
                            class="group flex items-center px-2 py-2 text-sm font-medium rounded-md transition-colors duration-200 {{ request()->routeIs('user.leave-requests.*') ? 'bg-indigo-700 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white' }}"
                            :class="sidebarCollapsed ? 'justify-center' : ''"
@@ -234,7 +234,15 @@
                             </span>
                         </a>
 
-                        @if(auth()->user()->role === 'employee' && \App\Models\User::employeeDocumentsNavEnabled())
+                        @if(auth()->user()->isStaffMember() && \App\Models\User::employeeDocumentsNavEnabled())
+                        @php
+                            $handbookMaterials = \App\Support\EmployeeHandbookMaterial::available();
+                            $policyMaterials = \App\Support\EmployeePolicyMaterial::available();
+                            $handbookNavActive = request()->routeIs('user.employee-documents.show') && request()->route('type') === 'handbook'
+                                || request()->routeIs('user.employee-documents.handbook-material*');
+                            $policyNavActive = request()->routeIs('user.employee-documents.show') && request()->route('type') === 'policy'
+                                || request()->routeIs('user.employee-documents.policy-material*');
+                        @endphp
                         <div x-data="{ open: (localStorage.getItem('user-employee-documents') || 'false') === 'true' }"
                              x-init="if ({{ request()->routeIs('user.employee-documents.*') ? 'true' : 'false' }}) { open = true; }"
                              x-effect="localStorage.setItem('user-employee-documents', open)"
@@ -267,24 +275,90 @@
                                    :title="sidebarCollapsed ? 'Agreement' : ''">
                                     <span class="transition-opacity duration-300" :class="sidebarCollapsed ? 'opacity-0 w-0 overflow-hidden' : 'opacity-100'">Agreement</span>
                                 </a>
+                                @if(count($policyMaterials) > 0)
+                                <div x-data="{ policyOpen: (localStorage.getItem('user-policy-submenu') || 'false') === 'true' }"
+                                     x-init="if ({{ $policyNavActive ? 'true' : 'false' }}) { policyOpen = true; }"
+                                     x-effect="localStorage.setItem('user-policy-submenu', policyOpen)"
+                                     class="space-y-1">
+                                    <div class="w-full flex items-center justify-between px-2 py-2 text-sm font-medium rounded-md transition-colors duration-200 {{ $policyNavActive ? 'bg-indigo-700 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white' }}"
+                                         :class="sidebarCollapsed ? 'justify-center' : ''">
+                                        <a href="{{ route('user.employee-documents.show', 'policy') }}"
+                                           class="flex-1 min-w-0 text-left transition-opacity duration-300 {{ request()->routeIs('user.employee-documents.show') && request()->route('type') === 'policy' ? 'text-white' : 'text-inherit hover:text-white' }}"
+                                           :class="sidebarCollapsed ? 'opacity-0 w-0 overflow-hidden' : 'opacity-100'"
+                                           :title="sidebarCollapsed ? 'Policy' : ''">
+                                            Policy
+                                        </a>
+                                        <button @click="policyOpen = !policyOpen"
+                                                type="button"
+                                                class="shrink-0 p-0.5 rounded hover:bg-white/10"
+                                                :class="sidebarCollapsed ? 'opacity-0 w-0 overflow-hidden' : ''"
+                                                aria-label="Toggle policy documents">
+                                            <svg class="h-3.5 w-3.5 transition-transform duration-200" :class="{ 'rotate-180': policyOpen }" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                                            </svg>
+                                        </button>
+                                    </div>
+                                    <div x-show="sidebarCollapsed ? true : policyOpen" class="space-y-1" :class="sidebarCollapsed ? '' : 'ml-4'">
+                                        @foreach($policyMaterials as $policyMaterial)
+                                            <a href="{{ route('user.employee-documents.policy-material', $policyMaterial['id']) }}"
+                                               class="group flex items-center px-2 py-2 text-sm font-medium rounded-md transition-colors duration-200 {{ request()->routeIs('user.employee-documents.policy-material') && request()->route('id') === $policyMaterial['id'] ? 'bg-indigo-700 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white' }}"
+                                               :class="sidebarCollapsed ? 'justify-center' : ''"
+                                               :title="sidebarCollapsed ? $policyMaterial['name'] : ''">
+                                                <span class="transition-opacity duration-300 truncate" :class="sidebarCollapsed ? 'opacity-0 w-0 overflow-hidden' : 'opacity-100'">{{ $policyMaterial['name'] }}</span>
+                                            </a>
+                                        @endforeach
+                                    </div>
+                                </div>
+                                @else
                                 <a href="{{ route('user.employee-documents.show', 'policy') }}"
                                    class="group flex items-center px-2 py-2 text-sm font-medium rounded-md transition-colors duration-200 {{ request()->routeIs('user.employee-documents.show') && request()->route('type') === 'policy' ? 'bg-indigo-700 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white' }}"
                                    :class="sidebarCollapsed ? 'justify-center' : ''"
                                    :title="sidebarCollapsed ? 'Policy' : ''">
                                     <span class="transition-opacity duration-300" :class="sidebarCollapsed ? 'opacity-0 w-0 overflow-hidden' : 'opacity-100'">Policy</span>
                                 </a>
+                                @endif
+                                @if(count($handbookMaterials) > 0)
+                                <div x-data="{ handbookOpen: (localStorage.getItem('user-handbook-submenu') || 'false') === 'true' }"
+                                     x-init="if ({{ $handbookNavActive ? 'true' : 'false' }}) { handbookOpen = true; }"
+                                     x-effect="localStorage.setItem('user-handbook-submenu', handbookOpen)"
+                                     class="space-y-1">
+                                    <div class="w-full flex items-center justify-between px-2 py-2 text-sm font-medium rounded-md transition-colors duration-200 {{ $handbookNavActive ? 'bg-indigo-700 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white' }}"
+                                         :class="sidebarCollapsed ? 'justify-center' : ''">
+                                        <a href="{{ route('user.employee-documents.show', 'handbook') }}"
+                                           class="flex-1 min-w-0 text-left transition-opacity duration-300 {{ request()->routeIs('user.employee-documents.show') && request()->route('type') === 'handbook' ? 'text-white' : 'text-inherit hover:text-white' }}"
+                                           :class="sidebarCollapsed ? 'opacity-0 w-0 overflow-hidden' : 'opacity-100'"
+                                           :title="sidebarCollapsed ? 'Handbook' : ''">
+                                            Handbook
+                                        </a>
+                                        <button @click="handbookOpen = !handbookOpen"
+                                                type="button"
+                                                class="shrink-0 p-0.5 rounded hover:bg-white/10"
+                                                :class="sidebarCollapsed ? 'opacity-0 w-0 overflow-hidden' : ''"
+                                                aria-label="Toggle handbook documents">
+                                            <svg class="h-3.5 w-3.5 transition-transform duration-200" :class="{ 'rotate-180': handbookOpen }" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                                            </svg>
+                                        </button>
+                                    </div>
+                                    <div x-show="sidebarCollapsed ? true : handbookOpen" class="space-y-1" :class="sidebarCollapsed ? '' : 'ml-4'">
+                                        @foreach($handbookMaterials as $handbookMaterial)
+                                            <a href="{{ route('user.employee-documents.handbook-material', $handbookMaterial['id']) }}"
+                                               class="group flex items-center px-2 py-2 text-sm font-medium rounded-md transition-colors duration-200 {{ request()->routeIs('user.employee-documents.handbook-material') && request()->route('id') === $handbookMaterial['id'] ? 'bg-indigo-700 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white' }}"
+                                               :class="sidebarCollapsed ? 'justify-center' : ''"
+                                               :title="sidebarCollapsed ? $handbookMaterial['name'] : ''">
+                                                <span class="transition-opacity duration-300 truncate" :class="sidebarCollapsed ? 'opacity-0 w-0 overflow-hidden' : 'opacity-100'">{{ $handbookMaterial['name'] }}</span>
+                                            </a>
+                                        @endforeach
+                                    </div>
+                                </div>
+                                @else
                                 <a href="{{ route('user.employee-documents.show', 'handbook') }}"
                                    class="group flex items-center px-2 py-2 text-sm font-medium rounded-md transition-colors duration-200 {{ request()->routeIs('user.employee-documents.show') && request()->route('type') === 'handbook' ? 'bg-indigo-700 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white' }}"
                                    :class="sidebarCollapsed ? 'justify-center' : ''"
-                                   :title="sidebarCollapsed ? 'Handbook Acknowledgment' : ''">
-                                    <span class="transition-opacity duration-300" :class="sidebarCollapsed ? 'opacity-0 w-0 overflow-hidden' : 'opacity-100'">Handbook Acknowledgment</span>
+                                   :title="sidebarCollapsed ? 'Handbook' : ''">
+                                    <span class="transition-opacity duration-300" :class="sidebarCollapsed ? 'opacity-0 w-0 overflow-hidden' : 'opacity-100'">Handbook</span>
                                 </a>
-                                <a href="{{ route('user.employee-documents.handbook-material') }}"
-                                   class="group flex items-center px-2 py-2 text-sm font-medium rounded-md transition-colors duration-200 {{ request()->routeIs('user.employee-documents.handbook-material*') ? 'bg-indigo-700 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white' }}"
-                                   :class="sidebarCollapsed ? 'justify-center' : ''"
-                                   :title="sidebarCollapsed ? 'Employee Handbook' : ''">
-                                    <span class="transition-opacity duration-300" :class="sidebarCollapsed ? 'opacity-0 w-0 overflow-hidden' : 'opacity-100'">Employee Handbook</span>
-                                </a>
+                                @endif
                             </div>
                         </div>
                         @endif
@@ -304,7 +378,7 @@
                         </a>
                         @endif
 
-                        @if(auth()->user()->role === 'student')
+                        @if(auth()->user()->isStudent())
                         <a href="{{ route('user.nda.index') }}"
                            class="group flex items-center px-2 py-2 text-sm font-medium rounded-md transition-colors duration-200 {{ request()->routeIs('user.nda.*') ? 'bg-indigo-700 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white' }}"
                            :class="sidebarCollapsed ? 'justify-center' : ''"

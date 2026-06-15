@@ -113,6 +113,7 @@
                             <option value="">Select type</option>
                             <option value="vacation_leave" {{ old('type') == 'vacation_leave' ? 'selected' : '' }}>Vacation Leave</option>
                             <option value="sick_leave" {{ old('type') == 'sick_leave' ? 'selected' : '' }}>Sick Leave</option>
+                            @unless($hrLeaveTypesOnly ?? false)
                             <option value="work_from_home" {{ old('type') == 'work_from_home' ? 'selected' : '' }}>Work From Home</option>
                             <option value="absent" {{ old('type') == 'absent' ? 'selected' : '' }}>Absent</option>
                             <option value="overtime" {{ old('type') == 'overtime' ? 'selected' : '' }}>Overtime</option>
@@ -120,6 +121,7 @@
                             <option value="additional_time" {{ old('type') == 'additional_time' ? 'selected' : '' }}>Additional Time</option>
                             <option value="travel" {{ old('type') == 'travel' ? 'selected' : '' }}>Travel</option>
                             <option value="other" {{ old('type') == 'other' ? 'selected' : '' }}>Other</option>
+                            @endunless
                         </select>
                     </div>
                     <!-- Travel Hours Field (only shown for travel type) -->

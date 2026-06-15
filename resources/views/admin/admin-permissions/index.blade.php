@@ -73,6 +73,7 @@
                     <option value="">All Roles</option>
                     <option value="admin" {{ request('role') == 'admin' ? 'selected' : '' }}>Admin</option>
                     <option value="employee" {{ request('role') == 'employee' ? 'selected' : '' }}>Employee</option>
+                    <option value="hr" {{ request('role') == 'hr' ? 'selected' : '' }}>HR</option>
                     @if($isFullAccessAdmin)
                         <option value="student" {{ request('role') == 'student' ? 'selected' : '' }}>Student</option>
                         <option value="applicant" {{ request('role') == 'applicant' ? 'selected' : '' }}>Applicant</option>

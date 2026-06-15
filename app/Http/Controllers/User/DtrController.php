@@ -417,6 +417,11 @@ class DtrController extends Controller
 
         $pendingTimeRequestByDate = $pendingTimeRequestByDate ?? [];
 
+        $canStudentRecordAttendance = $user->role !== 'student' || $user->canStudentRecordAttendance();
+        $studentNda = $user->role === 'student'
+            ? $user->studentNda()->first()
+            : null;
+
         return view('user.dtr.index', compact(
             'groupedDtrs',
             'totalRecords',
@@ -436,7 +441,9 @@ class DtrController extends Controller
             'pendingOvertimeLeaveRequests',
             'incompleteOvertimeReminderItems',
             'existingTimeRequestSlots',
-            'pendingTimeRequestByDate'
+            'pendingTimeRequestByDate',
+            'canStudentRecordAttendance',
+            'studentNda'
         ));
     }
 

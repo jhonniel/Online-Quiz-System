@@ -138,6 +138,7 @@ class UserActivity extends Model
             'user_login' => 'Signed in',
             'user_logout' => 'Signed out',
             'rules_regulations_acknowledged' => 'Acknowledged rules and regulations',
+            'student_tor_reviewed' => 'Reviewed Term of Reference (TOR)',
             'student_merits_updated' => 'Updated student merits and notices',
             'student_terminated_enabled' => 'Marked student account as terminated',
             'student_terminated_disabled' => 'Restored student account access',

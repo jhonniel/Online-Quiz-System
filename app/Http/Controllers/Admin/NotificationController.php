@@ -43,6 +43,7 @@ class NotificationController extends Controller
             'admin' => 'Administrator',
             'student' => 'Student',
             'employee' => 'Employee',
+            'hr' => 'HR',
             'teacher' => 'Teacher',
             'applicant' => 'Applicant',
             'technician' => 'Technician',

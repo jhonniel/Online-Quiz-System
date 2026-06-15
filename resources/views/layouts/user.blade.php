@@ -438,7 +438,7 @@
                         </a>
                         @endif
 
-                        @if(in_array(auth()->user()->role, ['employee', 'student']))
+                        @if(in_array(auth()->user()->role, ['employee', 'hr', 'student']))
                         <a href="{{ url('/files') }}"
                            @click="sidebarOpen = false"
                            class="group flex items-center px-2 py-2 text-sm font-medium rounded-md transition-colors duration-200 {{ request()->routeIs('user.files.*') ? 'bg-indigo-700 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white' }}">
@@ -449,7 +449,7 @@
                         </a>
                         @endif
 
-                        @if(auth()->user()->role === 'employee')
+                        @if(auth()->user()->isStaffMember())
                         <a href="{{ url('/document-requests') }}"
                            @click="sidebarOpen = false"
                            class="group flex items-center px-2 py-2 text-sm font-medium rounded-md transition-colors duration-200 {{ request()->routeIs('user.employee-file-requests.*') ? 'bg-indigo-700 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white' }}">
@@ -468,7 +468,7 @@
                         </a>
                         @endif
 
-                        @if(in_array(auth()->user()->role, ['employee', 'student']))
+                        @if(in_array(auth()->user()->role, ['employee', 'hr', 'student']))
                         <a href="{{ url('/dtr') }}"
                            @click="sidebarOpen = false"
                            class="group flex items-center px-2 py-2 text-sm font-medium rounded-md transition-colors duration-200 {{ request()->routeIs('user.dtr.*') ? 'bg-indigo-700 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white' }}">
@@ -479,7 +479,7 @@
                         </a>
                         @endif
 
-                        @if(in_array(auth()->user()->role, ['employee', 'student']))
+                        @if(in_array(auth()->user()->role, ['employee', 'hr', 'student']))
                         <a href="{{ url('/leave-requests') }}"
                            @click="sidebarOpen = false"
                            class="group flex items-center px-2 py-2 text-sm font-medium rounded-md transition-colors duration-200 {{ request()->routeIs('user.leave-requests.*') ? 'bg-indigo-700 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white' }}">
@@ -518,7 +518,15 @@
                             Feedback
                         </a>
 
-                        @if(auth()->user()->role === 'employee' && \App\Models\User::employeeDocumentsNavEnabled())
+                        @if(auth()->user()->isStaffMember() && \App\Models\User::employeeDocumentsNavEnabled())
+                        @php
+                            $handbookMaterials = \App\Support\EmployeeHandbookMaterial::available();
+                            $policyMaterials = \App\Support\EmployeePolicyMaterial::available();
+                            $handbookNavActive = request()->routeIs('user.employee-documents.show') && request()->route('type') === 'handbook'
+                                || request()->routeIs('user.employee-documents.handbook-material*');
+                            $policyNavActive = request()->routeIs('user.employee-documents.show') && request()->route('type') === 'policy'
+                                || request()->routeIs('user.employee-documents.policy-material*');
+                        @endphp
                         <div x-data="{ open: (localStorage.getItem('user-employee-documents-mobile') || 'false') === 'true' }"
                              x-init="if ({{ request()->routeIs('user.employee-documents.*') ? 'true' : 'false' }}) { open = true; }"
                              x-effect="localStorage.setItem('user-employee-documents-mobile', open)"
@@ -540,12 +548,64 @@
                                    class="group flex items-center px-2 py-2 text-sm font-medium rounded-md transition-colors duration-200 {{ request()->routeIs('user.employee-documents.show') && request()->route('type') === 'nda' ? 'bg-indigo-700 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white' }}">NDA</a>
                                 <a href="{{ route('user.employee-documents.show', 'contract') }}" @click="sidebarOpen = false"
                                    class="group flex items-center px-2 py-2 text-sm font-medium rounded-md transition-colors duration-200 {{ request()->routeIs('user.employee-documents.show') && request()->route('type') === 'contract' ? 'bg-indigo-700 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white' }}">Agreement</a>
+                                @if(count($policyMaterials) > 0)
+                                <div x-data="{ policyOpen: (localStorage.getItem('user-policy-submenu-mobile') || 'false') === 'true' }"
+                                     x-init="if ({{ $policyNavActive ? 'true' : 'false' }}) { policyOpen = true; }"
+                                     x-effect="localStorage.setItem('user-policy-submenu-mobile', policyOpen)"
+                                     class="space-y-1">
+                                    <div class="w-full flex items-center justify-between px-2 py-2 text-sm font-medium rounded-md transition-colors duration-200 {{ $policyNavActive ? 'bg-indigo-700 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white' }}">
+                                        <a href="{{ route('user.employee-documents.show', 'policy') }}" @click="sidebarOpen = false"
+                                           class="flex-1 min-w-0 text-left {{ request()->routeIs('user.employee-documents.show') && request()->route('type') === 'policy' ? 'text-white' : 'text-inherit' }}">
+                                            Policy
+                                        </a>
+                                        <button @click="policyOpen = !policyOpen" type="button"
+                                                class="shrink-0 p-0.5 rounded hover:bg-white/10"
+                                                aria-label="Toggle policy documents">
+                                            <svg class="h-3.5 w-3.5 transition-transform duration-200 shrink-0" :class="{ 'rotate-180': policyOpen }" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                                            </svg>
+                                        </button>
+                                    </div>
+                                    <div x-show="policyOpen" class="ml-4 space-y-1">
+                                        @foreach($policyMaterials as $policyMaterial)
+                                            <a href="{{ route('user.employee-documents.policy-material', $policyMaterial['id']) }}" @click="sidebarOpen = false"
+                                               class="group flex items-center px-2 py-2 text-sm font-medium rounded-md transition-colors duration-200 {{ request()->routeIs('user.employee-documents.policy-material') && request()->route('id') === $policyMaterial['id'] ? 'bg-indigo-700 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white' }}">{{ $policyMaterial['name'] }}</a>
+                                        @endforeach
+                                    </div>
+                                </div>
+                                @else
                                 <a href="{{ route('user.employee-documents.show', 'policy') }}" @click="sidebarOpen = false"
                                    class="group flex items-center px-2 py-2 text-sm font-medium rounded-md transition-colors duration-200 {{ request()->routeIs('user.employee-documents.show') && request()->route('type') === 'policy' ? 'bg-indigo-700 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white' }}">Policy</a>
+                                @endif
+                                @if(count($handbookMaterials) > 0)
+                                <div x-data="{ handbookOpen: (localStorage.getItem('user-handbook-submenu-mobile') || 'false') === 'true' }"
+                                     x-init="if ({{ $handbookNavActive ? 'true' : 'false' }}) { handbookOpen = true; }"
+                                     x-effect="localStorage.setItem('user-handbook-submenu-mobile', handbookOpen)"
+                                     class="space-y-1">
+                                    <div class="w-full flex items-center justify-between px-2 py-2 text-sm font-medium rounded-md transition-colors duration-200 {{ $handbookNavActive ? 'bg-indigo-700 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white' }}">
+                                        <a href="{{ route('user.employee-documents.show', 'handbook') }}" @click="sidebarOpen = false"
+                                           class="flex-1 min-w-0 text-left {{ request()->routeIs('user.employee-documents.show') && request()->route('type') === 'handbook' ? 'text-white' : 'text-inherit' }}">
+                                            Handbook
+                                        </a>
+                                        <button @click="handbookOpen = !handbookOpen" type="button"
+                                                class="shrink-0 p-0.5 rounded hover:bg-white/10"
+                                                aria-label="Toggle handbook documents">
+                                            <svg class="h-3.5 w-3.5 transition-transform duration-200 shrink-0" :class="{ 'rotate-180': handbookOpen }" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                                            </svg>
+                                        </button>
+                                    </div>
+                                    <div x-show="handbookOpen" class="ml-4 space-y-1">
+                                        @foreach($handbookMaterials as $handbookMaterial)
+                                            <a href="{{ route('user.employee-documents.handbook-material', $handbookMaterial['id']) }}" @click="sidebarOpen = false"
+                                               class="group flex items-center px-2 py-2 text-sm font-medium rounded-md transition-colors duration-200 {{ request()->routeIs('user.employee-documents.handbook-material') && request()->route('id') === $handbookMaterial['id'] ? 'bg-indigo-700 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white' }}">{{ $handbookMaterial['name'] }}</a>
+                                        @endforeach
+                                    </div>
+                                </div>
+                                @else
                                 <a href="{{ route('user.employee-documents.show', 'handbook') }}" @click="sidebarOpen = false"
-                                   class="group flex items-center px-2 py-2 text-sm font-medium rounded-md transition-colors duration-200 {{ request()->routeIs('user.employee-documents.show') && request()->route('type') === 'handbook' ? 'bg-indigo-700 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white' }}">Handbook Acknowledgment</a>
-                                <a href="{{ route('user.employee-documents.handbook-material') }}" @click="sidebarOpen = false"
-                                   class="group flex items-center px-2 py-2 text-sm font-medium rounded-md transition-colors duration-200 {{ request()->routeIs('user.employee-documents.handbook-material*') ? 'bg-indigo-700 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white' }}">Employee Handbook</a>
+                                   class="group flex items-center px-2 py-2 text-sm font-medium rounded-md transition-colors duration-200 {{ request()->routeIs('user.employee-documents.show') && request()->route('type') === 'handbook' ? 'bg-indigo-700 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white' }}">Handbook</a>
+                                @endif
                             </div>
                         </div>
                         @endif
@@ -561,7 +621,7 @@
                         </a>
                         @endif
 
-                        @if(auth()->user()->role === 'student')
+                        @if(auth()->user()->isStudent())
                         <a href="{{ route('user.nda.index') }}"
                            @click="sidebarOpen = false"
                            class="group flex items-center px-2 py-2 text-sm font-medium rounded-md transition-colors duration-200 {{ request()->routeIs('user.nda.*') ? 'bg-indigo-700 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white' }}">
@@ -1581,10 +1641,13 @@
     @endauth
 
     @auth
-        @if(auth()->user()->role === 'student' && session('student_rules_regulations_pending') === true)
+        @if(auth()->user()->isStudent() && session('student_rules_regulations_pending') === true)
             @include('components.student-rules-regulations-modal')
         @endif
-        @if(auth()->user()->role === 'employee' && ($pendingEmployeeAnnouncement = auth()->user()->pendingSystemAnnouncement()))
+        @if(auth()->user()->isStudent() && ! empty($studentComplianceModalPayload))
+            <x-student-compliance-required-modal :items="$studentComplianceModalPayload" />
+        @endif
+        @if(auth()->user()->isStaffMember() && ($pendingEmployeeAnnouncement = auth()->user()->pendingSystemAnnouncement()))
             @include('components.employee-system-announcement-modal', ['announcement' => $pendingEmployeeAnnouncement])
         @endif
     @endauth

@@ -176,7 +176,7 @@
                     </div>
                 </div>
 
-                @if($user->role === 'employee')
+                @if($user->isStaffMember())
                 <!-- P12 Digital Certificate -->
                 <div class="mb-8" id="p12-certificate-section">
                     <h3 class="text-lg font-medium text-gray-900 mb-2">P12 Digital Certificate</h3>

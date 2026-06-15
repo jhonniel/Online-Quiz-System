@@ -14,7 +14,7 @@ class PayslipController extends Controller
     public function index(Request $request)
     {
         $user = $request->user();
-        abort_unless($user->role === 'employee', 403);
+        abort_unless($user->isStaffMember(), 403);
 
         $payslips = EmployeePayslip::query()
             ->with(['employee.department:id,name', 'employee.departmentPosition:id,name,department_id'])
@@ -30,7 +30,7 @@ class PayslipController extends Controller
     public function show(Request $request, EmployeePayslip $payslip)
     {
         $user = $request->user();
-        abort_unless($user->role === 'employee', 403);
+        abort_unless($user->isStaffMember(), 403);
         abort_unless((int) $payslip->user_id === (int) $user->id, 403);
 
         $payslip->load(['employee:id,name,department_id,department_position_id,date_hired,e_signature_path,p12_certificate_path', 'employee.department:id,name', 'employee.departmentPosition:id,name,department_id']);
@@ -43,7 +43,7 @@ class PayslipController extends Controller
     {
         try {
             $user = $request->user();
-            abort_unless($user->role === 'employee', 403);
+            abort_unless($user->isStaffMember(), 403);
             abort_unless((int) $payslip->user_id === (int) $user->id, 403);
 
             if (! $user->hasESignature()) {
@@ -122,7 +122,7 @@ class PayslipController extends Controller
     public function signedPdf(Request $request, EmployeePayslip $payslip)
     {
         $user = $request->user();
-        abort_unless($user->role === 'employee', 403);
+        abort_unless($user->isStaffMember(), 403);
         abort_unless((int) $payslip->user_id === (int) $user->id, 403);
         abort_unless($payslip->isSigned(), 404);
 
