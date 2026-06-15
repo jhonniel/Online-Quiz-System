@@ -63,6 +63,14 @@
         </div>
     @endif
 
+    @include('admin.partials.hr-dashboard-analytics', [
+        'chartPeriod' => $chartPeriod ?? 'week',
+        'chartFrom' => $chartFrom ?? now()->subDays(6)->format('Y-m-d'),
+        'chartTo' => $chartTo ?? now()->format('Y-m-d'),
+        'hrChartPayload' => $hrChartPayload ?? [],
+        'hrChartSections' => $hrChartSections ?? ['workforce'],
+    ])
+
     @if(count($sections) === 0)
         <div class="rounded-xl border border-amber-200 bg-amber-50 p-6 text-center">
             <p class="text-sm font-medium text-amber-900">No admin features are assigned to your HR account yet.</p>

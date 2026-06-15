@@ -11,6 +11,7 @@ use App\Models\LeaveRequest;
 use App\Models\TicketReport;
 use App\Models\User;
 use App\Support\AdminFeatureNavLinks;
+use App\Support\AdminHrDashboardCharts;
 use Illuminate\Http\Request;
 
 class HrDashboardController extends Controller
@@ -22,12 +23,18 @@ class HrDashboardController extends Controller
 
         $sections = AdminFeatureNavLinks::sectionsFor($user);
         $stats = $this->statsFor($user);
+        $chartBundle = app(AdminHrDashboardCharts::class)->forUser($user, $request);
 
         return view('admin.hr-dashboard', [
             'user' => $user,
             'sections' => $sections,
             'stats' => $stats,
             'totalLinks' => collect($sections)->sum(fn (array $section): int => count($section['links'] ?? [])),
+            'chartPeriod' => $chartBundle['chartPeriod'],
+            'chartFrom' => $chartBundle['chartFrom'],
+            'chartTo' => $chartBundle['chartTo'],
+            'hrChartPayload' => $chartBundle['payload'],
+            'hrChartSections' => $chartBundle['sections'],
         ]);
     }
 
