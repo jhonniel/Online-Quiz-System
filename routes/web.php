@@ -161,6 +161,7 @@ Route::get('/home', [RedirectController::class, 'home'])->name('home');
 Route::prefix('admin')->middleware(['auth', 'admin'])->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('admin.dashboard');
     Route::get('/hr-dashboard', [HrDashboardController::class, 'index'])->name('admin.hr-dashboard');
+    Route::get('/my-permissions', [AdminPermissionController::class, 'myPermissions'])->name('admin.my-permissions');
     Route::get('/activity-data', [DashboardController::class, 'getActivityData'])->name('admin.activity-data');
     Route::redirect('/teacher-invites', '/admin/teachers-management/invite-links');
 

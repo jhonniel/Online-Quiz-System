@@ -60,8 +60,8 @@ class AdminMiddleware
         } elseif ($isAllowedTaskRoute && ($user->isStaffMember() || $user->isStudent())) {
             // Staff and students can access task routes (My Tasks, Group Tasks, and related actions)
             $hasAccess = true;
-        } elseif ($user->isHr() && $request->routeIs('admin.hr-dashboard')) {
-            // HR always lands on their dashboard, even before permissions are assigned.
+        } elseif ($user->isHr() && $request->routeIs('admin.hr-dashboard', 'admin.my-permissions')) {
+            // HR can open their dashboard and view assigned permissions before features are granted.
             $hasAccess = true;
         } elseif ($user->isStaffMember()) {
             // Staff need at least one admin permission for other routes
