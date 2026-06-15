@@ -1,5 +1,7 @@
 {{-- User features first, then all granted admin sections --}}
-@include('components.nav.user-features-nav')
+@if(auth()->user()->shouldShowUserFeaturesNav())
+    @include('components.nav.user-features-nav')
+@endif
 
 @if(auth()->user()->hasAnyAdminPermission() && !auth()->user()->isSuperAdmin())
 <div class="pt-4 mt-4 border-t border-gray-700 mb-2" :class="sidebarCollapsed ? 'hidden' : ''">

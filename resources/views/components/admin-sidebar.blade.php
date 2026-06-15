@@ -130,8 +130,10 @@
         </div>
         @endif
 
-        @if(auth()->user()->hasAnyAdminPermission() && !auth()->user()->isSuperAdmin())
+        @if(auth()->user()->hasAnyAdminPermission() && !auth()->user()->isSuperAdmin() && auth()->user()->shouldShowUserFeaturesNav())
         @include('components.nav.user-features-nav')
+        @endif
+        @if(auth()->user()->hasAnyAdminPermission() && !auth()->user()->isSuperAdmin())
         <div class="pt-2 pb-2 mb-2 border-t border-gray-700" :class="sidebarCollapsed ? 'hidden' : ''">
             <p class="px-3 text-[11px] font-semibold uppercase tracking-wider text-purple-300">Admin Features</p>
         </div>

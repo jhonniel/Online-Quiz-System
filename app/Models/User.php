@@ -354,6 +354,12 @@ class User extends Authenticatable
         return $this->role === 'hr';
     }
 
+    /** HR accounts use admin workflows only — no employee/user portal nav. */
+    public function shouldShowUserFeaturesNav(): bool
+    {
+        return ! $this->isHr();
+    }
+
     /** Employee or HR — internal staff with department workflows. */
     public function isStaffMember(): bool
     {

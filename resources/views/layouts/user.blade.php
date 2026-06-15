@@ -356,6 +356,7 @@
 
                     <!-- Mobile navigation -->
                     <nav class="flex-1 px-2 py-4 space-y-1">
+                        @if(auth()->user()->shouldShowUserFeaturesNav())
                         <p class="px-2 pb-1 text-[11px] font-semibold uppercase tracking-wider text-gray-400">User Features</p>
                         <a href="{{ url('/dashboard') }}"
                            @click="sidebarOpen = false"
@@ -630,6 +631,7 @@
                             </svg>
                             NDA
                         </a>
+                        @endif
                         @endif
 
                         @if(auth()->user()->hasAnyAdminPermission() && !auth()->user()->isSuperAdmin())
