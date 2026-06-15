@@ -3,6 +3,6 @@
     'fieldPrefix' => 'handbook_materials',
     'materialItems' => old('handbook_materials', $settings['handbook_materials'] ?? \App\Support\EmployeeHandbookMaterial::all()),
     'sectionTitle' => 'Handbook material PDFs',
-    'sectionDescription' => 'Upload one or more handbook PDFs. Each file appears under <strong>Handbook</strong> in the employee Documents menu using the display name you set here.',
+    'sectionDescription' => 'Upload one or more handbook PDFs. Each file appears under <strong>Handbook</strong> in the employee Documents menu using the display name you set here. Use the arrows to set which handbook appears first.',
     'namePlaceholder' => 'e.g. Company Handbook, Safety Manual',
 ])
