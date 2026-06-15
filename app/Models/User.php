@@ -6,14 +6,18 @@ namespace App\Models;
 use App\Services\MailConfigService;
 use App\Support\AdminPermissionAreas;
 use App\Support\UserThemeColor;
+use Carbon\Carbon;
+use Database\Factories\UserFactory;
 use Illuminate\Auth\Notifications\ResetPassword;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Support\Facades\Cache;
+use SimpleSoftwareIO\QrCode\Facades\QrCode;
 
 class User extends Authenticatable
 {
-    /** @use HasFactory<\Database\Factories\UserFactory> */
+    /** @use HasFactory<UserFactory> */
     use HasFactory, Notifiable;
 
     public const DEFAULT_STUDENT_ABSENCE_ALLOWANCE = 3.0;
@@ -360,6 +364,24 @@ class User extends Authenticatable
         return ! $this->isHr();
     }
 
+    public function usesHrDashboard(): bool
+    {
+        return $this->isHr();
+    }
+
+    public function adminDashboardUrl(): string
+    {
+        if ($this->usesHrDashboard()) {
+            return url('/admin/hr-dashboard');
+        }
+
+        if ($this->isSuperAdmin() || ($this->isAdmin() && $this->hasAnyAdminPermission())) {
+            return url('/admin/dashboard');
+        }
+
+        return url('/dashboard');
+    }
+
     /** Employee or HR — internal staff with department workflows. */
     public function isStaffMember(): bool
     {
@@ -503,7 +525,7 @@ class User extends Authenticatable
         } elseif ($diff < 1440) {
             return floor($diff / 60).' hours ago';
         } else {
-            return \Carbon\Carbon::parse($this->last_activity)->format('M j, Y g:i A');
+            return Carbon::parse($this->last_activity)->format('M j, Y g:i A');
         }
     }
 
@@ -1524,8 +1546,8 @@ class User extends Authenticatable
     {
         // Get current prefix from settings (always fresh, not cached)
         // Clear cache to ensure we get the latest prefix value
-        \Illuminate\Support\Facades\Cache::forget('setting.qr_code_prefix');
-        $prefix = \App\Models\Setting::get('qr_code_prefix', 'QR');
+        Cache::forget('setting.qr_code_prefix');
+        $prefix = Setting::get('qr_code_prefix', 'QR');
 
         // Ensure prefix is not empty
         if (empty(trim($prefix))) {
@@ -1575,7 +1597,7 @@ class User extends Authenticatable
     {
         try {
             // Get or generate a token for this user (reuses existing unused token)
-            $token = \App\Models\QrCodeToken::getOrGenerateForUser($this);
+            $token = QrCodeToken::getOrGenerateForUser($this);
 
             // Generate QR code URL - use url() helper as fallback if route() fails
             try {
@@ -1586,7 +1608,7 @@ class User extends Authenticatable
             }
 
             // Use the QrCode facade with full namespace
-            return \SimpleSoftwareIO\QrCode\Facades\QrCode::size($size)->generate($qrCodeUrl);
+            return QrCode::size($size)->generate($qrCodeUrl);
         } catch (\Exception $e) {
             // Log error for debugging
             \Log::error('QR Code image generation failed: '.$e->getMessage().' | Trace: '.$e->getTraceAsString());
@@ -1603,7 +1625,7 @@ class User extends Authenticatable
     {
         try {
             // Get or generate a token for this user (reuses existing unused token)
-            $token = \App\Models\QrCodeToken::getOrGenerateForUser($this);
+            $token = QrCodeToken::getOrGenerateForUser($this);
 
             // Generate QR code URL - use url() helper as fallback if route() fails
             try {
@@ -1614,7 +1636,7 @@ class User extends Authenticatable
             }
 
             // Use the QrCode facade (SVG format, doesn't require imagick)
-            return \SimpleSoftwareIO\QrCode\Facades\QrCode::size($size)->format('svg')->generate($qrCodeUrl);
+            return QrCode::size($size)->format('svg')->generate($qrCodeUrl);
         } catch (\Exception $e) {
             // Log error for debugging but don't expose it to user
             \Log::error('QR Code generation failed: '.$e->getMessage().' | Trace: '.$e->getTraceAsString());

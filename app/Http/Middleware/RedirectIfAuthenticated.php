@@ -15,7 +15,7 @@ class RedirectIfAuthenticated
     /**
      * Handle an incoming request.
      *
-     * @param  \Closure(\Illuminate\Http\Request): (\Symfony\Component\HttpFoundation\Response)  $next
+     * @param  Closure(Request): (Response)  $next
      */
     public function handle(Request $request, Closure $next, string ...$guards): Response
     {
@@ -29,6 +29,10 @@ class RedirectIfAuthenticated
                     return redirect('/admin/dashboard');
                 }
 
+                if ($user instanceof User && $user->isHr()) {
+                    return redirect('/admin/hr-dashboard');
+                }
+
                 if ($user instanceof User && $user->role === 'student' && (bool) $user->student_terminated) {
                     return redirect()->to(AccountTerminatedController::url());
                 }
@@ -40,4 +44,3 @@ class RedirectIfAuthenticated
         return $next($request);
     }
 }
-

@@ -15,12 +15,12 @@ use App\Models\LeaveRequest;
 use App\Models\Notification;
 use App\Models\Quiz;
 use App\Models\QuizAttempt;
+use App\Models\Setting;
 use App\Models\TicketReport;
 use App\Models\University;
 use App\Models\User;
 use App\Models\UserActivity;
 use App\Models\UserSession;
-use App\Models\Setting;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -168,6 +168,11 @@ class DashboardController extends Controller
     public function index()
     {
         $this->ensureCanAccessDashboard();
+
+        $user = auth()->user();
+        if ($user instanceof User && $user->usesHrDashboard()) {
+            return redirect()->route('admin.hr-dashboard');
+        }
 
         try {
             $totalUsers = User::where('role', 'user')->count();

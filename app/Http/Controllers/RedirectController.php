@@ -4,7 +4,6 @@ namespace App\Http\Controllers;
 
 use App\Http\Controllers\User\AccountTerminatedController;
 use App\Models\User;
-use Illuminate\Http\Request;
 
 class RedirectController extends Controller
 {
@@ -12,6 +11,11 @@ class RedirectController extends Controller
     {
         if (auth()->check()) {
             $user = auth()->user();
+
+            // HR users land on the HR dashboard.
+            if ($user instanceof User && $user->isHr()) {
+                return redirect('/admin/hr-dashboard');
+            }
 
             // Any admin role user should always land on admin dashboard.
             if ($user instanceof User && $user->isAdmin()) {

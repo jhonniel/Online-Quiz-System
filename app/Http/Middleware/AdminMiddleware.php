@@ -11,18 +11,18 @@ class AdminMiddleware
     /**
      * Handle an incoming request.
      *
-     * @param  \Closure(\Illuminate\Http\Request): (\Symfony\Component\HttpFoundation\Response)  $next
+     * @param  Closure(Request): (Response)  $next
      */
     public function handle(Request $request, Closure $next): Response
     {
-        if (!auth()->check()) {
+        if (! auth()->check()) {
             return redirect('/login');
         }
 
         $user = auth()->user();
 
         // Load adminPermission relationship if not already loaded
-        if (!$user->relationLoaded('adminPermission')) {
+        if (! $user->relationLoaded('adminPermission')) {
             $user->load('adminPermission');
         }
 
@@ -32,12 +32,12 @@ class AdminMiddleware
         // 3. User has any role but has been granted admin permissions via adminPermission record
         // 4. User is accessing task routes (students and employees can access tasks)
         $hasAccess = false;
-        
+
         // Check if this is a task route that students/employees can access
         // Allow access to task index (My Tasks, Group Tasks) but not dashboard/analytics
         $isTaskIndexRoute = $request->routeIs('admin.tasks.index');
-        $isTaskActionRoute = $request->routeIs('admin.tasks.store') || 
-                            $request->routeIs('admin.tasks.update') || 
+        $isTaskActionRoute = $request->routeIs('admin.tasks.store') ||
+                            $request->routeIs('admin.tasks.update') ||
                             $request->routeIs('admin.tasks.destroy') ||
                             $request->routeIs('admin.tasks.reorder') ||
                             $request->routeIs('admin.tasks.update-order') ||
@@ -51,7 +51,7 @@ class AdminMiddleware
                             $request->routeIs('admin.tasks.custom-boards.*') ||
                             $request->routeIs('admin.tasks.task-lists.*') ||
                             $request->routeIs('admin.tasks.custom-priorities.*');
-        
+
         $isAllowedTaskRoute = $isTaskIndexRoute || $isTaskActionRoute;
 
         if ($user->isAdmin()) {
@@ -59,6 +59,9 @@ class AdminMiddleware
             $hasAccess = true;
         } elseif ($isAllowedTaskRoute && ($user->isStaffMember() || $user->isStudent())) {
             // Staff and students can access task routes (My Tasks, Group Tasks, and related actions)
+            $hasAccess = true;
+        } elseif ($user->isHr() && $request->routeIs('admin.hr-dashboard')) {
+            // HR always lands on their dashboard, even before permissions are assigned.
             $hasAccess = true;
         } elseif ($user->isStaffMember()) {
             // Staff need at least one admin permission for other routes
@@ -69,7 +72,7 @@ class AdminMiddleware
             $hasAccess = $user->hasAnyAdminPermission();
         }
 
-        if (!$hasAccess) {
+        if (! $hasAccess) {
             abort(403, 'Access denied. You do not have permission to access admin features.');
         }
 

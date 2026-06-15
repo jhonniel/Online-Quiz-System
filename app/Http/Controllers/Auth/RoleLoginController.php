@@ -21,9 +21,17 @@ class RoleLoginController extends Controller
                 return redirect()->to(AccountTerminatedController::url());
             }
 
+            if ($user instanceof User && $user->isAdmin()) {
+                return redirect('/admin/dashboard');
+            }
+
+            if ($user instanceof User && $user->isHr()) {
+                return redirect('/admin/hr-dashboard');
+            }
+
             return redirect('/home');
         }
-        
+
         return view('landing.login');
     }
 
@@ -44,6 +52,10 @@ class RoleLoginController extends Controller
 
             if ($user instanceof User && $user->isAdmin()) {
                 return redirect('/admin/dashboard');
+            }
+
+            if ($user instanceof User && $user->isHr()) {
+                return redirect('/admin/hr-dashboard');
             }
 
             if ($user instanceof User
@@ -68,10 +80,10 @@ class RoleLoginController extends Controller
     public function logout(Request $request)
     {
         Auth::logout();
-        
+
         $request->session()->invalidate();
         $request->session()->regenerateToken();
-        
+
         return redirect('/login');
     }
 }

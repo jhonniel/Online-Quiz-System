@@ -4,6 +4,7 @@ namespace App\Http\Controllers\User;
 
 use App\Http\Controllers\Controller;
 use App\Models\Dtr;
+use App\Models\EmployeeAnnouncementAcknowledgment;
 use App\Models\EvaluationForm;
 use App\Models\EvaluationSubmission;
 use App\Models\HiringApplication;
@@ -11,8 +12,8 @@ use App\Models\LeaveBalance;
 use App\Models\LeaveRequest;
 use App\Models\LeaveRequestLog;
 use App\Models\News;
+use App\Models\Quiz;
 use App\Models\QuizAssignment;
-use App\Models\EmployeeAnnouncementAcknowledgment;
 use App\Models\Setting;
 use App\Models\SystemAnnouncement;
 use App\Models\TicketReport;
@@ -28,6 +29,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 
 class DashboardController extends Controller
@@ -35,6 +37,11 @@ class DashboardController extends Controller
     public function index()
     {
         $user = auth()->user();
+
+        if ($user instanceof User && $user->usesHrDashboard()) {
+            return redirect()->route('admin.hr-dashboard');
+        }
+
         $evaluationAvailable = false;
         $evaluationFormTitle = null;
         $studentTrainingStats = null;
@@ -114,7 +121,7 @@ class DashboardController extends Controller
                 })
                 ->get();
 
-            $allQuizzes = \App\Models\Quiz::query()
+            $allQuizzes = Quiz::query()
                 ->where('is_active', true)
                 ->whereHas('assignments', function ($query) use ($user) {
                     $query->where('user_id', $user->id);
@@ -141,7 +148,7 @@ class DashboardController extends Controller
             $ojtService->syncForStudentId((int) $user->id);
             $user->refresh();
             if ((bool) $user->student_terminated) {
-                return redirect()->to(\App\Http\Controllers\User\AccountTerminatedController::url());
+                return redirect()->to(AccountTerminatedController::url());
             }
             $studentOjtAccessCountdown = $ojtService->studentAccountDisableCountdownForDashboard($user);
         }
@@ -727,7 +734,7 @@ class DashboardController extends Controller
         ]);
 
         [$supportingPaths, $legacySupportingPath] = $this->storeSupportingDocumentsFromRequest($request);
-        $teacherExcusedBatch = (string) \Illuminate\Support\Str::uuid();
+        $teacherExcusedBatch = (string) Str::uuid();
         $createdCount = 0;
 
         foreach ($validated['student_ids'] as $studentId) {

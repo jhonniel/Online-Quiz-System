@@ -109,7 +109,25 @@
     <!-- Navigation -->
     <nav class="mt-6 px-3 flex-1 overflow-y-auto sidebar-scroll">
         <!-- Dashboard (full access only) -->
-        @if(auth()->user()->isSuperAdmin())
+        @if(auth()->user()->usesHrDashboard())
+        <div class="mb-6">
+            <a href="{{ route('admin.hr-dashboard') }}"
+               class="flex items-center px-2 py-2 text-sm font-medium rounded-md transition-colors duration-200 {{ request()->routeIs('admin.hr-dashboard') ? 'bg-indigo-700 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white' }}"
+               :class="sidebarCollapsed ? 'justify-center px-2' : 'px-3'"
+               :title="sidebarCollapsed ? 'Dashboard' : ''">
+                <svg class="h-6 w-6 flex-shrink-0"
+                     :class="sidebarCollapsed ? '' : 'mr-3'"
+                     fill="none"
+                     stroke="currentColor"
+                     viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2H5a2 2 0 00-2-2z"></path>
+                </svg>
+                <span class="transition-opacity duration-300 whitespace-nowrap" :class="sidebarCollapsed ? 'opacity-0 w-0 overflow-hidden absolute' : 'opacity-100'">
+                    Dashboard
+                </span>
+            </a>
+        </div>
+        @elseif(auth()->user()->isSuperAdmin())
         <div class="mb-6">
             <a href="{{ url('/admin/dashboard') }}"
                class="flex items-center px-2 py-2 text-sm font-medium rounded-md transition-colors duration-200 {{ request()->routeIs('admin.dashboard') ? 'bg-indigo-700 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white' }}"
