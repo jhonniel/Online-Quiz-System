@@ -320,11 +320,15 @@ class SettingsController extends Controller
         $payslipSignatoryUsers = PayslipSignatorySettings::selectableUsersQuery()
             ->get(['id', 'name', 'email', 'role']);
 
+        $leaveSignatoryUsers = LeaveRequestSignatorySettings::selectableUsersQuery()
+            ->get(['id', 'name', 'email', 'role']);
+
         // Pass settings to view - ensure it's passed correctly
         return view('admin.settings.index', [
             'settings' => $settings,
             'health' => $health,
             'payslipSignatoryUsers' => $payslipSignatoryUsers,
+            'leaveSignatoryUsers' => $leaveSignatoryUsers,
         ]);
     }
 

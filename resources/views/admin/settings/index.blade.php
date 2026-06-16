@@ -501,7 +501,7 @@
                                     <select name="leave_immediate_supervisor_user_id" id="leave_immediate_supervisor_user_id"
                                             class="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
                                         <option value="">— Not set —</option>
-                                        @foreach($payslipSignatoryUsers->groupBy('role') as $role => $users)
+                                        @foreach($leaveSignatoryUsers->groupBy('role') as $role => $users)
                                             <optgroup label="{{ ucfirst($role) }}s">
                                                 @foreach($users as $user)
                                                     <option value="{{ $user->id }}"
@@ -540,7 +540,7 @@
                                     <select name="leave_hr_admin_user_id" id="leave_hr_admin_user_id"
                                             class="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
                                         <option value="">— Not set —</option>
-                                        @foreach($payslipSignatoryUsers->groupBy('role') as $role => $users)
+                                        @foreach($leaveSignatoryUsers->groupBy('role') as $role => $users)
                                             <optgroup label="{{ ucfirst($role) }}s">
                                                 @foreach($users as $user)
                                                     <option value="{{ $user->id }}"
@@ -573,7 +573,7 @@
                                     <select name="leave_cto_user_id" id="leave_cto_user_id"
                                             class="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
                                         <option value="">— Not set —</option>
-                                        @foreach($payslipSignatoryUsers->groupBy('role') as $role => $users)
+                                        @foreach($leaveSignatoryUsers->groupBy('role') as $role => $users)
                                             <optgroup label="{{ ucfirst($role) }}s">
                                                 @foreach($users as $user)
                                                     <option value="{{ $user->id }}"

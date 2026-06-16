@@ -141,12 +141,19 @@ final class LeaveRequestSignatorySettings
 
     public static function selectableUsersQuery(): Builder
     {
-        return PayslipSignatorySettings::selectableUsersQuery();
+        return User::query()
+            ->whereIn('role', ['employee', 'admin', 'hr'])
+            ->where('is_active', true)
+            ->orderBy('name');
     }
 
     public static function isSelectableUser(?User $user): bool
     {
-        return PayslipSignatorySettings::isSelectableUser($user);
+        if (! $user || ! $user->is_active) {
+            return false;
+        }
+
+        return in_array($user->role, ['employee', 'admin', 'hr'], true);
     }
 
     public static function findUserByName(?string $name): ?User
@@ -169,6 +176,16 @@ final class LeaveRequestSignatorySettings
     {
         $user = User::query()->find($id);
 
-        return self::isSelectableUser($user) ? $user : null;
+        if (! self::isSelectableUser($user)) {
+            return null;
+        }
+
+        if ($user !== null && blank($user->e_signature_path)) {
+            $user = User::query()
+                ->whereKey($user->id)
+                ->first(['id', 'name', 'role', 'e_signature_path']);
+        }
+
+        return $user;
     }
 }

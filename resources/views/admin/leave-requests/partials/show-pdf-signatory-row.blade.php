@@ -6,9 +6,7 @@
 
 <div class="signatory-block">
     @if(!empty($signatureUri))
-        <div class="signature-slot">
-            <img src="{{ $signatureUri }}" alt="E-Signature" class="signature-image">
-        </div>
+        <img src="{{ $signatureUri }}" alt="E-Signature" class="signature-image">
     @endif
     <p class="signatory-name">{{ $name !== '' ? $name : '—' }}</p>
     <p class="signatory-role">{{ $role }}</p>

@@ -909,7 +909,11 @@ class LeaveRequestController extends Controller
             'leaveRequest' => $leaveRequest,
             'signatories' => $signatories,
             'signatoryAssets' => $signatoryAssets,
-        ])->setPaper('a4', 'portrait');
+        ])
+            ->setPaper('a4', 'portrait')
+            ->setOption('isHtml5ParserEnabled', true)
+            ->setOption('isRemoteEnabled', true)
+            ->setOption('dpi', 120);
 
         $requesterName = Str::slug($leaveRequest->user?->name ?? 'employee');
         $filename = 'leave_request_'.$leaveRequest->id.'_'.$requesterName.'.pdf';

@@ -49,6 +49,12 @@ final class LeaveRequestSignatoryAssets
      */
     private static function block(string $name, string $role, ?User $user): array
     {
+        if ($user !== null && blank($user->e_signature_path)) {
+            $user = User::query()
+                ->whereKey($user->id)
+                ->first(['id', 'name', 'role', 'e_signature_path']);
+        }
+
         return [
             'name' => $name,
             'role' => $role,
