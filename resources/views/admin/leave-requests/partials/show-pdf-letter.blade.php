@@ -26,9 +26,8 @@
             <p>
                 If my leave of absence is approved, I'll try my best to assist with any questions by phone call
                 or chat provided that I have the means or I can connect with the internet.
+                <strong>Additional info:</strong>  {!! nl2br(e(trim((string) ($leaveRequest->reason ?? '')))) !!}
             </p>
-            <p style="white-space: pre-line;"><strong>Additional info:</strong>
-{{ $leaveRequest->reason }}</p>
             <p>
                 Please let me know if you have any questions and an appropriate time for us to speak to
                 discuss the terms of my leave of absence.
