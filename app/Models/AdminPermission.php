@@ -12,6 +12,7 @@ class AdminPermission extends Model
         'analytics' => 'Student Performance Analytics',
         'error_logs' => 'Error Logs',
         'user_activity' => 'User Activity',
+        'anonymous_chats' => 'Anonymous Chats',
         'students_review' => 'Students Review',
     ];
 
@@ -38,6 +39,8 @@ class AdminPermission extends Model
         'allowed_subscription_features',
         'files',
         'confession',
+        'tasks',
+        'allowed_task_features',
         'feedback',
         'user_management',
         'allowed_user_management_features',
@@ -68,6 +71,8 @@ class AdminPermission extends Model
         'allowed_subscription_features' => 'array',
         'files' => 'boolean',
         'confession' => 'boolean',
+        'tasks' => 'boolean',
+        'allowed_task_features' => 'array',
         'feedback' => 'boolean',
         'user_management' => 'boolean',
         'allowed_user_management_features' => 'array',

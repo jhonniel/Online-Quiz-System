@@ -7,7 +7,7 @@
             </a>
         @endif
     @endforeach
-    @if(auth()->user()->canAccessAnyEmployeeDocumentFeature())
+    @if(auth()->user()->canAccessEmployeeFeature('employee_signatures'))
         <a href="{{ route('admin.employee-documents.signatures') }}"
            class="inline-flex items-center px-4 py-2 rounded-md text-sm font-medium {{ ($active ?? '') === 'signatures' ? 'bg-indigo-600 text-white' : 'bg-white border border-gray-300 text-gray-700 hover:bg-gray-50' }}">
             Signatures

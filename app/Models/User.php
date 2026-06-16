@@ -22,6 +22,14 @@ class User extends Authenticatable
 
     public const DEFAULT_STUDENT_ABSENCE_ALLOWANCE = 3.0;
 
+    /** @var array<string, string> */
+    public const GENDERS = [
+        'male' => 'Male',
+        'female' => 'Female',
+        'other' => 'Other',
+        'prefer_not_to_say' => 'Prefer not to say',
+    ];
+
     /** Roles that participate in quizzes / leaderboard rankings. */
     public const LEARNER_ROLES = ['student', 'user', 'applicant', 'employee', 'teacher'];
 
@@ -72,6 +80,7 @@ class User extends Authenticatable
         'moa_uploaded_at',
         'moa_reupload_allowed',
         'bio',
+        'gender',
         'theme_color_enabled',
         'theme_color',
         'overtime_months_credited',
@@ -351,6 +360,52 @@ class User extends Authenticatable
     public function isEmployee()
     {
         return $this->role === 'employee';
+    }
+
+    public static function genderOptions(): array
+    {
+        return self::GENDERS;
+    }
+
+    public static function genderLabel(?string $gender): string
+    {
+        if ($gender === null || $gender === '') {
+            return 'Not specified';
+        }
+
+        return self::GENDERS[$gender] ?? 'Not specified';
+    }
+
+    public function getGenderLabelAttribute(): string
+    {
+        return self::genderLabel($this->gender);
+    }
+
+    /**
+     * @return array{labels: list<string>, data: list<int>}
+     */
+    public static function employeeGenderChartData(): array
+    {
+        $labels = [];
+        $data = [];
+
+        foreach (self::GENDERS as $key => $label) {
+            $labels[] = $label;
+            $data[] = self::query()->where('role', 'employee')->where('gender', $key)->count();
+        }
+
+        $labels[] = 'Not specified';
+        $data[] = self::query()
+            ->where('role', 'employee')
+            ->where(function ($query) {
+                $query->whereNull('gender')->orWhere('gender', '');
+            })
+            ->count();
+
+        return [
+            'labels' => $labels,
+            'data' => $data,
+        ];
     }
 
     public function isHr()
@@ -1068,7 +1123,97 @@ class User extends Authenticatable
             }
         }
 
-        return false;
+        return $this->canAccessEmployeeFeature('employee_signatures');
+    }
+
+    public function canAccessTasks(): bool
+    {
+        if ($this->isSuperAdmin()) {
+            return true;
+        }
+
+        if ($this->hasAdminPermission('tasks')) {
+            return true;
+        }
+
+        return $this->hasAnyAdminPermissionExcludingTasks();
+    }
+
+    public function canAccessTaskFeature(string $feature): bool
+    {
+        if (! array_key_exists($feature, AdminPermissionAreas::TASK_FEATURES)) {
+            return false;
+        }
+
+        if ($this->isSuperAdmin()) {
+            return true;
+        }
+
+        if (! $this->canAccessTasks()) {
+            return false;
+        }
+
+        if (! $this->hasAdminPermission('tasks') && $this->hasAnyAdminPermissionExcludingTasks()) {
+            return true;
+        }
+
+        return $this->canAccessAdminSubFeature('task_management', $feature);
+    }
+
+    public function canAccessAnyTaskFeature(): bool
+    {
+        if ($this->isSuperAdmin()) {
+            return true;
+        }
+
+        if (! $this->canAccessTasks()) {
+            return false;
+        }
+
+        if (! $this->hasAdminPermission('tasks') && $this->hasAnyAdminPermissionExcludingTasks()) {
+            return true;
+        }
+
+        if (! $this->relationLoaded('adminPermission')) {
+            $this->load('adminPermission');
+        }
+
+        $allowed = $this->adminPermission?->allowed_task_features;
+        if (empty($allowed)) {
+            return true;
+        }
+
+        return count(array_intersect($allowed, array_keys(AdminPermissionAreas::TASK_FEATURES))) > 0;
+    }
+
+    /**
+     * @return bool Whether the user has any delegated admin permission other than Task To Do.
+     */
+    public function hasAnyAdminPermissionExcludingTasks(): bool
+    {
+        if (! $this->relationLoaded('adminPermission')) {
+            $this->load('adminPermission');
+        }
+
+        $adminPermission = $this->adminPermission;
+        if (! $adminPermission) {
+            return false;
+        }
+
+        return $adminPermission->content_management
+            || $adminPermission->analytics_reports
+            || $adminPermission->employee_management
+            || $adminPermission->student_management
+            || $adminPermission->hiring_process
+            || $adminPermission->communication
+            || $adminPermission->linked_accounts
+            || $adminPermission->billing
+            || $adminPermission->files
+            || $adminPermission->confession
+            || $adminPermission->feedback
+            || $adminPermission->user_management
+            || $adminPermission->system
+            || ($adminPermission->qr_code ?? false);
     }
 
     public static function employeeDocumentsNavEnabled(): bool
@@ -1513,9 +1658,11 @@ class User extends Authenticatable
                    $adminPermission->billing ||
                    $adminPermission->files ||
                    $adminPermission->confession ||
+                   $adminPermission->tasks ||
                    $adminPermission->feedback ||
                    $adminPermission->user_management ||
-                   $adminPermission->system;
+                   $adminPermission->system ||
+                   ($adminPermission->qr_code ?? false);
         }
 
         // If user doesn't have a permission record, they have NO access

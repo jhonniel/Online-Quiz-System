@@ -84,14 +84,14 @@ final class EmployeeDocumentFooter
         return str_replace(array_keys($replacements), array_values($replacements), $html);
     }
 
-    public static function renderPdfFixedFooterHtml(string $type, ?string $companyName = null): string
+    public static function renderPdfFixedFooterHtml(string $type, ?string $companyName = null, ?string $documentTitle = null): string
     {
         $html = EmployeeDocumentTemplateSanitizer::sanitize(self::editorFooterHtml($type));
 
         $replacements = [
             '{{page_number}}' => '<span class="document-pdf-page-number"></span>',
             '{{company_name}}' => e($companyName ?? self::defaultCompanyName()),
-            '{{document_title}}' => e(EmployeeSampleDocument::title($type)),
+            '{{document_title}}' => e($documentTitle ?? EmployeeSampleDocument::title($type)),
         ];
 
         return str_replace(array_keys($replacements), array_values($replacements), $html);

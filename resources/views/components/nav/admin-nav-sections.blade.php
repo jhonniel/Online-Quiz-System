@@ -214,6 +214,8 @@
                         User Activity
                     </span>
                 </a>
+                @endif
+                @if(auth()->user()->canAccessAnalyticsFeature('anonymous_chats'))
                 <a href="{{ route('admin.anonymous-chats.index') }}"
                    class="flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors duration-200 {{ request()->routeIs('admin.anonymous-chats.*') ? 'bg-indigo-700 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white' }}"
                    :class="sidebarCollapsed ? 'justify-center' : ''"
@@ -244,7 +246,7 @@
         @endif
 
         <!-- KPI -->
-        @if(auth()->user()->isSuperAdmin())
+        @if(auth()->user()->canAccessEmployeeFeature('kpi_dashboard'))
         <div class="mb-6" x-data="{
             open: (localStorage.getItem('nav-kpi') || 'true') === 'true',
             toggle() {
@@ -360,6 +362,7 @@
                     <span class="transition-opacity duration-300" :class="sidebarCollapsed ? 'opacity-0 w-0 overflow-hidden' : 'opacity-100'">Hand Book</span>
                 </a>
                 @endif
+                @if(auth()->user()->canAccessEmployeeFeature('employee_signatures'))
                 <a href="{{ url('/admin/employee-documents/signatures') }}"
                    class="flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors duration-200 {{ request()->routeIs('admin.employee-documents.signatures') ? 'bg-indigo-700 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white' }}"
                    :class="sidebarCollapsed ? 'justify-center' : ''"
@@ -369,6 +372,7 @@
                     </svg>
                     <span class="transition-opacity duration-300" :class="sidebarCollapsed ? 'opacity-0 w-0 overflow-hidden' : 'opacity-100'">Signatures</span>
                 </a>
+                @endif
             </div>
         </div>
         @endif
@@ -1031,6 +1035,7 @@
         @endif
 
         <!-- TASK TO DO -->
+        @if(auth()->user()->canAccessTasks())
         <div class="mb-6" x-data="{
             open: (localStorage.getItem('nav-task-assign') || '{{ request()->routeIs('admin.tasks.*') ? 'true' : 'false' }}') === 'true',
             toggle() {
@@ -1068,7 +1073,7 @@
                  x-transition:leave-end="opacity-0 transform scale-95"
                  :class="sidebarCollapsed ? 'hidden' : ''"
                  class="ml-6 mt-1 space-y-1">
-                @if(auth()->user()->isSuperAdmin())
+                @if(auth()->user()->canAccessTaskFeature('task_dashboard'))
                 <a href="{{ url('/admin/tasks/dashboard') }}"
                    class="flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors duration-200 {{ request()->routeIs('admin.tasks.dashboard') ? 'bg-indigo-700 text-white' : 'text-gray-400 hover:bg-gray-700 hover:text-gray-300' }}"
                    :title="sidebarCollapsed ? 'Task Dashboard' : ''">
@@ -1080,6 +1085,7 @@
                     </span>
                 </a>
                 @endif
+                @if(auth()->user()->canAccessTaskFeature('personal_tasks'))
                 <a href="{{ url('/admin/tasks?type=personal') }}"
                    class="flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors duration-200 {{ request()->routeIs('admin.tasks.index') && request('type') == 'personal' ? 'bg-indigo-700 text-white' : 'text-gray-400 hover:bg-gray-700 hover:text-gray-300' }}"
                    :title="sidebarCollapsed ? 'My Tasks' : ''">
@@ -1090,6 +1096,8 @@
                         My Tasks
                     </span>
                 </a>
+                @endif
+                @if(auth()->user()->canAccessTaskFeature('group_tasks'))
                 <a href="{{ url('/admin/tasks?type=group') }}"
                    class="flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors duration-200 {{ request()->routeIs('admin.tasks.index') && request('type') == 'group' ? 'bg-indigo-700 text-white' : 'text-gray-400 hover:bg-gray-700 hover:text-gray-300' }}"
                    :title="sidebarCollapsed ? 'Group Tasks' : ''">
@@ -1100,8 +1108,10 @@
                         Group Tasks
                     </span>
                 </a>
+                @endif
             </div>
         </div>
+        @endif
 
         <!-- System -->
         @if(auth()->user()->canAccessAnyAdminSubFeature('system'))

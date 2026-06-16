@@ -17,14 +17,25 @@
                     <p class="text-sm sm:text-base text-indigo-100 mt-1">Review and manage this leave request</p>
                 </div>
             </div>
-            <a href="{{ $backLink['url'] }}"
-               class="inline-flex items-center justify-center px-3 py-2 sm:px-4 sm:py-2 text-xs sm:text-sm bg-white/10 backdrop-blur-sm border border-white/20 rounded-lg text-white hover:bg-white/20 transition duration-200">
-                <svg class="h-4 w-4 sm:h-5 sm:w-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
-                </svg>
-                <span class="hidden sm:inline">{{ $backLink['label'] }}</span>
-                <span class="sm:hidden">Back</span>
-            </a>
+            <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+                <a href="{{ route('admin.leave-requests.show-pdf', $leaveRequest) }}"
+                   target="_blank"
+                   rel="noopener noreferrer"
+                   class="inline-flex items-center justify-center px-3 py-2 sm:px-4 sm:py-2 text-xs sm:text-sm bg-white text-indigo-700 rounded-lg hover:bg-indigo-50 transition duration-200 font-medium">
+                    <svg class="h-4 w-4 sm:h-5 sm:w-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"></path>
+                    </svg>
+                    View PDF
+                </a>
+                <a href="{{ $backLink['url'] }}"
+                   class="inline-flex items-center justify-center px-3 py-2 sm:px-4 sm:py-2 text-xs sm:text-sm bg-white/10 backdrop-blur-sm border border-white/20 rounded-lg text-white hover:bg-white/20 transition duration-200">
+                    <svg class="h-4 w-4 sm:h-5 sm:w-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
+                    </svg>
+                    <span class="hidden sm:inline">{{ $backLink['label'] }}</span>
+                    <span class="sm:hidden">Back</span>
+                </a>
+            </div>
         </div>
     </div>
 

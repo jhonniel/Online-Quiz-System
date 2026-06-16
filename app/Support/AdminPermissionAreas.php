@@ -24,18 +24,26 @@ final class AdminPermissionAreas
         'employee_contract' => 'Agreement',
         'employee_policy' => 'Policy',
         'employee_handbook' => 'Hand Book',
+        'employee_signatures' => 'E-Signatures',
         'dtr' => 'DTR (Time Records)',
         'time_report' => 'Time Report',
         'leave_requests' => 'Leave Requests',
         'leave_calendar' => 'Leave Calendar',
+        'kpi_dashboard' => 'KPI Dashboard',
     ];
 
     /** @var array<string, list<string>> */
     public const EMPLOYEE_FEATURE_GROUPS = [
-        'Dashboard' => ['employee_dashboard'],
-        'Employee Documents' => ['file_request', 'payslip', 'employee_nda', 'employee_contract', 'employee_policy', 'employee_handbook'],
+        'Dashboard' => ['employee_dashboard', 'kpi_dashboard'],
+        'Employee Documents' => ['file_request', 'payslip', 'employee_nda', 'employee_contract', 'employee_policy', 'employee_handbook', 'employee_signatures'],
         'Time & Attendance' => ['dtr', 'time_report'],
         'Leave' => ['leave_requests', 'leave_calendar'],
+    ];
+
+    public const TASK_FEATURES = [
+        'personal_tasks' => 'My Tasks',
+        'group_tasks' => 'Group Tasks',
+        'task_dashboard' => 'Task Dashboard',
     ];
 
     public const STUDENT_FEATURES = [
@@ -145,6 +153,12 @@ final class AdminPermissionAreas
                 'parent_flag' => 'system',
                 'column' => 'allowed_system_features',
                 'features' => self::SYSTEM_FEATURES,
+            ],
+            'task_management' => [
+                'label' => 'Task To Do',
+                'parent_flag' => 'tasks',
+                'column' => 'allowed_task_features',
+                'features' => self::TASK_FEATURES,
             ],
         ];
     }

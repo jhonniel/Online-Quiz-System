@@ -560,6 +560,15 @@
         </div>
         <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
             <div class="px-6 py-4 border-b border-gray-200 bg-gray-50/80">
+                <h2 class="text-base font-semibold text-gray-900">Employee Gender</h2>
+                <p class="text-sm text-gray-500 mt-0.5">Workforce breakdown by gender</p>
+            </div>
+            <div class="p-6">
+                <canvas id="employeeGenderChart" height="200"></canvas>
+            </div>
+        </div>
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+            <div class="px-6 py-4 border-b border-gray-200 bg-gray-50/80">
                 <h2 class="text-base font-semibold text-gray-900">Employee Leave Requests</h2>
                 <p class="text-sm text-gray-500 mt-0.5">By status</p>
             </div>
@@ -1499,6 +1508,8 @@
         'dtrStudentData' => $dtrStudentChartData ?? [],
         'leaveEmployeeLabels' => $leaveRequestEmployeeLabels ?? [],
         'leaveEmployeeData' => $leaveRequestEmployeeData ?? [],
+        'employeeGenderLabels' => $employeeGenderLabels ?? [],
+        'employeeGenderData' => $employeeGenderData ?? [],
         'leaveStudentLabels' => $leaveRequestStudentLabels ?? [],
         'leaveStudentData' => $leaveRequestStudentData ?? [],
         'activityTypeLabels' => $activityTypeLabels ?? [],
@@ -1559,7 +1570,8 @@ document.addEventListener('DOMContentLoaded', function() {
         'userRegLabels', 'userRegData', 'errorLogLabels', 'errorLogData',
         'studentRegLabels', 'studentRegData', 'employeeRegData',
         'dtrLabels', 'dtrEmployeeData', 'dtrStudentData',
-        'leaveEmployeeLabels', 'leaveEmployeeData', 'leaveStudentLabels', 'leaveStudentData',
+        'leaveEmployeeLabels', 'leaveEmployeeData', 'employeeGenderLabels', 'employeeGenderData',
+        'leaveStudentLabels', 'leaveStudentData',
         'activityTypeLabels', 'activityTypeData',
         'loginTimeLabels', 'loginTimeData',
         'activityLogLabels', 'activityLogTotalData', 'activityLogGuestTrafficData',
@@ -1596,6 +1608,8 @@ document.addEventListener('DOMContentLoaded', function() {
     var dtrStudentData = chartArrays.dtrStudentData;
     var leaveEmployeeLabels = chartArrays.leaveEmployeeLabels;
     var leaveEmployeeData = chartArrays.leaveEmployeeData;
+    var employeeGenderLabels = chartArrays.employeeGenderLabels;
+    var employeeGenderData = chartArrays.employeeGenderData;
     var leaveStudentLabels = chartArrays.leaveStudentLabels;
     var leaveStudentData = chartArrays.leaveStudentData;
     var activityTypeLabels = chartArrays.activityTypeLabels;
@@ -1914,6 +1928,39 @@ document.addEventListener('DOMContentLoaded', function() {
                 maintainAspectRatio: false,
                 plugins: { legend: { position: 'top' } },
                 scales: { y: { beginAtZero: true } }
+            }
+        });
+    }
+
+    // Employee Gender Pie Chart
+    if (document.getElementById('employeeGenderChart') && typeof Chart !== 'undefined') {
+        new Chart(document.getElementById('employeeGenderChart'), {
+            type: 'pie',
+            data: {
+                labels: employeeGenderLabels,
+                datasets: [{
+                    data: employeeGenderData,
+                    backgroundColor: [
+                        'rgba(59, 130, 246, 0.85)',
+                        'rgba(236, 72, 153, 0.85)',
+                        'rgba(139, 92, 246, 0.85)',
+                        'rgba(107, 114, 128, 0.85)',
+                        'rgba(245, 158, 11, 0.85)',
+                    ],
+                    borderColor: [
+                        'rgb(59, 130, 246)',
+                        'rgb(236, 72, 153)',
+                        'rgb(139, 92, 246)',
+                        'rgb(107, 114, 128)',
+                        'rgb(245, 158, 11)',
+                    ],
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { position: 'bottom' } }
             }
         });
     }

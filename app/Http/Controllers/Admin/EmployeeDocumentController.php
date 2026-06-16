@@ -7,8 +7,8 @@ use App\Models\EmployeeDocumentSignature;
 use App\Models\User;
 use App\Support\AdminEmployeeDepartmentScope;
 use App\Support\EmployeeDocumentFooter;
-use App\Support\EmployeeDocumentTemplate;
 use App\Support\EmployeeDocumentPositionRules;
+use App\Support\EmployeeDocumentTemplate;
 use App\Support\EmployeeSampleDocument;
 use App\Support\UserESignatureStorage;
 use Illuminate\Http\Request;
@@ -20,7 +20,7 @@ class EmployeeDocumentController extends Controller
 {
     public function signatures(Request $request)
     {
-        abort_unless($this->requireAuthUser()->canAccessAnyEmployeeDocumentFeature(), 403);
+        abort_unless($this->requireAuthUser()->canAccessEmployeeFeature('employee_signatures'), 403);
 
         $search = trim((string) $request->query('search', ''));
         $status = (string) $request->query('status', '');
@@ -60,7 +60,7 @@ class EmployeeDocumentController extends Controller
 
     public function uploadEmployeeESignature(Request $request, User $employee)
     {
-        abort_unless($this->requireAuthUser()->canAccessAnyEmployeeDocumentFeature(), 403);
+        abort_unless($this->requireAuthUser()->canAccessEmployeeFeature('employee_signatures'), 403);
         abort_unless($employee->isStaffMember(), 404);
         abort_unless($this->canAccessEmployee($employee), 403);
 
@@ -82,7 +82,7 @@ class EmployeeDocumentController extends Controller
 
     public function removeEmployeeESignature(Request $request, User $employee)
     {
-        abort_unless($this->requireAuthUser()->canAccessAnyEmployeeDocumentFeature(), 403);
+        abort_unless($this->requireAuthUser()->canAccessEmployeeFeature('employee_signatures'), 403);
         abort_unless($employee->isStaffMember(), 404);
         abort_unless($this->canAccessEmployee($employee), 403);
 

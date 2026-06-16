@@ -10,6 +10,7 @@ use App\Models\Dtr;
 use App\Models\DtrDeficit;
 use App\Models\LeaveBalance;
 use App\Support\DocumentExportPdfBranding;
+use App\Support\LeaveRequestSignatoryAssets;
 use App\Support\WorkFromHomeQuota;
 use App\Models\LeaveRequest;
 use App\Models\LeaveRequestLog;
@@ -29,6 +30,7 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 
 class LeaveRequestController extends Controller
@@ -853,21 +855,7 @@ class LeaveRequestController extends Controller
             ];
         }
 
-        // Get signatory names - immediate supervisor based on user's department
-        $employee = $leaveRequest->user;
-        $immediateSupervisor = 'CHARMAINE JOY ROSATACE'; // Default fallback
-
-        if ($employee && $employee->department && $employee->department->supervisor_name) {
-            $immediateSupervisor = $employee->department->supervisor_name;
-        } else {
-            $immediateSupervisor = \App\Models\Setting::get('leave_immediate_supervisor', 'CHARMAINE JOY ROSATACE');
-        }
-
-        $signatories = [
-            'immediate_supervisor' => $immediateSupervisor,
-            'hr_admin' => \App\Models\Setting::get('leave_hr_admin', 'MAY GRACE ACOSTA'),
-            'cto' => \App\Models\Setting::get('leave_cto', 'NITISH KHEMANI'),
-        ];
+        $signatories = $this->leaveRequestSignatories($leaveRequest);
 
         // Load recent activity only (avoid loading unbounded log history into memory)
         $leaveRequest->load([
@@ -905,6 +893,30 @@ class LeaveRequestController extends Controller
             'backLink',
             'teacherExcusedBatchmates'
         ));
+    }
+
+    public function showPdf(Request $request, LeaveRequest $leaveRequest)
+    {
+        $this->assertCanAccessEmployeeLeaveRequest($leaveRequest);
+
+        $leaveRequest->load(['user.department', 'reviewer']);
+
+        $signatories = $this->leaveRequestSignatories($leaveRequest);
+        $signatoryAssets = LeaveRequestSignatoryAssets::forLeaveRequest($leaveRequest, $signatories);
+
+        $pdf = Pdf::loadView('admin.leave-requests.show-pdf', [
+            'leaveRequest' => $leaveRequest,
+            'signatories' => $signatories,
+            'signatoryAssets' => $signatoryAssets,
+        ])->setPaper('a4', 'portrait');
+
+        $requesterName = Str::slug($leaveRequest->user?->name ?? 'employee');
+        $filename = 'leave_request_'.$leaveRequest->id.'_'.$requesterName.'.pdf';
+
+        return response($pdf->output(), 200, [
+            'Content-Type' => 'application/pdf',
+            'Content-Disposition' => 'inline; filename="'.$filename.'"',
+        ]);
     }
 
     /**
@@ -2417,6 +2429,27 @@ class LeaveRequestController extends Controller
         if ($user->isHr()) {
             $query->whereIn('type', LeaveRequest::hrViewableTypes());
         }
+    }
+
+    /**
+     * @return array{immediate_supervisor: string, hr_admin: string, cto: string}
+     */
+    private function leaveRequestSignatories(LeaveRequest $leaveRequest): array
+    {
+        $employee = $leaveRequest->user;
+        $immediateSupervisor = 'CHARMAINE JOY ROSATACE';
+
+        if ($employee && $employee->department && $employee->department->supervisor_name) {
+            $immediateSupervisor = $employee->department->supervisor_name;
+        } else {
+            $immediateSupervisor = Setting::get('leave_immediate_supervisor', 'CHARMAINE JOY ROSATACE');
+        }
+
+        return [
+            'immediate_supervisor' => $immediateSupervisor,
+            'hr_admin' => Setting::get('leave_hr_admin', 'MAY GRACE ACOSTA'),
+            'cto' => Setting::get('leave_cto', 'NITISH KHEMANI'),
+        ];
     }
 
     private function assertCanAccessEmployeeLeaveRequest(LeaveRequest $leaveRequest): User

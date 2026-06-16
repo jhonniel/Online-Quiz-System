@@ -71,14 +71,23 @@ final class AdminFeatureNavLinks
             $sections[] = $links;
         }
 
-        if ($user->hasAnyAdminPermission()) {
-            $sections[] = [
-                'area' => 'Task To Do',
-                'links' => [
-                    ['label' => 'My Tasks', 'url' => url('/admin/tasks?type=personal'), 'description' => 'Personal task board'],
-                    ['label' => 'Group Tasks', 'url' => url('/admin/tasks?type=group'), 'description' => 'Shared team tasks'],
-                ],
-            ];
+        if ($user->canAccessTasks()) {
+            $taskLinks = [];
+            if ($user->canAccessTaskFeature('task_dashboard')) {
+                $taskLinks[] = ['label' => 'Task Dashboard', 'url' => url('/admin/tasks/dashboard'), 'description' => 'Task analytics overview'];
+            }
+            if ($user->canAccessTaskFeature('personal_tasks')) {
+                $taskLinks[] = ['label' => 'My Tasks', 'url' => url('/admin/tasks?type=personal'), 'description' => 'Personal task board'];
+            }
+            if ($user->canAccessTaskFeature('group_tasks')) {
+                $taskLinks[] = ['label' => 'Group Tasks', 'url' => url('/admin/tasks?type=group'), 'description' => 'Shared team tasks'];
+            }
+            if ($taskLinks !== []) {
+                $sections[] = [
+                    'area' => 'Task To Do',
+                    'links' => $taskLinks,
+                ];
+            }
         }
 
         return array_values(array_filter($sections, fn (array $section): bool => ($section['links'] ?? []) !== []));
@@ -134,7 +143,7 @@ final class AdminFeatureNavLinks
             }
         }
 
-        if ($user->canAccessEmployeeManagement()) {
+        if ($user->canAccessEmployeeFeature('kpi_dashboard')) {
             $links[] = [
                 'label' => 'KPI Dashboard',
                 'url' => url('/admin/kpi/dashboard'),
@@ -170,7 +179,7 @@ final class AdminFeatureNavLinks
 
         $links = self::buildLinks($user, 'canAccessEmployeeFeature', AdminPermissionAreas::EMPLOYEE_FEATURES, $map);
 
-        if ($user->canAccessAnyEmployeeDocumentFeature()) {
+        if ($user->canAccessEmployeeFeature('employee_signatures')) {
             $links[] = [
                 'label' => 'E-Signatures',
                 'url' => url('/admin/employee-documents/signatures'),

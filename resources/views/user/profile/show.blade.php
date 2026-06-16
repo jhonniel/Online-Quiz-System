@@ -108,6 +108,12 @@
                 <div class="bg-gray-50 rounded-lg p-4 mb-6">
                     <h3 class="text-sm font-medium text-gray-900 mb-3">Employment Details</h3>
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
+                        @if($user->isEmployee())
+                        <div>
+                            <p class="text-xs font-semibold text-gray-500 uppercase tracking-wide">Gender</p>
+                            <p class="mt-1 text-gray-900">{{ $user->gender_label }}</p>
+                        </div>
+                        @endif
                         <div>
                             <p class="text-xs font-semibold text-gray-500 uppercase tracking-wide">Date Hired</p>
                             <p class="mt-1 text-gray-900">{{ $user->date_hired?->format('F j, Y') ?: '—' }}</p>

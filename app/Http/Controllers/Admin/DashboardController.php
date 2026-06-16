@@ -835,6 +835,16 @@ class DashboardController extends Controller
                 $activityTypeData = [0, 0];
             }
 
+            try {
+                $employeeGenderChart = User::employeeGenderChartData();
+                $employeeGenderLabels = $employeeGenderChart['labels'];
+                $employeeGenderData = $employeeGenderChart['data'];
+            } catch (\Exception $e) {
+                $employeeGenderLabels = array_values(User::GENDERS);
+                $employeeGenderLabels[] = 'Not specified';
+                $employeeGenderData = array_fill(0, count($employeeGenderLabels), 0);
+            }
+
             return view('admin.dashboard', compact(
                 'chartPeriod',
                 'chartFrom',
@@ -908,6 +918,8 @@ class DashboardController extends Controller
                 'leaveRequestStudentData',
                 'activityTypeLabels',
                 'activityTypeData',
+                'employeeGenderLabels',
+                'employeeGenderData',
                 'loginTimeLabels',
                 'loginTimeData',
                 'activityLogLabels',
@@ -1021,6 +1033,8 @@ class DashboardController extends Controller
                 'leaveRequestStudentData' => [],
                 'activityTypeLabels' => [],
                 'activityTypeData' => [],
+                'employeeGenderLabels' => array_merge(array_values(User::GENDERS), ['Not specified']),
+                'employeeGenderData' => array_fill(0, count(User::GENDERS) + 1, 0),
                 'loginTimeLabels' => [],
                 'loginTimeData' => [],
                 'activityLogLabels' => [],

@@ -3,26 +3,25 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
-use App\Models\User;
+use App\Models\Department;
 use App\Models\Dtr;
 use App\Models\DtrDeficit;
 use App\Models\LeaveRequest;
-use App\Models\Department;
-use Illuminate\Http\Request;
+use App\Models\User;
 use Carbon\Carbon;
 use Carbon\CarbonPeriod;
+use Illuminate\Http\Request;
 
 class KpiController extends Controller
 {
     private const PRODUCTIVE_STATUSES = ['present', 'late', 'half_day'];
+
     private const EXCUSED_STATUSES = ['on_leave', 'travel'];
 
     public function dashboard(Request $request)
     {
         // Only super admins can access
-        if (!auth()->user()->isSuperAdmin()) {
-            abort(403, 'Access denied. Only super administrators can view KPI dashboard.');
-        }
+        abort_unless($request->user()?->canAccessEmployeeFeature('kpi_dashboard'), 403);
 
         // Get filter parameters
         $dateFrom = $request->input('date_from', Carbon::now()->startOfWeek()->format('Y-m-d'));
@@ -61,7 +60,7 @@ class KpiController extends Controller
             ->whereDate('week_start_date', '<=', $endDate->toDateString())
             ->orderBy('week_start_date')
             ->get();
-        $deficitHoursByUser = $deficits->groupBy('user_id')->map(fn($rows) => (float) $rows->sum('deficit_hours'));
+        $deficitHoursByUser = $deficits->groupBy('user_id')->map(fn ($rows) => (float) $rows->sum('deficit_hours'));
 
         // Approved absent leave requests overlapping selected range.
         $approvedAbsentLeaves = LeaveRequest::whereIn('user_id', $users->pluck('id'))
@@ -73,7 +72,7 @@ class KpiController extends Controller
 
         $weekdays = [];
         foreach (CarbonPeriod::create($startDate->copy()->startOfDay(), $endDate->copy()->startOfDay()) as $dt) {
-            if (!$dt->isWeekend()) {
+            if (! $dt->isWeekend()) {
                 $weekdays[] = $dt->toDateString();
             }
         }
@@ -106,7 +105,7 @@ class KpiController extends Controller
 
         foreach ($users as $user) {
             $userDtrs = $dtrs->where('user_id', $user->id);
-            $byDate = $userDtrs->sortBy('date')->keyBy(fn($row) => Carbon::parse($row->date)->toDateString());
+            $byDate = $userDtrs->sortBy('date')->keyBy(fn ($row) => Carbon::parse($row->date)->toDateString());
 
             $presentCount = 0;
             $lateCount = 0;
@@ -117,7 +116,7 @@ class KpiController extends Controller
 
             foreach ($weekdays as $dateStr) {
                 $row = $byDate->get($dateStr);
-                if (!$row) {
+                if (! $row) {
                     continue;
                 }
 
@@ -154,7 +153,7 @@ class KpiController extends Controller
             $hoursRate = min(($avgHoursPerDay / 8) * 100, 100);
             $activityValues = $userDtrs
                 ->pluck('activity_percentage')
-                ->filter(fn($value) => $value !== null);
+                ->filter(fn ($value) => $value !== null);
             $activityRate = $activityValues->count() > 0
                 ? min(max((float) $activityValues->avg(), 0), 100)
                 : $hoursRate;
@@ -200,7 +199,7 @@ class KpiController extends Controller
         }
 
         // Sort by performance score (descending)
-        usort($performanceData, function($a, $b) {
+        usort($performanceData, function ($a, $b) {
             return $b['performance_score'] <=> $a['performance_score'];
         });
 
@@ -217,10 +216,10 @@ class KpiController extends Controller
 
         // Prepare chart data
         // Top 10 Performers
-        $topPerformers = collect($performanceData)->take(10)->map(function($data) {
+        $topPerformers = collect($performanceData)->take(10)->map(function ($data) {
             return [
                 'name' => $data['user']->name,
-                'score' => round($data['performance_score'], 1)
+                'score' => round($data['performance_score'], 1),
             ];
         })->toArray();
 
@@ -230,7 +229,7 @@ class KpiController extends Controller
             '80-89' => 0,
             '70-79' => 0,
             '60-69' => 0,
-            '0-59' => 0
+            '0-59' => 0,
         ];
         foreach ($performanceData as $data) {
             $score = $data['performance_score'];
@@ -251,10 +250,10 @@ class KpiController extends Controller
         $departmentPerformance = [];
         foreach ($performanceData as $data) {
             $deptName = $data['user']->department->name ?? 'No Department';
-            if (!isset($departmentPerformance[$deptName])) {
+            if (! isset($departmentPerformance[$deptName])) {
                 $departmentPerformance[$deptName] = [
                     'total_score' => 0,
-                    'count' => 0
+                    'count' => 0,
                 ];
             }
             $departmentPerformance[$deptName]['total_score'] += $data['performance_score'];
@@ -286,7 +285,7 @@ class KpiController extends Controller
             $halfDayCount = $dayDtrs->where('status', 'half_day')->count();
             $excusedCount = $dayDtrs->whereIn('status', self::EXCUSED_STATUSES)->count();
             $usersWithDtr = $dayDtrs->pluck('user_id')->unique()->count();
-            $isWeekday = !$currentDate->isWeekend();
+            $isWeekday = ! $currentDate->isWeekend();
             $absentForDay = isset($approvedAbsentUsersByDate[$dateStr])
                 ? count($approvedAbsentUsersByDate[$dateStr])
                 : 0;
@@ -299,8 +298,8 @@ class KpiController extends Controller
             $hoursRateForDay = min(($avgHours / 8) * 100, 100);
             $activityRateForDay = $dayDtrs
                 ->pluck('activity_percentage')
-                ->filter(fn($value) => $value !== null)
-                ->whenEmpty(fn($collection) => $collection->push($hoursRateForDay))
+                ->filter(fn ($value) => $value !== null)
+                ->whenEmpty(fn ($collection) => $collection->push($hoursRateForDay))
                 ->avg();
             $dailyScore = max(0, min(100, ($attendanceRateForDay * 0.35) + ($punctualityRateForDay * 0.20) + ($hoursRateForDay * 0.15) + ((float) $activityRateForDay * 0.30)));
 
@@ -315,7 +314,7 @@ class KpiController extends Controller
                 'excused' => $excusedCount,
                 'absent' => $absentForDay,
             ];
-            
+
             $currentDate->addDay();
         }
 
@@ -328,7 +327,7 @@ class KpiController extends Controller
                 'late' => $data['late'],
                 'half_day' => $data['half_day'],
                 'excused' => $data['excused'],
-                'absent' => $data['absent']
+                'absent' => $data['absent'],
             ];
         }
 
@@ -340,9 +339,9 @@ class KpiController extends Controller
             'Hours Worked' => collect($performanceData)->avg('total_hours'),
             'Productivity' => collect($performanceData)->avg('activity_rate'),
             'Consistency' => collect($performanceData)->avg('working_days') / max(collect($performanceData)->avg('total_days'), 1) * 100,
-            'Performance Score' => collect($performanceData)->avg('performance_score')
+            'Performance Score' => collect($performanceData)->avg('performance_score'),
         ];
-        
+
         $topPerformerMetrics = [];
         if ($topPerformer) {
             $topPerformerMetrics = [
@@ -351,7 +350,7 @@ class KpiController extends Controller
                 'Hours Worked' => $topPerformer['total_hours'],
                 'Productivity' => $topPerformer['activity_rate'],
                 'Consistency' => $topPerformer['total_days'] > 0 ? ($topPerformer['working_days'] / $topPerformer['total_days'] * 100) : 0,
-                'Performance Score' => $topPerformer['performance_score']
+                'Performance Score' => $topPerformer['performance_score'],
             ];
         }
 
@@ -364,18 +363,18 @@ class KpiController extends Controller
             'Hours Worked' => max(max($avgMetrics['Hours Worked'], $topPerformerMetrics['Hours Worked'] ?? 0), 1),
             'Productivity' => 100,
             'Consistency' => 100,
-            'Performance Score' => 100
+            'Performance Score' => 100,
         ];
 
         // Additional charts
-        $dailyAttendanceRateData = array_values(array_map(fn($d) => $d['attendance_rate'], $dailyPerformance));
-        $dailyLateData = array_values(array_map(fn($d) => $d['late'], $dailyPerformance));
-        $dailyHalfDayData = array_values(array_map(fn($d) => $d['half_day'], $dailyPerformance));
+        $dailyAttendanceRateData = array_values(array_map(fn ($d) => $d['attendance_rate'], $dailyPerformance));
+        $dailyLateData = array_values(array_map(fn ($d) => $d['late'], $dailyPerformance));
+        $dailyHalfDayData = array_values(array_map(fn ($d) => $d['half_day'], $dailyPerformance));
 
         $departmentHours = [];
         foreach ($performanceData as $data) {
             $deptName = $data['user']->department->name ?? 'No Department';
-            if (!isset($departmentHours[$deptName])) {
+            if (! isset($departmentHours[$deptName])) {
                 $departmentHours[$deptName] = 0;
             }
             $departmentHours[$deptName] += (float) $data['total_hours'];
@@ -406,14 +405,14 @@ class KpiController extends Controller
 
         $topBottom = collect($performanceData)->sortByDesc('performance_score');
         $topBottomPerformers = [
-            'top' => $topBottom->take(5)->map(fn($d) => ['name' => $d['user']->name, 'score' => round($d['performance_score'], 1)])->values()->all(),
-            'bottom' => $topBottom->reverse()->take(5)->map(fn($d) => ['name' => $d['user']->name, 'score' => round($d['performance_score'], 1)])->values()->all(),
+            'top' => $topBottom->take(5)->map(fn ($d) => ['name' => $d['user']->name, 'score' => round($d['performance_score'], 1)])->values()->all(),
+            'bottom' => $topBottom->reverse()->take(5)->map(fn ($d) => ['name' => $d['user']->name, 'score' => round($d['performance_score'], 1)])->values()->all(),
         ];
 
         $deficitByWeek = [];
         foreach ($deficits as $deficit) {
             $weekLabel = Carbon::parse($deficit->week_start_date)->format('M d');
-            if (!isset($deficitByWeek[$weekLabel])) {
+            if (! isset($deficitByWeek[$weekLabel])) {
                 $deficitByWeek[$weekLabel] = 0.0;
             }
             $deficitByWeek[$weekLabel] += (float) $deficit->deficit_hours;
@@ -421,7 +420,7 @@ class KpiController extends Controller
         ksort($deficitByWeek);
         $deficitTrendLabels = array_keys($deficitByWeek);
         $deficitTrendData = array_values($deficitByWeek);
-        
+
         foreach ($avgMetrics as $key => $value) {
             $normalizedAvgMetrics[$key] = ($value / $maxValues[$key]) * 100;
             if (isset($topPerformerMetrics[$key])) {

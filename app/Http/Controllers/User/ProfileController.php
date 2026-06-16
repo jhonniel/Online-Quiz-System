@@ -49,6 +49,7 @@ class ProfileController extends Controller
     public function edit()
     {
         $user = auth()->user();
+
         return view('user.profile.edit', compact('user'));
     }
 
@@ -69,6 +70,10 @@ class ProfileController extends Controller
                 $rules['theme_color'] = ['nullable', 'regex:/^#[0-9A-Fa-f]{6}$/'];
             }
 
+            if ($user->isEmployee()) {
+                $rules['gender'] = 'nullable|in:'.implode(',', array_keys(User::GENDERS));
+            }
+
             $request->validate($rules, [
                 'profile_picture.image' => 'Profile picture must be an image file.',
                 'profile_picture.mimes' => 'Profile picture must be a JPEG, PNG, JPG, GIF, or WEBP file.',
@@ -79,6 +84,7 @@ class ProfileController extends Controller
                 'e_signature.mimes' => 'E-signature must be a PNG file.',
                 'e_signature.max' => 'E-signature must not be larger than 1.5MB.',
                 'theme_color.regex' => 'Theme color must be a valid hex color (e.g. #4F46E5).',
+                'gender.in' => 'Please select a valid gender option.',
             ]);
 
             $data = [
@@ -86,19 +92,23 @@ class ProfileController extends Controller
                 'bio' => $request->bio,
             ];
 
+            if ($user->isEmployee()) {
+                $data['gender'] = $request->filled('gender') ? $request->input('gender') : null;
+            }
+
             if ($user->canCustomizeThemeColor()) {
                 $data['theme_color'] = UserThemeColor::normalize($request->input('theme_color'));
             }
 
             // Store profile picture and cover on DigitalOcean Spaces when configured, else public disk
-            $spacesConfigured = !empty(env('DIGITALOCEAN_SPACES_KEY') ?: env('DO_SPACES_KEY'))
-                && !empty(env('DIGITALOCEAN_SPACES_SECRET') ?: env('DO_SPACES_SECRET'))
-                && !empty(env('DIGITALOCEAN_SPACES_BUCKET') ?: env('DO_SPACES_BUCKET'));
+            $spacesConfigured = ! empty(env('DIGITALOCEAN_SPACES_KEY') ?: env('DO_SPACES_KEY'))
+                && ! empty(env('DIGITALOCEAN_SPACES_SECRET') ?: env('DO_SPACES_SECRET'))
+                && ! empty(env('DIGITALOCEAN_SPACES_BUCKET') ?: env('DO_SPACES_BUCKET'));
             $assetDisk = $spacesConfigured ? 'digitalocean' : 'public';
             $assetRoot = $spacesConfigured ? trim(env('DIGITALOCEAN_SPACES_ROOT_PATH', ''), '/') : '';
-            $profileDir = $assetRoot ? $assetRoot . '/profile-pictures' : 'profile-pictures';
-            $coverDir = $assetRoot ? $assetRoot . '/cover-photos' : 'cover-photos';
-            $eSignatureDir = $assetRoot ? $assetRoot . '/e-signatures' : 'e-signatures';
+            $profileDir = $assetRoot ? $assetRoot.'/profile-pictures' : 'profile-pictures';
+            $coverDir = $assetRoot ? $assetRoot.'/cover-photos' : 'cover-photos';
+            $eSignatureDir = $assetRoot ? $assetRoot.'/e-signatures' : 'e-signatures';
 
             // Handle profile picture upload (stored on Spaces when configured)
             if ($request->hasFile('profile_picture')) {
@@ -117,7 +127,7 @@ class ProfileController extends Controller
                 }
 
                 $profilePicture = $request->file('profile_picture');
-                $profilePictureName = time() . '_' . Str::random(10) . '.' . $profilePicture->getClientOriginalExtension();
+                $profilePictureName = time().'_'.Str::random(10).'.'.$profilePicture->getClientOriginalExtension();
                 $profilePicturePath = $profilePicture->storeAs($profileDir, $profilePictureName, $assetDisk);
                 $data['profile_picture'] = $profilePicturePath;
             }
@@ -139,7 +149,7 @@ class ProfileController extends Controller
                 }
 
                 $coverPhoto = $request->file('cover_photo');
-                $coverPhotoName = time() . '_' . Str::random(10) . '.' . $coverPhoto->getClientOriginalExtension();
+                $coverPhotoName = time().'_'.Str::random(10).'.'.$coverPhoto->getClientOriginalExtension();
                 $coverPhotoPath = $coverPhoto->storeAs($coverDir, $coverPhotoName, $assetDisk);
                 $data['cover_photo'] = $coverPhotoPath;
             }
@@ -176,12 +186,12 @@ class ProfileController extends Controller
             return redirect('/profile')
                 ->with('success', 'Profile updated successfully!');
 
-        } catch (\Illuminate\Validation\ValidationException $e) {
+        } catch (ValidationException $e) {
             if ($request->expectsJson() || $request->ajax()) {
                 return response()->json([
                     'success' => false,
                     'message' => 'Validation failed',
-                    'errors' => $e->errors()
+                    'errors' => $e->errors(),
                 ], 422);
             }
             throw $e;
@@ -189,12 +199,12 @@ class ProfileController extends Controller
             if ($request->expectsJson() || $request->ajax()) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'Failed to update profile: ' . $e->getMessage()
+                    'message' => 'Failed to update profile: '.$e->getMessage(),
                 ], 500);
             }
 
             return redirect()->back()
-                ->with('error', 'Failed to update profile: ' . $e->getMessage());
+                ->with('error', 'Failed to update profile: '.$e->getMessage());
         }
     }
 
@@ -219,7 +229,7 @@ class ProfileController extends Controller
         return response()->json([
             'success' => true,
             'message' => 'Profile picture removed successfully!',
-            'type' => 'success'
+            'type' => 'success',
         ]);
     }
 
@@ -244,7 +254,7 @@ class ProfileController extends Controller
         return response()->json([
             'success' => true,
             'message' => 'Cover photo removed successfully!',
-            'type' => 'success'
+            'type' => 'success',
         ]);
     }
 
@@ -421,12 +431,12 @@ class ProfileController extends Controller
             $user = auth()->user();
 
             // Verify current password
-            if (!Hash::check($request->current_password, $user->password)) {
+            if (! Hash::check($request->current_password, $user->password)) {
                 if ($request->expectsJson() || $request->ajax()) {
                     return response()->json([
                         'success' => false,
                         'message' => 'Current password is incorrect.',
-                        'errors' => ['current_password' => ['Current password is incorrect.']]
+                        'errors' => ['current_password' => ['Current password is incorrect.']],
                     ], 422);
                 }
 
@@ -443,19 +453,19 @@ class ProfileController extends Controller
                 return response()->json([
                     'success' => true,
                     'message' => 'Password changed successfully!',
-                    'type' => 'success'
+                    'type' => 'success',
                 ]);
             }
 
             return redirect()->back()
                 ->with('success', 'Password changed successfully!');
 
-        } catch (\Illuminate\Validation\ValidationException $e) {
+        } catch (ValidationException $e) {
             if ($request->expectsJson() || $request->ajax()) {
                 return response()->json([
                     'success' => false,
                     'message' => 'Validation failed',
-                    'errors' => $e->errors()
+                    'errors' => $e->errors(),
                 ], 422);
             }
             throw $e;
@@ -463,12 +473,12 @@ class ProfileController extends Controller
             if ($request->expectsJson() || $request->ajax()) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'Failed to change password: ' . $e->getMessage()
+                    'message' => 'Failed to change password: '.$e->getMessage(),
                 ], 500);
             }
 
             return redirect()->back()
-                ->with('error', 'Failed to change password: ' . $e->getMessage());
+                ->with('error', 'Failed to change password: '.$e->getMessage());
         }
     }
 

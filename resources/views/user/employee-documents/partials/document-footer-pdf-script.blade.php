@@ -3,6 +3,7 @@
 
     $documentType = $documentType ?? 'policy';
     $companyName = $companyName ?? null;
+    $documentTitle = $documentTitle ?? null;
 @endphp
 
 <style>
@@ -30,5 +31,5 @@
 </style>
 
 <div class="document-pdf-fixed-footer">
-    {!! EmployeeDocumentFooter::renderPdfFixedFooterHtml($documentType, $companyName) !!}
+    {!! EmployeeDocumentFooter::renderPdfFixedFooterHtml($documentType, $companyName, $documentTitle) !!}
 </div>

@@ -324,20 +324,6 @@ Route::prefix('admin')->middleware(['auth', 'admin'])->group(function () {
             Route::post('quiz-attempts/{attempt}/grade', [AdminQuizController::class, 'gradeAttempt'])->name('admin.quiz-attempts.grade');
         });
 
-        // Task Management - Dashboard and Analytics (Super Admin Only)
-        Route::get('tasks/dashboard', [TaskController::class, 'dashboard'])->name('admin.tasks.dashboard');
-        Route::get('tasks/dashboard/chart-data', [TaskController::class, 'getChartData'])->name('admin.tasks.dashboard.chart-data');
-        // Task Management - My Tasks and Group Tasks (Available to Students and Employees)
-        Route::get('tasks', [TaskController::class, 'index'])->name('admin.tasks.index');
-        Route::post('tasks', [TaskController::class, 'store'])->name('admin.tasks.store');
-        Route::put('tasks/{task}', [TaskController::class, 'update'])->name('admin.tasks.update');
-        Route::post('tasks/{task}/reorder', [TaskController::class, 'reorder'])->name('admin.tasks.reorder');
-        Route::delete('tasks/{task}', [TaskController::class, 'destroy'])->name('admin.tasks.destroy');
-        Route::post('tasks/update-order', [TaskController::class, 'updateOrder'])->name('admin.tasks.update-order');
-        Route::post('tasks/{task}/comments', [TaskController::class, 'addComment'])->name('admin.tasks.add-comment');
-        Route::post('tasks/{task}/attachments', [TaskController::class, 'uploadAttachment'])->name('admin.tasks.upload-attachment');
-        Route::delete('tasks/attachments/{attachment}', [TaskController::class, 'deleteAttachment'])->name('admin.tasks.delete-attachment');
-
         Route::middleware(['admin.subfeature:content_management,news'])->group(function () {
             // News Management
             Route::resource('news', NewsController::class)->names([
@@ -352,49 +338,6 @@ Route::prefix('admin')->middleware(['auth', 'admin'])->group(function () {
             Route::post('news/{news}/toggle-publish', [NewsController::class, 'togglePublish'])->name('admin.news.toggle-publish');
             Route::post('news/toggle-section', [NewsController::class, 'toggleNewsSection'])->name('admin.news.toggle-section');
         });
-
-        Route::post('tasks/{task}/assign-users', [TaskController::class, 'assignUsers'])->name('admin.tasks.assign-users');
-
-        // Task Invitation Routes
-        Route::post('tasks/{task}/generate-invite-code', [TaskController::class, 'generateInviteCode'])->name('admin.tasks.generate-invite-code');
-        Route::post('tasks/{task}/get-invite-link', [TaskController::class, 'getInviteLink'])->name('admin.tasks.get-invite-link');
-        Route::post('tasks/{task}/generate-share-link', [TaskController::class, 'generateShareLink'])->name('admin.tasks.generate-share-link');
-        Route::post('tasks/{task}/invite-users', [TaskController::class, 'inviteUsers'])->name('admin.tasks.invite-users');
-        Route::post('tasks/join-by-code', [TaskController::class, 'joinByCode'])->name('admin.tasks.join-by-code')->middleware('auth');
-        Route::get('tasks/join-by-link/{token}', [TaskController::class, 'joinByLink'])->name('admin.tasks.join-by-link')->middleware('auth');
-        Route::post('tasks/invitations/{invitation}/accept', [TaskController::class, 'acceptInvitation'])->name('admin.tasks.invitations.accept');
-        Route::post('tasks/invitations/{invitation}/reject', [TaskController::class, 'rejectInvitation'])->name('admin.tasks.invitations.reject');
-        Route::get('tasks/pending-invitations', [TaskController::class, 'getPendingInvitations'])->name('admin.tasks.pending-invitations');
-        Route::post('tasks/{task}/convert-to-group', [TaskController::class, 'convertToGroup'])->name('admin.tasks.convert-to-group');
-
-        // Custom Boards Management
-        Route::post('tasks/custom-boards', [TaskController::class, 'storeCustomBoard'])->name('admin.tasks.custom-boards.store');
-        Route::put('tasks/custom-boards/{customBoard}', [TaskController::class, 'updateCustomBoard'])->name('admin.tasks.custom-boards.update');
-        Route::delete('tasks/custom-boards/{customBoard}', [TaskController::class, 'destroyCustomBoard'])->name('admin.tasks.custom-boards.destroy');
-        Route::post('tasks/custom-boards/update-order', [TaskController::class, 'updateCustomBoardOrder'])->name('admin.tasks.custom-boards.update-order');
-        Route::post('tasks/custom-boards/{customBoard}/toggle-lock', [TaskController::class, 'toggleCustomBoardLock'])->name('admin.tasks.custom-boards.toggle-lock');
-
-        // Task List Routes (for personal tasks)
-        Route::post('tasks/task-lists', [TaskController::class, 'storeTaskList'])->name('admin.tasks.task-lists.store');
-        Route::put('tasks/task-lists/{taskList}', [TaskController::class, 'updateTaskList'])->name('admin.tasks.task-lists.update');
-        Route::delete('tasks/task-lists/{taskList}', [TaskController::class, 'destroyTaskList'])->name('admin.tasks.task-lists.destroy');
-
-        // Task List Sharing Routes
-        Route::post('tasks/task-lists/{taskList}/generate-invite-code', [TaskController::class, 'generateTaskListInviteCode'])->name('admin.tasks.task-lists.generate-invite-code');
-        Route::post('tasks/task-lists/{taskList}/generate-share-link', [TaskController::class, 'generateTaskListShareLink'])->name('admin.tasks.task-lists.generate-share-link');
-        Route::post('tasks/task-lists/{taskList}/send-invitation-email', [TaskController::class, 'sendTaskListInvitationEmail'])->name('admin.tasks.task-lists.send-invitation-email');
-        Route::post('tasks/task-lists/join-by-code', [TaskController::class, 'joinTaskListByCode'])->name('admin.tasks.task-lists.join-by-code')->middleware('auth');
-        Route::get('tasks/task-lists/join-by-link/{token}', [TaskController::class, 'joinTaskListByLink'])->name('admin.tasks.join-task-list-by-link')->middleware('auth');
-
-        // Custom Priority Routes
-        Route::post('tasks/custom-priorities', [TaskController::class, 'storeCustomPriority'])->name('admin.tasks.custom-priorities.store');
-        Route::put('tasks/custom-priorities/{customPriority}', [TaskController::class, 'updateCustomPriority'])->name('admin.tasks.custom-priorities.update');
-        Route::delete('tasks/custom-priorities/{customPriority}', [TaskController::class, 'destroyCustomPriority'])->name('admin.tasks.custom-priorities.destroy');
-
-        // Import Management (Standalone Import Page)
-        Route::get('import', [AdminImportController::class, 'index'])->name('admin.import');
-        Route::post('import', [AdminImportController::class, 'import'])->name('admin.import.process');
-        Route::get('import/template', [AdminImportController::class, 'downloadTemplate'])->name('admin.import.template');
 
         Route::middleware(['admin.subfeature:content_management,forum'])->group(function () {
             Route::resource('forum', ForumController::class)->names('admin.forum');
@@ -416,6 +359,54 @@ Route::prefix('admin')->middleware(['auth', 'admin'])->group(function () {
             Route::post('system-announcements/{system_announcement}/publish', [SystemAnnouncementController::class, 'publish'])->name('admin.system-announcements.publish');
             Route::post('system-announcements/{system_announcement}/unpublish', [SystemAnnouncementController::class, 'unpublish'])->name('admin.system-announcements.unpublish');
         });
+
+        Route::get('import', [AdminImportController::class, 'index'])->name('admin.import');
+        Route::post('import', [AdminImportController::class, 'import'])->name('admin.import.process');
+        Route::get('import/template', [AdminImportController::class, 'downloadTemplate'])->name('admin.import.template');
+    });
+
+    Route::middleware(['admin.permission:tasks'])->group(function () {
+        Route::middleware(['admin.subfeature:task_management,task_dashboard'])->group(function () {
+            Route::get('tasks/dashboard', [TaskController::class, 'dashboard'])->name('admin.tasks.dashboard');
+            Route::get('tasks/dashboard/chart-data', [TaskController::class, 'getChartData'])->name('admin.tasks.dashboard.chart-data');
+        });
+
+        Route::get('tasks', [TaskController::class, 'index'])->name('admin.tasks.index');
+        Route::post('tasks', [TaskController::class, 'store'])->name('admin.tasks.store');
+        Route::put('tasks/{task}', [TaskController::class, 'update'])->name('admin.tasks.update');
+        Route::post('tasks/{task}/reorder', [TaskController::class, 'reorder'])->name('admin.tasks.reorder');
+        Route::delete('tasks/{task}', [TaskController::class, 'destroy'])->name('admin.tasks.destroy');
+        Route::post('tasks/update-order', [TaskController::class, 'updateOrder'])->name('admin.tasks.update-order');
+        Route::post('tasks/{task}/comments', [TaskController::class, 'addComment'])->name('admin.tasks.add-comment');
+        Route::post('tasks/{task}/attachments', [TaskController::class, 'uploadAttachment'])->name('admin.tasks.upload-attachment');
+        Route::delete('tasks/attachments/{attachment}', [TaskController::class, 'deleteAttachment'])->name('admin.tasks.delete-attachment');
+        Route::post('tasks/{task}/assign-users', [TaskController::class, 'assignUsers'])->name('admin.tasks.assign-users');
+        Route::post('tasks/{task}/generate-invite-code', [TaskController::class, 'generateInviteCode'])->name('admin.tasks.generate-invite-code');
+        Route::post('tasks/{task}/get-invite-link', [TaskController::class, 'getInviteLink'])->name('admin.tasks.get-invite-link');
+        Route::post('tasks/{task}/generate-share-link', [TaskController::class, 'generateShareLink'])->name('admin.tasks.generate-share-link');
+        Route::post('tasks/{task}/invite-users', [TaskController::class, 'inviteUsers'])->name('admin.tasks.invite-users');
+        Route::post('tasks/join-by-code', [TaskController::class, 'joinByCode'])->name('admin.tasks.join-by-code')->middleware('auth');
+        Route::get('tasks/join-by-link/{token}', [TaskController::class, 'joinByLink'])->name('admin.tasks.join-by-link')->middleware('auth');
+        Route::post('tasks/invitations/{invitation}/accept', [TaskController::class, 'acceptInvitation'])->name('admin.tasks.invitations.accept');
+        Route::post('tasks/invitations/{invitation}/reject', [TaskController::class, 'rejectInvitation'])->name('admin.tasks.invitations.reject');
+        Route::get('tasks/pending-invitations', [TaskController::class, 'getPendingInvitations'])->name('admin.tasks.pending-invitations');
+        Route::post('tasks/{task}/convert-to-group', [TaskController::class, 'convertToGroup'])->name('admin.tasks.convert-to-group');
+        Route::post('tasks/custom-boards', [TaskController::class, 'storeCustomBoard'])->name('admin.tasks.custom-boards.store');
+        Route::put('tasks/custom-boards/{customBoard}', [TaskController::class, 'updateCustomBoard'])->name('admin.tasks.custom-boards.update');
+        Route::delete('tasks/custom-boards/{customBoard}', [TaskController::class, 'destroyCustomBoard'])->name('admin.tasks.custom-boards.destroy');
+        Route::post('tasks/custom-boards/update-order', [TaskController::class, 'updateCustomBoardOrder'])->name('admin.tasks.custom-boards.update-order');
+        Route::post('tasks/custom-boards/{customBoard}/toggle-lock', [TaskController::class, 'toggleCustomBoardLock'])->name('admin.tasks.custom-boards.toggle-lock');
+        Route::post('tasks/task-lists', [TaskController::class, 'storeTaskList'])->name('admin.tasks.task-lists.store');
+        Route::put('tasks/task-lists/{taskList}', [TaskController::class, 'updateTaskList'])->name('admin.tasks.task-lists.update');
+        Route::delete('tasks/task-lists/{taskList}', [TaskController::class, 'destroyTaskList'])->name('admin.tasks.task-lists.destroy');
+        Route::post('tasks/task-lists/{taskList}/generate-invite-code', [TaskController::class, 'generateTaskListInviteCode'])->name('admin.tasks.task-lists.generate-invite-code');
+        Route::post('tasks/task-lists/{taskList}/generate-share-link', [TaskController::class, 'generateTaskListShareLink'])->name('admin.tasks.task-lists.generate-share-link');
+        Route::post('tasks/task-lists/{taskList}/send-invitation-email', [TaskController::class, 'sendTaskListInvitationEmail'])->name('admin.tasks.task-lists.send-invitation-email');
+        Route::post('tasks/task-lists/join-by-code', [TaskController::class, 'joinTaskListByCode'])->name('admin.tasks.task-lists.join-by-code')->middleware('auth');
+        Route::get('tasks/task-lists/join-by-link/{token}', [TaskController::class, 'joinTaskListByLink'])->name('admin.tasks.join-task-list-by-link')->middleware('auth');
+        Route::post('tasks/custom-priorities', [TaskController::class, 'storeCustomPriority'])->name('admin.tasks.custom-priorities.store');
+        Route::put('tasks/custom-priorities/{customPriority}', [TaskController::class, 'updateCustomPriority'])->name('admin.tasks.custom-priorities.update');
+        Route::delete('tasks/custom-priorities/{customPriority}', [TaskController::class, 'destroyCustomPriority'])->name('admin.tasks.custom-priorities.destroy');
     });
 
     // Analytics & Reports (parent: analytics_reports; sub-areas: admin.analytics:{feature})
@@ -434,25 +425,26 @@ Route::prefix('admin')->middleware(['auth', 'admin'])->group(function () {
         });
     });
 
-    // User Activity: analytics sub-permission or legacy System permission
     Route::middleware(['admin.analytics:user_activity'])->group(function () {
         Route::get('user-activity', [UserActivityController::class, 'index'])->name('admin.user-activity.index');
         Route::get('user-activity/sessions', [UserActivityController::class, 'sessions'])->name('admin.user-activity.sessions');
         Route::get('user-activity/statistics', [UserActivityController::class, 'statistics'])->name('admin.user-activity.statistics');
         Route::post('user-activity/cleanup', [UserActivityController::class, 'cleanup'])->name('admin.user-activity.cleanup');
-        Route::get('anonymous-chats', [App\Http\Controllers\Admin\AnonymousChatController::class, 'index'])->name('admin.anonymous-chats.index');
-        Route::get('anonymous-chats/{anonymousChatRoom}', [App\Http\Controllers\Admin\AnonymousChatController::class, 'show'])->name('admin.anonymous-chats.show');
     });
 
-    // Key Performance Indicator (KPI) - Only for super admins
-    Route::middleware(['auth'])->group(function () {
-        Route::get('kpi/dashboard', [KpiController::class, 'dashboard'])->name('admin.kpi.dashboard');
+    Route::middleware(['admin.analytics:anonymous_chats'])->group(function () {
+        Route::get('anonymous-chats', [App\Http\Controllers\Admin\AnonymousChatController::class, 'index'])->name('admin.anonymous-chats.index');
+        Route::get('anonymous-chats/{anonymousChatRoom}', [App\Http\Controllers\Admin\AnonymousChatController::class, 'show'])->name('admin.anonymous-chats.show');
     });
 
     // Employee Management
     Route::middleware(['admin.permission:employee_management'])->group(function () {
         Route::middleware(['admin.subfeature:employee_management,employee_dashboard'])->group(function () {
             Route::get('/employee-dashboard', [EmployeeDashboardController::class, 'index'])->name('admin.employee-dashboard.index');
+        });
+
+        Route::middleware(['admin.subfeature:employee_management,kpi_dashboard'])->group(function () {
+            Route::get('/kpi/dashboard', [KpiController::class, 'dashboard'])->name('admin.kpi.dashboard');
         });
 
         Route::middleware(['admin.subfeature:employee_management,file_request'])->group(function () {
@@ -498,10 +490,12 @@ Route::prefix('admin')->middleware(['auth', 'admin'])->group(function () {
         Route::middleware(['admin.subfeature:employee_management,employee_handbook'])->get('/employee-documents/handbook', fn (EmployeeDocumentController $controller, Request $request) => $controller->index($request, 'handbook'))->name('admin.employee-documents.handbook');
         Route::get('/employee-documents/{type}/template', [EmployeeDocumentController::class, 'editTemplate'])->name('admin.employee-documents.template')->where('type', 'nda|contract|policy|handbook');
         Route::post('/employee-documents/{type}/template', [EmployeeDocumentController::class, 'updateTemplate'])->name('admin.employee-documents.template.update')->where('type', 'nda|contract|policy|handbook');
-        Route::get('/employee-documents/signatures', [EmployeeDocumentController::class, 'signatures'])->name('admin.employee-documents.signatures');
-        Route::post('/employee-documents/signatures/employees/{employee}/e-signature', [EmployeeDocumentController::class, 'uploadEmployeeESignature'])->name('admin.employee-documents.signatures.upload');
-        Route::delete('/employee-documents/signatures/employees/{employee}/e-signature', [EmployeeDocumentController::class, 'removeEmployeeESignature'])->name('admin.employee-documents.signatures.remove');
-        Route::get('/employee-documents/signatures/{signature}/preview', [EmployeeDocumentController::class, 'preview'])->name('admin.employee-documents.preview');
+        Route::middleware(['admin.subfeature:employee_management,employee_signatures'])->group(function () {
+            Route::get('/employee-documents/signatures', [EmployeeDocumentController::class, 'signatures'])->name('admin.employee-documents.signatures');
+            Route::post('/employee-documents/signatures/employees/{employee}/e-signature', [EmployeeDocumentController::class, 'uploadEmployeeESignature'])->name('admin.employee-documents.signatures.upload');
+            Route::delete('/employee-documents/signatures/employees/{employee}/e-signature', [EmployeeDocumentController::class, 'removeEmployeeESignature'])->name('admin.employee-documents.signatures.remove');
+            Route::get('/employee-documents/signatures/{signature}/preview', [EmployeeDocumentController::class, 'preview'])->name('admin.employee-documents.preview');
+        });
         Route::get('/employee-documents/{type}/employees/{employee}/preview', [EmployeeDocumentController::class, 'previewEmployee'])->name('admin.employee-documents.employee-preview')->where('type', 'nda|contract|policy|handbook');
 
         Route::middleware(['admin.subfeature:employee_management,dtr'])->group(function () {
@@ -528,6 +522,7 @@ Route::prefix('admin')->middleware(['auth', 'admin'])->group(function () {
             Route::get('/leave-requests/export/csv', [LeaveRequestController::class, 'exportApprovedCsv'])->name('admin.leave-requests.export-csv');
             Route::get('/leave-requests/export/pdf', [LeaveRequestController::class, 'exportApprovedPdf'])->name('admin.leave-requests.export-pdf');
             Route::post('/leave-requests/create-for-employee', [LeaveRequestController::class, 'storeForEmployee'])->name('admin.leave-requests.store-for-employee');
+            Route::get('/leave-requests/{leaveRequest}/pdf', [LeaveRequestController::class, 'showPdf'])->name('admin.leave-requests.show-pdf');
             Route::get('/leave-requests/{leaveRequest}', [LeaveRequestController::class, 'show'])->name('admin.leave-requests.show');
             Route::patch('/leave-requests/{leaveRequest}/type', [LeaveRequestController::class, 'updateType'])->name('admin.leave-requests.update-type');
             Route::patch('/leave-requests/{leaveRequest}/dates', [LeaveRequestController::class, 'updateDates'])->name('admin.leave-requests.update-dates');

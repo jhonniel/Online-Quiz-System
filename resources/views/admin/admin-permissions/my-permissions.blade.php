@@ -75,6 +75,7 @@
                     ['key' => 'billing', 'label' => 'Billing', 'desc' => 'Starlink/Omada billing, mark as paid, and statements'],
                     ['key' => 'files', 'label' => 'File Storage', 'desc' => 'Admin file storage and shared files'],
                     ['key' => 'confession', 'label' => 'Confession (Say-it)', 'desc' => 'Confession board management, topics, and banned words'],
+                    ['key' => 'tasks', 'label' => 'Task To Do', 'desc' => 'Personal tasks, group tasks, and task dashboard'],
                     ['key' => 'feedback', 'label' => 'Feedback', 'desc' => 'Feedback management and assignment'],
                     ['key' => 'user_management', 'label' => 'User Management', 'desc' => 'User management and administration'],
                     ['key' => 'system', 'label' => 'System', 'desc' => 'Settings, error logs, and user activity'],

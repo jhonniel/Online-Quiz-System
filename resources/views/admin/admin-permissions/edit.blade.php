@@ -153,7 +153,7 @@
                                 <label for="employee_management" class="block text-sm font-medium text-gray-900 cursor-pointer">
                                     Employee Management
                                 </label>
-                                <p class="mt-1 text-sm text-gray-500">Employee dashboard, documents (file request, payslip, NDA, agreement, policy), DTR, time reports, and leave</p>
+                                <p class="mt-1 text-sm text-gray-500">Employee dashboard, documents (file request, payslip, NDA, agreement, policy, handbook, e-signatures), DTR, time reports, leave, and KPI</p>
 
                                 @include('admin.admin-permissions.partials.sub-feature-fields', [
                                     'areaKey' => 'employee_management',
@@ -385,6 +385,31 @@
                                 Confession (Say-it)
                             </label>
                             <p class="mt-1 text-sm text-gray-500">Access to confession board management, topics, and banned words</p>
+                        </div>
+                    </div>
+
+                    <!-- Task To Do -->
+                    <div class="md:col-span-2">
+                        <div class="flex items-start space-x-3 p-4 border border-gray-200 rounded-lg hover:bg-gray-50">
+                            <input type="checkbox"
+                                   name="tasks"
+                                   id="tasks"
+                                   value="1"
+                                   {{ ($permission && $permission->tasks) ? 'checked' : '' }}
+                                   class="mt-1 h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
+                                   onchange="toggleSubFeaturePanel('task-feature-selection', 'tasks')">
+                            <div class="flex-1">
+                                <label for="tasks" class="block text-sm font-medium text-gray-900 cursor-pointer">
+                                    Task To Do
+                                </label>
+                                <p class="mt-1 text-sm text-gray-500">Personal tasks, group tasks, and task dashboard</p>
+                                @include('admin.admin-permissions.partials.sub-feature-fields', [
+                                    'areaKey' => 'task_management',
+                                    'permission' => $permission,
+                                    'parentChecked' => $permission && $permission->tasks,
+                                    'containerId' => 'task-feature-selection',
+                                ])
+                            </div>
                         </div>
                     </div>
 
