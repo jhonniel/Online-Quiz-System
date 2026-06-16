@@ -521,7 +521,7 @@
                                         Immediate Supervisor Name (fallback)
                                     </label>
                                     @php
-                                        $supervisorValue = isset($settings['leave_immediate_supervisor']) ? $settings['leave_immediate_supervisor'] : 'CHARMAINE JOY ROSATACE';
+                                        $supervisorValue = $settings['leave_immediate_supervisor'] ?? '';
                                         if (old('leave_immediate_supervisor') !== null) {
                                             $supervisorValue = old('leave_immediate_supervisor');
                                         }
@@ -557,7 +557,7 @@
                                         HR Admin Name (fallback)
                                     </label>
                                     @php
-                                        $hrAdminValue = isset($settings['leave_hr_admin']) ? $settings['leave_hr_admin'] : 'MAY GRACE ACOSTA';
+                                        $hrAdminValue = $settings['leave_hr_admin'] ?? '';
                                         if (old('leave_hr_admin') !== null) {
                                             $hrAdminValue = old('leave_hr_admin');
                                         }
@@ -590,7 +590,7 @@
                                         Chief Technology Officer Name (fallback)
                                     </label>
                                     @php
-                                        $ctoValue = isset($settings['leave_cto']) ? $settings['leave_cto'] : 'NITISH KHEMANI';
+                                        $ctoValue = $settings['leave_cto'] ?? '';
                                         if (old('leave_cto') !== null) {
                                             $ctoValue = old('leave_cto');
                                         }
@@ -598,6 +598,24 @@
                                     <input type="text" id="leave_cto" name="leave_cto"
                                            value="{{ $ctoValue }}"
                                            class="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                                </div>
+                                <div class="md:col-span-2">
+                                    <label for="leave_letter_addressee" class="block text-sm font-medium text-gray-700 mb-2">
+                                        Letter Addressee (optional)
+                                    </label>
+                                    @php
+                                        $letterAddresseeValue = $settings['leave_letter_addressee'] ?? '';
+                                        if (old('leave_letter_addressee') !== null) {
+                                            $letterAddresseeValue = old('leave_letter_addressee');
+                                        }
+                                    @endphp
+                                    <input type="text" id="leave_letter_addressee" name="leave_letter_addressee"
+                                           value="{{ $letterAddresseeValue }}"
+                                           placeholder="Leave blank to use assigned HR Admin name"
+                                           class="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                                    <p class="mt-2 text-xs text-gray-500">
+                                        Used in the letter greeting (e.g. &ldquo;Dear Ms. [name],&rdquo;). When blank, the assigned HR Admin name is used.
+                                    </p>
                                 </div>
                                 <div class="md:col-span-2">
                                     <label for="leave_admin_notification_email" class="block text-sm font-medium text-gray-700 mb-2">

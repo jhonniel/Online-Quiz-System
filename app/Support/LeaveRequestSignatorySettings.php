@@ -15,6 +15,22 @@ final class LeaveRequestSignatorySettings
 
     public const CTO_USER_ID_KEY = 'leave_cto_user_id';
 
+    public const LETTER_ADDRESSEE_KEY = 'leave_letter_addressee';
+
+    /**
+     * @return array{
+     *     letter_addressee: string,
+     *     signatories: array{immediate_supervisor: string, hr_admin: string, cto: string}
+     * }
+     */
+    public static function letterContext(?User $employee): array
+    {
+        return [
+            'letter_addressee' => self::letterAddresseeLine(),
+            'signatories' => self::signatoriesForEmployee($employee),
+        ];
+    }
+
     /**
      * @return array{immediate_supervisor: string, hr_admin: string, cto: string}
      */
@@ -31,10 +47,22 @@ final class LeaveRequestSignatorySettings
     public static function signatoriesForEmployee(?User $employee): array
     {
         return [
-            'immediate_supervisor' => self::immediateSupervisorName($employee),
-            'hr_admin' => self::hrAdminName(),
-            'cto' => self::ctoName(),
+            'immediate_supervisor' => self::immediateSupervisorDisplayName($employee),
+            'hr_admin' => self::hrAdminDisplayName(),
+            'cto' => self::ctoDisplayName(),
         ];
+    }
+
+    public static function letterAddresseeLine(): string
+    {
+        $override = trim((string) Setting::get(self::LETTER_ADDRESSEE_KEY, ''));
+        $name = $override !== '' ? $override : self::hrAdminDisplayName();
+
+        if ($name === '' || $name === '—') {
+            return 'Dear HR Admin,';
+        }
+
+        return 'Dear Ms. '.$name.',';
     }
 
     public static function immediateSupervisorUserId(): ?int
@@ -79,10 +107,10 @@ final class LeaveRequestSignatorySettings
 
         $fallbackName = trim((string) ($employee?->department?->supervisor_name ?? ''));
         if ($fallbackName === '') {
-            $fallbackName = (string) Setting::get('leave_immediate_supervisor', 'CHARMAINE JOY ROSATACE');
+            $fallbackName = trim((string) Setting::get('leave_immediate_supervisor', ''));
         }
 
-        return self::findUserByName($fallbackName);
+        return $fallbackName !== '' ? self::findUserByName($fallbackName) : null;
     }
 
     public static function hrAdminUser(): ?User
@@ -95,7 +123,9 @@ final class LeaveRequestSignatorySettings
             }
         }
 
-        return self::findUserByName((string) Setting::get('leave_hr_admin', 'MAY GRACE ACOSTA'));
+        $fallbackName = trim((string) Setting::get('leave_hr_admin', ''));
+
+        return $fallbackName !== '' ? self::findUserByName($fallbackName) : null;
     }
 
     public static function ctoUser(): ?User
@@ -108,35 +138,83 @@ final class LeaveRequestSignatorySettings
             }
         }
 
-        return self::findUserByName((string) Setting::get('leave_cto', 'NITISH KHEMANI'));
+        $fallbackName = trim((string) Setting::get('leave_cto', ''));
+
+        return $fallbackName !== '' ? self::findUserByName($fallbackName) : null;
     }
 
-    public static function immediateSupervisorName(?User $employee): string
+    public static function immediateSupervisorDisplayName(?User $employee): string
     {
-        $assigned = self::immediateSupervisorUser($employee);
-        if ($assigned !== null) {
-            return $assigned->name;
+        $employee?->loadMissing('department');
+
+        if ($employee?->department?->supervisor_user_id) {
+            $user = self::findSelectableUser((int) $employee->department->supervisor_user_id);
+            if ($user !== null) {
+                return $user->name;
+            }
         }
 
-        $employee?->loadMissing('department');
+        $globalId = self::immediateSupervisorUserId();
+        if ($globalId !== null) {
+            $user = self::findSelectableUser($globalId);
+            if ($user !== null) {
+                return $user->name;
+            }
+        }
+
         $departmentName = trim((string) ($employee?->department?->supervisor_name ?? ''));
         if ($departmentName !== '') {
             return $departmentName;
         }
 
-        return (string) Setting::get('leave_immediate_supervisor', 'CHARMAINE JOY ROSATACE');
+        $settingName = trim((string) Setting::get('leave_immediate_supervisor', ''));
+
+        return $settingName !== '' ? $settingName : '—';
+    }
+
+    public static function hrAdminDisplayName(): string
+    {
+        $assigned = self::hrAdminUserId();
+        if ($assigned !== null) {
+            $user = self::findSelectableUser($assigned);
+            if ($user !== null) {
+                return $user->name;
+            }
+        }
+
+        $settingName = trim((string) Setting::get('leave_hr_admin', ''));
+
+        return $settingName !== '' ? $settingName : '—';
+    }
+
+    public static function ctoDisplayName(): string
+    {
+        $assigned = self::ctoUserId();
+        if ($assigned !== null) {
+            $user = self::findSelectableUser($assigned);
+            if ($user !== null) {
+                return $user->name;
+            }
+        }
+
+        $settingName = trim((string) Setting::get('leave_cto', ''));
+
+        return $settingName !== '' ? $settingName : '—';
+    }
+
+    public static function immediateSupervisorName(?User $employee): string
+    {
+        return self::immediateSupervisorDisplayName($employee);
     }
 
     public static function hrAdminName(): string
     {
-        return self::hrAdminUser()?->name
-            ?? (string) Setting::get('leave_hr_admin', 'MAY GRACE ACOSTA');
+        return self::hrAdminDisplayName();
     }
 
     public static function ctoName(): string
     {
-        return self::ctoUser()?->name
-            ?? (string) Setting::get('leave_cto', 'NITISH KHEMANI');
+        return self::ctoDisplayName();
     }
 
     public static function selectableUsersQuery(): Builder
@@ -163,13 +241,62 @@ final class LeaveRequestSignatorySettings
             return null;
         }
 
-        $normalized = strtolower(preg_replace('/\s+/', ' ', $name) ?? $name);
-
-        return User::query()
+        $query = User::query()
             ->whereIn('role', ['employee', 'admin', 'hr'])
-            ->where('is_active', true)
+            ->where('is_active', true);
+
+        $normalized = self::normalizeSignatoryName($name);
+
+        $exact = (clone $query)
             ->whereRaw('LOWER(TRIM(name)) = ?', [$normalized])
             ->first(['id', 'name', 'role', 'e_signature_path']);
+
+        if ($exact !== null) {
+            return $exact;
+        }
+
+        $tokens = self::signatoryNameTokens($name);
+        if ($tokens === []) {
+            return null;
+        }
+
+        $candidates = $query->get(['id', 'name', 'role', 'e_signature_path']);
+
+        $matches = $candidates->filter(function (User $user) use ($tokens) {
+            $userTokens = self::signatoryNameTokens($user->name);
+
+            return $userTokens !== [] && $userTokens === $tokens;
+        });
+
+        if ($matches->isEmpty()) {
+            return null;
+        }
+
+        return $matches
+            ->sortByDesc(fn (User $user) => $user->hasESignature() ? 1 : 0)
+            ->sortBy('name')
+            ->first();
+    }
+
+    /**
+     * @return list<string>
+     */
+    private static function signatoryNameTokens(string $name): array
+    {
+        $normalized = self::normalizeSignatoryName($name);
+        $normalized = str_replace([',', '.'], ' ', $normalized);
+        $parts = preg_split('/\s+/u', $normalized, -1, PREG_SPLIT_NO_EMPTY) ?: [];
+        $parts = array_values(array_filter($parts, fn (string $part) => $part !== ''));
+        sort($parts, SORT_STRING);
+
+        return $parts;
+    }
+
+    private static function normalizeSignatoryName(string $name): string
+    {
+        $normalized = preg_replace('/\s+/u', ' ', trim($name)) ?? trim($name);
+
+        return strtolower($normalized);
     }
 
     private static function findSelectableUser(int $id): ?User

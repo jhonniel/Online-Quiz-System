@@ -856,7 +856,9 @@ class LeaveRequestController extends Controller
             ];
         }
 
-        $signatories = $this->leaveRequestSignatories($leaveRequest);
+        $letterContext = LeaveRequestSignatorySettings::letterContext($leaveRequest->user);
+        $signatories = $letterContext['signatories'];
+        $letterAddressee = $letterContext['letter_addressee'];
 
         // Load recent activity only (avoid loading unbounded log history into memory)
         $leaveRequest->load([
@@ -887,6 +889,7 @@ class LeaveRequestController extends Controller
             'balances',
             'overtimeFormatted',
             'signatories',
+            'letterAddressee',
             'studentTime',
             'hasNegativeBalance',
             'leaveTypeOptions',
@@ -902,12 +905,15 @@ class LeaveRequestController extends Controller
 
         $leaveRequest->load(['user.department', 'reviewer']);
 
-        $signatories = $this->leaveRequestSignatories($leaveRequest);
+        $letterContext = LeaveRequestSignatorySettings::letterContext($leaveRequest->user);
+        $signatories = $letterContext['signatories'];
+        $letterAddressee = $letterContext['letter_addressee'];
         $signatoryAssets = LeaveRequestSignatoryAssets::forLeaveRequest($leaveRequest);
 
         $pdf = Pdf::loadView('admin.leave-requests.show-pdf', [
             'leaveRequest' => $leaveRequest,
             'signatories' => $signatories,
+            'letterAddressee' => $letterAddressee,
             'signatoryAssets' => $signatoryAssets,
         ])
             ->setPaper('a4', 'portrait')

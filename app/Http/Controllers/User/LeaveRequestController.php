@@ -661,11 +661,13 @@ class LeaveRequestController extends Controller
             ];
         }
 
-        $signatories = LeaveRequestSignatorySettings::signatoriesForEmployee($leaveRequest->user);
+        $letterContext = LeaveRequestSignatorySettings::letterContext($leaveRequest->user);
+        $signatories = $letterContext['signatories'];
+        $letterAddressee = $letterContext['letter_addressee'];
 
         $leaveRequestActivityLogs = $this->leaveRequestActivityLogsForRequester($leaveRequest);
 
-        return view('user.leave-requests.show', compact('leaveRequest', 'signatories', 'studentTime', 'leaveRequestActivityLogs'));
+        return view('user.leave-requests.show', compact('leaveRequest', 'signatories', 'letterAddressee', 'studentTime', 'leaveRequestActivityLogs'));
     }
 
     /**

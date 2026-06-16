@@ -5,17 +5,17 @@
         'e_signature_data_uri' => null,
     ];
     $supervisorSignatory = $signatoryAssets['immediate_supervisor'] ?? [
-        'name' => $signatories['immediate_supervisor'] ?? 'CHARMAINE JOY ROSATACE',
+        'name' => $signatories['immediate_supervisor'] ?? '—',
         'role' => 'Immediate Supervisor',
         'e_signature_data_uri' => null,
     ];
     $hrSignatory = $signatoryAssets['hr_admin'] ?? [
-        'name' => $signatories['hr_admin'] ?? 'MAY GRACE ACOSTA',
+        'name' => $signatories['hr_admin'] ?? '—',
         'role' => 'HR Admin',
         'e_signature_data_uri' => null,
     ];
     $ctoSignatory = $signatoryAssets['cto'] ?? [
-        'name' => $signatories['cto'] ?? 'NITISH KHEMANI',
+        'name' => $signatories['cto'] ?? '—',
         'role' => 'Chief Technology Officer',
         'e_signature_data_uri' => null,
     ];

@@ -30,7 +30,7 @@
     </label>
     <input type="text" name="supervisor_name" id="supervisor_name"
            value="{{ old('supervisor_name', $department->supervisor_name ?? '') }}"
-           placeholder="e.g., CHARMAINE JOY ROSATACE"
+           placeholder="e.g., Department supervisor name"
            class="w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500">
     <p class="mt-1 text-sm text-gray-500">
         Used only when no supervisor user is assigned above.

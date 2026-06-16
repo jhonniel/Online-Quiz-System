@@ -12,7 +12,7 @@
     <div class="letter-content">
         <p class="letter-date">{{ $effectiveDate }}</p>
         <div class="letter-body">
-            <p><strong>Dear Ms. May Grace Acosta,</strong></p>
+            <p><strong>{{ $letterAddressee ?? 'Dear HR Admin,' }}</strong></p>
             <p>
                 Please accept this letter as formal request for a leave of absence. My leave is due to
                 <span class="emphasis">{{ $reasonText }}</span>.
@@ -63,7 +63,7 @@
     <div class="letter-content">
         <p class="letter-date">{{ $effectiveDate }}</p>
         <div class="letter-body">
-            <p><strong>Dear Ms. May Grace Acosta,</strong></p>
+            <p><strong>{{ $letterAddressee ?? 'Dear HR Admin,' }}</strong></p>
             <p>
                 Please accept this letter as official notice that I will be
                 <span class="emphasis">[{{ $mode ?: 'working remotely or request to be excused' }}]</span>
@@ -109,7 +109,7 @@
     <div class="letter-content">
         <p class="letter-date">{{ $effectiveDate }}</p>
         <div class="letter-body">
-            <p><strong>Dear Ms. May Grace Acosta,</strong></p>
+            <p><strong>{{ $letterAddressee ?? 'Dear HR Admin,' }}</strong></p>
             <p>
                 I respectfully request your approval for an additional
                 <span class="emphasis">{{ $otHours ?: '[hours, HH:MM]' }}</span>

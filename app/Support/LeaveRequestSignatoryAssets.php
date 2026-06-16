@@ -27,17 +27,17 @@ final class LeaveRequestSignatoryAssets
                 $employee
             ),
             'immediate_supervisor' => self::block(
-                LeaveRequestSignatorySettings::immediateSupervisorName($employee),
+                LeaveRequestSignatorySettings::immediateSupervisorDisplayName($employee),
                 'Immediate Supervisor',
                 LeaveRequestSignatorySettings::immediateSupervisorUser($employee)
             ),
             'hr_admin' => self::block(
-                LeaveRequestSignatorySettings::hrAdminName(),
+                LeaveRequestSignatorySettings::hrAdminDisplayName(),
                 'HR Admin',
                 LeaveRequestSignatorySettings::hrAdminUser()
             ),
             'cto' => self::block(
-                LeaveRequestSignatorySettings::ctoName(),
+                LeaveRequestSignatorySettings::ctoDisplayName(),
                 'Chief Technology Officer',
                 LeaveRequestSignatorySettings::ctoUser()
             ),

@@ -80,20 +80,25 @@ class SettingsController extends Controller
         if ($leaveSupervisorSetting && $leaveSupervisorSetting->value !== null && $leaveSupervisorSetting->value !== '' && trim($leaveSupervisorSetting->value) !== '') {
             $settings['leave_immediate_supervisor'] = $leaveSupervisorSetting->value;
         } else {
-            $settings['leave_immediate_supervisor'] = 'CHARMAINE JOY ROSATACE';
+            $settings['leave_immediate_supervisor'] = '';
         }
 
         if ($leaveHrSetting && $leaveHrSetting->value !== null && $leaveHrSetting->value !== '' && trim($leaveHrSetting->value) !== '') {
             $settings['leave_hr_admin'] = $leaveHrSetting->value;
         } else {
-            $settings['leave_hr_admin'] = 'MAY GRACE ACOSTA';
+            $settings['leave_hr_admin'] = '';
         }
 
         if ($leaveCtoSetting && $leaveCtoSetting->value !== null && $leaveCtoSetting->value !== '' && trim($leaveCtoSetting->value) !== '') {
             $settings['leave_cto'] = $leaveCtoSetting->value;
         } else {
-            $settings['leave_cto'] = 'NITISH KHEMANI';
+            $settings['leave_cto'] = '';
         }
+
+        $leaveLetterAddresseeSetting = Setting::where('key', LeaveRequestSignatorySettings::LETTER_ADDRESSEE_KEY)->first();
+        $settings[LeaveRequestSignatorySettings::LETTER_ADDRESSEE_KEY] = ($leaveLetterAddresseeSetting && trim((string) $leaveLetterAddresseeSetting->value) !== '')
+            ? $leaveLetterAddresseeSetting->value
+            : '';
 
         // Leave Admin Notification Email
         $leaveAdminNotificationEmailSetting = Setting::where('key', 'leave_admin_notification_email')->first();
@@ -574,6 +579,7 @@ class SettingsController extends Controller
             'leave_immediate_supervisor' => 'nullable|string|max:255',
             'leave_hr_admin' => 'nullable|string|max:255',
             'leave_cto' => 'nullable|string|max:255',
+            LeaveRequestSignatorySettings::LETTER_ADDRESSEE_KEY => 'nullable|string|max:255',
             'leave_immediate_supervisor_user_id' => 'nullable|integer|exists:users,id',
             'leave_hr_admin_user_id' => 'nullable|integer|exists:users,id',
             'leave_cto_user_id' => 'nullable|integer|exists:users,id',
@@ -872,14 +878,35 @@ class SettingsController extends Controller
         Setting::set('ojt_total_slots', $ojtTotalSlots, 'number', 'Total available OJT slots for student capacity tracking');
 
         // Leave Request Signatories
-        $leaveImmediateSupervisor = $request->leave_immediate_supervisor ?? 'CHARMAINE JOY ROSATACE';
+        $leaveImmediateSupervisor = trim((string) ($request->leave_immediate_supervisor ?? ''));
+        $leaveHrAdmin = trim((string) ($request->leave_hr_admin ?? ''));
+        $leaveCto = trim((string) ($request->leave_cto ?? ''));
+
+        $supervisorUserId = (int) $request->input('leave_immediate_supervisor_user_id');
+        if ($supervisorUserId > 0 && ($supervisorUser = User::query()->find($supervisorUserId))) {
+            $leaveImmediateSupervisor = $supervisorUser->name;
+        }
+
+        $hrAdminUserId = (int) $request->input('leave_hr_admin_user_id');
+        if ($hrAdminUserId > 0 && ($hrAdminUser = User::query()->find($hrAdminUserId))) {
+            $leaveHrAdmin = $hrAdminUser->name;
+        }
+
+        $ctoUserId = (int) $request->input('leave_cto_user_id');
+        if ($ctoUserId > 0 && ($ctoUser = User::query()->find($ctoUserId))) {
+            $leaveCto = $ctoUser->name;
+        }
+
         Setting::set('leave_immediate_supervisor', $leaveImmediateSupervisor, 'text', 'Name for Immediate Supervisor in leave request letters');
-
-        $leaveHrAdmin = $request->leave_hr_admin ?? 'MAY GRACE ACOSTA';
         Setting::set('leave_hr_admin', $leaveHrAdmin, 'text', 'Name for HR Admin in leave request letters');
-
-        $leaveCto = $request->leave_cto ?? 'NITISH KHEMANI';
         Setting::set('leave_cto', $leaveCto, 'text', 'Name for Chief Technology Officer in leave request letters');
+
+        Setting::set(
+            LeaveRequestSignatorySettings::LETTER_ADDRESSEE_KEY,
+            trim((string) ($request->input(LeaveRequestSignatorySettings::LETTER_ADDRESSEE_KEY) ?? '')),
+            'text',
+            'Optional override for leave letter greeting addressee name (without Dear Ms.)'
+        );
 
         $this->saveAssignedSignatoryUserSetting(
             LeaveRequestSignatorySettings::IMMEDIATE_SUPERVISOR_USER_ID_KEY,

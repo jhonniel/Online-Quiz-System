@@ -143,7 +143,7 @@
 
                         <!-- Greeting -->
                         <div class="space-y-1">
-                            <p class="text-sm font-semibold text-gray-900">Dear Ms. May Grace Acosta,</p>
+                            <p class="text-sm font-semibold text-gray-900">{{ $letterAddressee ?? 'Dear HR Admin,' }}</p>
                         </div>
 
                         <!-- Body -->
@@ -192,17 +192,17 @@
                             <div class="mt-6 space-y-1 text-sm text-gray-900">
                                 <p>Noted:</p>
                                 <div class="mt-2">
-                                    <p class="font-semibold underline">{{ $signatories['immediate_supervisor'] ?? 'CHARMAINE JOY ROSATACE' }}</p>
+                                    <p class="font-semibold underline">{{ $signatories['immediate_supervisor'] ?? '—' }}</p>
                                     <p class="text-gray-700 text-xs tracking-wide">IMMEDIATE SUPERVISOR</p>
                                 </div>
                                 <div class="mt-3">
-                                    <p class="font-semibold underline">{{ $signatories['hr_admin'] ?? 'MAY GRACE ACOSTA' }}</p>
+                                    <p class="font-semibold underline">{{ $signatories['hr_admin'] ?? '—' }}</p>
                                     <p class="text-gray-700 text-xs tracking-wide">HR ADMIN</p>
                                 </div>
                                 <div class="mt-3 flex items-center justify-between">
                                     <div>
                                         <p class="text-xs text-gray-700">Approved:</p>
-                                        <p class="font-semibold underline">{{ $signatories['cto'] ?? 'NITISH KHEMANI' }}</p>
+                                        <p class="font-semibold underline">{{ $signatories['cto'] ?? '—' }}</p>
                                         <p class="text-gray-700 text-xs tracking-wide">CHIEF TECHNOLOGY OFFICER</p>
                                     </div>
                                     <div class="text-xs font-semibold tracking-wide text-gray-900">
@@ -294,7 +294,7 @@
 
                         <!-- Greeting -->
                         <div class="space-y-1">
-                            <p class="text-sm font-semibold text-gray-900">Dear Ms. May Grace Acosta,</p>
+                            <p class="text-sm font-semibold text-gray-900">{{ $letterAddressee ?? 'Dear HR Admin,' }}</p>
                         </div>
 
                         <!-- Body -->
@@ -349,17 +349,17 @@
                             <div class="mt-6 space-y-1 text-sm text-gray-900">
                                 <p>Noted:</p>
                                 <div class="mt-2">
-                                    <p class="font-semibold underline">{{ $signatories['immediate_supervisor'] ?? 'CHARMAINE JOY ROSATACE' }}</p>
+                                    <p class="font-semibold underline">{{ $signatories['immediate_supervisor'] ?? '—' }}</p>
                                     <p class="text-gray-700 text-xs tracking-wide">IMMEDIATE SUPERVISOR</p>
                                 </div>
                                 <div class="mt-3">
-                                    <p class="font-semibold underline">{{ $signatories['hr_admin'] ?? 'MAY GRACE ACOSTA' }}</p>
+                                    <p class="font-semibold underline">{{ $signatories['hr_admin'] ?? '—' }}</p>
                                     <p class="text-gray-700 text-xs tracking-wide">HR ADMIN</p>
                                 </div>
                                 <div class="mt-3 flex items-center justify-between">
                                     <div>
                                         <p class="text-xs text-gray-700">Approved:</p>
-                                        <p class="font-semibold underline">{{ $signatories['cto'] ?? 'NITISH KHEMANI' }}</p>
+                                        <p class="font-semibold underline">{{ $signatories['cto'] ?? '—' }}</p>
                                         <p class="text-gray-700 text-xs tracking-wide">CHIEF TECHNOLOGY OFFICER</p>
                                     </div>
                                     <div class="text-xs font-semibold tracking-wide text-gray-900">
@@ -404,7 +404,7 @@
 
                         <!-- Greeting -->
                         <div class="space-y-1">
-                            <p class="text-sm font-semibold text-gray-900">Dear Ms. May Grace Acosta,</p>
+                            <p class="text-sm font-semibold text-gray-900">{{ $letterAddressee ?? 'Dear HR Admin,' }}</p>
                         </div>
 
                         <!-- Body -->
@@ -466,17 +466,17 @@
                             <div class="mt-6 space-y-1 text-sm text-gray-900">
                                 <p>Noted:</p>
                                 <div class="mt-2">
-                                    <p class="font-semibold underline">{{ $signatories['immediate_supervisor'] ?? 'CHARMAINE JOY ROSATACE' }}</p>
+                                    <p class="font-semibold underline">{{ $signatories['immediate_supervisor'] ?? '—' }}</p>
                                     <p class="text-gray-700 text-xs tracking-wide">IMMEDIATE SUPERVISOR</p>
                                 </div>
                                 <div class="mt-3">
-                                    <p class="font-semibold underline">{{ $signatories['hr_admin'] ?? 'MAY GRACE ACOSTA' }}</p>
+                                    <p class="font-semibold underline">{{ $signatories['hr_admin'] ?? '—' }}</p>
                                     <p class="text-gray-700 text-xs tracking-wide">HR ADMIN</p>
                                 </div>
                                 <div class="mt-3 flex items-center justify-between">
                                     <div>
                                         <p class="text-xs text-gray-700">Approved:</p>
-                                        <p class="font-semibold underline">{{ $signatories['cto'] ?? 'NITISH KHEMANI' }}</p>
+                                        <p class="font-semibold underline">{{ $signatories['cto'] ?? '—' }}</p>
                                         <p class="text-gray-700 text-xs tracking-wide">CHIEF TECHNOLOGY OFFICER</p>
                                     </div>
                                     <div class="text-xs font-semibold tracking-wide text-gray-900">
