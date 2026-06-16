@@ -10,8 +10,6 @@
         .letter-date { font-size: 10px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; margin: 0 0 12px 0; color: #374151; }
         .letter-body p { margin: 0 0 10px 0; }
         .emphasis { font-weight: 700; text-decoration: underline; }
-        .tasks-heading { font-weight: 700; margin: 0 0 0 0; }
-        .tasks-body { border-top: 1px solid #d1d5db; padding-top: 8px; margin-top: 0; min-height: 2.5rem; white-space: pre-line; }
         .signatory-block { margin: 0 0 12px 0; }
         .signature-slot { height: 36px; margin: 0 0 -28px 0; }
         .signature-image { display: block; height: 36px; max-width: 160px; width: auto; object-fit: contain; }

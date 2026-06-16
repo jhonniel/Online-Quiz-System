@@ -26,7 +26,6 @@
             <p>
                 If my leave of absence is approved, I'll try my best to assist with any questions by phone call
                 or chat provided that I have the means or I can connect with the internet.
-                <strong>Additional info:</strong>  {!! nl2br(e(trim((string) ($leaveRequest->reason ?? '')))) !!}
             </p>
             <p>
                 Please let me know if you have any questions and an appropriate time for us to speak to
@@ -77,8 +76,7 @@
                 due to
                 <span class="emphasis">[{{ $reasonAbsence ?: 'reasons for absence' }}]</span>.
             </p>
-            <p class="tasks-heading">[Strictly List down Task Listed in ClickUp for Devs via link]</p>
-            <p class="tasks-body">{{ $tasks }}</p>
+            <p><strong>[Strictly List down Task Listed in ClickUp for Devs via link]</strong> {!! nl2br(e($tasks)) !!}</p>
             <p>Thank you for understanding.</p>
             <p>Best regards,</p>
             <p>Truly yours,</p>
@@ -120,8 +118,7 @@
                 due to
                 <span class="emphasis">{{ $otReason }}</span>@else.@endif
             </p>
-            <p class="tasks-heading">Tasks completed (ClickUp links)</p>
-            <p class="tasks-body">{{ $otTasks }}</p>
+            <p><strong>Tasks completed (ClickUp links)</strong> {!! nl2br(e($otTasks)) !!}</p>
             <p>Thank you for understanding.</p>
             <p>Best regards,</p>
             <p>Truly yours,</p>
