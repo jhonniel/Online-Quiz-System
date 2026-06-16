@@ -8,7 +8,6 @@ use App\Models\User;
 final class LeaveRequestSignatoryAssets
 {
     /**
-     * @param  array{immediate_supervisor: string, hr_admin: string, cto: string}  $signatoryNames
      * @return array{
      *     employee: array{name: string, role: string, e_signature_data_uri: ?string},
      *     immediate_supervisor: array{name: string, role: string, e_signature_data_uri: ?string},
@@ -16,9 +15,10 @@ final class LeaveRequestSignatoryAssets
      *     cto: array{name: string, role: string, e_signature_data_uri: ?string}
      * }
      */
-    public static function forLeaveRequest(LeaveRequest $leaveRequest, array $signatoryNames): array
+    public static function forLeaveRequest(LeaveRequest $leaveRequest): array
     {
         $employee = $leaveRequest->user;
+        $employee?->loadMissing('department');
 
         return [
             'employee' => self::block(
@@ -27,19 +27,19 @@ final class LeaveRequestSignatoryAssets
                 $employee
             ),
             'immediate_supervisor' => self::block(
-                $signatoryNames['immediate_supervisor'] ?? '',
+                LeaveRequestSignatorySettings::immediateSupervisorName($employee),
                 'Immediate Supervisor',
-                self::findUserByName($signatoryNames['immediate_supervisor'] ?? null)
+                LeaveRequestSignatorySettings::immediateSupervisorUser($employee)
             ),
             'hr_admin' => self::block(
-                $signatoryNames['hr_admin'] ?? '',
+                LeaveRequestSignatorySettings::hrAdminName(),
                 'HR Admin',
-                self::findUserByName($signatoryNames['hr_admin'] ?? null)
+                LeaveRequestSignatorySettings::hrAdminUser()
             ),
             'cto' => self::block(
-                $signatoryNames['cto'] ?? '',
+                LeaveRequestSignatorySettings::ctoName(),
                 'Chief Technology Officer',
-                self::findUserByName($signatoryNames['cto'] ?? null)
+                LeaveRequestSignatorySettings::ctoUser()
             ),
         ];
     }
@@ -56,21 +56,5 @@ final class LeaveRequestSignatoryAssets
                 ? EmployeeSampleDocument::eSignatureDataUri($user)
                 : null,
         ];
-    }
-
-    public static function findUserByName(?string $name): ?User
-    {
-        $name = trim((string) $name);
-        if ($name === '') {
-            return null;
-        }
-
-        $normalized = strtolower(preg_replace('/\s+/', ' ', $name) ?? $name);
-
-        return User::query()
-            ->whereIn('role', ['employee', 'admin', 'hr'])
-            ->where('is_active', true)
-            ->whereRaw('LOWER(TRIM(name)) = ?', [$normalized])
-            ->first(['id', 'name', 'role', 'e_signature_path']);
     }
 }

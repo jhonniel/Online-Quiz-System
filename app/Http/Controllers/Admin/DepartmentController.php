@@ -5,6 +5,8 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Department;
 use App\Models\DepartmentPosition;
+use App\Models\User;
+use App\Support\LeaveRequestSignatorySettings;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 
@@ -44,7 +46,10 @@ class DepartmentController extends Controller
 
     public function create()
     {
-        return view('admin.departments.create');
+        $supervisorUsers = LeaveRequestSignatorySettings::selectableUsersQuery()
+            ->get(['id', 'name', 'email', 'role']);
+
+        return view('admin.departments.create', compact('supervisorUsers'));
     }
 
     public function store(Request $request)
@@ -57,15 +62,19 @@ class DepartmentController extends Controller
             'description' => 'nullable|string',
             'job_description' => 'nullable|string|max:10000',
             'supervisor_name' => 'nullable|string|max:255',
+            'supervisor_user_id' => 'nullable|integer|exists:users,id',
             'is_active' => 'boolean',
         ]);
+
+        $supervisorFields = $this->resolveSupervisorFields($request);
 
         $department = Department::create([
             'name' => $request->name,
             'code' => $request->code ?: Str::upper(Str::limit(Str::slug($request->name), 10, '')),
             'description' => $request->description,
             'job_description' => $this->normalizeJobDescription($request->input('job_description')),
-            'supervisor_name' => $request->supervisor_name,
+            'supervisor_name' => $supervisorFields['supervisor_name'],
+            'supervisor_user_id' => $supervisorFields['supervisor_user_id'],
             'is_active' => $request->has('is_active'),
         ]);
 
@@ -78,8 +87,10 @@ class DepartmentController extends Controller
     public function edit(Department $department)
     {
         $department->load(['positions' => fn ($q) => $q->orderBy('sort_order')->orderBy('name')]);
+        $supervisorUsers = LeaveRequestSignatorySettings::selectableUsersQuery()
+            ->get(['id', 'name', 'email', 'role']);
 
-        return view('admin.departments.edit', compact('department'));
+        return view('admin.departments.edit', compact('department', 'supervisorUsers'));
     }
 
     public function update(Request $request, Department $department)
@@ -92,15 +103,19 @@ class DepartmentController extends Controller
             'description' => 'nullable|string',
             'job_description' => 'nullable|string|max:10000',
             'supervisor_name' => 'nullable|string|max:255',
+            'supervisor_user_id' => 'nullable|integer|exists:users,id',
             'is_active' => 'boolean',
         ]);
+
+        $supervisorFields = $this->resolveSupervisorFields($request);
 
         $department->update([
             'name' => $request->name,
             'code' => $request->code ?: Str::upper(Str::limit(Str::slug($request->name), 10, '')),
             'description' => $request->description,
             'job_description' => $this->normalizeJobDescription($request->input('job_description')),
-            'supervisor_name' => $request->supervisor_name,
+            'supervisor_name' => $supervisorFields['supervisor_name'],
+            'supervisor_user_id' => $supervisorFields['supervisor_user_id'],
             'is_active' => $request->has('is_active'),
         ]);
 
@@ -192,5 +207,29 @@ class DepartmentController extends Controller
         }
 
         return $normalized === [] ? null : implode("\n", $normalized);
+    }
+
+    /**
+     * @return array{supervisor_name: ?string, supervisor_user_id: ?int}
+     */
+    private function resolveSupervisorFields(Request $request): array
+    {
+        $supervisorUserId = (int) $request->input('supervisor_user_id', 0);
+        $supervisorName = trim((string) $request->input('supervisor_name', ''));
+
+        if ($supervisorUserId > 0) {
+            $user = User::query()->find($supervisorUserId);
+            abort_unless(LeaveRequestSignatorySettings::isSelectableUser($user), 422, 'Selected supervisor is not an active employee or admin.');
+
+            return [
+                'supervisor_name' => $user->name,
+                'supervisor_user_id' => $user->id,
+            ];
+        }
+
+        return [
+            'supervisor_name' => $supervisorName !== '' ? $supervisorName : null,
+            'supervisor_user_id' => null,
+        ];
     }
 }

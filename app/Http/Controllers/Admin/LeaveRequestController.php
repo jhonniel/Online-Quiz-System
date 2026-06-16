@@ -11,6 +11,7 @@ use App\Models\DtrDeficit;
 use App\Models\LeaveBalance;
 use App\Support\DocumentExportPdfBranding;
 use App\Support\LeaveRequestSignatoryAssets;
+use App\Support\LeaveRequestSignatorySettings;
 use App\Support\WorkFromHomeQuota;
 use App\Models\LeaveRequest;
 use App\Models\LeaveRequestLog;
@@ -902,7 +903,7 @@ class LeaveRequestController extends Controller
         $leaveRequest->load(['user.department', 'reviewer']);
 
         $signatories = $this->leaveRequestSignatories($leaveRequest);
-        $signatoryAssets = LeaveRequestSignatoryAssets::forLeaveRequest($leaveRequest, $signatories);
+        $signatoryAssets = LeaveRequestSignatoryAssets::forLeaveRequest($leaveRequest);
 
         $pdf = Pdf::loadView('admin.leave-requests.show-pdf', [
             'leaveRequest' => $leaveRequest,
@@ -2436,20 +2437,7 @@ class LeaveRequestController extends Controller
      */
     private function leaveRequestSignatories(LeaveRequest $leaveRequest): array
     {
-        $employee = $leaveRequest->user;
-        $immediateSupervisor = 'CHARMAINE JOY ROSATACE';
-
-        if ($employee && $employee->department && $employee->department->supervisor_name) {
-            $immediateSupervisor = $employee->department->supervisor_name;
-        } else {
-            $immediateSupervisor = Setting::get('leave_immediate_supervisor', 'CHARMAINE JOY ROSATACE');
-        }
-
-        return [
-            'immediate_supervisor' => $immediateSupervisor,
-            'hr_admin' => Setting::get('leave_hr_admin', 'MAY GRACE ACOSTA'),
-            'cto' => Setting::get('leave_cto', 'NITISH KHEMANI'),
-        ];
+        return LeaveRequestSignatorySettings::signatoriesForLeaveRequest($leaveRequest);
     }
 
     private function assertCanAccessEmployeeLeaveRequest(LeaveRequest $leaveRequest): User

@@ -11,6 +11,7 @@ use App\Models\LeaveRequestLog;
 use App\Models\User;
 use App\Rules\ClickUpTasksUrlsOnly;
 use App\Services\MailConfigService;
+use App\Support\LeaveRequestSignatorySettings;
 use App\Support\TimeRequestOvertimeLeaveImport;
 use App\Support\WorkFromHomeQuota;
 use Carbon\Carbon;
@@ -660,21 +661,7 @@ class LeaveRequestController extends Controller
             ];
         }
 
-        // Get signatory names - immediate supervisor based on user's department
-        $user = Auth::user();
-        $immediateSupervisor = 'CHARMAINE JOY ROSATACE'; // Default fallback
-
-        if ($user && $user->department && $user->department->supervisor_name) {
-            $immediateSupervisor = $user->department->supervisor_name;
-        } else {
-            $immediateSupervisor = \App\Models\Setting::get('leave_immediate_supervisor', 'CHARMAINE JOY ROSATACE');
-        }
-
-        $signatories = [
-            'immediate_supervisor' => $immediateSupervisor,
-            'hr_admin' => \App\Models\Setting::get('leave_hr_admin', 'MAY GRACE ACOSTA'),
-            'cto' => \App\Models\Setting::get('leave_cto', 'NITISH KHEMANI'),
-        ];
+        $signatories = LeaveRequestSignatorySettings::signatoriesForEmployee($leaveRequest->user);
 
         $leaveRequestActivityLogs = $this->leaveRequestActivityLogsForRequester($leaveRequest);
 

@@ -9,6 +9,7 @@ use App\Support\EmployeeDocumentMaterial;
 use App\Support\EmployeeDocumentRequestTypes;
 use App\Support\EmployeeHandbookMaterial;
 use App\Support\EmployeePolicyMaterial;
+use App\Support\LeaveRequestSignatorySettings;
 use App\Support\PayslipSignatorySettings;
 use App\Services\MailConfigService;
 use Illuminate\Http\Request;
@@ -312,6 +313,9 @@ class SettingsController extends Controller
 
         $settings['payslip_admin_officer_user_id'] = PayslipSignatorySettings::adminOfficerUserId() ?? '';
         $settings['payslip_proprietor_user_id'] = PayslipSignatorySettings::proprietorUserId() ?? '';
+        $settings['leave_immediate_supervisor_user_id'] = LeaveRequestSignatorySettings::immediateSupervisorUserId() ?? '';
+        $settings['leave_hr_admin_user_id'] = LeaveRequestSignatorySettings::hrAdminUserId() ?? '';
+        $settings['leave_cto_user_id'] = LeaveRequestSignatorySettings::ctoUserId() ?? '';
 
         $payslipSignatoryUsers = PayslipSignatorySettings::selectableUsersQuery()
             ->get(['id', 'name', 'email', 'role']);
@@ -566,6 +570,9 @@ class SettingsController extends Controller
             'leave_immediate_supervisor' => 'nullable|string|max:255',
             'leave_hr_admin' => 'nullable|string|max:255',
             'leave_cto' => 'nullable|string|max:255',
+            'leave_immediate_supervisor_user_id' => 'nullable|integer|exists:users,id',
+            'leave_hr_admin_user_id' => 'nullable|integer|exists:users,id',
+            'leave_cto_user_id' => 'nullable|integer|exists:users,id',
             'payslip_admin_officer_user_id' => 'nullable|integer|exists:users,id',
             'payslip_proprietor_user_id' => 'nullable|integer|exists:users,id',
             'leave_admin_notification_email' => 'nullable|array',
@@ -869,6 +876,22 @@ class SettingsController extends Controller
 
         $leaveCto = $request->leave_cto ?? 'NITISH KHEMANI';
         Setting::set('leave_cto', $leaveCto, 'text', 'Name for Chief Technology Officer in leave request letters');
+
+        $this->saveAssignedSignatoryUserSetting(
+            LeaveRequestSignatorySettings::IMMEDIATE_SUPERVISOR_USER_ID_KEY,
+            $request->input('leave_immediate_supervisor_user_id'),
+            'User assigned as default Immediate Supervisor on leave request letters'
+        );
+        $this->saveAssignedSignatoryUserSetting(
+            LeaveRequestSignatorySettings::HR_ADMIN_USER_ID_KEY,
+            $request->input('leave_hr_admin_user_id'),
+            'User assigned as HR Admin on leave request letters'
+        );
+        $this->saveAssignedSignatoryUserSetting(
+            LeaveRequestSignatorySettings::CTO_USER_ID_KEY,
+            $request->input('leave_cto_user_id'),
+            'User assigned as Chief Technology Officer on leave request letters'
+        );
 
         $this->savePayslipSignatoryUserSetting(
             'payslip_admin_officer_user_id',
@@ -1520,6 +1543,22 @@ class SettingsController extends Controller
                 'message' => 'Failed to send test email: '.$e->getMessage().' (Check logs for details)',
             ], 500);
         }
+    }
+
+    private function saveAssignedSignatoryUserSetting(string $key, mixed $userId, string $description): void
+    {
+        $id = (int) $userId;
+
+        if ($id <= 0) {
+            Setting::set($key, '', 'text', $description);
+
+            return;
+        }
+
+        $user = User::query()->find($id);
+        abort_unless(LeaveRequestSignatorySettings::isSelectableUser($user), 422, 'Selected user is not an active employee or admin.');
+
+        Setting::set($key, (string) $id, 'number', $description);
     }
 
     private function savePayslipSignatoryUserSetting(string $key, mixed $userId, string $description): void

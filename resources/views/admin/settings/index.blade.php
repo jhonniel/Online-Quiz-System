@@ -489,14 +489,36 @@
                                 </div>
                                 <div>
                                     <h3 class="text-lg font-semibold text-gray-900">Leave Request Signatories</h3>
-                                    <p class="text-sm text-gray-500">Configure names for leave request letter templates.</p>
+                                    <p class="text-sm text-gray-500">Assign users for leave request letters and PDF e-signatures. Name fields are used only when no user is assigned.</p>
                                 </div>
                             </div>
 
                             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                                 <div>
+                                    <label for="leave_immediate_supervisor_user_id" class="block text-sm font-medium text-gray-700 mb-2">
+                                        Assigned Immediate Supervisor (default)
+                                    </label>
+                                    <select name="leave_immediate_supervisor_user_id" id="leave_immediate_supervisor_user_id"
+                                            class="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                                        <option value="">— Not set —</option>
+                                        @foreach($payslipSignatoryUsers->groupBy('role') as $role => $users)
+                                            <optgroup label="{{ ucfirst($role) }}s">
+                                                @foreach($users as $user)
+                                                    <option value="{{ $user->id }}"
+                                                        {{ (string) old('leave_immediate_supervisor_user_id', $settings['leave_immediate_supervisor_user_id'] ?? '') === (string) $user->id ? 'selected' : '' }}>
+                                                        {{ $user->name }} ({{ $user->email }})
+                                                    </option>
+                                                @endforeach
+                                            </optgroup>
+                                        @endforeach
+                                    </select>
+                                    <p class="mt-2 text-xs text-gray-500">
+                                        Used when a department has no assigned supervisor. Their e-signature appears on leave PDFs when uploaded.
+                                    </p>
+                                </div>
+                                <div>
                                     <label for="leave_immediate_supervisor" class="block text-sm font-medium text-gray-700 mb-2">
-                                        Immediate Supervisor Name
+                                        Immediate Supervisor Name (fallback)
                                     </label>
                                     @php
                                         $supervisorValue = isset($settings['leave_immediate_supervisor']) ? $settings['leave_immediate_supervisor'] : 'CHARMAINE JOY ROSATACE';
@@ -508,12 +530,31 @@
                                            value="{{ $supervisorValue }}"
                                            class="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
                                     <p class="mt-2 text-xs text-gray-500">
-                                        Name displayed as "IMMEDIATE SUPERVISOR" in leave request letters.
+                                        Used only when no supervisor user is assigned (global or department).
                                     </p>
                                 </div>
                                 <div>
+                                    <label for="leave_hr_admin_user_id" class="block text-sm font-medium text-gray-700 mb-2">
+                                        Assigned HR Admin
+                                    </label>
+                                    <select name="leave_hr_admin_user_id" id="leave_hr_admin_user_id"
+                                            class="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                                        <option value="">— Not set —</option>
+                                        @foreach($payslipSignatoryUsers->groupBy('role') as $role => $users)
+                                            <optgroup label="{{ ucfirst($role) }}s">
+                                                @foreach($users as $user)
+                                                    <option value="{{ $user->id }}"
+                                                        {{ (string) old('leave_hr_admin_user_id', $settings['leave_hr_admin_user_id'] ?? '') === (string) $user->id ? 'selected' : '' }}>
+                                                        {{ $user->name }} ({{ $user->email }})
+                                                    </option>
+                                                @endforeach
+                                            </optgroup>
+                                        @endforeach
+                                    </select>
+                                </div>
+                                <div>
                                     <label for="leave_hr_admin" class="block text-sm font-medium text-gray-700 mb-2">
-                                        HR Admin Name
+                                        HR Admin Name (fallback)
                                     </label>
                                     @php
                                         $hrAdminValue = isset($settings['leave_hr_admin']) ? $settings['leave_hr_admin'] : 'MAY GRACE ACOSTA';
@@ -524,13 +565,29 @@
                                     <input type="text" id="leave_hr_admin" name="leave_hr_admin"
                                            value="{{ $hrAdminValue }}"
                                            class="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
-                                    <p class="mt-2 text-xs text-gray-500">
-                                        Name displayed as "HR ADMIN" in leave request letters.
-                                    </p>
+                                </div>
+                                <div>
+                                    <label for="leave_cto_user_id" class="block text-sm font-medium text-gray-700 mb-2">
+                                        Assigned Chief Technology Officer
+                                    </label>
+                                    <select name="leave_cto_user_id" id="leave_cto_user_id"
+                                            class="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                                        <option value="">— Not set —</option>
+                                        @foreach($payslipSignatoryUsers->groupBy('role') as $role => $users)
+                                            <optgroup label="{{ ucfirst($role) }}s">
+                                                @foreach($users as $user)
+                                                    <option value="{{ $user->id }}"
+                                                        {{ (string) old('leave_cto_user_id', $settings['leave_cto_user_id'] ?? '') === (string) $user->id ? 'selected' : '' }}>
+                                                        {{ $user->name }} ({{ $user->email }})
+                                                    </option>
+                                                @endforeach
+                                            </optgroup>
+                                        @endforeach
+                                    </select>
                                 </div>
                                 <div>
                                     <label for="leave_cto" class="block text-sm font-medium text-gray-700 mb-2">
-                                        Chief Technology Officer Name
+                                        Chief Technology Officer Name (fallback)
                                     </label>
                                     @php
                                         $ctoValue = isset($settings['leave_cto']) ? $settings['leave_cto'] : 'NITISH KHEMANI';
@@ -541,11 +598,8 @@
                                     <input type="text" id="leave_cto" name="leave_cto"
                                            value="{{ $ctoValue }}"
                                            class="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
-                                    <p class="mt-2 text-xs text-gray-500">
-                                        Name displayed as "CHIEF TECHNOLOGY OFFICER" in leave request letters.
-                                    </p>
                                 </div>
-                                <div>
+                                <div class="md:col-span-2">
                                     <label for="leave_admin_notification_email" class="block text-sm font-medium text-gray-700 mb-2">
                                         Admin Notification Emails
                                     </label>
