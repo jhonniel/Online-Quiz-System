@@ -5,9 +5,13 @@
 @endphp
 
 <div class="signatory-block">
-    @if(!empty($signatureUri))
-        <img src="{{ $signatureUri }}" alt="E-Signature" class="signature-image">
-    @endif
-    <p class="signatory-name">{{ $name !== '' ? $name : '—' }}</p>
+    <div class="signatory-name-block">
+        @if(!empty($signatureUri))
+            <div class="signature-slot">
+                <img src="{{ $signatureUri }}" alt="E-Signature" class="signature-image">
+            </div>
+        @endif
+        <p class="signatory-name">{{ $name !== '' ? $name : '—' }}</p>
+    </div>
     <p class="signatory-role">{{ $role }}</p>
 </div>

@@ -10,9 +10,11 @@
         .letter-date { font-size: 10px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; margin: 0 0 12px 0; color: #374151; }
         .letter-body p { margin: 0 0 10px 0; }
         .emphasis { font-weight: 700; text-decoration: underline; }
-        .signatory-block { margin: 0 0 14px 0; }
-        .signature-image { display: block; height: 42px; max-width: 200px; width: auto; object-fit: contain; margin: 0 0 4px 0; }
-        .signatory-name { font-weight: 700; text-decoration: underline; margin: 0; }
+        .signatory-block { margin: 0 0 14px 0; display: block; clear: both; }
+        .signatory-name-block { position: relative; display: inline-block; max-width: 100%; padding-top: 4px; vertical-align: top; }
+        .signature-slot { height: 42px; margin-bottom: -34px; position: relative; z-index: 2; }
+        .signature-image { display: inline-block; height: 42px; max-width: 240px; width: auto; object-fit: contain; vertical-align: bottom; }
+        .signatory-name { position: relative; z-index: 1; font-weight: 700; margin: 0; border-bottom: 1px solid #111827; padding: 0 2px 2px; line-height: 1.2; display: inline-block; min-width: 140px; max-width: 100%; white-space: nowrap; }
         .signatory-role { font-size: 9px; color: #374151; margin: 2px 0 0 0; text-transform: uppercase; letter-spacing: 0.03em; }
         .remarks { font-size: 10px; font-weight: 700; text-align: right; margin: 0; }
     </style>
