@@ -257,8 +257,9 @@
                             $isInternship = $application->hiringPosition && strcasecmp($application->hiringPosition->employment_type ?? '', 'Internship') === 0;
                         @endphp
                         @if($isInternship)
-                            <form action="{{ url('/admin/hiring-applications/' . $application->id . '/accept-intern') }}" method="POST" onsubmit="return confirm('Are you sure you want to accept this intern? Their role will change from applicant to student and they will be able to login.');">
+                            <form action="{{ url('/admin/hiring-applications/' . $application->id . '/accept-intern') }}" method="POST" class="accept-intern-form" onsubmit="return confirmAcceptIntern(this);">
                                 @csrf
+                                @include('admin.hiring-applications.partials.accept-intern-form-fields', ['fieldSuffix' => 'done'])
                                 <div class="mb-3">
                                     <label for="admin_notes_intern_done" class="block text-sm font-medium text-gray-700 mb-1">
                                         Notes (Optional)
@@ -279,7 +280,7 @@
                                     </span>
                                 </button>
                                 <p class="mt-2 text-xs text-gray-500">
-                                    This will change the user role from applicant to student and activate their account.
+                                    Enter required training hours, then confirm. This changes the user role to student and activates their account.
                                 </p>
                             </form>
                         @else
@@ -316,8 +317,9 @@
                             $isInternship = $application->hiringPosition && strcasecmp($application->hiringPosition->employment_type ?? '', 'Internship') === 0;
                         @endphp
                         @if($isInternship)
-                            <form action="{{ url('/admin/hiring-applications/' . $application->id . '/accept-intern') }}" method="POST" onsubmit="return confirm('Are you sure you want to accept this intern? Their role will change from applicant to student and they will be able to login.');">
+                            <form action="{{ url('/admin/hiring-applications/' . $application->id . '/accept-intern') }}" method="POST" class="accept-intern-form" onsubmit="return confirmAcceptIntern(this);">
                                 @csrf
+                                @include('admin.hiring-applications.partials.accept-intern-form-fields', ['fieldSuffix' => 'scheduled'])
                                 <div class="mb-3">
                                     <label for="admin_notes_intern" class="block text-sm font-medium text-gray-700 mb-1">
                                         Notes (Optional)
@@ -338,7 +340,7 @@
                                     </span>
                                 </button>
                                 <p class="mt-2 text-xs text-gray-500">
-                                    This will change the user role from applicant to student and activate their account.
+                                    Enter required training hours, then confirm. This changes the user role to student and activates their account.
                                 </p>
                             </form>
                         @else
@@ -413,3 +415,25 @@
                     @endif
                 </div>
             </div>
+
+@once
+<script>
+    function confirmAcceptIntern(form) {
+        const hoursInput = form.querySelector('[name="required_training_hours"]');
+        const hours = hoursInput ? parseFloat(String(hoursInput.value).trim()) : NaN;
+
+        if (!Number.isFinite(hours) || hours <= 0) {
+            alert('Please enter the required training hours before accepting this intern.');
+            if (hoursInput) {
+                hoursInput.focus();
+            }
+            return false;
+        }
+
+        return confirm(
+            'Accept this intern with ' + hours + ' required training hour(s)?\n\n'
+            + 'Their role will change to student and their account will be activated.'
+        );
+    }
+</script>
+@endonce

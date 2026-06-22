@@ -856,6 +856,11 @@
                                 <span class="font-bold">{{ number_format($balances['work_from_home']['remaining'] ?? 0, 0) }}</span>
                                 / {{ $balances['work_from_home']['allowance'] ?? 2 }} days
                             </p>
+                            @if(($balances['work_from_home']['carryover_debt'] ?? 0) > 0)
+                                <p class="text-xs text-amber-700 mt-1">
+                                    Includes {{ number_format($balances['work_from_home']['carryover_debt'], 0) }} day(s) deducted from admin-filed WFH in the previous month.
+                                </p>
+                            @endif
                         </div>
                         @endif
                     </div>

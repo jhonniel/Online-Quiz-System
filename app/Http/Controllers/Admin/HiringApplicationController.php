@@ -1636,6 +1636,11 @@ class HiringApplicationController extends Controller
             abort(403, 'Access denied. Only super administrators can accept interns.');
         }
 
+        $validated = $request->validate([
+            'admin_notes' => 'nullable|string|max:1000',
+            'required_training_hours' => 'required|numeric|min:0.01',
+        ]);
+
         // Check if this is an internship position
         $isInternship = $application->hiringPosition &&
                         strcasecmp($application->hiringPosition->employment_type ?? '', 'Internship') === 0;
@@ -1684,21 +1689,24 @@ class HiringApplicationController extends Controller
 
         // Store the previous status before updating
         $previousStatus = $application->status;
+        $previousRole = $user->role;
 
         // Update application status to hired
-        HiringApplication::withoutEvents(function () use ($application, $request) {
+        HiringApplication::withoutEvents(function () use ($application, $request, $validated) {
             $application->update([
                 'status' => 'hired',
-                'admin_notes' => $request->admin_notes ?? $application->admin_notes,
+                'admin_notes' => $validated['admin_notes'] ?? $application->admin_notes,
                 'reviewed_by' => Auth::id(),
                 'reviewed_at' => now(),
             ]);
         });
 
-        // Prepare user update data - change role to student for interns
+        // Prepare user update data - interns become active students with required training hours
         $userUpdateData = [
             'is_approved' => true,
             'is_active' => true,
+            'role' => 'student',
+            'required_training_hours' => (float) $validated['required_training_hours'],
         ];
 
         $universityId = $application->resolvedUniversityId();
@@ -1706,15 +1714,6 @@ class HiringApplicationController extends Controller
             $userUpdateData['university_id'] = $universityId;
         }
 
-        // If previous status was done_interview and user is applicant, change role to student (not employee)
-        if ($previousStatus === 'done_interview' && $user->role === 'applicant') {
-            $userUpdateData['role'] = 'student';
-        } elseif ($user->role === 'applicant') {
-            // Also change role to student if status is interview_scheduled or accepted
-            $userUpdateData['role'] = 'student';
-        }
-
-        // Activate user account so they can login
         $user->update($userUpdateData);
 
         // Log the action
@@ -1723,14 +1722,15 @@ class HiringApplicationController extends Controller
             'applicant_name' => $application->full_name,
             'applicant_email' => $application->email,
             'position' => $application->hiringPosition->title ?? $application->position_applied,
-            'admin_notes' => $request->admin_notes,
+            'admin_notes' => $validated['admin_notes'] ?? null,
             'employment_type' => 'Internship',
+            'required_training_hours' => (float) $validated['required_training_hours'],
+            'previous_status' => $previousStatus,
         ];
 
-        // If role was changed from applicant to student, log it
-        if (isset($userUpdateData['role']) && $userUpdateData['role'] === 'student') {
+        if ($previousRole !== 'student') {
             $logMetadata['role_changed'] = true;
-            $logMetadata['previous_role'] = 'applicant';
+            $logMetadata['previous_role'] = $previousRole;
             $logMetadata['new_role'] = 'student';
         }
 
@@ -1763,7 +1763,7 @@ class HiringApplicationController extends Controller
             }
         }
 
-        $successMessage = 'Intern accepted. User account is now active with student role and can login.';
+        $successMessage = 'Intern accepted with '.number_format((float) $validated['required_training_hours'], 2).' required training hour(s). User account is now active with student role and can login.';
         if (($ojtTotalSlots ?? 0) > 0) {
             $updatedUsedSlots = $this->getOngoingInternsCount();
             $remainingSlots = max($ojtTotalSlots - $updatedUsedSlots, 0);

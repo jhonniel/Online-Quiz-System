@@ -523,7 +523,11 @@
             const month = balances?.work_from_home?.month_label ?? 'this month';
             const remaining = parseFloat(balances?.work_from_home_remaining ?? balances?.work_from_home?.remaining ?? 0);
             if (remaining <= 0) {
-                return `No balance: You do not have any Work From Home balance remaining for ${month}. Your allowance resets on the 1st of each month.`;
+                const carryover = parseFloat(balances?.work_from_home?.carryover_debt ?? 0);
+                const carryoverNote = carryover > 0
+                    ? ` This includes ${carryover} day(s) carried over from admin-filed Work From Home in the previous month.`
+                    : '';
+                return `No balance: You do not have any Work From Home balance remaining for ${month}.${carryoverNote} Contact an administrator if you need additional WFH days.`;
             }
             const start = startDateInput?.value;
             const end = endDateInput?.value || start;

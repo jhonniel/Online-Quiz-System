@@ -19,22 +19,31 @@ class UserActivity extends Model
         'action',
         'page_url',
         'ip_address',
+        'latitude',
+        'longitude',
+        'location_label',
         'user_agent',
         'metadata',
-        'created_at'
+        'created_at',
     ];
 
     protected $casts = [
         'metadata' => 'array',
-        'created_at' => 'datetime'
+        'created_at' => 'datetime',
+        'latitude' => 'float',
+        'longitude' => 'float',
     ];
 
     protected static function booted(): void
     {
         static::creating(function (self $activity) {
-            if (!$activity->created_at) {
+            if (! $activity->created_at) {
                 $activity->created_at = now();
             }
+        });
+
+        static::created(function (self $activity) {
+            \App\Support\IpGeolocationService::attachCoordinatesToActivity($activity);
         });
     }
 

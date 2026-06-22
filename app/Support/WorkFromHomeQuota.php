@@ -17,7 +17,16 @@ final class WorkFromHomeQuota
     }
 
     /**
-     * @return array{allowance: int, used: float, remaining: float, month_label: string, year: int, month: int}
+     * @return array{
+     *     allowance: int,
+     *     used: float,
+     *     remaining: float,
+     *     carryover_debt: float,
+     *     month_label: string,
+     *     year: int,
+     *     month: int,
+     *     approved_deductions: list<array{id: int, start_date: string, end_date: string, days_in_month: float}>
+     * }
      */
     public static function balanceForMonth(int $userId, ?Carbon $reference = null, ?int $excludeLeaveRequestId = null): array
     {
@@ -27,11 +36,13 @@ final class WorkFromHomeQuota
         $allowance = self::monthlyAllowanceDays();
         $approvedDeductions = self::approvedDeductionsForMonth($userId, $year, $month, $excludeLeaveRequestId);
         $used = array_sum(array_column($approvedDeductions, 'days_in_month'));
+        $carryoverDebt = self::carryoverDebtForMonth($userId, $year, $month, $excludeLeaveRequestId);
 
         return [
             'allowance' => $allowance,
             'used' => $used,
-            'remaining' => max($allowance - $used, 0),
+            'carryover_debt' => $carryoverDebt,
+            'remaining' => max($allowance - $used - $carryoverDebt, 0),
             'month_label' => $reference->format('F Y'),
             'year' => $year,
             'month' => $month,
@@ -142,15 +153,21 @@ final class WorkFromHomeQuota
         foreach ($neededPerMonth as $monthKey => $daysNeeded) {
             [$year, $month] = array_map('intval', explode('-', $monthKey));
             $used = self::usedDaysInMonth($userId, $year, $month, $excludeLeaveRequestId);
-            $remaining = max($allowance - $used, 0);
+            $carryoverDebt = self::carryoverDebtForMonth($userId, $year, $month, $excludeLeaveRequestId);
+            $remaining = max($allowance - $used - $carryoverDebt, 0);
 
             if ($daysNeeded > $remaining) {
                 $monthLabel = Carbon::create($year, $month, 1)->format('F Y');
 
                 if ($remaining <= 0) {
+                    $carryoverNote = $carryoverDebt > 0
+                        ? ' This includes '.$carryoverDebt.' day(s) carried over from admin-filed Work From Home in the previous month.'
+                        : '';
+
                     return 'No balance: You do not have any Work From Home balance remaining for '.$monthLabel.'. '
-                        ."You have already used your {$allowance} approved day(s) for that month. "
-                        .'Your allowance resets on the 1st of each month. Contact an administrator if you need additional WFH days.';
+                        ."You have already used your {$allowance} approved day(s) for that month."
+                        .$carryoverNote
+                        .' Contact an administrator if you need additional WFH days.';
                 }
 
                 $remainingLabel = $remaining == 1 ? 'day' : 'days';
@@ -179,6 +196,98 @@ final class WorkFromHomeQuota
             ($leaveRequest->end_date ?? $leaveRequest->start_date)->format('Y-m-d'),
             null
         );
+    }
+
+    /**
+     * Admin-filed WFH days that exceeded the monthly allowance and reduce next month's balance.
+     */
+    public static function adminExcessForMonth(
+        int $userId,
+        int $year,
+        int $month,
+        ?int $excludeLeaveRequestId = null
+    ): float {
+        $allowance = self::monthlyAllowanceDays();
+        $totalUsed = self::usedDaysInMonth($userId, $year, $month, $excludeLeaveRequestId);
+        $adminUsed = self::adminFiledUsedDaysInMonth($userId, $year, $month, $excludeLeaveRequestId);
+        $overflow = max($totalUsed - $allowance, 0);
+
+        if ($overflow <= 0 || $adminUsed <= 0) {
+            return 0.0;
+        }
+
+        return (float) min($adminUsed, $overflow);
+    }
+
+    /**
+     * WFH days deducted from this month because of admin-filed excess in the previous month.
+     */
+    public static function carryoverDebtForMonth(
+        int $userId,
+        int $year,
+        int $month,
+        ?int $excludeLeaveRequestId = null
+    ): float {
+        $previousMonth = Carbon::create($year, $month, 1, 0, 0, 0, 'Asia/Manila')->subMonth();
+
+        return self::adminExcessForMonth(
+            $userId,
+            (int) $previousMonth->year,
+            (int) $previousMonth->month,
+            $excludeLeaveRequestId
+        );
+    }
+
+    public static function adminFiledUsedDaysInMonth(
+        int $userId,
+        int $year,
+        int $month,
+        ?int $excludeLeaveRequestId = null
+    ): float {
+        $total = 0.0;
+
+        foreach (self::approvedAdminFiledRequestsOverlappingMonth($userId, $year, $month, $excludeLeaveRequestId) as $request) {
+            $total += self::daysOfRequestInMonth($request, $year, $month);
+        }
+
+        return $total;
+    }
+
+    /**
+     * @return EloquentCollection<int, LeaveRequest>
+     */
+    public static function approvedAdminFiledRequestsOverlappingMonth(
+        int $userId,
+        int $year,
+        int $month,
+        ?int $excludeLeaveRequestId = null
+    ): EloquentCollection {
+        $query = LeaveRequest::query()
+            ->where('user_id', $userId)
+            ->where('type', 'work_from_home')
+            ->where('status', 'approved')
+            ->whereHas('logs', fn ($q) => $q->where('action', 'filed_by_admin'));
+
+        if ($excludeLeaveRequestId !== null) {
+            $query->where('id', '!=', $excludeLeaveRequestId);
+        }
+
+        $matching = $query->orderBy('start_date')->get()->filter(
+            fn (LeaveRequest $request) => self::daysOfRequestInMonth($request, $year, $month) > 0
+        );
+
+        return new EloquentCollection($matching->values()->all());
+    }
+
+    public static function isAdminFiledRequest(LeaveRequest $leaveRequest): bool
+    {
+        if ($leaveRequest->relationLoaded('logs')) {
+            return $leaveRequest->logs->contains(
+                fn ($log) => (string) ($log->action ?? '') === 'filed_by_admin'
+            );
+        }
+
+        return $leaveRequest->logs()->where('action', 'filed_by_admin')->exists();
     }
 
     /**

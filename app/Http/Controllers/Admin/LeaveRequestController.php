@@ -1489,7 +1489,7 @@ class LeaveRequestController extends Controller
         if (
             $leaveRequest->type === 'work_from_home'
             && $leaveRequest->user?->role === 'employee'
-            && ! $leaveRequest->logs()->where('action', 'filed_by_admin')->exists()
+            && ! WorkFromHomeQuota::isAdminFiledRequest($leaveRequest)
         ) {
             $wfhQuotaError = WorkFromHomeQuota::validateApproval($leaveRequest);
             if ($wfhQuotaError !== null) {

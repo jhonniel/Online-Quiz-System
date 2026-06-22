@@ -190,9 +190,10 @@
 
             <div id="user-map" class="bg-slate-100"></div>
             <p class="mt-3 text-xs text-gray-500">
-                Pins come from distinct IP addresses in
-                <a href="{{ url('/admin/user-activity') }}" class="text-indigo-600 hover:text-indigo-800">User Activity Logs</a>
-                (geocoded when public) and browser GPS shared at login. Local/private IPs (127.0.0.1) use GPS when available.
+                Pins use IP addresses from
+                <a href="{{ url('/admin/user-activity') }}" class="text-indigo-600 hover:text-indigo-800">User Activity Logs</a>.
+                Coordinates are saved in the database (<code class="text-xs bg-gray-100 px-1 rounded">ip_geolocations</code> and each activity row) so pins load faster on refresh.
+                Browser GPS shared at login is used for local/private IPs (e.g. 127.0.0.1).
                 In production, set <code class="text-xs bg-gray-100 px-1 rounded">TRUSTED_PROXIES=*</code> so real client IPs are logged.
             </p>
         </div>
@@ -388,6 +389,9 @@
                 }
                 if (data.stats?.capped) {
                     status += ' Showing the most recent 500 IPs.';
+                }
+                if ((data.stats?.geocoding_queued ?? 0) > 0) {
+                    status += ` Resolving ${data.stats.geocoding_queued} more IP(s) in the background — refresh shortly.`;
                 }
                 setStatus(status);
             } catch (error) {

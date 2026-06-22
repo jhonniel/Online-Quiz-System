@@ -35,10 +35,17 @@ final class TomTomService
             ]);
     }
 
-    /**
-     * @return array{lat: float, lng: float, label: string}|null
-     */
     public static function geocodeIp(string $ip): ?array
+    {
+        return IpGeolocationService::resolve($ip);
+    }
+
+    /**
+     * Look up coordinates from cache or external IP APIs (does not read/write the database).
+     *
+     * @return array{lat: float, lng: float, label: string, source: string}|null
+     */
+    public static function lookupIpCoordinates(string $ip): ?array
     {
         $ip = trim($ip);
         if ($ip === '' || self::isPrivateIp($ip)) {
@@ -63,7 +70,7 @@ final class TomTomService
     }
 
     /**
-     * @return array{lat: float, lng: float, label: string}|null
+     * @return array{lat: float, lng: float, label: string, source: string}|null
      */
     private static function fetchIpGeolocation(string $ip): ?array
     {
@@ -114,7 +121,8 @@ final class TomTomService
                 $data['region'] ?? null,
                 $data['country'] ?? null,
             ],
-            $ip
+            $ip,
+            'ipwho.is'
         );
     }
 
@@ -145,7 +153,8 @@ final class TomTomService
                 $data['region'] ?? null,
                 $data['country_name'] ?? null,
             ],
-            $ip
+            $ip,
+            'ipapi.co'
         );
     }
 
@@ -178,15 +187,16 @@ final class TomTomService
                 $data['regionName'] ?? null,
                 $data['country'] ?? null,
             ],
-            $ip
+            $ip,
+            'ip-api.com'
         );
     }
 
     /**
      * @param  list<mixed>  $labelParts
-     * @return array{lat: float, lng: float, label: string}|null
+     * @return array{lat: float, lng: float, label: string, source: string}|null
      */
-    private static function normalizeIpGeocodeResult(mixed $lat, mixed $lng, array $labelParts, string $ip): ?array
+    private static function normalizeIpGeocodeResult(mixed $lat, mixed $lng, array $labelParts, string $ip, string $source = 'ip_lookup'): ?array
     {
         if (! is_numeric($lat) || ! is_numeric($lng)) {
             return null;
@@ -198,6 +208,7 @@ final class TomTomService
             'lat' => (float) $lat,
             'lng' => (float) $lng,
             'label' => $parts !== [] ? implode(', ', $parts) : $ip,
+            'source' => $source,
         ];
     }
 

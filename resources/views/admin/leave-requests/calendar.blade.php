@@ -162,7 +162,7 @@
                     <div id="admin_wfh_section" class="space-y-1.5 hidden border-t border-gray-100 pt-2 mt-1">
                         <p class="text-[10px] font-semibold text-gray-800">Work From Home Details</p>
                         <p class="text-[10px] text-indigo-700 bg-indigo-50 border border-indigo-100 rounded px-2 py-1">
-                            Admin filing: no monthly WFH limit (employees are limited to 2 days per month).
+                            Admin filing bypasses the employee monthly WFH limit. Any days above the employee&rsquo;s remaining balance are deducted from their next month&rsquo;s allowance when approved.
                         </p>
                         <div>
                             <label for="admin_wfh_mode" class="block text-xs font-medium text-gray-700">Work Mode <span class="text-red-500">*</span></label>

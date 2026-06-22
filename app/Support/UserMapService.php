@@ -79,16 +79,20 @@ final class UserMapService
             ->flatMap(fn (array $marker) => collect($marker['users'] ?? [])->pluck('id'))
             ->unique()
             ->all();
+        $ipResolution = IpGeolocationService::resolveMany($ipAddresses);
+        $coordsByIp = $ipResolution['coordinates'];
+        $geocodingQueued = (int) $ipResolution['queued'];
         $locationBuckets = [];
         $markers = [];
         $mappedIpPins = 0;
         $onlinePins = 0;
         $unmappedIps = 0;
+        $unmappedPublicIps = [];
 
         foreach ($ipRows as $row) {
             $ip = trim((string) $row->ip_address);
             $isPrivate = TomTomService::isPrivateIp($ip);
-            $coords = TomTomService::geocodeIp($ip);
+            $coords = $coordsByIp[$ip] ?? null;
             $locationSource = 'activity_log';
 
             if ($coords === null && $isPrivate) {
@@ -100,6 +104,9 @@ final class UserMapService
 
             if ($coords === null) {
                 $unmappedIps++;
+                if (! $isPrivate) {
+                    $unmappedPublicIps[] = $ip;
+                }
 
                 continue;
             }
@@ -148,6 +155,10 @@ final class UserMapService
 
         $onlineGpsPins = collect($gpsMarkers)->filter(fn (array $marker) => (bool) ($marker['is_online'] ?? false))->count();
 
+        if ($unmappedPublicIps !== []) {
+            IpGeolocationService::queueUnresolved($unmappedPublicIps);
+        }
+
         return [
             'markers' => array_merge($gpsMarkers, $markers),
             'stats' => [
@@ -157,6 +168,7 @@ final class UserMapService
                 'online' => $onlinePins + $onlineGpsPins,
                 'gps_pins' => count($gpsMarkers),
                 'private_ips' => $privateIpCount,
+                'geocoding_queued' => $geocodingQueued,
                 'capped' => $totalIps > self::MAX_IPS,
             ],
             'filters' => [
