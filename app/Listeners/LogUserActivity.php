@@ -8,6 +8,7 @@ use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Queue\InteractsWithQueue;
 use App\Models\UserActivity;
 use App\Models\UserSession;
+use Illuminate\Support\Facades\Log;
 
 class LogUserActivity
 {
@@ -26,15 +27,27 @@ class LogUserActivity
     {
         $user = $event->user;
 
-        // Log login activity
-        UserActivity::logActivity($user, 'login', 'user_login', [
-            'login_method' => 'web',
-            'remember' => $event->remember ?? false
-        ]);
+        try {
+            UserActivity::logActivity($user, 'login', 'user_login', [
+                'login_method' => 'web',
+                'remember' => $event->remember ?? false,
+            ]);
+        } catch (\Throwable $e) {
+            Log::warning('Failed to log login activity', [
+                'user_id' => $user->id ?? null,
+                'error' => $e->getMessage(),
+            ]);
+        }
 
-        // Create user session
-        $sessionId = session()->getId();
-        UserSession::createOrUpdateSession($user, $sessionId, 'active');
+        try {
+            $sessionId = session()->getId();
+            UserSession::createOrUpdateSession($user, $sessionId, 'active');
+        } catch (\Throwable $e) {
+            Log::warning('Failed to create login session record', [
+                'user_id' => $user->id ?? null,
+                'error' => $e->getMessage(),
+            ]);
+        }
     }
 
     /**
@@ -45,16 +58,28 @@ class LogUserActivity
         $user = $event->user;
 
         if ($user) {
-            // Log logout activity
-            UserActivity::logActivity($user, 'logout', 'user_logout', [
-                'logout_method' => 'web'
-            ]);
+            try {
+                UserActivity::logActivity($user, 'logout', 'user_logout', [
+                    'logout_method' => 'web',
+                ]);
+            } catch (\Throwable $e) {
+                Log::warning('Failed to log logout activity', [
+                    'user_id' => $user->id ?? null,
+                    'error' => $e->getMessage(),
+                ]);
+            }
 
-            // Mark session as offline
-            $sessionId = session()->getId();
-            $session = UserSession::where('session_id', $sessionId)->first();
-            if ($session) {
-                $session->markOffline();
+            try {
+                $sessionId = session()->getId();
+                $session = UserSession::where('session_id', $sessionId)->first();
+                if ($session) {
+                    $session->markOffline();
+                }
+            } catch (\Throwable $e) {
+                Log::warning('Failed to mark session offline', [
+                    'user_id' => $user->id ?? null,
+                    'error' => $e->getMessage(),
+                ]);
             }
         }
     }

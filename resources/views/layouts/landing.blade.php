@@ -387,6 +387,8 @@
             });
         </script>
 
+        @include('components.toast')
+
         <!-- Seasonal Effects -->
         @include('components.seasonal-effects')
 

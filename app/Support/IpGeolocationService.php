@@ -32,7 +32,23 @@ final class IpGeolocationService
             return;
         }
 
-        ResolveIpGeolocationBatchJob::dispatch([$ip]);
+        self::dispatchGeolocationJob([$ip]);
+    }
+
+    /**
+     * @param  list<string>  $ipAddresses
+     */
+    private static function dispatchGeolocationJob(array $ipAddresses): void
+    {
+        if ($ipAddresses === []) {
+            return;
+        }
+
+        try {
+            ResolveIpGeolocationBatchJob::dispatch($ipAddresses)->afterResponse();
+        } catch (\Throwable) {
+            // Login and activity logging must not fail when the queue is unavailable.
+        }
     }
 
     /**
@@ -120,7 +136,7 @@ final class IpGeolocationService
         }
 
         if ($deferred->isNotEmpty()) {
-            ResolveIpGeolocationBatchJob::dispatch($deferred->all());
+            self::dispatchGeolocationJob($deferred->all());
         }
 
         return [
@@ -154,7 +170,7 @@ final class IpGeolocationService
         $missing = $ips->reject(fn (string $ip) => in_array($ip, $known, true))->values()->all();
 
         if ($missing !== []) {
-            ResolveIpGeolocationBatchJob::dispatch($missing);
+            self::dispatchGeolocationJob($missing);
         }
     }
 

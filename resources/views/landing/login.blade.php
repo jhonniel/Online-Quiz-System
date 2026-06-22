@@ -630,7 +630,6 @@ document.addEventListener('DOMContentLoaded', function() {
             });
         }
 
-        // Login submission is handled by the location prompt above.
         const loginFormAjax = document.getElementById('login-form-element');
         if (loginFormAjax && false) {
             loginFormAjax.addEventListener('submit', function(e) {

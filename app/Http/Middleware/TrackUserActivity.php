@@ -55,20 +55,24 @@ class TrackUserActivity
         $ua = (string) ($request->userAgent() ?? '');
         $ip = $request->ip() !== null ? (string) $request->ip() : null;
 
-        LogUserActivityJob::dispatch(
-            $user instanceof User ? (int) $user->id : null,
-            'page_view',
-            $request->route()?->getName(),
-            [
-                'method' => $request->method(),
-                'route' => $request->route()?->getName(),
-                'parameters' => $request->route()?->parameters(),
-                'is_guest' => ! $user,
-            ],
-            $url !== '' ? $url : null,
-            $ip,
-            $ua !== '' ? $ua : null,
-        )->afterResponse();
+        try {
+            LogUserActivityJob::dispatch(
+                $user instanceof User ? (int) $user->id : null,
+                'page_view',
+                $request->route()?->getName(),
+                [
+                    'method' => $request->method(),
+                    'route' => $request->route()?->getName(),
+                    'parameters' => $request->route()?->parameters(),
+                    'is_guest' => ! $user,
+                ],
+                $url !== '' ? $url : null,
+                $ip,
+                $ua !== '' ? $ua : null,
+            )->afterResponse();
+        } catch (\Throwable) {
+            // Page views should not break when the queue is unavailable.
+        }
     }
 
     private function touchUserSessionThrottled(User $user, Request $request): void

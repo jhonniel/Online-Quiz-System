@@ -43,7 +43,11 @@ class UserActivity extends Model
         });
 
         static::created(function (self $activity) {
-            \App\Support\IpGeolocationService::attachCoordinatesToActivity($activity);
+            try {
+                \App\Support\IpGeolocationService::attachCoordinatesToActivity($activity);
+            } catch (\Throwable) {
+                // Never block activity logging when geolocation queue/storage fails.
+            }
         });
     }
 
