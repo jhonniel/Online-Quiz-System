@@ -443,69 +443,26 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
-    // Real-time validation for login form
+    // Real-time toast validation removed — login uses server-side errors and inline hints only.
     const emailInput = document.getElementById('email');
-    const passwordInput = document.getElementById('password');
     const loginFormSubmitElement = document.getElementById('login-form-element');
 
     if (emailInput) {
-        // Email validation function
-        function validateEmail(email) {
-            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-            return emailRegex.test(email);
-        }
-
-        // Real-time email validation and hide error hint when typing
-        let emailValidationTimeout;
         emailInput.addEventListener('input', function() {
-            // Hide error hint when user starts typing
             hideErrorHint(true);
-
-            clearTimeout(emailValidationTimeout);
-            emailValidationTimeout = setTimeout(() => {
-                const email = this.value.trim();
-                if (email.length > 0 && !validateEmail(email)) {
-                    ToastNotification.warning('Please enter a valid email address format.', 3000);
-                }
-            }, 1000);
         });
     }
 
+    const passwordInput = document.getElementById('password');
     if (passwordInput) {
-        // Real-time password validation and hide error hint when typing
         passwordInput.addEventListener('input', function() {
-            // Hide error hint when user starts typing
             hideErrorHint(true);
-
-            const password = this.value;
-            if (password.length > 0 && password.length < 6) {
-                ToastNotification.warning('Password should be at least 6 characters long.', 3000);
-            }
         });
     }
 
     if (loginFormSubmitElement) {
-        // Form submission validation
-        loginFormSubmitElement.addEventListener('submit', function(e) {
+        loginFormSubmitElement.addEventListener('submit', function() {
             const email = emailInput ? emailInput.value.trim() : '';
-            const password = passwordInput ? passwordInput.value : '';
-
-            // Validate email format
-            if (email && !validateEmail(email)) {
-                e.preventDefault();
-                ToastNotification.error('Please enter a valid email address.', 4000);
-                return false;
-            }
-
-            // Validate password length
-            if (password && password.length < 6) {
-                e.preventDefault();
-                ToastNotification.error('Password must be at least 6 characters long.', 4000);
-                return false;
-            }
-
-            // Show loading toast
-            ToastNotification.info('Logging in...', 2000);
 
             // Store form data for error detection after page reload
             sessionStorage.setItem('loginAttempt', JSON.stringify({
