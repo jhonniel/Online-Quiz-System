@@ -17,7 +17,7 @@
                 <h1 class="text-lg sm:text-xl lg:text-2xl font-bold text-white">Student Excused Requests</h1>
                 <p class="text-indigo-100 text-sm mt-1">
                     @if($schoolName)
-                        File a request to excuse a student from {{ $schoolName }}
+                        File a request to excuse an ongoing intern from {{ $schoolName }}
                     @else
                         File a request to excuse a student from company duty
                     @endif
@@ -132,7 +132,7 @@
                                         <div class="mb-2 flex flex-wrap items-center justify-between gap-2">
                                             <span id="students-field-label" class="text-sm font-medium text-gray-800">Students</span>
                                             @if($students->isEmpty())
-                                                <span class="text-xs font-medium text-amber-700">No students in your school</span>
+                                                <span class="text-xs font-medium text-amber-700">No ongoing interns</span>
                                             @else
                                                 <div class="flex flex-wrap items-center gap-3 text-xs">
                                                     <button
@@ -182,7 +182,7 @@
                                             </fieldset>
                                         @endif
                                         @if($students->isEmpty())
-                                            <p class="mt-2 text-xs text-amber-800">There are no active students assigned to your school. Add or assign students before filing.</p>
+                                            <p class="mt-2 text-xs text-amber-800">There are no ongoing interns at your school right now. Only students who still have required training hours to complete can be excused here.</p>
                                         @endif
                                         @error('student_ids')
                                             <p class="mt-2 text-xs font-medium text-red-600">{{ $message }}</p>

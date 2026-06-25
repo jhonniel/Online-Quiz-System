@@ -673,12 +673,7 @@ class DashboardController extends Controller
         $user = auth()->user();
         abort_unless($user->role === 'teacher', 403);
 
-        $students = User::query()
-            ->where('role', 'student')
-            ->where('is_active', true)
-            ->where('university_id', $user->university_id)
-            ->orderBy('name')
-            ->get(['id', 'name', 'email']);
+        $students = $this->getOngoingTeacherSchoolStudents($user);
 
         $perPage = (int) $request->input('per_page', 10);
         if (! in_array($perPage, [10, 20, 50], true)) {
@@ -717,22 +712,26 @@ class DashboardController extends Controller
         $teacher = auth()->user();
         abort_unless($teacher->role === 'teacher', 403);
 
+        $ongoingStudents = $this->getOngoingTeacherSchoolStudents($teacher);
+        $ongoingStudentIds = $ongoingStudents
+            ->pluck('id')
+            ->map(fn ($id) => (int) $id)
+            ->all();
+
         $validated = $request->validate([
             'student_ids' => ['required', 'array', 'min:1'],
             'student_ids.*' => [
                 'required',
-                Rule::exists('users', 'id')->where(function ($query) use ($teacher) {
-                    $query
-                        ->where('role', 'student')
-                        ->where('is_active', true)
-                        ->where('university_id', $teacher->university_id);
-                }),
+                'integer',
+                Rule::in($ongoingStudentIds),
             ],
             'start_date' => ['required', 'date'],
             'end_date' => ['nullable', 'date', 'after_or_equal:start_date'],
             'reason' => ['required', 'string', 'max:1000'],
             'supporting_documents' => ['nullable', 'array', 'max:5'],
             'supporting_documents.*' => ['file', 'mimes:pdf,jpg,jpeg,png', 'max:5120'],
+        ], [
+            'student_ids.*.in' => 'Only ongoing interns from your school can be selected.',
         ]);
 
         [$supportingPaths, $legacySupportingPath] = $this->storeSupportingDocumentsFromRequest($request);
@@ -740,14 +739,9 @@ class DashboardController extends Controller
         $createdCount = 0;
 
         foreach ($validated['student_ids'] as $studentId) {
-            $student = User::query()
-                ->where('id', $studentId)
-                ->where('role', 'student')
-                ->where('is_active', true)
-                ->where('university_id', $teacher->university_id)
-                ->first();
+            $student = $ongoingStudents->firstWhere('id', (int) $studentId);
 
-            if (! $student) {
+            if (! $student instanceof User) {
                 continue;
             }
 
@@ -1058,6 +1052,52 @@ class DashboardController extends Controller
     private function teacherStudentInternshipHoursRequired(User $student): float
     {
         return (float) ($student->required_training_hours ?? 0);
+    }
+
+    /**
+     * Active students from the teacher's school who still have required training hours to complete.
+     *
+     * @return \Illuminate\Support\Collection<int, User>
+     */
+    private function getOngoingTeacherSchoolStudents(User $teacher): \Illuminate\Support\Collection
+    {
+        if (! $teacher->university_id) {
+            return collect();
+        }
+
+        $dtrTotals = Dtr::query()
+            ->selectRaw('user_id, COALESCE(SUM(total_hours), 0) as logged_hours')
+            ->groupBy('user_id');
+
+        return User::query()
+            ->leftJoinSub($dtrTotals, 'dtr_totals', function ($join) {
+                $join->on('dtr_totals.user_id', '=', 'users.id');
+            })
+            ->where('users.role', 'student')
+            ->where('users.is_active', true)
+            ->where('users.university_id', $teacher->university_id)
+            ->where('users.required_training_hours', '>', 0)
+            ->whereRaw('COALESCE(dtr_totals.logged_hours, 0) < users.required_training_hours')
+            ->select([
+                'users.id',
+                'users.name',
+                'users.email',
+                'users.required_training_hours',
+            ])
+            ->selectRaw('COALESCE(dtr_totals.logged_hours, 0) as logged_hours')
+            ->orderBy('users.name')
+            ->get()
+            ->map(fn (User $student) => $this->hydrateTeacherStudentInternshipProgress($student));
+    }
+
+    private function hydrateTeacherStudentInternshipProgress(User $student): User
+    {
+        $required = $this->teacherStudentInternshipHoursRequired($student);
+        $logged = (float) ($student->logged_hours ?? Dtr::query()->where('user_id', $student->id)->sum('total_hours'));
+        $student->logged_hours = $logged;
+        $student->remaining_hours = max($required - $logged, 0);
+
+        return $student;
     }
 
     private function teacherStudentInternshipIsOngoing(User $student): bool
