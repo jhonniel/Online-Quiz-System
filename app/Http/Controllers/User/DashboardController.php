@@ -96,7 +96,9 @@ class DashboardController extends Controller
             return view('user.teacher-dashboard', [
                 'totalStudents' => $teacherData['totalStudents'],
                 'ongoingInternships' => $teacherData['ongoingInternships'],
+                'ongoingInterns' => $teacherData['ongoingInterns'],
                 'completedInternships' => $teacherData['completedInternships'],
+                'completedInterns' => $teacherData['completedInterns'],
                 'schoolName' => $teacherData['schoolName'],
                 'teacherCharts' => $teacherData['charts'],
                 'studentsApprovedAbsentRanking' => $teacherData['studentsApprovedAbsentRanking'],
@@ -841,7 +843,9 @@ class DashboardController extends Controller
                 'totalStudents' => 0,
                 'activeStudents' => 0,
                 'ongoingInternships' => 0,
+                'ongoingInterns' => collect(),
                 'completedInternships' => 0,
+                'completedInterns' => collect(),
                 'students' => collect(),
                 'studentsApprovedAbsentRanking' => collect(),
                 'schoolName' => null,
@@ -853,7 +857,7 @@ class DashboardController extends Controller
                         'values' => [0, 0],
                     ],
                     'internshipStatus' => [
-                        'labels' => ['Ongoing', 'Completed / No Required Hours'],
+                        'labels' => ['Ongoing', 'Completed'],
                         'values' => [0, 0],
                     ],
                     'monthlyHours' => [
@@ -946,13 +950,14 @@ class DashboardController extends Controller
             return $student;
         });
 
-        $ongoingInternships = $students->filter(function ($student) {
-            $required = (float) ($student->required_training_hours ?? 0);
-            $logged = (float) ($student->logged_hours ?? 0);
-
-            return $required > 0 && $logged < $required;
-        })->count();
-        $completedInternships = max($totalStudents - $ongoingInternships, 0);
+        $ongoingInterns = $students
+            ->filter(fn (User $student) => $this->teacherStudentInternshipIsOngoing($student))
+            ->values();
+        $ongoingInternshipsCount = $ongoingInterns->count();
+        $completedInterns = $students
+            ->filter(fn (User $student) => $this->teacherStudentInternshipIsCompleted($student))
+            ->values();
+        $completedInternships = $completedInterns->count();
         $totalRequiredHours = (float) $students->sum(fn ($student) => (float) ($student->required_training_hours ?? 0));
         $totalLoggedHours = (float) $students->sum(fn ($student) => (float) ($student->logged_hours ?? 0));
         $totalRemainingHours = max($totalRequiredHours - $totalLoggedHours, 0);
@@ -1015,7 +1020,7 @@ class DashboardController extends Controller
             ],
             'internshipStatus' => [
                 'labels' => ['Ongoing', 'Completed'],
-                'values' => [$ongoingInternships, $completedInternships],
+                'values' => [$ongoingInternshipsCount, $completedInternships],
             ],
             'monthlyHours' => [
                 'labels' => $monthlyLabels->all(),
@@ -1037,8 +1042,10 @@ class DashboardController extends Controller
         return [
             'totalStudents' => $totalStudents,
             'activeStudents' => $activeStudents,
-            'ongoingInternships' => $ongoingInternships,
+            'ongoingInternships' => $ongoingInternshipsCount,
+            'ongoingInterns' => $ongoingInterns,
             'completedInternships' => $completedInternships,
+            'completedInterns' => $completedInterns,
             'students' => $students,
             'studentsApprovedAbsentRanking' => $studentsApprovedAbsentRanking,
             'nextExitConferenceDate' => $nextExitConferenceDate,
@@ -1046,5 +1053,33 @@ class DashboardController extends Controller
             'schoolName' => optional($teacher->university)->name,
             'charts' => $charts,
         ];
+    }
+
+    private function teacherStudentInternshipHoursRequired(User $student): float
+    {
+        return (float) ($student->required_training_hours ?? 0);
+    }
+
+    private function teacherStudentInternshipIsOngoing(User $student): bool
+    {
+        $required = $this->teacherStudentInternshipHoursRequired($student);
+        if ($required <= 0) {
+            return false;
+        }
+
+        return (float) ($student->remaining_hours ?? 0) > 0;
+    }
+
+    /**
+     * Completed = has a required hour target and logged DTR hours have reached it.
+     */
+    private function teacherStudentInternshipIsCompleted(User $student): bool
+    {
+        $required = $this->teacherStudentInternshipHoursRequired($student);
+        if ($required <= 0) {
+            return false;
+        }
+
+        return (float) ($student->remaining_hours ?? 0) <= 0;
     }
 }

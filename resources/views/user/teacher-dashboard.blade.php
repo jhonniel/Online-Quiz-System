@@ -36,6 +36,7 @@
         <div class="bg-white border border-gray-200 rounded-lg p-3 sm:p-4 shadow-sm min-w-0">
             <p class="text-xs sm:text-sm text-gray-500 leading-tight">Completed Internships</p>
             <p class="text-xl sm:text-2xl font-semibold text-emerald-700 tabular-nums mt-1">{{ $completedInternships ?? 0 }}</p>
+            <p class="text-[11px] text-gray-400 mt-1 leading-tight">Required hours met</p>
         </div>
         <a
             href="{{ url('/teacher/pending-applications') }}"
@@ -57,6 +58,188 @@
     </div>
 
     <div class="bg-white border-t border-gray-200 flex-1 min-h-0 overflow-auto min-w-0 p-3 sm:p-4">
+        @php
+            $ongoingInternList = $ongoingInterns ?? collect();
+        @endphp
+        <div class="rounded-lg border border-gray-200 bg-white shadow-sm overflow-hidden mb-4 min-w-0 w-full max-w-full">
+            <div class="px-3 sm:px-4 py-3 border-b border-gray-100 bg-gray-50 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                <div class="min-w-0">
+                    <h3 class="text-sm font-semibold text-gray-900 break-words">Ongoing interns</h3>
+                    <p class="text-xs text-gray-500 mt-0.5 break-words">
+                        @if($schoolName)
+                            Students from {{ $schoolName }} who still have required training hours to complete
+                        @else
+                            Assign a school to this teacher account to see interns
+                        @endif
+                    </p>
+                </div>
+                @if($schoolName)
+                    <a href="{{ url('/teacher/students') }}" class="text-xs font-medium text-indigo-600 hover:text-indigo-800 shrink-0 inline-flex py-1">View all students →</a>
+                @endif
+            </div>
+            @if($ongoingInternList->isEmpty())
+                <div class="px-4 py-8 text-center text-sm text-gray-500">
+                    @if($schoolName)
+                        No ongoing internships right now. Students appear here when they have required hours set and have not yet completed them.
+                    @else
+                        Assign a school to this teacher account to see ongoing interns.
+                    @endif
+                </div>
+            @else
+                <div class="w-full max-w-full overflow-x-auto max-h-[26rem] overflow-y-auto" style="-webkit-overflow-scrolling: touch;">
+                    <table class="w-full border-collapse divide-y divide-gray-200">
+                        <thead class="bg-gray-50 sticky top-0 z-10 shadow-sm">
+                            <tr>
+                                <th scope="col" class="px-4 py-2.5 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-14">#</th>
+                                <th scope="col" class="px-4 py-2.5 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Intern</th>
+                                <th scope="col" class="px-4 py-2.5 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden md:table-cell whitespace-nowrap">Department</th>
+                                <th scope="col" class="px-4 py-2.5 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden sm:table-cell whitespace-nowrap">Status</th>
+                                <th scope="col" class="px-4 py-2.5 text-right text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">Progress</th>
+                                <th scope="col" class="px-4 py-2.5 text-right text-xs font-medium text-gray-500 uppercase tracking-wider hidden lg:table-cell whitespace-nowrap">Est. end</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-gray-100 bg-white">
+                            @foreach($ongoingInternList as $intern)
+                                @php
+                                    $requiredH = (float) ($intern->required_training_hours ?? 0);
+                                    $loggedH = (float) ($intern->logged_hours ?? 0);
+                                    $remainingH = (float) ($intern->remaining_hours ?? max($requiredH - $loggedH, 0));
+                                    $progressPct = $requiredH > 0 ? min(100, round(($loggedH / $requiredH) * 100)) : 0;
+                                @endphp
+                                <tr class="hover:bg-gray-50/80">
+                                    <td class="px-4 py-2.5 text-sm tabular-nums text-gray-500">{{ $loop->iteration }}</td>
+                                    <td class="px-4 py-2.5 text-sm min-w-0">
+                                        <span class="font-medium text-gray-900 break-words">{{ $intern->name }}</span>
+                                        <span class="block text-xs text-gray-500 break-all">{{ $intern->email }}</span>
+                                        <span class="md:hidden block text-[11px] text-gray-600 mt-1">
+                                            <span class="text-gray-500">Dept:</span>
+                                            {{ $intern->department?->name ?? '—' }}
+                                        </span>
+                                        <span class="lg:hidden block text-[11px] text-gray-600 mt-1">
+                                            <span class="text-gray-500">Est. end:</span>
+                                            @if(! empty($intern->estimated_end_date))
+                                                {{ \Carbon\Carbon::parse($intern->estimated_end_date)->format('M d, Y') }}
+                                            @else
+                                                N/A
+                                            @endif
+                                        </span>
+                                    </td>
+                                    <td class="px-4 py-2.5 text-sm text-gray-700 hidden md:table-cell">
+                                        {{ $intern->department?->name ?? '—' }}
+                                    </td>
+                                    <td class="px-4 py-2.5 text-sm hidden sm:table-cell whitespace-nowrap">
+                                        @if($intern->is_active)
+                                            <span class="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium bg-green-100 text-green-800">Active</span>
+                                        @else
+                                            <span class="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium bg-gray-100 text-gray-700">Inactive</span>
+                                        @endif
+                                    </td>
+                                    <td class="px-4 py-2.5 text-sm text-right whitespace-nowrap">
+                                        <span class="font-medium text-gray-900 tabular-nums">{{ number_format($loggedH, 1) }}</span>
+                                        <span class="text-gray-400">/</span>
+                                        <span class="text-gray-600 tabular-nums">{{ number_format($requiredH, 1) }} hrs</span>
+                                        <span class="block text-xs text-amber-700 tabular-nums mt-0.5">{{ number_format($remainingH, 1) }} remaining · {{ $progressPct }}%</span>
+                                    </td>
+                                    <td class="px-4 py-2.5 text-sm text-gray-700 hidden lg:table-cell whitespace-nowrap text-right">
+                                        @if(! empty($intern->estimated_end_date))
+                                            {{ \Carbon\Carbon::parse($intern->estimated_end_date)->format('M d, Y') }}
+                                        @else
+                                            <span class="text-gray-400" title="Needs remaining hours and recent DTR activity to project a date">N/A</span>
+                                        @endif
+                                    </td>
+                                </tr>
+                            @endforeach
+                        </tbody>
+                    </table>
+                </div>
+            @endif
+        </div>
+
+        @php
+            $completedInternList = $completedInterns ?? collect();
+        @endphp
+        <div class="rounded-lg border border-emerald-200 bg-white shadow-sm overflow-hidden mb-4 min-w-0 w-full max-w-full">
+            <div class="px-3 sm:px-4 py-3 border-b border-emerald-100 bg-emerald-50 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                <div class="min-w-0">
+                    <h3 class="text-sm font-semibold text-gray-900 break-words">Completed interns</h3>
+                    <p class="text-xs text-gray-600 mt-0.5 break-words">
+                        @if($schoolName)
+                            Students from {{ $schoolName }} who have met their required training hours
+                        @else
+                            Assign a school to this teacher account to see completed interns
+                        @endif
+                    </p>
+                </div>
+            </div>
+            @if($completedInternList->isEmpty())
+                <div class="px-4 py-8 text-center text-sm text-gray-500">
+                    @if($schoolName)
+                        No completed internships yet. Students move here once their logged DTR hours reach the required total.
+                    @else
+                        Assign a school to this teacher account to see completed interns.
+                    @endif
+                </div>
+            @else
+                <div class="w-full max-w-full overflow-x-auto max-h-[26rem] overflow-y-auto" style="-webkit-overflow-scrolling: touch;">
+                    <table class="w-full border-collapse divide-y divide-gray-200">
+                        <thead class="bg-gray-50 sticky top-0 z-10 shadow-sm">
+                            <tr>
+                                <th scope="col" class="px-4 py-2.5 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-14">#</th>
+                                <th scope="col" class="px-4 py-2.5 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Intern</th>
+                                <th scope="col" class="px-4 py-2.5 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden md:table-cell whitespace-nowrap">Department</th>
+                                <th scope="col" class="px-4 py-2.5 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden sm:table-cell whitespace-nowrap">Status</th>
+                                <th scope="col" class="px-4 py-2.5 text-right text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">Hours</th>
+                                <th scope="col" class="px-4 py-2.5 text-right text-xs font-medium text-gray-500 uppercase tracking-wider hidden lg:table-cell whitespace-nowrap">Completed</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-gray-100 bg-white">
+                            @foreach($completedInternList as $intern)
+                                @php
+                                    $requiredH = (float) ($intern->required_training_hours ?? 0);
+                                    $loggedH = (float) ($intern->logged_hours ?? 0);
+                                @endphp
+                                <tr class="hover:bg-gray-50/80">
+                                    <td class="px-4 py-2.5 text-sm tabular-nums text-gray-500">{{ $loop->iteration }}</td>
+                                    <td class="px-4 py-2.5 text-sm min-w-0">
+                                        <span class="font-medium text-gray-900 break-words">{{ $intern->name }}</span>
+                                        <span class="block text-xs text-gray-500 break-all">{{ $intern->email }}</span>
+                                        <span class="md:hidden block text-[11px] text-gray-600 mt-1">
+                                            <span class="text-gray-500">Dept:</span>
+                                            {{ $intern->department?->name ?? '—' }}
+                                        </span>
+                                        <span class="lg:hidden block text-[11px] text-emerald-700 mt-1 font-medium">Completed</span>
+                                    </td>
+                                    <td class="px-4 py-2.5 text-sm text-gray-700 hidden md:table-cell">
+                                        {{ $intern->department?->name ?? '—' }}
+                                    </td>
+                                    <td class="px-4 py-2.5 text-sm hidden sm:table-cell whitespace-nowrap">
+                                        @if($intern->is_active)
+                                            <span class="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium bg-green-100 text-green-800">Active</span>
+                                        @else
+                                            <span class="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium bg-gray-100 text-gray-700">Inactive</span>
+                                        @endif
+                                    </td>
+                                    <td class="px-4 py-2.5 text-sm text-right whitespace-nowrap">
+                                        <span class="font-medium text-gray-900 tabular-nums">{{ number_format($loggedH, 1) }}</span>
+                                        <span class="text-gray-400">/</span>
+                                        <span class="text-gray-600 tabular-nums">{{ number_format($requiredH, 1) }} hrs</span>
+                                        <span class="block text-xs text-emerald-700 font-medium mt-0.5">100% complete</span>
+                                    </td>
+                                    <td class="px-4 py-2.5 text-sm text-gray-700 hidden lg:table-cell whitespace-nowrap text-right">
+                                        @if(! empty($intern->ojt_requirement_met_at))
+                                            {{ \Carbon\Carbon::parse($intern->ojt_requirement_met_at)->format('M d, Y') }}
+                                        @else
+                                            <span class="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium bg-emerald-100 text-emerald-800">Completed</span>
+                                        @endif
+                                    </td>
+                                </tr>
+                            @endforeach
+                        </tbody>
+                    </table>
+                </div>
+            @endif
+        </div>
+
         <div class="grid grid-cols-1 xl:grid-cols-2 2xl:grid-cols-4 gap-3 sm:gap-4 mb-4">
             <div class="bg-white border border-gray-200 rounded-lg p-3 sm:p-4 shadow-sm min-w-0">
                 <h3 class="text-sm font-semibold text-gray-900 mb-3">Student Status</h3>
@@ -171,7 +354,7 @@
         </div>
 
         <div class="rounded-lg border border-indigo-100 bg-indigo-50 p-3 sm:p-4 text-sm text-indigo-900 break-words">
-            Use <span class="font-semibold">My Students</span> in the sidebar to view the full student list from your school.
+            Use <span class="font-semibold">My Students</span> in the sidebar for the full student list, merit details, and search.
         </div>
     </div>
 </div>
