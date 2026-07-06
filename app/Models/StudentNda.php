@@ -61,7 +61,12 @@ class StudentNda extends Model
 
     public function isApprovedForAttendance(): bool
     {
-        return $this->hasSignedUpload() && $this->approval_status === self::STATUS_APPROVED;
+        return $this->isAdminApproved() && $this->hasSignedUpload();
+    }
+
+    public function isAdminApproved(): bool
+    {
+        return $this->approval_status === self::STATUS_APPROVED;
     }
 
     public function isPendingApproval(): bool

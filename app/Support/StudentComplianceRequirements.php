@@ -75,6 +75,13 @@ final class StudentComplianceRequirements
             ->exists();
     }
 
+    public static function ndaComplete(User $user): bool
+    {
+        $user->loadMissing('studentNda');
+
+        return $user->studentNda?->isAdminApproved() ?? false;
+    }
+
     /**
      * @return array{
      *     key: string,
@@ -89,9 +96,8 @@ final class StudentComplianceRequirements
     private static function ndaItem(User $user): array
     {
         $nda = $user->studentNda;
-        $approved = $user->canStudentRecordAttendance();
 
-        if ($approved) {
+        if (self::ndaComplete($user)) {
             return [
                 'key' => 'nda',
                 'label' => 'Non-Disclosure Agreement (NDA)',

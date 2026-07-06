@@ -2288,7 +2288,8 @@ class DtrController extends Controller
 
         $query = Dtr::with(['user.university'])
             ->whereHas('user', function ($q) use ($allowedDepartmentIds, $request, $search) {
-                $q->where('role', 'student');
+                $q->where('role', 'student')
+                    ->where('is_active', true);
                 if ($allowedDepartmentIds !== null) {
                     $q->whereIn('department_id', $allowedDepartmentIds);
                 }
@@ -2309,7 +2310,9 @@ class DtrController extends Controller
         // Filter by student
         $selectedStudent = null;
         if ($request->filled('student_id')) {
-            $selectedStudentQuery = User::where('id', $request->student_id)->where('role', 'student');
+            $selectedStudentQuery = User::where('id', $request->student_id)
+                ->where('role', 'student')
+                ->where('is_active', true);
             if ($allowedDepartmentIds !== null) {
                 $selectedStudentQuery->whereIn('department_id', $allowedDepartmentIds);
             }
@@ -2342,6 +2345,8 @@ class DtrController extends Controller
         $dtrs = $query->orderBy('date', 'asc')
             ->orderBy('user_id')
             ->get();
+
+        $dtrs = $this->filterDtrCollectionToActiveUsers($dtrs);
 
         // Approved overtime from leave requests (only count approved overtime requests)
         $parsedDateFrom = $dateFrom ? Carbon::parse($dateFrom) : ($dtrs->min('date') ? $dtrs->min('date')->copy() : null);
@@ -2465,7 +2470,8 @@ class DtrController extends Controller
 
         $query = Dtr::with('user')
             ->whereHas('user', function($q) {
-                $q->where('role', 'employee');
+                $q->where('role', 'employee')
+                    ->where('is_active', true);
             });
 
         // Apply department restrictions if user has Employee Management with restrictions
@@ -2493,8 +2499,15 @@ class DtrController extends Controller
         // Filter by employee
         $selectedEmployee = null;
         if ($request->filled('employee_id')) {
-            $selectedEmployee = User::find($request->employee_id);
-            $query->where('user_id', $request->employee_id);
+            $selectedEmployee = User::where('id', $request->employee_id)
+                ->where('role', 'employee')
+                ->where('is_active', true)
+                ->first();
+            if ($selectedEmployee) {
+                $query->where('user_id', $selectedEmployee->id);
+            } else {
+                $query->whereRaw('1 = 0');
+            }
         }
 
         // Filter by date range
@@ -2517,6 +2530,8 @@ class DtrController extends Controller
         $dtrs = $query->orderBy('date', 'asc')
             ->orderBy('user_id')
             ->get();
+
+        $dtrs = $this->filterDtrCollectionToActiveUsers($dtrs);
 
         // Employees in current PDF scope (respecting restrictions and filters),
         // used to ensure all weekdays are present in the export.
@@ -3179,6 +3194,17 @@ class DtrController extends Controller
 
         $filename = 'employee_dtr_export_' . ($dateFrom ? Carbon::parse($dateFrom)->format('Y-m-d') : 'all') . '_' . ($dateTo ? Carbon::parse($dateTo)->format('Y-m-d') : 'all') . '.pdf';
         return $pdf->stream($filename);
+    }
+
+    /**
+     * @param  \Illuminate\Support\Collection<int, Dtr>  $dtrs
+     * @return \Illuminate\Support\Collection<int, Dtr>
+     */
+    private function filterDtrCollectionToActiveUsers($dtrs)
+    {
+        return $dtrs->filter(function (Dtr $dtr) {
+            return $dtr->user instanceof User && $dtr->user->is_active;
+        })->values();
     }
 
     /**

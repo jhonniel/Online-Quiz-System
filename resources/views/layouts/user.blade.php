@@ -1657,6 +1657,12 @@
         @if(auth()->user()->isStudent() && session('student_rules_regulations_pending') === true)
             @include('components.student-rules-regulations-modal')
         @endif
+        @if(auth()->user()->isStudent() && empty($studentComplianceModalPayload))
+            <script>
+                sessionStorage.removeItem('studentComplianceModalDismissed');
+                sessionStorage.removeItem('studentComplianceModalSuppressOnce');
+            </script>
+        @endif
         @if(auth()->user()->isStudent() && ! empty($studentComplianceModalPayload))
             <x-student-compliance-required-modal :items="$studentComplianceModalPayload" />
         @endif
