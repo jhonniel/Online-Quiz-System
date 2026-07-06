@@ -1668,25 +1668,6 @@ class HiringApplicationController extends Controller
                 ->withErrors(['error' => 'User account not found.']);
         }
 
-        // OJT slot capacity guard (configured in Admin Settings).
-        $ojtTotalSlots = (int) \App\Models\Setting::get('ojt_total_slots', 0);
-        if ($ojtTotalSlots > 0) {
-            $currentUsedSlots = $this->getOngoingInternsCount();
-
-            // Count this acceptance only when the user is not already an ongoing intern.
-            $willConsumeNewSlot = ! ($user->role === 'student'
-                && (bool) $user->is_active
-                && (float) ($user->required_training_hours ?? 0) > 0);
-            $projectedUsedSlots = $currentUsedSlots + ($willConsumeNewSlot ? 1 : 0);
-
-            if ($projectedUsedSlots > $ojtTotalSlots) {
-                return redirect('/admin/hiring-applications/'.$application->id)
-                    ->withErrors([
-                        'error' => "Cannot accept intern: OJT capacity would be exceeded ({$projectedUsedSlots}/{$ojtTotalSlots}). Increase total OJT slots in Admin Settings first.",
-                    ]);
-            }
-        }
-
         // Store the previous status before updating
         $previousStatus = $application->status;
         $previousRole = $user->role;
@@ -1764,11 +1745,17 @@ class HiringApplicationController extends Controller
         }
 
         $successMessage = 'Intern accepted with '.number_format((float) $validated['required_training_hours'], 2).' required training hour(s). User account is now active with student role and can login.';
-        if (($ojtTotalSlots ?? 0) > 0) {
+        $ojtTotalSlots = (int) \App\Models\Setting::get('ojt_total_slots', 0);
+        if ($ojtTotalSlots > 0) {
             $updatedUsedSlots = $this->getOngoingInternsCount();
-            $remainingSlots = max($ojtTotalSlots - $updatedUsedSlots, 0);
-            if ($remainingSlots <= 3) {
-                $successMessage .= " Warning: OJT capacity is low ({$updatedUsedSlots}/{$ojtTotalSlots} used, {$remainingSlots} slots left).";
+            if ($updatedUsedSlots > $ojtTotalSlots) {
+                $overBy = $updatedUsedSlots - $ojtTotalSlots;
+                $successMessage .= " Warning: OJT capacity exceeded ({$updatedUsedSlots}/{$ojtTotalSlots} used, over by {$overBy} slot".($overBy > 1 ? 's' : '').').';
+            } else {
+                $remainingSlots = $ojtTotalSlots - $updatedUsedSlots;
+                if ($remainingSlots <= 3) {
+                    $successMessage .= " Warning: OJT capacity is low ({$updatedUsedSlots}/{$ojtTotalSlots} used, {$remainingSlots} slots left).";
+                }
             }
         }
 
