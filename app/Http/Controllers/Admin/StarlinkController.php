@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\LinkedAccount;
 use App\Models\Starlink;
 use App\Models\SubscriptionPlanType;
+use App\Support\StarlinkReplacementGroup;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -33,7 +34,16 @@ class StarlinkController extends Controller
 
         [$query, $search, $statusFilter, $accountEmailFilter, $clientNameFilter] = $this->buildFilteredQuery($request, $hasMunicipalityColumn);
 
+        if (Schema::hasColumn('starlinks', 'replacement_group_id')) {
+            $query->reorder()
+                ->orderByRaw('COALESCE(replacement_group_id, id) DESC')
+                ->orderByDesc('created_at');
+        }
+
         $starlinks = $query->paginate(15)->withQueryString();
+        $replacementGroupSummaries = Schema::hasColumn('starlinks', 'replacement_group_id')
+            ? StarlinkReplacementGroup::summariesFor($starlinks->getCollection())
+            : [];
 
         // Which starlinks are currently overdue (past billing date, not yet paid)
         $today = now()->startOfDay();
@@ -96,7 +106,8 @@ class StarlinkController extends Controller
             'clientNameFilter',
             'accountEmailOptions',
             'clientNameOptions',
-            'overdueCounts'
+            'overdueCounts',
+            'replacementGroupSummaries'
         ));
     }
 
@@ -169,6 +180,20 @@ class StarlinkController extends Controller
 
         if (request()->wantsJson() || request()->ajax()) {
             $starlink->load('linkedAccount');
+            $linkedDevices = Schema::hasColumn('starlinks', 'replacement_group_id')
+                ? StarlinkReplacementGroup::members($starlink, false)->map(function (Starlink $member) {
+                    return [
+                        'id' => $member->id,
+                        'starlink_id' => $member->starlink_id,
+                        'serial_number' => $member->serial_number,
+                        'kit_number' => $member->kit_number,
+                        'status' => $member->status,
+                        'replaced_at' => $member->replaced_at?->format('M j, Y'),
+                        'replacement_note' => $member->replacement_note,
+                        'edit_url' => url('/admin/starlinks/'.$member->id.'/edit'),
+                    ];
+                })->values()->all()
+                : [];
             $data = [
                 'id' => $starlink->id,
                 'linked_account_id' => $starlink->linked_account_id,
@@ -187,6 +212,14 @@ class StarlinkController extends Controller
                 'contact_email' => $starlink->contact_email,
                 'plan' => $starlink->plan,
                 'status' => $starlink->status,
+                'replaced_at' => $starlink->replaced_at?->format('Y-m-d'),
+                'replaced_at_formatted' => $starlink->replaced_at?->format('M j, Y'),
+                'replacement_note' => $starlink->replacement_note,
+                'replacement_group_id' => $starlink->replacement_group_id,
+                'replacement_group_count' => Schema::hasColumn('starlinks', 'replacement_group_id')
+                    ? StarlinkReplacementGroup::memberCount($starlink)
+                    : 1,
+                'linked_devices' => $linkedDevices,
                 'end_user_email' => $starlink->end_user_email,
                 'created_at' => $starlink->created_at?->format('Y-m-d H:i:s'),
                 'updated_at' => $starlink->updated_at?->format('Y-m-d H:i:s'),
@@ -197,7 +230,11 @@ class StarlinkController extends Controller
         }
 
         $starlink->load('linkedAccount');
-        return view('admin.starlinks.show', compact('starlink'));
+        $linkedDevices = Schema::hasColumn('starlinks', 'replacement_group_id')
+            ? StarlinkReplacementGroup::members($starlink, false)
+            : collect();
+
+        return view('admin.starlinks.show', compact('starlink', 'linkedDevices'));
     }
 
     public function create()
@@ -208,8 +245,10 @@ class StarlinkController extends Controller
         $subscriptionPlanTypes = SubscriptionPlanType::where('subscription_type', 'starlink')->orderBy('name')->get();
         $currentLinkedAccountId = null;
         $clientNameOptions = $this->getClientNameOptions();
+        $linkableStarlinks = $this->getLinkableStarlinks();
+        $linkedStarlinkIds = [];
 
-        return view('admin.starlinks.create', compact('linkedAccounts', 'subscriptionPlanTypes', 'currentLinkedAccountId', 'clientNameOptions'));
+        return view('admin.starlinks.create', compact('linkedAccounts', 'subscriptionPlanTypes', 'currentLinkedAccountId', 'clientNameOptions', 'linkableStarlinks', 'linkedStarlinkIds'));
     }
 
     public function store(Request $request)
@@ -237,33 +276,16 @@ class StarlinkController extends Controller
             'plan' => 'nullable|string|max:255',
             'subscription_plan_type_id' => 'nullable|exists:subscription_plan_types,id',
             'status' => 'nullable|string|max:50',
+            'replaced_at' => 'nullable|date',
+            'replacement_note' => 'nullable|string|max:500',
+            'linked_starlink_ids' => 'nullable|array',
+            'linked_starlink_ids.*' => 'integer|exists:starlinks,id',
             'end_user_email' => 'nullable|email|max:255',
         ]);
-        $selectedClientName = trim((string) ($validated['municipality_select'] ?? ''));
-        $customClientName = trim((string) ($validated['municipality_custom'] ?? ''));
-        if ($selectedClientName === '__custom__') {
-            $validated['municipality'] = $customClientName !== '' ? $customClientName : null;
-        } elseif ($selectedClientName !== '') {
-            $validated['municipality'] = $selectedClientName;
-        } elseif ($customClientName !== '') {
-            $validated['municipality'] = $customClientName;
-        } else {
-            $validated['municipality'] = null;
-        }
-        unset($validated['municipality_select'], $validated['municipality_custom']);
+        $linkedStarlinkIds = $validated['linked_starlink_ids'] ?? [];
+        unset($validated['linked_starlink_ids']);
 
-        $validated['subscription_plan_type_id'] = ! empty($validated['subscription_plan_type_id']) ? (int) $validated['subscription_plan_type_id'] : null;
-
-        // Keep plain "plan" column in sync with selected subscription plan type
-        // because list/details/search currently read from starlinks.plan.
-        if (! empty($validated['subscription_plan_type_id'])) {
-            $selectedPlanName = SubscriptionPlanType::where('id', $validated['subscription_plan_type_id'])->value('name');
-            if ($selectedPlanName) {
-                $validated['plan'] = $selectedPlanName;
-            }
-        } elseif (empty($validated['plan'])) {
-            $validated['plan'] = null;
-        }
+        $validated = $this->prepareValidatedStarlinkData($validated);
 
         // Check if a device with the same Starlink ID, Serial number, Kit number, or Router ID already exists
         $deviceFields = [
@@ -292,7 +314,11 @@ class StarlinkController extends Controller
             $validated['linked_account_id'] = $validated['linked_account_id'] ?? $account->id;
         }
 
-        Starlink::create($validated);
+        $created = Starlink::create($validated);
+
+        if (Schema::hasColumn('starlinks', 'replacement_group_id')) {
+            StarlinkReplacementGroup::syncLinks($created, $linkedStarlinkIds);
+        }
 
         return redirect()->to('/admin/starlinks')
             ->with('success', 'Starlink device added successfully.');
@@ -312,8 +338,12 @@ class StarlinkController extends Controller
 
         $subscriptionPlanTypes = SubscriptionPlanType::where('subscription_type', 'starlink')->orderBy('name')->get();
         $clientNameOptions = $this->getClientNameOptions();
+        $linkableStarlinks = $this->getLinkableStarlinks($starlink->id);
+        $linkedStarlinkIds = Schema::hasColumn('starlinks', 'replacement_group_id')
+            ? StarlinkReplacementGroup::members($starlink, false)->pluck('id')->all()
+            : [];
 
-        return view('admin.starlinks.edit', compact('starlink', 'linkedAccounts', 'subscriptionPlanTypes', 'currentLinkedAccountId', 'clientNameOptions'));
+        return view('admin.starlinks.edit', compact('starlink', 'linkedAccounts', 'subscriptionPlanTypes', 'currentLinkedAccountId', 'clientNameOptions', 'linkableStarlinks', 'linkedStarlinkIds'));
     }
 
     public function update(Request $request, Starlink $starlink)
@@ -341,33 +371,17 @@ class StarlinkController extends Controller
             'plan' => 'nullable|string|max:255',
             'subscription_plan_type_id' => 'nullable|exists:subscription_plan_types,id',
             'status' => 'nullable|string|max:50',
+            'replaced_at' => 'nullable|date',
+            'replacement_note' => 'nullable|string|max:500',
+            'linked_starlink_ids' => 'nullable|array',
+            'linked_starlink_ids.*' => 'integer|exists:starlinks,id',
             'end_user_email' => 'nullable|email|max:255',
         ]);
 
-        $selectedClientName = trim((string) ($validated['municipality_select'] ?? ''));
-        $customClientName = trim((string) ($validated['municipality_custom'] ?? ''));
-        if ($selectedClientName === '__custom__') {
-            $validated['municipality'] = $customClientName !== '' ? $customClientName : null;
-        } elseif ($selectedClientName !== '') {
-            $validated['municipality'] = $selectedClientName;
-        } elseif ($customClientName !== '') {
-            $validated['municipality'] = $customClientName;
-        } else {
-            $validated['municipality'] = null;
-        }
-        unset($validated['municipality_select'], $validated['municipality_custom']);
+        $linkedStarlinkIds = $validated['linked_starlink_ids'] ?? [];
+        unset($validated['linked_starlink_ids']);
 
-        $validated['subscription_plan_type_id'] = ! empty($validated['subscription_plan_type_id']) ? $validated['subscription_plan_type_id'] : null;
-        // Keep plain "plan" column in sync with selected subscription plan type
-        // because list/details/search currently read from starlinks.plan.
-        if (! empty($validated['subscription_plan_type_id'])) {
-            $selectedPlanName = SubscriptionPlanType::where('id', $validated['subscription_plan_type_id'])->value('name');
-            if ($selectedPlanName) {
-                $validated['plan'] = $selectedPlanName;
-            }
-        } elseif (empty($validated['plan'])) {
-            $validated['plan'] = null;
-        }
+        $validated = $this->prepareValidatedStarlinkData($validated);
 
         // Ensure a linked account exists for the email so the dashboard shows data
         if (! empty($validated['account_linked_email'])) {
@@ -380,6 +394,10 @@ class StarlinkController extends Controller
 
         $starlink->update($validated);
 
+        if (Schema::hasColumn('starlinks', 'replacement_group_id')) {
+            StarlinkReplacementGroup::syncLinks($starlink, $linkedStarlinkIds);
+        }
+
         return redirect()->to('/admin/starlinks')
             ->with('success', 'Starlink device updated successfully.');
     }
@@ -387,6 +405,10 @@ class StarlinkController extends Controller
     public function destroy(Starlink $starlink)
     {
         $this->ensureCanAccess();
+
+        if (Schema::hasColumn('starlinks', 'replacement_group_id')) {
+            StarlinkReplacementGroup::detach($starlink);
+        }
 
         $starlink->delete();
 
@@ -716,6 +738,50 @@ class StarlinkController extends Controller
         }
 
         return [$query, $search, $statusFilter, $accountEmailFilter, $clientNameFilter];
+    }
+
+    private function prepareValidatedStarlinkData(array $validated): array
+    {
+        $selectedClientName = trim((string) ($validated['municipality_select'] ?? ''));
+        $customClientName = trim((string) ($validated['municipality_custom'] ?? ''));
+        if ($selectedClientName === '__custom__') {
+            $validated['municipality'] = $customClientName !== '' ? $customClientName : null;
+        } elseif ($selectedClientName !== '') {
+            $validated['municipality'] = $selectedClientName;
+        } elseif ($customClientName !== '') {
+            $validated['municipality'] = $customClientName;
+        } else {
+            $validated['municipality'] = null;
+        }
+        unset($validated['municipality_select'], $validated['municipality_custom']);
+
+        $validated['subscription_plan_type_id'] = ! empty($validated['subscription_plan_type_id']) ? (int) $validated['subscription_plan_type_id'] : null;
+
+        if (! empty($validated['subscription_plan_type_id'])) {
+            $selectedPlanName = SubscriptionPlanType::where('id', $validated['subscription_plan_type_id'])->value('name');
+            if ($selectedPlanName) {
+                $validated['plan'] = $selectedPlanName;
+            }
+        } elseif (empty($validated['plan'])) {
+            $validated['plan'] = null;
+        }
+
+        return $validated;
+    }
+
+    /**
+     * @return \Illuminate\Support\Collection<int, Starlink>
+     */
+    private function getLinkableStarlinks(?int $excludeId = null)
+    {
+        $query = Starlink::query()
+            ->orderByDesc('created_at');
+
+        if ($excludeId) {
+            $query->where('id', '!=', $excludeId);
+        }
+
+        return $query->get(['id', 'starlink_id', 'serial_number', 'kit_number', 'office_location', 'status', 'replacement_group_id']);
     }
 
     private function getClientNameOptions(): array

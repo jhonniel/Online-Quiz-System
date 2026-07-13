@@ -96,7 +96,12 @@
                                                             <input type="checkbox" name="ids[]" value="{{ $starlink->id }}" form="form-mark-overdue" class="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500" />
                                                         </td>
                                                         <td class="px-4 sm:px-5 py-2">
-                                                            <p class="font-medium text-gray-900 truncate max-w-[200px] sm:max-w-none">{{ $starlink->starlink_id ?: $starlink->serial_number ?: '—' }}</p>
+                                                            <div class="flex items-center gap-2 flex-wrap">
+                                                                <p class="font-medium text-gray-900 truncate max-w-[200px] sm:max-w-none">{{ $starlink->starlink_id ?: $starlink->serial_number ?: '—' }}</p>
+                                                                @if(($starlink->late_payment_count ?? 0) > 0)
+                                                                    <span class="inline-flex flex-shrink-0 items-center justify-center min-w-[1.5rem] h-6 px-1.5 rounded-full text-xs font-semibold bg-red-100 text-red-800" title="Late payments since last paid date ({{ $starlink->last_paid_date?->format('M j, Y') ?? '—' }})">{{ $starlink->late_payment_count }}</span>
+                                                                @endif
+                                                            </div>
                                                         </td>
                                                         <td class="px-4 sm:px-5 py-2 text-sm text-gray-600 hidden sm:table-cell">{{ $starlink->subscriptionPlanType?->name ?? $starlink->plan ?? '—' }}</td>
                                                         <td class="px-4 sm:px-5 py-2 whitespace-nowrap text-sm text-red-700">{{ $starlink->overdue_date?->format('M j, Y') ?? '—' }}</td>

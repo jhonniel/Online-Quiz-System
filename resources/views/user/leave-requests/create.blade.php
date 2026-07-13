@@ -77,6 +77,11 @@
                         @error('type')
                             <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
                         @enderror
+                        @if(auth()->user()->role !== 'student')
+                            <p class="mt-2 text-xs text-amber-800 bg-amber-50 border border-amber-200 rounded-md px-3 py-2">
+                                <strong>Additional time:</strong> Please ask your supervisor or team lead to file it as <strong>Overtime</strong> on your behalf.
+                            </p>
+                        @endif
                     </div>
 
                     <!-- Date Range -->
@@ -172,10 +177,13 @@
                         <div class="border-t border-gray-200 pt-4 mt-4">
                             <h2 class="text-sm font-semibold text-gray-900 mb-2" id="structured-hours-section-title">Additional Time Details</h2>
                             <p class="text-xs text-gray-500 mb-3" id="structured-hours-section-help">
-                                When requesting <strong>Additional Time</strong>, provide the total hours, the dates covered,
-                                and list the tasks (e.g., ClickUp links) completed during that time.
                                 @if(auth()->user()->role === 'student')
+                                    When requesting <strong>Additional Time</strong>, provide the total hours, the dates covered,
+                                    and list the tasks (e.g., ClickUp links) completed during that time.
                                     When approved, these hours are added to your DTR and count toward your required training hours.
+                                @else
+                                    <strong>Overtime</strong> requests should be filed by your supervisor or team lead on your behalf.
+                                    If you need to record additional time, please ask them to submit an <strong>Overtime</strong> request for you.
                                 @endif
                             </p>
                         </div>
@@ -226,12 +234,14 @@
                             </p>
                         </div>
                         <div>
-                            <label for="travel_hours" class="block text-sm font-medium text-gray-700 mb-2">
+                            <label class="block text-sm font-medium text-gray-700 mb-2">
                                 Hours per Day <span class="text-gray-400">(Default 8:00)</span>
                             </label>
-                            <input type="number" name="travel_hours" id="travel_hours" min="0" max="24" step="0.5" value="{{ old('travel_hours', '8') }}"
-                                   class="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500" placeholder="8">
-                            <p class="mt-1 text-xs text-gray-500">Default is 8 hours per day if left blank.</p>
+                            <input type="hidden" name="travel_hours" value="8">
+                            <div class="w-full px-4 py-3 border border-gray-200 rounded-lg bg-gray-50 text-sm font-medium text-gray-900" aria-hidden="true">
+                                8
+                            </div>
+                            <p class="mt-1 text-xs text-gray-500">Fixed at 8 hours per day for travel requests (shown for reference only).</p>
                             @error('travel_hours')
                                 <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
                             @enderror

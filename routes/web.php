@@ -12,6 +12,7 @@ use App\Http\Controllers\Admin\DepartmentController;
 use App\Http\Controllers\Admin\DtrController;
 use App\Http\Controllers\Admin\DtrTimeRequestController;
 use App\Http\Controllers\Admin\EmployeeDashboardController;
+use App\Http\Controllers\Admin\EmployeeRecordsController;
 use App\Http\Controllers\Admin\EmployeeDocumentController;
 use App\Http\Controllers\Admin\ErrorLogController;
 use App\Http\Controllers\Admin\EvaluationController;
@@ -422,6 +423,10 @@ Route::prefix('admin')->middleware(['auth', 'admin'])->group(function () {
         });
         Route::middleware(['admin.analytics:students_review'])->group(function () {
             Route::get('analytics/students-review', [EvaluationController::class, 'reviews'])->name('admin.evaluations.reviews');
+        });
+        Route::middleware(['admin.analytics:employee_records'])->group(function () {
+            Route::get('employee-records', [EmployeeRecordsController::class, 'index'])->name('admin.employee-records.index');
+            Route::get('employee-records/{employee}', [EmployeeRecordsController::class, 'show'])->name('admin.employee-records.show');
         });
     });
 

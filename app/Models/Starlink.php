@@ -9,6 +9,7 @@ class Starlink extends Model
 {
     protected $fillable = [
         'linked_account_id',
+        'replacement_group_id',
         'account_linked_email',
         'starlink_id',
         'serial_number',
@@ -27,6 +28,8 @@ class Starlink extends Model
         'plan',
         'subscription_plan_type_id',
         'status',
+        'replaced_at',
+        'replacement_note',
         'end_user_email',
     ];
 
@@ -34,6 +37,7 @@ class Starlink extends Model
         'start_date' => 'date',
         'advance_payment_until' => 'date',
         'last_paid_date' => 'date',
+        'replaced_at' => 'date',
     ];
 
     /**

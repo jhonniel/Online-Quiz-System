@@ -4,7 +4,7 @@
 @section('page-title', 'Import Starlinks')
 
 @section('content')
-<div class="px-3 sm:px-4 lg:px-6 py-4 max-w-2xl mx-auto">
+<div class="px-3 sm:px-4 lg:px-6 py-4 max-w-2xl mx-auto w-full min-w-0">
     <div class="mb-6">
         <a href="{{ url('/admin/starlinks') }}" class="inline-flex items-center text-sm font-medium text-gray-500 hover:text-gray-700 transition-colors">
             <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>
@@ -44,8 +44,8 @@
                     @enderror
                 </div>
                 <div class="flex flex-col-reverse sm:flex-row justify-end gap-3 pt-4 border-t border-gray-200">
-                    <a href="{{ url('/admin/starlinks') }}" class="inline-flex justify-center items-center px-4 py-2.5 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 transition-colors">Cancel</a>
-                    <button type="submit" class="inline-flex justify-center items-center px-4 py-2.5 border border-transparent rounded-lg text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 transition-colors shadow-sm">
+                    <a href="{{ url('/admin/starlinks') }}" class="inline-flex justify-center items-center px-4 py-2.5 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 transition-colors w-full sm:w-auto min-h-[48px] sm:min-h-0 touch-manipulation">Cancel</a>
+                    <button type="submit" class="inline-flex justify-center items-center px-4 py-2.5 border border-transparent rounded-lg text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 transition-colors shadow-sm w-full sm:w-auto min-h-[48px] sm:min-h-0 touch-manipulation">
                         <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path></svg>
                         Import CSV
                     </button>

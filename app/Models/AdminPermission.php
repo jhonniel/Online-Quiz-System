@@ -14,6 +14,7 @@ class AdminPermission extends Model
         'user_activity' => 'User Activity',
         'anonymous_chats' => 'Anonymous Chats',
         'students_review' => 'Students Review',
+        'employee_records' => 'Employee Records',
     ];
 
     protected $fillable = [

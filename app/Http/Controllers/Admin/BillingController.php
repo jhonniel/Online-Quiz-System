@@ -68,6 +68,8 @@ class BillingController extends Controller
             })
             ->map(function ($s) {
                 $s->overdue_date = $this->getCurrentPeriodBillingDate($s);
+                $s->late_payment_count = $this->getLatePaymentCount($s);
+
                 return $s;
             })
             ->sortBy(fn ($s) => $s->overdue_date?->format('Y-m-d'))
@@ -281,6 +283,49 @@ class BillingController extends Controller
         }
 
         return $s->start_date->copy()->startOfDay();
+    }
+
+    /**
+     * Count late payments from last payment date until today (unpaid billing periods).
+     */
+    private function getLatePaymentCount(Starlink $s): int
+    {
+        $today = now()->startOfDay();
+        if (! $s->start_date || ! $s->last_paid_date) {
+            return 0;
+        }
+        if ($s->advance_payment_until && $s->advance_payment_until->gte($today)) {
+            return 0;
+        }
+
+        $interval = $s->billing_interval ?? 'monthly';
+        $billingDay = $s->start_date->day;
+        $check = $s->last_paid_date->copy()->startOfDay();
+
+        if ($interval === 'monthly') {
+            $check->addMonth();
+            $day = min($billingDay, $check->copy()->endOfMonth()->day);
+            $check->day($day);
+        } else {
+            $check->addYear();
+        }
+
+        $count = 0;
+        if ($interval === 'monthly') {
+            while ($check->lte($today)) {
+                $count++;
+                $check->addMonth();
+                $day = min($billingDay, $check->copy()->endOfMonth()->day);
+                $check->day($day);
+            }
+        } else {
+            while ($check->lte($today)) {
+                $count++;
+                $check->addYear();
+            }
+        }
+
+        return $count;
     }
 
     /**

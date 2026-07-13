@@ -130,6 +130,7 @@ final class AdminFeatureNavLinks
             'error_logs' => [url('/admin/analytics/error-logs'), 'Application error logs'],
             'user_activity' => [url('/admin/user-activity'), 'User activity tracking'],
             'students_review' => [url('/admin/analytics/students-review'), 'Student review analytics'],
+            'employee_records' => [url('/admin/employee-records'), 'Leave credits, overtime, and offset tracking'],
         ];
 
         $links = [];

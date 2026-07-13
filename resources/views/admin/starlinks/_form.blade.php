@@ -7,9 +7,12 @@
     $isExistingClientNameInOptions = in_array($existingClientName, $clientNameOptions, true);
     $selectedClientName = old('municipality_select', $isExistingClientNameInOptions ? $existingClientName : ($existingClientName !== '' ? '__custom__' : ''));
     $customClientName = old('municipality_custom', $isExistingClientNameInOptions ? '' : $existingClientName);
-    $inputClass = 'mt-1 block w-full rounded-lg border border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm px-3 py-2';
-    $selectClass = 'mt-1 block w-full rounded-lg border border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm px-3 py-2';
+    $inputClass = 'mt-1 block w-full rounded-lg border border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-base sm:text-sm px-3 py-2.5 min-h-[44px] sm:min-h-0';
+    $selectClass = 'mt-1 block w-full rounded-lg border border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-base sm:text-sm px-3 py-2.5 min-h-[44px] sm:min-h-0';
     $gridClass = 'grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-6';
+    $linkableStarlinks = $linkableStarlinks ?? collect();
+    $linkedStarlinkIds = $linkedStarlinkIds ?? [];
+    $selectedLinkedStarlinkIds = collect(old('linked_starlink_ids', $linkedStarlinkIds))->map(fn ($id) => (int) $id)->all();
 @endphp
 
 {{-- Account --}}
@@ -174,6 +177,52 @@
             <label for="end_user_email" class="block text-sm font-medium text-gray-700">End user email</label>
             <input type="email" name="end_user_email" id="end_user_email" value="{{ old('end_user_email', $starlink?->end_user_email ?? '') }}" class="{{ $inputClass }}" placeholder="Email of the end user" />
             @error('end_user_email')<p class="mt-1.5 text-sm text-red-600">{{ $message }}</p>@enderror
+        </div>
+    </div>
+</div>
+
+{{-- Replacement / linked devices --}}
+<div class="mb-0">
+    <h3 class="text-sm font-semibold text-gray-900 uppercase tracking-wider mb-4 pb-2 border-b border-gray-100">Replacement / linked devices</h3>
+    <p class="text-sm text-gray-500 mb-4">Link this device to other Starlinks that were replaced or share the same site/account. Linked devices appear together for easy viewing.</p>
+    <div class="{{ $gridClass }}">
+        <div class="md:col-span-2 xl:col-span-3">
+            <label for="linked_starlink_ids" class="block text-sm font-medium text-gray-700">Linked Starlink devices</label>
+            <select name="linked_starlink_ids[]" id="linked_starlink_ids" multiple class="{{ $selectClass }} min-h-[120px]">
+                @foreach($linkableStarlinks as $linkable)
+                    @php
+                        $label = collect([
+                            $linkable->starlink_id,
+                            $linkable->serial_number,
+                            $linkable->kit_number,
+                        ])->filter()->implode(' · ');
+                        if ($label === '') {
+                            $label = 'Device #'.$linkable->id;
+                        }
+                        if ($linkable->office_location) {
+                            $label .= ' — '.$linkable->office_location;
+                        }
+                        if ($linkable->status) {
+                            $label .= ' ('.$linkable->status.')';
+                        }
+                    @endphp
+                    <option value="{{ $linkable->id }}" {{ in_array($linkable->id, $selectedLinkedStarlinkIds, true) ? 'selected' : '' }}>{{ $label }}</option>
+                @endforeach
+            </select>
+            <p class="mt-1 text-xs text-gray-500">Hold Ctrl/Cmd to select multiple devices. Use this when a unit was replaced but you want to keep history grouped.</p>
+            @error('linked_starlink_ids')<p class="mt-1.5 text-sm text-red-600">{{ $message }}</p>@enderror
+            @error('linked_starlink_ids.*')<p class="mt-1.5 text-sm text-red-600">{{ $message }}</p>@enderror
+        </div>
+        <div>
+            <label for="replaced_at" class="block text-sm font-medium text-gray-700">Replaced / retired date</label>
+            <input type="date" name="replaced_at" id="replaced_at" value="{{ old('replaced_at', $starlink?->replaced_at?->format('Y-m-d') ?? '') }}" class="{{ $inputClass }}" />
+            @error('replaced_at')<p class="mt-1.5 text-sm text-red-600">{{ $message }}</p>@enderror
+            <p class="mt-1 text-xs text-gray-500">Optional. Set when this hardware was replaced or taken offline.</p>
+        </div>
+        <div class="md:col-span-2 xl:col-span-2">
+            <label for="replacement_note" class="block text-sm font-medium text-gray-700">Replacement note</label>
+            <input type="text" name="replacement_note" id="replacement_note" value="{{ old('replacement_note', $starlink?->replacement_note ?? '') }}" class="{{ $inputClass }}" placeholder="e.g. Replaced due to hardware fault; new kit installed on site" />
+            @error('replacement_note')<p class="mt-1.5 text-sm text-red-600">{{ $message }}</p>@enderror
         </div>
     </div>
 </div>

@@ -54,7 +54,7 @@
             @csrf
             @method('PUT')
             <div class="p-4 sm:p-6 lg:p-8">
-                @include('admin.starlinks._form', ['starlink' => $starlink])
+                @include('admin.starlinks._form', ['starlink' => $starlink, 'linkableStarlinks' => $linkableStarlinks, 'linkedStarlinkIds' => $linkedStarlinkIds])
             </div>
             <div class="flex flex-col-reverse sm:flex-row justify-end gap-3 p-4 sm:p-6 lg:p-8 bg-gray-50/50">
                 <a href="{{ url('/admin/starlinks') }}" class="inline-flex justify-center items-center px-5 py-2.5 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 transition-colors w-full sm:w-auto min-h-[48px] sm:min-h-0 touch-manipulation">Cancel</a>
