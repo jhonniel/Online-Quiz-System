@@ -2476,12 +2476,10 @@ class LeaveRequestController extends Controller
         if ($type === 'official_excused') {
             $query->whereIn('type', ['absent', 'excused'])
                 ->where(function ($scoped): void {
-                    $scoped->where(function ($batch): void {
-                        $batch->whereNotNull('teacher_excused_batch')
-                            ->where('teacher_excused_batch', '!=', '');
-                    })->orWhereHas('logs', function ($logs): void {
-                        $logs->where('action', 'filed_by_teacher');
-                    });
+                    $scoped->whereNotNull('teacher_excused_batch')
+                        ->orWhereHas('logs', function ($logs): void {
+                            $logs->where('action', 'filed_by_teacher');
+                        });
                 });
 
             return;

@@ -480,10 +480,7 @@ class LeaveRequest extends Model
     public function scopeCountingTowardAbsenceMerits(Builder $query): Builder
     {
         return $query
-            ->where(function (Builder $scoped): void {
-                $scoped->whereNull('teacher_excused_batch')
-                    ->orWhere('teacher_excused_batch', '');
-            })
+            ->whereNull('teacher_excused_batch')
             ->whereDoesntHave('logs', function (Builder $logs): void {
                 $logs->where('action', 'filed_by_teacher');
             });

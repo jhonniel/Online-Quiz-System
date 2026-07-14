@@ -306,12 +306,10 @@ final class StudentViolationCounter
             ->whereIn('type', ['absent', 'excused'])
             ->where('status', 'approved')
             ->where(function ($query): void {
-                $query->where(function ($batch): void {
-                    $batch->whereNotNull('teacher_excused_batch')
-                        ->where('teacher_excused_batch', '!=', '');
-                })->orWhereHas('logs', function ($logs): void {
-                    $logs->where('action', 'filed_by_teacher');
-                });
+                $query->whereNotNull('teacher_excused_batch')
+                    ->orWhereHas('logs', function ($logs): void {
+                        $logs->where('action', 'filed_by_teacher');
+                    });
             })
             ->orderByDesc('start_date')
             ->get(['id', 'start_date', 'end_date', 'status', 'teacher_excused_batch'])
