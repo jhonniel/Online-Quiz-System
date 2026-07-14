@@ -326,10 +326,10 @@ class LeaveRequestController extends Controller
                 Rule::exists('travel_time_locations', 'id')->where(fn ($q) => $q->where('is_active', true)),
             ],
             'travel_time_terms_agreed' => [
-                Rule::requiredIf(fn () => (string) $request->input('type') === 'overtime'
-                    && $user->role !== 'student'
-                    && (string) $request->input('overtime_work_type') === 'travel_time'),
-                'nullable',
+                Rule::excludeIf(fn () => (string) $request->input('type') !== 'overtime'
+                    || $user->role === 'student'
+                    || (string) $request->input('overtime_work_type') !== 'travel_time'),
+                'required',
                 Rule::in(['1']),
             ],
             'overtime_specific_dates' => [
@@ -1089,10 +1089,10 @@ class LeaveRequestController extends Controller
                 Rule::exists('travel_time_locations', 'id')->where(fn ($q) => $q->where('is_active', true)),
             ],
             'travel_time_terms_agreed' => [
-                Rule::requiredIf(fn () => (string) $request->input('type') === 'overtime'
-                    && $user->role !== 'student'
-                    && (string) $request->input('overtime_work_type') === 'travel_time'),
-                'nullable',
+                Rule::excludeIf(fn () => (string) $request->input('type') !== 'overtime'
+                    || $user->role === 'student'
+                    || (string) $request->input('overtime_work_type') !== 'travel_time'),
+                'required',
                 Rule::in(['1']),
             ],
             'overtime_specific_dates' => [

@@ -892,6 +892,11 @@
         updateOvertimeTravelTimeRequirements();
         syncConditionalRequiredFields();
 
+        if (!isOvertimeTravelTimeSelected()) {
+            resetTravelTimeTermsAgreed();
+            closeTravelTimeAgreementModal();
+        }
+
         syncEndDateMin();
         renderOvertimeSpecificDates();
 
@@ -1118,6 +1123,10 @@
     }
 
     function openTravelTimeAgreementModal() {
+        if (!isOvertimeTravelTimeSelected()) {
+            return;
+        }
+
         const modal = document.getElementById('travel-time-agreement-modal');
         const checkbox = document.getElementById('travel-time-agreement-checkbox');
         const confirmBtn = document.getElementById('travel-time-agreement-confirm-btn');
@@ -1274,7 +1283,7 @@
     updateOvertimeTravelLocationField();
     syncOvertimeGrossFromInput();
 
-    @if($errors->has('travel_time_terms_agreed'))
+    @if($errors->has('travel_time_terms_agreed') && old('type') === 'overtime' && old('overtime_work_type') === 'travel_time' && auth()->user()->role !== 'student')
     openTravelTimeAgreementModal();
     @endif
 
