@@ -754,7 +754,19 @@ class LeaveRequestController extends Controller
 
         $leaveRequestActivityLogs = $this->leaveRequestActivityLogsForRequester($leaveRequest);
 
-        return view('user.leave-requests.edit', compact('leaveRequest', 'editData', 'leaveRequestActivityLogs'));
+        $lockOvertimeDates = $leaveRequest->type === 'overtime'
+            && ! $this->overtimeOriginalDatesWithinSevenDayWindow($leaveRequest);
+        if ($leaveRequest->type === 'overtime') {
+            $editData['start_date'] = $leaveRequest->start_date->format('Y-m-d');
+            $editData['end_date'] = ($leaveRequest->end_date ?? $leaveRequest->start_date)->format('Y-m-d');
+        }
+
+        return view('user.leave-requests.edit', compact(
+            'leaveRequest',
+            'editData',
+            'leaveRequestActivityLogs',
+            'lockOvertimeDates'
+        ));
     }
 
     /**
@@ -953,10 +965,17 @@ class LeaveRequestController extends Controller
         $startDateRules = ['required', 'date'];
         $endDateRules = ['nullable', 'date', 'after_or_equal:start_date'];
         $typeInput = $request->input('type');
+        $lockOvertimeDatesOnResubmission = $leaveRequest->type === 'overtime'
+            && $this->usesStructuredHoursRequestFormat((string) $typeInput, $user)
+            && ! $this->overtimeOriginalDatesWithinSevenDayWindow($leaveRequest);
+
         // Travel (employee): only today or past dates
         if ($typeInput === 'travel') {
             $startDateRules[] = 'before_or_equal:today';
             $endDateRules[] = 'before_or_equal:today';
+        } elseif ($lockOvertimeDatesOnResubmission) {
+            // Original overtime dates are outside the 7-day window — keep them locked.
+            $endDateRules = ['required', 'date', 'after_or_equal:start_date'];
         } elseif ($this->usesStructuredHoursRequestFormat((string) $typeInput, $user)) {
             $startDateRules[] = 'after_or_equal:'.now()->subDays(7)->toDateString();
             $startDateRules[] = 'before_or_equal:today';
@@ -965,9 +984,11 @@ class LeaveRequestController extends Controller
             $startDateRules[] = 'after_or_equal:today';
         }
 
-        $overtimeSpecificDateItemRules = $this->usesStructuredHoursRequestFormat((string) $typeInput, $user)
-            ? $this->overtimeSpecificDateItemRules()
-            : ['date'];
+        $overtimeSpecificDateItemRules = $lockOvertimeDatesOnResubmission
+            ? ['date']
+            : ($this->usesStructuredHoursRequestFormat((string) $typeInput, $user)
+                ? $this->overtimeSpecificDateItemRules()
+                : ['date']);
 
         $hoursLabel = $this->structuredHoursRequestLabel((string) $typeInput, $user);
 
@@ -1010,6 +1031,14 @@ class LeaveRequestController extends Controller
         }
 
         if ($this->usesStructuredHoursRequestFormat($validated['type'], $user)) {
+            $lockOvertimeDatesOnResubmission = $leaveRequest->type === 'overtime'
+                && ! $this->overtimeOriginalDatesWithinSevenDayWindow($leaveRequest);
+
+            if ($lockOvertimeDatesOnResubmission) {
+                $validated['start_date'] = $leaveRequest->start_date->format('Y-m-d');
+                $validated['end_date'] = ($leaveRequest->end_date ?? $leaveRequest->start_date)->format('Y-m-d');
+            }
+
             $overtimeInputValidationError = $this->validateOvertimeInputData($validated);
             if ($overtimeInputValidationError !== null) {
                 return redirect()->back()->withErrors($overtimeInputValidationError)->withInput();
@@ -1018,7 +1047,8 @@ class LeaveRequestController extends Controller
             $overtimeDateValidationError = $this->validateOvertimeDateSelection(
                 (string) ($validated['start_date'] ?? ''),
                 (string) ($validated['end_date'] ?? ''),
-                $validated['overtime_specific_dates'] ?? []
+                $validated['overtime_specific_dates'] ?? [],
+                $lockOvertimeDatesOnResubmission
             );
             if ($overtimeDateValidationError !== null) {
                 return redirect()->back()->withErrors($overtimeDateValidationError)->withInput();
@@ -1711,13 +1741,38 @@ class LeaveRequestController extends Controller
     }
 
     /**
+     * Whether the original overtime start/end dates fall within the last 7 days through today.
+     */
+    private function overtimeOriginalDatesWithinSevenDayWindow(LeaveRequest $leaveRequest): bool
+    {
+        if (! $leaveRequest->start_date) {
+            return false;
+        }
+
+        $today = now()->startOfDay();
+        $earliest = $today->copy()->subDays(7);
+        $start = $leaveRequest->start_date->copy()->startOfDay();
+        $end = ($leaveRequest->end_date ?? $leaveRequest->start_date)->copy()->startOfDay();
+
+        return $start->gte($earliest)
+            && $start->lte($today)
+            && $end->gte($earliest)
+            && $end->lte($today)
+            && $end->gte($start);
+    }
+
+    /**
      * Validate overtime range and specific selected dates.
      *
      * @param  array<int, mixed>  $specificDates
      * @return array<string, string>|null
      */
-    private function validateOvertimeDateSelection(string $startDate, string $endDate, array $specificDates): ?array
-    {
+    private function validateOvertimeDateSelection(
+        string $startDate,
+        string $endDate,
+        array $specificDates,
+        bool $allowOutsideSevenDayWindow = false
+    ): ?array {
         try {
             $start = Carbon::parse($startDate)->startOfDay();
             $end = Carbon::parse($endDate)->startOfDay();
@@ -1728,11 +1783,15 @@ class LeaveRequestController extends Controller
         $today = now()->startOfDay();
         $earliest = $today->copy()->subDays(7);
 
-        if ($start->lt($earliest) || $start->gt($today)) {
-            return ['start_date' => 'For overtime, the start date must be within the last 7 days up to today.'];
-        }
-        if ($end->lt($start) || $end->gt($today)) {
-            return ['end_date' => 'For overtime, the end date must be within the selected range and not later than today.'];
+        if (! $allowOutsideSevenDayWindow) {
+            if ($start->lt($earliest) || $start->gt($today)) {
+                return ['start_date' => 'For overtime, the start date must be within the last 7 days up to today.'];
+            }
+            if ($end->lt($start) || $end->gt($today)) {
+                return ['end_date' => 'For overtime, the end date must be within the selected range and not later than today.'];
+            }
+        } elseif ($end->lt($start)) {
+            return ['end_date' => 'For overtime, the end date must be the same as or after the start date.'];
         }
 
         $normalized = collect($specificDates)
@@ -1756,12 +1815,14 @@ class LeaveRequestController extends Controller
                 return ['overtime_specific_dates' => 'Selected overtime dates must be inside the chosen start/end range only.'];
             }
 
-            if ($picked->gt($today)) {
-                return ['overtime_specific_dates' => 'Overtime cannot be filed for future dates.'];
-            }
+            if (! $allowOutsideSevenDayWindow) {
+                if ($picked->gt($today)) {
+                    return ['overtime_specific_dates' => 'Overtime cannot be filed for future dates.'];
+                }
 
-            if ($picked->lt($earliest)) {
-                return ['overtime_specific_dates' => 'Each overtime date must be within the last 7 days through today.'];
+                if ($picked->lt($earliest)) {
+                    return ['overtime_specific_dates' => 'Each overtime date must be within the last 7 days through today.'];
+                }
             }
         }
 

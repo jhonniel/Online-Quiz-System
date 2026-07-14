@@ -78,8 +78,9 @@
                             <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
                         @enderror
                         @if(auth()->user()->role !== 'student')
-                            <p class="mt-2 text-xs text-amber-800 bg-amber-50 border border-amber-200 rounded-md px-3 py-2">
-                                <strong>Additional time:</strong> Please ask your supervisor or team lead to file it as <strong>Overtime</strong> on your behalf.
+                            <p id="travel-additional-time-notice"
+                               class="mt-2 text-xs text-amber-800 bg-amber-50 border border-amber-200 rounded-md px-3 py-2 {{ old('type') === 'travel' ? '' : 'hidden' }}">
+                                <strong>Travel</strong> will only record <strong>8 hours per day</strong>. If you have overtime, file it as a separate <strong>Overtime</strong> request and notify your supervisor or team lead.
                             </p>
                         @endif
                     </div>
@@ -230,7 +231,7 @@
                                 <strong>Note:</strong> Only travel <strong>outside Davao</strong> will be approved for this request.
                             </p>
                             <p class="text-xs text-gray-600 mb-3">
-                                You can only file TRAVEL for <strong>today or past dates</strong>. Travel for future dates can only be filed by an admin with full access.
+                                You can only file TRAVEL for <strong>today or past dates</strong>. Travel for future dates can only be filed by your team lead or supervisor.
                             </p>
                         </div>
                         <div>
@@ -404,6 +405,7 @@
     const wfhSection = document.getElementById('wfh-section');
     const offsetSection = document.getElementById('offset-section');
     const travelSection = document.getElementById('travel-section');
+    const travelAdditionalTimeNotice = document.getElementById('travel-additional-time-notice');
     const isStudent = @json(auth()->user()->role === 'student');
     const overtimeSpecificDatesContainer = document.getElementById('overtime-specific-dates-container');
     const overtimeSpecificDatesWrap = document.getElementById('overtime-specific-dates-wrap');
@@ -766,6 +768,14 @@
                 travelSection.classList.remove('hidden');
             } else {
                 travelSection.classList.add('hidden');
+            }
+        }
+
+        if (travelAdditionalTimeNotice) {
+            if (typeSelect.value === 'travel') {
+                travelAdditionalTimeNotice.classList.remove('hidden');
+            } else {
+                travelAdditionalTimeNotice.classList.add('hidden');
             }
         }
 

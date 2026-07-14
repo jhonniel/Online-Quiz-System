@@ -189,7 +189,41 @@ final class EmployeeRecordsLedger
      *     reference: string|null
      * }>
      */
-    public static function overtimeLedger(int $userId): array
+    public static function overtimeLedger(int $userId, ?int $year = null): array
+    {
+        $items = array_values(array_filter(
+            self::overtimeBalanceTimeline($userId),
+            fn (array $entry) => ($entry['kind'] ?? '') === 'overtime'
+                && ($year === null || (int) $entry['date']->year === $year)
+        ));
+
+        usort($items, fn (array $a, array $b) => $b['date']->timestamp <=> $a['date']->timestamp);
+
+        return $items;
+    }
+
+    /**
+     * @return list<array<string, mixed>>
+     */
+    public static function offsetLedger(int $userId, ?int $year = null): array
+    {
+        $items = array_values(array_filter(
+            self::overtimeBalanceTimeline($userId),
+            fn (array $entry) => ($entry['kind'] ?? '') === 'offset'
+                && ($year === null || (int) $entry['date']->year === $year)
+        ));
+
+        usort($items, fn (array $a, array $b) => $b['date']->timestamp <=> $a['date']->timestamp);
+
+        return $items;
+    }
+
+    /**
+     * Combined overtime credits and offset debits with running net balance.
+     *
+     * @return list<array<string, mixed>>
+     */
+    private static function overtimeBalanceTimeline(int $userId): array
     {
         $today = Carbon::today();
 
@@ -212,6 +246,7 @@ final class EmployeeRecordsLedger
             $countsTowardBalance = $request->start_date && $request->start_date->lte($today);
 
             $items[] = [
+                'kind' => 'overtime',
                 'date' => $request->start_date->copy()->startOfDay(),
                 'direction' => 'credit',
                 'amount_minutes' => $minutes,
@@ -240,6 +275,7 @@ final class EmployeeRecordsLedger
             }
 
             $items[] = [
+                'kind' => 'offset',
                 'date' => $request->start_date->copy()->startOfDay(),
                 'direction' => 'debit',
                 'amount_minutes' => $minutes,
@@ -247,6 +283,7 @@ final class EmployeeRecordsLedger
                 'description' => 'Offset approved',
                 'leave_request_id' => $request->id,
                 'reference' => self::dateRangeLabel($request),
+                'counts_toward_balance' => true,
             ];
         }
 
@@ -269,9 +306,25 @@ final class EmployeeRecordsLedger
         }
         unset($item);
 
-        usort($items, fn (array $a, array $b) => $b['date']->timestamp <=> $a['date']->timestamp);
-
         return $items;
+    }
+
+    /**
+     * @return \Illuminate\Support\Collection<int, LeaveRequestLog>
+     */
+    public static function offsetActivityLogs(int $userId, ?int $year = null): Collection
+    {
+        return LeaveRequestLog::query()
+            ->with(['leaveRequest', 'performer'])
+            ->whereHas('leaveRequest', function ($query) use ($userId, $year) {
+                $query->where('user_id', $userId)->where('type', 'offset');
+                if ($year !== null) {
+                    $query->whereYear('start_date', $year);
+                }
+            })
+            ->orderByDesc('created_at')
+            ->limit(200)
+            ->get();
     }
 
     /**

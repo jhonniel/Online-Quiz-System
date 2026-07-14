@@ -37,6 +37,10 @@
                     @php
                         $selectedType = old('type', $editData['type']);
                         $isVacationLeaveType = in_array($selectedType, ['leave', 'vacation_leave'], true);
+                        $lockOvertimeDates = $lockOvertimeDates ?? false;
+                        $lockedOvertimeStart = $leaveRequest->start_date?->format('Y-m-d');
+                        $lockedOvertimeEnd = ($leaveRequest->end_date ?? $leaveRequest->start_date)?->format('Y-m-d');
+                        $lockDatesNow = $lockOvertimeDates && in_array($selectedType, ['overtime', 'additional_time'], true);
                     @endphp
 
                     <!-- Request Type -->
@@ -69,15 +73,20 @@
                     </div>
 
                     <!-- Date Range -->
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6"
+                         id="leave-date-range"
+                         data-lock-overtime-dates="{{ $lockOvertimeDates ? '1' : '0' }}"
+                         data-locked-start="{{ $lockedOvertimeStart }}"
+                         data-locked-end="{{ $lockedOvertimeEnd }}">
                         <div>
                             <label for="start_date" class="block text-sm font-medium text-gray-700 mb-2">
                                 Start Date <span class="text-red-500">*</span>
                             </label>
                             <input type="date" name="start_date" id="start_date"
-                                   value="{{ old('start_date', $editData['start_date']) }}"
+                                   value="{{ $lockDatesNow ? $lockedOvertimeStart : old('start_date', $editData['start_date']) }}"
                                    required
-                                   class="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                                   @if($lockDatesNow) readonly @endif
+                                   class="w-full px-4 py-3 border {{ $lockDatesNow ? 'border-gray-200 bg-gray-50 text-gray-700 cursor-not-allowed' : 'border-gray-300 shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500' }} rounded-lg">
                             @error('start_date')
                                 <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
                             @enderror
@@ -85,14 +94,18 @@
 
                         <div>
                             <label for="end_date" class="block text-sm font-medium text-gray-700 mb-2">
-                                End Date <span id="end-date-required-span" class="text-gray-400">(Optional)</span>
+                                End Date <span id="end-date-required-span" class="{{ $lockDatesNow ? 'text-red-500' : 'text-gray-400' }}">{{ $lockDatesNow ? '*' : '(Optional)' }}</span>
                             </label>
                             <input type="date" name="end_date" id="end_date"
-                                   value="{{ old('end_date', $editData['end_date']) }}"
-                                   class="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
-                            <p id="end-date-hint" class="mt-1 text-xs text-gray-500">Leave blank for single day requests</p>
+                                   value="{{ $lockDatesNow ? $lockedOvertimeEnd : old('end_date', $editData['end_date']) }}"
+                                   @if($lockDatesNow) readonly required @endif
+                                   class="w-full px-4 py-3 border {{ $lockDatesNow ? 'border-gray-200 bg-gray-50 text-gray-700 cursor-not-allowed' : 'border-gray-300 shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500' }} rounded-lg">
+                            <p id="end-date-hint" class="mt-1 text-xs text-gray-500 {{ $lockDatesNow ? 'hidden' : '' }}">Leave blank for single day requests</p>
                             <p id="overtime-date-hint" class="mt-1 text-xs text-amber-700 hidden">
                                 Overtime dates must be from the last 7 days through today only (no future dates).
+                            </p>
+                            <p id="overtime-locked-date-hint" class="mt-1 text-xs text-amber-700 {{ $lockDatesNow ? '' : 'hidden' }}">
+                                The original overtime dates are outside the past 7 days, so Start and End Date stay locked to that original range.
                             </p>
                             @error('end_date')
                                 <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
@@ -113,8 +126,12 @@
                              class="rounded-lg border border-gray-200 bg-gray-50 p-3 min-h-[3rem]">
                             <p class="text-xs text-gray-500">Pick Start Date and End Date above first.</p>
                         </div>
-                        <p class="mt-1 text-xs text-gray-500">
-                            Additional Time requests filed within the past 7 days are eligible for approval.
+                        <p id="overtime-specific-dates-help" class="mt-1 text-xs text-gray-500">
+                            @if($lockDatesNow)
+                                Select specific date(s) from the original overtime date range.
+                            @else
+                                Additional Time requests filed within the past 7 days are eligible for approval.
+                            @endif
                         </p>
                         @error('overtime_specific_dates')
                             <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
@@ -247,7 +264,7 @@
                                 <strong>Note:</strong> Only travel <strong>outside Davao</strong> will be approved for this request.
                             </p>
                             <p class="text-xs text-gray-600 mb-3">
-                                You can only file TRAVEL for <strong>today or past dates</strong>. Travel for future dates can only be filed by an admin with full access.
+                                You can only file TRAVEL for <strong>today or past dates</strong>. Travel for future dates can only be filed by your team lead or supervisor.
                             </p>
                         </div>
                         <div>
@@ -381,16 +398,6 @@
         return type === 'overtime' || (isStudent && type === 'additional_time');
     }
     const startDateInput = document.getElementById('start_date');
-
-    document.getElementById('start_date').addEventListener('change', function() {
-        const endDateInput = document.getElementById('end_date');
-        if (typeSelect && isStructuredHoursType(typeSelect.value)) {
-            endDateInput.min = this.value || endDateInput.min;
-            endDateInput.max = new Date().toISOString().split('T')[0];
-        } else if (!endDateInput.value) {
-            endDateInput.min = this.value;
-        }
-    });
     const endDateInput = document.getElementById('end_date');
     const leaveDateBounds = {
         today: @json(now()->toDateString()),
@@ -401,8 +408,63 @@
     const endDateHint = document.getElementById('end-date-hint');
     const overtimeDateHint = document.getElementById('overtime-date-hint');
 
+    const leaveDateRange = document.getElementById('leave-date-range');
+    const lockOvertimeDates = leaveDateRange?.dataset.lockOvertimeDates === '1';
+    const lockedOvertimeStart = leaveDateRange?.dataset.lockedStart || '';
+    const lockedOvertimeEnd = leaveDateRange?.dataset.lockedEnd || '';
+    const overtimeLockedDateHint = document.getElementById('overtime-locked-date-hint');
+    const overtimeSpecificDatesHelp = document.getElementById('overtime-specific-dates-help');
+
+    function shouldLockOvertimeDates() {
+        return lockOvertimeDates && isStructuredHoursType(typeSelect.value);
+    }
+
+    startDateInput?.addEventListener('change', function() {
+        if (shouldLockOvertimeDates()) {
+            restoreLockedOvertimeDates();
+            return;
+        }
+        if (typeSelect && isStructuredHoursType(typeSelect.value)) {
+            endDateInput.min = this.value || endDateInput.min;
+            endDateInput.max = new Date().toISOString().split('T')[0];
+        } else if (endDateInput && !endDateInput.value) {
+            endDateInput.min = this.value;
+        }
+    });
+    endDateInput?.addEventListener('change', function() {
+        if (shouldLockOvertimeDates()) {
+            restoreLockedOvertimeDates();
+        }
+    });
+
+    function applyLockedOvertimeDateStyles(locked) {
+        const lockedClasses = ['border-gray-200', 'bg-gray-50', 'text-gray-700', 'cursor-not-allowed'];
+        const editableClasses = ['border-gray-300', 'shadow-sm'];
+        [startDateInput, endDateInput].forEach((input) => {
+            if (!input) return;
+            if (locked) {
+                input.readOnly = true;
+                input.removeAttribute('min');
+                input.removeAttribute('max');
+                lockedClasses.forEach((c) => input.classList.add(c));
+                editableClasses.forEach((c) => input.classList.remove(c));
+                input.classList.remove('focus:ring-2', 'focus:ring-indigo-500', 'focus:border-indigo-500');
+            } else {
+                input.readOnly = false;
+                lockedClasses.forEach((c) => input.classList.remove(c));
+                editableClasses.forEach((c) => input.classList.add(c));
+            }
+        });
+    }
+
+    function restoreLockedOvertimeDates() {
+        if (!shouldLockOvertimeDates()) return;
+        if (startDateInput && lockedOvertimeStart) startDateInput.value = lockedOvertimeStart;
+        if (endDateInput && lockedOvertimeEnd) endDateInput.value = lockedOvertimeEnd;
+    }
+
     function clampOvertimeDateInputs() {
-        if (!startDateInput) return;
+        if (!startDateInput || shouldLockOvertimeDates()) return;
         const minD = leaveDateBounds.overtimeMin;
         const maxD = leaveDateBounds.today;
         if (startDateInput.value) {
@@ -420,6 +482,13 @@
 
     function syncEndDateMin() {
         if (!endDateInput) return;
+        if (shouldLockOvertimeDates()) {
+            startDateInput?.removeAttribute('min');
+            startDateInput?.removeAttribute('max');
+            endDateInput.removeAttribute('min');
+            endDateInput.removeAttribute('max');
+            return;
+        }
         const startDate = startDateInput.value;
         if (typeSelect.value === 'travel') {
             endDateInput.removeAttribute('min');
@@ -458,7 +527,8 @@
 
         const start = startDateInput.value;
         let end = endDateInput.value || start;
-        if (end > leaveDateBounds.today) {
+        const datesLocked = shouldLockOvertimeDates();
+        if (!datesLocked && end > leaveDateBounds.today) {
             end = leaveDateBounds.today;
         }
         if (!start || !end) {
@@ -492,7 +562,7 @@
             const m = String(cursor.getMonth() + 1).padStart(2, '0');
             const d = String(cursor.getDate()).padStart(2, '0');
             const value = `${y}-${m}-${d}`;
-            if (value > leaveDateBounds.today || value < leaveDateBounds.overtimeMin) {
+            if (!datesLocked && (value > leaveDateBounds.today || value < leaveDateBounds.overtimeMin)) {
                 cursor.setDate(cursor.getDate() + 1);
                 continue;
             }
@@ -513,6 +583,8 @@
     function updateRequestTypeSections() {
         // Travel: only today or past dates (no future for employees)
         if (typeSelect.value === 'travel') {
+            applyLockedOvertimeDateStyles(false);
+            if (overtimeLockedDateHint) overtimeLockedDateHint.classList.add('hidden');
             if (startDateInput) { startDateInput.removeAttribute('min'); startDateInput.setAttribute('max', today); }
             if (endDateInput) {
                 endDateInput.setAttribute('max', today);
@@ -526,24 +598,52 @@
                 endDateRequiredSpan.textContent = '(Optional)';
             }
         } else if (isStructuredHoursType(typeSelect.value)) {
-            if (startDateInput) {
-                startDateInput.setAttribute('min', leaveDateBounds.overtimeMin);
-                startDateInput.setAttribute('max', today);
+            if (shouldLockOvertimeDates()) {
+                restoreLockedOvertimeDates();
+                applyLockedOvertimeDateStyles(true);
+                if (startDateInput) {
+                    startDateInput.removeAttribute('min');
+                    startDateInput.removeAttribute('max');
+                }
+                if (endDateInput) {
+                    endDateInput.removeAttribute('min');
+                    endDateInput.removeAttribute('max');
+                    endDateInput.required = true;
+                    endDateInput.disabled = false;
+                }
+                if (overtimeDateHint) overtimeDateHint.classList.add('hidden');
+                if (overtimeLockedDateHint) overtimeLockedDateHint.classList.remove('hidden');
+                if (endDateHint) endDateHint.classList.add('hidden');
+                if (overtimeSpecificDatesHelp) {
+                    overtimeSpecificDatesHelp.textContent = 'Select specific date(s) from the original overtime date range (locked because it is outside the past 7 days).';
+                }
+            } else {
+                applyLockedOvertimeDateStyles(false);
+                if (startDateInput) {
+                    startDateInput.setAttribute('min', leaveDateBounds.overtimeMin);
+                    startDateInput.setAttribute('max', today);
+                }
+                if (endDateInput) {
+                    endDateInput.setAttribute('max', today);
+                    endDateInput.required = true;
+                    endDateInput.disabled = false;
+                }
+                clampOvertimeDateInputs();
+                if (overtimeDateHint) overtimeDateHint.classList.remove('hidden');
+                if (overtimeLockedDateHint) overtimeLockedDateHint.classList.add('hidden');
+                if (endDateHint) endDateHint.classList.add('hidden');
+                if (overtimeSpecificDatesHelp) {
+                    overtimeSpecificDatesHelp.textContent = 'Additional Time requests filed within the past 7 days are eligible for approval.';
+                }
             }
-            if (endDateInput) {
-                endDateInput.setAttribute('max', today);
-                endDateInput.required = true;
-                endDateInput.disabled = false;
-            }
-            clampOvertimeDateInputs();
-            if (overtimeDateHint) overtimeDateHint.classList.remove('hidden');
-            if (endDateHint) endDateHint.classList.add('hidden');
             if (endDateRequiredSpan) {
                 endDateRequiredSpan.classList.remove('text-gray-400');
                 endDateRequiredSpan.classList.add('text-red-500');
                 endDateRequiredSpan.textContent = '*';
             }
         } else if (typeSelect.value === 'sick_leave') {
+            applyLockedOvertimeDateStyles(false);
+            if (overtimeLockedDateHint) overtimeLockedDateHint.classList.add('hidden');
             if (startDateInput) {
                 startDateInput.removeAttribute('min');
                 startDateInput.removeAttribute('max');
@@ -562,6 +662,8 @@
                 endDateRequiredSpan.textContent = '(Optional)';
             }
         } else {
+            applyLockedOvertimeDateStyles(false);
+            if (overtimeLockedDateHint) overtimeLockedDateHint.classList.add('hidden');
             if (startDateInput) startDateInput.removeAttribute('max');
             if (endDateInput) {
                 endDateInput.removeAttribute('max');
@@ -682,15 +784,19 @@
     if (form && submitBtn) {
         form.addEventListener('submit', function(e) {
             if (isStructuredHoursType(typeSelect.value)) {
-                clampOvertimeDateInputs();
-                const maxD = leaveDateBounds.today;
-                const minD = leaveDateBounds.overtimeMin;
-                if (!startDateInput.value || !endDateInput?.value
-                    || startDateInput.value > maxD || endDateInput.value > maxD
-                    || startDateInput.value < minD || endDateInput.value < minD) {
-                    e.preventDefault();
-                    alert('Additional Time can only be filed for dates within the last 7 days through today.');
-                    return;
+                if (shouldLockOvertimeDates()) {
+                    restoreLockedOvertimeDates();
+                } else {
+                    clampOvertimeDateInputs();
+                    const maxD = leaveDateBounds.today;
+                    const minD = leaveDateBounds.overtimeMin;
+                    if (!startDateInput.value || !endDateInput?.value
+                        || startDateInput.value > maxD || endDateInput.value > maxD
+                        || startDateInput.value < minD || endDateInput.value < minD) {
+                        e.preventDefault();
+                        alert('Additional Time can only be filed for dates within the last 7 days through today.');
+                        return;
+                    }
                 }
             }
 

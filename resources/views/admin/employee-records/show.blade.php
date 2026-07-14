@@ -4,7 +4,8 @@
 @php
     $tabs = [
         'leave' => 'Leave credits',
-        'overtime' => 'Overtime & offset',
+        'overtime' => 'Overtime logs',
+        'offset' => 'Offset logs',
         'activity' => 'Request logs',
     ];
     $allYears = $allYears ?? false;
@@ -162,7 +163,7 @@
             @endif
         @elseif($tab === 'overtime')
             <div class="px-4 sm:px-6 py-4 border-b border-gray-100 bg-gray-50/50">
-                <p class="text-sm text-gray-600">Overtime requests add time; offset requests deduct time from the running balance. Approved overtime credits the balance once its start date has passed (today or earlier).</p>
+                <p class="text-sm text-gray-600">Approved overtime requests add time to the balance once their start date has passed (today or earlier).</p>
             </div>
             @if(count($overtimeLedger) > 0)
                 <div class="md:hidden mobile-card-list">
@@ -218,8 +219,117 @@
                     </table>
                 </div>
             @else
-                <div class="text-center py-12 text-sm text-gray-500">No overtime or offset entries yet.</div>
+                <div class="text-center py-12 text-sm text-gray-500">No overtime entries for {{ $yearLabel }}.</div>
             @endif
+        @elseif($tab === 'offset')
+            <div class="px-4 sm:px-6 py-4 border-b border-gray-100 bg-gray-50/50">
+                <p class="text-sm text-gray-600">
+                    Approved offset requests deduct time from the overtime balance.
+                    @if($allYears)<span class="font-medium text-gray-700">Showing full history across all years.</span>@endif
+                </p>
+            </div>
+            @if(count($offsetLedger) > 0)
+                <div class="md:hidden mobile-card-list">
+                    @foreach($offsetLedger as $entry)
+                        <div class="mobile-card">
+                            <div class="flex items-start justify-between gap-3">
+                                <div>
+                                    <p class="text-sm font-semibold text-gray-900">{{ $entry['description'] }}</p>
+                                    <p class="text-xs text-gray-500 mt-0.5">{{ $entry['date']->format('M j, Y') }}</p>
+                                </div>
+                                <span class="shrink-0 px-2 py-1 rounded-full text-xs font-semibold bg-red-100 text-red-800">
+                                    −{{ $entry['amount_label'] }}
+                                </span>
+                            </div>
+                            @if($entry['reference'])
+                                <p class="text-xs text-gray-500 mt-2">{{ $entry['reference'] }}</p>
+                            @endif
+                            @if($entry['leave_request_id'])
+                                <a href="{{ url('/admin/leave-requests/' . $entry['leave_request_id']) }}" class="inline-block mt-2 text-xs font-medium text-indigo-600">View request #{{ $entry['leave_request_id'] }}</a>
+                            @endif
+                            <p class="text-xs text-gray-400 mt-2">Balance after: {{ $entry['balance_after'] ?? '00:00' }}</p>
+                        </div>
+                    @endforeach
+                </div>
+                <div class="hidden md:block overflow-x-auto">
+                    <table class="min-w-full divide-y divide-gray-200">
+                        <thead class="bg-gray-50">
+                            <tr>
+                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Date</th>
+                                @if($allYears)<th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Year</th>@endif
+                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Description</th>
+                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Period</th>
+                                <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Deducted</th>
+                                <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Balance</th>
+                                <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Request</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-gray-100">
+                            @foreach($offsetLedger as $entry)
+                                <tr class="hover:bg-gray-50">
+                                    <td class="px-4 py-3 text-sm text-gray-700 whitespace-nowrap">{{ $entry['date']->format('M j, Y') }}</td>
+                                    @if($allYears)<td class="px-4 py-3 text-sm text-gray-500 tabular-nums">{{ $entry['date']->year }}</td>@endif
+                                    <td class="px-4 py-3 text-sm text-gray-900">{{ $entry['description'] }}</td>
+                                    <td class="px-4 py-3 text-sm text-gray-500">{{ $entry['reference'] ?? '—' }}</td>
+                                    <td class="px-4 py-3 text-sm text-right font-semibold tabular-nums text-red-700">−{{ $entry['amount_label'] }}</td>
+                                    <td class="px-4 py-3 text-sm text-right text-gray-700 tabular-nums">{{ $entry['balance_after'] ?? '00:00' }}</td>
+                                    <td class="px-4 py-3 text-sm text-right">
+                                        <a href="{{ url('/admin/leave-requests/' . $entry['leave_request_id']) }}" class="text-indigo-600 hover:text-indigo-900">#{{ $entry['leave_request_id'] }}</a>
+                                    </td>
+                                </tr>
+                            @endforeach
+                        </tbody>
+                    </table>
+                </div>
+            @else
+                <div class="text-center py-12 text-sm text-gray-500">No offset entries for {{ $yearLabel }}.</div>
+            @endif
+
+            <div class="border-t border-gray-200">
+                <div class="px-4 sm:px-6 py-4 bg-gray-50/50 border-b border-gray-100">
+                    <h3 class="text-sm font-semibold text-gray-900">Offset request activity</h3>
+                    <p class="text-xs text-gray-500 mt-0.5">Filing, approvals, rejections, and updates for offset requests in {{ $yearLabel }}.</p>
+                </div>
+                @if($offsetActivityLogs->count() > 0)
+                    <div class="divide-y divide-gray-100">
+                        @foreach($offsetActivityLogs as $log)
+                            <div class="px-4 sm:px-6 py-4 hover:bg-gray-50">
+                                <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2">
+                                    <div class="min-w-0">
+                                        <p class="text-sm font-semibold text-gray-900">{{ $log->action_label }}</p>
+                                        <p class="text-xs text-gray-500 mt-0.5">
+                                            Offset
+                                            @if($log->leaveRequest)
+                                                · {{ $log->leaveRequest->start_date?->format('M j, Y') }}
+                                                @if($log->leaveRequest->end_date && $log->leaveRequest->end_date->ne($log->leaveRequest->start_date))
+                                                    – {{ $log->leaveRequest->end_date->format('M j, Y') }}
+                                                @endif
+                                            @endif
+                                        </p>
+                                        @if($log->notes)
+                                            <p class="text-sm text-gray-700 mt-2 whitespace-pre-line">{{ $log->notes }}</p>
+                                        @endif
+                                        <p class="text-xs text-gray-500 mt-2">
+                                            By {{ $log->performer?->name ?? 'System' }}
+                                            · {{ $log->created_at->format('M j, Y g:i A') }}
+                                        </p>
+                                    </div>
+                                    <div class="flex items-center gap-2 shrink-0">
+                                        @if($log->status_after)
+                                            <span class="px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-700">{{ ucfirst(str_replace('_', ' ', $log->status_after)) }}</span>
+                                        @endif
+                                        @if($log->leave_request_id)
+                                            <a href="{{ url('/admin/leave-requests/' . $log->leave_request_id) }}" class="text-sm font-medium text-indigo-600 hover:text-indigo-900">View</a>
+                                        @endif
+                                    </div>
+                                </div>
+                            </div>
+                        @endforeach
+                    </div>
+                @else
+                    <div class="text-center py-10 text-sm text-gray-500">No offset request activity for {{ $yearLabel }}.</div>
+                @endif
+            </div>
         @else
             <div class="px-4 sm:px-6 py-4 border-b border-gray-100 bg-gray-50/50">
                 <p class="text-sm text-gray-600">Activity log for leave requests in {{ $yearLabel }} (approvals, rejections, updates, and adjustments).</p>

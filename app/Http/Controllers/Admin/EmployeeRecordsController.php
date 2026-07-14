@@ -90,8 +90,10 @@ class EmployeeRecordsController extends Controller
         $leaveSummary = EmployeeRecordsLedger::leaveCreditSummary((int) $employee->id, $summaryYear);
         $overtimeSummary = EmployeeRecordsLedger::overtimeSummary((int) $employee->id);
         $leaveLedger = EmployeeRecordsLedger::leaveCreditLedger((int) $employee->id, $year);
-        $overtimeLedger = EmployeeRecordsLedger::overtimeLedger((int) $employee->id);
+        $overtimeLedger = EmployeeRecordsLedger::overtimeLedger((int) $employee->id, $year);
+        $offsetLedger = EmployeeRecordsLedger::offsetLedger((int) $employee->id, $year);
         $activityLogs = EmployeeRecordsLedger::activityLogs((int) $employee->id, $year);
+        $offsetActivityLogs = EmployeeRecordsLedger::offsetActivityLogs((int) $employee->id, $year);
 
         return view('admin.employee-records.show', compact(
             'employee',
@@ -103,7 +105,9 @@ class EmployeeRecordsController extends Controller
             'overtimeSummary',
             'leaveLedger',
             'overtimeLedger',
-            'activityLogs'
+            'offsetLedger',
+            'activityLogs',
+            'offsetActivityLogs'
         ));
     }
 }
