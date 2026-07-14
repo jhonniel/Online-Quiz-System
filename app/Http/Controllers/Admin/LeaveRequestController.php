@@ -938,6 +938,11 @@ class LeaveRequestController extends Controller
         $leaveRequest->load('user');
         $this->assertCanManageLeaveRequestSubject($leaveRequest);
 
+        if ($leaveRequest->wasFiledByTeacher()) {
+            return $this->redirectToAdminLeaveRequestShow($leaveRequest)
+                ->withErrors(['type' => 'Request type cannot be changed for Official Excused (teacher-filed) requests.']);
+        }
+
         $allowedTypes = LeaveRequest::adminSelectableTypesForRole($leaveRequest->user->role);
         $authUser = $this->requireAuthUser();
         if ($authUser->isHr()) {
@@ -959,6 +964,7 @@ class LeaveRequestController extends Controller
 
         $wasApproved = $leaveRequest->status === 'approved';
         $isStudentAbsentExcusedCorrection = $leaveRequest->user?->role === 'student'
+            && ! $leaveRequest->wasFiledByTeacher()
             && in_array($oldType, ['absent', 'excused'], true)
             && in_array($newType, ['absent', 'excused'], true);
 

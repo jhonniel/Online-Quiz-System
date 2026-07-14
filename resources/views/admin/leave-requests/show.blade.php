@@ -118,10 +118,13 @@
                         <label class="block text-sm font-medium text-gray-500 mb-1">Request Type</label>
                         @php
                             $isStudentLeaveRequest = ($leaveRequest->user?->role === 'student');
+                            $isTeacherFiledExcused = $leaveRequest->wasFiledByTeacher();
                             $canEditApprovedStudentAbsentExcused = $isStudentLeaveRequest
+                                && ! $isTeacherFiledExcused
                                 && $leaveRequest->isApproved()
                                 && in_array($leaveRequest->type, ['absent', 'excused'], true);
                             $canEditLeaveRequestType = ($canEditLeaveRequestDetails ?? false)
+                                && ! $isTeacherFiledExcused
                                 && (! $leaveRequest->isApproved() || $canEditApprovedStudentAbsentExcused);
                         @endphp
                         @if($canEditLeaveRequestType)
