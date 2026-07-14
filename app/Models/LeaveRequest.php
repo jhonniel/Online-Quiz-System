@@ -568,7 +568,7 @@ class LeaveRequest extends Model
 
     /**
      * Human-readable duration for details UI.
-     * For offset: if hours to deduct differs from (calendar days × 8h), show that HH:MM; otherwise show day count + date range.
+     * For offset: day count only in lists (dates live in start/end columns); custom HH:MM when hours differ from days × 8h.
      */
     public function getDurationDisplayLabelAttribute(): string
     {
@@ -595,7 +595,6 @@ class LeaveRequest extends Model
         $deductMins = $this->parseOffsetHoursToDeductMinutes();
         $days = $this->days;
         $defaultMins = $days * 8 * 60;
-        $end = $this->end_date ?? $this->start_date;
 
         if ($deductMins !== null && $deductMins !== $defaultMins) {
             $h = intdiv($deductMins, 60);
@@ -604,13 +603,7 @@ class LeaveRequest extends Model
             return sprintf('%d:%02d', $h, $m).' (hours to deduct)';
         }
 
-        if ($deductMins === null) {
-            return $days.' '.($days === 1 ? 'day' : 'days')
-                .' — '.$this->start_date->format('M j, Y').' to '.$end->format('M j, Y');
-        }
-
-        return $days.' '.($days === 1 ? 'day' : 'days')
-            .' — '.$this->start_date->format('M j, Y').' to '.$end->format('M j, Y');
+        return $days.' '.($days === 1 ? 'day' : 'days');
     }
 
     /**
