@@ -368,6 +368,10 @@
                                 @endif
                             </div>
                             <div>
+                                <p class="text-xs font-medium uppercase tracking-wide text-gray-400">Type</p>
+                                <p class="text-sm font-semibold text-indigo-700">{{ $requestItem->type_label }}</p>
+                            </div>
+                            <div>
                                 <p class="text-xs font-medium uppercase tracking-wide text-gray-400">Dates</p>
                                 <p class="text-sm text-gray-800">
                                     {{ $requestItem->start_date?->format('M j, Y') }}
@@ -393,6 +397,7 @@
                             <tr>
                                 <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Filed</th>
                                 <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Student</th>
+                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Type</th>
                                 <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Dates</th>
                                 <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Reason</th>
                                 <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
@@ -415,6 +420,9 @@
                                         @if(optional($requestItem->user)->email)
                                             <div class="text-gray-500">{{ $requestItem->user->email }}</div>
                                         @endif
+                                    </td>
+                                    <td class="px-4 py-3 text-sm font-medium text-indigo-700 whitespace-nowrap">
+                                        {{ $requestItem->type_label }}
                                     </td>
                                     <td class="px-4 py-3 text-sm text-gray-700 whitespace-nowrap">
                                         {{ $requestItem->start_date?->format('M j, Y') }}

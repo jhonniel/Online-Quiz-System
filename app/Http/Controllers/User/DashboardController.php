@@ -281,6 +281,7 @@ class DashboardController extends Controller
                 ->where('user_id', $user->id)
                 ->where('status', 'approved')
                 ->where('type', 'absent')
+                ->countingTowardAbsenceMerits()
                 ->get()
                 ->sum('days');
             $allowableAbsences = Schema::hasColumn('users', 'student_absence_allowance')
@@ -747,7 +748,7 @@ class DashboardController extends Controller
 
             $leaveRequest = LeaveRequest::create([
                 'user_id' => $student->id,
-                'type' => 'absent',
+                'type' => 'excused',
                 'start_date' => $validated['start_date'],
                 'end_date' => $validated['end_date'] ?? $validated['start_date'],
                 'reason' => trim("Teacher excused request by {$teacher->name} ({$teacher->email}).\n\n".$validated['reason']),
@@ -898,6 +899,7 @@ class DashboardController extends Controller
                 ->whereIn('user_id', $studentIds)
                 ->where('type', 'absent')
                 ->where('status', 'approved')
+                ->countingTowardAbsenceMerits()
                 ->get(['user_id', 'start_date', 'end_date'])
                 ->groupBy('user_id')
                 ->map(function ($requests) {

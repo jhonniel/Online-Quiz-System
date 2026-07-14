@@ -209,44 +209,6 @@
                                         REMARKS: {{ $remarksText }}
                                     </div>
                                 </div>
-
-                @if(!empty($leaveRequest->all_supporting_document_paths))
-                    <div class="p-4 bg-indigo-50 border border-indigo-100 rounded-lg">
-                        <div class="flex items-start space-x-3">
-                            <svg class="h-5 w-5 text-indigo-600 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
-                            </svg>
-                            <div>
-                                <p class="text-sm font-semibold text-gray-900">Supporting Document(s)</p>
-                                <div class="mt-1 space-y-1">
-                                    @foreach($leaveRequest->all_supporting_document_paths as $index => $docPath)
-                                        @php
-                                            $docUrl = null;
-                                            try {
-                                                $docUrl = \Illuminate\Support\Facades\Storage::disk('digitalocean')
-                                                    ->temporaryUrl(
-                                                        $docPath,
-                                                        now()->addMinutes(30),
-                                                        ['ResponseContentDisposition' => 'inline']
-                                                    );
-                                            } catch (\Throwable $e) {
-                                                try {
-                                                    $docUrl = \Illuminate\Support\Facades\Storage::url($docPath);
-                                                } catch (\Throwable $e) {
-                                                    $docUrl = null;
-                                                }
-                                            }
-                                        @endphp
-                                        @if($docUrl)
-                                            <a href="{{ $docUrl }}" target="_blank" rel="noopener"
-                                               class="block text-sm text-indigo-700 underline break-words">View / Download file {{ $index + 1 }}</a>
-                                        @endif
-                                    @endforeach
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                @endif
                             </div>
                         </div>
                     </div>
@@ -495,6 +457,51 @@
                         <p class="text-sm text-gray-900 bg-gray-50 p-4 rounded-lg border border-gray-200">
                             {{ $leaveRequest->reason }}
                         </p>
+                    </div>
+                @endif
+
+                @if(!empty($leaveRequest->all_supporting_document_paths))
+                    <div class="p-4 bg-indigo-50 border border-indigo-100 rounded-lg">
+                        <div class="flex items-start space-x-3">
+                            <svg class="h-5 w-5 text-indigo-600 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"></path>
+                            </svg>
+                            <div class="min-w-0 flex-1">
+                                <p class="text-sm font-semibold text-gray-900">Supporting Document(s)</p>
+                                <p class="text-xs text-gray-500 mt-0.5">Files you attached to this request</p>
+                                <div class="mt-2 space-y-1.5">
+                                    @foreach($leaveRequest->all_supporting_document_paths as $index => $docPath)
+                                        @php
+                                            $docUrl = null;
+                                            $docName = basename((string) $docPath);
+                                            try {
+                                                $docUrl = \Illuminate\Support\Facades\Storage::disk('digitalocean')
+                                                    ->temporaryUrl(
+                                                        $docPath,
+                                                        now()->addMinutes(30),
+                                                        ['ResponseContentDisposition' => 'inline']
+                                                    );
+                                            } catch (\Throwable $e) {
+                                                try {
+                                                    $docUrl = \Illuminate\Support\Facades\Storage::url($docPath);
+                                                } catch (\Throwable $e) {
+                                                    $docUrl = null;
+                                                }
+                                            }
+                                        @endphp
+                                        @if($docUrl)
+                                            <a href="{{ $docUrl }}" target="_blank" rel="noopener"
+                                               class="flex items-center gap-2 text-sm text-indigo-700 hover:text-indigo-900 underline break-all">
+                                                <span class="shrink-0 font-medium">File {{ $index + 1 }}:</span>
+                                                <span>{{ $docName !== '' ? $docName : 'View / Download' }}</span>
+                                            </a>
+                                        @else
+                                            <p class="text-sm text-gray-500">File {{ $index + 1 }}: unavailable</p>
+                                        @endif
+                                    @endforeach
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 @endif
 

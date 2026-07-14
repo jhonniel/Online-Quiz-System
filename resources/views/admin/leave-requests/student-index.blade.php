@@ -116,6 +116,8 @@
                         <option value="additional_time" {{ request('type') == 'additional_time' ? 'selected' : '' }}>Additional Time</option>
                         <option value="overtime" {{ request('type') == 'overtime' ? 'selected' : '' }}>Overtime</option>
                         <option value="absent" {{ request('type') == 'absent' ? 'selected' : '' }}>Absent</option>
+                        <option value="excused" {{ request('type') == 'excused' ? 'selected' : '' }}>Excused</option>
+                        <option value="official_excused" {{ request('type') == 'official_excused' ? 'selected' : '' }}>Official Excused</option>
                         <option value="other" {{ request('type') == 'other' ? 'selected' : '' }}>Other</option>
                     </select>
                 </div>

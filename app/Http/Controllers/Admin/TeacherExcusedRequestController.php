@@ -15,7 +15,7 @@ class TeacherExcusedRequestController extends Controller
     private function teacherExcusedBaseQuery()
     {
         return LeaveRequest::query()
-            ->where('type', 'absent')
+            ->whereIn('type', ['absent', 'excused'])
             ->whereHas('logs', function ($q): void {
                 $q->where('action', 'filed_by_teacher');
             });

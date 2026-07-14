@@ -126,7 +126,7 @@ class LeaveRequest extends Model
     public static function adminSelectableTypesForRole(string $role): array
     {
         if ($role === 'student') {
-            return ['additional_time', 'absent', 'overtime', 'other'];
+            return ['additional_time', 'absent', 'excused', 'overtime', 'other'];
         }
 
         return [
@@ -175,6 +175,14 @@ class LeaveRequest extends Model
      */
     public function getTypeLabelAttribute(): string
     {
+        if ($this->type === 'excused') {
+            return $this->wasFiledByTeacher() ? 'Official Excused' : 'Excused';
+        }
+
+        if ($this->type === 'absent' && $this->wasFiledByTeacher()) {
+            return 'Official Excused';
+        }
+
         $isStudentRequest = ($this->user?->role === 'student')
             || (auth()->check() && auth()->user()->role === 'student');
 
@@ -196,6 +204,7 @@ class LeaveRequest extends Model
             'sick_leave' => 'Sick Leave',
             'work_from_home' => 'Work From Home',
             'absent' => 'Absent',
+            'excused' => 'Excused',
             'overtime' => 'Overtime',
             'offset' => 'Offset',
             'additional_time' => 'Additional Time',
@@ -466,6 +475,33 @@ class LeaveRequest extends Model
     }
 
     /**
+     * Absences that count toward student absence balance / merit (excludes teacher-filed excused requests).
+     */
+    public function scopeCountingTowardAbsenceMerits(Builder $query): Builder
+    {
+        return $query
+            ->where(function (Builder $scoped): void {
+                $scoped->whereNull('teacher_excused_batch')
+                    ->orWhere('teacher_excused_batch', '');
+            })
+            ->whereDoesntHave('logs', function (Builder $logs): void {
+                $logs->where('action', 'filed_by_teacher');
+            });
+    }
+
+    /**
+     * Whether this leave request was filed by a teacher on the student's behalf.
+     */
+    public function wasFiledByTeacher(): bool
+    {
+        if (filled($this->teacher_excused_batch)) {
+            return true;
+        }
+
+        return $this->filedByTeacher() !== null;
+    }
+
+    /**
      * Teacher who filed this excused request on behalf of the student.
      */
     public function filedByTeacher(): ?\App\Models\User
@@ -484,7 +520,11 @@ class LeaveRequest extends Model
     {
         $request->loadMissing(['logs.performer', 'user']);
 
-        if ($request->type !== 'absent' || ! $request->filedByTeacher()) {
+        if ($request->type !== 'absent' && $request->type !== 'excused') {
+            return collect([$request]);
+        }
+
+        if (! $request->filedByTeacher()) {
             return collect([$request]);
         }
 
@@ -500,7 +540,7 @@ class LeaveRequest extends Model
         $groupKey = $request->teacherExcusedGroupKey();
 
         return static::query()
-            ->where('type', 'absent')
+            ->whereIn('type', ['absent', 'excused'])
             ->whereHas('logs', function ($q): void {
                 $q->where('action', 'filed_by_teacher');
             })

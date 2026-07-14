@@ -194,6 +194,7 @@ final class StudentViolationCounter
             ->whereIn('user_id', $userIds)
             ->where('type', 'absent')
             ->where('status', 'approved')
+            ->countingTowardAbsenceMerits()
             ->get(['user_id', 'start_date', 'end_date']);
 
         foreach ($absentRequests->groupBy('user_id') as $userId => $requests) {
@@ -262,6 +263,7 @@ final class StudentViolationCounter
             ->where('user_id', $userId)
             ->where('type', 'absent')
             ->where('status', 'approved')
+            ->countingTowardAbsenceMerits()
             ->orderByDesc('start_date')
             ->get(['id', 'start_date', 'end_date', 'status'])
             ->map(function (LeaveRequest $request) {
@@ -279,6 +281,52 @@ final class StudentViolationCounter
                     'status' => (string) $request->status,
                 ];
             })
+            ->values()
+            ->all();
+
+        $mapExcusedRequest = function (LeaveRequest $request): array {
+            $days = $request->days;
+            $start = $request->start_date;
+            $end = $request->end_date ?? $start;
+            $range = $start && $end && ! $start->equalTo($end)
+                ? $start->format('M j, Y').' – '.$end->format('M j, Y')
+                : ($start?->format('M j, Y') ?? '—');
+
+            return [
+                'id' => (int) $request->id,
+                'range' => $range,
+                'days' => $days,
+                'status' => (string) $request->status,
+                'excluded_from_merit' => true,
+            ];
+        };
+
+        $teacherExcusedAbsentRequests = LeaveRequest::query()
+            ->where('user_id', $userId)
+            ->whereIn('type', ['absent', 'excused'])
+            ->where('status', 'approved')
+            ->where(function ($query): void {
+                $query->where(function ($batch): void {
+                    $batch->whereNotNull('teacher_excused_batch')
+                        ->where('teacher_excused_batch', '!=', '');
+                })->orWhereHas('logs', function ($logs): void {
+                    $logs->where('action', 'filed_by_teacher');
+                });
+            })
+            ->orderByDesc('start_date')
+            ->get(['id', 'start_date', 'end_date', 'status', 'teacher_excused_batch'])
+            ->map($mapExcusedRequest)
+            ->values()
+            ->all();
+
+        $adminExcusedRequests = LeaveRequest::query()
+            ->where('user_id', $userId)
+            ->where('type', 'excused')
+            ->where('status', 'approved')
+            ->countingTowardAbsenceMerits()
+            ->orderByDesc('start_date')
+            ->get(['id', 'start_date', 'end_date', 'status'])
+            ->map($mapExcusedRequest)
             ->values()
             ->all();
 
@@ -303,6 +351,8 @@ final class StudentViolationCounter
             ],
             'undertime_filings' => $undertimeFilings,
             'absent_requests' => $absentRequests,
+            'teacher_excused_absent_requests' => $teacherExcusedAbsentRequests,
+            'admin_excused_requests' => $adminExcusedRequests,
             'notices' => [
                 'rules_warning' => (bool) ($student->student_rules_warning ?? false),
                 'final_notice' => (bool) ($student->student_rules_marquee_enabled ?? false),
@@ -318,7 +368,7 @@ final class StudentViolationCounter
                     self::UNDERTIME_FILINGS_PER_MERIT,
                     self::UNDERTIME_FILINGS_PER_MERIT
                 ),
-                'excess_absence' => 'Excess absence merits = approved absent days minus allowable absence balance (when the result is over zero).',
+                'excess_absence' => 'Excess absence merits = approved Absent days (excluding Excused and Official Excused / teacher-filed requests) minus allowable absence balance (when the result is over zero).',
                 'manual' => 'Added by an administrator on the student profile.',
             ],
         ];

@@ -938,11 +938,6 @@ class LeaveRequestController extends Controller
         $leaveRequest->load('user');
         $this->assertCanManageLeaveRequestSubject($leaveRequest);
 
-        if ($leaveRequest->status === 'approved') {
-            return $this->redirectToAdminLeaveRequestShow($leaveRequest)
-                ->withErrors(['type' => 'Unable to update request type for an approved request.']);
-        }
-
         $allowedTypes = LeaveRequest::adminSelectableTypesForRole($leaveRequest->user->role);
         $authUser = $this->requireAuthUser();
         if ($authUser->isHr()) {
@@ -963,16 +958,13 @@ class LeaveRequestController extends Controller
         }
 
         $wasApproved = $leaveRequest->status === 'approved';
+        $isStudentAbsentExcusedCorrection = $leaveRequest->user?->role === 'student'
+            && in_array($oldType, ['absent', 'excused'], true)
+            && in_array($newType, ['absent', 'excused'], true);
 
-        if ($wasApproved && $this->leaveRequestInclusiveDayCount($leaveRequest) > self::MAX_LEAVE_DTR_DAYS_PER_REQUEST) {
+        if ($wasApproved && ! $isStudentAbsentExcusedCorrection) {
             return $this->redirectToAdminLeaveRequestShow($leaveRequest)
-                ->withErrors([
-                    'type' => 'This request spans more than '.self::MAX_LEAVE_DTR_DAYS_PER_REQUEST.' days. Shorten the date range before changing type on an approved request.',
-                ]);
-        }
-
-        if ($wasApproved) {
-            $this->revertApprovedCreditOnResubmission($leaveRequest, true);
+                ->withErrors(['type' => 'Unable to update request type for an approved request.']);
         }
 
         try {
@@ -981,10 +973,6 @@ class LeaveRequestController extends Controller
             return $this->redirectToAdminLeaveRequestShow($leaveRequest)
                 ->withErrors(['type' => 'Unable to save the selected request type. Please choose another type or contact support.'])
                 ->withInput();
-        }
-
-        if ($wasApproved) {
-            $this->applyApprovedCreditsForType($leaveRequest);
         }
 
         $logNotes = trim((string) ($validated['admin_notes'] ?? ''));
@@ -1011,9 +999,15 @@ class LeaveRequestController extends Controller
             ],
         ]);
 
+        if ($leaveRequest->user?->role === 'student') {
+            StudentMeritRulesNotice::syncForStudent($leaveRequest->user);
+        }
+
         $message = 'Request type updated to '.LeaveRequest::labelForType($newType).'.';
-        if ($wasApproved) {
-            $message .= ' DTR credits were adjusted for the new type.';
+        if ($wasApproved && $isStudentAbsentExcusedCorrection) {
+            $message .= $newType === 'excused'
+                ? ' This request no longer counts toward absence merits.'
+                : ' This request counts toward absence merits again.';
         }
 
         return $this->redirectToAdminLeaveRequestShow($leaveRequest)
@@ -1868,7 +1862,7 @@ class LeaveRequestController extends Controller
 
         // Filter by type
         if ($request->has('type') && $request->type) {
-            $query->where('type', $request->type);
+            $this->applyStudentLeaveTypeFilter($query, (string) $request->type);
         }
 
         // Filter by student
@@ -1911,7 +1905,7 @@ class LeaveRequestController extends Controller
             $baseQuery->where('user_id', $request->student);
         }
         if ($request->has('type') && $request->type) {
-            $baseQuery->where('type', $request->type);
+            $this->applyStudentLeaveTypeFilter($baseQuery, (string) $request->type);
         }
         if ($search !== '') {
             $baseQuery->where(function ($q) use ($search) {
@@ -2467,8 +2461,50 @@ class LeaveRequestController extends Controller
     }
 
     /**
-     * Whether the user may edit type/dates on an employee leave request details page.
-     * Matches route access (Leave Requests sub-feature), not the broader Employee Management parent alone.
+     * Filter student leave requests by displayed type (Official Excused vs student-filed Absent).
+     */
+    private function applyStudentLeaveTypeFilter($query, string $type): void
+    {
+        if ($type === 'official_excused') {
+            $query->whereIn('type', ['absent', 'excused'])
+                ->where(function ($scoped): void {
+                    $scoped->where(function ($batch): void {
+                        $batch->whereNotNull('teacher_excused_batch')
+                            ->where('teacher_excused_batch', '!=', '');
+                    })->orWhereHas('logs', function ($logs): void {
+                        $logs->where('action', 'filed_by_teacher');
+                    });
+                });
+
+            return;
+        }
+
+        if ($type === 'excused') {
+            $query->where('type', 'excused')
+                ->countingTowardAbsenceMerits();
+
+            return;
+        }
+
+        if ($type === 'absent') {
+            $query->where('type', 'absent')
+                ->countingTowardAbsenceMerits();
+
+            return;
+        }
+
+        if ($type === 'additional_time') {
+            $query->whereIn('type', ['additional_time', 'overtime']);
+
+            return;
+        }
+
+        $query->where('type', $type);
+    }
+
+    /**
+     * Whether the user may edit type/dates on a leave request details page.
+     * Employees: Leave Requests sub-feature. Students: Student Leave Requests sub-feature.
      */
     private function userCanManageLeaveRequest(LeaveRequest $leaveRequest, User $authUser): bool
     {
@@ -2481,11 +2517,16 @@ class LeaveRequestController extends Controller
             return true;
         }
 
-        if ($subject->role !== 'employee') {
-            return false;
+        if ($subject->role === 'employee') {
+            return $authUser->canAccessEmployeeFeature('leave_requests');
         }
 
-        return $authUser->canAccessEmployeeFeature('leave_requests');
+        if ($subject->role === 'student') {
+            return $authUser->canAccessStudentFeature('student_leave_requests')
+                || $authUser->canAccessEmployeeFeature('leave_requests');
+        }
+
+        return false;
     }
 
     /**

@@ -116,9 +116,24 @@
 
                     <div class="md:col-span-2">
                         <label class="block text-sm font-medium text-gray-500 mb-1">Request Type</label>
-                        @if($leaveRequest->isApproved())
-                            <p class="text-sm font-semibold text-gray-900">{{ $leaveRequest->type_label }}</p>
-                        @elseif($canEditLeaveRequestDetails ?? false)
+                        @php
+                            $isStudentLeaveRequest = ($leaveRequest->user?->role === 'student');
+                            $canEditApprovedStudentAbsentExcused = $isStudentLeaveRequest
+                                && $leaveRequest->isApproved()
+                                && in_array($leaveRequest->type, ['absent', 'excused'], true);
+                            $canEditLeaveRequestType = ($canEditLeaveRequestDetails ?? false)
+                                && (! $leaveRequest->isApproved() || $canEditApprovedStudentAbsentExcused);
+                        @endphp
+                        @if($canEditLeaveRequestType)
+                            @php
+                                $editableLeaveTypeOptions = $leaveTypeOptions ?? [];
+                                if ($canEditApprovedStudentAbsentExcused) {
+                                    $editableLeaveTypeOptions = array_values(array_filter(
+                                        $editableLeaveTypeOptions,
+                                        fn ($option) => in_array($option['value'] ?? null, ['absent', 'excused'], true)
+                                    ));
+                                }
+                            @endphp
                             <form action="{{ url('/admin/leave-requests/' . $leaveRequest->id . '/type') }}" method="POST"
                                   class="flex flex-col sm:flex-row sm:items-end gap-3"
                                   onsubmit="return confirmLeaveTypeChange(this);">
@@ -128,7 +143,7 @@
                                 <div class="flex-1 min-w-0">
                                     <select name="type" id="leave-request-type"
                                             class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white">
-                                        @foreach($leaveTypeOptions ?? [] as $option)
+                                        @foreach($editableLeaveTypeOptions as $option)
                                             <option value="{{ $option['value'] }}"
                                                 {{ $leaveRequest->type === $option['value'] ? 'selected' : '' }}>
                                                 {{ $option['label'] }}
@@ -138,6 +153,11 @@
                                     @error('type')
                                         <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
                                     @enderror
+                                    @if($isStudentLeaveRequest)
+                                        <p class="mt-1 text-xs text-gray-500">
+                                            Excused is admin-only and does not count toward absence merits. You can change Absent ↔ Excused even after approval.
+                                        </p>
+                                    @endif
                                 </div>
                                 <div class="flex-1 min-w-0">
                                     <label for="type-change-notes" class="sr-only">Note (optional)</label>
@@ -1109,7 +1129,9 @@ function confirmLeaveTypeChange(form) {
         return false;
     }
     let message = 'Change request type to "' + selected.text + '"?';
-    @if($leaveRequest->isApproved())
+    @if($leaveRequest->isApproved() && ($leaveRequest->user?->role === 'student') && in_array($leaveRequest->type, ['absent', 'excused'], true))
+        message += '\n\nThis will update absence merit counting (Excused does not count toward absences).';
+    @elseif($leaveRequest->isApproved())
         message += '\n\nThis request is approved. DTR credits will be recalculated for the new type.';
     @endif
     return window.confirm(message);

@@ -894,6 +894,7 @@ class StudentDashboardController extends Controller
                 $approvedAbsentDaysByStudent = LeaveRequest::whereIn('user_id', $studentIds)
                     ->where('type', 'absent')
                     ->where('status', 'approved')
+                    ->countingTowardAbsenceMerits()
                     ->get(['user_id', 'start_date', 'end_date'])
                     ->groupBy('user_id')
                     ->map(function ($requests) {

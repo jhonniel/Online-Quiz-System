@@ -1857,6 +1857,7 @@ class LeaveRequestController extends Controller
             ->where('user_id', $userId)
             ->where('type', 'absent')
             ->where('status', 'approved')
+            ->countingTowardAbsenceMerits()
             ->get()
             ->sum('days');
 

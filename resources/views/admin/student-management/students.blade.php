@@ -817,7 +817,35 @@
                         + '<td class="py-2 pr-3 tabular-nums">' + escapeHtml(row.days) + ' day(s)</td>'
                         + '<td class="py-2">' + statusBadge(row.status) + '</td></tr>';
                 }).join('')
-                : '<tr><td colspan="3" class="py-3 text-gray-500">No approved absent leave requests.</td></tr>';
+                : '<tr><td colspan="3" class="py-3 text-gray-500">No approved absent leave requests counting toward merits.</td></tr>';
+
+            const teacherExcused = data.teacher_excused_absent_requests || [];
+            let teacherExcusedRows = teacherExcused.length
+                ? teacherExcused.map(function (row) {
+                    return '<tr class="border-t border-gray-100"><td class="py-2 pr-3">' + escapeHtml(row.range) + '</td>'
+                        + '<td class="py-2 pr-3 tabular-nums">' + escapeHtml(row.days) + ' day(s)</td>'
+                        + '<td class="py-2"><span class="inline-flex px-2 py-0.5 rounded text-xs font-medium bg-slate-100 text-slate-700">Excluded</span></td></tr>';
+                }).join('')
+                : '';
+            const teacherExcusedSection = teacherExcused.length
+                ? '<div><h3 class="text-sm font-semibold text-gray-900 mb-2">Official Excused (teacher-filed) <span class="font-normal text-gray-500">(' + teacherExcused.length + ')</span></h3>'
+                    + '<p class="text-xs text-gray-500 mb-2">Labeled Official Excused — excluded from absent days and excess absence merits.</p>'
+                    + '<div class="overflow-x-auto rounded-lg border border-gray-200"><table class="min-w-full text-sm"><thead class="bg-gray-50 text-left text-xs text-gray-500 uppercase"><tr><th class="px-3 py-2">Period</th><th class="px-3 py-2">Days</th><th class="px-3 py-2">Merit</th></tr></thead><tbody>' + teacherExcusedRows + '</tbody></table></div></div>'
+                : '';
+
+            const adminExcused = data.admin_excused_requests || [];
+            let adminExcusedRows = adminExcused.length
+                ? adminExcused.map(function (row) {
+                    return '<tr class="border-t border-gray-100"><td class="py-2 pr-3">' + escapeHtml(row.range) + '</td>'
+                        + '<td class="py-2 pr-3 tabular-nums">' + escapeHtml(row.days) + ' day(s)</td>'
+                        + '<td class="py-2"><span class="inline-flex px-2 py-0.5 rounded text-xs font-medium bg-slate-100 text-slate-700">Excluded</span></td></tr>';
+                }).join('')
+                : '';
+            const adminExcusedSection = adminExcused.length
+                ? '<div><h3 class="text-sm font-semibold text-gray-900 mb-2">Excused (admin) <span class="font-normal text-gray-500">(' + adminExcused.length + ')</span></h3>'
+                    + '<p class="text-xs text-gray-500 mb-2">Admin-changed Excused — excluded from absent days and excess absence merits.</p>'
+                    + '<div class="overflow-x-auto rounded-lg border border-gray-200"><table class="min-w-full text-sm"><thead class="bg-gray-50 text-left text-xs text-gray-500 uppercase"><tr><th class="px-3 py-2">Period</th><th class="px-3 py-2">Days</th><th class="px-3 py-2">Merit</th></tr></thead><tbody>' + adminExcusedRows + '</tbody></table></div></div>'
+                : '';
 
             const meritTotal = parseInt(b.total, 10) || 0;
             const meritTotalHigh = meritTotal >= 3;
@@ -848,6 +876,8 @@
                 + '<div class="overflow-x-auto rounded-lg border border-gray-200"><table class="min-w-full text-sm"><thead class="bg-gray-50 text-left text-xs text-gray-500 uppercase"><tr><th class="px-3 py-2">Date</th><th class="px-3 py-2">Filed</th><th class="px-3 py-2">Status</th></tr></thead><tbody class="px-3">' + undertimeRows + '</tbody></table></div></div>'
                 + '<div><h3 class="text-sm font-semibold text-gray-900 mb-2">Approved absent leave <span class="font-normal text-gray-500">(' + absentReqs.length + ')</span></h3>'
                 + '<div class="overflow-x-auto rounded-lg border border-gray-200"><table class="min-w-full text-sm"><thead class="bg-gray-50 text-left text-xs text-gray-500 uppercase"><tr><th class="px-3 py-2">Period</th><th class="px-3 py-2">Days</th><th class="px-3 py-2">Status</th></tr></thead><tbody>' + absentRows + '</tbody></table></div></div>'
+                + teacherExcusedSection
+                + adminExcusedSection
                 + '<p class="text-xs text-gray-500">' + escapeHtml(data.rules?.manual || '') + '</p>'
                 + '</div>';
 
