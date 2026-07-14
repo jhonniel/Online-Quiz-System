@@ -327,6 +327,7 @@ final class AdminFeatureNavLinks
 
         $map = [
             'calendar' => [url('/admin/system/calendar'), 'Holiday calendar'],
+            'travel_time' => [url('/admin/system/travel-time'), 'Travel time locations'],
             'rules' => [url('/admin/system/rules'), 'Rules and regulations'],
             'settings' => [url('/admin/settings'), 'System settings'],
             'landing_page' => [url('/admin/landing-page'), 'Landing page content'],

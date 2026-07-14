@@ -135,6 +135,18 @@
                     <div id="admin_overtime_section" class="space-y-1.5 hidden border-t border-gray-100 pt-2 mt-1">
                         <p class="text-[10px] font-semibold text-gray-800">Overtime Details</p>
                         <div>
+                            <label for="admin_overtime_work_type" class="block text-xs font-medium text-gray-700">Overtime Type <span class="text-red-500">*</span></label>
+                            <select name="overtime_work_type" id="admin_overtime_work_type" class="w-full px-2.5 py-1.5 text-xs border border-gray-300 rounded-md focus:ring-2 focus:ring-indigo-500">
+                                <option value="">Select type</option>
+                                @foreach(\App\Models\LeaveRequest::overtimeWorkTypes() as $value => $label)
+                                    <option value="{{ $value }}" {{ old('overtime_work_type') === $value ? 'selected' : '' }}>{{ $label }}</option>
+                                @endforeach
+                            </select>
+                            @error('overtime_work_type')
+                                <p class="mt-1 text-xs text-red-600">{{ $message }}</p>
+                            @enderror
+                        </div>
+                        <div>
                             <label for="admin_overtime_hours" class="block text-xs font-medium text-gray-700">Total Overtime (HH:MM) <span class="text-red-500">*</span></label>
                             <input type="text" name="overtime_hours" id="admin_overtime_hours" value="{{ old('overtime_hours') }}" placeholder="01:30" class="w-full px-2.5 py-1.5 text-xs border border-gray-300 rounded-md focus:ring-2 focus:ring-indigo-500">
                         </div>
@@ -596,6 +608,7 @@ function handleLeaveTypeChange(selectElement) {
     const otH = document.getElementById('admin_overtime_hours');
     const otD = document.getElementById('admin_overtime_dates');
     const otT = document.getElementById('admin_overtime_tasks');
+    const otWorkType = document.getElementById('admin_overtime_work_type');
     const wfhM = document.getElementById('admin_wfh_mode');
     const wfhA = document.getElementById('admin_wfh_address');
     const wfhTasks = document.getElementById('admin_wfh_tasks');
@@ -604,7 +617,7 @@ function handleLeaveTypeChange(selectElement) {
     const supportingRequired = document.getElementById('admin_supporting_required');
 
     [travelHoursContainer, overtimeSec, offsetSec, wfhSec].forEach(el => el && el.classList.add('hidden'));
-    [otH, otD, otT, wfhM, wfhA, wfhTasks].forEach(el => { if (el) el.required = false; });
+    [otH, otD, otT, otWorkType, wfhM, wfhA, wfhTasks].forEach(el => { if (el) el.required = false; });
     if (supportingInput) supportingInput.required = false;
     if (supportingOptional) supportingOptional.classList.remove('hidden');
     if (supportingRequired) supportingRequired.classList.add('hidden');
@@ -630,6 +643,7 @@ function handleLeaveTypeChange(selectElement) {
 
     if (v === 'overtime') {
         overtimeSec.classList.remove('hidden');
+        if (otWorkType) otWorkType.required = true;
         otH.required = true;
         otD.required = true;
         otT.required = true;

@@ -171,6 +171,171 @@ class LeaveRequest extends Model
     }
 
     /**
+     * Employee overtime subtypes (Office Work vs Travel Time).
+     *
+     * @return array<string, string>
+     */
+    public static function overtimeWorkTypes(): array
+    {
+        return [
+            'office_work' => 'Office Work',
+            'travel_time' => 'Travel Time',
+        ];
+    }
+
+    public const OVERTIME_LOOKBACK_DAYS_DEFAULT = 7;
+
+    public const OVERTIME_LOOKBACK_DAYS_TRAVEL_TIME = 30;
+
+    public static function overtimeLookbackDays(?string $workType): int
+    {
+        return $workType === 'travel_time'
+            ? self::OVERTIME_LOOKBACK_DAYS_TRAVEL_TIME
+            : self::OVERTIME_LOOKBACK_DAYS_DEFAULT;
+    }
+
+    public static function overtimeWorkTypeLabel(?string $value): ?string
+    {
+        if ($value === null || $value === '') {
+            return null;
+        }
+
+        return self::overtimeWorkTypes()[$value] ?? null;
+    }
+
+    /**
+     * Parse overtime subtype from stored reason text.
+     */
+    public static function parseOvertimeWorkTypeFromReason(?string $reason): ?string
+    {
+        if ($reason === null || $reason === '') {
+            return null;
+        }
+
+        if (! preg_match('/Overtime Type:\s*(.+)/i', $reason, $m)) {
+            return null;
+        }
+
+        $label = strtolower(trim($m[1]));
+
+        return match ($label) {
+            'office work' => 'office_work',
+            'travel time' => 'travel_time',
+            default => null,
+        };
+    }
+
+    /**
+     * Human-readable overtime subtype for this request, if present.
+     */
+    public function overtimeWorkTypeLabelFromReason(): ?string
+    {
+        $value = self::parseOvertimeWorkTypeFromReason($this->reason);
+
+        return self::overtimeWorkTypeLabel($value);
+    }
+
+    public static function travelTimeLocationReasonLine(TravelTimeLocation $location): string
+    {
+        return sprintf(
+            'Travel Location: %s — %s (%s)',
+            $location->name,
+            $location->hoursFormatted(),
+            $location->tripTypeLabel()
+        );
+    }
+
+    public static function parseTravelTimeLocationIdFromReason(?string $reason): ?int
+    {
+        if ($reason === null || $reason === '') {
+            return null;
+        }
+
+        if (! preg_match('/Travel Location ID:\s*(\d+)/i', $reason, $m)) {
+            return null;
+        }
+
+        return (int) $m[1];
+    }
+
+    public static function parseTravelTimeLocationSummaryFromReason(?string $reason): ?string
+    {
+        if ($reason === null || $reason === '') {
+            return null;
+        }
+
+        if (! preg_match('/Travel Location:\s*(.+)/i', $reason, $m)) {
+            return null;
+        }
+
+        return trim($m[1]);
+    }
+
+    public function travelTimeLocationSummaryFromReason(): ?string
+    {
+        $id = self::parseTravelTimeLocationIdFromReason($this->reason);
+        if ($id !== null) {
+            $location = TravelTimeLocation::find($id);
+            if ($location !== null) {
+                return sprintf(
+                    '%s — %s (%s)',
+                    $location->name,
+                    $location->hoursFormatted(),
+                    $location->tripTypeLabel()
+                );
+            }
+        }
+
+        return self::parseTravelTimeLocationSummaryFromReason($this->reason);
+    }
+
+    /**
+     * Dates shown in overtime/additional-time request letters.
+     */
+    public function overtimeDisplayDatesForLetter(): string
+    {
+        if (self::parseOvertimeWorkTypeFromReason($this->reason) === 'travel_time' && $this->start_date) {
+            $start = $this->start_date->format('Y-m-d');
+            $end = ($this->end_date ?? $this->start_date)->format('Y-m-d');
+
+            return $start === $end ? $start : "{$start} to {$end}";
+        }
+
+        $raw = $this->reason ?? '';
+        if (preg_match('/(?:Overtime|Additional Time) Dates:\s*(.+)/i', $raw, $m)) {
+            return trim($m[1]);
+        }
+
+        return '';
+    }
+
+    public static function parseGrossOvertimeHoursFromReason(?string $reason): ?string
+    {
+        if ($reason === null || $reason === '') {
+            return null;
+        }
+
+        if (! preg_match('/Gross (?:Overtime|Additional Time) Hours:\s*(.+)/i', $reason, $m)) {
+            return null;
+        }
+
+        return trim($m[1]);
+    }
+
+    public static function parseTravelTimeDeductedFromReason(?string $reason): ?string
+    {
+        if ($reason === null || $reason === '') {
+            return null;
+        }
+
+        if (! preg_match('/Travel Time Deducted:\s*(.+)/i', $reason, $m)) {
+            return null;
+        }
+
+        return trim($m[1]);
+    }
+
+    /**
      * Get the type label.
      */
     public function getTypeLabelAttribute(): string

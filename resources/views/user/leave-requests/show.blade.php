@@ -338,17 +338,16 @@
                         $raw = $leaveRequest->reason ?? '';
                         $hoursLabel = auth()->user()->role === 'student' ? 'Additional Time' : ($leaveRequest->type === 'additional_time' ? 'Additional Time' : 'Overtime');
                         $otHours = '';
-                        $otDates = '';
+                        $otDates = $leaveRequest->overtimeDisplayDatesForLetter();
                         $otReason = '';
                         $otTasks = '';
+                        $otWorkType = $leaveRequest->overtimeWorkTypeLabelFromReason();
+                        $otTravelLocation = $leaveRequest->travelTimeLocationSummaryFromReason();
 
                         if (preg_match('/Total (?:Overtime|Additional Time) Hours:\s*(.+)/i', $raw, $m)) {
                             $otHours = trim($m[1]);
                         } elseif (preg_match('/Additional Time Hours:\s*([0-9]{1,3}:[0-9]{2})/i', $raw, $m)) {
                             $otHours = trim($m[1]);
-                        }
-                        if (preg_match('/(?:Overtime|Additional Time) Dates:\s*(.+)/i', $raw, $m)) {
-                            $otDates = trim($m[1]);
                         }
                         if (preg_match('/Tasks \/ ClickUp Links:\s*(.+?)(?:\n+Additional Explanation:|\z)/s', $raw, $m)) {
                             $otTasks = trim($m[1]);
@@ -371,6 +370,18 @@
 
                         <!-- Body -->
                         <div class="space-y-3 text-sm text-gray-800">
+                            @if($otWorkType)
+                                <p>
+                                    Overtime type:
+                                    <span class="font-semibold underline decoration-gray-400 decoration-1">{{ $otWorkType }}</span>
+                                </p>
+                            @endif
+                            @if($otTravelLocation)
+                                <p>
+                                    Travel location:
+                                    <span class="font-semibold underline decoration-gray-400 decoration-1">{{ $otTravelLocation }}</span>
+                                </p>
+                            @endif
                             <p>
                                 I respectfully request your approval for an additional
                                 <span class="font-semibold underline decoration-gray-400 decoration-1">
@@ -386,12 +397,13 @@
                                 </span>@else.@endif
                             </p>
 
-                            @if(empty($otReason))
+                            @if(empty($otReason) && $otWorkType !== 'Travel Time')
                             <p class="text-xs text-gray-600">
                                 Examples of valid reasons: urgent project deadline, increased workload, critical system maintenance.
                             </p>
                             @endif
 
+                            @if($otWorkType !== 'Travel Time')
                             <p class="font-semibold">
                                 Tasks completed (ClickUp links)
                             </p>
@@ -407,6 +419,7 @@
                             <p class="min-h-[3rem] border-t border-gray-300 pt-2 text-gray-800 whitespace-pre-line">
                                 {!! nl2br($otTasksWithLinks) !!}
                             </p>
+                            @endif
 
                             <p>Thank you for understanding.</p>
                             <p class="mt-4">Best regards,</p>

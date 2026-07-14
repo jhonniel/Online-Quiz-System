@@ -3,11 +3,13 @@
 namespace App\Http\Controllers\User;
 
 use App\Http\Controllers\Controller;
+use App\Helpers\TimeExtraction;
 use App\Mail\LeaveRequestNotification;
 use App\Models\Dtr;
 use App\Models\LeaveBalance;
 use App\Models\LeaveRequest;
 use App\Models\LeaveRequestLog;
+use App\Models\TravelTimeLocation;
 use App\Models\User;
 use App\Rules\ClickUpTasksUrlsOnly;
 use App\Services\MailConfigService;
@@ -219,8 +221,9 @@ class LeaveRequestController extends Controller
         }
 
         $showNoBalanceModalOnLoad = (bool) session('show_no_balance_modal', false);
+        $travelTimeLocations = TravelTimeLocation::active()->ordered()->get();
 
-        return view('user.leave-requests.create', compact('balances', 'showNoBalanceModalOnLoad'));
+        return view('user.leave-requests.create', compact('balances', 'showNoBalanceModalOnLoad', 'travelTimeLocations'));
     }
 
     /**
@@ -274,7 +277,12 @@ class LeaveRequestController extends Controller
             $startDateRules[] = 'before_or_equal:today';
             $endDateRules[] = 'before_or_equal:today';
         } elseif ($this->usesStructuredHoursRequestFormat((string) $typeInput, $user)) {
-            $startDateRules[] = 'after_or_equal:'.now()->subDays(7)->toDateString();
+            $lookbackDays = $this->overtimeLookbackDaysForRequest(
+                (string) $typeInput,
+                (string) $request->input('overtime_work_type'),
+                $user
+            );
+            $startDateRules[] = 'after_or_equal:'.now()->subDays($lookbackDays)->toDateString();
             $startDateRules[] = 'before_or_equal:today';
             $endDateRules = ['required', 'date', 'after_or_equal:start_date', 'before_or_equal:today'];
         } elseif (! ($typeInput === 'overtime' || $typeInput === 'sick_leave' || ($user->role === 'student' && $typeInput === 'additional_time'))) {
@@ -282,7 +290,11 @@ class LeaveRequestController extends Controller
         }
 
         $overtimeSpecificDateItemRules = $this->usesStructuredHoursRequestFormat((string) $typeInput, $user)
-            ? $this->overtimeSpecificDateItemRules()
+            ? $this->overtimeSpecificDateItemRules($this->overtimeLookbackDaysForRequest(
+                (string) $typeInput,
+                (string) $request->input('overtime_work_type'),
+                $user
+            ))
             : ['date'];
 
         $hoursLabel = $this->structuredHoursRequestLabel((string) $typeInput, $user);
@@ -297,16 +309,39 @@ class LeaveRequestController extends Controller
             'overtime_hours' => [
                 Rule::requiredIf(fn () => $this->usesStructuredHoursRequestFormat((string) $request->input('type'), $user)),
                 'nullable',
-                'regex:/^\\d{2}:\\d{2}$/',
+                'regex:/^\\d{1,3}:\\d{2}$/',
+            ],
+            'overtime_hours_gross' => ['nullable', 'regex:/^\\d{1,3}:\\d{2}$/'],
+            'overtime_work_type' => [
+                Rule::requiredIf(fn () => (string) $request->input('type') === 'overtime' && $user->role !== 'student'),
+                'nullable',
+                Rule::in(array_keys(LeaveRequest::overtimeWorkTypes())),
+            ],
+            'travel_time_location_id' => [
+                Rule::requiredIf(fn () => (string) $request->input('type') === 'overtime'
+                    && $user->role !== 'student'
+                    && (string) $request->input('overtime_work_type') === 'travel_time'),
+                'nullable',
+                'integer',
+                Rule::exists('travel_time_locations', 'id')->where(fn ($q) => $q->where('is_active', true)),
+            ],
+            'travel_time_terms_agreed' => [
+                Rule::requiredIf(fn () => (string) $request->input('type') === 'overtime'
+                    && $user->role !== 'student'
+                    && (string) $request->input('overtime_work_type') === 'travel_time'),
+                'nullable',
+                Rule::in(['1']),
             ],
             'overtime_specific_dates' => [
-                Rule::requiredIf(fn () => $this->usesStructuredHoursRequestFormat((string) $request->input('type'), $user)),
+                Rule::requiredIf(fn () => $this->usesStructuredHoursRequestFormat((string) $request->input('type'), $user)
+                    && (string) $request->input('overtime_work_type') !== 'travel_time'),
+                'nullable',
                 'array',
-                'min:1',
             ],
             'overtime_specific_dates.*' => $overtimeSpecificDateItemRules,
             'overtime_tasks' => [
-                Rule::requiredIf(fn () => $this->usesStructuredHoursRequestFormat((string) $request->input('type'), $user)),
+                Rule::requiredIf(fn () => $this->usesStructuredHoursRequestFormat((string) $request->input('type'), $user)
+                    && (string) $request->input('overtime_work_type') !== 'travel_time'),
                 'nullable',
                 'string',
                 'max:2000',
@@ -332,10 +367,18 @@ class LeaveRequestController extends Controller
                 return redirect()->back()->withErrors($overtimeInputValidationError)->withInput();
             }
 
+            $this->fillOvertimeSpecificDatesForTravelTime($validated);
+
             $overtimeDateValidationError = $this->validateOvertimeDateSelection(
                 (string) ($validated['start_date'] ?? ''),
                 (string) ($validated['end_date'] ?? ''),
-                $validated['overtime_specific_dates'] ?? []
+                $validated['overtime_specific_dates'] ?? [],
+                false,
+                $this->overtimeLookbackDaysForRequest(
+                    (string) $validated['type'],
+                    (string) ($validated['overtime_work_type'] ?? ''),
+                    $user
+                )
             );
             if ($overtimeDateValidationError !== null) {
                 return redirect()->back()->withErrors($overtimeDateValidationError)->withInput();
@@ -701,6 +744,9 @@ class LeaveRequestController extends Controller
             'additional_time_mode' => 'fixed_date',
             'additional_time_total_hours' => '',
             'overtime_hours' => '',
+            'overtime_hours_gross' => '',
+            'overtime_work_type' => '',
+            'travel_time_location_id' => '',
             'overtime_specific_dates' => [],
             'overtime_tasks' => '',
             'wfh_mode' => '',
@@ -713,7 +759,10 @@ class LeaveRequestController extends Controller
 
         if (in_array($leaveRequest->type, ['overtime', 'additional_time'], true)) {
             $parsed = $this->parseStructuredHoursRequestReason($raw);
-            $editData['overtime_hours'] = $parsed['overtime_hours'];
+            $editData['overtime_hours'] = $parsed['overtime_hours_gross'] ?: $parsed['overtime_hours'];
+            $editData['overtime_hours_gross'] = $parsed['overtime_hours_gross'] ?: $parsed['overtime_hours'];
+            $editData['overtime_work_type'] = $parsed['overtime_work_type'];
+            $editData['travel_time_location_id'] = $parsed['travel_time_location_id'];
             $editData['overtime_specific_dates'] = $parsed['overtime_specific_dates'];
             $editData['overtime_tasks'] = $parsed['overtime_tasks'];
             $editData['reason'] = $parsed['reason'];
@@ -755,17 +804,27 @@ class LeaveRequestController extends Controller
         $leaveRequestActivityLogs = $this->leaveRequestActivityLogsForRequester($leaveRequest);
 
         $lockOvertimeDates = $leaveRequest->type === 'overtime'
-            && ! $this->overtimeOriginalDatesWithinSevenDayWindow($leaveRequest);
+            && ! $this->overtimeOriginalDatesWithinLookbackWindow(
+                $leaveRequest,
+                LeaveRequest::overtimeLookbackDays(LeaveRequest::parseOvertimeWorkTypeFromReason($leaveRequest->reason))
+            );
+        $overtimeLookbackDays = LeaveRequest::overtimeLookbackDays(
+            LeaveRequest::parseOvertimeWorkTypeFromReason($leaveRequest->reason)
+        );
         if ($leaveRequest->type === 'overtime') {
             $editData['start_date'] = $leaveRequest->start_date->format('Y-m-d');
             $editData['end_date'] = ($leaveRequest->end_date ?? $leaveRequest->start_date)->format('Y-m-d');
         }
 
+        $travelTimeLocations = TravelTimeLocation::active()->ordered()->get();
+
         return view('user.leave-requests.edit', compact(
             'leaveRequest',
             'editData',
             'leaveRequestActivityLogs',
-            'lockOvertimeDates'
+            'lockOvertimeDates',
+            'overtimeLookbackDays',
+            'travelTimeLocations'
         ));
     }
 
@@ -965,19 +1024,26 @@ class LeaveRequestController extends Controller
         $startDateRules = ['required', 'date'];
         $endDateRules = ['nullable', 'date', 'after_or_equal:start_date'];
         $typeInput = $request->input('type');
+        $existingOvertimeWorkType = LeaveRequest::parseOvertimeWorkTypeFromReason($leaveRequest->reason);
+        $existingLookbackDays = LeaveRequest::overtimeLookbackDays($existingOvertimeWorkType);
         $lockOvertimeDatesOnResubmission = $leaveRequest->type === 'overtime'
             && $this->usesStructuredHoursRequestFormat((string) $typeInput, $user)
-            && ! $this->overtimeOriginalDatesWithinSevenDayWindow($leaveRequest);
+            && ! $this->overtimeOriginalDatesWithinLookbackWindow($leaveRequest, $existingLookbackDays);
 
         // Travel (employee): only today or past dates
         if ($typeInput === 'travel') {
             $startDateRules[] = 'before_or_equal:today';
             $endDateRules[] = 'before_or_equal:today';
         } elseif ($lockOvertimeDatesOnResubmission) {
-            // Original overtime dates are outside the 7-day window — keep them locked.
+            // Original overtime dates are outside the filing window — keep them locked.
             $endDateRules = ['required', 'date', 'after_or_equal:start_date'];
         } elseif ($this->usesStructuredHoursRequestFormat((string) $typeInput, $user)) {
-            $startDateRules[] = 'after_or_equal:'.now()->subDays(7)->toDateString();
+            $lookbackDays = $this->overtimeLookbackDaysForRequest(
+                (string) $typeInput,
+                (string) $request->input('overtime_work_type'),
+                $user
+            );
+            $startDateRules[] = 'after_or_equal:'.now()->subDays($lookbackDays)->toDateString();
             $startDateRules[] = 'before_or_equal:today';
             $endDateRules = ['required', 'date', 'after_or_equal:start_date', 'before_or_equal:today'];
         } elseif (! ($typeInput === 'overtime' || $typeInput === 'sick_leave' || ($user->role === 'student' && $typeInput === 'additional_time'))) {
@@ -987,7 +1053,11 @@ class LeaveRequestController extends Controller
         $overtimeSpecificDateItemRules = $lockOvertimeDatesOnResubmission
             ? ['date']
             : ($this->usesStructuredHoursRequestFormat((string) $typeInput, $user)
-                ? $this->overtimeSpecificDateItemRules()
+                ? $this->overtimeSpecificDateItemRules($this->overtimeLookbackDaysForRequest(
+                    (string) $typeInput,
+                    (string) $request->input('overtime_work_type'),
+                    $user
+                ))
                 : ['date']);
 
         $hoursLabel = $this->structuredHoursRequestLabel((string) $typeInput, $user);
@@ -1002,16 +1072,39 @@ class LeaveRequestController extends Controller
             'overtime_hours' => [
                 Rule::requiredIf(fn () => $this->usesStructuredHoursRequestFormat((string) $request->input('type'), $user)),
                 'nullable',
-                'regex:/^\\d{2}:\\d{2}$/',
+                'regex:/^\\d{1,3}:\\d{2}$/',
+            ],
+            'overtime_hours_gross' => ['nullable', 'regex:/^\\d{1,3}:\\d{2}$/'],
+            'overtime_work_type' => [
+                Rule::requiredIf(fn () => (string) $request->input('type') === 'overtime' && $user->role !== 'student'),
+                'nullable',
+                Rule::in(array_keys(LeaveRequest::overtimeWorkTypes())),
+            ],
+            'travel_time_location_id' => [
+                Rule::requiredIf(fn () => (string) $request->input('type') === 'overtime'
+                    && $user->role !== 'student'
+                    && (string) $request->input('overtime_work_type') === 'travel_time'),
+                'nullable',
+                'integer',
+                Rule::exists('travel_time_locations', 'id')->where(fn ($q) => $q->where('is_active', true)),
+            ],
+            'travel_time_terms_agreed' => [
+                Rule::requiredIf(fn () => (string) $request->input('type') === 'overtime'
+                    && $user->role !== 'student'
+                    && (string) $request->input('overtime_work_type') === 'travel_time'),
+                'nullable',
+                Rule::in(['1']),
             ],
             'overtime_specific_dates' => [
-                Rule::requiredIf(fn () => $this->usesStructuredHoursRequestFormat((string) $request->input('type'), $user)),
+                Rule::requiredIf(fn () => $this->usesStructuredHoursRequestFormat((string) $request->input('type'), $user)
+                    && (string) $request->input('overtime_work_type') !== 'travel_time'),
+                'nullable',
                 'array',
-                'min:1',
             ],
             'overtime_specific_dates.*' => $overtimeSpecificDateItemRules,
             'overtime_tasks' => [
-                Rule::requiredIf(fn () => $this->usesStructuredHoursRequestFormat((string) $request->input('type'), $user)),
+                Rule::requiredIf(fn () => $this->usesStructuredHoursRequestFormat((string) $request->input('type'), $user)
+                    && (string) $request->input('overtime_work_type') !== 'travel_time'),
                 'nullable',
                 'string',
                 'max:2000',
@@ -1031,9 +1124,6 @@ class LeaveRequestController extends Controller
         }
 
         if ($this->usesStructuredHoursRequestFormat($validated['type'], $user)) {
-            $lockOvertimeDatesOnResubmission = $leaveRequest->type === 'overtime'
-                && ! $this->overtimeOriginalDatesWithinSevenDayWindow($leaveRequest);
-
             if ($lockOvertimeDatesOnResubmission) {
                 $validated['start_date'] = $leaveRequest->start_date->format('Y-m-d');
                 $validated['end_date'] = ($leaveRequest->end_date ?? $leaveRequest->start_date)->format('Y-m-d');
@@ -1044,11 +1134,18 @@ class LeaveRequestController extends Controller
                 return redirect()->back()->withErrors($overtimeInputValidationError)->withInput();
             }
 
+            $this->fillOvertimeSpecificDatesForTravelTime($validated);
+
             $overtimeDateValidationError = $this->validateOvertimeDateSelection(
                 (string) ($validated['start_date'] ?? ''),
                 (string) ($validated['end_date'] ?? ''),
                 $validated['overtime_specific_dates'] ?? [],
-                $lockOvertimeDatesOnResubmission
+                $lockOvertimeDatesOnResubmission,
+                $this->overtimeLookbackDaysForRequest(
+                    (string) $validated['type'],
+                    (string) ($validated['overtime_work_type'] ?? $existingOvertimeWorkType ?? ''),
+                    $user
+                )
             );
             if ($overtimeDateValidationError !== null) {
                 return redirect()->back()->withErrors($overtimeDateValidationError)->withInput();
@@ -1540,8 +1637,12 @@ class LeaveRequestController extends Controller
      * @param  array<string, mixed>  $validated
      * @return array<string, string>|null
      */
-    private function validateOvertimeInputData(array $validated): ?array
+    private function validateOvertimeInputData(array &$validated): ?array
     {
+        if (($validated['overtime_work_type'] ?? '') === 'travel_time') {
+            return $this->validateAndNormalizeTravelTimeOvertimeHours($validated);
+        }
+
         $hoursText = trim((string) ($validated['overtime_hours'] ?? ''));
         if ($hoursText === '') {
             return ['overtime_hours' => 'Overtime hours is required for Overtime requests.'];
@@ -1556,6 +1657,77 @@ class LeaveRequestController extends Controller
         }
 
         return null;
+    }
+
+    /**
+     * @param  array<string, mixed>  $validated
+     * @return array<string, string>|null
+     */
+    private function validateAndNormalizeTravelTimeOvertimeHours(array &$validated): ?array
+    {
+        $locationId = (int) ($validated['travel_time_location_id'] ?? 0);
+        if ($locationId <= 0 || ! TravelTimeLocation::active()->whereKey($locationId)->exists()) {
+            return ['travel_time_location_id' => 'Please select a travel location.'];
+        }
+
+        $location = TravelTimeLocation::active()->find($locationId);
+        if ($location === null) {
+            return ['travel_time_location_id' => 'Please select a valid travel location.'];
+        }
+
+        $grossText = trim((string) ($validated['overtime_hours_gross'] ?? $validated['overtime_hours'] ?? ''));
+        if ($grossText === '') {
+            return ['overtime_hours' => 'Overtime hours is required for Overtime requests.'];
+        }
+
+        $grossMinutes = $this->parseHourMinuteToMinutes($grossText);
+        if ($grossMinutes <= 0) {
+            return ['overtime_hours' => 'Please enter a valid overtime duration in HH:MM (example: 01:30).'];
+        }
+
+        $travelMinutes = (int) round(((float) $location->hours) * 60);
+        $netMinutes = $grossMinutes - $travelMinutes;
+
+        if ($netMinutes <= 0) {
+            return ['overtime_hours' => 'Total overtime hours must be greater than the selected travel time ('.$location->hoursFormatted().' hrs).'];
+        }
+
+        $validated['overtime_hours_gross'] = TimeExtraction::minutesToHhMm($grossMinutes);
+        $validated['overtime_hours'] = TimeExtraction::minutesToHhMm($netMinutes);
+        $validated['travel_time_deducted'] = $location->hoursFormatted();
+        $validated['overtime_tasks'] = '';
+
+        return null;
+    }
+
+    /**
+     * Travel Time overtime uses the start/end range only; no manual date checkboxes.
+     *
+     * @param  array<string, mixed>  $validated
+     */
+    private function fillOvertimeSpecificDatesForTravelTime(array &$validated): void
+    {
+        if (($validated['overtime_work_type'] ?? '') !== 'travel_time') {
+            return;
+        }
+
+        try {
+            $start = Carbon::parse((string) ($validated['start_date'] ?? ''))->startOfDay();
+            $end = Carbon::parse((string) ($validated['end_date'] ?? $validated['start_date'] ?? ''))->startOfDay();
+        } catch (\Throwable) {
+            return;
+        }
+
+        if ($end->lt($start)) {
+            return;
+        }
+
+        $dates = [];
+        for ($cursor = $start->copy(); $cursor->lte($end); $cursor->addDay()) {
+            $dates[] = $cursor->format('Y-m-d');
+        }
+
+        $validated['overtime_specific_dates'] = $dates;
     }
 
     /**
@@ -1608,6 +1780,11 @@ class LeaveRequestController extends Controller
         $user = Auth::user();
         $type = (string) $request->input('type');
         if (! $user || ! $this->usesStructuredHoursRequestFormat($type, $user)) {
+            return null;
+        }
+
+        if ((string) $request->input('type') === 'overtime'
+            && (string) $request->input('overtime_work_type') === 'travel_time') {
             return null;
         }
 
@@ -1693,15 +1870,24 @@ class LeaveRequestController extends Controller
     /**
      * @return array<int, string>
      */
-    private function overtimeSpecificDateItemRules(): array
+    private function overtimeSpecificDateItemRules(int $lookbackDays = LeaveRequest::OVERTIME_LOOKBACK_DAYS_DEFAULT): array
     {
-        $earliest = now()->subDays(7)->toDateString();
+        $earliest = now()->subDays($lookbackDays)->toDateString();
 
         return ['date', 'after_or_equal:'.$earliest, 'before_or_equal:today'];
     }
 
+    private function overtimeLookbackDaysForRequest(string $type, ?string $overtimeWorkType, $user): int
+    {
+        if ($type === 'overtime' && $user->role !== 'student') {
+            return LeaveRequest::overtimeLookbackDays($overtimeWorkType);
+        }
+
+        return LeaveRequest::OVERTIME_LOOKBACK_DAYS_DEFAULT;
+    }
+
     /**
-     * Dates for overtime completed from Record Attendance (no 7-day / today window).
+     * Dates for overtime completed from Record Attendance (no filing window).
      *
      * @param  array<int, mixed>  $specificDates
      * @return array<string, string>|null
@@ -1741,16 +1927,16 @@ class LeaveRequestController extends Controller
     }
 
     /**
-     * Whether the original overtime start/end dates fall within the last 7 days through today.
+     * Whether the original overtime start/end dates fall within the allowed filing window.
      */
-    private function overtimeOriginalDatesWithinSevenDayWindow(LeaveRequest $leaveRequest): bool
+    private function overtimeOriginalDatesWithinLookbackWindow(LeaveRequest $leaveRequest, int $lookbackDays): bool
     {
         if (! $leaveRequest->start_date) {
             return false;
         }
 
         $today = now()->startOfDay();
-        $earliest = $today->copy()->subDays(7);
+        $earliest = $today->copy()->subDays($lookbackDays);
         $start = $leaveRequest->start_date->copy()->startOfDay();
         $end = ($leaveRequest->end_date ?? $leaveRequest->start_date)->copy()->startOfDay();
 
@@ -1771,7 +1957,8 @@ class LeaveRequestController extends Controller
         string $startDate,
         string $endDate,
         array $specificDates,
-        bool $allowOutsideSevenDayWindow = false
+        bool $allowOutsideLookbackWindow = false,
+        int $lookbackDays = LeaveRequest::OVERTIME_LOOKBACK_DAYS_DEFAULT
     ): ?array {
         try {
             $start = Carbon::parse($startDate)->startOfDay();
@@ -1781,11 +1968,11 @@ class LeaveRequestController extends Controller
         }
 
         $today = now()->startOfDay();
-        $earliest = $today->copy()->subDays(7);
+        $earliest = $today->copy()->subDays($lookbackDays);
 
-        if (! $allowOutsideSevenDayWindow) {
+        if (! $allowOutsideLookbackWindow) {
             if ($start->lt($earliest) || $start->gt($today)) {
-                return ['start_date' => 'For overtime, the start date must be within the last 7 days up to today.'];
+                return ['start_date' => "For overtime, the start date must be within the last {$lookbackDays} days up to today."];
             }
             if ($end->lt($start) || $end->gt($today)) {
                 return ['end_date' => 'For overtime, the end date must be within the selected range and not later than today.'];
@@ -1815,13 +2002,13 @@ class LeaveRequestController extends Controller
                 return ['overtime_specific_dates' => 'Selected overtime dates must be inside the chosen start/end range only.'];
             }
 
-            if (! $allowOutsideSevenDayWindow) {
+            if (! $allowOutsideLookbackWindow) {
                 if ($picked->gt($today)) {
                     return ['overtime_specific_dates' => 'Overtime cannot be filed for future dates.'];
                 }
 
                 if ($picked->lt($earliest)) {
-                    return ['overtime_specific_dates' => 'Each overtime date must be within the last 7 days through today.'];
+                    return ['overtime_specific_dates' => "Each overtime date must be within the last {$lookbackDays} days through today."];
                 }
             }
         }
@@ -1947,9 +2134,15 @@ class LeaveRequestController extends Controller
             'overtime_specific_dates.min' => 'Please select at least one date.',
             'overtime_specific_dates.*.date' => 'One or more dates are invalid.',
             'overtime_specific_dates.*.before_or_equal' => 'Dates cannot be in the future.',
-            'overtime_specific_dates.*.after_or_equal' => 'Each date must be within the last 7 days.',
+            'overtime_specific_dates.*.after_or_equal' => 'Each date must be within the allowed filing window.',
             'overtime_tasks.required_if' => 'Please provide your task details/links.',
             'overtime_tasks.max' => 'Task details must not exceed 2000 characters.',
+            'overtime_work_type.required' => 'Please select Office Work or Travel Time.',
+            'overtime_work_type.in' => 'Please select a valid overtime type (Office Work or Travel Time).',
+            'travel_time_location_id.required' => 'Please select a travel location.',
+            'travel_time_location_id.exists' => 'Please select a valid travel location.',
+            'travel_time_terms_agreed.required' => 'You must agree to the travel time overtime terms before submitting.',
+            'travel_time_terms_agreed.in' => 'You must agree to the travel time overtime terms before submitting.',
         ];
     }
 
@@ -1959,10 +2152,36 @@ class LeaveRequestController extends Controller
     private function buildStructuredHoursRequestReason(string $label, array $validated, ?string $additionalExplanation): string
     {
         $details = "{$label} Request Details:\n";
+        $workTypeLabel = LeaveRequest::overtimeWorkTypeLabel($validated['overtime_work_type'] ?? null);
+        if ($workTypeLabel !== null) {
+            $details .= 'Overtime Type: '.$workTypeLabel."\n";
+        }
+        if (($validated['overtime_work_type'] ?? '') === 'travel_time') {
+            $location = TravelTimeLocation::active()->find((int) ($validated['travel_time_location_id'] ?? 0));
+            if ($location !== null) {
+                $details .= 'Travel Location ID: '.$location->id."\n";
+                $details .= LeaveRequest::travelTimeLocationReasonLine($location)."\n";
+                if (! empty($validated['overtime_hours_gross'])) {
+                    $details .= 'Gross '.$label.' Hours: '.($validated['overtime_hours_gross'])."\n";
+                }
+                if (! empty($validated['travel_time_deducted'])) {
+                    $details .= 'Travel Time Deducted: '.($validated['travel_time_deducted'])."\n";
+                }
+            }
+        }
         $details .= "Total {$label} Hours: ".($validated['overtime_hours'] ?? '')."\n";
         $details .= "{$label} Date Range: ".($validated['start_date'] ?? '').' to '.($validated['end_date'] ?? $validated['start_date'] ?? '')."\n";
-        $details .= "{$label} Dates: ".$this->normalizedSpecificOvertimeDates($validated['overtime_specific_dates'] ?? [])."\n";
-        $details .= "Tasks / ClickUp Links:\n".($validated['overtime_tasks'] ?? '')."\n";
+        if (($validated['overtime_work_type'] ?? '') === 'travel_time') {
+            $start = (string) ($validated['start_date'] ?? '');
+            $end = (string) ($validated['end_date'] ?? $start);
+            $datesLine = $start !== '' && $start === $end ? $start : "{$start} to {$end}";
+            $details .= "{$label} Dates: {$datesLine}\n";
+        } else {
+            $details .= "{$label} Dates: ".$this->normalizedSpecificOvertimeDates($validated['overtime_specific_dates'] ?? [])."\n";
+        }
+        if (($validated['overtime_work_type'] ?? '') !== 'travel_time') {
+            $details .= "Tasks / ClickUp Links:\n".($validated['overtime_tasks'] ?? '')."\n";
+        }
 
         if (! empty($additionalExplanation)) {
             $details .= "\nAdditional Explanation:\n".$additionalExplanation;
@@ -1974,6 +2193,8 @@ class LeaveRequestController extends Controller
     /**
      * @return array{
      *     overtime_hours: string,
+     *     overtime_work_type: string,
+     *     travel_time_location_id: string,
      *     start_date: string|null,
      *     end_date: string|null,
      *     overtime_specific_dates: array<int, string>,
@@ -1985,6 +2206,9 @@ class LeaveRequestController extends Controller
     {
         $data = [
             'overtime_hours' => '',
+            'overtime_work_type' => '',
+            'travel_time_location_id' => '',
+            'overtime_hours_gross' => '',
             'start_date' => null,
             'end_date' => null,
             'overtime_specific_dates' => [],
@@ -1992,10 +2216,17 @@ class LeaveRequestController extends Controller
             'reason' => '',
         ];
 
+        $data['overtime_work_type'] = LeaveRequest::parseOvertimeWorkTypeFromReason($raw) ?? '';
+        $parsedLocationId = LeaveRequest::parseTravelTimeLocationIdFromReason($raw);
+        $data['travel_time_location_id'] = $parsedLocationId !== null ? (string) $parsedLocationId : '';
+
         if (preg_match('/Total (?:Overtime|Additional Time) Hours:\s*(.+)/i', $raw, $m)) {
             $data['overtime_hours'] = trim($m[1]);
         } elseif (preg_match('/Additional Time Hours:\s*([0-9]{1,3}:[0-9]{2})/i', $raw, $m)) {
             $data['overtime_hours'] = trim($m[1]);
+        }
+        if (preg_match('/Gross (?:Overtime|Additional Time) Hours:\s*(.+)/i', $raw, $m)) {
+            $data['overtime_hours_gross'] = trim($m[1]);
         }
         if (preg_match('/(?:Overtime|Additional Time) Date Range:\s*(\d{4}-\d{2}-\d{2})\s+to\s+(\d{4}-\d{2}-\d{2})/i', $raw, $m)) {
             $data['start_date'] = trim($m[1]);

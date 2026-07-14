@@ -105,7 +105,7 @@
                                 Overtime dates must be from the last 7 days through today only (no future dates).
                             </p>
                             <p id="overtime-locked-date-hint" class="mt-1 text-xs text-amber-700 {{ $lockDatesNow ? '' : 'hidden' }}">
-                                The original overtime dates are outside the past 7 days, so Start and End Date stay locked to that original range.
+                                The original overtime dates are outside the past {{ $overtimeLookbackDays ?? 7 }} days, so Start and End Date stay locked to that original range.
                             </p>
                             @error('end_date')
                                 <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
@@ -140,6 +140,13 @@
                             <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
                         @enderror
                     </div>
+
+                    @include('user.leave-requests.partials.overtime-work-type-field', [
+                        'visible' => old('type', $editData['type']) === 'overtime',
+                        'selected' => old('overtime_work_type', $editData['overtime_work_type'] ?? ''),
+                        'selectedTravelLocationId' => old('travel_time_location_id', $editData['travel_time_location_id'] ?? ''),
+                        'travelTimeLocations' => $travelTimeLocations ?? collect(),
+                    ])
 
                     <!-- Reason (label/required change to "Location of travel" when type = Travel) -->
                     <div id="reason-field">
@@ -230,18 +237,21 @@
                                    value="{{ old('overtime_hours', $editData['overtime_hours']) }}"
                                    placeholder="01:20"
                                    class="time-input w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
-                            <p class="mt-1 text-xs text-gray-500">
+                            <input type="hidden" name="overtime_hours_gross" id="overtime_hours_gross"
+                                   value="{{ old('overtime_hours_gross', $editData['overtime_hours_gross'] ?? $editData['overtime_hours']) }}">
+                            <p class="mt-1 text-xs text-gray-500" id="overtime-hours-help">
                                 Enter the total time in <strong>HH:MM</strong> (e.g., 01:00, 02:30). No AM/PM.
                             </p>
+                            <p class="mt-1 text-xs text-indigo-700 hidden" id="overtime-travel-deduction-note"></p>
                             @error('overtime_hours')
                                 <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
                             @enderror
                         </div>
 
                         <!-- Overtime Tasks / ClickUp Link -->
-                        <div>
+                        <div id="overtime-tasks-field">
                             <label for="overtime_tasks" class="block text-sm font-medium text-gray-700 mb-2">
-                                Tasks / ClickUp Links <span class="text-red-500">*</span>
+                                Tasks / ClickUp Links <span class="text-red-500" id="overtime-tasks-required-span">*</span>
                             </label>
                             <textarea name="overtime_tasks" id="overtime_tasks" rows="4"
                                       placeholder="https://app.clickup.com/... (URLs only)"
@@ -365,6 +375,7 @@
                     </div>
 
                     <!-- Form Actions -->
+                    <input type="hidden" name="travel_time_terms_agreed" id="travel_time_terms_agreed" value="{{ old('travel_time_terms_agreed', '0') }}">
                     <div class="flex items-center justify-end space-x-3 pt-6 border-t border-gray-200">
                         <a href="{{ url('/leave-requests/' . $leaveRequest->id) }}"
                            class="inline-flex items-center px-6 py-3 border border-gray-300 text-sm font-medium rounded-lg text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition duration-200">
@@ -391,6 +402,8 @@
     </div>
 </div>
 
+@include('user.leave-requests.partials.travel-time-agreement-modal')
+
 <script>
     const typeSelect = document.getElementById('type');
     const isStudent = @json(auth()->user()->role === 'student');
@@ -402,7 +415,9 @@
     const leaveDateBounds = {
         today: @json(now()->toDateString()),
         overtimeMin: @json(now()->subDays(7)->toDateString()),
+        overtimeTravelMin: @json(now()->subDays(30)->toDateString()),
     };
+    const lockedOvertimeLookbackDays = @json($overtimeLookbackDays ?? 7);
     const today = leaveDateBounds.today;
     const endDateRequiredSpan = document.getElementById('end-date-required-span');
     const endDateHint = document.getElementById('end-date-hint');
@@ -417,6 +432,53 @@
 
     function shouldLockOvertimeDates() {
         return lockOvertimeDates && isStructuredHoursType(typeSelect.value);
+    }
+
+    function getOvertimeLookbackDays() {
+        if (typeSelect.value === 'overtime' && getSelectedOvertimeWorkType() === 'travel_time') {
+            return 30;
+        }
+        return 7;
+    }
+
+    function getOvertimeMinDate() {
+        return getOvertimeLookbackDays() === 30
+            ? leaveDateBounds.overtimeTravelMin
+            : leaveDateBounds.overtimeMin;
+    }
+
+    function getOvertimeDateHintText() {
+        const days = getOvertimeLookbackDays();
+        if (typeSelect.value === 'overtime' && getSelectedOvertimeWorkType() === 'travel_time') {
+            return `Travel Time overtime dates must be from the last ${days} days through today only (no future dates).`;
+        }
+        return `Overtime dates must be from the last ${days} days through today only (no future dates).`;
+    }
+
+    function updateOvertimeDateRangeRules() {
+        if (!isStructuredHoursType(typeSelect.value) || shouldLockOvertimeDates()) {
+            return;
+        }
+
+        const minD = getOvertimeMinDate();
+        if (startDateInput) {
+            startDateInput.setAttribute('min', minD);
+            startDateInput.setAttribute('max', leaveDateBounds.today);
+        }
+        if (endDateInput) {
+            endDateInput.setAttribute('max', leaveDateBounds.today);
+        }
+        if (overtimeDateHint) {
+            overtimeDateHint.textContent = getOvertimeDateHintText();
+        }
+        if (overtimeSpecificDatesHelp) {
+            overtimeSpecificDatesHelp.textContent = typeSelect.value === 'overtime' && getSelectedOvertimeWorkType() === 'travel_time'
+                ? `Travel Time overtime filed within the past ${getOvertimeLookbackDays()} days is eligible for approval.`
+                : `Additional Time requests filed within the past ${getOvertimeLookbackDays()} days are eligible for approval.`;
+        }
+        clampOvertimeDateInputs();
+        syncEndDateMin();
+        renderOvertimeSpecificDates();
     }
 
     startDateInput?.addEventListener('change', function() {
@@ -465,7 +527,7 @@
 
     function clampOvertimeDateInputs() {
         if (!startDateInput || shouldLockOvertimeDates()) return;
-        const minD = leaveDateBounds.overtimeMin;
+        const minD = getOvertimeMinDate();
         const maxD = leaveDateBounds.today;
         if (startDateInput.value) {
             if (startDateInput.value > maxD) startDateInput.value = maxD;
@@ -494,9 +556,9 @@
             endDateInput.removeAttribute('min');
             endDateInput.setAttribute('max', today);
         } else if (isStructuredHoursType(typeSelect.value)) {
-            const endMin = startDate && startDate >= leaveDateBounds.overtimeMin
+            const endMin = startDate && startDate >= getOvertimeMinDate()
                 ? startDate
-                : leaveDateBounds.overtimeMin;
+                : getOvertimeMinDate();
             endDateInput.min = endMin;
             endDateInput.setAttribute('max', today);
         } else if (typeSelect.value === 'sick_leave') {
@@ -517,6 +579,15 @@
     const supportingSection = document.getElementById('supporting-section');
     const overtimeSpecificDatesContainer = document.getElementById('overtime-specific-dates-container');
     const overtimeSpecificDatesWrap = document.getElementById('overtime-specific-dates-wrap');
+    const overtimeWorkTypeField = document.getElementById('overtime-work-type-field');
+    const overtimeTravelLocationField = document.getElementById('overtime-travel-location-field');
+    const travelTimeLocationSelect = document.getElementById('travel_time_location_id');
+    const overtimeHoursInput = document.getElementById('overtime_hours');
+    const overtimeHoursGrossInput = document.getElementById('overtime_hours_gross');
+    const overtimeTravelDeductionNote = document.getElementById('overtime-travel-deduction-note');
+    const overtimeTasksField = document.getElementById('overtime-tasks-field');
+    const overtimeTasksInput = document.getElementById('overtime_tasks');
+    const submitBtn = document.getElementById('submit-btn');
 
     function renderOvertimeSpecificDates() {
         if (!overtimeSpecificDatesWrap) return;
@@ -562,7 +633,7 @@
             const m = String(cursor.getMonth() + 1).padStart(2, '0');
             const d = String(cursor.getDate()).padStart(2, '0');
             const value = `${y}-${m}-${d}`;
-            if (!datesLocked && (value > leaveDateBounds.today || value < leaveDateBounds.overtimeMin)) {
+            if (!datesLocked && (value > leaveDateBounds.today || value < getOvertimeMinDate())) {
                 cursor.setDate(cursor.getDate() + 1);
                 continue;
             }
@@ -615,26 +686,18 @@
                 if (overtimeLockedDateHint) overtimeLockedDateHint.classList.remove('hidden');
                 if (endDateHint) endDateHint.classList.add('hidden');
                 if (overtimeSpecificDatesHelp) {
-                    overtimeSpecificDatesHelp.textContent = 'Select specific date(s) from the original overtime date range (locked because it is outside the past 7 days).';
+                    overtimeSpecificDatesHelp.textContent = `Select specific date(s) from the original overtime date range (locked because it is outside the past ${lockedOvertimeLookbackDays} days).`;
                 }
             } else {
                 applyLockedOvertimeDateStyles(false);
-                if (startDateInput) {
-                    startDateInput.setAttribute('min', leaveDateBounds.overtimeMin);
-                    startDateInput.setAttribute('max', today);
-                }
+                updateOvertimeDateRangeRules();
                 if (endDateInput) {
-                    endDateInput.setAttribute('max', today);
                     endDateInput.required = true;
                     endDateInput.disabled = false;
                 }
-                clampOvertimeDateInputs();
                 if (overtimeDateHint) overtimeDateHint.classList.remove('hidden');
                 if (overtimeLockedDateHint) overtimeLockedDateHint.classList.add('hidden');
                 if (endDateHint) endDateHint.classList.add('hidden');
-                if (overtimeSpecificDatesHelp) {
-                    overtimeSpecificDatesHelp.textContent = 'Additional Time requests filed within the past 7 days are eligible for approval.';
-                }
             }
             if (endDateRequiredSpan) {
                 endDateRequiredSpan.classList.remove('text-gray-400');
@@ -679,11 +742,25 @@
         }
         if (isStructuredHoursType(typeSelect.value)) {
             overtimeSection.classList.remove('hidden');
-            if (overtimeSpecificDatesContainer) overtimeSpecificDatesContainer.classList.remove('hidden');
+            if (overtimeSpecificDatesContainer && !isOvertimeTravelTimeSelected()) {
+                overtimeSpecificDatesContainer.classList.remove('hidden');
+            } else if (overtimeSpecificDatesContainer) {
+                overtimeSpecificDatesContainer.classList.add('hidden');
+            }
         } else {
             overtimeSection.classList.add('hidden');
             if (overtimeSpecificDatesContainer) overtimeSpecificDatesContainer.classList.add('hidden');
         }
+
+        if (overtimeWorkTypeField) {
+            if (typeSelect.value === 'overtime') {
+                overtimeWorkTypeField.classList.remove('hidden');
+            } else {
+                overtimeWorkTypeField.classList.add('hidden');
+            }
+        }
+
+        updateOvertimeTravelLocationField();
 
         if (typeSelect.value === 'work_from_home') {
             wfhSection.classList.remove('hidden');
@@ -704,6 +781,8 @@
                 travelSection.classList.add('hidden');
             }
         }
+
+        updateOvertimeTravelTimeRequirements();
 
         syncEndDateMin();
         renderOvertimeSpecificDates();
@@ -735,7 +814,10 @@
             if (reasonTravelHelp) reasonTravelHelp.classList.add('hidden');
             if (reasonInput) reasonInput.placeholder = 'Please provide a reason for this request...';
             if (supportingSection) supportingSection.classList.remove('hidden');
-            if (isStructuredHoursType(typeSelect.value)) {
+            if (isOvertimeTravelTimeSelected()) {
+                if (supportingSection) supportingSection.classList.add('hidden');
+                if (supportingInput) supportingInput.required = false;
+            } else if (isStructuredHoursType(typeSelect.value)) {
                 if (supportingRequiredSpan) { supportingRequiredSpan.classList.remove('text-gray-400'); supportingRequiredSpan.classList.add('text-red-500'); supportingRequiredSpan.textContent = '*'; }
                 if (supportingHelp) {
                     supportingHelp.textContent = hasExistingSupporting
@@ -758,8 +840,342 @@
     });
     endDateInput.addEventListener('focus', syncEndDateMin);
     endDateInput.addEventListener('change', renderOvertimeSpecificDates);
+
+    function getSelectedOvertimeWorkType() {
+        const checked = document.querySelector('input[name="overtime_work_type"]:checked');
+        return checked ? checked.value : '';
+    }
+
+    function isOvertimeTravelTimeSelected() {
+        return typeSelect.value === 'overtime' && getSelectedOvertimeWorkType() === 'travel_time';
+    }
+
+    function updateOvertimeTravelTimeRequirements() {
+        const travelOvertime = isOvertimeTravelTimeSelected();
+        const hasExistingSupporting = @json(!empty($leaveRequest->all_supporting_document_paths));
+
+        if (overtimeTasksField) {
+            overtimeTasksField.classList.toggle('hidden', travelOvertime);
+        }
+        if (overtimeTasksInput) {
+            overtimeTasksInput.required = !travelOvertime;
+            if (travelOvertime) {
+                overtimeTasksInput.value = '';
+            }
+        }
+
+        if (overtimeSpecificDatesContainer) {
+            if (isStructuredHoursType(typeSelect.value) && !travelOvertime) {
+                overtimeSpecificDatesContainer.classList.remove('hidden');
+            } else {
+                overtimeSpecificDatesContainer.classList.add('hidden');
+            }
+        }
+
+        updateOvertimeDateRangeRules();
+
+        if (supportingSection && typeSelect.value !== 'travel') {
+            supportingSection.classList.toggle('hidden', travelOvertime);
+        }
+        if (supportingInput) {
+            if (travelOvertime || typeSelect.value === 'travel') {
+                supportingInput.required = false;
+            } else if (isStructuredHoursType(typeSelect.value)) {
+                supportingInput.required = !hasExistingSupporting;
+            }
+        }
+    }
+
+    function updateOvertimeTravelLocationField() {
+        if (!overtimeTravelLocationField) {
+            return;
+        }
+
+        const show = typeSelect.value === 'overtime' && getSelectedOvertimeWorkType() === 'travel_time';
+        overtimeTravelLocationField.classList.toggle('hidden', !show);
+
+        if (travelTimeLocationSelect) {
+            travelTimeLocationSelect.required = show && travelTimeLocationSelect.options.length > 1;
+            if (!show) {
+                travelTimeLocationSelect.required = false;
+            }
+        }
+
+        updateTravelDeductionPreview();
+        updateOvertimeTravelTimeRequirements();
+    }
+
+    function parseHmToMinutes(text) {
+        const value = (text || '').trim();
+        const match = value.match(/^(\d{1,3}):(\d{2})$/);
+        if (!match) {
+            return null;
+        }
+        const minutes = parseInt(match[2], 10);
+        if (minutes < 0 || minutes > 59) {
+            return null;
+        }
+        return (parseInt(match[1], 10) * 60) + minutes;
+    }
+
+    function formatMinutesToHm(totalMinutes) {
+        if (totalMinutes <= 0) {
+            return '00:00';
+        }
+        const h = Math.floor(totalMinutes / 60);
+        const m = totalMinutes % 60;
+        return String(h).padStart(2, '0') + ':' + String(m).padStart(2, '0');
+    }
+
+    function getSelectedTravelMinutes() {
+        if (!travelTimeLocationSelect) {
+            return null;
+        }
+        const option = travelTimeLocationSelect.options[travelTimeLocationSelect.selectedIndex];
+        if (!option || !option.value) {
+            return null;
+        }
+        return parseHmToMinutes(option.dataset.hours || '');
+    }
+
+    function getSelectedTravelLocationName() {
+        if (!travelTimeLocationSelect) {
+            return '—';
+        }
+        const option = travelTimeLocationSelect.options[travelTimeLocationSelect.selectedIndex];
+        if (!option || !option.value) {
+            return '—';
+        }
+        return option.dataset.name || option.textContent.split('—')[0].trim() || '—';
+    }
+
+    function resetTravelTimeTermsAgreed() {
+        const termsAgreed = document.getElementById('travel_time_terms_agreed');
+        if (termsAgreed) {
+            termsAgreed.value = '0';
+        }
+    }
+
+    function populateTravelTimeAgreementModal() {
+        const grossMinutes = parseHmToMinutes(overtimeHoursGrossInput?.value || overtimeHoursInput?.value || '');
+        const travelMinutes = getSelectedTravelMinutes();
+        const netMinutes = grossMinutes !== null && travelMinutes !== null ? grossMinutes - travelMinutes : null;
+        const grossHm = grossMinutes !== null ? formatMinutesToHm(grossMinutes) : '—';
+        const travelHm = travelMinutes !== null ? formatMinutesToHm(travelMinutes) : '—';
+        const netHm = netMinutes !== null && netMinutes > 0 ? formatMinutesToHm(netMinutes) : '—';
+
+        const locationEl = document.getElementById('travel-agreement-location');
+        const travelEl = document.getElementById('travel-agreement-travel-hours');
+        const grossEl = document.getElementById('travel-agreement-gross-hours');
+        const netEl = document.getElementById('travel-agreement-net-hours');
+
+        if (locationEl) locationEl.textContent = getSelectedTravelLocationName();
+        if (travelEl) travelEl.textContent = travelHm + ' hrs';
+        if (grossEl) grossEl.textContent = grossHm + ' hrs';
+        if (netEl) netEl.textContent = netHm + ' hrs';
+    }
+
+    function setTravelTimeAgreementSubmitting(isSubmitting) {
+        const modal = document.getElementById('travel-time-agreement-modal');
+        const checkbox = document.getElementById('travel-time-agreement-checkbox');
+        const confirmBtn = document.getElementById('travel-time-agreement-confirm-btn');
+        const spinner = document.getElementById('travel-agreement-confirm-spinner');
+        const confirmText = document.getElementById('travel-agreement-confirm-text');
+
+        if (!confirmBtn || !confirmText) {
+            return;
+        }
+
+        modal?.querySelectorAll('[data-travel-agreement-dismiss]').forEach(function (el) {
+            if (el.tagName === 'BUTTON') {
+                el.disabled = isSubmitting;
+            } else {
+                el.classList.toggle('pointer-events-none', isSubmitting);
+            }
+        });
+
+        if (checkbox) {
+            checkbox.disabled = isSubmitting;
+        }
+
+        confirmBtn.disabled = isSubmitting || !checkbox?.checked;
+        confirmBtn.setAttribute('aria-busy', isSubmitting ? 'true' : 'false');
+
+        if (spinner) {
+            spinner.classList.toggle('hidden', !isSubmitting);
+        }
+
+        confirmText.textContent = isSubmitting ? 'Processing...' : 'Agree and Submit';
+    }
+
+    function resetTravelTimeAgreementIfBlocked() {
+        const confirmBtn = document.getElementById('travel-time-agreement-confirm-btn');
+        if (confirmBtn?.getAttribute('aria-busy') === 'true') {
+            setTravelTimeAgreementSubmitting(false);
+        }
+    }
+
+    function openTravelTimeAgreementModal() {
+        const modal = document.getElementById('travel-time-agreement-modal');
+        const checkbox = document.getElementById('travel-time-agreement-checkbox');
+        const confirmBtn = document.getElementById('travel-time-agreement-confirm-btn');
+        if (!modal) {
+            return;
+        }
+        populateTravelTimeAgreementModal();
+        setTravelTimeAgreementSubmitting(false);
+        if (checkbox) checkbox.checked = false;
+        if (confirmBtn) confirmBtn.disabled = true;
+        modal.classList.remove('hidden');
+        modal.setAttribute('aria-hidden', 'false');
+        document.body.classList.add('overflow-hidden');
+    }
+
+    function closeTravelTimeAgreementModal() {
+        const confirmBtn = document.getElementById('travel-time-agreement-confirm-btn');
+        if (confirmBtn?.getAttribute('aria-busy') === 'true') {
+            return;
+        }
+
+        const modal = document.getElementById('travel-time-agreement-modal');
+        if (!modal) {
+            return;
+        }
+        modal.classList.add('hidden');
+        modal.setAttribute('aria-hidden', 'true');
+        document.body.classList.remove('overflow-hidden');
+    }
+
+    function initTravelTimeAgreementModal() {
+        const modal = document.getElementById('travel-time-agreement-modal');
+        const checkbox = document.getElementById('travel-time-agreement-checkbox');
+        const confirmBtn = document.getElementById('travel-time-agreement-confirm-btn');
+        if (!modal) {
+            return;
+        }
+
+        modal.querySelectorAll('[data-travel-agreement-dismiss]').forEach(function (el) {
+            el.addEventListener('click', closeTravelTimeAgreementModal);
+        });
+
+        if (checkbox && confirmBtn) {
+            checkbox.addEventListener('change', function () {
+                confirmBtn.disabled = !checkbox.checked;
+            });
+        }
+
+        if (confirmBtn) {
+            confirmBtn.addEventListener('click', function () {
+                const termsAgreed = document.getElementById('travel_time_terms_agreed');
+                if (!checkbox?.checked || !termsAgreed) {
+                    return;
+                }
+                termsAgreed.value = '1';
+                setTravelTimeAgreementSubmitting(true);
+                const form = document.querySelector('form');
+                if (form && submitBtn) {
+                    form.requestSubmit(submitBtn);
+                } else if (submitBtn) {
+                    submitBtn.click();
+                }
+            });
+        }
+
+        document.addEventListener('keydown', function (e) {
+            if (e.key === 'Escape' && !modal.classList.contains('hidden')
+                && confirmBtn?.getAttribute('aria-busy') !== 'true') {
+                closeTravelTimeAgreementModal();
+            }
+        });
+    }
+
+    function syncOvertimeGrossFromInput() {
+        if (!overtimeHoursInput) {
+            return;
+        }
+        const minutes = parseHmToMinutes(overtimeHoursInput.value);
+        if (minutes !== null && overtimeHoursGrossInput) {
+            overtimeHoursGrossInput.value = overtimeHoursInput.value.trim();
+        }
+        updateTravelDeductionPreview();
+    }
+
+    function updateTravelDeductionPreview() {
+        if (!overtimeTravelDeductionNote) {
+            return;
+        }
+
+        if (typeSelect.value !== 'overtime' || getSelectedOvertimeWorkType() !== 'travel_time') {
+            overtimeTravelDeductionNote.classList.add('hidden');
+            overtimeTravelDeductionNote.textContent = '';
+            return;
+        }
+
+        const grossMinutes = parseHmToMinutes(overtimeHoursGrossInput?.value || overtimeHoursInput?.value || '');
+        const travelMinutes = getSelectedTravelMinutes();
+
+        if (grossMinutes === null || travelMinutes === null) {
+            overtimeTravelDeductionNote.classList.add('hidden');
+            overtimeTravelDeductionNote.textContent = '';
+            return;
+        }
+
+        const netMinutes = grossMinutes - travelMinutes;
+        const travelHm = formatMinutesToHm(travelMinutes);
+        const netHm = formatMinutesToHm(Math.max(0, netMinutes));
+
+        overtimeTravelDeductionNote.classList.remove('hidden');
+        if (netMinutes <= 0) {
+            overtimeTravelDeductionNote.textContent = 'Travel time (' + travelHm + ' hrs) exceeds or equals your total hours. Enter a higher total.';
+            overtimeTravelDeductionNote.classList.add('text-red-600');
+            overtimeTravelDeductionNote.classList.remove('text-indigo-700');
+        } else {
+            overtimeTravelDeductionNote.textContent = 'Travel time (' + travelHm + ' hrs) will be deducted. Net overtime: ' + netHm + ' hrs.';
+            overtimeTravelDeductionNote.classList.add('text-indigo-700');
+            overtimeTravelDeductionNote.classList.remove('text-red-600');
+        }
+    }
+
+    function applySelectedTravelLocationHours() {
+        syncOvertimeGrossFromInput();
+    }
+
+    if (overtimeHoursInput) {
+        overtimeHoursInput.addEventListener('input', function () {
+            resetTravelTimeTermsAgreed();
+            syncOvertimeGrossFromInput();
+        });
+    }
+
+    document.querySelectorAll('.overtime-work-type-radio').forEach(function (radio) {
+        radio.addEventListener('change', function () {
+            resetTravelTimeTermsAgreed();
+            updateOvertimeTravelLocationField();
+            if (radio.value === 'travel_time' && radio.checked) {
+                applySelectedTravelLocationHours();
+            } else if (radio.value === 'office_work' && radio.checked) {
+                updateOvertimeTravelTimeRequirements();
+            }
+        });
+    });
+
+    if (travelTimeLocationSelect) {
+        travelTimeLocationSelect.addEventListener('change', function () {
+            resetTravelTimeTermsAgreed();
+            applySelectedTravelLocationHours();
+        });
+    }
+
+    initTravelTimeAgreementModal();
+
     // Initialize on page load (for validation errors / old input)
     updateRequestTypeSections();
+    updateOvertimeTravelLocationField();
+    syncOvertimeGrossFromInput();
+
+    @if($errors->has('travel_time_terms_agreed'))
+    openTravelTimeAgreementModal();
+    @endif
 
     // Simple time input formatter (HH:MM), max 4 digits, no AM/PM
     document.querySelectorAll('.time-input').forEach(function (input) {
@@ -777,7 +1193,6 @@
 
     // Form submission with loading animation
     const form = document.querySelector('form');
-    const submitBtn = document.getElementById('submit-btn');
     const submitIcon = document.getElementById('submit-icon');
     const submitText = document.getElementById('submit-text');
 
@@ -788,13 +1203,37 @@
                     restoreLockedOvertimeDates();
                 } else {
                     clampOvertimeDateInputs();
+                    syncOvertimeGrossFromInput();
+                    if (typeSelect.value === 'overtime' && getSelectedOvertimeWorkType() === 'travel_time') {
+                        const grossMinutes = parseHmToMinutes(overtimeHoursGrossInput?.value || overtimeHoursInput?.value || '');
+                        const travelMinutes = getSelectedTravelMinutes();
+                        if (grossMinutes === null || travelMinutes === null) {
+                            e.preventDefault();
+                            resetTravelTimeAgreementIfBlocked();
+                            alert('Please enter total overtime hours and select a travel location.');
+                            return;
+                        }
+                        if (grossMinutes - travelMinutes <= 0) {
+                            e.preventDefault();
+                            resetTravelTimeAgreementIfBlocked();
+                            alert('Total overtime hours must be greater than the selected travel time.');
+                            return;
+                        }
+                        const termsAgreed = document.getElementById('travel_time_terms_agreed');
+                        if (termsAgreed?.value !== '1') {
+                            e.preventDefault();
+                            openTravelTimeAgreementModal();
+                            return;
+                        }
+                    }
                     const maxD = leaveDateBounds.today;
-                    const minD = leaveDateBounds.overtimeMin;
+                    const minD = getOvertimeMinDate();
                     if (!startDateInput.value || !endDateInput?.value
                         || startDateInput.value > maxD || endDateInput.value > maxD
                         || startDateInput.value < minD || endDateInput.value < minD) {
                         e.preventDefault();
-                        alert('Additional Time can only be filed for dates within the last 7 days through today.');
+                        resetTravelTimeAgreementIfBlocked();
+                        alert(`Dates must be within the last ${getOvertimeLookbackDays()} days through today.`);
                         return;
                     }
                 }

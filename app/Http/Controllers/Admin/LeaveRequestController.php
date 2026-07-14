@@ -1330,6 +1330,7 @@ class LeaveRequestController extends Controller
             'travel_hours' => ['nullable', 'numeric', 'min:0', 'max:24'],
             // Same structured fields as employee leave-requests/create
             'overtime_hours' => ['required_if:type,overtime', 'nullable', 'regex:/^\d{2}:\d{2}$/'],
+            'overtime_work_type' => ['required_if:type,overtime', 'nullable', Rule::in(array_keys(LeaveRequest::overtimeWorkTypes()))],
             'overtime_dates' => ['required_if:type,overtime', 'nullable', 'string', 'max:255'],
             'overtime_tasks' => ['required_if:type,overtime', 'nullable', 'string', 'max:2000', new ClickUpTasksUrlsOnly],
             'wfh_mode' => ['required_if:type,work_from_home', 'nullable', 'in:working_remotely,request_to_be_excused'],
@@ -2839,6 +2840,10 @@ class LeaveRequestController extends Controller
 
         if ($type === 'overtime') {
             $details = "Overtime Request Details:\n";
+            $workTypeLabel = LeaveRequest::overtimeWorkTypeLabel($validated['overtime_work_type'] ?? null);
+            if ($workTypeLabel !== null) {
+                $details .= 'Overtime Type: '.$workTypeLabel."\n";
+            }
             $details .= 'Total Overtime Hours: '.($validated['overtime_hours'] ?? '')."\n";
             $details .= 'Overtime Dates: '.($validated['overtime_dates'] ?? '')."\n";
             $details .= "Tasks / ClickUp Links:\n".($validated['overtime_tasks'] ?? '')."\n";

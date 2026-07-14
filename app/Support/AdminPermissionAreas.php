@@ -92,6 +92,7 @@ final class AdminPermissionAreas
 
     public const SYSTEM_FEATURES = [
         'calendar' => 'Calendar',
+        'travel_time' => 'Travel Time',
         'rules' => 'Rules',
         'settings' => 'Settings',
         'landing_page' => 'Landing Page',

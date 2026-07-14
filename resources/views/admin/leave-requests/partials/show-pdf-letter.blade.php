@@ -88,15 +88,13 @@
 @elseif($leaveRequest->type === 'overtime')
     @php
         $otHours = '';
-        $otDates = '';
+        $otDates = $leaveRequest->overtimeDisplayDatesForLetter();
         $otReason = '';
         $otTasks = '';
+        $otWorkType = $leaveRequest->overtimeWorkTypeLabelFromReason();
 
         if (preg_match('/Total Overtime Hours:\s*(.+)/', $raw, $m)) {
             $otHours = trim($m[1]);
-        }
-        if (preg_match('/Overtime Dates:\s*(.+)/', $raw, $m)) {
-            $otDates = trim($m[1]);
         }
         if (preg_match('/Tasks \/ ClickUp Links:\s*(.+?)(?:\n+Additional Explanation:|\z)/s', $raw, $m)) {
             $otTasks = trim($m[1]);
@@ -118,7 +116,9 @@
                 due to
                 <span class="emphasis">{{ $otReason }}</span>@else.@endif
             </p>
+            @if($otWorkType !== 'Travel Time')
             <p><strong>Tasks completed (ClickUp links)</strong> {!! nl2br(e($otTasks)) !!}</p>
+            @endif
             <p>Thank you for understanding.</p>
             <p>Best regards,</p>
             <p>Truly yours,</p>

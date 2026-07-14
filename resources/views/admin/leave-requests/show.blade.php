@@ -314,15 +314,14 @@
                     @php
                         $raw = $leaveRequest->reason ?? '';
                         $otHours = '';
-                        $otDates = '';
+                        $otDates = $leaveRequest->overtimeDisplayDatesForLetter();
                         $otTasks = '';
                         $otReason = '';
+                        $otWorkType = $leaveRequest->overtimeWorkTypeLabelFromReason();
+                        $otTravelLocation = $leaveRequest->travelTimeLocationSummaryFromReason();
 
                         if (preg_match('/Total Overtime Hours:\s*(.+)/', $raw, $m)) {
                             $otHours = trim($m[1]);
-                        }
-                        if (preg_match('/Overtime Dates:\s*(.+)/', $raw, $m)) {
-                            $otDates = trim($m[1]);
                         }
                         if (preg_match('/Tasks \/ ClickUp Links:\s*(.+?)(?:\n+Additional Explanation:|\z)/s', $raw, $m)) {
                             $otTasks = trim($m[1]);
@@ -340,6 +339,18 @@
                     @endphp
 
                     <div class="mt-4 sm:mt-6 grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
+                        @if($otWorkType)
+                            <div>
+                                <label class="block text-sm font-medium text-gray-500 mb-1">Overtime Type</label>
+                                <p class="text-sm font-semibold text-gray-900">{{ $otWorkType }}</p>
+                            </div>
+                        @endif
+                        @if($otTravelLocation)
+                            <div>
+                                <label class="block text-sm font-medium text-gray-500 mb-1">Travel Location</label>
+                                <p class="text-sm font-semibold text-gray-900">{{ $otTravelLocation }}</p>
+                            </div>
+                        @endif
                         <div>
                             <label class="block text-sm font-medium text-gray-500 mb-1">Total Overtime Hours</label>
                             <p class="text-sm font-semibold text-gray-900">{{ $otHours }}</p>
@@ -348,12 +359,14 @@
                             <label class="block text-sm font-medium text-gray-500 mb-1">Overtime Dates</label>
                             <p class="text-sm font-semibold text-gray-900">{{ $otDates }}</p>
                         </div>
+                        @if($otWorkType !== 'Travel Time')
                         <div class="md:col-span-2">
                             <label class="block text-sm font-medium text-gray-500 mb-1">Tasks / ClickUp Links</label>
                             <p class="text-sm text-gray-900 bg-gray-50 p-4 rounded-lg border border-gray-200 whitespace-pre-line">
                                 {!! nl2br($otTasksWithLinks) !!}
                             </p>
                         </div>
+                        @endif
                         @if($otReason)
                             <div class="md:col-span-2">
                                 <label class="block text-sm font-medium text-gray-500 mb-1">Additional Explanation</label>
@@ -691,15 +704,14 @@
                         $employee = $leaveRequest->user;
                         $raw = $leaveRequest->reason ?? '';
                         $otHours = '';
-                        $otDates = '';
+                        $otDates = $leaveRequest->overtimeDisplayDatesForLetter();
                         $otReason = '';
                         $otTasks = '';
+                        $otWorkType = $leaveRequest->overtimeWorkTypeLabelFromReason();
+                        $otTravelLocation = $leaveRequest->travelTimeLocationSummaryFromReason();
 
                         if (preg_match('/Total Overtime Hours:\s*(.+)/', $raw, $m)) {
                             $otHours = trim($m[1]);
-                        }
-                        if (preg_match('/Overtime Dates:\s*(.+)/', $raw, $m)) {
-                            $otDates = trim($m[1]);
                         }
                         if (preg_match('/Tasks \/ ClickUp Links:\s*(.+?)(?:\n+Additional Explanation:|\z)/s', $raw, $m)) {
                             $otTasks = trim($m[1]);
@@ -722,6 +734,18 @@
 
                         <!-- Body -->
                         <div class="space-y-3 text-sm text-gray-800">
+                            @if($otWorkType)
+                                <p>
+                                    Overtime type:
+                                    <span class="font-semibold underline decoration-gray-400 decoration-1">{{ $otWorkType }}</span>
+                                </p>
+                            @endif
+                            @if($otTravelLocation)
+                                <p>
+                                    Travel location:
+                                    <span class="font-semibold underline decoration-gray-400 decoration-1">{{ $otTravelLocation }}</span>
+                                </p>
+                            @endif
                             <p>
                                 I respectfully request your approval for an additional
                                 <span class="font-semibold underline decoration-gray-400 decoration-1">
@@ -737,12 +761,13 @@
                                 </span>@else.@endif
                             </p>
 
-                            @if(empty($otReason))
+                            @if(empty($otReason) && $otWorkType !== 'Travel Time')
                             <p class="text-xs text-gray-600">
                                 Examples of valid reasons: urgent project deadline, increased workload, critical system maintenance.
                             </p>
                             @endif
 
+                            @if($otWorkType !== 'Travel Time')
                             <p class="font-semibold">
                                 Tasks completed (ClickUp links)
                             </p>
@@ -758,6 +783,7 @@
                             <p class="min-h-[3rem] border-t border-gray-300 pt-2 text-gray-800 whitespace-pre-line">
                                 {!! nl2br($otTasksWithLinks) !!}
                             </p>
+                            @endif
 
                             <p>Thank you for understanding.</p>
                             <p class="mt-4">Best regards,</p>

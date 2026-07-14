@@ -293,4 +293,40 @@ class TimeExtraction
         $m = $totalMinutes % 60;
         return sprintf('%02d:%02d', $h, $m);
     }
+
+    public static function minutesToHhMm(int $totalMinutes): string
+    {
+        if ($totalMinutes <= 0) {
+            return '00:00';
+        }
+
+        $h = intdiv($totalMinutes, 60);
+        $m = $totalMinutes % 60;
+
+        return sprintf('%02d:%02d', $h, $m);
+    }
+
+    /**
+     * Parse HH:MM into decimal hours. Returns null when invalid.
+     */
+    public static function parseHhMmToDecimal(string $value): ?float
+    {
+        $value = trim($value);
+        if (! preg_match('/^(\d{1,3}):(\d{2})$/', $value, $m)) {
+            return null;
+        }
+
+        $hours = (int) $m[1];
+        $minutes = (int) $m[2];
+        if ($minutes < 0 || $minutes > 59) {
+            return null;
+        }
+
+        $totalMinutes = ($hours * 60) + $minutes;
+        if ($totalMinutes <= 0) {
+            return null;
+        }
+
+        return round($totalMinutes / 60, 2);
+    }
 }

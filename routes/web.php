@@ -47,6 +47,7 @@ use App\Http\Controllers\Admin\TaskController;
 use App\Http\Controllers\Admin\TeacherExcusedRequestController as AdminTeacherExcusedRequestController;
 use App\Http\Controllers\Admin\TeacherMoaController as AdminTeacherMoaController;
 use App\Http\Controllers\Admin\TicketProblemTypeController;
+use App\Http\Controllers\Admin\TravelTimeLocationController;
 use App\Http\Controllers\Admin\TicketReportController;
 use App\Http\Controllers\Admin\TimeReportController;
 use App\Http\Controllers\Admin\UniversityController;
@@ -194,6 +195,13 @@ Route::prefix('admin')->middleware(['auth', 'admin'])->group(function () {
             Route::post('/system/calendar', [HolidayCalendarController::class, 'store'])->name('admin.system.calendar.store');
             Route::put('/system/calendar/{dtrHoliday}', [HolidayCalendarController::class, 'update'])->name('admin.system.calendar.update');
             Route::delete('/system/calendar/{dtrHoliday}', [HolidayCalendarController::class, 'destroy'])->name('admin.system.calendar.destroy');
+        });
+        Route::middleware(['admin.subfeature:system,travel_time'])->group(function () {
+            Route::get('/system/travel-time', [TravelTimeLocationController::class, 'index'])->name('admin.system.travel-time.index');
+            Route::post('/system/travel-time', [TravelTimeLocationController::class, 'store'])->name('admin.system.travel-time.store');
+            Route::get('/system/travel-time/{travelTimeLocation}/edit', [TravelTimeLocationController::class, 'edit'])->name('admin.system.travel-time.edit');
+            Route::put('/system/travel-time/{travelTimeLocation}', [TravelTimeLocationController::class, 'update'])->name('admin.system.travel-time.update');
+            Route::delete('/system/travel-time/{travelTimeLocation}', [TravelTimeLocationController::class, 'destroy'])->name('admin.system.travel-time.destroy');
         });
         Route::middleware(['admin.subfeature:system,api_monitoring'])->group(function () {
             Route::get('/system/api-monitoring', [ApiMonitoringController::class, 'index'])->name('admin.system.api-monitoring.index');

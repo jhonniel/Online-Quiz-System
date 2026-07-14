@@ -1157,6 +1157,20 @@
                     </span>
                 </a>
                 @endif
+                @if(auth()->user()->canAccessSystemFeature('travel_time'))
+                <a href="{{ url('/admin/system/travel-time') }}"
+                   class="flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors duration-200 {{ request()->routeIs('admin.system.travel-time.*') ? 'bg-indigo-700 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white' }}"
+                   :class="sidebarCollapsed ? 'justify-center' : ''"
+                   :title="sidebarCollapsed ? 'Travel Time' : ''">
+                    <svg class="h-5 w-5 flex-shrink-0" :class="sidebarCollapsed ? '' : 'mr-3'" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path>
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                    </svg>
+                    <span class="transition-opacity duration-300" :class="sidebarCollapsed ? 'opacity-0 w-0 overflow-hidden' : 'opacity-100'">
+                        Travel Time
+                    </span>
+                </a>
+                @endif
                 @if(auth()->user()->canAccessSystemFeature('rules'))
                 <a href="{{ url('/admin/system/rules') }}"
                    class="flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors duration-200 {{ request()->is('admin/system/rules') ? 'bg-indigo-700 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white' }}"
