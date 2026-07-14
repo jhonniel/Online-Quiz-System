@@ -796,27 +796,22 @@
         const supportingRequiredSpan = document.getElementById('supporting-required-span');
         const supportingHelp = document.getElementById('supporting-help');
         const supportingInput = document.getElementById('supporting_documents_input');
-        const hasExistingSupporting = @json(!empty($leaveRequest->all_supporting_document_paths));
         if (typeSelect.value === 'travel') {
             if (reasonLabelText) reasonLabelText.textContent = 'Location of travel ';
             if (reasonRequiredSpan) { reasonRequiredSpan.classList.remove('text-gray-400'); reasonRequiredSpan.classList.add('text-red-500'); reasonRequiredSpan.textContent = '*'; }
-            if (reasonInput) reasonInput.required = true;
             if (reasonHelp) reasonHelp.classList.add('hidden');
             if (reasonTravelHelp) reasonTravelHelp.classList.remove('hidden');
             if (reasonInput) reasonInput.placeholder = 'Enter location or destination of travel...';
             if (supportingSection) supportingSection.classList.add('hidden');
-            if (supportingInput) supportingInput.required = false;
         } else {
             if (reasonLabelText) reasonLabelText.textContent = 'Reason ';
             if (reasonRequiredSpan) { reasonRequiredSpan.classList.add('text-gray-400'); reasonRequiredSpan.classList.remove('text-red-500'); reasonRequiredSpan.textContent = '(Optional)'; }
-            if (reasonInput) reasonInput.required = false;
             if (reasonHelp) reasonHelp.classList.remove('hidden');
             if (reasonTravelHelp) reasonTravelHelp.classList.add('hidden');
             if (reasonInput) reasonInput.placeholder = 'Please provide a reason for this request...';
             if (supportingSection) supportingSection.classList.remove('hidden');
             if (isOvertimeTravelTimeSelected()) {
                 if (supportingSection) supportingSection.classList.add('hidden');
-                if (supportingInput) supportingInput.required = false;
             } else if (isStructuredHoursType(typeSelect.value)) {
                 if (supportingRequiredSpan) { supportingRequiredSpan.classList.remove('text-gray-400'); supportingRequiredSpan.classList.add('text-red-500'); supportingRequiredSpan.textContent = '*'; }
                 if (supportingHelp) {
@@ -824,13 +819,13 @@
                         ? 'Required for Additional Time unless current attachment(s) above remain. Uploading new files replaces current attachments.'
                         : 'Required for Additional Time. Upload up to 5 files (PDF/JPG/PNG), 5MB max per file.';
                 }
-                if (supportingInput) supportingInput.required = !hasExistingSupporting;
             } else {
                 if (supportingRequiredSpan) { supportingRequiredSpan.classList.remove('text-red-500'); supportingRequiredSpan.classList.add('text-gray-400'); supportingRequiredSpan.textContent = '(Optional)'; }
                 if (supportingHelp) supportingHelp.textContent = 'Optional, upload up to 5 files (PDF/JPG/PNG), 5MB max per file. Uploading new files replaces current attachments.';
-                if (supportingInput) supportingInput.required = false;
             }
         }
+
+        syncConditionalRequiredFields();
     }
 
     typeSelect.addEventListener('change', updateRequestTypeSections);
@@ -850,18 +845,48 @@
         return typeSelect.value === 'overtime' && getSelectedOvertimeWorkType() === 'travel_time';
     }
 
+    const hasExistingSupporting = @json(!empty($leaveRequest->all_supporting_document_paths));
+
+    function syncConditionalRequiredFields() {
+        const type = typeSelect.value;
+        const structured = isStructuredHoursType(type);
+        const travelOvertime = isOvertimeTravelTimeSelected();
+        const reasonInput = document.getElementById('reason');
+        const supportingInput = document.getElementById('supporting_documents_input');
+        const wfhMode = document.getElementById('wfh_mode');
+        const wfhAddress = document.getElementById('wfh_address');
+        const wfhTasks = document.getElementById('wfh_tasks');
+
+        if (overtimeTasksInput) {
+            overtimeTasksInput.required = structured && !travelOvertime;
+        }
+
+        if (travelTimeLocationSelect) {
+            const showTravelLocation = type === 'overtime' && getSelectedOvertimeWorkType() === 'travel_time';
+            travelTimeLocationSelect.required = !!(showTravelLocation && travelTimeLocationSelect.options.length > 1);
+        }
+
+        if (supportingInput) {
+            supportingInput.required = structured && !travelOvertime && type !== 'travel' && !hasExistingSupporting;
+        }
+
+        if (reasonInput) {
+            reasonInput.required = type === 'travel';
+        }
+
+        if (wfhMode) wfhMode.required = type === 'work_from_home';
+        if (wfhAddress) wfhAddress.required = type === 'work_from_home';
+        if (wfhTasks) wfhTasks.required = type === 'work_from_home';
+    }
+
     function updateOvertimeTravelTimeRequirements() {
         const travelOvertime = isOvertimeTravelTimeSelected();
-        const hasExistingSupporting = @json(!empty($leaveRequest->all_supporting_document_paths));
 
         if (overtimeTasksField) {
             overtimeTasksField.classList.toggle('hidden', travelOvertime);
         }
-        if (overtimeTasksInput) {
-            overtimeTasksInput.required = !travelOvertime;
-            if (travelOvertime) {
-                overtimeTasksInput.value = '';
-            }
+        if (overtimeTasksInput && travelOvertime) {
+            overtimeTasksInput.value = '';
         }
 
         if (overtimeSpecificDatesContainer) {
@@ -877,13 +902,8 @@
         if (supportingSection && typeSelect.value !== 'travel') {
             supportingSection.classList.toggle('hidden', travelOvertime);
         }
-        if (supportingInput) {
-            if (travelOvertime || typeSelect.value === 'travel') {
-                supportingInput.required = false;
-            } else if (isStructuredHoursType(typeSelect.value)) {
-                supportingInput.required = !hasExistingSupporting;
-            }
-        }
+
+        syncConditionalRequiredFields();
     }
 
     function updateOvertimeTravelLocationField() {
@@ -893,13 +913,6 @@
 
         const show = typeSelect.value === 'overtime' && getSelectedOvertimeWorkType() === 'travel_time';
         overtimeTravelLocationField.classList.toggle('hidden', !show);
-
-        if (travelTimeLocationSelect) {
-            travelTimeLocationSelect.required = show && travelTimeLocationSelect.options.length > 1;
-            if (!show) {
-                travelTimeLocationSelect.required = false;
-            }
-        }
 
         updateTravelDeductionPreview();
         updateOvertimeTravelTimeRequirements();
