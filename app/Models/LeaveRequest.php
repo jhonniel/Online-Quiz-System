@@ -498,7 +498,17 @@ class LeaveRequest extends Model
             return true;
         }
 
-        return $this->filedByTeacher() !== null;
+        if ($this->relationLoaded('logs')
+            && $this->logs->contains(fn ($log) => $log->action === 'filed_by_teacher')) {
+            return true;
+        }
+
+        // Do not rely only on loaded logs (show page may keep a limited recent set).
+        if ($this->logs()->where('action', 'filed_by_teacher')->exists()) {
+            return true;
+        }
+
+        return str_starts_with(ltrim((string) $this->reason), 'Teacher excused request by ');
     }
 
     /**
@@ -508,7 +518,18 @@ class LeaveRequest extends Model
     {
         $this->loadMissing('logs.performer');
 
-        return $this->logs->firstWhere('action', 'filed_by_teacher')?->performer;
+        $fromLoaded = $this->logs->firstWhere('action', 'filed_by_teacher')?->performer;
+        if ($fromLoaded) {
+            return $fromLoaded;
+        }
+
+        $log = $this->logs()
+            ->where('action', 'filed_by_teacher')
+            ->with('performer')
+            ->oldest('id')
+            ->first();
+
+        return $log?->performer;
     }
 
     /**
@@ -524,7 +545,7 @@ class LeaveRequest extends Model
             return collect([$request]);
         }
 
-        if (! $request->filedByTeacher()) {
+        if (! $request->wasFiledByTeacher()) {
             return collect([$request]);
         }
 

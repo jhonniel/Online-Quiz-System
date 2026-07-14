@@ -690,6 +690,7 @@ class LeaveRequestController extends Controller
         $this->assertCanAccessEmployeeLeaveRequest($leaveRequest);
 
         $leaveRequest->load(['user.department', 'reviewer', 'dtrTimeRequest', 'logs.performer']);
+        $isTeacherFiledExcused = $leaveRequest->wasFiledByTeacher();
         $teacherExcusedBatchmates = LeaveRequest::siblingsInTeacherExcusedFiling($leaveRequest);
         $backLink = $this->adminLeaveRequestBackLink($request, $leaveRequest);
 
@@ -894,6 +895,7 @@ class LeaveRequestController extends Controller
             'hasNegativeBalance',
             'leaveTypeOptions',
             'canEditLeaveRequestDetails',
+            'isTeacherFiledExcused',
             'backLink',
             'teacherExcusedBatchmates'
         ));

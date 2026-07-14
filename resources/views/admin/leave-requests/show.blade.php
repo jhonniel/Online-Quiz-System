@@ -118,7 +118,7 @@
                         <label class="block text-sm font-medium text-gray-500 mb-1">Request Type</label>
                         @php
                             $isStudentLeaveRequest = ($leaveRequest->user?->role === 'student');
-                            $isTeacherFiledExcused = $leaveRequest->wasFiledByTeacher();
+                            $isTeacherFiledExcused = $isTeacherFiledExcused ?? $leaveRequest->wasFiledByTeacher();
                             $canEditApprovedStudentAbsentExcused = $isStudentLeaveRequest
                                 && ! $isTeacherFiledExcused
                                 && $leaveRequest->isApproved()
@@ -175,7 +175,14 @@
                                 </button>
                             </form>
                         @else
-                            <p class="text-sm font-semibold text-gray-900">{{ $leaveRequest->type_label }}</p>
+                            <p class="text-sm font-semibold text-gray-900">
+                                {{ $isTeacherFiledExcused ? 'Official Excused' : $leaveRequest->type_label }}
+                            </p>
+                            @if($isTeacherFiledExcused)
+                                <p class="mt-1 text-xs text-gray-500">
+                                    Filed by a teacher. Request type cannot be changed.
+                                </p>
+                            @endif
                         @endif
                     </div>
 
