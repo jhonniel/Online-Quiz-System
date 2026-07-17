@@ -69,6 +69,7 @@ use App\Http\Controllers\RedirectController;
 use App\Http\Controllers\ReportProblemController;
 use App\Http\Controllers\SayItComfyUiProxyController;
 use App\Http\Controllers\SayItController;
+use App\Http\Controllers\SayItChatController;
 use App\Http\Controllers\SayItSdWebUiProxyController;
 use App\Http\Controllers\StatusController;
 use App\Http\Controllers\TeacherInviteController;
@@ -121,6 +122,23 @@ Route::post('/Say-it/generate-image', [SayItController::class, 'generateImage'])
     ->middleware('throttle:say-it-ai-image');
 Route::get('/Say-it/composer-mesh-preview', [SayItController::class, 'composerMeshPreview'])
     ->middleware('throttle:60,1');
+
+// Say-it anonymous group chat (public, session codenames)
+Route::get('/Say-it/chat', [SayItChatController::class, 'index'])->name('say-it.chat.index');
+Route::post('/Say-it/chat', [SayItChatController::class, 'store'])
+    ->middleware('throttle:say-it-chat-create')
+    ->name('say-it.chat.store');
+Route::get('/Say-it/chat/{room}', [SayItChatController::class, 'show'])->name('say-it.chat.show');
+Route::get('/Say-it/chat/{room}/messages', [SayItChatController::class, 'messages'])
+    ->middleware('throttle:say-it-chat-poll')
+    ->name('say-it.chat.messages');
+Route::post('/Say-it/chat/{room}/messages', [SayItChatController::class, 'sendMessage'])
+    ->middleware('throttle:say-it-chat-send')
+    ->name('say-it.chat.send');
+Route::delete('/Say-it/chat/{room}/messages/{message}', [SayItChatController::class, 'destroyMessage'])
+    ->middleware('throttle:say-it-chat-send')
+    ->name('say-it.chat.message.delete');
+
 Route::get('/Say-it/{post}', [SayItController::class, 'show'])->where('post', '[0-9]+');
 Route::post('/Say-it/comment', [SayItController::class, 'storeComment']);
 Route::post('/Say-it/vote', [SayItController::class, 'vote']);
@@ -656,6 +674,10 @@ Route::prefix('admin')->middleware(['auth', 'admin'])->group(function () {
         Route::get('confession/banned-words', [ConfessionBannedWordController::class, 'index'])->name('admin.confession.banned-words');
         Route::post('confession/banned-words', [ConfessionBannedWordController::class, 'store']);
         Route::delete('confession/banned-words/{banned_word}', [ConfessionBannedWordController::class, 'destroy'])->name('admin.confession.banned-words.destroy');
+        Route::get('confession/chat-rooms', [ConfessionController::class, 'chatRooms'])->name('admin.confession.chat-rooms');
+        Route::get('confession/chat-rooms/{room}', [ConfessionController::class, 'chatRoomShow'])->name('admin.confession.chat-rooms.show');
+        Route::delete('confession/chat-rooms/{room}', [ConfessionController::class, 'destroyChatRoom'])->name('admin.confession.chat-rooms.destroy');
+        Route::delete('confession/chat-rooms/{room}/messages/{message}', [ConfessionController::class, 'destroyChatMessage'])->name('admin.confession.chat-messages.destroy');
     });
 
     // Communication

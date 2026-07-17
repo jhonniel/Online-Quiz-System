@@ -6,6 +6,8 @@ use App\Http\Controllers\Controller;
 use App\Models\ConfessionComment;
 use App\Models\ConfessionPost;
 use App\Models\ConfessionTopic;
+use App\Models\SayItChatMessage;
+use App\Models\SayItChatRoom;
 use App\Models\Setting;
 use App\Models\User;
 use Illuminate\Http\Request;
@@ -189,5 +191,48 @@ class ConfessionController extends Controller
         $confession_post->delete();
 
         return redirect()->back()->with('success', 'Post deleted.');
+    }
+
+    public function chatRooms()
+    {
+        $rooms = SayItChatRoom::query()
+            ->withCount('messages')
+            ->orderByDesc('last_message_at')
+            ->orderByDesc('created_at')
+            ->paginate(30);
+
+        return view('admin.confession.chat-rooms', compact('rooms'));
+    }
+
+    public function chatRoomShow(SayItChatRoom $room)
+    {
+        $messages = $room->messages()
+            ->orderByDesc('created_at')
+            ->paginate(50);
+
+        return view('admin.confession.chat-room-show', compact('room', 'messages'));
+    }
+
+    public function destroyChatRoom(SayItChatRoom $room)
+    {
+        $room->messages()->delete();
+        $room->delete();
+
+        return redirect()
+            ->route('admin.confession.chat-rooms')
+            ->with('success', 'Chat room deleted.');
+    }
+
+    public function destroyChatMessage(SayItChatRoom $room, SayItChatMessage $message)
+    {
+        if ((int) $message->sayit_chat_room_id !== (int) $room->id) {
+            abort(404);
+        }
+
+        $message->delete();
+
+        return redirect()
+            ->back()
+            ->with('success', 'Message deleted.');
     }
 }

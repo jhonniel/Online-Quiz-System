@@ -480,7 +480,7 @@ class SayItController extends Controller
         ]);
     }
 
-    protected static function codenameForSession(Request $request): string
+    public static function codenameForSession(Request $request): string
     {
         $settingsVersion = (string) Setting::get('confession_anon_name_settings_version', 'v1');
         $sessionVersion = (string) $request->session()->get('sayit_codename_settings_version', '');

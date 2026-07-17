@@ -97,5 +97,17 @@ class RouteServiceProvider extends ServiceProvider
         RateLimiter::for('anonymous-chat-targets', function (Request $request) {
             return Limit::perMinute(20)->by($request->user()?->id ?: $request->ip());
         });
+
+        RateLimiter::for('say-it-chat-send', function (Request $request) {
+            return Limit::perMinute(20)->by($request->ip());
+        });
+
+        RateLimiter::for('say-it-chat-poll', function (Request $request) {
+            return Limit::perMinute(60)->by($request->ip());
+        });
+
+        RateLimiter::for('say-it-chat-create', function (Request $request) {
+            return Limit::perMinute(5)->by($request->ip());
+        });
     }
 }

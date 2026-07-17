@@ -56,11 +56,11 @@
                     <i class="fas fa-plus text-xs shrink-0"></i>
                     <span class="hidden sm:inline">Create</span>
                 </a>
+                <a href="{{ route('say-it.chat.index') }}" class="hidden sm:flex items-center justify-center w-9 h-9 rounded-full text-gray-500 hover:bg-gray-100 transition touch-manipulation {{ request()->is('Say-it/chat*') ? 'bg-violet-50 text-violet-700' : '' }}" aria-label="Anonymous chat">
+                    <i class="fas fa-comments"></i>
+                </a>
                 <a href="{{ url('/Say-it') }}" class="hidden sm:flex items-center justify-center w-9 h-9 rounded-full text-gray-500 hover:bg-gray-100 transition touch-manipulation" aria-label="Home">
                     <i class="fas fa-home"></i>
-                </a>
-                <a href="{{ url('/Say-it') }}" class="hidden sm:flex items-center justify-center w-9 h-9 rounded-full text-gray-500 hover:bg-gray-100 transition touch-manipulation" aria-label="Feed">
-                    <i class="fas fa-comment"></i>
                 </a>
             </div>
         </div>
@@ -70,13 +70,17 @@
         {{-- Left sidebar (desktop) --}}
         <aside id="left-sidebar" class="hidden lg:block w-56 flex-shrink-0 border-r border-gray-200 bg-white overflow-y-auto scrollbar-hide py-4">
             <nav class="px-3 space-y-1">
-                <a href="{{ url('/Say-it') }}" class="flex items-center gap-3 px-3 py-2.5 rounded-lg font-medium {{ request()->get('sort') !== 'popular' ? 'bg-violet-50 text-violet-700' : 'text-gray-700 hover:bg-gray-50' }}">
+                <a href="{{ url('/Say-it') }}" class="flex items-center gap-3 px-3 py-2.5 rounded-lg font-medium {{ !request()->is('Say-it/chat*') && request()->get('sort') !== 'popular' ? 'bg-violet-50 text-violet-700' : 'text-gray-700 hover:bg-gray-50' }}">
                     <i class="fas fa-home w-5 text-center text-gray-500"></i>
                     Home
                 </a>
-                <a href="{{ url('/Say-it?sort=popular') }}" class="flex items-center gap-3 px-3 py-2.5 rounded-lg font-medium {{ request()->get('sort') === 'popular' ? 'bg-violet-50 text-violet-700' : 'text-gray-700 hover:bg-gray-50' }}">
+                <a href="{{ url('/Say-it?sort=popular') }}" class="flex items-center gap-3 px-3 py-2.5 rounded-lg font-medium {{ !request()->is('Say-it/chat*') && request()->get('sort') === 'popular' ? 'bg-violet-50 text-violet-700' : 'text-gray-700 hover:bg-gray-50' }}">
                     <i class="fas fa-chart-line w-5 text-center text-gray-500"></i>
                     Popular
+                </a>
+                <a href="{{ route('say-it.chat.index') }}" class="flex items-center gap-3 px-3 py-2.5 rounded-lg font-medium {{ request()->is('Say-it/chat*') ? 'bg-violet-50 text-violet-700' : 'text-gray-700 hover:bg-gray-50' }}">
+                    <i class="fas fa-comments w-5 text-center text-gray-500"></i>
+                    Chat
                 </a>
                 <a href="{{ url('/Say-it') }}" class="flex items-center gap-3 px-3 py-2.5 rounded-lg font-medium text-gray-700 hover:bg-gray-50">
                     <i class="fas fa-clock w-5 text-center text-gray-500"></i>
@@ -135,13 +139,17 @@
                 </button>
             </div>
             <nav class="p-3 space-y-1">
-                <a href="{{ url('/Say-it') }}" class="flex items-center gap-3 px-3 py-2.5 rounded-lg font-medium {{ request()->get('sort') !== 'popular' ? 'bg-violet-50 text-violet-700' : 'text-gray-700' }}" onclick="document.getElementById('mobile-sidebar').classList.add('-translate-x-full')">
+                <a href="{{ url('/Say-it') }}" class="flex items-center gap-3 px-3 py-2.5 rounded-lg font-medium {{ !request()->is('Say-it/chat*') && request()->get('sort') !== 'popular' ? 'bg-violet-50 text-violet-700' : 'text-gray-700' }}" onclick="document.getElementById('mobile-sidebar').classList.add('-translate-x-full')">
                     <i class="fas fa-home w-5 text-center text-gray-500"></i>
                     Home
                 </a>
-                <a href="{{ url('/Say-it?sort=popular') }}" class="flex items-center gap-3 px-3 py-2.5 rounded-lg font-medium {{ request()->get('sort') === 'popular' ? 'bg-violet-50 text-violet-700' : 'text-gray-700' }}" onclick="document.getElementById('mobile-sidebar').classList.add('-translate-x-full')">
+                <a href="{{ url('/Say-it?sort=popular') }}" class="flex items-center gap-3 px-3 py-2.5 rounded-lg font-medium {{ !request()->is('Say-it/chat*') && request()->get('sort') === 'popular' ? 'bg-violet-50 text-violet-700' : 'text-gray-700' }}" onclick="document.getElementById('mobile-sidebar').classList.add('-translate-x-full')">
                     <i class="fas fa-chart-line w-5 text-center text-gray-500"></i>
                     Popular
+                </a>
+                <a href="{{ route('say-it.chat.index') }}" class="flex items-center gap-3 px-3 py-2.5 rounded-lg font-medium {{ request()->is('Say-it/chat*') ? 'bg-violet-50 text-violet-700' : 'text-gray-700' }}" onclick="document.getElementById('mobile-sidebar').classList.add('-translate-x-full')">
+                    <i class="fas fa-comments w-5 text-center text-gray-500"></i>
+                    Chat
                 </a>
                 <a href="{{ url('/Say-it') }}" class="flex items-center gap-3 px-3 py-2.5 rounded-lg font-medium text-gray-700" onclick="document.getElementById('mobile-sidebar').classList.add('-translate-x-full')">
                     <i class="fas fa-clock w-5 text-center text-gray-500"></i>
@@ -184,35 +192,38 @@
             </div>
         </aside>
 
-        {{-- Main content: only this area scrolls (scrollbar hidden) --}}
-        <main id="say-it-main" class="flex-1 min-w-0 min-h-0 overflow-y-auto overflow-x-hidden scrollbar-hide py-3 sm:py-6 px-2.5 sm:px-6 lg:px-8 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
-            @if(session('success'))
-                <div class="mb-4 py-3 px-4 rounded-xl bg-emerald-50 text-emerald-800 text-sm font-medium border border-emerald-200">{{ session('success') }}</div>
-            @endif
-            @if(session('error'))
-                <div class="mb-4 py-3 px-4 rounded-xl bg-red-50 text-red-800 text-sm font-medium border border-red-200">{{ session('error') }}</div>
-            @endif
-            @php
-                $errorBag = $errors->getBag('default');
-                $topicKeys = ['topic', 'topic_id', 'topic_name'];
-                $errorsExceptTopic = array_diff_key($errorBag->getMessages(), array_flip($topicKeys));
-            @endphp
-            @if(!empty($errorsExceptTopic))
-                <div class="mb-4 py-3 px-4 rounded-xl bg-red-50 text-red-800 text-sm border border-red-200">
-                    <ul class="list-disc list-inside space-y-0.5">
-                        @foreach($errorsExceptTopic as $msgs)
-                            @foreach((array) $msgs as $err)
-                                <li>{{ $err }}</li>
+        {{-- Main content: only this area scrolls (scrollbar hidden). Chat room fills the pane. --}}
+        <main id="say-it-main" class="flex-1 min-w-0 min-h-0 overflow-y-auto overflow-x-hidden scrollbar-hide @yield('main_class', 'py-3 sm:py-6 px-2.5 sm:px-6 lg:px-8 pb-[max(0.75rem,env(safe-area-inset-bottom))]')">
+            @hasSection('hide_flash')
+            @else
+                @if(session('success'))
+                    <div class="mb-4 py-3 px-4 rounded-xl bg-emerald-50 text-emerald-800 text-sm font-medium border border-emerald-200">{{ session('success') }}</div>
+                @endif
+                @if(session('error'))
+                    <div class="mb-4 py-3 px-4 rounded-xl bg-red-50 text-red-800 text-sm font-medium border border-red-200">{{ session('error') }}</div>
+                @endif
+                @php
+                    $errorBag = $errors->getBag('default');
+                    $topicKeys = ['topic', 'topic_id', 'topic_name'];
+                    $errorsExceptTopic = array_diff_key($errorBag->getMessages(), array_flip($topicKeys));
+                @endphp
+                @if(!empty($errorsExceptTopic))
+                    <div class="mb-4 py-3 px-4 rounded-xl bg-red-50 text-red-800 text-sm border border-red-200">
+                        <ul class="list-disc list-inside space-y-0.5">
+                            @foreach($errorsExceptTopic as $msgs)
+                                @foreach((array) $msgs as $err)
+                                    <li>{{ $err }}</li>
+                                @endforeach
                             @endforeach
-                        @endforeach
-                    </ul>
-                </div>
+                        </ul>
+                    </div>
+                @endif
             @endif
             @yield('content')
         </main>
 
-        {{-- Right sidebar: Recent Posts (desktop only when variable set) --}}
-        @if(isset($recentPosts) && $recentPosts->isNotEmpty())
+        {{-- Right sidebar: Recent Posts (hidden on chat so the room can use full width) --}}
+        @if(isset($recentPosts) && $recentPosts->isNotEmpty() && !request()->is('Say-it/chat*'))
         <aside class="hidden xl:block w-72 flex-shrink-0 border-l border-gray-200 bg-white overflow-hidden flex flex-col">
             <div class="px-4 flex items-center justify-between mb-3 py-4 flex-shrink-0">
                 <h3 class="font-bold text-gray-900">Recent Posts</h3>
