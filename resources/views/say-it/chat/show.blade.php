@@ -140,6 +140,15 @@
         width: 100%;
         max-width: none;
     }
+    #say-it-chat-input,
+    #say-it-chat-input:focus,
+    #say-it-chat-input:focus-visible {
+        border: 0 !important;
+        outline: none !important;
+        box-shadow: none !important;
+        --tw-ring-shadow: 0 0 #0000 !important;
+        --tw-ring-offset-shadow: 0 0 #0000 !important;
+    }
     .say-it-image-preview {
         display: none;
         align-items: center;
@@ -284,7 +293,7 @@
                           rows="1"
                           maxlength="2000"
                           placeholder="{{ ($roomStatus['is_frozen'] ?? false) ? 'Room is frozen…' : 'Write a message…' }}"
-                          class="flex-1 min-w-0 resize-none border-0 bg-transparent px-1.5 py-1.5 text-sm sm:text-[0.9375rem] text-gray-900 placeholder:text-gray-400 focus:ring-0 max-h-28 leading-5"
+                          class="flex-1 min-w-0 resize-none border-0 bg-transparent px-1.5 py-1.5 text-sm sm:text-[0.9375rem] text-gray-900 placeholder:text-gray-400 shadow-none outline-none ring-0 focus:border-0 focus:outline-none focus:ring-0 focus:shadow-none max-h-28 leading-5"
                           @if($roomStatus['is_frozen'] ?? false) disabled @endif></textarea>
                 <button type="submit"
                         id="say-it-chat-send"
