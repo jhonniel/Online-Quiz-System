@@ -196,6 +196,7 @@ class ConfessionController extends Controller
     public function chatRooms()
     {
         $rooms = SayItChatRoom::query()
+            ->withTrashed()
             ->withCount('messages')
             ->orderByDesc('last_message_at')
             ->orderByDesc('created_at')
@@ -204,28 +205,38 @@ class ConfessionController extends Controller
         return view('admin.confession.chat-rooms', compact('rooms'));
     }
 
-    public function chatRoomShow(SayItChatRoom $room)
+    public function chatRoomShow(string $room)
     {
-        $messages = $room->messages()
+        $roomModel = SayItChatRoom::withTrashed()->where('slug', $room)->firstOrFail();
+
+        $messages = $roomModel->messages()
             ->orderByDesc('created_at')
             ->paginate(50);
 
-        return view('admin.confession.chat-room-show', compact('room', 'messages'));
+        return view('admin.confession.chat-room-show', [
+            'room' => $roomModel,
+            'messages' => $messages,
+        ]);
     }
 
-    public function destroyChatRoom(SayItChatRoom $room)
+    public function destroyChatRoom(string $room)
     {
-        $room->messages()->delete();
-        $room->delete();
+        $roomModel = SayItChatRoom::withTrashed()->where('slug', $room)->firstOrFail();
+        $roomModel->messages()->delete();
+        if (! $roomModel->trashed()) {
+            $roomModel->delete();
+        }
 
         return redirect()
             ->route('admin.confession.chat-rooms')
             ->with('success', 'Chat room deleted.');
     }
 
-    public function destroyChatMessage(SayItChatRoom $room, SayItChatMessage $message)
+    public function destroyChatMessage(string $room, SayItChatMessage $message)
     {
-        if ((int) $message->sayit_chat_room_id !== (int) $room->id) {
+        $roomModel = SayItChatRoom::withTrashed()->where('slug', $room)->firstOrFail();
+
+        if ((int) $message->sayit_chat_room_id !== (int) $roomModel->id) {
             abort(404);
         }
 

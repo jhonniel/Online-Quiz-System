@@ -33,6 +33,10 @@ class Kernel extends ConsoleKernel
             ->hourly()
             ->withoutOverlapping();
 
+        $schedule->command('sayit:purge-expired-chat-images')
+            ->everyFifteenMinutes()
+            ->withoutOverlapping();
+
         $schedule->command('stories:purge-expired')
             ->hourly()
             ->withoutOverlapping();

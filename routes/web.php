@@ -129,6 +129,9 @@ Route::post('/Say-it/chat', [SayItChatController::class, 'store'])
     ->middleware('throttle:say-it-chat-create')
     ->name('say-it.chat.store');
 Route::get('/Say-it/chat/{room}', [SayItChatController::class, 'show'])->name('say-it.chat.show');
+Route::post('/Say-it/chat/{room}/avatar', [SayItChatController::class, 'updateAvatar'])
+    ->middleware('throttle:say-it-chat-create')
+    ->name('say-it.chat.avatar');
 Route::get('/Say-it/chat/{room}/messages', [SayItChatController::class, 'messages'])
     ->middleware('throttle:say-it-chat-poll')
     ->name('say-it.chat.messages');

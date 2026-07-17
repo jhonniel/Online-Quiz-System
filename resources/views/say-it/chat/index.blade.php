@@ -8,7 +8,7 @@
 @section('content')
 <div class="flex flex-col flex-1 min-h-0 h-full w-full bg-[#f3f4f6]">
     <div class="flex-1 min-h-0 overflow-y-auto scrollbar-hide">
-        <div class="w-full h-full min-h-full px-4 sm:px-6 lg:px-8 py-4 sm:py-6 flex flex-col gap-5">
+        <div class="w-full max-w-7xl mx-auto h-full min-h-full px-4 sm:px-6 lg:px-8 py-4 sm:py-6 flex flex-col gap-5">
             @if(session('success'))
                 <div class="flex-shrink-0 py-3 px-4 rounded-xl bg-emerald-50 text-emerald-800 text-sm font-medium border border-emerald-200">{{ session('success') }}</div>
             @endif
@@ -39,28 +39,49 @@
                         </div>
                     </div>
 
-                    <form method="POST" action="{{ route('say-it.chat.store') }}" class="mt-5 flex flex-col sm:flex-row gap-2 max-w-3xl">
+                    <form method="POST" action="{{ route('say-it.chat.store') }}" enctype="multipart/form-data" class="mt-5 space-y-3 max-w-3xl">
                         @csrf
-                        <div class="flex-1 min-w-0">
-                            <label for="chat-room-name" class="sr-only">Room name</label>
-                            <input id="chat-room-name"
-                                   type="text"
-                                   name="name"
-                                   value="{{ old('name') }}"
-                                   maxlength="80"
-                                   required
-                                   placeholder="Name your room…"
-                                   class="w-full rounded-xl border-0 bg-white/95 px-4 py-3 text-sm text-gray-900 placeholder:text-gray-400 shadow-sm focus:ring-2 focus:ring-white/80">
+                        <div class="flex flex-col sm:flex-row gap-2 sm:items-center">
+                            <label for="chat-room-avatar" class="relative shrink-0 cursor-pointer group/avatar">
+                                <span id="chat-room-avatar-preview" class="flex h-14 w-14 items-center justify-center rounded-2xl bg-white/20 ring-1 ring-white/30 overflow-hidden text-white">
+                                    <i class="fas fa-camera text-sm"></i>
+                                </span>
+                                <input id="chat-room-avatar"
+                                       type="file"
+                                       name="avatar"
+                                       accept="image/jpeg,image/png,image/gif,image/webp"
+                                       class="sr-only">
+                                <span class="absolute -bottom-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-white text-violet-700 text-[9px] shadow-sm">
+                                    <i class="fas fa-plus"></i>
+                                </span>
+                            </label>
+                            <div class="flex-1 min-w-0 flex flex-col sm:flex-row gap-2">
+                                <div class="flex-1 min-w-0">
+                                    <label for="chat-room-name" class="sr-only">Room name</label>
+                                    <input id="chat-room-name"
+                                           type="text"
+                                           name="name"
+                                           value="{{ old('name') }}"
+                                           maxlength="80"
+                                           required
+                                           placeholder="Name your room…"
+                                           class="w-full rounded-xl border-0 bg-white/95 px-4 py-3 text-sm text-gray-900 placeholder:text-gray-400 shadow-sm focus:ring-2 focus:ring-white/80">
+                                </div>
+                                <button type="submit"
+                                        class="inline-flex items-center justify-center gap-2 rounded-xl bg-white px-5 py-3 text-sm font-semibold text-violet-700 hover:bg-violet-50 active:scale-[0.98] transition shadow-sm">
+                                    <i class="fas fa-plus text-xs"></i>
+                                    Create room
+                                </button>
+                            </div>
                         </div>
-                        <button type="submit"
-                                class="inline-flex items-center justify-center gap-2 rounded-xl bg-white px-5 py-3 text-sm font-semibold text-violet-700 hover:bg-violet-50 active:scale-[0.98] transition shadow-sm">
-                            <i class="fas fa-plus text-xs"></i>
-                            Create room
-                        </button>
+                        <p class="text-[11px] text-violet-100/80">Optional: add a room profile photo (JPEG, PNG, GIF, or WebP · max 5 MB).</p>
+                        @error('name')
+                            <p class="text-sm text-amber-100">{{ $message }}</p>
+                        @enderror
+                        @error('avatar')
+                            <p class="text-sm text-amber-100">{{ $message }}</p>
+                        @enderror
                     </form>
-                    @error('name')
-                        <p class="mt-2 text-sm text-amber-100">{{ $message }}</p>
-                    @enderror
                 </div>
             </section>
 
@@ -82,8 +103,12 @@
                             <a href="{{ route('say-it.chat.show', $room) }}"
                                class="group flex flex-col rounded-2xl border border-gray-200/80 bg-white p-4 shadow-sm hover:border-violet-200 hover:shadow-md hover:bg-violet-50/30 transition">
                                 <div class="flex items-start justify-between gap-2">
-                                    <div class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-violet-100 to-indigo-100 text-violet-700 ring-1 ring-violet-100 group-hover:from-violet-200 group-hover:to-indigo-200 transition">
-                                        <i class="fas fa-hashtag text-sm"></i>
+                                    <div class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-violet-100 to-indigo-100 text-violet-700 ring-1 ring-violet-100 overflow-hidden group-hover:from-violet-200 group-hover:to-indigo-200 transition">
+                                        @if($room->avatar_url)
+                                            <img src="{{ $room->avatar_url }}" alt="" class="h-full w-full object-cover">
+                                        @else
+                                            <i class="fas fa-hashtag text-sm"></i>
+                                        @endif
                                     </div>
                                     @if($room->last_message_at && $room->last_message_at->gt(now()->subMinutes(15)))
                                         <span class="shrink-0 inline-flex items-center gap-1 rounded-full bg-emerald-50 text-emerald-700 px-1.5 py-0.5 text-[10px] font-semibold">
@@ -134,3 +159,19 @@
     </div>
 </div>
 @endsection
+
+@push('scripts')
+<script>
+(function () {
+    var input = document.getElementById('chat-room-avatar');
+    var preview = document.getElementById('chat-room-avatar-preview');
+    if (!input || !preview) return;
+    input.addEventListener('change', function () {
+        var file = input.files && input.files[0];
+        if (!file) return;
+        var url = URL.createObjectURL(file);
+        preview.innerHTML = '<img src="' + url + '" alt="" class="h-full w-full object-cover">';
+    });
+})();
+</script>
+@endpush

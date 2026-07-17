@@ -38,6 +38,17 @@
                                 {{ $room->name }}
                             </a>
                             <p class="text-xs text-gray-400 font-mono">{{ $room->slug }}</p>
+                            <div class="mt-1 flex flex-wrap gap-1">
+                                @if($room->trashed())
+                                    <span class="inline-flex rounded-full bg-red-50 text-red-700 px-1.5 py-0.5 text-[10px] font-semibold">Deleted</span>
+                                @endif
+                                @if($room->is_frozen)
+                                    <span class="inline-flex rounded-full bg-amber-50 text-amber-800 px-1.5 py-0.5 text-[10px] font-semibold">Frozen</span>
+                                @endif
+                                @if($room->isGibberishActive())
+                                    <span class="inline-flex rounded-full bg-fuchsia-50 text-fuchsia-800 px-1.5 py-0.5 text-[10px] font-semibold">Gibberish</span>
+                                @endif
+                            </div>
                         </td>
                         <td class="px-4 py-3 text-sm text-gray-700 font-mono">{{ $room->creator_codename }}</td>
                         <td class="px-4 py-3 text-sm text-gray-700">{{ $room->messages_count }}</td>
