@@ -90,6 +90,47 @@ class SayItHelper
     }
 
     /**
+     * Deterministic placeholder icon for a chat room without a profile photo.
+     */
+    public static function roomPlaceholderIcon(?string $seed): string
+    {
+        $icons = [
+            'fa-comments',
+            'fa-comment-dots',
+            'fa-users',
+            'fa-user-friends',
+            'fa-hashtag',
+            'fa-bolt',
+            'fa-star',
+            'fa-heart',
+            'fa-fire',
+            'fa-moon',
+            'fa-sun',
+            'fa-leaf',
+            'fa-coffee',
+            'fa-music',
+            'fa-gamepad',
+            'fa-ghost',
+            'fa-rocket',
+            'fa-puzzle-piece',
+            'fa-lightbulb',
+            'fa-globe',
+        ];
+        $key = mb_strtolower((string) ($seed ?: '?'));
+        $index = abs(crc32($key)) % count($icons);
+
+        return 'fas '.$icons[$index];
+    }
+
+    /**
+     * Deterministic pastel background/text classes for a room placeholder icon.
+     */
+    public static function roomPlaceholderColorClasses(?string $seed): string
+    {
+        return self::avatarColorClassesForCodename($seed);
+    }
+
+    /**
      * Return deterministic pastel/vibrant avatar classes for a codename (e.g. "bg-sky-100 text-sky-600").
      * Same codename always gets the same color. Colors are soft, not harsh.
      */

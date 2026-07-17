@@ -18,6 +18,8 @@ class SayItChatController extends Controller
 {
     public function index(Request $request): View
     {
+        SayItChatRoom::clearRoomUnlock($request);
+
         $codename = SayItController::codenameForSession($request);
 
         $rooms = SayItChatRoom::query()
@@ -36,6 +38,7 @@ class SayItChatController extends Controller
     {
         $validated = $request->validate([
             'name' => ['required', 'string', 'min:2', 'max:80'],
+            'password' => ['nullable', 'string', 'min:4', 'max:64'],
             'avatar' => [
                 'nullable',
                 'file',
@@ -44,6 +47,7 @@ class SayItChatController extends Controller
                 'mimetypes:image/jpeg,image/png,image/gif,image/webp',
             ],
         ], [
+            'password.min' => 'Room password must be at least 4 characters.',
             'avatar.mimes' => 'The room profile must be an image (JPEG, PNG, GIF, or WebP).',
             'avatar.mimetypes' => 'The room profile must be an image (JPEG, PNG, GIF, or WebP).',
             'avatar.max' => 'The room profile may not be larger than 5 MB.',
@@ -51,6 +55,7 @@ class SayItChatController extends Controller
 
         $codename = SayItController::codenameForSession($request);
         $name = trim($validated['name']);
+        $plainPassword = trim((string) ($validated['password'] ?? ''));
 
         $avatarPath = null;
         if ($request->hasFile('avatar')) {
@@ -63,7 +68,7 @@ class SayItChatController extends Controller
 
         $codes = SayItChatRoom::generateModerationCodes();
 
-        $room = SayItChatRoom::create([
+        $room = new SayItChatRoom([
             'name' => $name,
             'slug' => SayItChatRoom::uniqueSlugFromName($name),
             'creator_codename' => $codename,
@@ -72,19 +77,55 @@ class SayItChatController extends Controller
             'delete_code' => $codes['delete'],
             'gibberish_code' => $codes['gibberish'],
         ]);
+        $room->setRoomPassword($plainPassword !== '' ? $plainPassword : null);
+        $room->save();
+
+        $room->unlockFor($request);
+
+        $flashCodes = [
+            'freeze' => $codes['freeze'],
+            'delete' => $codes['delete'],
+            'gibberish' => $codes['gibberish'],
+        ];
+        if ($plainPassword !== '') {
+            $flashCodes['password'] = $plainPassword;
+        }
 
         return redirect()
             ->route('say-it.chat.show', $room)
             ->with('success', 'Room created. You are chatting as '.$codename.'.')
-            ->with('moderation_codes', [
-                'freeze' => $codes['freeze'],
-                'delete' => $codes['delete'],
-                'gibberish' => $codes['gibberish'],
-            ]);
+            ->with('moderation_codes', $flashCodes);
+    }
+
+    public function unlock(Request $request, SayItChatRoom $room): RedirectResponse
+    {
+        if (! $room->hasPassword()) {
+            return redirect()->route('say-it.chat.show', $room);
+        }
+
+        if ($room->isUnlockedFor($request)) {
+            return redirect()->route('say-it.chat.show', $room);
+        }
+
+        $validated = $request->validate([
+            'password' => ['required', 'string', 'max:64'],
+        ]);
+
+        if (! $room->checkPassword($validated['password'])) {
+            return back()->withErrors(['password' => 'Incorrect room password.'])->withInput();
+        }
+
+        $room->unlockFor($request);
+
+        return redirect()->route('say-it.chat.show', $room);
     }
 
     public function updateAvatar(Request $request, SayItChatRoom $room): RedirectResponse
     {
+        if (! $room->isUnlockedFor($request)) {
+            return redirect()->route('say-it.chat.show', $room);
+        }
+
         if (! $room->isOwnedBy($request)) {
             return back()->with('error', 'Only the room creator can update the profile photo.');
         }
@@ -118,6 +159,19 @@ class SayItChatController extends Controller
     public function show(Request $request, SayItChatRoom $room): View
     {
         $codename = SayItController::codenameForSession($request);
+
+        if (! $room->isUnlockedFor($request)) {
+            return view('say-it.chat.unlock', array_merge(
+                [
+                    'room' => $room,
+                    'codename' => $codename,
+                    'isRoomOwner' => $room->isOwnedBy($request),
+                    'ownerPassword' => $room->revealPasswordFor($request),
+                ],
+                $this->sidebarData()
+            ));
+        }
+
         $gibberish = $room->isGibberishActive();
 
         $initialMessages = $room->messages()
@@ -135,6 +189,7 @@ class SayItChatController extends Controller
                 'room' => $room,
                 'codename' => $codename,
                 'isRoomOwner' => $room->isOwnedBy($request),
+                'roomPassword' => $room->revealPasswordFor($request),
                 'initialMessages' => $initialMessages,
                 'roomStatus' => $room->publicStatusPayload(),
                 'moderationCodes' => is_array($moderationCodes) ? $moderationCodes : null,
@@ -145,6 +200,10 @@ class SayItChatController extends Controller
 
     public function messages(Request $request, SayItChatRoom $room): JsonResponse
     {
+        if (! $room->isUnlockedFor($request)) {
+            return response()->json(['message' => 'Password required.'], 403);
+        }
+
         $codename = SayItController::codenameForSession($request);
         $afterId = (int) $request->query('after_id', 0);
         $gibberish = $room->isGibberishActive();
@@ -173,6 +232,10 @@ class SayItChatController extends Controller
 
     public function sendMessage(Request $request, SayItChatRoom $room): JsonResponse
     {
+        if (! $room->isUnlockedFor($request)) {
+            return response()->json(['message' => 'Password required.'], 403);
+        }
+
         $validated = $request->validate([
             'body' => ['nullable', 'string', 'max:2000'],
             'image' => [

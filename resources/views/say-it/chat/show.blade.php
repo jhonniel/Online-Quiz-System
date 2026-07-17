@@ -182,11 +182,11 @@
                 <form id="say-it-room-avatar-form" method="POST" action="{{ route('say-it.chat.avatar', $room) }}" enctype="multipart/form-data" class="shrink-0">
                     @csrf
                     <label for="say-it-room-avatar-input" class="relative block cursor-pointer group" title="Change room profile photo">
-                        <span class="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-violet-500 to-indigo-600 text-white shadow-sm overflow-hidden ring-2 ring-transparent group-hover:ring-violet-300 transition">
+                        <span class="flex h-10 w-10 items-center justify-center rounded-xl shadow-sm overflow-hidden ring-2 ring-transparent group-hover:ring-violet-300 transition {{ $room->avatar_url ? 'bg-gradient-to-br from-violet-500 to-indigo-600 text-white' : \App\Helpers\SayItHelper::roomPlaceholderColorClasses($room->slug) }}">
                             @if($room->avatar_url)
                                 <img src="{{ $room->avatar_url }}" alt="" class="h-full w-full object-cover">
                             @else
-                                <i class="fas fa-comments text-sm"></i>
+                                <i class="{{ \App\Helpers\SayItHelper::roomPlaceholderIcon($room->slug) }} text-sm"></i>
                             @endif
                         </span>
                         <span class="absolute -bottom-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-white text-violet-700 text-[9px] shadow border border-gray-200">
@@ -201,11 +201,11 @@
                     </label>
                 </form>
             @else
-                <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-violet-500 to-indigo-600 text-white shadow-sm overflow-hidden">
+                <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl shadow-sm overflow-hidden {{ $room->avatar_url ? 'bg-gradient-to-br from-violet-500 to-indigo-600 text-white' : \App\Helpers\SayItHelper::roomPlaceholderColorClasses($room->slug) }}">
                     @if($room->avatar_url)
                         <img src="{{ $room->avatar_url }}" alt="" class="h-full w-full object-cover">
                     @else
-                        <i class="fas fa-comments text-sm"></i>
+                        <i class="{{ \App\Helpers\SayItHelper::roomPlaceholderIcon($room->slug) }} text-sm"></i>
                     @endif
                 </div>
             @endif
@@ -215,11 +215,24 @@
                 <p class="text-[11px] sm:text-xs text-gray-500 truncate mt-0.5">
                     Anonymous room · chatting as
                     <span class="font-semibold text-violet-700">{{ $codename }}</span>
+                    @if($room->hasPassword())
+                        <span class="text-gray-400">·</span>
+                        <span class="text-gray-600"><i class="fas fa-lock text-[9px]"></i> Locked</span>
+                    @endif
                     @if($isRoomOwner)
                         <span class="text-gray-400">·</span>
                         <span class="text-violet-600">tap photo to update</span>
                     @endif
                 </p>
+                @if($isRoomOwner && !empty($roomPassword))
+                    <details class="mt-1.5 group/pw">
+                        <summary class="cursor-pointer list-none text-[11px] font-semibold text-slate-600 hover:text-violet-700 inline-flex items-center gap-1">
+                            <i class="fas fa-key text-[10px]"></i>
+                            View room password
+                        </summary>
+                        <p class="mt-1 font-mono text-xs font-bold text-gray-900 bg-slate-50 border border-slate-200 rounded-lg px-2 py-1.5 select-all inline-block">{{ $roomPassword }}</p>
+                    </details>
+                @endif
                 @error('avatar')
                     <p class="text-[11px] text-red-600 mt-0.5">{{ $message }}</p>
                 @enderror
@@ -312,6 +325,13 @@
                 <p class="mt-1 font-mono text-sm font-bold text-gray-900 select-all">{{ $moderationCodes['gibberish'] ?? '' }}</p>
                 <p class="mt-0.5 text-[11px] text-fuchsia-800/80">Scrambles all message text for 1 hour.</p>
             </div>
+            @if(!empty($moderationCodes['password']))
+                <div class="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5">
+                    <p class="text-[11px] font-semibold uppercase tracking-wide text-slate-700">Room password</p>
+                    <p class="mt-1 font-mono text-sm font-bold text-gray-900 select-all">{{ $moderationCodes['password'] }}</p>
+                    <p class="mt-0.5 text-[11px] text-slate-600">Only you can view this again as the creator. Share it to let others join.</p>
+                </div>
+            @endif
             <p class="text-[11px] text-gray-500">These codes are also recorded for admins. Do not share them unless you intend to use them.</p>
         </div>
         <div class="px-5 py-3 border-t border-gray-100 flex justify-end">

@@ -7,6 +7,8 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Crypt;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
@@ -27,6 +29,8 @@ class SayItChatRoom extends Model
         'slug',
         'creator_codename',
         'avatar_path',
+        'password_hash',
+        'password_encrypted',
         'freeze_code',
         'delete_code',
         'gibberish_code',
@@ -55,6 +59,8 @@ class SayItChatRoom extends Model
     ];
 
     protected $hidden = [
+        'password_hash',
+        'password_encrypted',
         'freeze_code',
         'delete_code',
         'gibberish_code',
@@ -62,11 +68,103 @@ class SayItChatRoom extends Model
 
     protected $appends = [
         'avatar_url',
+        'is_password_protected',
     ];
 
     public function getRouteKeyName(): string
     {
         return 'slug';
+    }
+
+    public function getIsPasswordProtectedAttribute(): bool
+    {
+        return $this->hasPassword();
+    }
+
+    public function hasPassword(): bool
+    {
+        return filled($this->password_hash);
+    }
+
+    public function setRoomPassword(?string $plainPassword): void
+    {
+        $plainPassword = is_string($plainPassword) ? trim($plainPassword) : '';
+        if ($plainPassword === '') {
+            $this->password_hash = null;
+            $this->password_encrypted = null;
+
+            return;
+        }
+
+        $this->password_hash = Hash::make($plainPassword);
+        $this->password_encrypted = Crypt::encryptString($plainPassword);
+    }
+
+    public function checkPassword(string $plainPassword): bool
+    {
+        if (! $this->hasPassword()) {
+            return true;
+        }
+
+        return Hash::check($plainPassword, $this->password_hash);
+    }
+
+    /**
+     * Plaintext password for the creator (ownership required).
+     */
+    public function revealPasswordFor(Request $request): ?string
+    {
+        if (! $this->hasPassword() || ! $this->isOwnedBy($request)) {
+            return null;
+        }
+
+        return $this->decryptStoredPassword();
+    }
+
+    /**
+     * Plaintext password for admin moderation records.
+     */
+    public function revealPasswordForAdmin(): ?string
+    {
+        if (! $this->hasPassword()) {
+            return null;
+        }
+
+        return $this->decryptStoredPassword();
+    }
+
+    public function decryptStoredPassword(): ?string
+    {
+        if (! filled($this->password_encrypted)) {
+            return null;
+        }
+
+        try {
+            return Crypt::decryptString($this->password_encrypted);
+        } catch (\Throwable $e) {
+            return null;
+        }
+    }
+
+    public function isUnlockedFor(Request $request): bool
+    {
+        if (! $this->hasPassword()) {
+            return true;
+        }
+
+        $activeRoomId = $request->session()->get('sayit_chat_active_room');
+
+        return (string) $activeRoomId === (string) $this->id;
+    }
+
+    public function unlockFor(Request $request): void
+    {
+        $request->session()->put('sayit_chat_active_room', (string) $this->id);
+    }
+
+    public static function clearRoomUnlock(Request $request): void
+    {
+        $request->session()->forget('sayit_chat_active_room');
     }
 
     public function messages(): HasMany

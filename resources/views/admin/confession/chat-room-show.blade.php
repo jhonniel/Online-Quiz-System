@@ -18,6 +18,9 @@
                 Created by <span class="font-mono">{{ $room->creator_codename }}</span>
                 · <span class="font-mono">{{ $room->slug }}</span>
                 · {{ $room->created_at->format('M j, Y g:i A') }}
+                @if($room->hasPassword())
+                    · <span class="text-slate-700 font-semibold">Password protected</span>
+                @endif
                 @if($room->trashed())
                     · <span class="text-red-600 font-semibold">Deleted</span>
                 @endif
@@ -38,6 +41,21 @@
                     <button type="submit" class="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-red-600 hover:bg-red-700">Delete room</button>
                 </form>
             @endunless
+        </div>
+    </div>
+
+    <div class="bg-white shadow rounded-lg overflow-hidden mb-6">
+        <div class="px-4 py-3 border-b border-gray-200 bg-gray-50">
+            <h2 class="text-sm font-semibold text-gray-900">Room password (admin record)</h2>
+            <p class="text-xs text-gray-500 mt-0.5">Stored for moderation. Users must enter this every time they open the room.</p>
+        </div>
+        <div class="px-4 py-4">
+            @if($room->hasPassword())
+                <p class="text-xs font-semibold uppercase tracking-wide text-gray-500">Password</p>
+                <p class="mt-1 font-mono text-base font-bold text-gray-900 select-all">{{ $room->revealPasswordForAdmin() ?? '—' }}</p>
+            @else
+                <p class="text-sm text-gray-500">This room is not password protected.</p>
+            @endif
         </div>
     </div>
 
