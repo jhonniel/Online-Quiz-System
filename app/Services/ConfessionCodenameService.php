@@ -82,67 +82,86 @@ class ConfessionCodenameService
             ->whereNotNull('name')
             ->where('name', '!=', '')
             ->inRandomOrder()
-            ->limit(8)
+            ->limit(24)
             ->get(['name']);
 
         if ($users->isEmpty()) {
             return null;
         }
 
-        $parts = $users
-            ->map(function ($user) {
-                $tokens = preg_split('/\s+/', trim((string) $user->name)) ?: [];
-                $tokens = array_values(array_filter($tokens, fn ($token) => $token !== ''));
-                if (empty($tokens)) {
-                    return null;
+        $firstNames = [];
+        $lastNames = [];
+
+        foreach ($users as $user) {
+            $tokens = preg_split('/\s+/', trim((string) $user->name)) ?: [];
+            $tokens = array_values(array_filter($tokens, fn ($token) => is_string($token) && $token !== ''));
+            if ($tokens === []) {
+                continue;
+            }
+
+            $firstNames[] = (string) $tokens[0];
+            // Only use a real last/middle token — never duplicate the first name.
+            if (count($tokens) >= 2) {
+                $lastNames[] = (string) $tokens[array_key_last($tokens)];
+            }
+        }
+
+        $firstNames = array_values(array_unique($firstNames));
+        $lastNames = array_values(array_unique($lastNames));
+
+        if ($firstNames === []) {
+            return null;
+        }
+
+        // Need at least one last-name pool that can differ from the chosen first name.
+        if ($lastNames === []) {
+            // Fall back: mix two different first names as "First Last".
+            if (count($firstNames) < 2) {
+                return null;
+            }
+
+            return self::pickDistinctPair($firstNames, $firstNames);
+        }
+
+        return self::pickDistinctPair($firstNames, $lastNames);
+    }
+
+    /**
+     * Pick first + last so the two labels are not the same (case-insensitive).
+     */
+    protected static function pickDistinctPair(array $firstPool, array $lastPool): ?string
+    {
+        $maxAttempts = 40;
+
+        for ($i = 0; $i < $maxAttempts; $i++) {
+            $first = (string) $firstPool[array_rand($firstPool)];
+            $last = (string) $lastPool[array_rand($lastPool)];
+
+            if (mb_strtolower(trim($first)) === mb_strtolower(trim($last))) {
+                continue;
+            }
+
+            $label = trim($first.' '.$last);
+            if ($label !== '') {
+                return $label;
+            }
+        }
+
+        // Exhaustive fallback: find any unequal pair.
+        foreach ($firstPool as $first) {
+            foreach ($lastPool as $last) {
+                if (mb_strtolower(trim((string) $first)) === mb_strtolower(trim((string) $last))) {
+                    continue;
                 }
 
-                $firstPart = (string) ($tokens[0] ?? '');
-                $secondPart = (string) ($tokens[1] ?? $firstPart);
-
-                return [
-                    'first' => $firstPart,
-                    'second' => $secondPart,
-                ];
-            })
-            ->filter()
-            ->values();
-
-        if ($parts->isEmpty()) {
-            return null;
+                $label = trim($first.' '.$last);
+                if ($label !== '') {
+                    return $label;
+                }
+            }
         }
 
-        if ($parts->count() === 1) {
-            return trim(($parts[0]['first'] ?? '') . ' ' . ($parts[0]['second'] ?? ''));
-        }
-
-        $firstSource = $parts[random_int(0, $parts->count() - 1)];
-        $lastSource = $parts[random_int(0, $parts->count() - 1)];
-
-        // Prefer mixing two different users for better anonymity.
-        $attempts = 0;
-        while ($parts->count() > 1 && $firstSource === $lastSource && $attempts < 10) {
-            $lastSource = $parts[random_int(0, $parts->count() - 1)];
-            $attempts++;
-        }
-
-        $firstName = (string) ($firstSource['first'] ?? '');
-        $lastName = (string) ($lastSource['second'] ?? '');
-        $altFirstName = (string) ($lastSource['first'] ?? '');
-        $altLastName = (string) ($firstSource['second'] ?? '');
-
-        $candidates = array_values(array_filter([
-            trim($firstName . ' ' . $lastName),
-            trim($altFirstName . ' ' . $altLastName),
-            trim($firstName . ' ' . $altLastName),
-            trim($altFirstName . ' ' . $lastName),
-        ], fn ($value) => $value !== ''));
-
-        if (empty($candidates)) {
-            return null;
-        }
-
-        return $candidates[array_rand($candidates)];
+        return null;
     }
 
     protected static function makeUniqueLabel(string $label): string

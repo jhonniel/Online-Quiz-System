@@ -115,8 +115,13 @@ class ConfessionPost extends Model
      */
     public function scopeScheduledForDeletion(Builder $query): Builder
     {
-        return $query->where('upvotes_count', 0)
-            ->where('downvotes_count', 0)
+        return $query
+            ->where(function (Builder $q) {
+                $q->where('upvotes_count', 0)->orWhereNull('upvotes_count');
+            })
+            ->where(function (Builder $q) {
+                $q->where('downvotes_count', 0)->orWhereNull('downvotes_count');
+            })
             ->whereDoesntHave('allComments');
     }
 
@@ -127,6 +132,42 @@ class ConfessionPost extends Model
     {
         return $query->scheduledForDeletion()
             ->where('created_at', '<=', now()->subDays(7));
+    }
+
+    /**
+     * Permanently delete unengaged posts that are at least 7 days old.
+     * Uses forceDelete so SoftDeletes does not leave hidden rows behind.
+     */
+    public static function purgeUnengagedDue(): int
+    {
+        $count = 0;
+
+        $due = static::query()->eligibleForAutoDelete()->get();
+        foreach ($due as $post) {
+            $post->forceDelete();
+            $count++;
+        }
+
+        // Clean up any previously soft-deleted unengaged posts that are past due.
+        $trashedDue = static::onlyTrashed()->eligibleForAutoDelete()->get();
+        foreach ($trashedDue as $post) {
+            $post->forceDelete();
+            $count++;
+        }
+
+        return $count;
+    }
+
+    /**
+     * Run purge at most once per hour (works even when cron/scheduler is not configured).
+     */
+    public static function purgeUnengagedDueThrottled(): int
+    {
+        if (! \Illuminate\Support\Facades\Cache::add('sayit:purge-unengaged', 1, now()->addHour())) {
+            return 0;
+        }
+
+        return static::purgeUnengagedDue();
     }
 
     /**

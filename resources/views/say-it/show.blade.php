@@ -77,9 +77,17 @@
         <div class="p-4 sm:p-5 border-b border-gray-100">
             <h2 class="text-base font-semibold text-gray-900">Comments</h2>
         </div>
-        <form action="{{ url('/Say-it/comment') }}" method="POST" class="p-4 sm:p-5 border-b border-gray-100 bg-gray-50/50">
+        <form action="{{ url('/Say-it/comment') }}" method="POST" class="say-it-comment-form p-4 sm:p-5 border-b border-gray-100 bg-gray-50/50">
             @csrf
             <input type="hidden" name="confession_post_id" value="{{ $post->id }}">
+            @if($errors->has('content'))
+                <div class="mb-3 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
+                    {{ $errors->first('content') }}
+                </div>
+            @endif
+            @if(!empty($hasCommented))
+                <p class="text-sm text-gray-500">You already commented on this post. Each person can comment once.</p>
+            @else
             <div class="flex gap-3">
                 <div class="w-9 h-9 rounded-full flex-shrink-0 flex items-center justify-center shadow-sm {{ \App\Helpers\SayItHelper::avatarColorClassesForCodename('anon') }}" aria-hidden="true">
                     <i class="fas fa-paw text-sm"></i>
@@ -91,11 +99,12 @@
                     </button>
                 </div>
             </div>
+            @endif
         </form>
 
         <div class="divide-y divide-gray-100">
             @foreach($allComments->whereNull('parent_id') as $comment)
-                @include('say-it.partials.comment', ['comment' => $comment, 'allComments' => $allComments])
+                @include('say-it.partials.comment', ['comment' => $comment, 'allComments' => $allComments, 'hasCommented' => $hasCommented ?? false])
             @endforeach
         </div>
         @if($allComments->whereNull('parent_id')->isEmpty())
@@ -106,6 +115,24 @@
 
 @push('scripts')
 <script>
+// Prevent double-submit / spam clicks on Comment and Reply forms.
+document.querySelectorAll('form.say-it-comment-form').forEach(function(form) {
+    form.addEventListener('submit', function(e) {
+        if (form.dataset.submitting === '1') {
+            e.preventDefault();
+            return false;
+        }
+        form.dataset.submitting = '1';
+        form.querySelectorAll('[type="submit"]').forEach(function(btn) {
+            btn.disabled = true;
+            if (btn.tagName === 'BUTTON') {
+                btn.dataset.originalText = btn.textContent;
+                btn.textContent = 'Posting…';
+            }
+        });
+    });
+});
+
 document.querySelectorAll('.vote-buttons').forEach(function(el) {
     var type = el.dataset.type;
     var id = el.dataset.id;

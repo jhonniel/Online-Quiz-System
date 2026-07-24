@@ -90,12 +90,7 @@ class ConfessionController extends Controller
     public function dashboard()
     {
         // Auto-delete posts that are already due (0 likes, 0 comments, older than 7 days)
-        $duePosts = ConfessionPost::eligibleForAutoDelete()->get();
-        $autoDeletedCount = 0;
-        foreach ($duePosts as $post) {
-            $post->delete();
-            $autoDeletedCount++;
-        }
+        $autoDeletedCount = ConfessionPost::purgeUnengagedDue();
 
         // Unique IPs that posted or commented
         $postIps = ConfessionPost::whereNotNull('ip_address')->distinct('ip_address')->pluck('ip_address');

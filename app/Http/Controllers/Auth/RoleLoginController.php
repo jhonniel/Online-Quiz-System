@@ -13,12 +13,23 @@ use Illuminate\Validation\ValidationException;
 
 class RoleLoginController extends Controller
 {
-    public function showLoginForm()
+    public function showLoginForm(Request $request)
     {
+        if ($request->filled('redirect')) {
+            $redirect = $request->query('redirect');
+            if (is_string($redirect) && str_starts_with($redirect, url('/'))) {
+                $request->session()->put('url.intended', $redirect);
+            }
+        }
+
         if (Auth::check()) {
             $user = Auth::user();
             if ($user instanceof User && $user->role === 'student' && (bool) $user->student_terminated) {
                 return redirect()->to(AccountTerminatedController::url());
+            }
+
+            if ($request->session()->has('url.intended')) {
+                return redirect()->intended('/home');
             }
 
             if ($user instanceof User && $user->isAdmin()) {
@@ -50,14 +61,6 @@ class RoleLoginController extends Controller
 
             $user = Auth::user();
 
-            if ($user instanceof User && $user->isAdmin()) {
-                return redirect('/admin/dashboard');
-            }
-
-            if ($user instanceof User && $user->isHr()) {
-                return redirect('/admin/hr-dashboard');
-            }
-
             if ($user instanceof User
                 && $user->role === 'student'
                 && Schema::hasColumn('users', 'ojt_requirement_met_at')) {
@@ -69,7 +72,14 @@ class RoleLoginController extends Controller
                 return redirect()->to(AccountTerminatedController::url());
             }
 
-            return redirect()->intended('/home');
+            $fallback = '/home';
+            if ($user instanceof User && $user->isAdmin()) {
+                $fallback = '/admin/dashboard';
+            } elseif ($user instanceof User && $user->isHr()) {
+                $fallback = '/admin/hr-dashboard';
+            }
+
+            return redirect()->intended($fallback);
         }
 
         throw ValidationException::withMessages([

@@ -26,6 +26,9 @@ class SayItController extends Controller
 {
     public function index(Request $request)
     {
+        // Ensure 7-day unengaged cleanup runs even without server cron.
+        ConfessionPost::purgeUnengagedDueThrottled();
+
         $sort = $request->get('sort', 'recent');
         $topicSlug = $request->get('topic');
         $hashtagSlug = $request->get('hashtag');
@@ -44,12 +47,13 @@ class SayItController extends Controller
             $sort = 'popular';
         }
 
-        // Single most popular post for featured slot at top (score = net votes + comment count)
+        // Single most popular post for featured slot (net votes + unique commenters; each person counts once)
         $mostPopularPost = ConfessionPost::withCount('allComments')
             ->with(['latestComment', 'topic'])
             ->orderByRaw(
                 '(confession_posts.upvotes_count - confession_posts.downvotes_count) + '.
-                '(SELECT COUNT(*) FROM confession_comments WHERE confession_comments.confession_post_id = confession_posts.id) DESC'
+                '(SELECT COUNT(DISTINCT confession_comments.codename) '.
+                'FROM confession_comments WHERE confession_comments.confession_post_id = confession_posts.id) DESC'
             )
             ->orderByDesc('created_at')
             ->first();
@@ -57,7 +61,8 @@ class SayItController extends Controller
         if ($sort === 'popular') {
             $query->orderByRaw(
                 '(confession_posts.upvotes_count - confession_posts.downvotes_count) + '.
-                '(SELECT COUNT(*) FROM confession_comments WHERE confession_comments.confession_post_id = confession_posts.id) DESC'
+                '(SELECT COUNT(DISTINCT confession_comments.codename) '.
+                'FROM confession_comments WHERE confession_comments.confession_post_id = confession_posts.id) DESC'
             )->orderByDesc('created_at');
         } else {
             $query->orderByDesc('created_at');
@@ -344,14 +349,20 @@ class SayItController extends Controller
         return 'png';
     }
 
-    public function show(ConfessionPost $post)
+    public function show(Request $request, ConfessionPost $post)
     {
         $post->load('topic');
         $allComments = $post->allComments()->orderBy('created_at')->get();
         $topTopics = ConfessionTopic::orderByDesc('posts_count')->limit(10)->get(['id', 'name', 'slug', 'posts_count']);
         $topHashtags = ConfessionHashtag::orderByDesc('posts_count')->limit(10)->get(['id', 'name', 'slug', 'posts_count']);
+        $sessionCodename = self::codenameForSession($request);
+        // One comment per browser session (codename) — shared Wi‑Fi IPs are allowed.
+        $hasCommented = ConfessionComment::query()
+            ->where('confession_post_id', $post->id)
+            ->where('codename', $sessionCodename)
+            ->exists();
 
-        return view('say-it.show', compact('post', 'allComments', 'topTopics', 'topHashtags'));
+        return view('say-it.show', compact('post', 'allComments', 'topTopics', 'topHashtags', 'sessionCodename', 'hasCommented'));
     }
 
     public function storeComment(Request $request)
@@ -363,17 +374,39 @@ class SayItController extends Controller
         ]);
 
         $codename = self::codenameForSession($request);
+        $ip = $request->ip();
+        $postId = (int) $validated['confession_post_id'];
 
-        ConfessionComment::create([
-            'confession_post_id' => $validated['confession_post_id'],
-            'parent_id' => $validated['parent_id'] ?? null,
-            'content' => $validated['content'],
-            'codename' => $codename,
-            'ip_address' => $request->ip(),
-            'user_agent' => $request->userAgent(),
-        ]);
+        $alreadyCommented = ConfessionComment::query()
+            ->where('confession_post_id', $postId)
+            ->where('codename', $codename)
+            ->exists();
 
-        return redirect()->to(url('/Say-it/'.$validated['confession_post_id']).'#comments')->with('success', 'Comment posted as '.$codename.'.');
+        if ($alreadyCommented) {
+            return redirect()
+                ->to(url('/Say-it/'.$postId).'#comments')
+                ->withErrors(['content' => 'You can only comment once on this post.'])
+                ->withInput();
+        }
+
+        try {
+            ConfessionComment::create([
+                'confession_post_id' => $postId,
+                'parent_id' => $validated['parent_id'] ?? null,
+                'content' => $validated['content'],
+                'codename' => $codename,
+                'ip_address' => $ip,
+                'user_agent' => $request->userAgent(),
+            ]);
+        } catch (\Illuminate\Database\QueryException $e) {
+            // Unique (post, codename) race from double-click.
+            return redirect()
+                ->to(url('/Say-it/'.$postId).'#comments')
+                ->withErrors(['content' => 'You can only comment once on this post.'])
+                ->withInput();
+        }
+
+        return redirect()->to(url('/Say-it/'.$postId).'#comments')->with('success', 'Comment posted as '.$codename.'.');
     }
 
     public function vote(Request $request)
@@ -390,22 +423,31 @@ class SayItController extends Controller
         if ($validated['type'] === 'post') {
             $post = ConfessionPost::findOrFail($validated['id']);
             $existing = ConfessionPostVote::where('confession_post_id', $post->id)->where('ip_address', $ip)->first();
-            if ($existing) {
-                if ($existing->vote === $voteValue) {
-                    $existing->delete();
-                    $post->decrement($voteValue === 1 ? 'upvotes_count' : 'downvotes_count');
-                } else {
-                    $existing->update(['vote' => $voteValue]);
-                    $post->increment($voteValue === 1 ? 'upvotes_count' : 'downvotes_count');
-                    $post->decrement($voteValue === 1 ? 'downvotes_count' : 'upvotes_count');
-                }
-            } else {
-                ConfessionPostVote::create([
-                    'confession_post_id' => $post->id,
-                    'ip_address' => $ip,
-                    'vote' => $voteValue,
+
+            // Already voted the same way: keep a single count (no toggle spam).
+            if ($existing && (int) $existing->vote === $voteValue) {
+                return response()->json([
+                    'score' => $post->fresh()->upvotes_count - $post->fresh()->downvotes_count,
+                    'unchanged' => true,
                 ]);
+            }
+
+            if ($existing) {
+                // Flip direction still counts as one vote from this person.
+                $existing->update(['vote' => $voteValue]);
                 $post->increment($voteValue === 1 ? 'upvotes_count' : 'downvotes_count');
+                $post->decrement($voteValue === 1 ? 'downvotes_count' : 'upvotes_count');
+            } else {
+                try {
+                    ConfessionPostVote::create([
+                        'confession_post_id' => $post->id,
+                        'ip_address' => $ip,
+                        'vote' => $voteValue,
+                    ]);
+                    $post->increment($voteValue === 1 ? 'upvotes_count' : 'downvotes_count');
+                } catch (\Illuminate\Database\QueryException $e) {
+                    // Unique (post, ip) race: treat as already counted once.
+                }
             }
 
             return response()->json(['score' => $post->fresh()->upvotes_count - $post->fresh()->downvotes_count]);
@@ -413,22 +455,29 @@ class SayItController extends Controller
 
         $comment = ConfessionComment::findOrFail($validated['id']);
         $existing = ConfessionCommentVote::where('confession_comment_id', $comment->id)->where('ip_address', $ip)->first();
-        if ($existing) {
-            if ($existing->vote === $voteValue) {
-                $existing->delete();
-                $comment->decrement($voteValue === 1 ? 'upvotes_count' : 'downvotes_count');
-            } else {
-                $existing->update(['vote' => $voteValue]);
-                $comment->increment($voteValue === 1 ? 'upvotes_count' : 'downvotes_count');
-                $comment->decrement($voteValue === 1 ? 'downvotes_count' : 'upvotes_count');
-            }
-        } else {
-            ConfessionCommentVote::create([
-                'confession_comment_id' => $comment->id,
-                'ip_address' => $ip,
-                'vote' => $voteValue,
+
+        if ($existing && (int) $existing->vote === $voteValue) {
+            return response()->json([
+                'score' => $comment->fresh()->upvotes_count - $comment->fresh()->downvotes_count,
+                'unchanged' => true,
             ]);
+        }
+
+        if ($existing) {
+            $existing->update(['vote' => $voteValue]);
             $comment->increment($voteValue === 1 ? 'upvotes_count' : 'downvotes_count');
+            $comment->decrement($voteValue === 1 ? 'downvotes_count' : 'upvotes_count');
+        } else {
+            try {
+                ConfessionCommentVote::create([
+                    'confession_comment_id' => $comment->id,
+                    'ip_address' => $ip,
+                    'vote' => $voteValue,
+                ]);
+                $comment->increment($voteValue === 1 ? 'upvotes_count' : 'downvotes_count');
+            } catch (\Illuminate\Database\QueryException $e) {
+                // Unique (comment, ip) race: treat as already counted once.
+            }
         }
 
         return response()->json(['score' => $comment->fresh()->upvotes_count - $comment->fresh()->downvotes_count]);

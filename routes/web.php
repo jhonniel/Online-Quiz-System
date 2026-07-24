@@ -145,9 +145,46 @@ Route::delete('/Say-it/chat/{room}/messages/{message}', [SayItChatController::cl
     ->middleware('throttle:say-it-chat-send')
     ->name('say-it.chat.message.delete');
 
+// Say-it mini games (lobby + invite code / open join)
+Route::get('/Say-it/games', [\App\Http\Controllers\SayItGamesController::class, 'index'])->name('say-it.games.index');
+Route::post('/Say-it/games/start', [\App\Http\Controllers\SayItGamesController::class, 'start'])
+    ->middleware('throttle:60,1')
+    ->name('say-it.games.start');
+Route::post('/Say-it/games/join', [\App\Http\Controllers\SayItGamesController::class, 'join'])
+    ->middleware('throttle:60,1')
+    ->name('say-it.games.join');
+Route::post('/Say-it/games/join-open', [\App\Http\Controllers\SayItGamesController::class, 'joinOpen'])
+    ->middleware('throttle:60,1')
+    ->name('say-it.games.join-open');
+Route::post('/Say-it/games/resume', [\App\Http\Controllers\SayItGamesController::class, 'resume'])
+    ->middleware('throttle:30,1')
+    ->name('say-it.games.resume');
+Route::get('/Say-it/games/{code}/lobby', [\App\Http\Controllers\SayItGamesController::class, 'lobby'])
+    ->where('code', '[0-9]{6}')
+    ->name('say-it.games.lobby');
+Route::post('/Say-it/games/{code}/start-game', [\App\Http\Controllers\SayItGamesController::class, 'startGame'])
+    ->where('code', '[0-9]{6}')
+    ->middleware('throttle:30,1')
+    ->name('say-it.games.start-game');
+Route::post('/Say-it/games/{code}/leave', [\App\Http\Controllers\SayItGamesController::class, 'leave'])
+    ->where('code', '[0-9]{6}')
+    ->name('say-it.games.leave');
+Route::get('/Say-it/games/{code}/sync', [\App\Http\Controllers\SayItGamesController::class, 'sync'])
+    ->where('code', '[0-9]{6}')
+    ->name('say-it.games.sync');
+Route::get('/Say-it/games/{code}', [\App\Http\Controllers\SayItGamesController::class, 'play'])
+    ->where('code', '[0-9]{6}')
+    ->name('say-it.games.play');
+Route::post('/Say-it/games/{code}/state', [\App\Http\Controllers\SayItGamesController::class, 'saveState'])
+    ->where('code', '[0-9]{6}')
+    ->middleware('throttle:120,1')
+    ->name('say-it.games.state');
+
 Route::get('/Say-it/{post}', [SayItController::class, 'show'])->where('post', '[0-9]+');
-Route::post('/Say-it/comment', [SayItController::class, 'storeComment']);
-Route::post('/Say-it/vote', [SayItController::class, 'vote']);
+Route::post('/Say-it/comment', [SayItController::class, 'storeComment'])
+    ->middleware('throttle:say-it-comment');
+Route::post('/Say-it/vote', [SayItController::class, 'vote'])
+    ->middleware('throttle:say-it-vote');
 Route::delete('/Say-it/post/{post}', [SayItController::class, 'destroyPost'])->where('post', '[0-9]+')->name('say-it.post.delete');
 
 // QR Code Scanning Route (Public) - Uses hashed token for one-time access

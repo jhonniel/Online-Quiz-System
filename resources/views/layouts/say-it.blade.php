@@ -59,6 +59,9 @@
                 <a href="{{ route('say-it.chat.index') }}" class="hidden sm:flex items-center justify-center w-9 h-9 rounded-full text-gray-500 hover:bg-gray-100 transition touch-manipulation {{ request()->is('Say-it/chat*') ? 'bg-violet-50 text-violet-700' : '' }}" aria-label="Anonymous chat">
                     <i class="fas fa-comments"></i>
                 </a>
+                <a href="{{ route('say-it.games.index') }}" class="hidden sm:flex items-center justify-center w-9 h-9 rounded-full text-gray-500 hover:bg-gray-100 transition touch-manipulation {{ request()->is('Say-it/games*') ? 'bg-violet-50 text-violet-700' : '' }}" aria-label="Mini games">
+                    <i class="fas fa-gamepad"></i>
+                </a>
                 <a href="{{ url('/Say-it') }}" class="hidden sm:flex items-center justify-center w-9 h-9 rounded-full text-gray-500 hover:bg-gray-100 transition touch-manipulation" aria-label="Home">
                     <i class="fas fa-home"></i>
                 </a>
@@ -70,17 +73,21 @@
         {{-- Left sidebar (desktop) --}}
         <aside id="left-sidebar" class="hidden lg:block w-56 flex-shrink-0 border-r border-gray-200 bg-white overflow-y-auto scrollbar-hide py-4">
             <nav class="px-3 space-y-1">
-                <a href="{{ url('/Say-it') }}" class="flex items-center gap-3 px-3 py-2.5 rounded-lg font-medium {{ !request()->is('Say-it/chat*') && request()->get('sort') !== 'popular' ? 'bg-violet-50 text-violet-700' : 'text-gray-700 hover:bg-gray-50' }}">
+                <a href="{{ url('/Say-it') }}" class="flex items-center gap-3 px-3 py-2.5 rounded-lg font-medium {{ !request()->is('Say-it/chat*') && !request()->is('Say-it/games*') && request()->get('sort') !== 'popular' ? 'bg-violet-50 text-violet-700' : 'text-gray-700 hover:bg-gray-50' }}">
                     <i class="fas fa-home w-5 text-center text-gray-500"></i>
                     Home
                 </a>
-                <a href="{{ url('/Say-it?sort=popular') }}" class="flex items-center gap-3 px-3 py-2.5 rounded-lg font-medium {{ !request()->is('Say-it/chat*') && request()->get('sort') === 'popular' ? 'bg-violet-50 text-violet-700' : 'text-gray-700 hover:bg-gray-50' }}">
+                <a href="{{ url('/Say-it?sort=popular') }}" class="flex items-center gap-3 px-3 py-2.5 rounded-lg font-medium {{ !request()->is('Say-it/chat*') && !request()->is('Say-it/games*') && request()->get('sort') === 'popular' ? 'bg-violet-50 text-violet-700' : 'text-gray-700 hover:bg-gray-50' }}">
                     <i class="fas fa-chart-line w-5 text-center text-gray-500"></i>
                     Popular
                 </a>
                 <a href="{{ route('say-it.chat.index') }}" class="flex items-center gap-3 px-3 py-2.5 rounded-lg font-medium {{ request()->is('Say-it/chat*') ? 'bg-violet-50 text-violet-700' : 'text-gray-700 hover:bg-gray-50' }}">
                     <i class="fas fa-comments w-5 text-center text-gray-500"></i>
                     Chat
+                </a>
+                <a href="{{ route('say-it.games.index') }}" class="flex items-center gap-3 px-3 py-2.5 rounded-lg font-medium {{ request()->is('Say-it/games*') ? 'bg-violet-50 text-violet-700' : 'text-gray-700 hover:bg-gray-50' }}">
+                    <i class="fas fa-gamepad w-5 text-center text-gray-500"></i>
+                    Games
                 </a>
                 <a href="{{ url('/Say-it') }}" class="flex items-center gap-3 px-3 py-2.5 rounded-lg font-medium text-gray-700 hover:bg-gray-50">
                     <i class="fas fa-clock w-5 text-center text-gray-500"></i>
@@ -139,17 +146,21 @@
                 </button>
             </div>
             <nav class="p-3 space-y-1">
-                <a href="{{ url('/Say-it') }}" class="flex items-center gap-3 px-3 py-2.5 rounded-lg font-medium {{ !request()->is('Say-it/chat*') && request()->get('sort') !== 'popular' ? 'bg-violet-50 text-violet-700' : 'text-gray-700' }}" onclick="document.getElementById('mobile-sidebar').classList.add('-translate-x-full')">
+                <a href="{{ url('/Say-it') }}" class="flex items-center gap-3 px-3 py-2.5 rounded-lg font-medium {{ !request()->is('Say-it/chat*') && !request()->is('Say-it/games*') && request()->get('sort') !== 'popular' ? 'bg-violet-50 text-violet-700' : 'text-gray-700' }}" onclick="document.getElementById('mobile-sidebar').classList.add('-translate-x-full')">
                     <i class="fas fa-home w-5 text-center text-gray-500"></i>
                     Home
                 </a>
-                <a href="{{ url('/Say-it?sort=popular') }}" class="flex items-center gap-3 px-3 py-2.5 rounded-lg font-medium {{ !request()->is('Say-it/chat*') && request()->get('sort') === 'popular' ? 'bg-violet-50 text-violet-700' : 'text-gray-700' }}" onclick="document.getElementById('mobile-sidebar').classList.add('-translate-x-full')">
+                <a href="{{ url('/Say-it?sort=popular') }}" class="flex items-center gap-3 px-3 py-2.5 rounded-lg font-medium {{ !request()->is('Say-it/chat*') && !request()->is('Say-it/games*') && request()->get('sort') === 'popular' ? 'bg-violet-50 text-violet-700' : 'text-gray-700' }}" onclick="document.getElementById('mobile-sidebar').classList.add('-translate-x-full')">
                     <i class="fas fa-chart-line w-5 text-center text-gray-500"></i>
                     Popular
                 </a>
                 <a href="{{ route('say-it.chat.index') }}" class="flex items-center gap-3 px-3 py-2.5 rounded-lg font-medium {{ request()->is('Say-it/chat*') ? 'bg-violet-50 text-violet-700' : 'text-gray-700' }}" onclick="document.getElementById('mobile-sidebar').classList.add('-translate-x-full')">
                     <i class="fas fa-comments w-5 text-center text-gray-500"></i>
                     Chat
+                </a>
+                <a href="{{ route('say-it.games.index') }}" class="flex items-center gap-3 px-3 py-2.5 rounded-lg font-medium {{ request()->is('Say-it/games*') ? 'bg-violet-50 text-violet-700' : 'text-gray-700' }}" onclick="document.getElementById('mobile-sidebar').classList.add('-translate-x-full')">
+                    <i class="fas fa-gamepad w-5 text-center text-gray-500"></i>
+                    Games
                 </a>
                 <a href="{{ url('/Say-it') }}" class="flex items-center gap-3 px-3 py-2.5 rounded-lg font-medium text-gray-700" onclick="document.getElementById('mobile-sidebar').classList.add('-translate-x-full')">
                     <i class="fas fa-clock w-5 text-center text-gray-500"></i>
@@ -223,7 +234,7 @@
         </main>
 
         {{-- Right sidebar: Recent Posts (hidden on chat so the room can use full width) --}}
-        @if(isset($recentPosts) && $recentPosts->isNotEmpty() && !request()->is('Say-it/chat*'))
+        @if(isset($recentPosts) && $recentPosts->isNotEmpty() && !request()->is('Say-it/chat*') && !request()->is('Say-it/games*'))
         <aside class="hidden xl:block w-72 flex-shrink-0 border-l border-gray-200 bg-white overflow-hidden flex flex-col">
             <div class="px-4 flex items-center justify-between mb-3 py-4 flex-shrink-0">
                 <h3 class="font-bold text-gray-900">Recent Posts</h3>

@@ -176,7 +176,7 @@ class UserController extends Controller
         $departmentFilter = $context['departmentFilter'];
         $isTeachersManagement = $context['isTeachersManagement'];
         $dbDriver = DB::connection()->getDriverName();
-        $idLikeSql = $dbDriver === 'pgsql' ? 'CAST(id AS TEXT) LIKE ?' : 'CAST(id AS CHAR) LIKE ?';
+        $idLikeSql = $dbDriver === 'pgsql' ? 'CAST(id AS TEXT) ILIKE ?' : 'CAST(id AS CHAR) LIKE ?';
         $with = $isTeachersManagement ? ['university'] : ['university', 'department', 'departmentPosition'];
 
         $query = User::query()
@@ -210,16 +210,12 @@ class UserController extends Controller
     private function applyUsersSearch(Builder $query, string $search, string $idLikeSql, bool $isTeachersManagement): void
     {
         $searchTokens = preg_split('/\s+/', $search, -1, PREG_SPLIT_NO_EMPTY) ?: [];
+        // Full phrase + each word, OR'd together so partial matches return more results.
+        $terms = array_values(array_unique(array_filter(array_merge([$search], $searchTokens))));
 
-        $query->where(function ($q) use ($search, $searchTokens, $idLikeSql, $isTeachersManagement) {
-            $q->where(fn ($termQ) => $this->applyUsersSearchTerm($termQ, $search, $idLikeSql, $isTeachersManagement));
-
-            if (count($searchTokens) > 1) {
-                $q->orWhere(function ($andQ) use ($searchTokens, $idLikeSql, $isTeachersManagement) {
-                    foreach ($searchTokens as $token) {
-                        $andQ->where(fn ($tokenQ) => $this->applyUsersSearchTerm($tokenQ, $token, $idLikeSql, $isTeachersManagement));
-                    }
-                });
+        $query->where(function ($q) use ($terms, $idLikeSql, $isTeachersManagement) {
+            foreach ($terms as $term) {
+                $q->orWhere(fn ($termQ) => $this->applyUsersSearchTerm($termQ, $term, $idLikeSql, $isTeachersManagement));
             }
         });
     }
@@ -227,23 +223,24 @@ class UserController extends Controller
     private function applyUsersSearchTerm(Builder $query, string $term, string $idLikeSql, bool $isTeachersManagement): void
     {
         $like = "%{$term}%";
+        $op = DB::connection()->getDriverName() === 'pgsql' ? 'ilike' : 'like';
 
-        $query->where('name', 'like', $like)
-            ->orWhere('email', 'like', $like)
-            ->orWhere('role', 'like', $like)
-            ->orWhere('contact_number', 'like', $like)
+        $query->where('name', $op, $like)
+            ->orWhere('email', $op, $like)
+            ->orWhere('role', $op, $like)
+            ->orWhere('contact_number', $op, $like)
             ->orWhereRaw($idLikeSql, [$like]);
 
         if (! $isTeachersManagement) {
-            $query->orWhereHas('department', function ($dq) use ($like) {
-                $dq->where('name', 'like', $like)
-                    ->orWhere('code', 'like', $like);
-            })->orWhereHas('departmentPosition', fn ($pq) => $pq->where('name', 'like', $like));
+            $query->orWhereHas('department', function ($dq) use ($like, $op) {
+                $dq->where('name', $op, $like)
+                    ->orWhere('code', $op, $like);
+            })->orWhereHas('departmentPosition', fn ($pq) => $pq->where('name', $op, $like));
         }
 
-        $query->orWhereHas('university', function ($uq) use ($like) {
-            $uq->where('name', 'like', $like)
-                ->orWhere('code', 'like', $like);
+        $query->orWhereHas('university', function ($uq) use ($like, $op) {
+            $uq->where('name', $op, $like)
+                ->orWhere('code', $op, $like);
         });
 
         if (ctype_digit($term)) {

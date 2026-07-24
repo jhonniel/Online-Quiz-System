@@ -22,8 +22,8 @@
                 <time datetime="{{ $comment->created_at->toIso8601String() }}">{{ $comment->created_at->diffForHumans() }}</time>
             </div>
             <p class="text-gray-900 text-sm whitespace-pre-wrap leading-relaxed break-words">{{ $comment->censored_content }}</p>
-            @if(!$comment->parent_id)
-                <form action="{{ url('/Say-it/comment') }}" method="POST" class="mt-2">
+            @if(!$comment->parent_id && empty($hasCommented))
+                <form action="{{ url('/Say-it/comment') }}" method="POST" class="say-it-comment-form mt-2">
                     @csrf
                     <input type="hidden" name="confession_post_id" value="{{ $comment->confession_post_id }}">
                     <input type="hidden" name="parent_id" value="{{ $comment->id }}">
@@ -36,6 +36,6 @@
         </div>
     </div>
     @foreach($replies as $reply)
-        @include('say-it.partials.comment', ['comment' => $reply, 'allComments' => $allComments])
+        @include('say-it.partials.comment', ['comment' => $reply, 'allComments' => $allComments, 'hasCommented' => $hasCommented ?? false])
     @endforeach
 </div>

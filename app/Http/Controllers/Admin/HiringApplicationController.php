@@ -84,6 +84,70 @@ class HiringApplicationController extends Controller
     }
 
     /**
+     * Broad LIKE / whereHas search: full phrase and each word are OR'd so more rows match.
+     */
+    private function applyHiringApplicationsSearch($query, string $search, string $idLikeSql): void
+    {
+        $tokens = preg_split('/\s+/', $search, -1, PREG_SPLIT_NO_EMPTY) ?: [];
+        $terms = array_values(array_unique(array_filter(array_merge([$search], $tokens))));
+        $dbDriver = DB::connection()->getDriverName();
+        $op = $dbDriver === 'pgsql' ? 'ilike' : 'like';
+
+        $query->where(function ($q) use ($terms, $idLikeSql, $op, $dbDriver) {
+            foreach ($terms as $term) {
+                $like = "%{$term}%";
+                $q->orWhere(function ($termQ) use ($like, $idLikeSql, $op, $dbDriver, $term) {
+                    $termQ->whereRaw($idLikeSql, [$like])
+                        ->orWhere('first_name', $op, $like)
+                        ->orWhere('last_name', $op, $like)
+                        ->orWhere('email', $op, $like)
+                        ->orWhere('phone', $op, $like)
+                        ->orWhere('status', $op, $like)
+                        ->orWhere('position_applied', $op, $like)
+                        ->orWhere('school', $op, $like)
+                        ->orWhere('address', $op, $like)
+                        ->orWhere('cover_letter', $op, $like)
+                        ->orWhere('admin_notes', $op, $like);
+
+                    if ($dbDriver === 'pgsql') {
+                        $termQ->orWhereRaw("(COALESCE(first_name, '') || ' ' || COALESCE(last_name, '')) ILIKE ?", [$like]);
+                    } elseif ($dbDriver === 'sqlite') {
+                        $termQ->orWhereRaw(
+                            "LOWER(COALESCE(first_name, '') || ' ' || COALESCE(last_name, '')) LIKE LOWER(?)",
+                            [$like]
+                        );
+                    } else {
+                        $termQ->orWhereRaw(
+                            "LOWER(CONCAT(COALESCE(first_name, ''), ' ', COALESCE(last_name, ''))) LIKE LOWER(?)",
+                            [$like]
+                        );
+                    }
+
+                    $termQ->orWhereHas('hiringPosition', function ($hp) use ($like, $op) {
+                        $hp->where('title', $op, $like)
+                            ->orWhere('department', $op, $like)
+                            ->orWhere('location', $op, $like)
+                            ->orWhere('slug', $op, $like);
+                    })->orWhereHas('user', function ($uq) use ($like, $op) {
+                        $uq->where('name', $op, $like)
+                            ->orWhere('email', $op, $like)
+                            ->orWhere('contact_number', $op, $like);
+                    })->orWhereHas('reviewer', function ($rq) use ($like, $op) {
+                        $rq->where('name', $op, $like)
+                            ->orWhere('email', $op, $like);
+                    });
+
+                    if (ctype_digit($term)) {
+                        $termQ->orWhere('id', (int) $term)
+                            ->orWhere('hiring_position_id', (int) $term)
+                            ->orWhere('user_id', (int) $term);
+                    }
+                });
+            }
+        });
+    }
+
+    /**
      * @return list<string>
      */
     private function resumeStorageDisks(): array
@@ -238,9 +302,8 @@ class HiringApplicationController extends Controller
         $query = $this->applyPositionFilter($query);
 
         $search = trim((string) $request->input('search', ''));
-        $searchTokens = $search !== '' ? preg_split('/\s+/', $search, -1, PREG_SPLIT_NO_EMPTY) : [];
         $dbDriver = DB::connection()->getDriverName();
-        $idLikeSql = $dbDriver === 'pgsql' ? 'CAST(id AS TEXT) LIKE ?' : 'CAST(id AS CHAR) LIKE ?';
+        $idLikeSql = $dbDriver === 'pgsql' ? 'CAST(id AS TEXT) ILIKE ?' : 'CAST(id AS CHAR) LIKE ?';
 
         // Filter by position if provided (but only if user has access to it)
         if ($request->has('position') && $request->position) {
@@ -258,37 +321,7 @@ class HiringApplicationController extends Controller
 
         // Search
         if ($search !== '') {
-            $query->where(function ($q) use ($search, $searchTokens, $idLikeSql) {
-                $q->orWhereRaw($idLikeSql, ["%{$search}%"])
-                    ->orWhere('first_name', 'like', "%{$search}%")
-                    ->orWhere('last_name', 'like', "%{$search}%")
-                    ->orWhere('email', 'like', "%{$search}%")
-                    ->orWhere('phone', 'like', "%{$search}%")
-                    ->orWhere('status', 'like', "%{$search}%")
-                    ->orWhere('position_applied', 'like', "%{$search}%")
-                    ->orWhereHas('hiringPosition', function ($hp) use ($search) {
-                        $hp->where('title', 'like', "%{$search}%");
-                    });
-
-                // Support searching full names like "Juan Dela Cruz" by requiring each token to match
-                if (count($searchTokens) > 1) {
-                    $q->orWhere(function ($andQ) use ($searchTokens) {
-                        foreach ($searchTokens as $token) {
-                            $andQ->where(function ($tokenQ) use ($token) {
-                                $tokenQ->where('first_name', 'like', "%{$token}%")
-                                    ->orWhere('last_name', 'like', "%{$token}%")
-                                    ->orWhere('email', 'like', "%{$token}%")
-                                    ->orWhere('phone', 'like', "%{$token}%")
-                                    ->orWhere('status', 'like', "%{$token}%")
-                                    ->orWhere('position_applied', 'like', "%{$token}%")
-                                    ->orWhereHas('hiringPosition', function ($hp) use ($token) {
-                                        $hp->where('title', 'like', "%{$token}%");
-                                    });
-                            });
-                        }
-                    });
-                }
-            });
+            $this->applyHiringApplicationsSearch($query, $search, $idLikeSql);
         }
 
         // Get per page value (default 20, options: 10, 20, 50, 100)
@@ -376,36 +409,7 @@ class HiringApplicationController extends Controller
             $baseQuery->where('status', $statusFilter);
         }
         if ($search !== '') {
-            $baseQuery->where(function ($q) use ($search, $searchTokens, $idLikeSql) {
-                $q->orWhereRaw($idLikeSql, ["%{$search}%"])
-                    ->orWhere('first_name', 'like', "%{$search}%")
-                    ->orWhere('last_name', 'like', "%{$search}%")
-                    ->orWhere('email', 'like', "%{$search}%")
-                    ->orWhere('phone', 'like', "%{$search}%")
-                    ->orWhere('status', 'like', "%{$search}%")
-                    ->orWhere('position_applied', 'like', "%{$search}%")
-                    ->orWhereHas('hiringPosition', function ($hp) use ($search) {
-                        $hp->where('title', 'like', "%{$search}%");
-                    });
-
-                if (count($searchTokens) > 1) {
-                    $q->orWhere(function ($andQ) use ($searchTokens) {
-                        foreach ($searchTokens as $token) {
-                            $andQ->where(function ($tokenQ) use ($token) {
-                                $tokenQ->where('first_name', 'like', "%{$token}%")
-                                    ->orWhere('last_name', 'like', "%{$token}%")
-                                    ->orWhere('email', 'like', "%{$token}%")
-                                    ->orWhere('phone', 'like', "%{$token}%")
-                                    ->orWhere('status', 'like', "%{$token}%")
-                                    ->orWhere('position_applied', 'like', "%{$token}%")
-                                    ->orWhereHas('hiringPosition', function ($hp) use ($token) {
-                                        $hp->where('title', 'like', "%{$token}%");
-                                    });
-                            });
-                        }
-                    });
-                }
-            });
+            $this->applyHiringApplicationsSearch($baseQuery, $search, $idLikeSql);
         }
 
         $stats = [
