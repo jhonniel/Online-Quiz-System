@@ -22,28 +22,28 @@ class SayItGamesController extends Controller
             [
                 'type' => 'scrabble',
                 'title' => 'Scrabble',
-                'blurb' => 'Build words with friends — take turns on a shared rack.',
+                'blurb' => 'Solo practice or lobby turns with friends.',
                 'icon' => 'fas fa-font',
                 'color' => 'from-amber-500 to-orange-600',
             ],
             [
                 'type' => 'snakes',
                 'title' => 'Snake & Ladder',
-                'blurb' => 'Roll the dice and race friends to square 100.',
+                'blurb' => 'Race alone or invite friends to the board.',
                 'icon' => 'fas fa-dice',
                 'color' => 'from-emerald-500 to-teal-600',
             ],
             [
                 'type' => 'fourpics',
                 'title' => '4 Pics 1 Word',
-                'blurb' => 'Solve puzzles together — first correct guess wins the level.',
+                'blurb' => 'Solve alone, or team up in a lobby.',
                 'icon' => 'fas fa-th-large',
                 'color' => 'from-violet-500 to-fuchsia-600',
             ],
             [
                 'type' => 'duckrace',
                 'title' => 'Duck Race',
-                'blurb' => 'Everyone picks a duck and cheers them to the finish.',
+                'blurb' => 'Solo heats or a group race with friends.',
                 'icon' => 'fas fa-water',
                 'color' => 'from-sky-500 to-blue-600',
             ],
@@ -68,13 +68,23 @@ class SayItGamesController extends Controller
     {
         $validated = $request->validate([
             'game_type' => ['required', Rule::in(array_keys(SayItGameSession::TYPES))],
-            'nickname' => ['required', 'string', 'min:2', 'max:20'],
+            'mode' => ['required', Rule::in(['solo', 'lobby'])],
+            'nickname' => ['nullable', 'string', 'min:2', 'max:20'],
             'require_code' => ['nullable', 'boolean'],
         ]);
 
+        $mode = $validated['mode'];
         $playerId = $this->ensurePlayerId($request);
-        $name = trim($validated['nickname']);
-        $requireCode = $request->boolean('require_code');
+        $name = trim((string) ($validated['nickname'] ?? ''));
+        if ($name === '') {
+            $name = $mode === 'solo' ? 'You' : 'Player';
+        }
+
+        if ($mode === 'lobby' && strlen($name) < 2) {
+            throw ValidationException::withMessages([
+                'nickname' => 'Enter a nickname for the lobby.',
+            ]);
+        }
 
         $session = new SayItGameSession([
             'code' => SayItGameSession::generateUniqueCode(),
@@ -82,10 +92,20 @@ class SayItGamesController extends Controller
             'status' => SayItGameSession::STATUS_WAITING,
             'state' => [],
             'players' => [],
-            'require_code' => $requireCode,
+            'require_code' => $mode === 'solo' ? true : $request->boolean('require_code'),
             'last_played_at' => now(),
         ]);
         $session->addPlayer($playerId, $name, true);
+
+        if ($mode === 'solo') {
+            $session->startPlaying();
+            $session->save();
+
+            return redirect()
+                ->route('say-it.games.play', $session->code)
+                ->withCookie($this->playerCookie($playerId));
+        }
+
         $session->save();
 
         return redirect()
