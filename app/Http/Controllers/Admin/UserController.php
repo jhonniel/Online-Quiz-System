@@ -350,9 +350,7 @@ class UserController extends Controller
                 'nullable',
                 'integer',
                 Rule::exists('department_positions', 'id'),
-                Rule::requiredIf(function () use ($request) {
-                    return UserRoles::isStaff($request->role);
-                }),
+                Rule::requiredIf(fn () => $this->staffPositionIsRequired($request)),
             ],
             'is_active' => 'boolean',
             'required_training_hours' => 'nullable|numeric|min:0',
@@ -664,9 +662,7 @@ class UserController extends Controller
                 'nullable',
                 'integer',
                 Rule::exists('department_positions', 'id'),
-                Rule::requiredIf(function () use ($request) {
-                    return UserRoles::isStaff($request->role);
-                }),
+                Rule::requiredIf(fn () => $this->staffPositionIsRequired($request)),
             ],
             'is_active' => 'boolean',
             'theme_color_enabled' => 'boolean',
@@ -1066,6 +1062,21 @@ class UserController extends Controller
     }
 
     /**
+     * Position is required for staff only when the chosen department already has positions.
+     */
+    private function staffPositionIsRequired(Request $request): bool
+    {
+        if (! UserRoles::isStaff($request->role) || ! $request->filled('department_id')) {
+            return false;
+        }
+
+        return DepartmentPosition::query()
+            ->where('department_id', (int) $request->department_id)
+            ->active()
+            ->exists();
+    }
+
+    /**
      * @return array<string, string>|null
      */
     private function validateDepartmentPositionAssignment(Request $request): ?array
@@ -1074,23 +1085,26 @@ class UserController extends Controller
             return null;
         }
 
-        if (UserRoles::isStaff($request->role) && $request->filled('department_id')) {
-            $hasPositions = DepartmentPosition::query()
-                ->where('department_id', (int) $request->department_id)
-                ->active()
-                ->exists();
-
-            if (! $hasPositions) {
-                return ['department_position_id' => 'Add at least one position to this department before assigning employees.'];
-            }
-        }
-
-        if (UserRoles::isStaff($request->role) && ! $request->filled('department_position_id')) {
-            return ['department_position_id' => 'Please select a position for this staff member.'];
-        }
-
-        if (! $request->filled('department_position_id') || ! $request->filled('department_id')) {
+        if (! UserRoles::isStaff($request->role)) {
             return null;
+        }
+
+        if (! $request->filled('department_id')) {
+            return ['department_id' => 'Please select a department for this staff member.'];
+        }
+
+        $hasPositions = DepartmentPosition::query()
+            ->where('department_id', (int) $request->department_id)
+            ->active()
+            ->exists();
+
+        // Allow role change even if the department has no positions yet.
+        if (! $hasPositions) {
+            return null;
+        }
+
+        if (! $request->filled('department_position_id')) {
+            return ['department_position_id' => 'Please select a position for this staff member.'];
         }
 
         $belongsToDepartment = DepartmentPosition::query()

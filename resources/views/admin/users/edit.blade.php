@@ -23,6 +23,17 @@
 
 @section('content')
 <div class="w-full px-3 sm:px-4 lg:px-6 xl:px-8">
+    @if ($errors->any())
+        <div class="mb-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
+            <p class="font-semibold mb-1">Could not save user. Fix the following:</p>
+            <ul class="list-disc list-inside space-y-0.5">
+                @foreach ($errors->all() as $error)
+                    <li>{{ $error }}</li>
+                @endforeach
+            </ul>
+        </div>
+    @endif
+
     <div class="mb-6 sm:mb-8">
         <div class="bg-gradient-to-r from-indigo-600 via-indigo-700 to-purple-700 rounded-xl sm:rounded-2xl shadow-xl p-5 sm:p-8 text-white relative overflow-hidden">
             <div class="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full -mr-24 -mt-24"></div>
@@ -121,7 +132,7 @@
                             @error('university_id') <p class="mt-1 text-sm text-red-600">{{ $message }}</p> @enderror
                         </div>
 
-                        <div id="department_wrapper" class="{{ in_array(old('role', $user->role), ['employee', 'student'], true) ? '' : 'hidden' }}">
+                        <div id="department_wrapper" class="{{ in_array(old('role', $user->role), ['employee', 'hr', 'student'], true) ? '' : 'hidden' }}">
                             <label for="department_id" class="block text-sm font-semibold text-gray-700 mb-1.5">Department <span class="text-red-500 {{ in_array(old('role', $user->role), ['employee', 'hr'], true) ? '' : 'hidden' }}" id="department_required_indicator">*</span></label>
                             <select name="department_id" id="department_id"
                                     class="block w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 text-sm @error('department_id') border-red-500 @enderror">
