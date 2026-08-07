@@ -4,6 +4,7 @@ namespace App\Support;
 
 use App\Models\Dtr;
 use App\Models\LeaveRequest;
+use Illuminate\Support\Facades\Log;
 
 class StudentOvertimeLeaveRequest
 {
@@ -17,11 +18,18 @@ class StudentOvertimeLeaveRequest
             return null;
         }
 
-        if (! preg_match('/Total Overtime Hours:\s*(\d{1,3}:\d{2})/', $raw, $hoursMatch)) {
+        $hoursFormatted = null;
+        if (preg_match('/Total Overtime Hours:\s*(\d{1,3}:\d{2})/', $raw, $hoursMatch)) {
+            $hoursFormatted = $hoursMatch[1];
+        } elseif (preg_match('/Additional Time Hours:\s*(\d{1,3}:\d{2})/', $raw, $hoursMatch)) {
+            $hoursFormatted = $hoursMatch[1];
+        }
+
+        if ($hoursFormatted === null) {
             return null;
         }
 
-        $totalHours = DtrTimeRequestHours::timeStringToDecimal($hoursMatch[1]);
+        $totalHours = DtrTimeRequestHours::timeStringToDecimal($hoursFormatted);
         if ($totalHours <= 0) {
             return null;
         }
@@ -30,13 +38,9 @@ class StudentOvertimeLeaveRequest
         if (preg_match('/Overtime Dates:\s*(.+)/', $raw, $datesMatch)) {
             $dates = collect(explode(',', trim($datesMatch[1])))
                 ->map(fn ($d) => trim($d))
-                ->filter(fn ($d) => preg_match('/^\d{4}-\d{2}-\d{2}$/', $d))
+                ->filter(fn ($d) => preg_match('/^\d{4}-\d{2}-\d{2}$/', $d) === 1)
                 ->values()
                 ->all();
-        }
-
-        if ($dates === []) {
-            return null;
         }
 
         return [
@@ -45,9 +49,39 @@ class StudentOvertimeLeaveRequest
         ];
     }
 
+    /**
+     * @return array{total_hours: float, dates: list<string>}|null
+     */
+    public static function parseForLeaveRequest(LeaveRequest $leaveRequest): ?array
+    {
+        $parsed = self::parseFromReason($leaveRequest->reason);
+        if ($parsed === null) {
+            return null;
+        }
+
+        if ($parsed['dates'] === []) {
+            $start = $leaveRequest->start_date?->format('Y-m-d');
+            if ($start) {
+                $parsed['dates'] = [$start];
+            }
+        }
+
+        if ($parsed['dates'] === []) {
+            return null;
+        }
+
+        return $parsed;
+    }
+
     public static function applyApprovedToDtr(LeaveRequest $leaveRequest): void
     {
-        if ($leaveRequest->type !== 'overtime' || $leaveRequest->user?->role !== 'student') {
+        $leaveRequest->loadMissing('user');
+
+        if ($leaveRequest->user?->role !== 'student') {
+            return;
+        }
+
+        if (! in_array($leaveRequest->type, ['overtime', 'additional_time'], true)) {
             return;
         }
 
@@ -55,8 +89,14 @@ class StudentOvertimeLeaveRequest
             return;
         }
 
-        $parsed = self::parseFromReason($leaveRequest->reason);
+        $parsed = self::parseForLeaveRequest($leaveRequest);
         if ($parsed === null) {
+            Log::warning('Student Additional Time leave approved but DTR was not credited (could not parse hours/dates).', [
+                'leave_request_id' => $leaveRequest->id,
+                'user_id' => $leaveRequest->user_id,
+                'type' => $leaveRequest->type,
+            ]);
+
             return;
         }
 
@@ -71,10 +111,15 @@ class StudentOvertimeLeaveRequest
                 ->first();
 
             if ($existingDtr) {
+                $existingRemarks = trim((string) ($existingDtr->remarks ?? ''));
+                // Avoid double-crediting the same approved leave remark.
+                if (str_contains($existingRemarks, $remark)) {
+                    continue;
+                }
+
                 $existingDtr->total_hours = ((float) ($existingDtr->total_hours ?? 0)) + $hoursPerDate;
                 $existingDtr->overtime_hours = ((float) ($existingDtr->overtime_hours ?? 0)) + $hoursPerDate;
                 $existingDtr->status = $existingDtr->status ?: 'present';
-                $existingRemarks = trim((string) ($existingDtr->remarks ?? ''));
                 $existingDtr->remarks = $existingRemarks !== ''
                     ? $existingRemarks.' | '.$remark
                     : $remark;
@@ -98,7 +143,13 @@ class StudentOvertimeLeaveRequest
 
     public static function revertFromDtr(LeaveRequest $leaveRequest): void
     {
-        if ($leaveRequest->type !== 'overtime' || $leaveRequest->user?->role !== 'student') {
+        $leaveRequest->loadMissing('user');
+
+        if ($leaveRequest->user?->role !== 'student') {
+            return;
+        }
+
+        if (! in_array($leaveRequest->type, ['overtime', 'additional_time'], true)) {
             return;
         }
 
@@ -106,7 +157,7 @@ class StudentOvertimeLeaveRequest
             return;
         }
 
-        $parsed = self::parseFromReason($leaveRequest->reason);
+        $parsed = self::parseForLeaveRequest($leaveRequest);
         if ($parsed === null) {
             return;
         }

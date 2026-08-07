@@ -2207,35 +2207,47 @@ class LeaveRequestController extends Controller
     private function applyAdditionalTimeToDtr(LeaveRequest $leaveRequest): void
     {
         $rawReason = (string) ($leaveRequest->reason ?? '');
+        $hoursToCredit = null;
+        $hoursLabel = null;
+
         if (preg_match('/Additional Time Hours:\s*(\d{1,3}):(\d{2})/', $rawReason, $m)) {
             $hours = (int) $m[1];
             $minutes = (int) $m[2];
             if ($minutes >= 0 && $minutes <= 59) {
                 $hoursToCredit = $hours + ($minutes / 60);
-                if ($hoursToCredit > 0) {
-                    $date = Carbon::parse($leaveRequest->start_date);
-                    $dtr = $this->findOrCreateDtrRecord(
-                        (int) $leaveRequest->user_id,
-                        $date->toDateString(),
-                        'present'
-                    );
-
-                    $existingTotal = (float) ($dtr->total_hours ?? 0);
-                    $newTotal = $existingTotal + $hoursToCredit;
-                    $dtr->total_hours = $newTotal;
-                    $dtr->overtime_hours = max($newTotal - 8.0, 0);
-                    $additionalTimeRemark = "Additional Time ({$m[1]}:{$m[2]})";
-                    $existingRemarks = (string) ($dtr->remarks ?? '');
-                    if ($existingRemarks === '') {
-                        $dtr->remarks = $additionalTimeRemark;
-                    } elseif (strpos($existingRemarks, $additionalTimeRemark) === false) {
-                        $dtr->remarks = $existingRemarks.'; '.$additionalTimeRemark;
-                    }
-                    $dtr->save();
-
-                    return;
-                }
+                $hoursLabel = $m[1].':'.$m[2];
             }
+        } elseif (preg_match('/Total Overtime Hours:\s*(\d{1,3}):(\d{2})/', $rawReason, $m)) {
+            $hours = (int) $m[1];
+            $minutes = (int) $m[2];
+            if ($minutes >= 0 && $minutes <= 59) {
+                $hoursToCredit = $hours + ($minutes / 60);
+                $hoursLabel = str_pad((string) $hours, 2, '0', STR_PAD_LEFT).':'.str_pad((string) $minutes, 2, '0', STR_PAD_LEFT);
+            }
+        }
+
+        if ($hoursToCredit !== null && $hoursToCredit > 0) {
+            $date = Carbon::parse($leaveRequest->start_date);
+            $dtr = $this->findOrCreateDtrRecord(
+                (int) $leaveRequest->user_id,
+                $date->toDateString(),
+                'present'
+            );
+
+            $existingTotal = (float) ($dtr->total_hours ?? 0);
+            $newTotal = $existingTotal + $hoursToCredit;
+            $dtr->total_hours = $newTotal;
+            $dtr->overtime_hours = max($newTotal - 8.0, 0);
+            $additionalTimeRemark = "Additional Time ({$hoursLabel})";
+            $existingRemarks = (string) ($dtr->remarks ?? '');
+            if ($existingRemarks === '') {
+                $dtr->remarks = $additionalTimeRemark;
+            } elseif (strpos($existingRemarks, $additionalTimeRemark) === false) {
+                $dtr->remarks = $existingRemarks.'; '.$additionalTimeRemark;
+            }
+            $dtr->save();
+
+            return;
         }
 
         foreach ($this->iterateLeaveRequestDates($leaveRequest) as $date) {
@@ -2387,7 +2399,18 @@ class LeaveRequestController extends Controller
 
     private function revertApprovedCreditOnResubmission(LeaveRequest $leaveRequest, bool $force = false): void
     {
+        $leaveRequest->loadMissing('user');
+
         if ($leaveRequest->type === 'additional_time') {
+            if (
+                $leaveRequest->user?->role === 'student'
+                && \App\Support\StudentOvertimeLeaveRequest::parseForLeaveRequest($leaveRequest) !== null
+            ) {
+                \App\Support\StudentOvertimeLeaveRequest::revertFromDtr($leaveRequest);
+
+                return;
+            }
+
             $this->revertAdditionalTimeFromDtr($leaveRequest, $force);
 
             return;
@@ -2415,7 +2438,20 @@ class LeaveRequestController extends Controller
      */
     private function applyApprovedCreditsForType(LeaveRequest $leaveRequest): void
     {
+        $leaveRequest->loadMissing('user');
+
         if ($leaveRequest->type === 'additional_time') {
+            // Attendance-filed Additional Time uses the overtime reason format
+            // ("Total Overtime Hours"). Prefer that credit path when parseable.
+            if (
+                $leaveRequest->user?->role === 'student'
+                && \App\Support\StudentOvertimeLeaveRequest::parseForLeaveRequest($leaveRequest) !== null
+            ) {
+                \App\Support\StudentOvertimeLeaveRequest::applyApprovedToDtr($leaveRequest);
+
+                return;
+            }
+
             $this->applyAdditionalTimeToDtr($leaveRequest);
 
             return;
