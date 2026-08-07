@@ -373,12 +373,19 @@ class DtrTimeRequestController extends Controller
     {
         $freshRequest = $result['request'];
         $typeLabel = strtolower($freshRequest->request_type_label);
+        $requestedTotal = (float) ($freshRequest->requested_total_hours ?? $freshRequest->hours);
+        $overtimeHours = max($requestedTotal - DtrTimeRequestHours::STANDARD_DAY_HOURS, 0);
+
         $message = "Approved {$typeLabel} time request and applied hours to the student's DTR (counts toward required training time).";
+        if ($overtimeHours > 0 && $freshRequest->isRegular()) {
+            $message .= ' Additional Time of '.DtrTimeRequestHours::decimalToTimeString($overtimeHours)
+                .' was included in DTR and remaining training hours.';
+        }
 
         if ($result['leave_imported']) {
             $message .= ' An Additional Time leave request was recorded in Leave Requests ('.TimeRequestOvertimeLeaveImport::IMPORT_REMARK.').';
         } elseif ($result['attendance_additional_time_leave']) {
-            $message .= ' A pending Additional Time request was created in Leave Requests — the student must complete the details before it can be approved.';
+            $message .= ' A pending Additional Time leave request remains in Leave Requests for student details/documentation (hours are already on DTR).';
         }
 
         $automation = $result['automation'];

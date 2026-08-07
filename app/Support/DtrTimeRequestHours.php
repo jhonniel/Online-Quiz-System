@@ -49,9 +49,13 @@ class DtrTimeRequestHours
 
     /**
      * Apply an approved time request to the student's DTR for that date.
+     * Regular requests credit up to 08:00 plus any Additional Time filed the same day
+     * (requested_total_hours above 08:00), so training remaining includes the full day.
      */
     public static function applyApprovedRequestToDtr(DtrTimeRequest $timeRequest, ?string $adminRemark = null): Dtr
     {
+        $timeRequest->loadMissing('user');
+
         $existingDtr = Dtr::query()
             ->where('user_id', $timeRequest->user_id)
             ->whereDate('date', $timeRequest->date)
@@ -77,11 +81,26 @@ class DtrTimeRequestHours
     private static function applyRegularApproval(?Dtr $dtr, DtrTimeRequest $timeRequest, float $hours, string $remark): Dtr
     {
         $regularHours = min($hours, self::STANDARD_DAY_HOURS);
+        $requestedTotal = (float) ($timeRequest->requested_total_hours ?? $hours);
+        if ($requestedTotal < $regularHours) {
+            $requestedTotal = $regularHours;
+        }
+
+        $overtimeFromRequest = max($requestedTotal - self::STANDARD_DAY_HOURS, 0);
         $existingOvertime = $dtr ? (float) ($dtr->overtime_hours ?? 0) : 0;
 
+        // Same calendar day: keep the higher OT amount so we don't wipe leave-credited OT,
+        // and don't double-add when both the time request and leave carry the same OT.
+        $overtimeHours = max($existingOvertime, $overtimeFromRequest);
+        $totalHours = $regularHours + $overtimeHours;
+
+        if ($overtimeFromRequest > 0) {
+            $remark .= ' | Additional Time included ('.self::decimalToTimeString($overtimeFromRequest).')';
+        }
+
         if ($dtr) {
-            $dtr->total_hours = $regularHours + $existingOvertime;
-            $dtr->overtime_hours = $existingOvertime;
+            $dtr->total_hours = $totalHours;
+            $dtr->overtime_hours = $overtimeHours;
             $dtr->status = $dtr->status ?: 'present';
             $dtr->added_time_from_note = 0;
             $dtr->remarks = self::mergeRemarks($dtr->remarks, $remark);
@@ -93,8 +112,8 @@ class DtrTimeRequestHours
         return Dtr::create([
             'user_id' => $timeRequest->user_id,
             'date' => $timeRequest->date,
-            'total_hours' => $regularHours,
-            'overtime_hours' => 0,
+            'total_hours' => $totalHours,
+            'overtime_hours' => $overtimeHours,
             'status' => 'present',
             'remarks' => $remark,
             'added_time_from_note' => 0,

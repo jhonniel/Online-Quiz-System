@@ -279,12 +279,41 @@ class TimeRequestOvertimeLeaveImport
     }
 
     /**
-     * DTR already credited via time-request approval; leave record is informational only.
+     * DTR may already be credited via time-request approval (or legacy import).
+     * Skip leave approval credit when that would double-count Additional Time.
      */
     public static function shouldSkipDtrCreditOnLeaveApproval(LeaveRequest $leaveRequest): bool
     {
         if ($leaveRequest->dtr_time_request_id && str_contains((string) $leaveRequest->reason, self::IMPORT_REMARK)) {
             return true;
+        }
+
+        // Attendance-filed Additional Time: OT is applied when the regular time request
+        // is approved (from requested_total_hours). Skip if DTR already has those hours.
+        if (self::isFiledFromAttendance($leaveRequest)) {
+            $parsed = \App\Support\StudentOvertimeLeaveRequest::parseForLeaveRequest($leaveRequest);
+            if ($parsed === null) {
+                return false;
+            }
+
+            $dateStr = $parsed['dates'][0] ?? null;
+            if (! $dateStr) {
+                return false;
+            }
+
+            $dtr = \App\Models\Dtr::query()
+                ->where('user_id', $leaveRequest->user_id)
+                ->whereDate('date', $dateStr)
+                ->first();
+
+            if (! $dtr) {
+                return false;
+            }
+
+            $creditedOvertime = (float) ($dtr->overtime_hours ?? 0);
+
+            // Already on DTR from time-request approval — do not add again.
+            return $creditedOvertime + 0.009 >= (float) $parsed['total_hours'];
         }
 
         return false;
