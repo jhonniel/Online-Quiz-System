@@ -89,7 +89,39 @@
     <!-- Filters -->
     <div class="bg-white rounded-lg shadow border border-gray-200 p-4 sm:p-6">
         <form method="GET" action="{{ url('/admin/time-requests') }}" class="space-y-4">
-            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                <div class="sm:col-span-2 lg:col-span-1">
+                    <label for="search" class="block text-sm font-medium text-gray-700 mb-2">Search</label>
+                    <div class="relative">
+                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                            <svg class="h-4 w-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                            </svg>
+                        </div>
+                        <input type="text"
+                               name="search"
+                               id="search"
+                               value="{{ request('search') }}"
+                               placeholder="Student name, email, or school..."
+                               autocomplete="off"
+                               class="w-full pl-9 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                    </div>
+                    <p class="mt-1 text-xs text-gray-500 min-h-[1rem]">Name, email, or school</p>
+                </div>
+
+                <div>
+                    <label for="university_id" class="block text-sm font-medium text-gray-700 mb-2">School / University</label>
+                    <select name="university_id" id="university_id" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                        <option value="">All Schools</option>
+                        @foreach(($universities ?? collect()) as $university)
+                            <option value="{{ $university->id }}" {{ (string) request('university_id') === (string) $university->id ? 'selected' : '' }}>
+                                {{ $university->full_name }}
+                            </option>
+                        @endforeach
+                    </select>
+                    <p class="mt-1 text-xs text-gray-500 min-h-[1rem] invisible" aria-hidden="true">&nbsp;</p>
+                </div>
+
                 <div>
                     <label for="status" class="block text-sm font-medium text-gray-700 mb-2">Status</label>
                     <select name="status" id="status" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
@@ -131,22 +163,59 @@
                         {{ request('date_to') ? "\u{00a0}" : 'Leave empty for all dates' }}
                     </p>
                 </div>
+            </div>
 
-                <div>
-                    <label for="time-requests-filter-submit" class="block text-sm font-medium text-gray-700 mb-2 invisible" aria-hidden="true">Filter</label>
-                    <x-admin-filter-button id="time-requests-filter-submit" :fullWidth="true" />
-                    <p class="mt-1 text-xs text-gray-500 min-h-[1rem] invisible" aria-hidden="true">&nbsp;</p>
-                </div>
+            <div class="flex flex-wrap items-center gap-3">
+                <x-admin-filter-button id="time-requests-filter-submit" />
+                @if(request()->hasAny(['search', 'university_id', 'status', 'student_id', 'date_from', 'date_to']))
+                    <a href="{{ url('/admin/time-requests') }}"
+                       class="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-lg text-gray-700 bg-white hover:bg-gray-50">
+                        Reset
+                    </a>
+                @endif
             </div>
         </form>
     </div>
 
     <!-- Time Requests Table -->
     <div class="bg-white rounded-lg shadow border border-gray-200 overflow-hidden">
+        @php($canBulkApprove = auth()->user()->isAdmin())
+        <div class="px-4 sm:px-6 py-4 border-b border-gray-200 bg-gray-50 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+            <div>
+                <h2 class="text-base font-semibold text-gray-900">Requests</h2>
+                @if($canBulkApprove)
+                    <p class="text-sm text-gray-600 mt-0.5">Select pending requests to approve in bulk</p>
+                @else
+                    <p class="text-sm text-gray-600 mt-0.5">Review and process student attendance time requests</p>
+                @endif
+            </div>
+            @if($canBulkApprove)
+                <div id="bulk-actions" class="flex flex-wrap items-center gap-3" style="display: none;">
+                    <span class="text-sm text-gray-700" id="selected-count">0 selected</span>
+                    <button type="button"
+                            onclick="openBulkApproveModal()"
+                            class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-lg shadow-sm text-white bg-green-600 hover:bg-green-700">
+                        <svg class="h-4 w-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                        </svg>
+                        Approve Selected
+                    </button>
+                </div>
+            @endif
+        </div>
         <div class="overflow-x-auto">
             <table class="min-w-full divide-y divide-gray-200">
                 <thead class="bg-gray-50">
                     <tr>
+                        @if($canBulkApprove)
+                            <th class="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-10">
+                                <input type="checkbox"
+                                       id="select-all-pending"
+                                       class="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                                       title="Select all pending on this page"
+                                       onchange="toggleSelectAllPending(this)">
+                            </th>
+                        @endif
                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Student</th>
                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Type</th>
@@ -160,9 +229,20 @@
                 <tbody class="bg-white divide-y divide-gray-200">
                     @forelse($timeRequests as $request)
                         <tr class="hover:bg-gray-50">
+                            @if($canBulkApprove)
+                                <td class="px-4 sm:px-6 py-4 whitespace-nowrap">
+                                    @if($request->status === 'pending')
+                                        <input type="checkbox"
+                                               class="pending-request-checkbox rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                                               value="{{ $request->id }}"
+                                               onchange="updateBulkSelection()">
+                                    @endif
+                                </td>
+                            @endif
                             <td class="px-6 py-4 whitespace-nowrap">
                                 <div class="text-sm font-medium text-gray-900">{{ $request->user->name }}</div>
                                 <div class="text-sm text-gray-500">{{ $request->user->email }}</div>
+                                <div class="text-xs text-gray-400 mt-0.5">{{ optional($request->user->university)->name ?? 'No school on file' }}</div>
                             </td>
                             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                                 <div>{{ $request->date->format('M d, Y') }}</div>
@@ -244,7 +324,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="8" class="px-6 py-8 text-center text-sm text-gray-500">
+                            <td colspan="{{ $canBulkApprove ? 9 : 8 }}" class="px-6 py-8 text-center text-sm text-gray-500">
                                 No time requests found.
                             </td>
                         </tr>
@@ -373,6 +453,53 @@
         </form>
     </div>
 </div>
+
+<!-- Bulk Approve Modal (admin only) -->
+@if(auth()->user()->isAdmin())
+<div id="bulk-approve-modal" class="hidden fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
+    <div class="relative top-20 mx-auto p-5 border w-11/12 md:w-1/2 shadow-lg rounded-md bg-white">
+        <div class="flex items-center justify-between mb-4">
+            <h3 class="text-lg font-bold text-gray-900">Approve Selected Time Requests</h3>
+            <button type="button" onclick="closeBulkApproveModal()" class="text-gray-400 hover:text-gray-600">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                </svg>
+            </button>
+        </div>
+
+        <p class="text-sm text-gray-600 mb-4">
+            You are about to approve <span id="bulk-approve-count" class="font-semibold text-gray-900">0</span> pending request(s). Hours will be applied to each student's DTR.
+        </p>
+
+        <form id="bulk-approve-form" method="POST" action="{{ route('admin.time-requests.bulk-approve') }}">
+            @csrf
+            <div id="bulk-approve-ids"></div>
+            <div class="space-y-4">
+                <div>
+                    <label for="bulk_approve_admin_notes" class="block text-sm font-medium text-gray-700 mb-2">Admin Notes (Optional)</label>
+                    <textarea name="admin_notes"
+                              id="bulk_approve_admin_notes"
+                              rows="3"
+                              class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                              placeholder="Applied to all selected requests"></textarea>
+                </div>
+            </div>
+
+            <div class="mt-6 flex justify-end gap-3">
+                <button type="button"
+                        onclick="closeBulkApproveModal()"
+                        class="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors">
+                    Cancel
+                </button>
+                <button type="submit"
+                        class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors">
+                    Approve Selected
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+@endif
 
 <!-- Reject Modal -->
 <div id="reject-modal" class="hidden fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
@@ -556,6 +683,75 @@ function closeApproveModal() {
     document.getElementById('approve-form').reset();
 }
 
+function getSelectedPendingCheckboxes() {
+    return Array.from(document.querySelectorAll('.pending-request-checkbox:checked'));
+}
+
+function updateBulkSelection() {
+    const selected = getSelectedPendingCheckboxes();
+    const bulkActions = document.getElementById('bulk-actions');
+    const selectedCount = document.getElementById('selected-count');
+    const selectAll = document.getElementById('select-all-pending');
+    const allPending = document.querySelectorAll('.pending-request-checkbox');
+
+    if (!bulkActions) {
+        return;
+    }
+
+    if (selectedCount) {
+        selectedCount.textContent = selected.length + ' selected';
+    }
+
+    bulkActions.style.display = selected.length > 0 ? 'flex' : 'none';
+
+    if (selectAll && allPending.length > 0) {
+        selectAll.checked = selected.length === allPending.length;
+        selectAll.indeterminate = selected.length > 0 && selected.length < allPending.length;
+    }
+}
+
+function toggleSelectAllPending(selectAllCheckbox) {
+    document.querySelectorAll('.pending-request-checkbox').forEach(function (checkbox) {
+        checkbox.checked = selectAllCheckbox.checked;
+    });
+    updateBulkSelection();
+}
+
+function openBulkApproveModal() {
+    const selected = getSelectedPendingCheckboxes();
+    if (selected.length === 0) {
+        alert('Select at least one pending time request.');
+        return;
+    }
+
+    const idsContainer = document.getElementById('bulk-approve-ids');
+    if (!idsContainer) {
+        return;
+    }
+
+    idsContainer.innerHTML = '';
+    selected.forEach(function (checkbox) {
+        const input = document.createElement('input');
+        input.type = 'hidden';
+        input.name = 'request_ids[]';
+        input.value = checkbox.value;
+        idsContainer.appendChild(input);
+    });
+
+    document.getElementById('bulk-approve-count').textContent = String(selected.length);
+    document.getElementById('bulk-approve-modal').classList.remove('hidden');
+}
+
+function closeBulkApproveModal() {
+    const modal = document.getElementById('bulk-approve-modal');
+    if (!modal) {
+        return;
+    }
+    modal.classList.add('hidden');
+    document.getElementById('bulk-approve-form').reset();
+    document.getElementById('bulk-approve-ids').innerHTML = '';
+}
+
 function openRejectModal(requestId) {
     const modal = document.getElementById('reject-modal');
     const form = document.getElementById('reject-form');
@@ -598,10 +794,20 @@ document.getElementById('approve-modal')?.addEventListener('click', function(e) 
     }
 });
 
+document.getElementById('bulk-approve-modal')?.addEventListener('click', function(e) {
+    if (e.target === this) {
+        closeBulkApproveModal();
+    }
+});
+
 document.getElementById('reject-modal')?.addEventListener('click', function(e) {
     if (e.target === this) {
         closeRejectModal();
     }
+});
+
+document.addEventListener('DOMContentLoaded', function () {
+    updateBulkSelection();
 });
 
 document.getElementById('delete-modal')?.addEventListener('click', function(e) {

@@ -42,12 +42,20 @@ class DtrTimeRequestController extends Controller
             // has a pending Additional Time leave request linked in Leave Requests.
             $this->reconcilePendingAdditionalTimeLeaves($allowedDepartmentIds);
             $undertimeRulesResult = StudentUndertimeRulesViolation::reconcileForStudents($allowedDepartmentIds);
-            
-            $query = DtrTimeRequest::with(['user', 'reviewer'])
-                ->whereHas('user', function ($q) use ($allowedDepartmentIds) {
+
+            $search = trim((string) $request->input('search', ''));
+
+            $query = DtrTimeRequest::with(['user.university', 'reviewer'])
+                ->whereHas('user', function ($q) use ($allowedDepartmentIds, $request, $search) {
                     $q->where('role', 'student');
                     if ($allowedDepartmentIds !== null) {
                         $q->whereIn('department_id', $allowedDepartmentIds);
+                    }
+                    if ($request->filled('university_id')) {
+                        $q->where('university_id', $request->university_id);
+                    }
+                    if ($search !== '') {
+                        $this->applyStudentUserSearch($q, $search);
                     }
                 });
 
@@ -95,18 +103,30 @@ class DtrTimeRequestController extends Controller
             $pendingCount = (clone $baseStatusQuery)->where('status', 'pending')->count();
             $rejectedCount = (clone $baseStatusQuery)->where('status', 'rejected')->count();
 
-            // Get all students for filter dropdown
-            $students = \App\Models\User::where('role', 'student')
+            $universities = \App\Models\University::where('is_active', true)
+                ->orderBy('name')
+                ->get();
+
+            // Get all students for filter dropdown (optionally narrowed by school/search)
+            $studentsQuery = \App\Models\User::where('role', 'student')
                 ->where('is_active', true)
                 ->when($allowedDepartmentIds !== null, function ($q) use ($allowedDepartmentIds) {
                     $q->whereIn('department_id', $allowedDepartmentIds);
-                })
-                ->orderBy('name')
-                ->get();
+                });
+
+            if ($request->filled('university_id')) {
+                $studentsQuery->where('university_id', $request->university_id);
+            }
+            if ($search !== '') {
+                $this->applyStudentUserSearch($studentsQuery, $search);
+            }
+
+            $students = $studentsQuery->orderBy('name')->get();
 
             return view('admin.student-management.time-requests', compact(
                 'timeRequests',
                 'students',
+                'universities',
                 'pendingCount',
                 'rejectedCount',
                 'undertimeRulesResult'
@@ -194,14 +214,123 @@ class DtrTimeRequestController extends Controller
             'admin_notes' => 'nullable|string|max:1000',
         ]);
 
-        DtrTimeRequestHours::applyApprovedRequestToDtr(
-            $dtrTimeRequest,
-            $validated['admin_notes'] ?? null
-        );
+        $result = $this->processApproval($dtrTimeRequest, $validated['admin_notes'] ?? null);
+
+        return back()->with('success', $this->buildApprovalSuccessMessage($result));
+    }
+
+    /**
+     * Approve multiple pending time requests at once.
+     */
+    public function bulkApprove(Request $request)
+    {
+        $user = Auth::user();
+
+        if (! $user->isAdmin()) {
+            abort(403, 'Access denied. Only admins can bulk approve time requests.');
+        }
+
+        $validated = $request->validate([
+            'request_ids' => ['required', 'array', 'min:1'],
+            'request_ids.*' => ['integer', 'exists:dtr_time_requests,id'],
+            'admin_notes' => ['nullable', 'string', 'max:1000'],
+        ]);
+
+        $adminNotes = $validated['admin_notes'] ?? null;
+        $approvedCount = 0;
+        $skippedCount = 0;
+        $additionalTimePendingCount = 0;
+        $leaveImportedCount = 0;
+        $warningEnabledCount = 0;
+        $finalEnabledCount = 0;
+        $warningDisabledCount = 0;
+
+        $requests = DtrTimeRequest::with('user')
+            ->whereIn('id', $validated['request_ids'])
+            ->get();
+
+        foreach ($requests as $dtrTimeRequest) {
+            if ($dtrTimeRequest->status !== 'pending') {
+                $skippedCount++;
+                continue;
+            }
+
+            if ($dtrTimeRequest->user?->role !== 'student') {
+                $skippedCount++;
+                continue;
+            }
+
+            $allowedStudentDepartmentIds = $user->getAllowedStudentDepartmentIds();
+            if ($allowedStudentDepartmentIds !== null) {
+                $normalizedAllowedDepartmentIds = array_map('intval', $allowedStudentDepartmentIds);
+                if (! in_array((int) $dtrTimeRequest->user->department_id, $normalizedAllowedDepartmentIds, true)) {
+                    $skippedCount++;
+                    continue;
+                }
+            }
+
+            $result = $this->processApproval($dtrTimeRequest, $adminNotes);
+            $approvedCount++;
+
+            if (! empty($result['leave_imported'])) {
+                $leaveImportedCount++;
+            }
+            if (! empty($result['attendance_additional_time_leave'])) {
+                $additionalTimePendingCount++;
+            }
+
+            $automation = $result['automation'] ?? [];
+            if (! empty($automation['final_enabled'])) {
+                $finalEnabledCount++;
+            } elseif (! empty($automation['enabled'])) {
+                $warningEnabledCount++;
+            } elseif (! empty($automation['disabled'])) {
+                $warningDisabledCount++;
+            }
+        }
+
+        if ($approvedCount === 0) {
+            return back()->withErrors(['error' => 'No pending time requests were approved. Selected items may already be processed or outside your access.']);
+        }
+
+        $message = "Approved {$approvedCount} time request".($approvedCount === 1 ? '' : 's').' and applied hours to student DTR.';
+        if ($skippedCount > 0) {
+            $message .= " Skipped {$skippedCount}.";
+        }
+        if ($leaveImportedCount > 0) {
+            $message .= " {$leaveImportedCount} Additional Time leave request(s) recorded in Leave Requests.";
+        }
+        if ($additionalTimePendingCount > 0) {
+            $message .= " {$additionalTimePendingCount} pending Additional Time leave request(s) created for students to complete.";
+        }
+        if ($finalEnabledCount > 0) {
+            $message .= " Final notice enabled for {$finalEnabledCount} student(s).";
+        }
+        if ($warningEnabledCount > 0) {
+            $message .= " Rules violation warning enabled for {$warningEnabledCount} student(s).";
+        }
+        if ($warningDisabledCount > 0) {
+            $message .= " Rules violation warning disabled for {$warningDisabledCount} student(s).";
+        }
+
+        return back()->with('success', $message);
+    }
+
+    /**
+     * @return array{
+     *     request: DtrTimeRequest,
+     *     leave_imported: mixed,
+     *     attendance_additional_time_leave: mixed,
+     *     automation: array<string, mixed>
+     * }
+     */
+    private function processApproval(DtrTimeRequest $dtrTimeRequest, ?string $adminNotes): array
+    {
+        DtrTimeRequestHours::applyApprovedRequestToDtr($dtrTimeRequest, $adminNotes);
 
         $dtrTimeRequest->update([
             'status' => 'approved',
-            'admin_notes' => $validated['admin_notes'] ?? null,
+            'admin_notes' => $adminNotes,
             'reviewed_by' => Auth::id(),
             'reviewed_at' => now(),
         ]);
@@ -214,7 +343,7 @@ class DtrTimeRequestController extends Controller
             $leaveImported = TimeRequestOvertimeLeaveImport::syncFromApprovedTimeRequest(
                 $freshRequest,
                 Auth::id(),
-                $validated['admin_notes'] ?? null
+                $adminNotes
             );
         } else {
             $attendanceAdditionalTimeLeave = TimeRequestOvertimeLeaveImport::ensurePendingAdditionalTimeFromRegularTimeRequest(
@@ -222,19 +351,41 @@ class DtrTimeRequestController extends Controller
             );
         }
 
+        $automation = StudentUndertimeRulesViolation::evaluateAfterApprovedTimeRequest($freshRequest);
+
+        return [
+            'request' => $freshRequest,
+            'leave_imported' => $leaveImported,
+            'attendance_additional_time_leave' => $attendanceAdditionalTimeLeave,
+            'automation' => $automation,
+        ];
+    }
+
+    /**
+     * @param  array{
+     *     request: DtrTimeRequest,
+     *     leave_imported: mixed,
+     *     attendance_additional_time_leave: mixed,
+     *     automation: array<string, mixed>
+     * }  $result
+     */
+    private function buildApprovalSuccessMessage(array $result): string
+    {
+        $freshRequest = $result['request'];
         $typeLabel = strtolower($freshRequest->request_type_label);
         $message = "Approved {$typeLabel} time request and applied hours to the student's DTR (counts toward required training time).";
-        if ($leaveImported) {
+
+        if ($result['leave_imported']) {
             $message .= ' An Additional Time leave request was recorded in Leave Requests ('.TimeRequestOvertimeLeaveImport::IMPORT_REMARK.').';
-        } elseif ($attendanceAdditionalTimeLeave) {
+        } elseif ($result['attendance_additional_time_leave']) {
             $message .= ' A pending Additional Time request was created in Leave Requests — the student must complete the details before it can be approved.';
         }
 
-        $automation = StudentUndertimeRulesViolation::evaluateAfterApprovedTimeRequest($freshRequest);
+        $automation = $result['automation'];
         if (! empty($automation['final_enabled'])) {
             $meritTotal = \App\Support\StudentViolationCounter::countForUser((int) $freshRequest->user_id);
             $message .= " Final notice (scrolling banner) was enabled automatically ({$meritTotal} merit(s) on record, maximum reached).";
-        } elseif ($automation['enabled']) {
+        } elseif (! empty($automation['enabled'])) {
             $meritTotal = \App\Support\StudentViolationCounter::countForUser((int) $freshRequest->user_id);
             $meritThresholds = StudentMeritNoticeSettings::thresholds();
             if ($meritTotal >= $meritThresholds['warning'] && $meritTotal < $meritThresholds['final']) {
@@ -248,7 +399,7 @@ class DtrTimeRequestController extends Controller
                 );
                 $message .= " Student rules violation warning was enabled automatically ({$streak} consecutive under-time day(s) below 08:00).";
             }
-        } elseif ($automation['disabled']) {
+        } elseif (! empty($automation['disabled'])) {
             $streak = StudentUndertimeRulesViolation::countConsecutiveApprovedFullDaysEndingOn(
                 (int) $freshRequest->user_id,
                 $freshRequest->date->copy()->startOfDay()
@@ -256,7 +407,7 @@ class DtrTimeRequestController extends Controller
             $message .= " Student rules violation warning was disabled automatically ({$streak} consecutive day(s) at 08:00 or above).";
         }
 
-        return back()->with('success', $message);
+        return $message;
     }
 
     /**
@@ -390,6 +541,36 @@ class DtrTimeRequestController extends Controller
             $timeRequest->update($update);
             $timeRequest->refresh();
         }
+    }
+
+    /**
+     * Partial match on student name, email, ID, or school (university).
+     *
+     * @param  \Illuminate\Database\Eloquent\Builder|\Illuminate\Database\Query\Builder  $query
+     */
+    private function applyStudentUserSearch($query, string $search): void
+    {
+        $search = trim($search);
+        if ($search === '') {
+            return;
+        }
+
+        $term = '%'.addcslashes($search, '%_\\').'%';
+
+        $query->where(function ($q) use ($term, $search) {
+            if (ctype_digit($search)) {
+                $q->orWhere('id', (int) $search);
+            }
+
+            $q->orWhere('name', 'like', $term)
+                ->orWhere('email', 'like', $term)
+                ->orWhereHas('university', function ($uq) use ($term) {
+                    $uq->where(function ($inner) use ($term) {
+                        $inner->where('name', 'like', $term)
+                            ->orWhere('code', 'like', $term);
+                    });
+                });
+        });
     }
 
 }

@@ -64,8 +64,11 @@ class AppServiceProvider extends ServiceProvider
         if ($connection === 'sqlite') {
             $databasePath = config('database.connections.sqlite.database');
 
-            // If path is relative, make it absolute
-            if (! empty($databasePath) && substr($databasePath, 0, 1) !== '/') {
+            // If path is relative, make it absolute (Unix /path or Windows C:\path / C:/path)
+            $isAbsolute = str_starts_with($databasePath, '/')
+                || str_starts_with($databasePath, '\\')
+                || (bool) preg_match('/^[A-Za-z]:[\\\\\\/]/', (string) $databasePath);
+            if (! empty($databasePath) && ! $isAbsolute) {
                 $databasePath = base_path($databasePath);
             }
 

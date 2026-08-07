@@ -646,6 +646,7 @@ Route::prefix('admin')->middleware(['auth', 'admin'])->group(function () {
 
         // Student Time Requests Management
         Route::get('/time-requests', [DtrTimeRequestController::class, 'index'])->name('admin.time-requests.index');
+        Route::post('/time-requests/bulk-approve', [DtrTimeRequestController::class, 'bulkApprove'])->name('admin.time-requests.bulk-approve');
         Route::put('/time-requests/{dtrTimeRequest}', [DtrTimeRequestController::class, 'update'])->name('admin.time-requests.update');
         Route::post('/time-requests/{dtrTimeRequest}/approve', [DtrTimeRequestController::class, 'approve'])->name('admin.time-requests.approve');
         Route::post('/time-requests/{dtrTimeRequest}/reject', [DtrTimeRequestController::class, 'reject'])->name('admin.time-requests.reject');
