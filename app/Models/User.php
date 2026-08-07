@@ -352,6 +352,14 @@ class User extends Authenticatable
         return $this->role === 'admin';
     }
 
+    /**
+     * Profile verified badge — shown after admin approval in Users.
+     */
+    public function hasVerifiedBadge(): bool
+    {
+        return (bool) $this->is_approved;
+    }
+
     public function isStudent()
     {
         return $this->role === 'student';

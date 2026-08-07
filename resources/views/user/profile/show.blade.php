@@ -75,7 +75,12 @@
         <div class="pt-20 pb-6 px-6">
             <!-- User Info -->
             <div class="mb-6">
-                <h2 class="text-2xl font-bold text-gray-900 mb-2">{{ $user->name }}</h2>
+                <div class="flex items-center gap-2 mb-2 min-w-0">
+                    <h2 class="text-2xl font-bold text-gray-900 truncate">{{ $user->name }}</h2>
+                    @if($user->hasVerifiedBadge())
+                        <x-verified-badge :size="30" class="verified-badge--profile" />
+                    @endif
+                </div>
                 <p class="text-gray-600 mb-4">{{ $user->email }}</p>
 
                 @if($user->university)

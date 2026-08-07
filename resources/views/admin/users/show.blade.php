@@ -35,7 +35,12 @@
                     </div>
                 @endif
                 <div class="min-w-0 flex-1">
-                    <h1 class="text-xl sm:text-2xl font-bold truncate">{{ $user->name }}</h1>
+                    <div class="flex items-center gap-2 min-w-0">
+                        <h1 class="text-xl sm:text-2xl font-bold truncate">{{ $user->name }}</h1>
+                        @if($user->hasVerifiedBadge())
+                            <x-verified-badge :size="26" class="verified-badge--sm" title="Approved / verified" />
+                        @endif
+                    </div>
                     <p class="text-indigo-100 text-sm truncate mt-0.5">{{ $user->email }}</p>
                     <div class="mt-2 flex flex-wrap items-center gap-2">
                         <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-white/15 text-white border border-white/20">
@@ -44,6 +49,15 @@
                         <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold {{ $user->is_active ? 'bg-emerald-100 text-emerald-800' : 'bg-red-100 text-red-800' }}">
                             {{ $user->is_active ? 'Active' : 'Inactive' }}
                         </span>
+                        @if($user->is_approved)
+                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-800">
+                                Approved
+                            </span>
+                        @else
+                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-amber-100 text-amber-800">
+                                Pending approval
+                            </span>
+                        @endif
                     </div>
                 </div>
             </div>
