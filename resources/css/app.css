@@ -284,6 +284,52 @@
             transform: scale(0.85);
         }
     }
+
+    /* Student performance rating — students list actions */
+    .student-rating-actions-header {
+        @apply text-indigo-700 font-semibold tracking-wide;
+    }
+
+    .student-rating-action-btn {
+        @apply inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-xs font-semibold text-white;
+        @apply bg-gradient-to-r from-indigo-600 to-indigo-700 border border-indigo-500/80;
+        @apply shadow-sm transition-all duration-200 ease-out;
+    }
+
+    .student-rating-action-btn:hover {
+        @apply from-indigo-500 to-indigo-600 border-indigo-400 -translate-y-0.5;
+        box-shadow: 0 8px 20px -6px rgba(79, 70, 229, 0.55), 0 0 0 1px rgba(129, 140, 248, 0.35);
+    }
+
+    .student-rating-action-btn:active {
+        @apply translate-y-0 scale-[0.98];
+        box-shadow: 0 2px 8px -4px rgba(79, 70, 229, 0.45);
+    }
+
+    .student-rating-action-btn svg {
+        @apply h-3.5 w-3.5 opacity-90;
+    }
+
+    .student-rating-hours-incomplete {
+        @apply inline-flex items-center px-3 py-1.5 rounded-lg text-xs font-semibold text-amber-900;
+        @apply bg-amber-50/90 border border-amber-300/80 cursor-default select-none;
+        animation: student-rating-hours-glow 2.4s ease-in-out infinite;
+    }
+
+    @keyframes student-rating-hours-glow {
+        0%,
+        100% {
+            box-shadow:
+                0 0 0 1px rgba(251, 191, 36, 0.35),
+                0 0 8px rgba(251, 191, 36, 0.15);
+        }
+        50% {
+            box-shadow:
+                0 0 0 2px rgba(245, 158, 11, 0.65),
+                0 0 14px rgba(251, 191, 36, 0.45),
+                0 0 22px rgba(245, 158, 11, 0.2);
+        }
+    }
 }
 
 @layer utilities {
