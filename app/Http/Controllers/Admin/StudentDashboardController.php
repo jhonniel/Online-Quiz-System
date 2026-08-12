@@ -134,9 +134,8 @@ class StudentDashboardController extends Controller
 
     public function students(Request $request)
     {
-        // Check if user has student_management permission or is admin
         $user = auth()->user();
-        if (!$user->isAdmin() && !$user->canAccessStudentManagement()) {
+        if (! $user || ! StudentPerformanceRatingForm::canAccessStudentsListForRating($user)) {
             abort(403, 'Access denied. You do not have permission to access Student Management.');
         }
 

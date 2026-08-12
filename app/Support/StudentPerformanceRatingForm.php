@@ -165,7 +165,17 @@ class StudentPerformanceRatingForm
             return false;
         }
 
-        return $user->isAdmin() || $user->canAccessStudentFeature('student_performance_ratings');
+        return $user->canAccessStudentFeature('student_performance_ratings');
+    }
+
+    public static function canAccessStudentsListForRating(?User $user): bool
+    {
+        if (! $user || ! $user->canAccessStudentManagement()) {
+            return false;
+        }
+
+        return $user->canAccessStudentFeature('students')
+            || $user->canAccessStudentFeature('student_performance_ratings');
     }
 
     /**

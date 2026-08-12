@@ -208,7 +208,7 @@
                                 <label for="student_management" class="block text-sm font-medium text-gray-900 cursor-pointer">
                                     Student Management
                                 </label>
-                                <p class="mt-1 text-sm text-gray-500">Access to student dashboard, DTR, and leave requests</p>
+                                <p class="mt-1 text-sm text-gray-500">Access to student dashboard, DTR, leave requests, and performance ratings</p>
 
                                 @include('admin.admin-permissions.partials.sub-feature-fields', [
                                     'areaKey' => 'student_management',

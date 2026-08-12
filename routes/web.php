@@ -622,8 +622,11 @@ Route::prefix('admin')->middleware(['auth', 'admin'])->group(function () {
         Route::get('/student-management/students', [StudentDashboardController::class, 'students'])->name('admin.student-management.students');
         Route::get('/student-management/students/{user}/merits', [StudentDashboardController::class, 'studentMeritDetails'])->name('admin.student-management.students.merits');
         Route::patch('/student-management/students/{user}/merits', [StudentDashboardController::class, 'updateStudentMeritDetails'])->name('admin.student-management.students.merits.update');
-        Route::get('/student-management/students/{user}/performance-rating', [StudentPerformanceRatingController::class, 'edit'])->name('admin.student-management.students.performance-rating.edit');
-        Route::put('/student-management/students/{user}/performance-rating', [StudentPerformanceRatingController::class, 'update'])->name('admin.student-management.students.performance-rating.update');
+
+        Route::middleware(['admin.subfeature:student_management,student_performance_ratings'])->group(function () {
+            Route::get('/student-management/students/{user}/performance-rating', [StudentPerformanceRatingController::class, 'edit'])->name('admin.student-management.students.performance-rating.edit');
+            Route::put('/student-management/students/{user}/performance-rating', [StudentPerformanceRatingController::class, 'update'])->name('admin.student-management.students.performance-rating.update');
+        });
 
         // Student Management Dashboard
         Route::get('/student-management/dashboard', [StudentDashboardController::class, 'index'])->name('admin.student-management.dashboard');

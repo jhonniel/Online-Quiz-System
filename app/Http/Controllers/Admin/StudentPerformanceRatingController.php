@@ -77,7 +77,7 @@ class StudentPerformanceRatingController extends Controller
     {
         $authUser = auth()->user();
         if (! $authUser || ! StudentPerformanceRatingForm::viewerCanAccess($authUser)) {
-            abort(403, 'Access denied. Performance ratings are only available to admins with Student Performance Ratings access.');
+            abort(403, 'Access denied. You need the Student Performance Ratings permission to rate students.');
         }
 
         if ($student->role !== 'student') {
