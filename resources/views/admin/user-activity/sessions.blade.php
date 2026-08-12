@@ -132,7 +132,7 @@
                     <option value="">All Users</option>
                     @foreach($users as $user)
                         <option value="{{ $user->id }}" {{ request('user_id') == $user->id ? 'selected' : '' }}>
-                            {{ $user->name }}
+                            <x-user-name :user="$user" />
                         </option>
                     @endforeach
                 </select>
@@ -199,7 +199,7 @@
                                             </span>
                                         </div>
                                         <div class="ml-3">
-                                            <div class="text-sm font-medium text-gray-900">{{ $session->user->name }}</div>
+                                            <div class="text-sm font-medium text-gray-900"><x-user-name :user="$session->user" /></div>
                                             <div class="text-sm text-gray-500">{{ $session->user->email }}</div>
                                         </div>
                                     </div>

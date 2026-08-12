@@ -217,7 +217,7 @@
                 <div class="bg-gradient-to-r from-indigo-600 to-purple-600 px-4 py-3">
                     <div class="flex items-center justify-between">
                         <div class="flex-1 min-w-0">
-                            <h3 class="text-base font-semibold text-white truncate">{{ $report['employee']->name }}</h3>
+                            <h3 class="text-base font-semibold text-white truncate"><x-user-name :user="$report['employee']" class="text-white" /></h3>
                             <p class="text-xs text-indigo-100 truncate">{{ $report['employee']->email }}</p>
                         </div>
                         <div class="text-right ml-2 flex-shrink-0">

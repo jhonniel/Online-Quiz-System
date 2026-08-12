@@ -312,7 +312,7 @@
                                     <div class="flex items-center space-x-3">
                                         <div class="text-gray-400">
                                             @if($request->reviewer)
-                                                Reviewed by {{ $request->reviewer->name }}
+                                                Reviewed by <x-user-name :user="$request->reviewer" />
                                                 @if($request->reviewed_at)
                                                     <br><span class="text-xs">{{ $request->reviewed_at->format('M d, Y g:i A') }}</span>
                                                 @endif

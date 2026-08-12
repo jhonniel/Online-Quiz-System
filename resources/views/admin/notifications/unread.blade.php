@@ -142,7 +142,7 @@
                                         @endif
                                     </div>
                                     <div class="ml-4">
-                                        <div class="text-sm font-medium text-gray-900">{{ $notification->user->name ?? 'System' }}</div>
+                                        <div class="text-sm font-medium text-gray-900"><x-user-name :user="$notification->user" /></div>
                                         @if($notification->user)
                                             <div class="text-sm text-gray-500">{{ $notification->user->email }}</div>
                                         @endif

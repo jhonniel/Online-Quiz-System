@@ -118,7 +118,7 @@
                         @if($leaveRequest->reviewer)
                             <div>
                                 <label class="block text-sm font-medium text-gray-500 mb-1">Reviewed By</label>
-                                <p class="text-sm font-semibold text-gray-900">{{ $leaveRequest->reviewer->name }}</p>
+                                <p class="text-sm font-semibold text-gray-900"><x-user-name :user="$leaveRequest->reviewer" /></p>
                             </div>
                         @endif
                     @endif

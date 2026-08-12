@@ -660,7 +660,7 @@
                                                                 @endif
                                                             </div>
                                                             <div class="ml-3">
-                                                                <div class="text-sm font-medium text-gray-900">{{ $attempt->user->name }}</div>
+                                                                <div class="text-sm font-medium text-gray-900"><x-user-name :user="$attempt->user" /></div>
                                                                 <div class="text-sm text-gray-500">{{ $attempt->user->email }}</div>
                                                             </div>
                                                         </div>

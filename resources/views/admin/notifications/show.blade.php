@@ -55,7 +55,7 @@
                             </div>
                         @endif
                         <div>
-                            <p class="text-sm font-medium text-gray-900">{{ $notification->user->name }}</p>
+                            <p class="text-sm font-medium text-gray-900"><x-user-name :user="$notification->user" /></p>
                             <p class="text-sm text-gray-500">{{ $notification->user->email }}</p>
                         </div>
                     @else

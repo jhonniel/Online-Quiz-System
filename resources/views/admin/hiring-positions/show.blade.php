@@ -167,7 +167,7 @@
                     @if($hiringPosition->creator)
                         <div>
                             <label class="text-sm font-medium text-gray-500">Created By</label>
-                            <p class="mt-1 text-sm text-gray-900">{{ $hiringPosition->creator->name }}</p>
+                            <p class="mt-1 text-sm text-gray-900"><x-user-name :user="$hiringPosition->creator" /></p>
                         </div>
                     @endif
                 </div>

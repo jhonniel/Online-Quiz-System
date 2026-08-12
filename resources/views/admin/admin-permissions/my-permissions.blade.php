@@ -43,7 +43,7 @@
                     </div>
                 </div>
                 <div>
-                    <div class="text-sm font-medium text-gray-900">{{ $user->name }}</div>
+                    <div class="text-sm font-medium text-gray-900"><x-user-name :user="$user" /></div>
                     <div class="text-sm text-gray-500">{{ $user->email }}</div>
                     <div class="mt-1">
                         <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium {{ $user->isAdmin() ? 'bg-purple-100 text-purple-800' : 'bg-green-100 text-green-800' }}">

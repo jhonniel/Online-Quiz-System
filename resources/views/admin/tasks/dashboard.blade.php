@@ -547,7 +547,7 @@
                         <p class="text-sm text-gray-600 mb-2 line-clamp-2">{{ \Illuminate\Support\Str::limit($task->description, 100) }}</p>
                         @endif
                         <div class="flex items-center justify-between text-xs text-gray-500">
-                            <span>By: {{ $task->creator->name }}</span>
+                            <span>By: <x-user-name :user="$task->creator" class="inline" /></span>
                             @if($task->due_date)
                             <span class="text-red-600">{{ $task->due_date->format('M d, Y') }}</span>
                             @endif
@@ -620,7 +620,7 @@
                                 </span>
                             </td>
                             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                {{ $task->creator->name }}
+                                <x-user-name :user="$task->creator" />
                             </td>
                             <td class="px-6 py-4 whitespace-nowrap">
                                 @if($task->assignments->count() > 0)

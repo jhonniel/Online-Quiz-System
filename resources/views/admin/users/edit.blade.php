@@ -16,7 +16,7 @@
             <svg class="w-4 h-4 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
                 <path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd"></path>
             </svg>
-            <span class="ml-2 text-sm font-medium text-gray-500 truncate max-w-[100px] sm:max-w-none">{{ $user->name }}</span>
+            <x-user-name :user="$user" :size="14" class="ml-2 text-sm font-medium text-gray-500 truncate max-w-[100px] sm:max-w-none" />
         </div>
     </li>
 @endsection
@@ -47,7 +47,7 @@
                     </div>
                     <div class="min-w-0">
                         <h1 class="text-xl sm:text-3xl font-bold truncate">Edit User Profile</h1>
-                        <p class="text-indigo-100 text-sm sm:text-base mt-0.5">Update account details for {{ $user->name }}</p>
+                        <p class="text-indigo-100 text-sm sm:text-base mt-0.5">Update account details for <x-user-name :user="$user" class="inline text-indigo-100" /></p>
                     </div>
                 </div>
                 <a href="{{ url('/admin/users') }}" class="inline-flex items-center justify-center px-5 py-3 bg-white/20 hover:bg-white/30 rounded-xl font-medium transition w-full sm:w-auto min-h-[46px]">

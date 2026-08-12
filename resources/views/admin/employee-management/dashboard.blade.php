@@ -83,7 +83,7 @@
                     <div class="p-4">
                         <div class="flex items-start justify-between gap-3">
                             <div>
-                                <p class="text-sm font-semibold text-gray-900">{{ $leave->user->name ?? 'Unknown Employee' }}</p>
+                                <p class="text-sm font-semibold text-gray-900"><x-user-name :user="$leave->user" /></p>
                                 <p class="text-xs text-gray-500 mt-0.5">
                                     {{ $typeLabels[$leave->type] ?? ucfirst(str_replace('_', ' ', $leave->type)) }}
                                 </p>
@@ -179,7 +179,7 @@
                         @endphp
                         <tr class="hover:bg-gray-50/70 transition-colors">
                             <td class="px-4 py-3">
-                                <div class="text-sm font-semibold text-gray-900">{{ $employee->name }}</div>
+                                <div class="text-sm font-semibold text-gray-900"><x-user-name :user="$employee" /></div>
                                 <div class="text-xs text-gray-500">#{{ $employee->id }}</div>
                             </td>
                             <td class="px-4 py-3 text-sm text-gray-700">{{ $employee->email }}</td>
@@ -318,7 +318,7 @@
                         @endphp
                         <tr class="hover:bg-gray-50/70 transition-colors">
                             <td class="px-4 py-3 text-sm">
-                                <div class="font-medium text-gray-900">{{ $employee->name }}</div>
+                                <div class="font-medium text-gray-900"><x-user-name :user="$employee" /></div>
                                 <div class="text-xs text-gray-500">{{ $employee->email }}</div>
                             </td>
                             @foreach($typeLabels as $typeKey => $typeLabel)

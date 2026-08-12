@@ -61,12 +61,12 @@
                                 <p class="mt-2 text-xs text-gray-500">
                                     {{ $ticket->full_name }} · {{ $ticket->email }} · {{ $ticket->created_at->format('M j, Y g:i A') }}
                                     @if($ticket->assignedTo)
-                                        · Assigned to {{ $ticket->assignedTo->name }}
+                                        · Assigned to <x-user-name :user="$ticket->assignedTo" class="inline" />
                                     @endif
                                     @if($ticket->latestLog)
                                         · Last action: {{ str_replace('_', ' ', $ticket->latestLog->action) }}
                                         @if($ticket->latestLog->user)
-                                            by {{ $ticket->latestLog->user->name }}
+                                            by <x-user-name :user="$ticket->latestLog->user" class="inline" />
                                         @endif
                                         ({{ $ticket->latestLog->created_at->diffForHumans() }})
                                     @endif

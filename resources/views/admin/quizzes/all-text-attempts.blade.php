@@ -120,7 +120,7 @@
                                             </div>
                                         @endif
                                         <div class="min-w-0">
-                                            <div class="text-sm font-medium text-gray-900 truncate">{{ $attempt->user->name }}</div>
+                                            <div class="text-sm font-medium text-gray-900 truncate"><x-user-name :user="$attempt->user" /></div>
                                             <div class="text-xs text-gray-500 truncate">{{ $attempt->user->email }}</div>
                                         </div>
                                     </div>

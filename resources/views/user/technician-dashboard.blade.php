@@ -11,7 +11,7 @@
             </div>
             <div class="ml-3">
                 <h1 class="text-lg sm:text-xl lg:text-2xl font-bold text-white">Technician Dashboard</h1>
-                <p class="text-indigo-100 text-sm">Welcome back, {{ auth()->user()->name }}. Here are your assigned reported tickets.</p>
+                <p class="text-indigo-100 text-sm">Welcome back, <x-user-name :user="auth()->user()" class="inline text-indigo-100" />. Here are your assigned reported tickets.</p>
             </div>
         </div>
     </div>

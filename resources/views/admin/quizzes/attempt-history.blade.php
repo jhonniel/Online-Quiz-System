@@ -34,7 +34,7 @@
                 </div>
                 <div class="ml-3">
                     <h1 class="text-lg sm:text-xl lg:text-2xl font-bold text-white">Quiz Attempt History</h1>
-                    <p class="text-indigo-100 text-sm">{{ $assignment->user->name }} - {{ $assignment->quiz->title }}</p>
+                    <p class="text-indigo-100 text-sm"><x-user-name :user="$assignment->user" class="inline text-indigo-100" /> - {{ $assignment->quiz->title }}</p>
                 </div>
             </div>
             <a href="{{ route('quizzes.show', $assignment->quiz) }}" class="bg-white bg-opacity-20 hover:bg-opacity-30 text-white px-4 py-2 rounded-md transition-colors duration-200">

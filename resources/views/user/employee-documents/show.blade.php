@@ -77,7 +77,7 @@
                             @if($user->hasESignature())
                                 <img src="{{ $user->getESignatureUrl() }}" alt="E-Signature" class="max-h-16 object-contain">
                             @endif
-                            <p class="mt-2 text-sm font-medium text-gray-900">{{ $user->name }}</p>
+                            <p class="mt-2 text-sm font-medium text-gray-900"><x-user-name :user="$user" /></p>
                             <p class="text-xs text-gray-500">Signed {{ $signature->signed_at?->format('F j, Y h:i A') }}</p>
                         </div>
                         <a href="{{ route('user.employee-documents.pdf', $type) }}"

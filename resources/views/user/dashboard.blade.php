@@ -51,7 +51,7 @@
             <div class="ml-3">
                 <h1 class="text-lg sm:text-xl lg:text-2xl font-bold text-white">My Dashboard</h1>
                 <p class="text-indigo-100 text-sm">
-                    Welcome back, {{ auth()->user()->name }}! Your rank: {{ auth()->user()->getRankText() }} ({{ auth()->user()->getTotalScore() }} pts)
+                    Welcome back, <x-user-name :user="auth()->user()" class="inline text-indigo-100" />! Your rank: {{ auth()->user()->getRankText() }} ({{ auth()->user()->getTotalScore() }} pts)
                     @if(auth()->user()->role === 'student' && !empty($studentMeritDetails['breakdown']['total']))
                         · Merits:
                         <span class="font-semibold tabular-nums {{ (int) $studentMeritDetails['breakdown']['total'] >= 3 ? 'text-red-200' : '' }}">

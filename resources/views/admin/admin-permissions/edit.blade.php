@@ -28,7 +28,7 @@
         <div class="flex items-center justify-between">
             <div>
                 <h2 class="text-xl sm:text-2xl font-bold text-white">Edit Admin Permissions</h2>
-                <p class="mt-1 text-sm text-indigo-100">Manage feature access for {{ $user->name }} ({{ $user->getRoleLabel() }})</p>
+                <p class="mt-1 text-sm text-indigo-100">Manage feature access for <x-user-name :user="$user" class="inline text-indigo-100" /> ({{ $user->getRoleLabel() }})</p>
             </div>
             <a href="{{ url('/admin/admin-permissions') }}"
                class="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-700 hover:bg-indigo-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
@@ -56,7 +56,7 @@
                         </div>
                     </div>
                     <div>
-                        <div class="text-sm font-medium text-gray-900">{{ $user->name }}</div>
+                        <div class="text-sm font-medium text-gray-900"><x-user-name :user="$user" /></div>
                         <div class="text-sm text-gray-500">{{ $user->email }}</div>
                         <div class="mt-1">
                             <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium {{ $user->isAdmin() ? 'bg-purple-100 text-purple-800' : 'bg-green-100 text-green-800' }}">

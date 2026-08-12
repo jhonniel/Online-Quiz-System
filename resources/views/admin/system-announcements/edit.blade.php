@@ -160,7 +160,7 @@
                     @if($announcement->creator)
                         <div class="flex justify-between gap-3 pt-3">
                             <dt class="text-gray-500">Author</dt>
-                            <dd class="font-medium text-gray-900 text-right">{{ $announcement->creator->name }}</dd>
+                            <dd class="font-medium text-gray-900 text-right"><x-user-name :user="$announcement->creator" class="inline justify-end" /></dd>
                         </div>
                     @endif
                 </dl>

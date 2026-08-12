@@ -121,7 +121,7 @@
                                     <p class="mt-2 text-xs text-blue-600">
                                         Responded {{ $feedback->admin_responded_at->format('M d, Y \a\t g:i A') }}
                                         @if($feedback->assignedAdmin)
-                                            by {{ $feedback->assignedAdmin->name }}
+                                            by <x-user-name :user="$feedback->assignedAdmin" :size="14" class="inline" />
                                         @endif
                                     </p>
                                 @endif

@@ -52,7 +52,7 @@
                 <div class="ml-4 min-w-0">
                     <p class="text-xs font-semibold uppercase tracking-wider text-indigo-100">Confidential · Admin only</p>
                     <h1 class="text-2xl font-bold text-white mt-0.5">Student Performance Evaluation</h1>
-                    <p class="text-indigo-100 mt-1 truncate">{{ $student->name }} · {{ optional($student->university)->name ?? 'No school' }}@if(filled($student->course)) · {{ $student->course }}@endif</p>
+                    <p class="text-indigo-100 mt-1 truncate"><x-user-name :user="$student" class="inline text-indigo-100" /> · {{ optional($student->university)->name ?? 'No school' }}@if(filled($student->course)) · {{ $student->course }}@endif</p>
                 </div>
             </div>
             <a href="{{ route('admin.student-management.students') }}"
@@ -68,7 +68,7 @@
     <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
         <div class="bg-white border border-gray-200 rounded-lg p-4 shadow-sm">
             <p class="text-xs font-semibold uppercase tracking-wide text-gray-500">Student</p>
-            <p class="mt-2 text-lg font-bold text-gray-900 leading-snug">{{ $student->name }}</p>
+            <p class="mt-2 text-lg font-bold text-gray-900 leading-snug"><x-user-name :user="$student" /></p>
             <p class="mt-1 text-xs text-gray-500 break-all">{{ $student->email }}</p>
             @if(filled($student->course))
                 <p class="mt-1 text-xs font-medium text-indigo-700">{{ $student->course }}</p>

@@ -28,7 +28,7 @@
                     </div>
                     @if($log->performer)
                         <p class="text-xs font-medium text-gray-700 mt-2">
-                            By {{ $log->performer->name }}
+                            By <x-user-name :user="$log->performer" :size="14" class="inline" />
                         </p>
                     @endif
                     <div class="mt-2 rounded-lg bg-white border border-slate-100 px-3 py-2">

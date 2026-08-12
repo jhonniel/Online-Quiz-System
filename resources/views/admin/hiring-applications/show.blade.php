@@ -585,7 +585,9 @@
                         @if($application->reviewer)
                             <div>
                                 <label class="text-sm font-medium text-gray-500">Reviewed By</label>
-                                <p class="mt-1 text-sm text-gray-900">{{ $application->reviewer->name }}</p>
+                                @if($application->reviewer)
+                                <p class="mt-1 text-sm text-gray-900"><x-user-name :user="$application->reviewer" /></p>
+                                @endif
                             </div>
                         @endif
                     @endif
@@ -681,7 +683,7 @@
                                 </div>
                                 <div class="mt-2 text-sm text-gray-700">
                                     @if($log->user)
-                                        <span class="font-medium">{{ $log->user->name }}</span>
+                                        <span class="font-medium"><x-user-name :user="$log->user" /></span>
                                         <span class="text-gray-500">performed this action</span>
                                     @else
                                         <span class="text-gray-500">Action performed by unknown user</span>

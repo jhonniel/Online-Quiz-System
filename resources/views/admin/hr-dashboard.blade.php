@@ -19,7 +19,7 @@
         <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
             <div>
                 <p class="text-xs font-semibold uppercase tracking-wider text-teal-100">HR Dashboard</p>
-                <h1 class="mt-1 text-2xl font-bold">Welcome, {{ $user->name }}</h1>
+                <h1 class="mt-1 text-2xl font-bold">Welcome, <x-user-name :user="$user" class="inline text-white" /></h1>
                 <p class="mt-2 text-sm text-teal-50 max-w-2xl">
                     Quick access to the admin areas assigned to your HR account.
                     You have {{ $totalLinks }} feature{{ $totalLinks === 1 ? '' : 's' }} available.

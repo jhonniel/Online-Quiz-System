@@ -164,7 +164,7 @@
                                         </span>
                                     </div>
                                     <div>
-                                        <p class="text-sm font-medium text-gray-900">{{ $user->user->name }}</p>
+                                        <p class="text-sm font-medium text-gray-900"><x-user-name :user="$user->user" /></p>
                                         <p class="text-sm text-gray-500">{{ $user->user->email }}</p>
                                     </div>
                                 </div>

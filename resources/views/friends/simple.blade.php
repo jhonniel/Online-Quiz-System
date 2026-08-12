@@ -87,7 +87,7 @@
                                             </div>
                                         @endif
                                         <div>
-                                            <p class="font-medium text-gray-900">{{ $request->user->name }}</p>
+                                            <p class="font-medium text-gray-900"><x-user-name :user="$request->user" /></p>
                                             <p class="text-sm text-gray-500">{{ $request->user->email }}</p>
                                         </div>
                                     </div>

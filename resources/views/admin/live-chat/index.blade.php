@@ -160,7 +160,7 @@
                                 </div>
                                 <div class="min-w-0 flex-1">
                                     <div class="flex items-center space-x-1 sm:space-x-2">
-                                        <h3 class="text-sm sm:text-base lg:text-lg font-medium text-gray-900 truncate">{{ $ticket->user->name }}</h3>
+                                        <h3 class="text-sm sm:text-base lg:text-lg font-medium text-gray-900 truncate"><x-user-name :user="$ticket->user" /></h3>
                                         <span class="inline-flex items-center px-1.5 sm:px-2 py-0.5 rounded-full text-xs font-medium {{ $ticket->user->getStatusBadgeClass() }} flex-shrink-0">
                                             {{ ucfirst($ticket->user->status) }}
                                         </span>

@@ -109,7 +109,7 @@
                                 <tr class="hover:bg-gray-50/80">
                                     <td class="px-4 py-2.5 text-sm tabular-nums text-gray-500">{{ $loop->iteration }}</td>
                                     <td class="px-4 py-2.5 text-sm min-w-0">
-                                        <span class="font-medium text-gray-900 break-words">{{ $intern->name }}</span>
+                                        <span class="font-medium text-gray-900 break-words"><x-user-name :user="$intern" /></span>
                                         <span class="block text-xs text-gray-500 break-all">{{ $intern->email }}</span>
                                         <span class="md:hidden block text-[11px] text-gray-600 mt-1">
                                             <span class="text-gray-500">Dept:</span>
@@ -201,7 +201,7 @@
                                 <tr class="hover:bg-gray-50/80">
                                     <td class="px-4 py-2.5 text-sm tabular-nums text-gray-500">{{ $loop->iteration }}</td>
                                     <td class="px-4 py-2.5 text-sm min-w-0">
-                                        <span class="font-medium text-gray-900 break-words">{{ $intern->name }}</span>
+                                        <span class="font-medium text-gray-900 break-words"><x-user-name :user="$intern" /></span>
                                         <span class="block text-xs text-gray-500 break-all">{{ $intern->email }}</span>
                                         <span class="md:hidden block text-[11px] text-gray-600 mt-1">
                                             <span class="text-gray-500">Dept:</span>
@@ -309,7 +309,7 @@
                                 <tr class="hover:bg-gray-50/80">
                                     <td class="px-4 py-2.5 text-sm tabular-nums text-gray-500">{{ $loop->iteration }}</td>
                                     <td class="px-4 py-2.5 text-sm min-w-0">
-                                        <span class="font-medium text-gray-900 break-words">{{ $studentRow->name }}</span>
+                                        <span class="font-medium text-gray-900 break-words"><x-user-name :user="$studentRow" /></span>
                                         <span class="block text-xs text-gray-500 break-all">{{ $studentRow->email }}</span>
                                         <span class="lg:hidden block text-[11px] text-gray-600 mt-1">
                                             <span class="text-gray-500">Est. end:</span>

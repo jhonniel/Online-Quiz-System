@@ -168,7 +168,7 @@
                                     @if($nda->reviewed_at)
                                         <p class="text-xs text-gray-500 leading-snug">
                                             @if($nda->reviewer)
-                                                <span class="text-gray-700">{{ $nda->reviewer->name }}</span>
+                                                <span class="text-gray-700"><x-user-name :user="$nda->reviewer" /></span>
                                                 <span class="text-gray-400 mx-1">·</span>
                                             @endif
                                             {{ $nda->reviewed_at->format('M d, Y') }}

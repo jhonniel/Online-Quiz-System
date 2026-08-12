@@ -334,7 +334,7 @@
                                         @endif
                                     </div>
                                     <div class="flex-1 min-w-0">
-                                        <p class="text-sm font-medium text-gray-900 truncate">{{ $request->user->name }}</p>
+                                        <p class="text-sm font-medium text-gray-900 truncate"><x-user-name :user="$request->user" /></p>
                                         <p class="text-xs text-gray-500 truncate">{{ $request->user->email }}</p>
                                     </div>
                                     <div class="flex flex-col space-y-1">
@@ -392,7 +392,7 @@
                                         @endif
                                     </div>
                                     <div class="flex-1 min-w-0">
-                                        <p class="text-sm font-medium text-gray-900 truncate">{{ $request->friend->name }}</p>
+                                        <p class="text-sm font-medium text-gray-900 truncate"><x-user-name :user="$request->friend" /></p>
                                         <p class="text-xs text-gray-500 truncate">{{ $request->friend->email }}</p>
                                         <p class="text-xs {{ $request->status === 'accepted' ? 'text-green-600' : 'text-blue-600' }} font-medium">
                                             {{ $request->status === 'accepted' ? 'Accepted' : 'Pending' }}
@@ -446,7 +446,7 @@
                                             :story-user-id="$friend->id" />
                                     </div>
                                     <div class="flex-1 min-w-0">
-                                        <p class="text-sm font-medium text-gray-900 truncate">{{ $friend->name }}</p>
+                                        <p class="text-sm font-medium text-gray-900 truncate"><x-user-name :user="$friend" /></p>
                                         <p class="text-xs text-gray-500 truncate">{{ $friend->email }}</p>
                                         <div class="flex items-center mt-1">
                                             <div class="w-2 h-2 bg-green-400 rounded-full mr-2"></div>
@@ -587,7 +587,7 @@
                                 <div class="flex-shrink-0">${avatar}</div>
                                 <div class="flex-1 min-w-0">
                                     <p class="text-[10px] uppercase tracking-wide text-gray-400">Full name</p>
-                                    <p class="font-semibold text-gray-900 truncate text-sm sm:text-base">${name}</p>
+                                    <p class="font-semibold text-gray-900 truncate text-sm sm:text-base">${window.VerifiedBadgeUI ? window.VerifiedBadgeUI.nameHtml(rawName, user.profile_verified, 11) : name}</p>
                                     <p class="text-xs sm:text-sm text-gray-500 truncate">${email}</p>
                                     ${user.department ? `<p class="text-xs text-gray-400 truncate">${escapeHtml(String(user.department))}</p>` : ''}
                                     ${university ? `<p class="text-xs text-gray-400 truncate">${university}</p>` : ''}

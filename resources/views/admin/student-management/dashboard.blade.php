@@ -142,7 +142,7 @@
                                 </td>
                                 <td class="px-3 sm:px-6 py-3 whitespace-nowrap text-xs sm:text-sm text-gray-900">
                                     <div class="font-semibold truncate max-w-[160px] sm:max-w-xs">
-                                        {{ $row['student']->name }}
+                                        <x-user-name :user="$row['student']" />
                                     </div>
                                     <div class="text-[11px] text-gray-500 truncate max-w-[160px] sm:max-w-xs">
                                         {{ $row['student']->email }}

@@ -9,7 +9,7 @@
                 <div class="min-w-0 flex-1">
                     @unless($compactHeader)
                         <div class="flex flex-wrap items-center gap-2 mb-1">
-                            <h3 class="text-base font-bold text-gray-900">{{ $attempt->user->name }}</h3>
+                            <h3 class="text-base font-bold text-gray-900"><x-user-name :user="$attempt->user" /></h3>
                             <span class="text-xs text-gray-400">·</span>
                             <span class="text-sm font-medium text-gray-600">{{ $attempt->quiz->title }}</span>
                         </div>

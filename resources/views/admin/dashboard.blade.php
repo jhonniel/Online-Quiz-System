@@ -699,7 +699,7 @@
                 @forelse($ongoingLeaveEmployees as $leave)
                     <a href="{{ url('/admin/leave-requests/' . $leave->id) }}" class="flex items-center justify-between p-3 rounded-lg hover:bg-gray-50 border border-transparent hover:border-amber-200 transition-colors">
                         <div class="min-w-0 flex-1">
-                            <p class="text-sm font-medium text-gray-900 truncate">{{ $leave->user->name ?? 'Unknown' }}</p>
+                            <p class="text-sm font-medium text-gray-900 truncate"><x-user-name :user="$leave->user" /></p>
                             <p class="text-xs text-gray-500">{{ $leave->start_date->format('M j') }} – {{ $leave->end_date->format('M j, Y') }}</p>
                         </div>
                         <span class="text-xs font-medium text-amber-600 bg-amber-50 px-2 py-1 rounded">{{ $leave->type_label }}</span>
@@ -725,7 +725,7 @@
                 @forelse($ongoingLeaveStudents as $leave)
                     <a href="{{ url('/admin/student-leave-requests') }}" class="flex items-center justify-between p-3 rounded-lg hover:bg-gray-50 border border-transparent hover:border-amber-200 transition-colors">
                         <div class="min-w-0 flex-1">
-                            <p class="text-sm font-medium text-gray-900 truncate">{{ $leave->user->name ?? 'Unknown' }}</p>
+                            <p class="text-sm font-medium text-gray-900 truncate"><x-user-name :user="$leave->user" /></p>
                             <p class="text-xs text-gray-500">{{ $leave->start_date->format('M j') }} – {{ $leave->end_date->format('M j, Y') }}</p>
                         </div>
                         <span class="text-xs font-medium text-amber-600 bg-amber-50 px-2 py-1 rounded">{{ $leave->type_label }}</span>
@@ -751,7 +751,7 @@
                 @forelse($studentsWithDeficit as $user)
                     <a href="{{ url('/admin/student-dtr') }}?user={{ $user->id }}" class="flex items-center justify-between p-3 rounded-lg hover:bg-gray-50 border border-transparent hover:border-red-200 transition-colors">
                         <div class="min-w-0 flex-1">
-                            <p class="text-sm font-medium text-gray-900 truncate">{{ $user->name }}</p>
+                            <p class="text-sm font-medium text-gray-900 truncate"><x-user-name :user="$user" /></p>
                             <p class="text-xs text-gray-500 truncate">{{ $user->email }}</p>
                         </div>
                         @php
@@ -781,7 +781,7 @@
                 @forelse($employeesWithDeficit as $user)
                     <a href="{{ url('/admin/dtr') }}?user={{ $user->id }}" class="flex items-center justify-between p-3 rounded-lg hover:bg-gray-50 border border-transparent hover:border-red-200 transition-colors">
                         <div class="min-w-0 flex-1">
-                            <p class="text-sm font-medium text-gray-900 truncate">{{ $user->name }}</p>
+                            <p class="text-sm font-medium text-gray-900 truncate"><x-user-name :user="$user" /></p>
                             <p class="text-xs text-gray-500 truncate">{{ $user->email }}</p>
                         </div>
                         @php
@@ -824,7 +824,7 @@
                                     </span>
                                 </div>
                                 <div class="min-w-0 flex-1">
-                                    <p class="text-xs sm:text-sm font-medium text-gray-900 truncate">{{ $session->user->name }}</p>
+                                    <p class="text-xs sm:text-sm font-medium text-gray-900 truncate"><x-user-name :user="$session->user" /></p>
                                     <p class="text-xs text-gray-500 truncate hidden sm:block">{{ $session->user->email }}</p>
                                 </div>
                             </div>
@@ -905,7 +905,7 @@
                         <div class="flex items-center justify-between">
                             <div>
                                 <p class="text-sm font-medium text-gray-900">{{ $quiz->title }}</p>
-                                <p class="text-sm text-gray-500">Created by {{ $quiz->creator->name }}</p>
+                                <p class="text-sm text-gray-500">Created by <x-user-name :user="$quiz->creator" /></p>
                             </div>
                             <div class="flex items-center">
                                 <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium {{ $quiz->is_active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800' }}">
@@ -928,7 +928,7 @@
                     @forelse($recentUsers as $user)
                         <div class="flex items-center justify-between">
                             <div>
-                                <p class="text-sm font-medium text-gray-900">{{ $user->name }}</p>
+                                <p class="text-sm font-medium text-gray-900"><x-user-name :user="$user" /></p>
                                 <p class="text-sm text-gray-500">{{ $user->email }}</p>
                                 <span class="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-700 mt-0.5">{{ $user->getRoleLabel() }}</span>
                             </div>
@@ -980,7 +980,7 @@
                                 @endif
                             </div>
                             <div class="min-w-0 flex-1">
-                                <p class="text-xs sm:text-sm font-medium text-gray-900 truncate">{{ $leaveRequest->user->name }}</p>
+                                <p class="text-xs sm:text-sm font-medium text-gray-900 truncate"><x-user-name :user="$leaveRequest->user" /></p>
                                 <p class="text-xs sm:text-sm text-gray-500 break-words">
                                     <span class="hidden sm:inline">{{ $leaveRequest->typeLabel }} • </span>
                                     <span class="sm:hidden">{{ \Illuminate\Support\Str::limit($leaveRequest->typeLabel, 15) }} • </span>
@@ -1120,7 +1120,7 @@
                         <p class="text-xs sm:text-sm font-medium truncate">Top Student</p>
                         <p class="text-base sm:text-lg font-bold truncate">
                             @if($topStudents->count() > 0)
-                                {{ $topStudents->first()->name }}
+                                <x-user-name :user="$topStudents->first()" />
                             @else
                                 N/A
                             @endif
@@ -1235,7 +1235,7 @@
                                                 </div>
                                                 <div class="ml-3">
                                                     <div class="flex items-center space-x-2">
-                                                        <p class="text-sm font-medium text-gray-900">{{ $student->name }}</p>
+                                                        <p class="text-sm font-medium text-gray-900"><x-user-name :user="$student" /></p>
                                                         @if($student->is_active)
                                                             <span class="inline-flex items-center px-1.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
                                                                 Active

@@ -59,7 +59,7 @@
                 @foreach($employees as $employee)
                     <div class="rounded-xl border border-gray-200 bg-gray-50/50 overflow-hidden flex flex-col">
                         <div class="px-4 pt-4 pb-2">
-                            <p class="font-medium text-gray-900 truncate" title="{{ $employee->name }}">{{ $employee->name ?: '—' }}</p>
+                            <p class="font-medium text-gray-900 truncate" title="{{ $employee->name }}"><x-user-name :user="$employee" /></p>
                             <p class="text-xs text-gray-500 truncate" title="{{ $employee->email }}">{{ $employee->email ?: '—' }}</p>
                             <p class="text-xs text-gray-500 mt-0.5">{{ $employee->department?->name ?: 'No department' }}</p>
                         </div>

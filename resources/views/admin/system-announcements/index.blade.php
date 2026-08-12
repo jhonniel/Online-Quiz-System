@@ -94,7 +94,7 @@
                                         </div>
                                         <p class="text-xs text-gray-500 mt-1 line-clamp-2">{{ Str::limit(strip_tags($announcement->content), 140) }}</p>
                                         @if($announcement->creator)
-                                            <p class="text-[11px] text-gray-400 mt-1.5">By {{ $announcement->creator->name }} · {{ $announcement->created_at?->format('M d, Y') }}</p>
+                                            <p class="text-[11px] text-gray-400 mt-1.5">By <x-user-name :user="$announcement->creator" class="inline" /> · {{ $announcement->created_at?->format('M d, Y') }}</p>
                                         @endif
                                     </div>
                                 </div>

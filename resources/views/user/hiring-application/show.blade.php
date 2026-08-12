@@ -177,7 +177,7 @@
                             @if($application->reviewer)
                                 <div>
                                     <label class="text-sm font-medium text-gray-500">Reviewed By</label>
-                                    <p class="mt-1 text-sm text-gray-900">{{ $application->reviewer->name }}</p>
+                                    <p class="mt-1 text-sm text-gray-900"><x-user-name :user="$application->reviewer" /></p>
                                 </div>
                             @endif
                         @endif

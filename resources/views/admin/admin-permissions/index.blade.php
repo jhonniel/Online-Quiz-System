@@ -170,7 +170,7 @@
                                         </div>
                                     </div>
                                     <div class="ml-4">
-                                        <div class="text-sm font-medium text-gray-900">{{ $user->name }}</div>
+                                        <div class="text-sm font-medium text-gray-900"><x-user-name :user="$user" /></div>
                                         <div class="text-sm text-gray-500">{{ $user->email }}</div>
                                     </div>
                                 </div>

@@ -48,7 +48,7 @@
                                     <span class="text-indigo-600 font-semibold text-xs">{{ $forum->admin->getInitials() }}</span>
                                 </div>
                             @endif
-                            <span>By {{ $forum->admin->name }}</span>
+                            <span>By <x-user-name :user="$forum->admin" :size="14" class="inline" /></span>
                         </div>
                         <span>•</span>
                         <span>{{ $forum->created_at->format('M j, Y \a\t g:i A') }}</span>
@@ -177,7 +177,7 @@
                                 </div>
                                 <div class="flex-1 min-w-0">
                                     <div class="flex items-center space-x-2">
-                                        <p class="text-sm font-medium text-gray-900">{{ $comment->user->name }}</p>
+                                        <p class="text-sm font-medium text-gray-900"><x-user-name :user="$comment->user" /></p>
                                         <span class="text-xs text-gray-500">{{ $comment->created_at->diffForHumans() }}</span>
                                     </div>
                                     <p class="text-sm text-gray-700 mt-1">{{ $comment->content }}</p>
@@ -234,7 +234,7 @@
                                             </div>
                                             <div class="flex-1 min-w-0">
                                                 <div class="flex items-center space-x-2">
-                                                    <p class="text-sm font-medium text-gray-900">{{ $reply->user->name }}</p>
+                                                    <p class="text-sm font-medium text-gray-900"><x-user-name :user="$reply->user" /></p>
                                                     <span class="text-xs text-gray-500">{{ $reply->created_at->diffForHumans() }}</span>
                                                 </div>
                                                 <p class="text-sm text-gray-700 mt-1">{{ $reply->content }}</p>

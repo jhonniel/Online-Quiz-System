@@ -417,7 +417,7 @@
                         </div>
                         <div>
                             <dt class="text-gray-500">User</dt>
-                            <dd class="mt-0.5 font-medium text-gray-900 truncate">{{ $account->user ? $account->user->name : '—' }}</dd>
+                            <dd class="mt-0.5 font-medium text-gray-900 truncate"><x-user-name :user="$account->user" /></dd>
                         </div>
                         <div class="col-span-2">
                             <dt class="text-gray-500">Linked</dt>
@@ -484,7 +484,7 @@
                                     <span class="text-gray-400">—</span>
                                 @endif
                             </td>
-                            <td class="px-5 py-3 text-sm text-gray-600 hidden lg:table-cell">{{ $account->user ? $account->user->name : '—' }}</td>
+                            <td class="px-5 py-3 text-sm text-gray-600 hidden lg:table-cell">@if($account->user)<x-user-name :user="$account->user" />@else—@endif</td>
                             <td class="px-5 py-3">
                                 <div class="flex flex-wrap gap-1.5">
                                     @if(($account->starlinks_count ?? 0) > 0)

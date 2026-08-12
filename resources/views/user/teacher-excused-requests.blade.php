@@ -172,7 +172,7 @@
                                                                     class="mt-0.5 h-4 w-4 shrink-0 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
                                                                 >
                                                                 <span class="min-w-0 flex-1 text-sm leading-snug">
-                                                                    <span class="font-medium text-gray-900">{{ $student->name }}</span>
+                                                                    <span class="font-medium text-gray-900"><x-user-name :user="$student" /></span>
                                                                     <span class="block text-xs text-gray-500">{{ $student->email }}</span>
                                                                 </span>
                                                             </label>

@@ -22,7 +22,7 @@
                     </svg>
                 </div>
                 <div class="min-w-0">
-                    <x-user-name :user="$employee" :size="14" as="h1" class="text-xl sm:text-2xl lg:text-3xl font-bold" />
+                    <x-user-name :user="$employee" :size="14" as="h1" class="text-xl sm:text-2xl lg:text-3xl font-bold text-white" />
                     <p class="text-sm sm:text-base text-indigo-100 mt-1 break-all">{{ $employee->email }}</p>
                     <p class="text-xs text-indigo-200 mt-1">
                         {{ $employee->department?->name ?? $employee->departmentPosition?->department?->name ?? 'No department' }}
