@@ -251,7 +251,7 @@
                                                        required
                                                        title="Whole number from 0 to {{ $max }}"
                                                        aria-describedby="{{ $field }}_hint"
-                                                       class="rating-score-input rating-numeric-input w-28 rounded-md border-gray-300 py-2 text-center text-base font-bold tabular-nums focus:border-indigo-500 focus:ring-indigo-500 user-invalid:border-red-500 user-invalid:ring-1 user-invalid:ring-red-500"
+                                                       class="rating-score-input rating-numeric-input w-16 rounded-md border-gray-300 py-2 text-center text-sm font-semibold tabular-nums focus:border-indigo-500 focus:ring-indigo-500 user-invalid:border-red-500 user-invalid:ring-1 user-invalid:ring-red-500"
                                                        data-section="{{ $sectionKey }}"
                                                        data-min="0"
                                                        data-max="{{ $max }}">
