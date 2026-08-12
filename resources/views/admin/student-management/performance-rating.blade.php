@@ -133,8 +133,8 @@
             <div class="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden">
                 <div class="px-6 py-4 border-b border-gray-100 flex flex-wrap items-center justify-between gap-3">
                     <div class="border-l-4 border-indigo-600 pl-4">
-                        <p class="text-xs font-semibold uppercase tracking-wide text-indigo-600">Part {{ $sectionNumber }}</p>
-                        <h2 class="text-lg font-bold text-gray-900">{{ $section['title'] }}</h2>
+                        <p class="text-sm font-semibold uppercase tracking-wide text-indigo-600">Part {{ $sectionNumber }}</p>
+                        <h2 class="text-2xl sm:text-3xl font-bold text-gray-900 leading-tight mt-0.5">{{ $section['title'] }}</h2>
                     </div>
                     <p class="text-sm text-gray-600">
                         Subtotal:
@@ -175,7 +175,7 @@
                                             <div class="flex items-start gap-3">
                                                 <span class="text-sm font-bold text-indigo-600 shrink-0">{{ strtoupper($letter) }}.</span>
                                                 <div>
-                                                    <p class="text-lg sm:text-2xl font-bold text-gray-900 leading-snug">{{ $item['label'] }}</p>
+                                                    <p class="text-sm sm:text-base font-medium text-gray-900 leading-snug">{{ $item['label'] }}</p>
                                                     <p class="mt-1.5 text-sm text-gray-500">Max {{ $max }} points</p>
                                                     @error($field)
                                                         <p class="mt-1.5 text-sm font-medium text-red-600">{{ $message }}</p>
@@ -228,7 +228,7 @@
                                             <div class="flex items-start gap-3">
                                                 <span class="text-sm font-bold text-indigo-600 shrink-0">{{ strtoupper($letter) }}.</span>
                                                 <div>
-                                                    <p class="text-lg sm:text-2xl font-bold text-gray-900 leading-snug">{{ $item['label'] }}</p>
+                                                    <p class="text-sm sm:text-base font-medium text-gray-900 leading-snug">{{ $item['label'] }}</p>
                                                     <p class="mt-1.5 text-sm text-gray-500">Max {{ $max }} points</p>
                                                     @error($field)
                                                         <p class="mt-1.5 text-sm font-medium text-red-600">{{ $message }}</p>

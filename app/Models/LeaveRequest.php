@@ -27,6 +27,7 @@ class LeaveRequest extends Model
         'admin_notes',
         'reviewed_by',
         'reviewed_at',
+        'admin_officially_excused',
     ];
 
     protected $casts = [
@@ -36,6 +37,7 @@ class LeaveRequest extends Model
         'attendance_overtime_completed_at' => 'datetime',
         'travel_hours' => 'float',
         'supporting_document_paths' => 'array',
+        'admin_officially_excused' => 'boolean',
     ];
 
     /**
@@ -639,6 +641,10 @@ class LeaveRequest extends Model
     {
         return $query
             ->whereNull('teacher_excused_batch')
+            ->where(function (Builder $q): void {
+                $q->where('admin_officially_excused', false)
+                    ->orWhereNull('admin_officially_excused');
+            })
             ->whereDoesntHave('logs', function (Builder $logs): void {
                 $logs->where('action', 'filed_by_teacher');
             });

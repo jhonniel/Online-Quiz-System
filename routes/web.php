@@ -606,6 +606,7 @@ Route::prefix('admin')->middleware(['auth', 'admin'])->group(function () {
             Route::post('/leave-requests/{leaveRequest}/approve', [LeaveRequestController::class, 'approve'])->name('admin.leave-requests.approve');
             Route::post('/leave-requests/{leaveRequest}/verify', [LeaveRequestController::class, 'verify'])->name('admin.leave-requests.verify');
             Route::post('/leave-requests/{leaveRequest}/force-accept', [LeaveRequestController::class, 'forceAccept'])->name('admin.leave-requests.force-accept');
+            Route::post('/leave-requests/{leaveRequest}/accept-officially-excused', [LeaveRequestController::class, 'acceptAsOfficiallyExcused'])->name('admin.leave-requests.accept-officially-excused');
             Route::post('/leave-requests/{leaveRequest}/reject', [LeaveRequestController::class, 'reject'])->name('admin.leave-requests.reject');
             Route::post('/leave-requests/{leaveRequest}/resubmit', [LeaveRequestController::class, 'resubmit'])->name('admin.leave-requests.resubmit');
             Route::delete('/leave-requests/{leaveRequest}', [LeaveRequestController::class, 'destroy'])->name('admin.leave-requests.destroy');

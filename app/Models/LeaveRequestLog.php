@@ -59,6 +59,7 @@ class LeaveRequestLog extends Model
             'updated' => 'Updated',
             'type_changed' => 'Request type changed',
             'dates_changed' => 'Request dates changed',
+            'admin_officially_excused' => 'Accepted as officially excused',
             'created' => 'Created',
             default => ucfirst(str_replace('_', ' ', $this->action)),
         };

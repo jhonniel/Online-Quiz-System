@@ -1568,6 +1568,88 @@ class LeaveRequestController extends Controller
     }
 
     /**
+     * Accept a student absent/excused leave request as officially excused (no demerit).
+     * Only super admins (full access) may use this action.
+     */
+    public function acceptAsOfficiallyExcused(Request $request, LeaveRequest $leaveRequest)
+    {
+        $this->assertCanAccessEmployeeLeaveRequest($leaveRequest);
+
+        $actor = Auth::user();
+
+        if (! $actor || ! $actor->isSuperAdmin()) {
+            abort(403, 'Only admins with full access can accept a request as officially excused.');
+        }
+
+        $leaveRequest->load('user');
+
+        if ($leaveRequest->user?->role !== 'student') {
+            return $this->redirectToAdminLeaveRequestShow($leaveRequest)
+                ->with('error', 'This action is only available for student leave requests.');
+        }
+
+        if (! in_array($leaveRequest->type, ['absent', 'excused'], true)) {
+            return $this->redirectToAdminLeaveRequestShow($leaveRequest)
+                ->with('error', 'This action is only available for absent or excused leave requests.');
+        }
+
+        if (! $leaveRequest->isPending() && $leaveRequest->status !== 'for_more_verification') {
+            return $this->redirectToAdminLeaveRequestShow($leaveRequest)
+                ->with('error', 'This request has already been processed.');
+        }
+
+        $request->validate([
+            'admin_notes' => 'nullable|string|max:1000',
+        ]);
+
+        $statusBefore = $leaveRequest->status;
+
+        $leaveRequest->update([
+            'status' => 'approved',
+            'admin_officially_excused' => true,
+            'admin_notes' => $request->admin_notes,
+            'reviewed_by' => $actor->id,
+            'reviewed_at' => now(),
+        ]);
+
+        LeaveRequestLog::create([
+            'leave_request_id' => $leaveRequest->id,
+            'action' => 'admin_officially_excused',
+            'status_before' => $statusBefore,
+            'status_after' => 'approved',
+            'notes' => $request->admin_notes
+                ? 'Accepted as officially excused. '.$request->admin_notes
+                : 'Accepted as officially excused (school letter on file).',
+            'performed_by' => $actor->id,
+        ]);
+
+        try {
+            MailConfigService::configure();
+
+            Mail::to($leaveRequest->user->email)->send(
+                new LeaveRequestStatusUpdate(
+                    $leaveRequest,
+                    'approved',
+                    $this->normalizedLeaveRequestMailNotes(
+                        'Your leave request has been accepted as officially excused and will not count toward demerits.'
+                        .($request->admin_notes ? ' '.$request->admin_notes : '')
+                    )
+                )
+            );
+        } catch (\Exception $e) {
+            Log::error('Failed to send officially excused email', [
+                'leave_request_id' => $leaveRequest->id,
+                'error' => $e->getMessage(),
+            ]);
+        }
+
+        StudentMeritRulesNotice::syncForStudent($leaveRequest->user);
+
+        return $this->redirectToAdminLeaveRequestShow($leaveRequest)
+            ->with('success', 'Leave request accepted as officially excused. This absence will not count toward the student\'s demerits.');
+    }
+
+    /**
      * Force approve an offset leave request when employee has negative overtime balance.
      * This allows approving offset requests even when it would make the balance more negative.
      */

@@ -258,9 +258,17 @@
 
                     <div>
                         <label class="block text-sm font-medium text-gray-500 mb-1">Status</label>
-                        <span class="px-3 py-1 inline-flex text-sm leading-5 font-semibold rounded-full {{ $leaveRequest->status_badge_class }}">
-                            {{ $leaveRequest->display_status }}
-                        </span>
+                        <div class="flex flex-wrap items-center gap-2">
+                            <span class="px-3 py-1 inline-flex text-sm leading-5 font-semibold rounded-full {{ $leaveRequest->status_badge_class }}">
+                                {{ $leaveRequest->display_status }}
+                            </span>
+                            @if($leaveRequest->admin_officially_excused)
+                                <span class="px-2.5 py-1 inline-flex items-center gap-1 text-xs font-semibold rounded-full bg-teal-100 text-teal-800">
+                                    <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path></svg>
+                                    Officially Excused
+                                </span>
+                            @endif
+                        </div>
                     </div>
 
                     <div>
@@ -1012,6 +1020,54 @@
                     </div>
                 @endif
 
+                @if(
+                    auth()->user()?->isSuperAdmin()
+                    && ($leaveRequest->user?->role === 'student')
+                    && in_array($leaveRequest->type, ['absent', 'excused'], true)
+                    && ! $leaveRequest->admin_officially_excused
+                )
+                    <!-- Accept as Officially Excused (super admin only) -->
+                    <div class="bg-white rounded-lg shadow border border-teal-200 p-4 sm:p-6">
+                        <div class="mb-3 sm:mb-4 p-3 bg-teal-50 border border-teal-200 rounded-lg">
+                            <div class="flex items-start">
+                                <svg class="h-5 w-5 text-teal-600 mt-0.5 mr-2 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path>
+                                </svg>
+                                <div class="text-xs sm:text-sm text-teal-800">
+                                    <strong>Official Excuse:</strong> This will approve the request and exclude it from the student's demerit count. Use this only when the student has a valid official excuse letter from their school.
+                                </div>
+                            </div>
+                        </div>
+                        <h3 class="text-base sm:text-lg font-bold text-gray-900 mb-3 sm:mb-4">Accept as Officially Excused</h3>
+                        <form action="{{ url('/admin/leave-requests/' . $leaveRequest->id . '/accept-officially-excused') }}" method="POST" class="space-y-3 sm:space-y-4">
+                            @csrf
+                            @include('admin.leave-requests.partials.show-nav-fields')
+                            <div>
+                                <label for="officially_excused_notes" class="block text-xs sm:text-sm font-medium text-gray-700 mb-2">Notes (Optional)</label>
+                                <textarea name="admin_notes" id="officially_excused_notes" rows="3"
+                                          placeholder="e.g. School excuse letter verified, signed by registrar…"
+                                          class="w-full px-3 sm:px-4 py-2 text-sm sm:text-base border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-teal-500"></textarea>
+                            </div>
+                            <button type="submit" id="officially-excused-btn"
+                                    class="w-full px-4 py-2 text-sm sm:text-base bg-teal-600 text-white rounded-lg hover:bg-teal-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-teal-500 disabled:opacity-50 disabled:cursor-not-allowed">
+                                <span class="officially-excused-content flex items-center justify-center">
+                                    <svg class="h-4 w-4 sm:h-5 sm:w-5 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path>
+                                    </svg>
+                                    Accept as Officially Excused
+                                </span>
+                                <span class="officially-excused-loading hidden flex items-center justify-center">
+                                    <svg class="animate-spin h-4 w-4 sm:h-5 sm:w-5 mr-2 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                    </svg>
+                                    Processing...
+                                </span>
+                            </button>
+                        </form>
+                    </div>
+                @endif
+
                 <!-- For More Verification Form -->
                 <div class="bg-white rounded-lg shadow border border-blue-200 p-4 sm:p-6">
                     <h3 class="text-base sm:text-lg font-bold text-gray-900 mb-3 sm:mb-4">Mark as For More Verification</h3>
@@ -1250,6 +1306,21 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
+    // Handle Officially Excused form
+    const officiallyExcusedForm = document.querySelector('form[action*="accept-officially-excused"]');
+    if (officiallyExcusedForm) {
+        officiallyExcusedForm.addEventListener('submit', function(e) {
+            const btn = document.getElementById('officially-excused-btn');
+            if (btn) {
+                btn.disabled = true;
+                const content = btn.querySelector('.officially-excused-content');
+                const loading = btn.querySelector('.officially-excused-loading');
+                if (content) content.classList.add('hidden');
+                if (loading) loading.classList.remove('hidden');
+            }
+        });
+    }
+
     // Handle Reject form
     const rejectForm = document.querySelector('form[action*="reject"]');
     if (rejectForm) {
@@ -1290,11 +1361,11 @@ document.addEventListener('DOMContentLoaded', function() {
     @if($leaveRequest->logs && $leaveRequest->logs->count() > 0)
         <div class="space-y-4">
             @foreach($leaveRequest->logs as $log)
-                <div class="border-l-4 {{ $log->action === 'approved' ? 'border-green-500' : ($log->action === 'rejected' ? 'border-red-500' : ($log->action === 'resubmission_requested' ? 'border-yellow-500' : ($log->action === 'for_more_verification' ? 'border-blue-500' : (in_array($log->action, ['type_changed', 'dates_changed'], true) ? 'border-purple-500' : ($log->action === 'requester_resubmitted' ? 'border-indigo-500' : 'border-gray-400'))))) }} pl-4 py-2">
+                <div class="border-l-4 {{ $log->action === 'admin_officially_excused' ? 'border-teal-500' : ($log->action === 'approved' ? 'border-green-500' : ($log->action === 'rejected' ? 'border-red-500' : ($log->action === 'resubmission_requested' ? 'border-yellow-500' : ($log->action === 'for_more_verification' ? 'border-blue-500' : (in_array($log->action, ['type_changed', 'dates_changed'], true) ? 'border-purple-500' : ($log->action === 'requester_resubmitted' ? 'border-indigo-500' : 'border-gray-400')))))) }} pl-4 py-2">
                     <div class="flex items-start justify-between">
                         <div class="flex-1">
                             <div class="flex items-center space-x-2">
-                                <span class="px-2 py-1 text-xs font-semibold rounded-full {{ $log->action === 'approved' ? 'bg-green-100 text-green-800' : ($log->action === 'rejected' ? 'bg-red-100 text-red-800' : ($log->action === 'resubmission_requested' ? 'bg-yellow-100 text-yellow-800' : ($log->action === 'for_more_verification' ? 'bg-blue-100 text-blue-800' : (in_array($log->action, ['type_changed', 'dates_changed'], true) ? 'bg-purple-100 text-purple-800' : ($log->action === 'requester_resubmitted' ? 'bg-indigo-100 text-indigo-900' : 'bg-gray-100 text-gray-800'))))) }}">
+                                <span class="px-2 py-1 text-xs font-semibold rounded-full {{ $log->action === 'admin_officially_excused' ? 'bg-teal-100 text-teal-800' : ($log->action === 'approved' ? 'bg-green-100 text-green-800' : ($log->action === 'rejected' ? 'bg-red-100 text-red-800' : ($log->action === 'resubmission_requested' ? 'bg-yellow-100 text-yellow-800' : ($log->action === 'for_more_verification' ? 'bg-blue-100 text-blue-800' : (in_array($log->action, ['type_changed', 'dates_changed'], true) ? 'bg-purple-100 text-purple-800' : ($log->action === 'requester_resubmitted' ? 'bg-indigo-100 text-indigo-900' : 'bg-gray-100 text-gray-800')))))) }}">
                                     {{ $log->action_label }}
                                 </span>
                                 @if($log->status_before && $log->status_after)
