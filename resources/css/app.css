@@ -215,20 +215,25 @@
 
     .verified-badge .twetch-green-check {
         display: block;
-        width: 30px;
-        height: 30px;
+        width: 14px;
+        height: 14px;
         max-width: none;
         flex-shrink: 0;
     }
 
     .verified-badge--profile .twetch-green-check {
-        width: 30px;
-        height: 30px;
+        width: 18px;
+        height: 18px;
     }
 
     .verified-badge--sm .twetch-green-check {
-        width: 20px;
-        height: 20px;
+        width: 14px;
+        height: 14px;
+    }
+
+    .verified-badge--xs .twetch-green-check {
+        width: 12px;
+        height: 12px;
     }
 
     .twetch-green-check__trace {

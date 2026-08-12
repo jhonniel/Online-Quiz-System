@@ -76,7 +76,7 @@
             <!-- User Info -->
             <div class="mb-6">
                 <div class="flex items-center gap-2 mb-2 min-w-0">
-                    <x-user-name :user="$user" :size="30" badge-class="verified-badge--profile" as="h2" class="text-2xl font-bold text-gray-900" />
+                    <x-user-name :user="$user" :size="18" badge-class="verified-badge--profile" as="h2" class="text-2xl font-bold text-gray-900" />
                 </div>
                 <p class="text-gray-600 mb-4">{{ $user->email }}</p>
 
