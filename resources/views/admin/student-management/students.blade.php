@@ -413,11 +413,8 @@
                                 <td class="px-6 py-4 whitespace-nowrap text-sm text-right align-middle">
                                     @if($canRateThisStudent)
                                         <a href="{{ route('admin.student-management.students.performance-rating.edit', $student) }}"
-                                           class="student-rating-action-btn group"
+                                           class="student-rating-action-btn"
                                            title="{{ $ratingInfo ? 'View or edit saved performance rating' : 'Rate this student' }}">
-                                            <svg class="transition-transform duration-200 group-hover:scale-110" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"></path>
-                                            </svg>
                                             {{ $ratingInfo ? 'View / edit' : 'Rate' }}
                                         </a>
                                     @else
@@ -1182,3 +1179,70 @@
 </script>
 @endsection
 
+@push('styles')
+<style>
+    .student-rating-actions-header {
+        color: #4338ca;
+        font-weight: 600;
+        letter-spacing: 0.05em;
+    }
+
+    .student-rating-action-btn {
+        display: inline-flex;
+        align-items: center;
+        padding: 0.375rem 0.875rem;
+        border-radius: 0.375rem;
+        font-size: 0.75rem;
+        line-height: 1rem;
+        font-weight: 600;
+        color: #4338ca;
+        background-color: #fff;
+        border: 1px solid #c7d2fe;
+        text-decoration: none;
+        transition: color 0.15s ease-in-out, background-color 0.15s ease-in-out, border-color 0.15s ease-in-out;
+    }
+
+    .student-rating-action-btn:hover {
+        color: #fff;
+        background-color: #4f46e5;
+        border-color: #4f46e5;
+    }
+
+    .student-rating-action-btn:active {
+        background-color: #4338ca;
+        border-color: #4338ca;
+    }
+
+    .student-rating-hours-incomplete {
+        display: inline-flex;
+        align-items: center;
+        padding: 0.375rem 0.75rem;
+        border-radius: 0.5rem;
+        font-size: 0.75rem;
+        line-height: 1rem;
+        font-weight: 600;
+        color: #78350f;
+        background-color: rgba(255, 251, 235, 0.95);
+        border: 1px solid rgba(252, 211, 77, 0.85);
+        cursor: default;
+        user-select: none;
+        animation: student-rating-hours-glow 2.4s ease-in-out infinite;
+    }
+
+    @keyframes student-rating-hours-glow {
+        0%,
+        100% {
+            box-shadow:
+                0 0 0 1px rgba(251, 191, 36, 0.35),
+                0 0 8px rgba(251, 191, 36, 0.15);
+        }
+
+        50% {
+            box-shadow:
+                0 0 0 2px rgba(245, 158, 11, 0.65),
+                0 0 14px rgba(251, 191, 36, 0.45),
+                0 0 22px rgba(245, 158, 11, 0.2);
+        }
+    }
+</style>
+@endpush

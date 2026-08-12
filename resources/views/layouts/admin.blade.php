@@ -33,6 +33,7 @@
 
     <!-- Scripts -->
     @vite(['resources/css/app.css', 'resources/js/app.js'])
+    @stack('styles')
 
     <!-- Tailwind CDN fallback: keeps legacy/dynamic utility classes working if not in the Vite build -->
     <script src="https://cdn.tailwindcss.com"></script>
