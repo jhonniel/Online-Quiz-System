@@ -148,7 +148,7 @@
                                     
                                     <!-- Name and Title -->
                                     <div class="text-white">
-                                        <h1 class="text-2xl font-bold mb-1 drop-shadow-lg"><x-user-name :user="$user" :size="18" /></h1>
+                                        <h1 class="text-2xl font-bold mb-1 drop-shadow-lg"><x-user-name :user="$user" :size="14" /></h1>
                                         <p class="text-sm text-white text-opacity-90 font-medium">
                                             {{ $user->department ? $user->department->name : 'Employee' }}
                                         </p>

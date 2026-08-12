@@ -35,7 +35,7 @@
                     </div>
                 @endif
                 <div class="min-w-0 flex-1">
-                    <x-user-name :user="$user" :size="18" as="h1" class="text-xl sm:text-2xl font-bold" />
+                    <x-user-name :user="$user" :size="14" as="h1" class="text-xl sm:text-2xl font-bold" />
                     <p class="text-indigo-100 text-sm truncate mt-0.5">{{ $user->email }}</p>
                     <div class="mt-2 flex flex-wrap items-center gap-2">
                         <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-white/15 text-white border border-white/20">

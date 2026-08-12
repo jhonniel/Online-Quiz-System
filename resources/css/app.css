@@ -14,8 +14,13 @@
 
     img,
     video,
-    canvas,
-    svg {
+    canvas {
+        max-width: 100%;
+        height: auto;
+    }
+
+    /* Don't let global svg sizing blow up verified badges / icons */
+    svg:not(.twetch-green-check) {
         max-width: 100%;
         height: auto;
     }
@@ -213,27 +218,51 @@
         overflow: visible;
     }
 
+    /* Verified badge: keep smaller than adjacent text; override base svg { height:auto } */
+    .verified-badge {
+        display: inline-flex;
+        align-items: center;
+        flex-shrink: 0;
+        line-height: 0;
+        margin-left: -0.12em;
+    }
+
     .verified-badge .twetch-green-check {
-        display: block;
-        width: 14px;
-        height: 14px;
-        max-width: none;
+        display: block !important;
+        width: 0.72em !important;
+        height: 0.72em !important;
+        min-width: 11px !important;
+        min-height: 11px !important;
+        max-width: 14px !important;
+        max-height: 14px !important;
         flex-shrink: 0;
     }
 
     .verified-badge--profile .twetch-green-check {
-        width: 18px;
-        height: 18px;
+        width: 0.7em !important;
+        height: 0.7em !important;
+        min-width: 12px !important;
+        min-height: 12px !important;
+        max-width: 16px !important;
+        max-height: 16px !important;
     }
 
     .verified-badge--sm .twetch-green-check {
-        width: 14px;
-        height: 14px;
+        width: 0.72em !important;
+        height: 0.72em !important;
+        min-width: 11px !important;
+        min-height: 11px !important;
+        max-width: 13px !important;
+        max-height: 13px !important;
     }
 
     .verified-badge--xs .twetch-green-check {
-        width: 12px;
-        height: 12px;
+        width: 0.7em !important;
+        height: 0.7em !important;
+        min-width: 10px !important;
+        min-height: 10px !important;
+        max-width: 12px !important;
+        max-height: 12px !important;
     }
 
     .twetch-green-check__trace {
