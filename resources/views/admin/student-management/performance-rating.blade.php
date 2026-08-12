@@ -212,7 +212,7 @@
                             <thead>
                                 <tr class="border-b border-gray-200 bg-gray-50 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">
                                     <th class="px-6 py-3 w-[70%]">Evaluation criteria</th>
-                                    <th class="px-6 py-3">Score</th>
+                                    <th class="px-6 py-3 text-right">Score</th>
                                 </tr>
                             </thead>
                             <tbody class="divide-y divide-gray-100">
@@ -236,8 +236,8 @@
                                                 </div>
                                             </div>
                                         </td>
-                                        <td class="px-6 py-5 align-middle">
-                                            <div class="flex items-center gap-2">
+                                        <td class="px-6 py-5 align-middle text-right">
+                                            <div class="inline-flex items-center justify-end gap-2">
                                                 <input type="text"
                                                        name="{{ $field }}"
                                                        id="{{ $field }}"
