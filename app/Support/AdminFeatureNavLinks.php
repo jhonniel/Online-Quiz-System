@@ -202,7 +202,6 @@ final class AdminFeatureNavLinks
 
         $map = [
             'students' => [url('/admin/student-management/students'), 'Student roster'],
-            'student_performance_ratings' => [url('/admin/student-management/students'), 'Rate student performance'],
             'student_dashboard' => [url('/admin/student-management/dashboard'), 'Student time dashboard'],
             'student_dtr' => [url('/admin/student-dtr'), 'Student DTR records'],
             'student_leave_requests' => [url('/admin/student-leave-requests'), 'Student leave requests'],
