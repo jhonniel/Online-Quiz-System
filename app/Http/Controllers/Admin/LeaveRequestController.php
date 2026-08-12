@@ -1568,8 +1568,8 @@ class LeaveRequestController extends Controller
     }
 
     /**
-     * Accept a student absent/excused leave request as officially excused (no demerit).
-     * Only super admins (full access) may use this action.
+     * Accept a student absent/excused/other leave request as officially excused (no demerit).
+     * Only admin accounts with full / student-management access may use this action.
      */
     public function acceptAsOfficiallyExcused(Request $request, LeaveRequest $leaveRequest)
     {
@@ -1577,7 +1577,7 @@ class LeaveRequestController extends Controller
 
         $actor = Auth::user();
 
-        if (! $actor || ! $actor->isSuperAdmin()) {
+        if (! $actor || ! $actor->canAcceptOfficiallyExcusedLeave()) {
             abort(403, 'Only admins with full access can accept a request as officially excused.');
         }
 
@@ -1588,9 +1588,9 @@ class LeaveRequestController extends Controller
                 ->with('error', 'This action is only available for student leave requests.');
         }
 
-        if (! in_array($leaveRequest->type, ['absent', 'excused'], true)) {
+        if (! in_array($leaveRequest->type, ['absent', 'excused', 'other'], true)) {
             return $this->redirectToAdminLeaveRequestShow($leaveRequest)
-                ->with('error', 'This action is only available for absent or excused leave requests.');
+                ->with('error', 'This action is only available for absent, excused, or other leave requests.');
         }
 
         if (! $leaveRequest->isPending() && $leaveRequest->status !== 'for_more_verification') {

@@ -69,6 +69,30 @@ final class ChatMediaService
     /**
      * @param  Collection<int, mixed>  $messages
      */
+    public static function attachMediaPayloadForAdmin(string $chatType, Collection $messages): Collection
+    {
+        if ($messages->isEmpty()) {
+            return $messages;
+        }
+
+        $mediaByMessageId = ChatMessageMedia::query()
+            ->where('chat_type', $chatType)
+            ->whereIn('message_id', $messages->pluck('id'))
+            ->withCount('views')
+            ->get()
+            ->keyBy('message_id');
+
+        return $messages->map(function ($message) use ($mediaByMessageId) {
+            $media = $mediaByMessageId->get($message->id);
+            $message->setAttribute('media', $media ? self::serializeForAdmin($media) : null);
+
+            return $message;
+        });
+    }
+
+    /**
+     * @param  Collection<int, mixed>  $messages
+     */
     public static function attachMediaPayload(string $chatType, Collection $messages, User $viewer): Collection
     {
         if ($messages->isEmpty()) {
@@ -123,6 +147,67 @@ final class ChatMediaService
             ChatMessageMedia::TYPE_ANONYMOUS => self::canAccessAnonymousMessage($media->message_id, $viewer->id),
             default => false,
         };
+    }
+
+    /**
+     * @return array<string, mixed>|null
+     */
+    public static function serializeForAdmin(?ChatMessageMedia $media): ?array
+    {
+        if (! $media instanceof ChatMessageMedia) {
+            return null;
+        }
+
+        $exists = Storage::disk($media->disk)->exists($media->path);
+        $expired = $media->isExpired();
+
+        if (! $exists) {
+            return [
+                'id' => $media->id,
+                'mode' => $media->mode,
+                'expires_at' => $media->expires_at?->toIso8601String(),
+                'expired' => $expired,
+                'available' => false,
+                'url' => null,
+                'view_count' => (int) ($media->views_count ?? $media->views()->count()),
+            ];
+        }
+
+        return [
+            'id' => $media->id,
+            'mode' => $media->mode,
+            'expires_at' => $media->expires_at?->toIso8601String(),
+            'expired' => $expired,
+            'available' => true,
+            'url' => route('admin.chat-media.show', $media),
+            'view_count' => (int) ($media->views_count ?? $media->views()->count()),
+        ];
+    }
+
+    public static function adminCanAccessMedia(ChatMessageMedia $media, User $admin): bool
+    {
+        if ($admin->isAdmin() && ! $admin->adminPermission) {
+            return true;
+        }
+
+        return match ($media->chat_type) {
+            ChatMessageMedia::TYPE_ANONYMOUS => $admin->canAccessAnalyticsFeature('anonymous_chats'),
+            ChatMessageMedia::TYPE_DIRECT, ChatMessageMedia::TYPE_GROUP => $admin->canAccessAnalyticsFeature('anonymous_chats')
+                || $admin->canAccessAnalyticsFeature('user_activity'),
+            default => false,
+        };
+    }
+
+    public static function streamForAdmin(ChatMessageMedia $media): StreamedResponse
+    {
+        if (! Storage::disk($media->disk)->exists($media->path)) {
+            abort(404);
+        }
+
+        return Storage::disk($media->disk)->response($media->path, null, [
+            'Content-Type' => $media->mime_type,
+            'Cache-Control' => 'private, no-store',
+        ]);
     }
 
     public static function markViewed(ChatMessageMedia $media, User $viewer): void

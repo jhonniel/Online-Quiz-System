@@ -116,12 +116,29 @@
                             </div>
                             <p class="text-sm text-gray-900 whitespace-pre-wrap break-words">{{ $message->display_body }}</p>
                             @if($message->image_path)
-                                <p class="mt-1 text-xs text-gray-500">
-                                    Image attached
-                                    @if($message->image_expires_at)
-                                        · expires {{ $message->image_expires_at->format('M j, g:i A') }}
+                                <div class="mt-2">
+                                    @if($message->adminImageAvailable())
+                                        @php($adminImageUrl = route('admin.confession.chat-messages.image', [$room, $message]))
+                                        <a href="{{ $adminImageUrl }}" target="_blank" rel="noopener noreferrer" class="inline-block">
+                                            <img
+                                                src="{{ $adminImageUrl }}"
+                                                alt="Attached image"
+                                                class="max-w-xs max-h-56 rounded-lg border border-gray-200 shadow-sm object-contain bg-gray-50"
+                                            >
+                                        </a>
+                                    @else
+                                        <p class="text-xs text-gray-500 italic">Image expired or removed</p>
                                     @endif
-                                </p>
+                                    <p class="mt-1 text-xs text-gray-500">
+                                        Image attached
+                                        @if($message->image_expires_at)
+                                            · expires {{ $message->image_expires_at->format('M j, g:i A') }}
+                                        @endif
+                                        @if($message->image_path && ! $message->hasActiveImage() && $message->adminImageAvailable())
+                                            · <span class="text-amber-700 font-medium">expired (admin preview)</span>
+                                        @endif
+                                    </p>
+                                </div>
                             @endif
                         </div>
                         @unless($room->trashed())

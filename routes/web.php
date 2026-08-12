@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Admin\AdminPermissionController;
+use App\Http\Controllers\Admin\AdminChatMediaController;
 use App\Http\Controllers\Admin\AnalyticsController;
 use App\Http\Controllers\Admin\ApiMonitoringController;
 use App\Http\Controllers\Admin\BillingController;
@@ -227,6 +228,7 @@ Route::prefix('admin')->middleware(['auth', 'admin'])->group(function () {
     Route::get('/hr-dashboard', [HrDashboardController::class, 'index'])->name('admin.hr-dashboard');
     Route::get('/my-permissions', [AdminPermissionController::class, 'myPermissions'])->name('admin.my-permissions');
     Route::get('/activity-data', [DashboardController::class, 'getActivityData'])->name('admin.activity-data');
+    Route::get('/chat-media/{chatMessageMedia}', [AdminChatMediaController::class, 'show'])->name('admin.chat-media.show');
     Route::redirect('/teacher-invites', '/admin/teachers-management/invite-links');
 
     /**
@@ -729,6 +731,7 @@ Route::prefix('admin')->middleware(['auth', 'admin'])->group(function () {
         Route::delete('confession/banned-words/{banned_word}', [ConfessionBannedWordController::class, 'destroy'])->name('admin.confession.banned-words.destroy');
         Route::get('confession/chat-rooms', [ConfessionController::class, 'chatRooms'])->name('admin.confession.chat-rooms');
         Route::get('confession/chat-rooms/{room}', [ConfessionController::class, 'chatRoomShow'])->name('admin.confession.chat-rooms.show');
+        Route::get('confession/chat-rooms/{room}/messages/{message}/image', [ConfessionController::class, 'streamChatMessageImage'])->name('admin.confession.chat-messages.image');
         Route::delete('confession/chat-rooms/{room}', [ConfessionController::class, 'destroyChatRoom'])->name('admin.confession.chat-rooms.destroy');
         Route::delete('confession/chat-rooms/{room}/messages/{message}', [ConfessionController::class, 'destroyChatMessage'])->name('admin.confession.chat-messages.destroy');
     });

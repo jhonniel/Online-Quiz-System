@@ -11,6 +11,8 @@ use App\Models\SayItChatRoom;
 use App\Models\Setting;
 use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class ConfessionController extends Controller
 {
@@ -240,5 +242,23 @@ class ConfessionController extends Controller
         return redirect()
             ->back()
             ->with('success', 'Message deleted.');
+    }
+
+    public function streamChatMessageImage(string $room, SayItChatMessage $message): StreamedResponse
+    {
+        $roomModel = SayItChatRoom::withTrashed()->where('slug', $room)->firstOrFail();
+
+        if ((int) $message->sayit_chat_room_id !== (int) $roomModel->id) {
+            abort(404);
+        }
+
+        $disk = $message->resolveImageStorageDisk();
+        if ($disk === null || ! filled($message->image_path)) {
+            abort(404);
+        }
+
+        return Storage::disk($disk)->response($message->image_path, null, [
+            'Cache-Control' => 'private, no-store',
+        ]);
     }
 }

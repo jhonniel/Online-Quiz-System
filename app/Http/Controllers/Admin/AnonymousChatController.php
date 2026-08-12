@@ -4,6 +4,8 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\AnonymousChatRoom;
+use App\Models\ChatMessageMedia;
+use App\Support\ChatMediaService;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
 
@@ -42,6 +44,14 @@ class AnonymousChatController extends Controller
             'participants.user:id,name,email',
             'messages.sender:id,name,email',
         ]);
+
+        $anonymousChatRoom->setRelation(
+            'messages',
+            ChatMediaService::attachMediaPayloadForAdmin(
+                ChatMessageMedia::TYPE_ANONYMOUS,
+                $anonymousChatRoom->messages
+            )
+        );
 
         return view('admin.anonymous-chat.show', [
             'room' => $anonymousChatRoom,

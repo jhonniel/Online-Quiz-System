@@ -55,7 +55,10 @@
                         </div>
                         <p class="text-xs text-gray-500 shrink-0">{{ $message->created_at?->format('M j, Y g:i A') }}</p>
                     </div>
-                    <p class="mt-3 text-sm text-gray-800 whitespace-pre-wrap">{{ $message->message }}</p>
+                    @if(filled($message->message))
+                        <p class="mt-3 text-sm text-gray-800 whitespace-pre-wrap">{{ $message->message }}</p>
+                    @endif
+                    @include('partials.admin-chat-attachment', ['media' => $message->media ?? null])
                 </div>
             @empty
                 <div class="px-5 py-10 text-center text-sm text-gray-500">No messages in this room yet.</div>

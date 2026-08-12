@@ -1645,6 +1645,19 @@ class User extends Authenticatable
     }
 
     /**
+     * Official school-letter excuse (no demerit) — admin role only, not delegated staff.
+     * Super admins always qualify; other admins need student management access.
+     */
+    public function canAcceptOfficiallyExcusedLeave(): bool
+    {
+        if (! $this->isAdmin()) {
+            return false;
+        }
+
+        return $this->isSuperAdmin() || $this->hasAdminPermission('student_management');
+    }
+
+    /**
      * Check if user has any admin permission assigned.
      * Works for admins, employees, and any other role that has been granted permissions.
      */

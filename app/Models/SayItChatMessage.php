@@ -48,6 +48,33 @@ class SayItChatMessage extends Model
             && $this->image_expires_at->isFuture();
     }
 
+    public function resolveImageStorageDisk(): ?string
+    {
+        if (! filled($this->image_path)) {
+            return null;
+        }
+
+        foreach (array_unique([SayItHelper::confessionStorageDisk(), 'digitalocean', 'spaces', 's3', 'public', 'local']) as $disk) {
+            if (! is_array(config("filesystems.disks.{$disk}"))) {
+                continue;
+            }
+            try {
+                if (Storage::disk($disk)->exists($this->image_path)) {
+                    return $disk;
+                }
+            } catch (\Throwable $e) {
+                continue;
+            }
+        }
+
+        return null;
+    }
+
+    public function adminImageAvailable(): bool
+    {
+        return $this->resolveImageStorageDisk() !== null;
+    }
+
     public function getImageUrlAttribute(): ?string
     {
         if (! $this->hasActiveImage()) {
