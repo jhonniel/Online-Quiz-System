@@ -916,6 +916,22 @@ class UserController extends Controller
             ->with('success', 'User disapproved successfully.');
     }
 
+    public function grantVerifiedBadge(User $user)
+    {
+        $user->update(['profile_verified' => true]);
+
+        return redirect()->back()
+            ->with('success', 'Verified badge granted. It will now show on this user’s profile.');
+    }
+
+    public function revokeVerifiedBadge(User $user)
+    {
+        $user->update(['profile_verified' => false]);
+
+        return redirect()->back()
+            ->with('success', 'Verified badge removed from this user’s profile.');
+    }
+
     public function bulkAssignRole(Request $request)
     {
         $request->validate([

@@ -19,7 +19,9 @@ use App\Models\User;
 use App\Models\Dtr;
 use App\Models\Department;
 use App\Models\QuizAttemptHistory;
+use App\Models\StudentPerformanceRating;
 use App\Models\University;
+use App\Support\StudentPerformanceRatingForm;
 use Illuminate\Http\Request;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\Cache;
@@ -318,6 +320,32 @@ class StudentDashboardController extends Controller
             $violationCounts[$studentId] = (int) ($violationBreakdowns[$studentId]['total'] ?? 0);
         }
 
+        $canRateStudentPerformance = StudentPerformanceRatingForm::viewerCanAccess($user);
+        $performanceRatingsByStudentId = [];
+        if ($canRateStudentPerformance && $studentIdsOnPage !== []) {
+            $performanceRatingsByStudentId = StudentPerformanceRating::query()
+                ->with('rater:id,name,email')
+                ->whereIn('user_id', $studentIdsOnPage)
+                ->get()
+                ->keyBy('user_id')
+                ->map(function (StudentPerformanceRating $rating) {
+                    $totals = $rating->totals();
+
+                    return [
+                        'overall' => (int) $totals['overall'],
+                        'overall_max' => (int) $totals['overall_max'],
+                        'complete' => $rating->isComplete(),
+                        'rated_by_name' => $rating->raterDisplayName(),
+                        'rated_by_email' => $rating->raterDisplayEmail(),
+                        'rated_at' => optional($rating->rated_at ?? $rating->updated_at)
+                            ?->timezone((string) config('app.timezone'))
+                            ?->format('M j, Y g:i A'),
+                    ];
+                })
+                ->all();
+        }
+        $performanceRatingOverallMax = StudentPerformanceRatingForm::totals([])['overall_max'];
+
         $exitConferenceClosestBySchool = $this->buildExitConferenceClosestBySchoolRows(
             $studentsQueryUnfilteredForExitConference->get()
         );
@@ -350,7 +378,10 @@ class StudentDashboardController extends Controller
             'statsRemainingBucketsMax',
             'exitConferenceClosestBySchool',
             'violationCounts',
-            'violationBreakdowns'
+            'violationBreakdowns',
+            'canRateStudentPerformance',
+            'performanceRatingsByStudentId',
+            'performanceRatingOverallMax'
         ));
     }
 

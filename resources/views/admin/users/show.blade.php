@@ -38,7 +38,7 @@
                     <div class="flex items-center gap-2 min-w-0">
                         <h1 class="text-xl sm:text-2xl font-bold truncate">{{ $user->name }}</h1>
                         @if($user->hasVerifiedBadge())
-                            <x-verified-badge :size="26" class="verified-badge--sm" title="Approved / verified" />
+                            <x-verified-badge :size="26" class="verified-badge--sm" title="Verified" />
                         @endif
                     </div>
                     <p class="text-indigo-100 text-sm truncate mt-0.5">{{ $user->email }}</p>
@@ -57,6 +57,30 @@
                             <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-amber-100 text-amber-800">
                                 Pending approval
                             </span>
+                        @endif
+                        @if($user->profile_verified)
+                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-sky-100 text-sky-800">
+                                Verified badge
+                            </span>
+                        @endif
+                    </div>
+                    <div class="mt-3">
+                        @if(!$user->profile_verified)
+                            <form method="POST" action="{{ route('admin.users.grant-verified-badge', $user) }}" class="inline">
+                                @csrf
+                                @method('PATCH')
+                                <button type="submit" class="inline-flex items-center px-3 py-1.5 rounded-lg text-xs font-semibold bg-white/15 text-white border border-white/30 hover:bg-white/25">
+                                    Grant verified badge
+                                </button>
+                            </form>
+                        @else
+                            <form method="POST" action="{{ route('admin.users.revoke-verified-badge', $user) }}" class="inline">
+                                @csrf
+                                @method('PATCH')
+                                <button type="submit" class="inline-flex items-center px-3 py-1.5 rounded-lg text-xs font-semibold bg-white/15 text-white border border-white/30 hover:bg-white/25">
+                                    Remove verified badge
+                                </button>
+                            </form>
                         @endif
                     </div>
                 </div>

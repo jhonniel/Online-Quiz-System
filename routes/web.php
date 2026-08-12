@@ -41,6 +41,7 @@ use App\Http\Controllers\Admin\StackController;
 use App\Http\Controllers\Admin\StarlinkController;
 use App\Http\Controllers\Admin\StudentDashboardController;
 use App\Http\Controllers\Admin\StudentNdaController;
+use App\Http\Controllers\Admin\StudentPerformanceRatingController;
 use App\Http\Controllers\Admin\SubscriptionPlanTypeController;
 use App\Http\Controllers\Admin\SystemAnnouncementController;
 use App\Http\Controllers\Admin\TaskController;
@@ -318,6 +319,8 @@ Route::prefix('admin')->middleware(['auth', 'admin'])->group(function () {
             Route::patch('users/{user}/toggle-status', [AdminUserController::class, 'toggleStatus'])->name('admin.users.toggle-status');
             Route::patch('users/{user}/approve', [AdminUserController::class, 'approve'])->name('admin.users.approve');
             Route::patch('users/{user}/disapprove', [AdminUserController::class, 'disapprove'])->name('admin.users.disapprove');
+            Route::patch('users/{user}/grant-verified-badge', [AdminUserController::class, 'grantVerifiedBadge'])->name('admin.users.grant-verified-badge');
+            Route::patch('users/{user}/revoke-verified-badge', [AdminUserController::class, 'revokeVerifiedBadge'])->name('admin.users.revoke-verified-badge');
             Route::patch('users/{user}/overtime-window', [AdminUserController::class, 'updateOvertimeWindow'])->name('admin.users.overtime-window');
             Route::patch('users/{user}/leave-balance', [AdminUserController::class, 'updateLeaveBalance'])->name('admin.users.leave-balance');
             Route::post('users/bulk-assign-role', [AdminUserController::class, 'bulkAssignRole'])->name('admin.users.bulk-assign-role');
@@ -619,6 +622,8 @@ Route::prefix('admin')->middleware(['auth', 'admin'])->group(function () {
         Route::get('/student-management/students', [StudentDashboardController::class, 'students'])->name('admin.student-management.students');
         Route::get('/student-management/students/{user}/merits', [StudentDashboardController::class, 'studentMeritDetails'])->name('admin.student-management.students.merits');
         Route::patch('/student-management/students/{user}/merits', [StudentDashboardController::class, 'updateStudentMeritDetails'])->name('admin.student-management.students.merits.update');
+        Route::get('/student-management/students/{user}/performance-rating', [StudentPerformanceRatingController::class, 'edit'])->name('admin.student-management.students.performance-rating.edit');
+        Route::put('/student-management/students/{user}/performance-rating', [StudentPerformanceRatingController::class, 'update'])->name('admin.student-management.students.performance-rating.update');
 
         // Student Management Dashboard
         Route::get('/student-management/dashboard', [StudentDashboardController::class, 'index'])->name('admin.student-management.dashboard');

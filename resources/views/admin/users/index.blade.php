@@ -480,6 +480,19 @@
                                                     <button type="submit" class="w-full text-left px-4 py-2.5 text-sm text-amber-700 hover:bg-amber-50" onclick="return confirmUserAction('disapprove', this)">Disapprove</button>
                                                 </form>
                                             @endif
+                                            @if(!$user->profile_verified)
+                                                <form method="POST" action="{{ url('/admin/users/' . $user->id . '/grant-verified-badge') }}" class="block">
+                                                    @csrf
+                                                    @method('PATCH')
+                                                    <button type="submit" class="w-full text-left px-4 py-2.5 text-sm text-emerald-700 hover:bg-emerald-50">Grant verified badge</button>
+                                                </form>
+                                            @else
+                                                <form method="POST" action="{{ url('/admin/users/' . $user->id . '/revoke-verified-badge') }}" class="block">
+                                                    @csrf
+                                                    @method('PATCH')
+                                                    <button type="submit" class="w-full text-left px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50">Remove verified badge</button>
+                                                </form>
+                                            @endif
                                             <form method="POST" action="{{ url('/admin/users/' . $user->id . '/toggle-status') }}" class="block">
                                                 @csrf
                                                 @method('PATCH')
@@ -635,6 +648,24 @@
                                                         <button type="submit" class="w-full text-left px-4 py-2 text-sm text-amber-700 hover:bg-amber-50 flex items-center" onclick="return confirmUserAction('disapprove', this)">
                                                             <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
                                                             Disapprove
+                                                        </button>
+                                                    </form>
+                                                @endif
+                                                @if(!$user->profile_verified)
+                                                    <form method="POST" action="{{ url('/admin/users/' . $user->id . '/grant-verified-badge') }}" class="block">
+                                                        @csrf
+                                                        @method('PATCH')
+                                                        <button type="submit" class="w-full text-left px-4 py-2 text-sm text-emerald-700 hover:bg-emerald-50 flex items-center">
+                                                            <svg class="w-4 h-4 mr-2" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M9 12l2 2 4-4"/></svg>
+                                                            Grant verified badge
+                                                        </button>
+                                                    </form>
+                                                @else
+                                                    <form method="POST" action="{{ url('/admin/users/' . $user->id . '/revoke-verified-badge') }}" class="block">
+                                                        @csrf
+                                                        @method('PATCH')
+                                                        <button type="submit" class="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 flex items-center">
+                                                            Remove verified badge
                                                         </button>
                                                     </form>
                                                 @endif

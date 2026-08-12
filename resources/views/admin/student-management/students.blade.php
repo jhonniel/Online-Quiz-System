@@ -6,6 +6,9 @@
     $showMeritModalProfileLink = auth()->user()->isAdmin();
     $canManageMeritAutomation = auth()->user()->isAdmin();
     $canManageStudentTermination = auth()->user()->isAdmin();
+    $canRateStudentPerformance = $canRateStudentPerformance ?? false;
+    $performanceRatingsByStudentId = $performanceRatingsByStudentId ?? [];
+    $performanceRatingOverallMax = (int) ($performanceRatingOverallMax ?? 100);
 @endphp
 <div class="space-y-6">
     <!-- Page Header -->
@@ -298,6 +301,10 @@
                         <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Internship Ended</th>
                         <th scope="col" class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Hours</th>
                         <th scope="col" class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Required</th>
+                        @if($canRateStudentPerformance)
+                            <th scope="col" class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Rating</th>
+                            <th scope="col" class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                        @endif
                     </tr>
                 </thead>
                 <tbody class="bg-white divide-y divide-gray-200">
@@ -382,10 +389,45 @@
                             <td class="px-6 py-4 whitespace-nowrap text-sm text-right text-gray-700">
                                 {{ number_format($required, 2) }}
                             </td>
+                            @if($canRateStudentPerformance)
+                                @php
+                                    $ratingInfo = $performanceRatingsByStudentId[$student->id] ?? null;
+                                    $canRateThisStudent = $required > 0 && $total >= $required;
+                                @endphp
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-center">
+                                    @if($ratingInfo)
+                                        <div class="inline-flex flex-col items-center gap-0.5">
+                                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-md text-xs font-semibold tabular-nums bg-slate-900 text-white"
+                                                  title="Admin-only performance rating">
+                                                {{ (int) $ratingInfo['overall'] }}/{{ (int) $ratingInfo['overall_max'] }}
+                                            </span>
+                                            <span class="text-[10px] leading-tight text-slate-500 max-w-[9rem] truncate"
+                                                  title="Rated by {{ $ratingInfo['rated_by_name'] }}{{ !empty($ratingInfo['rated_at']) ? ' on '.$ratingInfo['rated_at'] : '' }}">
+                                                by {{ $ratingInfo['rated_by_name'] }}
+                                            </span>
+                                        </div>
+                                    @else
+                                        <span class="text-gray-400">—</span>
+                                    @endif
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-right">
+                                    @if($canRateThisStudent)
+                                        <a href="{{ route('admin.student-management.students.performance-rating.edit', $student) }}"
+                                           class="inline-flex items-center px-3 py-1.5 rounded-md text-xs font-semibold text-slate-800 bg-white hover:bg-slate-50 border border-slate-300 shadow-sm">
+                                            {{ $ratingInfo ? 'View / edit' : 'Rate' }}
+                                        </a>
+                                    @else
+                                        <span class="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-medium text-amber-800 bg-amber-50 border border-amber-100"
+                                              title="{{ $required > 0 ? number_format($total, 2).' / '.number_format($required, 2).' hours logged' : 'Required training hours not set' }}">
+                                            Hours incomplete
+                                        </span>
+                                    @endif
+                                </td>
+                            @endif
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="{{ ($showDepartmentColumn ? 7 : 6) + 1 }}" class="px-6 py-12 text-center text-sm text-gray-500">
+                            <td colspan="{{ ($showDepartmentColumn ? 7 : 6) + 1 + ($canRateStudentPerformance ? 2 : 0) }}" class="px-6 py-12 text-center text-sm text-gray-500">
                                 <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z"></path>
                                 </svg>

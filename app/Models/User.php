@@ -58,6 +58,7 @@ class User extends Authenticatable
         'role',
         'is_active',
         'is_approved',
+        'profile_verified',
         'university_id',
         'department_id',
         'department_position_id',
@@ -123,6 +124,7 @@ class User extends Authenticatable
         'password' => 'hashed',
         'is_active' => 'boolean',
         'is_approved' => 'boolean',
+        'profile_verified' => 'boolean',
         'last_activity' => 'datetime',
         'last_seen' => 'datetime',
         'teacher_announcements_seen_at' => 'datetime',
@@ -281,6 +283,11 @@ class User extends Authenticatable
         return $this->hasOne(StudentNda::class);
     }
 
+    public function studentPerformanceRating()
+    {
+        return $this->hasOne(StudentPerformanceRating::class);
+    }
+
     /** Whether a student may use Record Attendance (signed NDA approved by admin). */
     public function canStudentRecordAttendance(): bool
     {
@@ -353,11 +360,11 @@ class User extends Authenticatable
     }
 
     /**
-     * Profile verified badge — shown after admin approval in Users.
+     * Profile verified badge — shown only after admin grants it in Users.
      */
     public function hasVerifiedBadge(): bool
     {
-        return (bool) $this->is_approved;
+        return (bool) $this->profile_verified;
     }
 
     public function isStudent()

@@ -48,6 +48,7 @@ final class AdminPermissionAreas
 
     public const STUDENT_FEATURES = [
         'students' => 'Students',
+        'student_performance_ratings' => 'Student Performance Ratings',
         'student_dashboard' => 'Student Time Dashboard',
         'student_dtr' => 'Student DTR',
         'student_leave_requests' => 'Student Leave Requests',
