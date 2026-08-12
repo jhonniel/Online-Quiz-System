@@ -5,7 +5,7 @@
         align-items: center;
         flex-shrink: 0;
         line-height: 0;
-        margin-left: -0.14em;
+        margin-left: 0.05em;
         vertical-align: middle;
     }
 

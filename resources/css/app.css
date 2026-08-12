@@ -224,7 +224,7 @@
         align-items: center;
         flex-shrink: 0;
         line-height: 0;
-        margin-left: -0.12em;
+        margin-left: 0.05em;
     }
 
     .verified-badge .twetch-green-check {

@@ -34,7 +34,7 @@
             if (!verified) {
                 return safeName;
             }
-            return '<span class="inline-flex items-center gap-0 min-w-0 max-w-full align-middle">'
+            return '<span class="inline-flex items-center min-w-0 max-w-full align-middle">'
                 + '<span class="truncate">' + safeName + '</span>'
                 + badgeSvg(size || 12)
                 + '</span>';

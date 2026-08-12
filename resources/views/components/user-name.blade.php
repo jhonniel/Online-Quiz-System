@@ -28,7 +28,7 @@
     }
 @endphp
 
-<{{ $tag }} {{ $attributes->merge(['class' => 'inline-flex items-center gap-0 min-w-0 max-w-full align-middle']) }}>
+<{{ $tag }} {{ $attributes->merge(['class' => 'inline-flex items-center min-w-0 max-w-full align-middle']) }}>
     <span class="truncate">{{ $displayName }}</span>
     @if($isVerified)
         <x-verified-badge :size="$resolvedSize" class="{{ $badgeClass }}" />
