@@ -830,6 +830,8 @@ class LeaveRequestController extends Controller
                 // If yes, approving will result in negative balance
                 $hasNegativeBalance = $offsetHoursNeeded > $totalOvertimeHours;
             }
+
+            $balances['approve_impact'] = $this->employeeApproveBalanceImpact($leaveRequest, $balances);
         } elseif ($user->role === 'student') {
             // Student: show total DTR time vs required time set by admin
             $requiredHours = (float) ($user->required_training_hours ?? 0);
@@ -3179,6 +3181,178 @@ class LeaveRequestController extends Controller
 
         return redirect($this->adminLeaveRequestListUrl($leaveRequest))
             ->with('success', 'Leave request deleted successfully.');
+    }
+
+    /**
+     * Preview leave/WFH balance impact before admin approves an employee request.
+     *
+     * @param  array<string, mixed>  $balances
+     * @return array<string, mixed>|null
+     */
+    private function employeeApproveBalanceImpact(LeaveRequest $leaveRequest, array $balances): ?array
+    {
+        if ($leaveRequest->user?->role !== 'employee') {
+            return null;
+        }
+
+        if (! $leaveRequest->isPending() && $leaveRequest->status !== 'for_more_verification') {
+            return null;
+        }
+
+        $requestDays = (float) $leaveRequest->days;
+
+        if (in_array($leaveRequest->type, ['vacation_leave', 'sick_leave', 'leave'], true)) {
+            if ($leaveRequest->type === 'vacation_leave') {
+                $bucket = 'Vacation Leave';
+                $allowance = (float) ($balances['vacation']['allowance'] ?? 0);
+                $used = (float) ($balances['vacation']['used'] ?? 0);
+            } elseif ($leaveRequest->type === 'sick_leave') {
+                $bucket = 'Sick Leave';
+                $allowance = (float) ($balances['sick']['allowance'] ?? 0);
+                $used = (float) ($balances['sick']['used'] ?? 0);
+            } else {
+                $bucket = 'Leave Credits';
+                $allowance = (float) ($balances['leave']['allowance'] ?? 0);
+                $used = (float) ($balances['leave']['used'] ?? 0);
+            }
+
+            $remainingBefore = $allowance - $used;
+            $remainingAfter = $remainingBefore - $requestDays;
+
+            if ($remainingAfter >= 0) {
+                return null;
+            }
+
+            $shortfall = abs($remainingAfter);
+
+            return [
+                'kind' => 'leave_negative',
+                'label' => $bucket,
+                'request_days' => $requestDays,
+                'remaining_before' => round($remainingBefore, 2),
+                'remaining_after' => round($remainingAfter, 2),
+                'shortfall' => round($shortfall, 2),
+                'carryover_debt' => 0.0,
+                'warning' => sprintf(
+                    'Approving this %s request (%.2f day(s)) will put the employee on a negative leave balance (%.2f remaining now → %.2f after approval, short by %.2f day(s)). Continue anyway?',
+                    $bucket,
+                    $requestDays,
+                    $remainingBefore,
+                    $remainingAfter,
+                    $shortfall
+                ),
+            ];
+        }
+
+        if ($leaveRequest->type !== 'work_from_home') {
+            return null;
+        }
+
+        $wfh = $balances['work_from_home'] ?? null;
+        if (! is_array($wfh)) {
+            return null;
+        }
+
+        $allowance = (float) ($wfh['allowance'] ?? WorkFromHomeQuota::monthlyAllowanceDays());
+        $used = (float) ($wfh['used'] ?? 0);
+        $carryoverDebt = (float) ($wfh['carryover_debt'] ?? 0);
+        $remainingBefore = (float) ($wfh['remaining'] ?? max($allowance - $used - $carryoverDebt, 0));
+        $monthLabel = (string) ($wfh['month_label'] ?? 'this month');
+        $isAdminFiled = WorkFromHomeQuota::isAdminFiledRequest($leaveRequest);
+
+        $start = $leaveRequest->start_date?->copy()->startOfDay();
+        $end = ($leaveRequest->end_date ?? $leaveRequest->start_date)?->copy()->startOfDay();
+        $neededInMonth = $requestDays;
+        if ($start && $end) {
+            $neededByMonth = WorkFromHomeQuota::daysPerMonthForRange($start, $end);
+            $monthKey = sprintf('%04d-%02d', (int) ($wfh['year'] ?? $start->year), (int) ($wfh['month'] ?? $start->month));
+            $neededInMonth = (float) ($neededByMonth[$monthKey] ?? $requestDays);
+        }
+
+        $rawAfter = $allowance - $used - $carryoverDebt - $neededInMonth;
+        $exceeds = $neededInMonth > $remainingBefore;
+        $willCreateCarryover = $isAdminFiled && $rawAfter < 0;
+
+        if (! $exceeds && ! $willCreateCarryover && $carryoverDebt <= 0) {
+            return null;
+        }
+
+        // Prompt when approving would exceed remaining, create carryover, or current month already has carryover debt affecting this request.
+        if (! $exceeds && ! $willCreateCarryover && $carryoverDebt > 0 && $neededInMonth <= $remainingBefore) {
+            // Still warn about existing carryover reducing available balance.
+            return [
+                'kind' => 'wfh_carryover',
+                'label' => 'Work From Home',
+                'request_days' => $neededInMonth,
+                'remaining_before' => round($remainingBefore, 2),
+                'remaining_after' => round(max($remainingBefore - $neededInMonth, 0), 2),
+                'shortfall' => 0.0,
+                'carryover_debt' => round($carryoverDebt, 2),
+                'month_label' => $monthLabel,
+                'admin_filed' => $isAdminFiled,
+                'warning' => sprintf(
+                    'This employee has %.0f WFH day(s) of carryover debt from admin-filed WFH last month reducing the %s balance. Approving this request uses %.0f of the %.0f day(s) remaining. Continue?',
+                    $carryoverDebt,
+                    $monthLabel,
+                    $neededInMonth,
+                    $remainingBefore
+                ),
+            ];
+        }
+
+        if ($willCreateCarryover) {
+            $carryoverNext = abs(min($rawAfter, 0));
+
+            return [
+                'kind' => 'wfh_carryover_create',
+                'label' => 'Work From Home',
+                'request_days' => $neededInMonth,
+                'remaining_before' => round($remainingBefore, 2),
+                'remaining_after' => round($rawAfter, 2),
+                'shortfall' => round(max($neededInMonth - $remainingBefore, 0), 2),
+                'carryover_debt' => round($carryoverDebt, 2),
+                'carryover_next' => round($carryoverNext, 2),
+                'month_label' => $monthLabel,
+                'admin_filed' => true,
+                'warning' => sprintf(
+                    'Approving this admin-filed WFH request exceeds the %s allowance and will create about %.0f day(s) of carryover debt against next month\'s WFH balance (remaining now %.0f, request %.0f day(s)). Continue anyway?',
+                    $monthLabel,
+                    $carryoverNext,
+                    $remainingBefore,
+                    $neededInMonth
+                ),
+            ];
+        }
+
+        if ($exceeds) {
+            $shortfall = max($neededInMonth - $remainingBefore, 0);
+            $carryoverNote = $carryoverDebt > 0
+                ? sprintf(' Current remaining already includes %.0f day(s) deducted as carryover from last month.', $carryoverDebt)
+                : '';
+
+            return [
+                'kind' => 'wfh_negative',
+                'label' => 'Work From Home',
+                'request_days' => $neededInMonth,
+                'remaining_before' => round($remainingBefore, 2),
+                'remaining_after' => round($remainingBefore - $neededInMonth, 2),
+                'shortfall' => round($shortfall, 2),
+                'carryover_debt' => round($carryoverDebt, 2),
+                'month_label' => $monthLabel,
+                'admin_filed' => $isAdminFiled,
+                'blocked' => ! $isAdminFiled,
+                'warning' => sprintf(
+                    'Approving this WFH request needs %.0f day(s) but only %.0f day(s) remain for %s (short by %.0f).%s Continue anyway?',
+                    $neededInMonth,
+                    $remainingBefore,
+                    $monthLabel,
+                    $shortfall,
+                    $carryoverNote
+                ),
+            ];
+        }
+
+        return null;
     }
 
     /**

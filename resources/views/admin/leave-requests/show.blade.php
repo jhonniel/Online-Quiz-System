@@ -854,17 +854,16 @@
                 @php
                     $meritSummary = $studentTime['merits'] ?? null;
                     $meritStatusKey = $meritSummary['status']['key'] ?? 'clear';
-                    $meritPanelClass = match ($meritStatusKey) {
-                        'final' => 'border-red-200 bg-red-50/40',
-                        'warning' => 'border-amber-200 bg-amber-50/40',
-                        'active' => 'border-amber-100 bg-amber-50/20',
-                        default => 'border-gray-100',
-                    };
-                    $meritTotalClass = match ($meritStatusKey) {
-                        'final' => 'text-red-700',
-                        'warning', 'active' => 'text-amber-700',
-                        default => 'text-gray-900',
-                    };
+                    $hasMeritViolation = is_array($meritSummary) && (
+                        (int) ($meritSummary['total'] ?? 0) > 0
+                        || ! empty($meritSummary['notices']['rules_warning'])
+                        || ! empty($meritSummary['notices']['final_notice'])
+                        || ! empty($meritSummary['notices']['student_terminated'])
+                    );
+                    $meritPanelClass = $hasMeritViolation
+                        ? 'border-red-500 bg-red-50 merit-violation-glow'
+                        : 'border-gray-100';
+                    $meritTotalClass = $hasMeritViolation ? 'text-red-700' : 'text-gray-900';
                 @endphp
                 <div class="bg-white rounded-lg shadow border border-gray-200 p-4 sm:p-6 space-y-3 sm:space-y-4">
                     <h3 class="text-base sm:text-lg font-bold text-gray-900 mb-2">Student Time Summary</h3>
@@ -903,15 +902,30 @@
                     </div>
 
                     @if(is_array($meritSummary))
-                        <div class="border rounded-lg px-3 py-3 space-y-3 {{ $meritPanelClass }}">
+                        @if($hasMeritViolation)
+                            <style>
+                                @keyframes merit-violation-pulse {
+                                    0%, 100% {
+                                        box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.55), 0 0 18px 2px rgba(239, 68, 68, 0.35);
+                                    }
+                                    50% {
+                                        box-shadow: 0 0 0 8px rgba(239, 68, 68, 0), 0 0 28px 6px rgba(220, 38, 38, 0.55);
+                                    }
+                                }
+                                .merit-violation-glow {
+                                    animation: merit-violation-pulse 1.6s ease-in-out infinite;
+                                }
+                            </style>
+                        @endif
+                        <div class="border-2 rounded-lg px-3 py-3 space-y-3 {{ $meritPanelClass }}">
                             <div class="flex items-start justify-between gap-3">
                                 <div>
-                                    <p class="text-xs font-semibold text-gray-500 uppercase tracking-wide">Merits / Violations</p>
+                                    <p class="text-xs font-semibold {{ $hasMeritViolation ? 'text-red-700' : 'text-gray-500' }} uppercase tracking-wide">Merits / Violations</p>
                                     <p class="text-sm font-semibold {{ $meritTotalClass }} mt-0.5">
                                         <span class="tabular-nums text-lg">{{ number_format((int) ($meritSummary['total'] ?? 0)) }}</span>
                                         total merit{{ (int) ($meritSummary['total'] ?? 0) === 1 ? '' : 's' }}
                                     </p>
-                                    <p class="text-xs text-gray-600 mt-1">
+                                    <p class="text-xs {{ $hasMeritViolation ? 'text-red-800/80' : 'text-gray-600' }} mt-1">
                                         Under-time {{ (int) ($meritSummary['breakdown']['undertime'] ?? 0) }}
                                         + excess absence {{ (int) ($meritSummary['breakdown']['excess_absence'] ?? 0) }}
                                         + manual {{ (int) ($meritSummary['breakdown']['manual'] ?? 0) }}
@@ -919,7 +933,7 @@
                                 </div>
                                 <div class="text-right shrink-0">
                                     <span class="inline-flex px-2 py-0.5 rounded-full text-[11px] font-semibold
-                                        {{ $meritStatusKey === 'final' ? 'bg-red-100 text-red-800' : ($meritStatusKey === 'warning' ? 'bg-amber-100 text-amber-800' : ($meritStatusKey === 'active' ? 'bg-amber-50 text-amber-700' : 'bg-gray-100 text-gray-600')) }}">
+                                        {{ $hasMeritViolation ? 'bg-red-600 text-white' : 'bg-gray-100 text-gray-600' }}">
                                         {{ $meritSummary['status']['label'] ?? 'No merits' }}
                                     </span>
                                 </div>
@@ -1013,10 +1027,11 @@
                 </div>
             @elseif(isset($balances))
                 <!-- Employee Balances & Overtime -->
+                @php $approveImpact = $balances['approve_impact'] ?? null; @endphp
                 <div class="bg-white rounded-lg shadow border border-gray-200 p-4 sm:p-6 space-y-3 sm:space-y-4">
                     <h3 class="text-base sm:text-lg font-bold text-gray-900 mb-2">Employee Balances ({{ now()->year }})</h3>
                     <div class="grid grid-cols-1 gap-3">
-                        <div class="border border-gray-100 rounded-lg px-3 py-2">
+                        <div class="border border-gray-100 rounded-lg px-3 py-2 {{ (($approveImpact['kind'] ?? null) === 'leave_negative') ? 'border-red-300 bg-red-50/50' : '' }}">
                             <p class="text-xs font-semibold text-gray-500 uppercase tracking-wide">Leave Credits</p>
                             <p class="text-sm text-gray-900">
                                 Remaining:
@@ -1035,7 +1050,7 @@
                             </p>
                         </div>
                         @if(isset($balances['work_from_home']))
-                        <div class="border border-gray-100 rounded-lg px-3 py-2 {{ ($balances['work_from_home']['remaining'] ?? 0) <= 0 ? 'bg-amber-50/50 border-amber-200' : '' }}">
+                        <div class="border border-gray-100 rounded-lg px-3 py-2 {{ in_array(($approveImpact['kind'] ?? null), ['wfh_negative', 'wfh_carryover', 'wfh_carryover_create'], true) || ($balances['work_from_home']['remaining'] ?? 0) <= 0 || ($balances['work_from_home']['carryover_debt'] ?? 0) > 0 ? 'bg-amber-50/50 border-amber-200' : '' }}">
                             <p class="text-xs font-semibold text-gray-500 uppercase tracking-wide">
                                 Work From Home ({{ $balances['work_from_home']['month_label'] ?? 'This month' }})
                             </p>
@@ -1052,6 +1067,49 @@
                         </div>
                         @endif
                     </div>
+
+                    @if(is_array($approveImpact))
+                        <div class="rounded-md border border-red-300 bg-red-50 px-3 py-2.5">
+                            <p class="text-xs font-semibold uppercase tracking-wide text-red-700">
+                                @if(($approveImpact['kind'] ?? '') === 'leave_negative')
+                                    Negative leave balance warning
+                                @elseif(str_starts_with((string) ($approveImpact['kind'] ?? ''), 'wfh_carryover'))
+                                    WFH carryover warning
+                                @else
+                                    WFH balance warning
+                                @endif
+                            </p>
+                            <p class="text-xs text-red-900 mt-1">
+                                @if(($approveImpact['kind'] ?? '') === 'leave_negative')
+                                    Approving this request needs
+                                    <span class="font-semibold tabular-nums">{{ number_format((float) $approveImpact['request_days'], 2) }}</span>
+                                    day(s) but remaining {{ $approveImpact['label'] }} is only
+                                    <span class="font-semibold tabular-nums">{{ number_format((float) $approveImpact['remaining_before'], 2) }}</span>.
+                                    Balance after approval:
+                                    <span class="font-semibold tabular-nums text-red-700">{{ number_format((float) $approveImpact['remaining_after'], 2) }}</span>
+                                    (short by {{ number_format((float) $approveImpact['shortfall'], 2) }}).
+                                @elseif(($approveImpact['kind'] ?? '') === 'wfh_carryover_create')
+                                    Approving this admin-filed WFH will exceed
+                                    {{ $approveImpact['month_label'] ?? 'this month' }} and create about
+                                    <span class="font-semibold tabular-nums">{{ number_format((float) ($approveImpact['carryover_next'] ?? 0), 0) }}</span>
+                                    day(s) of carryover debt for next month.
+                                @elseif(($approveImpact['kind'] ?? '') === 'wfh_carryover')
+                                    This month already has
+                                    <span class="font-semibold tabular-nums">{{ number_format((float) $approveImpact['carryover_debt'], 0) }}</span>
+                                    day(s) of carryover debt reducing available WFH balance.
+                                @else
+                                    Approving this WFH needs
+                                    <span class="font-semibold tabular-nums">{{ number_format((float) $approveImpact['request_days'], 0) }}</span>
+                                    day(s) but only
+                                    <span class="font-semibold tabular-nums">{{ number_format((float) $approveImpact['remaining_before'], 0) }}</span>
+                                    remain for {{ $approveImpact['month_label'] ?? 'this month' }}.
+                                    @if(!empty($approveImpact['blocked']))
+                                        Employee-filed WFH over quota cannot be approved; reject or refile as admin if carryover is intended.
+                                    @endif
+                                @endif
+                            </p>
+                        </div>
+                    @endif
                 </div>
             @endif
 
@@ -1119,9 +1177,89 @@
                             && ! $leaveRequest->admin_officially_excused;
                     @endphp
                     <!-- Normal Approve Form -->
-                    <div class="bg-white rounded-lg shadow border border-gray-200 p-4 sm:p-6">
+                    @php
+                        $approveMeritProjection = $studentTime['merits']['projection'] ?? null;
+                        $approveWillAddMerits = is_array($approveMeritProjection)
+                            && (int) ($approveMeritProjection['added_excess_merits'] ?? 0) > 0;
+                        $approveMeritWarning = null;
+                        if ($approveWillAddMerits) {
+                            $added = (int) $approveMeritProjection['added_excess_merits'];
+                            $after = (int) $approveMeritProjection['total_merits_after'];
+                            $approveMeritWarning = "This student will get {$added} merit"
+                                .($added === 1 ? '' : 's')
+                                ." from this absence violation if you approve (total would become {$after})."
+                                .(
+                                    ! empty($approveMeritProjection['hits_final'])
+                                        ? ' This also hits the final notice threshold.'
+                                        : (
+                                            ! empty($approveMeritProjection['hits_warning'])
+                                                ? ' This also hits the rules violation warning threshold.'
+                                                : ''
+                                        )
+                                )
+                                .' Cancel and use “Accept as Officially Excused” if they have a school letter. Continue with normal approval?';
+                        }
+
+                        $employeeApproveImpact = $balances['approve_impact'] ?? null;
+                        $approveBalanceWarning = is_array($employeeApproveImpact)
+                            ? (string) ($employeeApproveImpact['warning'] ?? '')
+                            : null;
+                        $approveHasBalanceRisk = filled($approveBalanceWarning);
+                        $approveWfhBlocked = ! empty($employeeApproveImpact['blocked']);
+                        $approveHasRisk = $approveWillAddMerits || $approveHasBalanceRisk;
+                        $approveConfirmWarning = $approveMeritWarning ?: $approveBalanceWarning;
+                    @endphp
+                    <div class="bg-white rounded-lg shadow border {{ $approveHasRisk ? 'border-red-300' : 'border-gray-200' }} p-4 sm:p-6">
                         <h3 class="text-base sm:text-lg font-bold text-gray-900 mb-3 sm:mb-4">Approve Request</h3>
-                        <form action="{{ url('/admin/leave-requests/' . $leaveRequest->id . '/approve') }}" method="POST" class="space-y-3 sm:space-y-4">
+                        @if($approveWillAddMerits)
+                            <div class="mb-3 sm:mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
+                                <p class="text-xs sm:text-sm text-red-800 font-medium">
+                                    Approving this request will give this student
+                                    <span class="font-bold tabular-nums">{{ (int) $approveMeritProjection['added_excess_merits'] }}</span>
+                                    excess absence merit{{ (int) $approveMeritProjection['added_excess_merits'] === 1 ? '' : 's' }}
+                                    (total would become {{ (int) $approveMeritProjection['total_merits_after'] }}).
+                                    @if(!empty($approveMeritProjection['hits_final']))
+                                        This hits the final notice threshold.
+                                    @elseif(!empty($approveMeritProjection['hits_warning']))
+                                        This hits the rules violation warning threshold.
+                                    @endif
+                                </p>
+                                <p class="text-[11px] sm:text-xs text-red-700 mt-1">
+                                    Use <strong>Accept as Officially Excused</strong> instead if this is covered by a school letter and should not count as a demerit.
+                                </p>
+                            </div>
+                        @endif
+                        @if($approveHasBalanceRisk)
+                            <div class="mb-3 sm:mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
+                                <p class="text-xs sm:text-sm text-red-800 font-medium">
+                                    @if(($employeeApproveImpact['kind'] ?? '') === 'leave_negative')
+                                        This approval will put the employee on a <strong>negative leave balance</strong>
+                                        ({{ number_format((float) $employeeApproveImpact['remaining_before'], 2) }} → {{ number_format((float) $employeeApproveImpact['remaining_after'], 2) }} days).
+                                    @elseif(($employeeApproveImpact['kind'] ?? '') === 'wfh_carryover_create')
+                                        This admin-filed WFH approval will create
+                                        <strong>{{ number_format((float) ($employeeApproveImpact['carryover_next'] ?? 0), 0) }} day(s) of carryover</strong>
+                                        against next month’s WFH balance.
+                                    @elseif(($employeeApproveImpact['kind'] ?? '') === 'wfh_carryover')
+                                        This month already has
+                                        <strong>{{ number_format((float) $employeeApproveImpact['carryover_debt'], 0) }} day(s) of WFH carryover debt</strong>
+                                        reducing available balance.
+                                    @else
+                                        This WFH approval exceeds the remaining balance for
+                                        {{ $employeeApproveImpact['month_label'] ?? 'this month' }}
+                                        (needs {{ number_format((float) $employeeApproveImpact['request_days'], 0) }},
+                                        remaining {{ number_format((float) $employeeApproveImpact['remaining_before'], 0) }}).
+                                    @endif
+                                </p>
+                                @if($approveWfhBlocked)
+                                    <p class="text-[11px] sm:text-xs text-red-700 mt-1">
+                                        Employee-filed WFH over the monthly quota cannot be approved. Reject the request, or file WFH as admin if carryover to next month is intended.
+                                    </p>
+                                @endif
+                            </div>
+                        @endif
+                        <form action="{{ url('/admin/leave-requests/' . $leaveRequest->id . '/approve') }}" method="POST"
+                              class="space-y-3 sm:space-y-4"
+                              @if($approveConfirmWarning) data-approve-warning="{{ $approveConfirmWarning }}" @endif>
                             @csrf
                             @include('admin.leave-requests.partials.show-nav-fields')
                             <div>
@@ -1131,12 +1269,21 @@
                                           class="w-full px-3 sm:px-4 py-2 text-sm sm:text-base border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"></textarea>
                             </div>
                             <button type="submit" id="approve-btn"
-                                    class="w-full px-4 py-2 text-sm sm:text-base bg-green-600 text-white rounded-lg hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 disabled:opacity-50 disabled:cursor-not-allowed">
+                                    @if($approveWfhBlocked) disabled @endif
+                                    class="w-full px-4 py-2 text-sm sm:text-base {{ $approveHasRisk ? 'bg-red-600 hover:bg-red-700 focus:ring-red-500' : 'bg-green-600 hover:bg-green-700 focus:ring-green-500' }} text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed">
                                 <span class="approve-content flex items-center justify-center">
                                     <svg class="h-4 w-4 sm:h-5 sm:w-5 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
                                     </svg>
-                                    Approve Request
+                                    @if($approveWfhBlocked)
+                                        Cannot Approve (WFH Over Quota)
+                                    @elseif($approveWillAddMerits)
+                                        Approve Anyway (Adds Merit)
+                                    @elseif($approveHasBalanceRisk)
+                                        Approve Anyway (Negative / Carryover)
+                                    @else
+                                        Approve Request
+                                    @endif
                                 </span>
                                 <span class="approve-loading hidden flex items-center justify-center">
                                     <svg class="animate-spin h-4 w-4 sm:h-5 sm:w-5 mr-2 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
@@ -1402,9 +1549,16 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     // Handle Approve form
-    const approveForm = document.querySelector('form[action*="approve"]:not([action*="force-accept"])');
+    const approveForm = document.querySelector('form[action*="/approve"]:not([action*="force-accept"])');
     if (approveForm) {
         approveForm.addEventListener('submit', function(e) {
+            const approveWarning = approveForm.getAttribute('data-approve-warning')
+                || approveForm.getAttribute('data-merit-warning');
+            if (approveWarning && !window.confirm(approveWarning)) {
+                e.preventDefault();
+                return;
+            }
+
             const btn = document.getElementById('approve-btn');
             if (btn) {
                 btn.disabled = true;

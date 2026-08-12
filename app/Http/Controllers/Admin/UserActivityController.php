@@ -7,6 +7,7 @@ use App\Models\UserActivity;
 use App\Models\UserSession;
 use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
 
 class UserActivityController extends Controller
@@ -119,19 +120,31 @@ class UserActivityController extends Controller
                 ->where('last_activity_at', '<', now()->subMinutes(5))->count(),
         ];
 
-        // Activity by hour (last 24 hours) - SQLite compatible
-        $activityByHour = UserActivity::where('created_at', '>=', now()->subDay())
-            ->selectRaw('strftime("%H", created_at) as hour, COUNT(*) as count')
-            ->groupBy('hour')
-            ->orderBy('hour')
-            ->get()
-            ->pluck('count', 'hour');
+        // Activity by hour (last 24 hours)
+        $hourExpression = match (DB::connection()->getDriverName()) {
+            'pgsql' => "EXTRACT(HOUR FROM created_at)::integer",
+            'mysql', 'mariadb' => 'HOUR(created_at)',
+            default => "strftime('%H', created_at)",
+        };
 
-        // Activity by day (last 30 days) - SQLite compatible
+        $activityByHour = UserActivity::where('created_at', '>=', now()->subDay())
+            ->selectRaw("{$hourExpression} as hour, COUNT(*) as count")
+            ->groupByRaw($hourExpression)
+            ->orderByRaw($hourExpression)
+            ->get()
+            ->mapWithKeys(fn ($row) => [str_pad((string) $row->hour, 2, '0', STR_PAD_LEFT) => $row->count]);
+
+        // Activity by day (last 30 days)
+        $dateExpression = match (DB::connection()->getDriverName()) {
+            'pgsql' => 'DATE(created_at)',
+            'mysql', 'mariadb' => 'DATE(created_at)',
+            default => 'date(created_at)',
+        };
+
         $activityByDay = UserActivity::where('created_at', '>=', now()->subDays(30))
-            ->selectRaw('date(created_at) as date, COUNT(*) as count')
-            ->groupBy('date')
-            ->orderBy('date')
+            ->selectRaw("{$dateExpression} as date, COUNT(*) as count")
+            ->groupByRaw($dateExpression)
+            ->orderByRaw($dateExpression)
             ->get()
             ->pluck('count', 'date');
 
