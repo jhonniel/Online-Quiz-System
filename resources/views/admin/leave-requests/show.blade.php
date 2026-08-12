@@ -851,6 +851,21 @@
         <div class="space-y-4 sm:space-y-6">
             @if(isset($studentTime) && $leaveRequest->user->role === 'student')
                 <!-- Student DTR Time Summary -->
+                @php
+                    $meritSummary = $studentTime['merits'] ?? null;
+                    $meritStatusKey = $meritSummary['status']['key'] ?? 'clear';
+                    $meritPanelClass = match ($meritStatusKey) {
+                        'final' => 'border-red-200 bg-red-50/40',
+                        'warning' => 'border-amber-200 bg-amber-50/40',
+                        'active' => 'border-amber-100 bg-amber-50/20',
+                        default => 'border-gray-100',
+                    };
+                    $meritTotalClass = match ($meritStatusKey) {
+                        'final' => 'text-red-700',
+                        'warning', 'active' => 'text-amber-700',
+                        default => 'text-gray-900',
+                    };
+                @endphp
                 <div class="bg-white rounded-lg shadow border border-gray-200 p-4 sm:p-6 space-y-3 sm:space-y-4">
                     <h3 class="text-base sm:text-lg font-bold text-gray-900 mb-2">Student Time Summary</h3>
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -886,6 +901,115 @@
                             @endif
                         </div>
                     </div>
+
+                    @if(is_array($meritSummary))
+                        <div class="border rounded-lg px-3 py-3 space-y-3 {{ $meritPanelClass }}">
+                            <div class="flex items-start justify-between gap-3">
+                                <div>
+                                    <p class="text-xs font-semibold text-gray-500 uppercase tracking-wide">Merits / Violations</p>
+                                    <p class="text-sm font-semibold {{ $meritTotalClass }} mt-0.5">
+                                        <span class="tabular-nums text-lg">{{ number_format((int) ($meritSummary['total'] ?? 0)) }}</span>
+                                        total merit{{ (int) ($meritSummary['total'] ?? 0) === 1 ? '' : 's' }}
+                                    </p>
+                                    <p class="text-xs text-gray-600 mt-1">
+                                        Under-time {{ (int) ($meritSummary['breakdown']['undertime'] ?? 0) }}
+                                        + excess absence {{ (int) ($meritSummary['breakdown']['excess_absence'] ?? 0) }}
+                                        + manual {{ (int) ($meritSummary['breakdown']['manual'] ?? 0) }}
+                                    </p>
+                                </div>
+                                <div class="text-right shrink-0">
+                                    <span class="inline-flex px-2 py-0.5 rounded-full text-[11px] font-semibold
+                                        {{ $meritStatusKey === 'final' ? 'bg-red-100 text-red-800' : ($meritStatusKey === 'warning' ? 'bg-amber-100 text-amber-800' : ($meritStatusKey === 'active' ? 'bg-amber-50 text-amber-700' : 'bg-gray-100 text-gray-600')) }}">
+                                        {{ $meritSummary['status']['label'] ?? 'No merits' }}
+                                    </span>
+                                </div>
+                            </div>
+
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                <div class="rounded-md bg-white/70 border border-gray-100 px-2.5 py-2">
+                                    <p class="text-[11px] font-semibold uppercase tracking-wide text-gray-500">Absence balance</p>
+                                    <p class="text-sm text-gray-900 mt-0.5">
+                                        <span class="font-bold tabular-nums">{{ number_format((float) ($meritSummary['absence']['approved_days'] ?? 0), 0) }}</span>
+                                        / {{ number_format((float) ($meritSummary['absence']['allowable'] ?? 0), 0) }}
+                                        approved absent day(s)
+                                    </p>
+                                    <p class="text-xs mt-0.5 {{ ((float) ($meritSummary['absence']['remaining_balance'] ?? 0)) <= 0 ? 'text-red-600' : 'text-gray-500' }}">
+                                        Remaining allowable:
+                                        <span class="font-semibold tabular-nums">{{ number_format((float) ($meritSummary['absence']['remaining_balance'] ?? 0), 0) }}</span>
+                                        @if((int) ($meritSummary['absence']['excess_merits'] ?? 0) > 0)
+                                            · <span class="text-red-700 font-semibold">{{ (int) $meritSummary['absence']['excess_merits'] }} excess merit(s)</span>
+                                        @endif
+                                    </p>
+                                </div>
+                                <div class="rounded-md bg-white/70 border border-gray-100 px-2.5 py-2">
+                                    <p class="text-[11px] font-semibold uppercase tracking-wide text-gray-500">Under-time filings</p>
+                                    <p class="text-sm text-gray-900 mt-0.5">
+                                        <span class="font-bold tabular-nums">{{ (int) ($meritSummary['undertime']['filing_count'] ?? 0) }}</span>
+                                        filing(s) below 08:00
+                                    </p>
+                                    <p class="text-xs text-gray-500 mt-0.5">
+                                        {{ (int) ($meritSummary['undertime']['merits'] ?? 0) }} undertime merit(s)
+                                        · {{ (int) ($meritSummary['undertime']['filings_until_next_merit'] ?? 0) }} more until next
+                                        (every {{ (int) ($meritSummary['undertime']['filings_per_merit'] ?? 5) }})
+                                    </p>
+                                </div>
+                            </div>
+
+                            <p class="text-xs text-gray-600">
+                                {{ $meritSummary['status']['hint'] ?? '' }}
+                                Thresholds: warning at {{ (int) ($meritSummary['thresholds']['warning'] ?? 1) }},
+                                final at {{ (int) ($meritSummary['thresholds']['final'] ?? 3) }}.
+                            </p>
+
+                            @if(!empty($meritSummary['notices']['rules_warning']) || !empty($meritSummary['notices']['final_notice']) || !empty($meritSummary['notices']['student_terminated']))
+                                <div class="flex flex-wrap gap-1.5">
+                                    @if(!empty($meritSummary['notices']['rules_warning']))
+                                        <span class="inline-flex px-2 py-0.5 rounded text-[11px] font-semibold bg-amber-100 text-amber-800">Rules warning active</span>
+                                    @endif
+                                    @if(!empty($meritSummary['notices']['final_notice']))
+                                        <span class="inline-flex px-2 py-0.5 rounded text-[11px] font-semibold bg-red-100 text-red-800">Final notice active</span>
+                                    @endif
+                                    @if(!empty($meritSummary['notices']['student_terminated']))
+                                        <span class="inline-flex px-2 py-0.5 rounded text-[11px] font-semibold bg-gray-900 text-white">Terminated</span>
+                                    @endif
+                                </div>
+                            @endif
+
+                            @if(!empty($meritSummary['projection']))
+                                @php $proj = $meritSummary['projection']; @endphp
+                                <div class="rounded-md border border-indigo-200 bg-indigo-50/70 px-2.5 py-2">
+                                    <p class="text-[11px] font-semibold uppercase tracking-wide text-indigo-700">If this Absent request is approved</p>
+                                    <p class="text-xs text-indigo-950 mt-1">
+                                        Adds <span class="font-semibold tabular-nums">{{ (int) $proj['request_days'] }}</span> absent day(s)
+                                        → <span class="font-semibold tabular-nums">{{ (int) $proj['approved_days_after'] }}</span> total
+                                        (remaining balance <span class="font-semibold tabular-nums">{{ number_format((float) $proj['remaining_balance_after'], 0) }}</span>).
+                                    </p>
+                                    @if((int) $proj['added_excess_merits'] > 0)
+                                        <p class="text-xs text-red-700 mt-1 font-medium">
+                                            Would add {{ (int) $proj['added_excess_merits'] }} excess absence merit(s)
+                                            → {{ (int) $proj['total_merits_after'] }} total merit(s).
+                                            @if(!empty($proj['hits_final']))
+                                                Hits final notice threshold.
+                                            @elseif(!empty($proj['hits_warning']))
+                                                Hits rules violation warning threshold.
+                                            @endif
+                                        </p>
+                                    @elseif(!empty($proj['uses_remaining_balance']))
+                                        <p class="text-xs text-emerald-700 mt-1 font-medium">
+                                            Still within allowable absence balance — no new excess absence merit from this request.
+                                        </p>
+                                    @else
+                                        <p class="text-xs text-gray-600 mt-1">
+                                            No additional excess absence merit projected from this request.
+                                        </p>
+                                    @endif
+                                    <p class="text-[11px] text-indigo-700/80 mt-1">
+                                        Use <strong>Accept as Officially Excused</strong> if a school letter should exclude this from demerits.
+                                    </p>
+                                </div>
+                            @endif
+                        </div>
+                    @endif
                 </div>
             @elseif(isset($balances))
                 <!-- Employee Balances & Overtime -->

@@ -20,7 +20,9 @@ use App\Models\User;
 use App\Rules\ClickUpTasksUrlsOnly;
 use App\Services\LeaveRequestStaleResubmissionService;
 use App\Services\MailConfigService;
+use App\Support\StudentMeritNoticeSettings;
 use App\Support\StudentMeritRulesNotice;
+use App\Support\StudentViolationCounter;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Carbon\Carbon;
 use Carbon\CarbonPeriod;
@@ -854,6 +856,7 @@ class LeaveRequestController extends Controller
                 'total_dtr_hours_formatted' => $formatHours($totalDtrHours),
                 'remaining_hours' => $remainingHours,
                 'remaining_hours_formatted' => $requiredHours > 0 ? $formatHours($remainingHours) : null,
+                'merits' => $this->studentMeritSummaryForLeaveShow($user, $leaveRequest),
             ];
         }
 
@@ -3176,6 +3179,127 @@ class LeaveRequestController extends Controller
 
         return redirect($this->adminLeaveRequestListUrl($leaveRequest))
             ->with('success', 'Leave request deleted successfully.');
+    }
+
+    /**
+     * Merit / absence violation snapshot for the leave-request Student Time Summary panel.
+     *
+     * @return array<string, mixed>
+     */
+    private function studentMeritSummaryForLeaveShow(User $student, LeaveRequest $leaveRequest): array
+    {
+        $details = StudentViolationCounter::detailsForUser($student);
+        $breakdown = $details['breakdown'] ?? StudentViolationCounter::composeBreakdown(0, 0, 0);
+        $absence = $details['absence'] ?? [
+            'allowable' => 0,
+            'approved_days' => 0,
+            'remaining_balance' => 0,
+            'days_over_balance' => 0,
+            'excess_merits' => 0,
+        ];
+        $thresholds = $details['thresholds'] ?? StudentMeritNoticeSettings::thresholds();
+        $notices = $details['notices'] ?? [];
+
+        $total = (int) ($breakdown['total'] ?? 0);
+        $warningAt = (int) ($thresholds['warning'] ?? 1);
+        $finalAt = (int) ($thresholds['final'] ?? 3);
+
+        $undertimeFilings = (int) ($details['undertime_filing_count'] ?? 0);
+        $perMerit = (int) ($details['undertime_filings_per_merit'] ?? StudentViolationCounter::UNDERTIME_FILINGS_PER_MERIT);
+        $undertimeProgress = $perMerit > 0 ? ($undertimeFilings % $perMerit) : 0;
+        $filingsUntilNextUndertimeMerit = $perMerit > 0 ? ($perMerit - $undertimeProgress) : 0;
+        if ($undertimeProgress === 0 && $undertimeFilings > 0) {
+            // Just completed a full cycle; next merit needs a fresh set of filings.
+            $filingsUntilNextUndertimeMerit = $perMerit;
+        } elseif ($undertimeFilings === 0) {
+            $filingsUntilNextUndertimeMerit = $perMerit;
+        }
+
+        $statusKey = 'clear';
+        $statusLabel = 'No merits on record';
+        $statusHint = 'Below the rules-violation warning threshold.';
+
+        if ($total >= $finalAt) {
+            $statusKey = 'final';
+            $statusLabel = 'Final notice threshold reached';
+            $statusHint = "Total merits ({$total}) meet or exceed the final notice threshold ({$finalAt}).";
+        } elseif ($total >= $warningAt) {
+            $statusKey = 'warning';
+            $statusLabel = 'Rules violation warning threshold reached';
+            $untilFinal = max(0, $finalAt - $total);
+            $statusHint = $untilFinal > 0
+                ? "{$untilFinal} more merit(s) until final notice (at {$finalAt})."
+                : "At final notice threshold ({$finalAt}).";
+        } elseif ($total > 0) {
+            $statusKey = 'active';
+            $statusLabel = 'Merits on record';
+            $untilWarning = max(0, $warningAt - $total);
+            $statusHint = $untilWarning > 0
+                ? "{$untilWarning} more merit(s) until rules violation warning (at {$warningAt})."
+                : "At warning threshold ({$warningAt}).";
+        } else {
+            $untilWarning = max(0, $warningAt - $total);
+            $statusHint = $untilWarning > 0
+                ? "{$untilWarning} merit(s) until rules violation warning (at {$warningAt})."
+                : "At warning threshold ({$warningAt}).";
+        }
+
+        $projection = null;
+        $isPendingLike = $leaveRequest->isPending() || $leaveRequest->status === 'for_more_verification';
+        $countsTowardAbsence = $leaveRequest->type === 'absent'
+            && ! $leaveRequest->admin_officially_excused
+            && ! $leaveRequest->wasFiledByTeacher();
+
+        if ($isPendingLike && $countsTowardAbsence) {
+            $requestDays = (int) $leaveRequest->days;
+            $projectedApprovedDays = (int) ($absence['approved_days'] ?? 0) + $requestDays;
+            $allowable = (float) ($absence['allowable'] ?? 0);
+            $projectedRemaining = max($allowable - $projectedApprovedDays, 0);
+            $currentExcess = (int) ($absence['excess_merits'] ?? 0);
+            $projectedExcess = StudentViolationCounter::excessAbsenceMerits($projectedApprovedDays, $allowable);
+            $addedExcessMerits = max(0, $projectedExcess - $currentExcess);
+            $projectedTotal = $total + $addedExcessMerits;
+
+            $projection = [
+                'request_days' => $requestDays,
+                'approved_days_after' => $projectedApprovedDays,
+                'remaining_balance_after' => round($projectedRemaining, 2),
+                'excess_merits_after' => $projectedExcess,
+                'added_excess_merits' => $addedExcessMerits,
+                'total_merits_after' => $projectedTotal,
+                'hits_warning' => $total < $warningAt && $projectedTotal >= $warningAt,
+                'hits_final' => $total < $finalAt && $projectedTotal >= $finalAt,
+                'uses_remaining_balance' => $requestDays > 0 && $requestDays <= (float) ($absence['remaining_balance'] ?? 0),
+            ];
+        }
+
+        return [
+            'breakdown' => $breakdown,
+            'total' => $total,
+            'absence' => $absence,
+            'thresholds' => [
+                'warning' => $warningAt,
+                'final' => $finalAt,
+            ],
+            'undertime' => [
+                'filing_count' => $undertimeFilings,
+                'filings_per_merit' => $perMerit,
+                'progress_in_cycle' => $undertimeProgress,
+                'filings_until_next_merit' => $filingsUntilNextUndertimeMerit,
+                'merits' => (int) ($breakdown['undertime'] ?? 0),
+            ],
+            'status' => [
+                'key' => $statusKey,
+                'label' => $statusLabel,
+                'hint' => $statusHint,
+            ],
+            'notices' => [
+                'rules_warning' => (bool) ($notices['rules_warning'] ?? false),
+                'final_notice' => (bool) ($notices['final_notice'] ?? false),
+                'student_terminated' => (bool) ($notices['student_terminated'] ?? false),
+            ],
+            'projection' => $projection,
+        ];
     }
 
     /**
