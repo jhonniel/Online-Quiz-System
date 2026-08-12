@@ -140,6 +140,26 @@ class StudentPerformanceRatingForm
     }
 
     /**
+     * @return array<string, array{label: string, min: int, max: int}>
+     */
+    public static function scoreFieldConstraints(): array
+    {
+        $constraints = [];
+        foreach (self::sections() as $section) {
+            $min = $section['key'] === 'grand_total' ? 0 : self::SCORE_MIN;
+            foreach ($section['items'] as $item) {
+                $constraints[$item['field']] = [
+                    'label' => $item['label'],
+                    'min' => $min,
+                    'max' => (int) $item['max'],
+                ];
+            }
+        }
+
+        return $constraints;
+    }
+
+    /**
      * @return array<string, mixed>
      */
     public static function validationRules(): array
@@ -148,15 +168,40 @@ class StudentPerformanceRatingForm
             'notes' => ['nullable', 'string', 'max:5000'],
         ];
 
-        foreach (self::fieldMaxScores() as $field => $max) {
-            $rules[$field] = ['required', 'integer', 'min:'.self::SCORE_MIN, 'max:'.$max];
+        foreach (self::scoreFieldConstraints() as $field => $constraint) {
+            $rules[$field] = [
+                'required',
+                'integer',
+                'min:'.$constraint['min'],
+                'max:'.$constraint['max'],
+                'regex:/^\d+$/',
+            ];
         }
 
-        // Grand-total extras allow 0 through max (not limited to 1–5 scale).
-        $rules['learning_journal_evaluation'] = ['required', 'integer', 'min:0', 'max:10'];
-        $rules['requirements_assessment'] = ['required', 'integer', 'min:0', 'max:30'];
-
         return $rules;
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    public static function validationMessages(): array
+    {
+        $messages = [];
+
+        foreach (self::scoreFieldConstraints() as $field => $constraint) {
+            $label = $constraint['label'];
+            $min = $constraint['min'];
+            $max = $constraint['max'];
+            $range = "a whole number from {$min} to {$max}";
+
+            $messages[$field.'.required'] = "Enter a score for {$label}.";
+            $messages[$field.'.integer'] = "{$label} must be {$range}.";
+            $messages[$field.'.min'] = "{$label} must be at least {$min}.";
+            $messages[$field.'.max'] = "{$label} cannot be more than {$max}.";
+            $messages[$field.'.regex'] = "{$label} must be {$range}.";
+        }
+
+        return $messages;
     }
 
     public static function viewerCanAccess(?User $user): bool

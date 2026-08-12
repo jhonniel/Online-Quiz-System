@@ -104,7 +104,7 @@
 
     @if($errors->any())
         <div class="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
-            <p class="font-semibold">Please complete all required scores before saving.</p>
+            <p class="font-semibold">Please enter valid scores before saving.</p>
             <ul class="mt-1 list-disc list-inside">
                 @foreach($errors->all() as $error)
                     <li>{{ $error }}</li>
@@ -113,7 +113,7 @@
         </div>
     @endif
 
-    <form method="POST" action="{{ route('admin.student-management.students.performance-rating.update', $student) }}" class="space-y-8">
+    <form method="POST" action="{{ route('admin.student-management.students.performance-rating.update', $student) }}" class="space-y-8" id="performance-rating-form">
         @csrf
         @method('PUT')
 
@@ -175,10 +175,10 @@
                                             <div class="flex items-start gap-3">
                                                 <span class="text-sm font-bold text-indigo-600 shrink-0">{{ strtoupper($letter) }}.</span>
                                                 <div>
-                                                    <p class="text-base sm:text-lg font-bold text-gray-900 leading-snug">{{ $item['label'] }}</p>
-                                                    <p class="mt-1 text-xs text-gray-500">Max {{ $max }} points</p>
+                                                    <p class="text-lg sm:text-2xl font-bold text-gray-900 leading-snug">{{ $item['label'] }}</p>
+                                                    <p class="mt-1.5 text-sm text-gray-500">Max {{ $max }} points</p>
                                                     @error($field)
-                                                        <p class="mt-1 text-sm font-medium text-red-600">{{ $message }}</p>
+                                                        <p class="mt-1.5 text-sm font-medium text-red-600">{{ $message }}</p>
                                                     @enderror
                                                 </div>
                                             </div>
@@ -228,28 +228,34 @@
                                             <div class="flex items-start gap-3">
                                                 <span class="text-sm font-bold text-indigo-600 shrink-0">{{ strtoupper($letter) }}.</span>
                                                 <div>
-                                                    <p class="text-base sm:text-lg font-bold text-gray-900 leading-snug">{{ $item['label'] }}</p>
-                                                    <p class="mt-1 text-xs text-gray-500">Max {{ $max }} points</p>
+                                                    <p class="text-lg sm:text-2xl font-bold text-gray-900 leading-snug">{{ $item['label'] }}</p>
+                                                    <p class="mt-1.5 text-sm text-gray-500">Max {{ $max }} points</p>
                                                     @error($field)
-                                                        <p class="mt-1 text-sm font-medium text-red-600">{{ $message }}</p>
+                                                        <p class="mt-1.5 text-sm font-medium text-red-600">{{ $message }}</p>
                                                     @enderror
                                                 </div>
                                             </div>
                                         </td>
                                         <td class="px-6 py-5 align-middle">
                                             <div class="flex items-center gap-2">
-                                                <input type="number"
+                                                <input type="text"
                                                        name="{{ $field }}"
                                                        id="{{ $field }}"
+                                                       inputmode="numeric"
+                                                       pattern="{{ $max === 10 ? '^(0|[1-9]|10)$' : ($max === 30 ? '^(0|[1-9]|[12][0-9]|30)$' : '[0-9]+') }}"
                                                        min="0"
                                                        max="{{ $max }}"
-                                                       step="1"
+                                                       maxlength="{{ strlen((string) $max) }}"
+                                                       autocomplete="off"
                                                        value="{{ $value }}"
                                                        required
-                                                       class="rating-score-input w-28 rounded-md border-gray-300 py-2 text-center text-base font-bold tabular-nums focus:border-indigo-500 focus:ring-indigo-500"
+                                                       title="Whole number from 0 to {{ $max }}"
+                                                       aria-describedby="{{ $field }}_hint"
+                                                       class="rating-score-input rating-numeric-input w-28 rounded-md border-gray-300 py-2 text-center text-base font-bold tabular-nums focus:border-indigo-500 focus:ring-indigo-500 user-invalid:border-red-500 user-invalid:ring-1 user-invalid:ring-red-500"
                                                        data-section="{{ $sectionKey }}"
+                                                       data-min="0"
                                                        data-max="{{ $max }}">
-                                                <span class="text-sm font-medium text-gray-500">/ {{ $max }}</span>
+                                                <span id="{{ $field }}_hint" class="text-sm font-medium text-gray-500">/ {{ $max }}</span>
                                             </div>
                                         </td>
                                     </tr>
@@ -292,11 +298,46 @@
     if (!totalEl) return;
 
     const overallMax = {{ $overallMax }};
+    const allowedKeys = ['Backspace', 'Delete', 'Tab', 'Escape', 'Enter', 'ArrowLeft', 'ArrowRight', 'Home', 'End'];
 
     function fieldValue(input) {
         if (input.type === 'radio' && !input.checked) return null;
         const value = parseInt(input.value, 10);
         return Number.isNaN(value) ? null : value;
+    }
+
+    function scoreBounds(input) {
+        const min = parseInt(input.getAttribute('data-min') || input.getAttribute('min') || '0', 10);
+        const max = parseInt(input.getAttribute('data-max') || input.getAttribute('max') || '0', 10);
+        return {
+            min: Number.isNaN(min) ? 0 : min,
+            max: Number.isNaN(max) ? 0 : max,
+        };
+    }
+
+    function sanitizeNumericScore(input) {
+        const bounds = scoreBounds(input);
+        let digits = String(input.value || '').replace(/[^\d]/g, '');
+        if (digits === '') {
+            input.value = '';
+            input.setCustomValidity('');
+            return;
+        }
+
+        let n = parseInt(digits, 10);
+        while (digits.length > 1 && n > bounds.max) {
+            digits = digits.slice(0, -1);
+            n = parseInt(digits, 10);
+        }
+        if (Number.isNaN(n) || n > bounds.max) {
+            n = bounds.max;
+        }
+        if (n < bounds.min) {
+            n = bounds.min;
+        }
+
+        input.value = String(n);
+        input.setCustomValidity('');
     }
 
     function recalculate() {
@@ -319,6 +360,88 @@
 
         document.querySelectorAll('.section-subtotal').forEach(function (el) {
             el.textContent = String(sectionSums[el.getAttribute('data-section')] || 0);
+        });
+    }
+
+    document.querySelectorAll('.rating-numeric-input').forEach(function (input) {
+        const bounds = scoreBounds(input);
+
+        input.addEventListener('keydown', function (e) {
+            if (allowedKeys.indexOf(e.key) !== -1 || e.ctrlKey || e.metaKey) {
+                return;
+            }
+            if (!/^\d$/.test(e.key)) {
+                e.preventDefault();
+                return;
+            }
+
+            const start = input.selectionStart;
+            const end = input.selectionEnd;
+            if (start == null || end == null) {
+                return;
+            }
+            const next = input.value.slice(0, start) + e.key + input.value.slice(end);
+            const n = parseInt(next.replace(/[^\d]/g, ''), 10);
+            if (!Number.isNaN(n) && n > bounds.max) {
+                e.preventDefault();
+            }
+        });
+
+        input.addEventListener('paste', function (e) {
+            e.preventDefault();
+            const pasted = (e.clipboardData || window.clipboardData).getData('text') || '';
+            const digits = pasted.replace(/[^\d]/g, '');
+            if (digits === '') {
+                return;
+            }
+            input.value = digits;
+            sanitizeNumericScore(input);
+            recalculate();
+        });
+
+        input.addEventListener('drop', function (e) {
+            e.preventDefault();
+        });
+
+        input.addEventListener('input', function () {
+            sanitizeNumericScore(input);
+        });
+
+        input.addEventListener('blur', function () {
+            sanitizeNumericScore(input);
+        });
+
+        input.addEventListener('beforeinput', function (e) {
+            if (e.inputType && e.inputType.indexOf('insert') === 0 && e.data && /\D/.test(e.data)) {
+                e.preventDefault();
+            }
+        });
+    });
+
+    const form = document.getElementById('performance-rating-form');
+    if (form) {
+        form.addEventListener('submit', function (e) {
+            let firstInvalid = null;
+
+            form.querySelectorAll('.rating-numeric-input').forEach(function (input) {
+                const bounds = scoreBounds(input);
+                const raw = String(input.value || '').trim();
+                const n = parseInt(raw, 10);
+                const valid = raw !== '' && /^\d+$/.test(raw) && !Number.isNaN(n) && n >= bounds.min && n <= bounds.max;
+
+                if (!valid) {
+                    input.setCustomValidity('Enter a whole number from ' + bounds.min + ' to ' + bounds.max + '.');
+                    if (!firstInvalid) firstInvalid = input;
+                } else {
+                    input.setCustomValidity('');
+                }
+            });
+
+            if (firstInvalid) {
+                e.preventDefault();
+                firstInvalid.reportValidity();
+                firstInvalid.focus();
+            }
         });
     }
 

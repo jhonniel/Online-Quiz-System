@@ -35,7 +35,10 @@ class StudentPerformanceRatingController extends Controller
         $this->assertCanAccessPerformanceRatings($user);
 
         $actor = auth()->user();
-        $validated = $request->validate(StudentPerformanceRatingForm::validationRules());
+        $validated = $request->validate(
+            StudentPerformanceRatingForm::validationRules(),
+            StudentPerformanceRatingForm::validationMessages()
+        );
 
         $previous = StudentPerformanceRating::query()->where('user_id', $user->id)->first();
         $previousOverall = $previous ? $previous->overallScore() : null;
