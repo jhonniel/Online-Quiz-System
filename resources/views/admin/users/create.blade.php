@@ -274,6 +274,22 @@
                     <!-- Required Training Hours (Students Only) -->
                     <div class="space-y-2" id="required_training_hours_wrapper"
                          @if(old('role') === 'student') style="" @else style="display:none;" @endif>
+                        <div class="space-y-2">
+                            <label for="course" class="block text-sm font-semibold text-gray-700">
+                                Course / Program
+                            </label>
+                            <input type="text"
+                                   name="course"
+                                   id="course"
+                                   value="{{ old('course') }}"
+                                   placeholder="e.g. BS Information Technology"
+                                   class="block w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200 bg-gray-50 focus:bg-white @error('course') border-red-300 focus:ring-red-500 focus:border-red-500 @enderror">
+                            <p class="text-xs text-gray-500">Optional. The student's academic course or program.</p>
+                            @error('course')
+                                <p class="text-sm text-red-600">{{ $message }}</p>
+                            @enderror
+                        </div>
+
                         <label for="required_training_hours" class="block text-sm font-semibold text-gray-700">
                             Required Training Hours (Time Needed to Acquire)
                         </label>

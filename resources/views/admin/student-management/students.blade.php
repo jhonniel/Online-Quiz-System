@@ -171,7 +171,7 @@
                                    id="student_search"
                                    name="search"
                                    value="{{ request('search', $search ?? '') }}"
-                                   placeholder="{{ $showDepartmentColumn ? 'Name, email, university, department, ID…' : 'Name, email, university, ID…' }}"
+                                   placeholder="{{ $showDepartmentColumn ? 'Name, email, university, course, department, ID…' : 'Name, email, university, course, ID…' }}"
                                    autocomplete="off"
                                    class="block w-full pl-9 pr-10 py-2 border border-gray-300 rounded-md shadow-sm text-sm focus:ring-indigo-500 focus:border-indigo-500">
                             @if(request('search'))
@@ -293,6 +293,7 @@
                     <tr>
                         <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Student</th>
                         <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">School / University</th>
+                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Course</th>
                         @if($showDepartmentColumn)
                             <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Department</th>
                         @endif
@@ -332,6 +333,9 @@
                             </td>
                             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
                                 {{ optional($student->university)->name ?? '—' }}
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
+                                {{ filled($student->course) ? $student->course : '—' }}
                             </td>
                             @if($showDepartmentColumn)
                                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
@@ -428,7 +432,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="{{ ($showDepartmentColumn ? 7 : 6) + 1 + ($canRateStudentPerformance ? 2 : 0) }}" class="px-6 py-12 text-center text-sm text-gray-500">
+                            <td colspan="{{ ($showDepartmentColumn ? 8 : 7) + ($canRateStudentPerformance ? 2 : 0) }}" class="px-6 py-12 text-center text-sm text-gray-500">
                                 <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z"></path>
                                 </svg>
@@ -1157,7 +1161,9 @@
                     })
                     .then(function (data) {
                         const student = data.student || {};
-                        subtitle.textContent = (student.name || '') + (student.email ? ' · ' + student.email : '');
+                        subtitle.textContent = (student.name || '')
+                            + (student.email ? ' · ' + student.email : '')
+                            + (student.course ? ' · ' + student.course : '');
                         if (showProfileLink && editLink && student.edit_url) {
                             editLink.href = student.edit_url;
                             editLink.classList.remove('hidden');

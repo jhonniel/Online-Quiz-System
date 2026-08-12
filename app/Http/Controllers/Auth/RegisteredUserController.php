@@ -60,6 +60,7 @@ class RegisteredUserController extends Controller
             // 'role' => ['nullable', 'string', 'in:student,employee,applicant'],
             'university_id' => ['required'],
             'new_university_name' => ['nullable', 'string', 'max:255'],
+            'course' => ['nullable', 'string', 'max:255'],
         ], [
             'password.min' => 'Password must be at least 8 characters long.',
             'password.regex' => 'Password must contain at least one uppercase letter, one lowercase letter, and one number.',
@@ -120,6 +121,7 @@ class RegisteredUserController extends Controller
             'is_active' => true,
             'is_approved' => $isHiringApplication, // Auto-approve if from hiring application
             'university_id' => $universityId,
+            'course' => $role === 'student' ? trim((string) $request->input('course', '')) ?: null : null,
         ]);
 
         // Link application to user if it's a hiring application

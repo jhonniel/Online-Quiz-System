@@ -260,6 +260,25 @@
                         @endif
                     </div>
 
+                    <!-- Course / Program -->
+                    <div class="mb-4">
+                        <div class="relative">
+                            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                <svg class="h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 14l9-5-9-5-9 5 9 5z"></path>
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 14l6.16-3.422a12.083 12.083 0 01.665 6.479A11.952 11.952 0 0012 20.055a11.952 11.952 0 00-6.824-2.998 12.078 12.078 0 01.665-6.479L12 14z"></path>
+                                </svg>
+                            </div>
+                            <input id="course" name="course" type="text" maxlength="255"
+                                   value="{{ old('course') }}"
+                                   placeholder="Course / Program (e.g. BS Information Technology)"
+                                   class="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500 transition-colors duration-200">
+                        </div>
+                        @if($errors->has('course'))
+                            <p class="mt-2 text-sm text-red-600">{{ $errors->first('course') }}</p>
+                        @endif
+                    </div>
+
                     <!-- New University Input (Hidden by default) -->
                     <div id="new-university-input" class="mb-4 hidden">
                         <div class="relative">

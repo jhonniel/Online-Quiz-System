@@ -155,6 +155,16 @@
                         ])
 
                         <div id="required_training_hours_wrapper" class="{{ old('role', $user->role) === 'student' ? '' : 'hidden' }}">
+                            <div class="mb-4">
+                                <label for="course" class="block text-sm font-semibold text-gray-700 mb-1.5">Course / Program</label>
+                                <input type="text" name="course" id="course" maxlength="255"
+                                       value="{{ old('course', $user->course) }}"
+                                       class="block w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 text-sm"
+                                       placeholder="e.g. BS Information Technology">
+                                <p class="mt-1 text-xs text-gray-500">The student's academic course or program.</p>
+                                @error('course') <p class="mt-1 text-sm text-red-600">{{ $message }}</p> @enderror
+                            </div>
+
                             <label for="required_training_hours" class="block text-sm font-semibold text-gray-700 mb-1.5">Required Training Hours</label>
                             <input type="number" name="required_training_hours" id="required_training_hours" step="0.01" min="0"
                                    value="{{ old('required_training_hours', $user->required_training_hours) }}"

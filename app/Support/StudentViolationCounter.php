@@ -335,6 +335,7 @@ final class StudentViolationCounter
                 'id' => $userId,
                 'name' => (string) $student->name,
                 'email' => (string) $student->email,
+                'course' => filled($student->course) ? (string) $student->course : null,
                 'edit_url' => url('/admin/users/'.$userId.'/edit'),
             ],
             'breakdown' => $breakdown,

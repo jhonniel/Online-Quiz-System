@@ -186,6 +186,7 @@ class StudentDashboardController extends Controller
 
                 $q->orWhere('users.name', 'like', "%{$search}%")
                     ->orWhere('users.email', 'like', "%{$search}%")
+                    ->orWhere('users.course', 'like', "%{$search}%")
                     ->orWhereHas('department', function ($dq) use ($search) {
                         $dq->where('name', 'like', "%{$search}%")
                             ->orWhere('code', 'like', "%{$search}%");

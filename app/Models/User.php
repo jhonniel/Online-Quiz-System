@@ -60,6 +60,7 @@ class User extends Authenticatable
         'is_approved',
         'profile_verified',
         'university_id',
+        'course',
         'department_id',
         'department_position_id',
         'date_hired',

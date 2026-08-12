@@ -356,6 +356,7 @@ class UserController extends Controller
             'required_training_hours' => 'nullable|numeric|min:0',
             'ojt_target_end_date' => 'nullable|date',
             'student_absence_allowance' => 'nullable|numeric|min:0|max:365',
+            'course' => 'nullable|string|max:255',
             'leave_allowance' => 'nullable|numeric|min:0|max:365',
             'vacation_allowance' => 'nullable|numeric|min:0|max:365',
             'sick_allowance' => 'nullable|numeric|min:0|max:365',
@@ -401,6 +402,9 @@ class UserController extends Controller
             'student_absence_allowance' => $request->role === 'student'
                 ? User::normalizedStudentAbsenceAllowance($request->input('student_absence_allowance'))
                 : 0,
+            'course' => $request->role === 'student'
+                ? $this->nullableProfileValue($request->input('course'))
+                : null,
         ]);
 
         // Handle leave balances for employees
@@ -669,6 +673,7 @@ class UserController extends Controller
             'required_training_hours' => 'nullable|numeric|min:0',
             'ojt_target_end_date' => 'nullable|date',
             'student_absence_allowance' => 'nullable|numeric|min:0|max:365',
+            'course' => 'nullable|string|max:255',
             'leave_allowance' => 'nullable|numeric|min:0|max:365',
             'vacation_allowance' => 'nullable|numeric|min:0|max:365',
             'sick_allowance' => 'nullable|numeric|min:0|max:365',
@@ -760,6 +765,7 @@ class UserController extends Controller
             $data['ojt_target_end_date'] = $request->filled('ojt_target_end_date')
                 ? $request->ojt_target_end_date
                 : null;
+            $data['course'] = $this->nullableProfileValue($request->input('course'));
             if (auth()->user()->isAdmin()) {
                 $data['student_manual_merits'] = max(0, (int) $request->input('student_manual_merits', 0));
             }
@@ -774,6 +780,7 @@ class UserController extends Controller
             $data['student_absence_allowance'] = 0;
             $data['student_manual_merits'] = 0;
             $data['ojt_target_end_date'] = null;
+            $data['course'] = null;
         }
 
         $prevStudentRulesWarning = (bool) ($user->student_rules_warning ?? false);

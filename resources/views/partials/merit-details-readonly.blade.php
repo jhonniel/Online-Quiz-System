@@ -184,7 +184,9 @@
                 })
                 .then(function (data) {
                     const student = data.student || {};
-                    subtitle.textContent = (student.name || '') + (student.email ? ' · ' + student.email : '');
+                    subtitle.textContent = (student.name || '')
+                        + (student.email ? ' · ' + student.email : '')
+                        + (student.course ? ' · ' + student.course : '');
                     renderDetails(data);
                 })
                 .catch(function () {
