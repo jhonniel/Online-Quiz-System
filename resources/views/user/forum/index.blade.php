@@ -77,7 +77,7 @@
                                                 <span class="text-indigo-600 font-semibold text-xs">{{ $thread->admin->getInitials() }}</span>
                                             </div>
                                         @endif
-                                        <span>{{ $thread->admin->name }}</span>
+                                        <span><x-user-name :user="$thread->admin" :size="14" /></span>
                                     </div>
                                     <span>•</span>
                                     <span>{{ $thread->created_at->diffForHumans() }}</span>

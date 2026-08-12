@@ -72,7 +72,7 @@
                     @endphp
                     <div class="p-4 space-y-2">
                         <div>
-                            <p class="text-sm font-medium text-gray-900 break-words">{{ $student->name }}</p>
+                            <p class="text-sm font-medium text-gray-900 break-words"><x-user-name :user="$student" :size="16" /></p>
                             <p class="text-xs text-gray-500 break-all mt-0.5">{{ $student->email }}</p>
                         </div>
                         <dl class="grid grid-cols-2 gap-x-3 gap-y-2 text-xs sm:text-sm">
@@ -159,7 +159,7 @@
                             @endphp
                             <tr>
                                 <td class="px-4 py-3">
-                                    <p class="text-sm font-medium text-gray-900">{{ $student->name }}</p>
+                                    <p class="text-sm font-medium text-gray-900"><x-user-name :user="$student" :size="16" /></p>
                                     <p class="text-xs text-gray-500">{{ $student->email }}</p>
                                 </td>
                                 <td class="px-4 py-3 text-sm text-gray-700">

@@ -127,7 +127,7 @@
                                                         </div>
                                                     @endif
                                                     <div class="flex flex-col text-left">
-                                                        <span class="text-sm font-medium text-gray-900">{{ auth()->user()->name }}</span>
+                                                        <span class="text-sm font-medium text-gray-900"><x-user-name :user="auth()->user()" :size="16" /></span>
                                                         <span class="text-xs text-gray-500">Click to edit</span>
                                                     </div>
                                                     <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -194,7 +194,7 @@
                                             </div>
                                         @else
                                             <span class="text-sm text-gray-700">
-                                                Welcome, {{ auth()->user()->name }}
+                                                Welcome, <x-user-name :user="auth()->user()" :size="16" />
                                             </span>
                                         @endif
 

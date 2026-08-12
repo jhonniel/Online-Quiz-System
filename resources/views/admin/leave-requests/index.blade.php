@@ -284,26 +284,26 @@
                         @php
                             $filedByAdminLog = $request->logs->firstWhere('action', 'filed_by_admin');
                             $canDelete = $filedByAdminLog && $filedByAdminLog->performed_by === auth()->id();
-                            $reviewedByName = null;
+                            $reviewedByUser = null;
                             $reviewedAtLabel = null;
                             if ($request->status === 'approved' && $request->approvedBy && $request->approvedBy->performer) {
-                                $reviewedByName = $request->approvedBy->performer->name;
+                                $reviewedByUser = $request->approvedBy->performer;
                                 $reviewedAtLabel = $request->approvedBy->created_at->format('M d, Y');
                             } elseif ($request->status === 'rejected' && $request->rejectedBy && $request->rejectedBy->performer) {
-                                $reviewedByName = $request->rejectedBy->performer->name;
+                                $reviewedByUser = $request->rejectedBy->performer;
                                 $reviewedAtLabel = $request->rejectedBy->created_at->format('M d, Y');
                             } elseif ($request->status === 'pending' && $request->reviewed_at && $request->resubmissionRequestedBy && $request->resubmissionRequestedBy->performer) {
-                                $reviewedByName = $request->resubmissionRequestedBy->performer->name;
+                                $reviewedByUser = $request->resubmissionRequestedBy->performer;
                                 $reviewedAtLabel = $request->resubmissionRequestedBy->created_at->format('M d, Y');
                             } elseif ($request->status === 'for_more_verification' && $request->reviewer) {
-                                $reviewedByName = $request->reviewer->name;
+                                $reviewedByUser = $request->reviewer;
                                 $reviewedAtLabel = optional($request->reviewed_at)->format('M d, Y');
                             }
                         @endphp
                         <div class="mobile-card">
                             <div class="flex items-start justify-between gap-3">
                                 <div class="min-w-0 flex-1">
-                                    <p class="mobile-card-title break-words">{{ $request->user->name }}</p>
+                                    <p class="mobile-card-title break-words"><x-user-name :user="$request->user" :size="16" /></p>
                                     <p class="mobile-card-subtitle break-all">{{ $request->user->email }}</p>
                                     <p class="text-sm font-medium text-gray-800 mt-1">{{ $request->type_label }}</p>
                                 </div>
@@ -321,10 +321,10 @@
                                 </dd>
                                 <dt>Duration</dt>
                                 <dd>{{ $request->duration_display_label }}</dd>
-                                @if($reviewedByName)
+                                @if($reviewedByUser)
                                     <dt>Reviewed by</dt>
                                     <dd>
-                                        {{ $reviewedByName }}
+                                        <x-user-name :user="$reviewedByUser" :size="14" />
                                         @if($reviewedAtLabel)
                                             <span class="text-gray-500">({{ $reviewedAtLabel }})</span>
                                         @endif
@@ -369,7 +369,7 @@
                                 <tr class="hover:bg-gray-50">
                                     <td class="px-4 lg:px-6 py-4">
                                         <div class="min-w-0 max-w-[12rem] lg:max-w-none">
-                                            <div class="text-sm font-medium text-gray-900 truncate">{{ $request->user->name }}</div>
+                                            <div class="text-sm font-medium text-gray-900 truncate"><x-user-name :user="$request->user" :size="16" /></div>
                                             <div class="text-xs text-gray-500 truncate">{{ $request->user->email }}</div>
                                         </div>
                                     </td>
@@ -396,22 +396,22 @@
                                     <td class="px-4 lg:px-6 py-4 hidden xl:table-cell text-sm text-gray-500">
                                         @if($request->status === 'approved' && $request->approvedBy && $request->approvedBy->performer)
                                             <div class="text-xs">
-                                                <div class="font-medium text-gray-900">{{ $request->approvedBy->performer->name }}</div>
+                                                <div class="font-medium text-gray-900"><x-user-name :user="$request->approvedBy->performer" :size="14" /></div>
                                                 <div class="text-gray-500">{{ $request->approvedBy->created_at->format('M d, Y') }}</div>
                                             </div>
                                         @elseif($request->status === 'rejected' && $request->rejectedBy && $request->rejectedBy->performer)
                                             <div class="text-xs">
-                                                <div class="font-medium text-gray-900">{{ $request->rejectedBy->performer->name }}</div>
+                                                <div class="font-medium text-gray-900"><x-user-name :user="$request->rejectedBy->performer" :size="14" /></div>
                                                 <div class="text-gray-500">{{ $request->rejectedBy->created_at->format('M d, Y') }}</div>
                                             </div>
                                         @elseif($request->status === 'pending' && $request->reviewed_at && $request->resubmissionRequestedBy && $request->resubmissionRequestedBy->performer)
                                             <div class="text-xs">
-                                                <div class="font-medium text-gray-900">{{ $request->resubmissionRequestedBy->performer->name }}</div>
+                                                <div class="font-medium text-gray-900"><x-user-name :user="$request->resubmissionRequestedBy->performer" :size="14" /></div>
                                                 <div class="text-gray-500">{{ $request->resubmissionRequestedBy->created_at->format('M d, Y') }}</div>
                                             </div>
                                         @elseif($request->status === 'for_more_verification' && $request->reviewer)
                                             <div class="text-xs">
-                                                <div class="font-medium text-gray-900">{{ $request->reviewer->name }}</div>
+                                                <div class="font-medium text-gray-900"><x-user-name :user="$request->reviewer" :size="14" /></div>
                                                 <div class="text-gray-500">{{ optional($request->reviewed_at)->format('M d, Y') }}</div>
                                             </div>
                                         @else

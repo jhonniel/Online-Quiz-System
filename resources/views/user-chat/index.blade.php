@@ -140,7 +140,8 @@
                             @php($friend = $entry['friend'])
                             <div class="friend-item p-2 sm:p-3 border border-gray-200 rounded-lg cursor-pointer hover:bg-gray-50 transition-colors mb-2"
                                  data-friend-id="{{ $friend->id }}"
-                                 data-friend-name="{{ $friend->name }}">
+                                 data-friend-name="{{ $friend->name }}"
+                                 data-friend-verified="{{ $friend->hasVerifiedBadge() ? '1' : '0' }}">
                                 <div class="flex items-center space-x-2 sm:space-x-3">
                                     <div class="relative">
                                         @php($friendRing = $storyRingMap[$friend->id] ?? ['has_story' => false, 'has_unviewed' => false])
@@ -155,7 +156,7 @@
                                         <div class="online-indicator absolute bottom-0 right-0 w-2 h-2 sm:w-3 sm:h-3 bg-gray-300 border-2 border-white rounded-full"></div>
                                     </div>
                                     <div class="flex-1 min-w-0">
-                                        <p class="chat-item-title font-medium text-gray-900 truncate text-sm sm:text-base {{ $entry['has_new'] ? 'font-semibold' : '' }}">{{ $friend->name }}</p>
+                                        <p class="chat-item-title font-medium text-gray-900 truncate text-sm sm:text-base {{ $entry['has_new'] ? 'font-semibold' : '' }}"><x-user-name :user="$friend" :size="16" /></p>
                                         <p class="chat-item-subtitle text-xs sm:text-sm truncate {{ $entry['has_new'] ? 'text-indigo-700 font-medium' : 'text-gray-500' }}">
                                             @if($entry['has_new'])
                                                 @if($entry['preview'])
@@ -647,7 +648,11 @@
         document.addEventListener('DOMContentLoaded', function() {
             document.querySelectorAll('.friend-item').forEach(item => {
                 item.addEventListener('click', function() {
-                    selectFriend(this.dataset.friendId, this.dataset.friendName);
+                    selectFriend(
+                        this.dataset.friendId,
+                        this.dataset.friendName,
+                        this.dataset.friendVerified === '1'
+                    );
                 });
             });
 
@@ -729,10 +734,24 @@
             });
         }
 
-        function selectFriend(friendId, friendName) {
+        function selectFriend(friendId, friendName, friendVerified = false) {
             currentChatType = 'friend';
             currentFriendId = friendId;
             currentFriendName = friendName;
+            currentGroupId = null;
+            currentAnonymousRoomId = null;
+            currentAnonymousPeerAlias = null;
+            currentAnonymousPeerName = null;
+            currentAnonymousIsCreator = false;
+
+            const friendNameEl = document.getElementById('chat-friend-name');
+            if (friendNameEl) {
+                if (window.VerifiedBadgeUI) {
+                    friendNameEl.innerHTML = window.VerifiedBadgeUI.nameHtml(friendName, !!friendVerified, 16);
+                } else {
+                    friendNameEl.textContent = friendName;
+                }
+            }
             currentGroupId = null;
             currentGroupName = null;
             currentAnonymousRoomId = null;
@@ -742,7 +761,6 @@
 
             document.getElementById('no-chat-selected').classList.add('hidden');
             document.getElementById('chat-area').classList.remove('hidden');
-            document.getElementById('chat-friend-name').textContent = friendName;
             document.getElementById('chat-subtitle').classList.remove('hidden');
             document.getElementById('chat-subtitle').textContent = 'Direct message';
 
@@ -1445,7 +1463,11 @@
         } else if (friendId) {
             const friendElement = document.querySelector(`[data-friend-id="${friendId}"]`);
             if (friendElement) {
-                selectFriend(friendId, friendElement.dataset.friendName);
+                selectFriend(
+                    friendId,
+                    friendElement.dataset.friendName,
+                    friendElement.dataset.friendVerified === '1'
+                );
             }
         }
 

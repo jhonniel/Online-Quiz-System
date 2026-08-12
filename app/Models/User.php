@@ -368,6 +368,20 @@ class User extends Authenticatable
         return (bool) $this->profile_verified;
     }
 
+    /**
+     * Compact identity payload for JS UIs (chat, search, Alpine lists).
+     *
+     * @return array{id: int, name: string, profile_verified: bool}
+     */
+    public function verifiedIdentityPayload(): array
+    {
+        return [
+            'id' => (int) $this->id,
+            'name' => (string) $this->name,
+            'profile_verified' => $this->hasVerifiedBadge(),
+        ];
+    }
+
     public function isStudent()
     {
         return $this->role === 'student';

@@ -184,7 +184,7 @@
                                 <td class="px-3 sm:px-6 py-4">
                                     <div class="flex items-center min-w-0">
                                         <div class="min-w-0 flex-1">
-                                            <div class="text-sm font-medium text-gray-900 truncate">{{ $request->user->name }}</div>
+                                            <div class="text-sm font-medium text-gray-900 truncate"><x-user-name :user="$request->user" :size="16" /></div>
                                             <div class="text-xs sm:text-sm text-gray-500 truncate">{{ $request->user->email }}</div>
                                         </div>
                                     </div>

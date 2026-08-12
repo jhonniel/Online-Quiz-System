@@ -98,7 +98,7 @@
                                             @endif
                                         </div>
                                         <div class="flex-1 min-w-0">
-                                            <p class="text-sm font-medium text-gray-900 truncate">{{ $request->user->name }}</p>
+                                            <p class="text-sm font-medium text-gray-900 truncate"><x-user-name :user="$request->user" :size="16" /></p>
                                             <p class="text-xs text-gray-500 truncate">{{ $request->user->email }}</p>
                                         </div>
                                         <div class="flex flex-col space-y-1">
@@ -161,7 +161,7 @@
                                                     :story-user-id="$friend->id" />
                                             </div>
                                             <div class="flex-1 min-w-0">
-                                                <p class="text-sm font-medium text-gray-900 truncate">{{ $friend->name }}</p>
+                                                <p class="text-sm font-medium text-gray-900 truncate"><x-user-name :user="$friend" :size="16" /></p>
                                                 <p class="text-xs text-gray-500 truncate">{{ $friend->email }}</p>
                                                 <div class="flex items-center mt-1">
                                                     <div class="w-2 h-2 bg-green-400 rounded-full mr-2"></div>
@@ -280,7 +280,7 @@
                             @foreach($allFriends as $friend)
                                 <label class="flex items-center gap-3 p-2 rounded-md hover:bg-gray-50 cursor-pointer">
                                     <input type="checkbox" name="member_ids[]" value="{{ $friend->id }}" class="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500">
-                                    <span class="text-sm text-gray-900">{{ $friend->name }}</span>
+                                    <span class="text-sm text-gray-900"><x-user-name :user="$friend" :size="14" /></span>
                                     <span class="text-xs text-gray-500 truncate">{{ $friend->department?->name }}</span>
                                 </label>
                             @endforeach
@@ -545,7 +545,18 @@
                         imageBtn.onclick = null;
                     }
 
-                    document.getElementById('view-friend-name').textContent = friend.name;
+                    const viewFriendName = document.getElementById('view-friend-name');
+                    if (viewFriendName) {
+                        if (window.VerifiedBadgeUI) {
+                            viewFriendName.innerHTML = window.VerifiedBadgeUI.nameHtml(
+                                friend.name,
+                                window.VerifiedBadgeUI.isVerified(friend),
+                                20
+                            );
+                        } else {
+                            viewFriendName.textContent = friend.name;
+                        }
+                    }
                     document.getElementById('view-friend-email').textContent = friend.email;
                     document.getElementById('view-friend-department').textContent = friend.department ? `Department: ${friend.department}` : 'Department: —';
                     document.getElementById('view-friend-chat-link').href = `{{ url('/user-chat') }}?friend=${friend.id}`;

@@ -3,7 +3,59 @@
 @section('title', 'API Monitoring')
 
 @section('content')
+@php
+    $newApiKeyPlainText = $newApiKeyPlainText ?? session('new_external_api_key');
+@endphp
 <div class="px-3 sm:px-4 lg:px-6 xl:px-8 space-y-6">
+    @if(session('success'))
+        <div class="rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
+            {{ session('success') }}
+        </div>
+    @endif
+
+    @if($newApiKeyPlainText)
+        <div class="rounded-xl border-2 border-indigo-300 bg-indigo-50 px-4 py-4 space-y-3 shadow-sm">
+            <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+                <div>
+                    <p class="text-sm font-bold text-indigo-900">New API key generated — copy it now</p>
+                    <p class="text-xs text-indigo-700 mt-1">For security, the full key is shown only once and cannot be retrieved later.</p>
+                </div>
+                <button type="button"
+                        id="copy-new-api-key-btn"
+                        data-key="{{ $newApiKeyPlainText }}"
+                        class="shrink-0 inline-flex items-center px-3 py-1.5 rounded-md bg-indigo-600 text-white text-xs font-semibold hover:bg-indigo-700">
+                    Copy key
+                </button>
+            </div>
+            <p id="new-api-key-value" class="text-sm text-indigo-950 font-mono break-all bg-white border border-indigo-200 rounded-lg px-3 py-2 select-all">{{ $newApiKeyPlainText }}</p>
+            <p class="text-[11px] text-indigo-700">Header example: <span class="font-mono">X-API-Key: {{ $newApiKeyPlainText }}</span></p>
+        </div>
+        <script>
+            (function () {
+                const btn = document.getElementById('copy-new-api-key-btn');
+                if (!btn) return;
+                btn.addEventListener('click', async function () {
+                    const key = btn.getAttribute('data-key') || '';
+                    try {
+                        await navigator.clipboard.writeText(key);
+                        btn.textContent = 'Copied!';
+                        setTimeout(function () { btn.textContent = 'Copy key'; }, 2000);
+                    } catch (e) {
+                        const el = document.getElementById('new-api-key-value');
+                        if (el) {
+                            const range = document.createRange();
+                            range.selectNodeContents(el);
+                            const sel = window.getSelection();
+                            sel.removeAllRanges();
+                            sel.addRange(range);
+                        }
+                        btn.textContent = 'Select & copy manually';
+                    }
+                });
+            })();
+        </script>
+    @endif
+
     <div class="bg-white border border-gray-200 rounded-2xl shadow-sm overflow-hidden">
         <div class="px-6 py-4 border-b border-gray-100 bg-gray-50/70 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
             <div>
@@ -16,26 +68,12 @@
         </div>
 
         <div class="p-6 space-y-5"
-             x-data='apiMonitor({
-                 metricsUrl: "{{ url('/admin/system/api-monitoring/metrics') }}",
-                 initialRows: @json($rows),
-                 initialSummary: @json($summary),
-                 initialScope: @json($scope ?? 'all')
-             })'>
-            @if(session('success'))
-                <div class="rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
-                    {{ session('success') }}
-                </div>
-            @endif
-
-            @if($newApiKeyPlainText)
-                <div class="rounded-lg border border-indigo-200 bg-indigo-50 px-4 py-3 space-y-2">
-                    <p class="text-sm font-semibold text-indigo-800">New API key generated (copy now)</p>
-                    <p class="text-xs text-indigo-700 font-mono break-all">{{ $newApiKeyPlainText }}</p>
-                    <p class="text-xs text-indigo-700">For security, this key is shown only once.</p>
-                </div>
-            @endif
-
+             x-data="apiMonitor(@js([
+                 'metricsUrl' => url('/admin/system/api-monitoring/metrics'),
+                 'initialRows' => $rows,
+                 'initialSummary' => $summary,
+                 'initialScope' => $scope ?? 'all',
+             ]))">
             <div class="rounded-xl border border-gray-200 p-4 space-y-4">
                 <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3">
                     <div>
@@ -90,6 +128,9 @@
                 <div class="grid grid-cols-1 xl:grid-cols-2 gap-4">
                     <form method="POST" action="{{ url('/admin/system/api-monitoring/keys') }}" class="rounded-lg border border-gray-200 p-3 space-y-2">
                         @csrf
+                        @if(request()->filled('scope'))
+                            <input type="hidden" name="scope" value="{{ request('scope') }}">
+                        @endif
                         <label class="block text-xs font-semibold text-gray-700" for="api_key_name">Create API Key</label>
                         <input id="api_key_name" name="name" type="text" required placeholder="Integration name (e.g. HR Dashboard)"
                                class="w-full h-9 rounded-md border-gray-300 text-sm focus:border-indigo-500 focus:ring-indigo-500">
@@ -105,6 +146,13 @@
                                 <div class="flex items-center justify-between gap-2 border border-gray-100 rounded-md px-2 py-1.5">
                                     <div class="min-w-0">
                                         <p class="text-xs font-semibold text-gray-800 truncate">{{ $apiKey->name }}</p>
+                                        <p class="text-[11px] font-mono text-gray-600 truncate">
+                                            @if(filled($apiKey->key_prefix))
+                                                {{ $apiKey->key_prefix }}…
+                                            @else
+                                                oqs_••••••••
+                                            @endif
+                                        </p>
                                         <p class="text-[11px] text-gray-500">Last used: {{ optional($apiKey->last_used_at)->diffForHumans() ?? 'Never' }}</p>
                                     </div>
                                     <div class="flex items-center gap-2">

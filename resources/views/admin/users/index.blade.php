@@ -418,7 +418,7 @@
                                         </div>
                                     @endif
                                     <div class="min-w-0 flex-1">
-                                        <p class="font-medium text-gray-900 truncate">{{ $user->name }}</p>
+                                        <p class="font-medium text-gray-900 truncate"><x-user-name :user="$user" :size="16" /></p>
                                         <p class="text-sm text-gray-500 truncate">{{ $user->email }}</p>
                                         <div class="flex flex-wrap gap-1.5 mt-1.5">
                                             <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium {{ $user->getRoleBadgeClass() }}">
@@ -558,7 +558,7 @@
                                             @endif
                                         </a>
                                         <div class="min-w-0">
-                                            <a href="{{ url('/admin/users/' . $user->id) }}" class="text-sm font-medium text-indigo-600 hover:text-indigo-800 hover:underline truncate block">{{ $user->name }}</a>
+                                            <a href="{{ url('/admin/users/' . $user->id) }}" class="text-sm font-medium text-indigo-600 hover:text-indigo-800 hover:underline truncate block"><x-user-name :user="$user" :size="16" /></a>
                                             <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium {{ $user->getRoleBadgeClass() }}">{{ $user->getRoleLabel() }}</span>
                                         </div>
                                     </div>

@@ -49,7 +49,7 @@
                         </div>
                         <div>
                             <div class="flex items-center space-x-2">
-                                <h2 class="text-xl font-bold text-gray-900">{{ $ticket->user->name }}</h2>
+                                <h2 class="text-xl font-bold text-gray-900"><x-user-name :user="$ticket->user" :size="20" /></h2>
                                 <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium {{ $ticket->user->getStatusBadgeClass() }}">
                                     {{ ucfirst($ticket->user->status) }}
                                 </span>

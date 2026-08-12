@@ -74,6 +74,7 @@ class FriendshipController extends Controller
                 'department' => $user->department?->name,
                 'profile_picture_url' => $user->profile_picture ? $user->getProfilePictureUrl() : null,
                 'initials' => $user->getInitials(),
+                'profile_verified' => $user->hasVerifiedBadge(),
                 'has_story' => $ring['has_story'],
                 'has_unviewed' => $ring['has_unviewed'],
             ],
@@ -106,7 +107,7 @@ class FriendshipController extends Controller
             ->with(['university:id,name', 'department:id,name'])
             ->orderBy('name')
             ->limit(25)
-            ->get(['id', 'name', 'email', 'profile_picture', 'university_id', 'department_id', 'role', 'is_active']);
+            ->get(['id', 'name', 'email', 'profile_picture', 'university_id', 'department_id', 'role', 'is_active', 'profile_verified']);
 
         $payload = $users->map(function (User $user) use ($currentUserId) {
             $friendship = Friendship::query()
@@ -131,6 +132,7 @@ class FriendshipController extends Controller
                 'profile_picture' => $user->profile_picture,
                 'profile_picture_url' => $user->getProfilePictureUrl(),
                 'university' => $user->university?->name,
+                'profile_verified' => $user->hasVerifiedBadge(),
                 'friendship_status' => $friendship ? $friendship->status : 'none',
                 'friendship_id' => $friendship?->id,
                 'can_anonymous_chat' => $canAnonymousChat,

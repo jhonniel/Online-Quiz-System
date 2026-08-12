@@ -326,7 +326,7 @@
                                         </div>
                                     </div>
                                     <div class="ml-4">
-                                        <div class="text-sm font-medium text-gray-900">{{ $student->name }}</div>
+                                        <div class="text-sm font-medium text-gray-900"><x-user-name :user="$student" :size="16" /></div>
                                         <div class="text-sm text-gray-500">{{ $student->email }}</div>
                                     </div>
                                 </div>

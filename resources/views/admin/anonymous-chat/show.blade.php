@@ -22,13 +22,13 @@
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <div class="bg-white rounded-lg border border-gray-200 p-5">
             <h2 class="text-sm font-semibold text-gray-900 mb-3">Participant A</h2>
-            <p class="font-medium text-gray-900">{{ $room->userOne->name }}</p>
+            <p class="font-medium text-gray-900"><x-user-name :user="$room->userOne" :size="16" /></p>
             <p class="text-sm text-gray-500">{{ $room->userOne->email }}</p>
             <p class="text-sm text-purple-700 mt-3">Shown to other user as: <strong>{{ $participantOne?->display_alias ?: '—' }}</strong></p>
         </div>
         <div class="bg-white rounded-lg border border-gray-200 p-5">
             <h2 class="text-sm font-semibold text-gray-900 mb-3">Participant B</h2>
-            <p class="font-medium text-gray-900">{{ $room->userTwo->name }}</p>
+            <p class="font-medium text-gray-900"><x-user-name :user="$room->userTwo" :size="16" /></p>
             <p class="text-sm text-gray-500">{{ $room->userTwo->email }}</p>
             <p class="text-sm text-purple-700 mt-3">Shown to other user as: <strong>{{ $participantTwo?->display_alias ?: '—' }}</strong></p>
         </div>
@@ -49,7 +49,7 @@
                 <div class="px-5 py-4">
                     <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2">
                         <div>
-                            <p class="text-sm font-medium text-gray-900">{{ $message->sender->name }}</p>
+                            <p class="text-sm font-medium text-gray-900"><x-user-name :user="$message->sender" :size="16" /></p>
                             <p class="text-xs text-gray-500">{{ $message->sender->email }}</p>
                             <p class="text-xs text-purple-700 mt-1">Alias in chat: {{ $room->senderAlias($message->sender_id) }}</p>
                         </div>

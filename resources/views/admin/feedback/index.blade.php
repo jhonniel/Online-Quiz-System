@@ -330,7 +330,7 @@
                                             @endif
                                         </div>
                                         <div class="ml-4">
-                                            <div class="text-sm font-medium text-gray-900">{{ $feedback->user->name }}</div>
+                                            <div class="text-sm font-medium text-gray-900"><x-user-name :user="$feedback->user" :size="16" /></div>
                                             <div class="text-sm text-gray-500">{{ $feedback->user->email }}</div>
                                         </div>
                                     </div>

@@ -210,7 +210,7 @@
                                         @endif
                                     </div>
                                     <div class="ml-4">
-                                        <div class="text-sm font-medium text-gray-900">{{ $notification->user->name }}</div>
+                                        <div class="text-sm font-medium text-gray-900"><x-user-name :user="$notification->user" :size="16" /></div>
                                         <div class="text-sm text-gray-500">{{ $notification->user->email }}</div>
                                     </div>
                                 </div>

@@ -83,7 +83,7 @@
                         <label class="block text-sm font-medium text-gray-500 mb-1">
                             {{ ($teacherExcusedBatchmates ?? collect())->count() > 1 ? 'Student (this record)' : ($leaveRequest->user->role === 'student' ? 'Student' : 'Employee') }}
                         </label>
-                        <p class="text-sm font-semibold text-gray-900">{{ $leaveRequest->user->name }}</p>
+                        <p class="text-sm font-semibold text-gray-900"><x-user-name :user="$leaveRequest->user" :size="16" /></p>
                         <p class="text-xs text-gray-500">{{ $leaveRequest->user->email }}</p>
                     </div>
 
@@ -91,22 +91,26 @@
                         <div class="md:col-span-2 rounded-lg border border-indigo-100 bg-indigo-50/50 px-4 py-3">
                             <label class="block text-sm font-medium text-indigo-900 mb-2">Students included in this request</label>
                             <p class="text-sm text-gray-900 leading-relaxed">
-                                {{ $teacherExcusedBatchmates->map(fn ($r) => $r->user?->name)->filter()->implode(', ') }}
+                                @foreach($teacherExcusedBatchmates as $batchMate)
+                                    @if($batchMate->user)
+                                        <x-user-name :user="$batchMate->user" :size="14" />@if(!$loop->last), @endif
+                                    @endif
+                                @endforeach
                             </p>
                             <p class="mt-2 text-xs text-indigo-800/80">
                                 This is one shared teacher filing. Approve or reject on this page applies only to
-                                <strong>{{ $leaveRequest->user->name }}</strong>. Use the links below to open each student’s record.
+                                <strong><x-user-name :user="$leaveRequest->user" :size="14" /></strong>. Use the links below to open each student’s record.
                             </p>
                             <ul class="mt-3 flex flex-wrap gap-2">
                                 @foreach($teacherExcusedBatchmates as $mate)
                                     @if($mate->id === $leaveRequest->id)
                                         <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-indigo-600 text-white">
-                                            {{ $mate->user->name }} (viewing)
+                                            <x-user-name :user="$mate->user" :size="14" /> (viewing)
                                         </span>
                                     @else
                                         <a href="{{ route('admin.leave-requests.show', ['leaveRequest' => $mate->id, 'from' => request('from'), 'return' => request('return')]) }}"
                                            class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-white border border-indigo-200 text-indigo-700 hover:bg-indigo-100">
-                                            {{ $mate->user->name }}
+                                            <x-user-name :user="$mate->user" :size="14" />
                                         </a>
                                     @endif
                                 @endforeach
@@ -285,7 +289,7 @@
                         @if($leaveRequest->reviewer)
                             <div>
                                 <label class="block text-sm font-medium text-gray-500 mb-1">Reviewed By</label>
-                                <p class="text-sm font-semibold text-gray-900">{{ $leaveRequest->reviewer->name }}</p>
+                                <p class="text-sm font-semibold text-gray-900"><x-user-name :user="$leaveRequest->reviewer" :size="16" /></p>
                             </div>
                         @endif
                     @endif
@@ -1656,10 +1660,10 @@ document.addEventListener('DOMContentLoaded', function() {
                             <div class="mt-2 text-sm text-gray-700">
                                 @if($log->performer)
                                     @if($log->action === 'filed_by_admin' && $leaveRequest->user_id !== $log->performed_by)
-                                        <span class="font-medium">{{ $log->performer->name }}</span>
+                                        <span class="font-medium"><x-user-name :user="$log->performer" :size="14" /></span>
                                         <span class="text-gray-500">filed this leave request on behalf of the employee</span>
                                     @else
-                                        <span class="font-medium">{{ $log->performer->name }}</span>
+                                        <span class="font-medium"><x-user-name :user="$log->performer" :size="14" /></span>
                                         <span class="text-gray-500">performed this action</span>
                                     @endif
                                 @endif

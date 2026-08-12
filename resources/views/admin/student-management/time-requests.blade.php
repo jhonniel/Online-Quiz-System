@@ -240,7 +240,7 @@
                                 </td>
                             @endif
                             <td class="px-6 py-4 whitespace-nowrap">
-                                <div class="text-sm font-medium text-gray-900">{{ $request->user->name }}</div>
+                                <div class="text-sm font-medium text-gray-900"><x-user-name :user="$request->user" :size="16" /></div>
                                 <div class="text-sm text-gray-500">{{ $request->user->email }}</div>
                                 <div class="text-xs text-gray-400 mt-0.5">{{ optional($request->user->university)->name ?? 'No school on file' }}</div>
                             </td>

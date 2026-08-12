@@ -47,7 +47,7 @@ function parseMentions($content) {
                                             <span class="text-indigo-600 font-semibold text-xs">{{ $forum->admin->getInitials() }}</span>
                                         </div>
                                     @endif
-                                    <span>{{ $forum->admin->name }}</span>
+                                    <span><x-user-name :user="$forum->admin" :size="14" /></span>
                                 </div>
                                 <span>•</span>
                                 <span>{{ $forum->created_at->format('M j, Y \a\t g:i A') }}</span>
@@ -180,7 +180,7 @@ function parseMentions($content) {
                                     </div>
                                     <div class="flex-1 min-w-0">
                                         <div class="flex items-center space-x-2 mb-1">
-                                            <p class="text-sm font-medium text-gray-900">{{ $comment->user->name }}</p>
+                                            <p class="text-sm font-medium text-gray-900"><x-user-name :user="$comment->user" :size="16" /></p>
                                             <span class="text-xs text-gray-500">{{ $comment->created_at->diffForHumans() }}</span>
                                         </div>
                                         <p class="text-sm text-gray-700 mb-2">{!! parseMentions($comment->content) !!}</p>
@@ -268,7 +268,7 @@ function parseMentions($content) {
                                                         </div>
                                                         <div class="flex-1 min-w-0">
                                                             <div class="flex items-center space-x-2 mb-1">
-                                                                <p class="text-sm font-medium text-gray-900">{{ $reply->user->name }}</p>
+                                                                <p class="text-sm font-medium text-gray-900"><x-user-name :user="$reply->user" :size="16" /></p>
                                                                 <span class="text-xs text-gray-500">{{ $reply->created_at->diffForHumans() }}</span>
                                                             </div>
                                                             <p class="text-sm text-gray-700 mb-2">{!! parseMentions($reply->content) !!}</p>

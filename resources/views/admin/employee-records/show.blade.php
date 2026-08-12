@@ -22,7 +22,7 @@
                     </svg>
                 </div>
                 <div class="min-w-0">
-                    <h1 class="text-xl sm:text-2xl lg:text-3xl font-bold break-words">{{ $employee->name }}</h1>
+                    <x-user-name :user="$employee" :size="28" as="h1" class="text-xl sm:text-2xl lg:text-3xl font-bold" />
                     <p class="text-sm sm:text-base text-indigo-100 mt-1 break-all">{{ $employee->email }}</p>
                     <p class="text-xs text-indigo-200 mt-1">
                         {{ $employee->department?->name ?? $employee->departmentPosition?->department?->name ?? 'No department' }}
@@ -310,7 +310,7 @@
                                             <p class="text-sm text-gray-700 mt-2 whitespace-pre-line">{{ $log->notes }}</p>
                                         @endif
                                         <p class="text-xs text-gray-500 mt-2">
-                                            By {{ $log->performer?->name ?? 'System' }}
+                                            By @if($log->performer)<x-user-name :user="$log->performer" :size="14" />@else System @endif
                                             · {{ $log->created_at->format('M j, Y g:i A') }}
                                         </p>
                                     </div>
@@ -351,7 +351,7 @@
                                         <p class="text-sm text-gray-700 mt-2 whitespace-pre-line">{{ $log->notes }}</p>
                                     @endif
                                     <p class="text-xs text-gray-500 mt-2">
-                                        By {{ $log->performer?->name ?? 'System' }}
+                                        By @if($log->performer)<x-user-name :user="$log->performer" :size="14" />@else System @endif
                                         · {{ $log->created_at->format('M j, Y g:i A') }}
                                     </p>
                                 </div>

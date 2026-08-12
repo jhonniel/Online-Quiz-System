@@ -196,7 +196,7 @@
                                             @endif
                                         </div>
                                         <div class="ml-3 min-w-0">
-                                            <div class="text-sm font-medium text-gray-900 truncate">{{ $user->name }}</div>
+                                            <div class="text-sm font-medium text-gray-900 truncate"><x-user-name :user="$user" :size="16" /></div>
                                             <div class="text-sm text-gray-500 truncate">{{ $user->email }}</div>
                                         </div>
                                     </div>

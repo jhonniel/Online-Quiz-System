@@ -170,7 +170,7 @@
                 </span>
             </div>
             <div class="flex-1 min-w-0 transition-opacity duration-300" :class="sidebarCollapsed ? 'opacity-0 w-0 overflow-hidden' : 'opacity-100'">
-                <p class="text-sm font-medium text-white truncate">{{ auth()->user()->name }}</p>
+                <p class="text-sm font-medium text-white truncate"><x-user-name :user="auth()->user()" :size="16" class="text-white" /></p>
                 <p class="text-xs text-gray-400 truncate">{{ auth()->user()->getRoleLabel() }}</p>
             </div>
                 <form method="POST" action="{{ url('/logout') }}" :class="sidebarCollapsed ? 'ml-0' : ''">

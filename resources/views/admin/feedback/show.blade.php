@@ -112,7 +112,7 @@
                                     <p class="mt-2 text-sm text-blue-600">
                                         Responded {{ $feedback->admin_responded_at->format('M d, Y \a\t g:i A') }}
                                         @if($feedback->assignedAdmin)
-                                            by {{ $feedback->assignedAdmin->name }}
+                                            by <x-user-name :user="$feedback->assignedAdmin" :size="14" />
                                         @endif
                                     </p>
                                 @endif
@@ -196,7 +196,7 @@
                             @endif
                         </div>
                         <div>
-                            <div class="text-sm font-medium text-gray-900">{{ $feedback->user->name }}</div>
+                            <div class="text-sm font-medium text-gray-900"><x-user-name :user="$feedback->user" :size="16" /></div>
                             <div class="text-sm text-gray-500">{{ $feedback->user->email }}</div>
                             @if($feedback->user->university)
                                 <div class="text-sm text-gray-500">{{ $feedback->user->university->name }}</div>

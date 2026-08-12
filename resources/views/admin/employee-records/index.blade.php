@@ -68,7 +68,7 @@
                         @endphp
                         <div class="mobile-card">
                             <div class="min-w-0">
-                                <p class="mobile-card-title break-words">{{ $employee->name }}</p>
+                                <p class="mobile-card-title break-words"><x-user-name :user="$employee" :size="16" /></p>
                                 <p class="mobile-card-subtitle break-all">{{ $employee->email }}</p>
                                 <p class="text-xs text-gray-500 mt-1">
                                     {{ $employee->department?->name ?? $employee->departmentPosition?->department?->name ?? '— No department —' }}
@@ -106,7 +106,7 @@
                                 @php $summary = $summaries[$employee->id] ?? null; @endphp
                                 <tr class="hover:bg-gray-50">
                                     <td class="px-4 lg:px-6 py-4">
-                                        <div class="text-sm font-medium text-gray-900">{{ $employee->name }}</div>
+                                        <div class="text-sm font-medium text-gray-900"><x-user-name :user="$employee" :size="16" /></div>
                                         <div class="text-xs text-gray-500">{{ $employee->email }}</div>
                                     </td>
                                     <td class="px-4 lg:px-6 py-4 text-sm text-gray-700">

@@ -267,7 +267,7 @@
                                     @endif
                                 </div>
                                 <div class="flex-1 transition-opacity duration-300" :class="sidebarCollapsed ? 'opacity-0 w-0 overflow-hidden' : 'opacity-100 ml-3'">
-                                    <p class="text-sm font-medium text-white">{{ auth()->user()->name }}</p>
+                                    <p class="text-sm font-medium text-white"><x-user-name :user="auth()->user()" :size="16" class="text-white" /></p>
                                     <p class="text-xs text-gray-300">{{ auth()->user()->getRankText() }}</p>
                                 </div>
                             </a>
@@ -684,7 +684,7 @@
                                 @endif
                             </div>
                             <div class="ml-3 flex-1">
-                                <p class="text-sm font-medium text-white">{{ auth()->user()->name }}</p>
+                                <p class="text-sm font-medium text-white"><x-user-name :user="auth()->user()" :size="16" class="text-white" /></p>
                                 <p class="text-xs text-gray-300">{{ auth()->user()->getRankText() }}</p>
                             </div>
                             <div class="ml-3 relative" x-data="{ open: false }">
@@ -820,7 +820,7 @@
                                     <span class="text-white text-sm font-medium">{{ auth()->user()->getInitials() }}</span>
                                 </div>
                             @endif
-                            <span class="hidden sm:block text-gray-700 font-medium text-sm">{{ auth()->user()->name }}</span>
+                            <span class="hidden sm:block text-gray-700 font-medium text-sm"><x-user-name :user="auth()->user()" :size="16" /></span>
                             <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
                             </svg>
@@ -1683,5 +1683,6 @@
     <!-- Seasonal Effects -->
     @include('components.brand-name-fit')
     @include('components.seasonal-effects')
+    @include('partials.verified-badge-js')
 </body>
 </html>

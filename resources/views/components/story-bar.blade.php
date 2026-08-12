@@ -31,7 +31,7 @@
                             :has-unviewed="$entry['has_unviewed']"
                             :clickable="true"
                             :story-user-id="$storyUser->id" />
-                        <p class="text-xs text-gray-600 mt-2 truncate w-full">{{ $storyUser->name }}</p>
+                        <p class="text-xs text-gray-600 mt-2 truncate w-full"><x-user-name :user="$storyUser" :size="14" /></p>
                     @endif
                 </div>
             @endforeach

@@ -34,7 +34,7 @@ class ApiMonitoringController extends Controller
             'scope' => $scope,
             'externalApiEnabled' => Setting::get('external_api_enabled', 'disabled') === 'enabled',
             'externalApiKeys' => ExternalApiKey::query()->latest()->get(),
-            'newApiKeyPlainText' => session('new_external_api_key'),
+            'newApiKeyPlainText' => session('new_external_api_key') ?: old('generated_api_key'),
             'externalAllowedRouteKeys' => $this->getExternalAllowedRouteKeys(),
         ]);
     }
@@ -81,12 +81,14 @@ class ApiMonitoringController extends Controller
         $plainKey = 'oqs_'.Str::random(48);
         ExternalApiKey::query()->create([
             'name' => $validated['name'],
+            'key_prefix' => substr($plainKey, 0, 12),
             'key_hash' => hash('sha256', $plainKey),
             'is_active' => true,
         ]);
 
-        return back()
-            ->with('success', 'External API key generated.')
+        return redirect()
+            ->route('admin.system.api-monitoring.index', request()->only('scope'))
+            ->with('success', 'External API key generated. Copy it now — it will not be shown again.')
             ->with('new_external_api_key', $plainKey);
     }
 

@@ -16,7 +16,7 @@
             <svg class="w-4 h-4 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
                 <path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd"></path>
             </svg>
-            <span class="ml-2 text-sm font-medium text-gray-500 truncate max-w-[120px] sm:max-w-none">{{ $user->name }}</span>
+            <x-user-name :user="$user" :size="14" class="ml-2 text-sm font-medium text-gray-500 truncate max-w-[120px] sm:max-w-none" />
         </div>
     </li>
 @endsection
@@ -35,12 +35,7 @@
                     </div>
                 @endif
                 <div class="min-w-0 flex-1">
-                    <div class="flex items-center gap-2 min-w-0">
-                        <h1 class="text-xl sm:text-2xl font-bold truncate">{{ $user->name }}</h1>
-                        @if($user->hasVerifiedBadge())
-                            <x-verified-badge :size="26" class="verified-badge--sm" title="Verified" />
-                        @endif
-                    </div>
+                    <x-user-name :user="$user" :size="26" as="h1" class="text-xl sm:text-2xl font-bold" />
                     <p class="text-indigo-100 text-sm truncate mt-0.5">{{ $user->email }}</p>
                     <div class="mt-2 flex flex-wrap items-center gap-2">
                         <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-white/15 text-white border border-white/20">
@@ -108,7 +103,7 @@
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
                     <div>
                         <p class="text-xs font-semibold text-gray-500 uppercase tracking-wide">Full Name</p>
-                        <p class="mt-1 text-sm font-semibold text-gray-900">{{ $user->name }}</p>
+                        <p class="mt-1 text-sm font-semibold text-gray-900"><x-user-name :user="$user" :size="16" /></p>
                     </div>
                     <div>
                         <p class="text-xs font-semibold text-gray-500 uppercase tracking-wide">Email Address</p>

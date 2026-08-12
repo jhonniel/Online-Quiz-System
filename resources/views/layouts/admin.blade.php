@@ -213,7 +213,7 @@
                                         {{ auth()->user()->name[0] }}
                                     </span>
                                 </div>
-                                <span class="hidden sm:block text-gray-700 font-medium text-sm">{{ auth()->user()->name }}</span>
+                                <span class="hidden sm:block text-gray-700 font-medium text-sm"><x-user-name :user="auth()->user()" :size="16" /></span>
                                 <svg class="w-3 h-3 sm:w-4 sm:h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
                                 </svg>
@@ -413,5 +413,6 @@
         }
     </script>
     @include('components.seasonal-effects')
+    @include('partials.verified-badge-js')
 </body>
 </html>
