@@ -22,6 +22,7 @@
 
     <!-- Tailwind CDN fallback: keeps legacy/dynamic utility classes working if not in the Vite build -->
     <script src="https://cdn.tailwindcss.com"></script>
+    @include('partials.verified-badge-styles')
 
     <!-- Alpine.js -->
     <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>

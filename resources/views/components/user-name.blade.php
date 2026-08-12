@@ -2,7 +2,7 @@
     'user' => null,
     'name' => null,
     'verified' => null,
-    'size' => 12,
+    'size' => 11,
     'badgeClass' => 'verified-badge--sm',
     'as' => 'span',
 ])
@@ -17,14 +17,14 @@
     $tag = in_array($as, ['span', 'div', 'p', 'h1', 'h2', 'h3', 'h4'], true) ? $as : 'span';
     $resolvedSize = (int) $size;
     if ($resolvedSize <= 0) {
-        $resolvedSize = 12;
+        $resolvedSize = 11;
     }
-    $resolvedSize = max(10, min(16, $resolvedSize));
+    $resolvedSize = max(10, min(12, $resolvedSize));
     // Keep CSS size classes aligned with the intended visual size.
     if ($badgeClass === 'verified-badge--sm' || $badgeClass === '') {
-        $badgeClass = $resolvedSize <= 11
+        $badgeClass = $resolvedSize <= 10
             ? 'verified-badge--xs'
-            : ($resolvedSize >= 15 ? 'verified-badge--profile' : 'verified-badge--sm');
+            : ($resolvedSize >= 12 ? 'verified-badge--profile' : 'verified-badge--sm');
     }
 @endphp
 
