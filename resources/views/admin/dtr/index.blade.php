@@ -257,6 +257,7 @@
     <!-- DTR Table -->
     @php
         $hrDtrLimitedView = auth()->user()?->isHr() ?? false;
+        $canEditAutoLabeledDtr = auth()->user()?->isSuperAdmin() ?? false;
     @endphp
     <div class="bg-white rounded-2xl shadow-xl border border-gray-200 overflow-hidden">
         <div class="px-6 py-4 border-b border-gray-200 bg-gray-50">
@@ -424,8 +425,9 @@
                                                         <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full {{ $statusClass }}">
                                                             {{ $statusLabel }}
                                                         </span>
-                                                        @if($hrDtrLimitedView && $dtr->exists && $dtr->id)
+                                                        @if($hrDtrLimitedView && ($dtr->exists && $dtr->id || $canEditAutoLabeledDtr))
                                                             <div class="mt-2 flex items-center gap-2">
+                                                                @if($dtr->exists && $dtr->id)
                                                                 <a href="{{ url('/admin/dtr/' . $dtr->id . '/edit') }}"
                                                                    class="inline-flex items-center px-2.5 py-1.5 border border-indigo-200 text-xs font-medium rounded-md text-indigo-700 bg-indigo-50 hover:bg-indigo-100">
                                                                     Edit
@@ -437,6 +439,12 @@
                                                                         Delete
                                                                     </button>
                                                                 </form>
+                                                                @elseif($canEditAutoLabeledDtr)
+                                                                <a href="{{ url('/admin/dtr/entry/edit?user_id=' . $dtr->user_id . '&date=' . $dtr->date->format('Y-m-d')) }}"
+                                                                   class="inline-flex items-center px-2.5 py-1.5 border border-indigo-200 text-xs font-medium rounded-md text-indigo-700 bg-indigo-50 hover:bg-indigo-100">
+                                                                    Edit
+                                                                </a>
+                                                                @endif
                                                             </div>
                                                         @endif
                                                     </td>
@@ -458,6 +466,11 @@
                                                                         Delete
                                                                     </button>
                                                                 </form>
+                                                            @elseif($canEditAutoLabeledDtr)
+                                                                <a href="{{ url('/admin/dtr/entry/edit?user_id=' . $dtr->user_id . '&date=' . $dtr->date->format('Y-m-d')) }}"
+                                                                   class="inline-flex items-center px-2.5 py-1.5 border border-indigo-200 text-xs font-medium rounded-md text-indigo-700 bg-indigo-50 hover:bg-indigo-100">
+                                                                    Edit
+                                                                </a>
                                                             @else
                                                                 <span class="text-xs text-gray-400">Not editable</span>
                                                             @endif

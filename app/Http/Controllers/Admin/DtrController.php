@@ -658,7 +658,7 @@ class DtrController extends Controller
             'total_hours' => 'required|date_format:H:i',
             // Overtime is auto-computed as (Total Hours - 8:00) when Total Hours > 8:00
             'overtime_hours' => 'nullable|date_format:H:i',
-            'status' => 'required|in:present,absent,late,half_day,on_leave,travel',
+            'status' => 'required|in:present,absent,late,half_day,on_leave,travel,holiday',
             'is_travel' => 'nullable|boolean',
             'remarks' => 'nullable|string|max:1000',
         ]);
@@ -849,7 +849,186 @@ class DtrController extends Controller
         $addedM = $addedMinutes % 60;
         $addedFormatted = sprintf('%02d:%02d', $addedH, $addedM);
 
-        return view('admin.dtr.edit', compact('dtr', 'employees', 'workedFormatted', 'addedFormatted'));
+        return view('admin.dtr.edit', compact('dtr', 'employees', 'workedFormatted', 'addedFormatted'))
+            ->with('isNewEntry', false);
+    }
+
+    /**
+     * Edit an auto-labeled (synthetic) DTR entry for a specific employee and date.
+     * Full-access admins only.
+     */
+    public function editEntry(Request $request)
+    {
+        $this->assertFullAccessDtrAdmin();
+
+        $request->validate([
+            'user_id' => 'required|exists:users,id',
+            'date' => 'required|date',
+        ]);
+
+        $employee = User::where('id', $request->user_id)
+            ->where('role', 'employee')
+            ->first();
+
+        if (! $employee) {
+            abort(404, 'Employee not found.');
+        }
+
+        $date = Carbon::parse($request->date)->startOfDay();
+        $dtr = Dtr::where('user_id', $employee->id)
+            ->whereDate('date', $date->toDateString())
+            ->first();
+
+        $isNewEntry = $dtr === null;
+
+        if ($isNewEntry) {
+            $holidayMap = DtrHolidayCalendar::mapForRange($date, $date);
+            $holidayEntry = DtrHolidayCalendar::syntheticHolidayEntry(
+                $date,
+                $holidayMap[$date->toDateString()] ?? null
+            );
+            $isHoliday = $holidayEntry !== null;
+
+            $dtr = new Dtr([
+                'user_id' => $employee->id,
+                'date' => $date->copy(),
+                'total_hours' => $isHoliday ? $holidayEntry['total_hours'] : 0,
+                'overtime_hours' => 0,
+                'status' => $isHoliday ? $holidayEntry['status'] : 'absent',
+                'remarks' => $isHoliday ? $holidayEntry['remarks'] : DtrHolidayCalendar::absentRemark(),
+            ]);
+        } else {
+            $holidayMap = DtrHolidayCalendar::mapForRange($date, $date);
+            DtrHolidayCalendar::applyRegularHolidayToRecordIfEligible(
+                $dtr,
+                $holidayMap[$date->toDateString()] ?? null
+            );
+        }
+
+        $employees = User::where('role', 'employee')
+            ->where('is_active', true)
+            ->orderBy('name')
+            ->get();
+
+        $workedDecimal = max(($dtr->total_hours ?? 0) - ($dtr->added_time_from_note ?? 0), 0);
+        $workedMinutes = (int) round($workedDecimal * 60);
+        $workedH = intdiv($workedMinutes, 60);
+        $workedM = $workedMinutes % 60;
+        $workedFormatted = sprintf('%02d:%02d', $workedH, $workedM);
+
+        $addedMinutes = (int) round(($dtr->added_time_from_note ?? 0) * 60);
+        $addedH = intdiv($addedMinutes, 60);
+        $addedM = $addedMinutes % 60;
+        $addedFormatted = sprintf('%02d:%02d', $addedH, $addedM);
+
+        return view('admin.dtr.edit', compact(
+            'dtr',
+            'employees',
+            'workedFormatted',
+            'addedFormatted',
+            'isNewEntry'
+        ));
+    }
+
+    /**
+     * Persist an auto-labeled DTR entry (create or fully replace existing values).
+     * Full-access admins only.
+     */
+    public function storeEntry(Request $request)
+    {
+        $this->assertFullAccessDtrAdmin();
+
+        $request->validate([
+            'user_id' => 'required|exists:users,id',
+            'date' => 'required|date',
+            'added_time_from_note' => 'nullable|date_format:H:i',
+            'total_hours' => 'required|date_format:H:i',
+            'status' => 'required|in:present,absent,late,half_day,on_leave,travel,holiday',
+            'is_travel' => 'nullable|boolean',
+            'remarks' => 'nullable|string|max:1000',
+        ]);
+
+        $requestDate = Carbon::parse($request->date);
+        $today = Carbon::today();
+        if ($requestDate->gt($today) && $request->status === 'absent') {
+            return redirect()->back()
+                ->withErrors(['status' => 'Cannot set absent status for future dates.'])
+                ->withInput();
+        }
+
+        $status = $request->status;
+        if ($request->boolean('is_travel')) {
+            $status = 'travel';
+        }
+
+        $employee = User::where('id', $request->user_id)
+            ->where('role', 'employee')
+            ->first();
+
+        if (! $employee) {
+            return redirect()->back()
+                ->withErrors(['user_id' => 'Selected user is not an employee.'])
+                ->withInput();
+        }
+
+        try {
+            $workedDecimal = 0;
+            $addedDecimal = 0;
+
+            if ($request->filled('total_hours')) {
+                [$h, $m] = explode(':', $request->total_hours);
+                $workedDecimal = ((int) $h) + ((int) $m / 60);
+            }
+
+            if ($request->filled('added_time_from_note')) {
+                [$eh, $em] = explode(':', $request->added_time_from_note);
+                $addedDecimal = ((int) $eh) + ((int) $em / 60);
+            }
+
+            $totalDecimal = $workedDecimal + $addedDecimal;
+            $standardDecimal = 8.0;
+            $overtimeDecimal = $totalDecimal > $standardDecimal
+                ? $totalDecimal - $standardDecimal
+                : 0;
+
+            $dtr = Dtr::updateOrCreate(
+                [
+                    'user_id' => $request->user_id,
+                    'date' => $request->date,
+                ],
+                [
+                    'added_time_from_note' => $addedDecimal,
+                    'total_hours' => $totalDecimal,
+                    'overtime_hours' => $overtimeDecimal,
+                    'status' => $status,
+                    'remarks' => $request->remarks,
+                ]
+            );
+
+            $this->calculateAndStoreWeeklyDeficit($request->user_id, Carbon::parse($request->date));
+
+            return redirect('/admin/dtr')
+                ->with('success', $dtr->wasRecentlyCreated
+                    ? 'DTR record created successfully.'
+                    : 'DTR record updated successfully.');
+        } catch (\Exception $e) {
+            Log::error('DTR entry save failed: '.$e->getMessage());
+
+            return redirect()->back()
+                ->withErrors(['error' => 'Failed to save DTR record: '.$e->getMessage()])
+                ->withInput();
+        }
+    }
+
+    /**
+     * Restrict auto-labeled DTR editing to full-access admins.
+     */
+    private function assertFullAccessDtrAdmin(): void
+    {
+        $user = auth()->user();
+        if (! $user || ! $user->isSuperAdmin()) {
+            abort(403, 'Only full-access admins can edit auto-labeled DTR entries.');
+        }
     }
 
     /**
@@ -862,7 +1041,7 @@ class DtrController extends Controller
             'date' => 'required|date',
             'added_time_from_note' => 'nullable|date_format:H:i',
             'total_hours' => 'required|date_format:H:i',
-            'status' => 'required|in:present,absent,late,half_day,on_leave,travel',
+            'status' => 'required|in:present,absent,late,half_day,on_leave,travel,holiday',
             'is_travel' => 'nullable|boolean',
             'remarks' => 'nullable|string|max:1000',
         ]);
@@ -1611,7 +1790,7 @@ class DtrController extends Controller
             'added_time_from_note' => 'nullable|date_format:H:i',
             'total_hours' => 'required|date_format:H:i',
             'overtime_hours' => 'nullable|date_format:H:i',
-            'status' => 'required|in:present,absent,late,half_day,on_leave,travel',
+            'status' => 'required|in:present,absent,late,half_day,on_leave,travel,holiday',
             'remarks' => 'nullable|string|max:1000',
         ]);
 
@@ -1791,7 +1970,7 @@ class DtrController extends Controller
             'date' => 'required|date',
             'added_time_from_note' => 'nullable|date_format:H:i',
             'total_hours' => 'required|date_format:H:i',
-            'status' => 'required|in:present,absent,late,half_day,on_leave,travel',
+            'status' => 'required|in:present,absent,late,half_day,on_leave,travel,holiday',
             'remarks' => 'nullable|string|max:1000',
         ]);
 

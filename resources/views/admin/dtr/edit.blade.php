@@ -49,11 +49,22 @@
         </div>
     @endif
 
+    @php
+        $isNewEntry = $isNewEntry ?? false;
+    @endphp
+
     <!-- Form -->
     <div class="bg-white rounded-2xl shadow-xl border border-gray-200 p-8">
-        <form action="{{ url('/admin/dtr/' . $dtr->id) }}" method="POST" class="space-y-6">
+        @if($isNewEntry)
+            <div class="mb-6 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+                This is an auto-labeled DTR entry (ABSENT or HOLIDAY). Saving will create a real time record for this employee and date.
+            </div>
+        @endif
+        <form action="{{ $isNewEntry ? url('/admin/dtr/entry') : url('/admin/dtr/' . $dtr->id) }}" method="POST" class="space-y-6">
             @csrf
+            @unless($isNewEntry)
             @method('PUT')
+            @endunless
 
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <!-- Employee Selection -->
@@ -165,10 +176,16 @@
                     </label>
                     @php
                         $currentStatus = old('status', $dtr->status);
-                        $statusDisplayText = $currentStatus === 'travel' ? 'Travel' : ucfirst(str_replace('_', ' ', $currentStatus));
-                        $statusDisplayClass = $currentStatus === 'travel' 
-                            ? 'px-4 py-3 border border-gray-200 rounded-lg bg-blue-50 text-sm font-medium text-blue-700'
-                            : 'px-4 py-3 border border-gray-200 rounded-lg bg-gray-50 text-sm font-medium text-gray-700';
+                        $statusDisplayText = match ($currentStatus) {
+                            'travel' => 'Travel',
+                            'holiday' => 'Holiday',
+                            default => ucfirst(str_replace('_', ' ', $currentStatus)),
+                        };
+                        $statusDisplayClass = match ($currentStatus) {
+                            'travel' => 'px-4 py-3 border border-gray-200 rounded-lg bg-blue-50 text-sm font-medium text-blue-700',
+                            'holiday' => 'px-4 py-3 border border-gray-200 rounded-lg bg-sky-50 text-sm font-medium text-sky-700',
+                            default => 'px-4 py-3 border border-gray-200 rounded-lg bg-gray-50 text-sm font-medium text-gray-700',
+                        };
                     @endphp
                     <div id="status_display" class="{{ $statusDisplayClass }}">
                         {{ $statusDisplayText }}
@@ -207,7 +224,7 @@
                     <svg class="h-5 w-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
                     </svg>
-                    Update DTR Record
+                    {{ $isNewEntry ? 'Save DTR Record' : 'Update DTR Record' }}
                 </button>
             </div>
         </form>

@@ -582,6 +582,8 @@ Route::prefix('admin')->middleware(['auth', 'admin'])->group(function () {
             Route::get('/dtr', [DtrController::class, 'index'])->name('admin.dtr.index');
             Route::get('/dtr/create', [DtrController::class, 'create'])->name('admin.dtr.create');
             Route::post('/dtr', [DtrController::class, 'store'])->name('admin.dtr.store');
+            Route::get('/dtr/entry/edit', [DtrController::class, 'editEntry'])->name('admin.dtr.entry.edit');
+            Route::post('/dtr/entry', [DtrController::class, 'storeEntry'])->name('admin.dtr.entry.store');
             Route::get('/dtr/{dtr}/edit', [DtrController::class, 'edit'])->name('admin.dtr.edit');
             Route::put('/dtr/{dtr}', [DtrController::class, 'update'])->name('admin.dtr.update');
             Route::delete('/dtr/{dtr}', [DtrController::class, 'destroy'])->name('admin.dtr.destroy');
