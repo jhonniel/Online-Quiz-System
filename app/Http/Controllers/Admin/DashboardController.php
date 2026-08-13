@@ -1101,6 +1101,7 @@ class DashboardController extends Controller
                     return [
                         'id' => $activity->id,
                         'user_name' => optional($activity->user)->name ?? 'Guest',
+                        'profile_verified' => (bool) optional($activity->user)->profile_verified,
                         'activity_type' => $activity->activity_type,
                         'action' => $activity->action,
                         'page_url' => $activity->page_url,

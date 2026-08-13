@@ -324,7 +324,7 @@ class StudentDashboardController extends Controller
         $performanceRatingsByStudentId = [];
         if ($canRateStudentPerformance && $studentIdsOnPage !== []) {
             $performanceRatingsByStudentId = StudentPerformanceRating::query()
-                ->with('rater:id,name,email')
+                ->with('rater:id,name,email,profile_verified')
                 ->whereIn('user_id', $studentIdsOnPage)
                 ->get()
                 ->keyBy('user_id')
@@ -335,6 +335,7 @@ class StudentDashboardController extends Controller
                         'overall' => (int) $totals['overall'],
                         'overall_max' => (int) $totals['overall_max'],
                         'complete' => $rating->isComplete(),
+                        'rated_by_user' => $rating->rater,
                         'rated_by_name' => $rating->raterDisplayName(),
                         'rated_by_email' => $rating->raterDisplayEmail(),
                         'rated_at' => optional($rating->rated_at ?? $rating->updated_at)

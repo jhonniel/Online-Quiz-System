@@ -160,6 +160,13 @@
                         @if($employmentDuration = $user->activeEmploymentDurationLabel())
                             <p class="mt-1 text-xs text-emerald-700 font-medium">{{ $employmentDuration }} employed (as of {{ now()->format('F j, Y') }})</p>
                         @endif
+                        <div class="mt-3 rounded-lg border border-gray-200 bg-gray-50 px-3 py-2.5">
+                            <p class="text-xs font-semibold text-gray-700 uppercase tracking-wide">Automatic tenure leave credits</p>
+                            <p class="mt-1 text-xs text-gray-600">
+                                {{ $user->auto_tenure_leave_credits_enabled ? 'Enabled by admin' : 'Disabled (default)' }}
+                            </p>
+                            <p class="mt-1 text-xs text-gray-600">{{ \App\Support\EmployeeTenureLeaveCredits::eligibilitySummary($user) }}</p>
+                        </div>
                     </div>
                     <div>
                         <p class="text-xs font-semibold text-gray-500 uppercase tracking-wide">TIN</p>

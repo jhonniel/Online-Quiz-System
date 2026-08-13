@@ -876,7 +876,13 @@
                                 @endif
                             </div>
                             <div class="flex-1 min-w-0">
-                                <p class="text-sm font-medium text-gray-900">{{ optional($activity->user)->name ?? 'Unknown' }}</p>
+                                <p class="text-sm font-medium text-gray-900">
+                                    @if($activity->user)
+                                        <x-user-name :user="$activity->user" :size="14" />
+                                    @else
+                                        Unknown
+                                    @endif
+                                </p>
                                 <p class="text-sm text-gray-500">
                                     {{ ucfirst(str_replace('_', ' ', $activity->activity_type)) }}
                                     @if($activity->action)
@@ -1191,8 +1197,8 @@
                     <div class="ml-2 sm:ml-3 min-w-0 flex-1">
                         <p class="text-xs sm:text-sm font-medium truncate">Most Active User</p>
                         <p class="text-base sm:text-lg font-bold truncate">
-                            @if($mostActiveUsers->count() > 0)
-                                {{ optional($mostActiveUsers->first()->user)->name ?? 'N/A' }}
+                            @if($mostActiveUsers->count() > 0 && $mostActiveUsers->first()->user)
+                                <x-user-name :user="$mostActiveUsers->first()->user" :size="16" class="text-white" />
                             @else
                                 N/A
                             @endif
@@ -1383,7 +1389,13 @@
                                                 {{ $index + 1 }}
                                             </div>
                                             <div class="min-w-0 flex-1">
-                                                <p class="text-sm font-medium text-gray-900 truncate">{{ optional($item->user)->name ?? 'Unknown' }}</p>
+                                                <p class="text-sm font-medium text-gray-900 truncate">
+                                                    @if($item->user)
+                                                        <x-user-name :user="$item->user" :size="14" />
+                                                    @else
+                                                        Unknown
+                                                    @endif
+                                                </p>
                                                 <p class="text-xs text-gray-500 truncate">{{ optional($item->user)->email ?? '-' }}</p>
                                             </div>
                                         </div>
@@ -2394,7 +2406,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                         </div>
                                     </div>
                                     <div class="flex-1 min-w-0">
-                                        <p class="text-sm font-medium text-gray-900">${activity.user_name}</p>
+                                        <p class="text-sm font-medium text-gray-900">${window.VerifiedBadgeUI ? VerifiedBadgeUI.nameHtml(activity.user_name, activity.profile_verified, 12) : activity.user_name}</p>
                                         <p class="text-sm text-gray-500">
                                             ${activity.activity_type.charAt(0).toUpperCase() + activity.activity_type.slice(1).replace('_', ' ')}
                                             ${activity.action ? '- ' + activity.action : ''}

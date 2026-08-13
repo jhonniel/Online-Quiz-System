@@ -17,6 +17,7 @@ use App\Models\University;
 use App\Models\User;
 use App\Services\MailConfigService;
 use App\Support\DepartmentPositionOptions;
+use App\Support\EmployeeTenureLeaveCredits;
 use App\Support\DocumentExportPdfBranding;
 use App\Support\StudentMeritNoticeSettings;
 use App\Support\StudentMeritRulesNotice;
@@ -692,6 +693,7 @@ class UserController extends Controller
             'student_manual_merits' => 'nullable|integer|min:0|max:9999',
             'student_rules_allow_merit_automation' => 'nullable|boolean',
             'date_hired' => 'nullable|date',
+            'auto_tenure_leave_credits_enabled' => 'nullable|boolean',
             'tin' => 'nullable|string|max:50',
             'sss_number' => 'nullable|string|max:50',
             'hdmf_number' => 'nullable|string|max:50',
@@ -811,12 +813,14 @@ class UserController extends Controller
 
         if (UserRoles::isStaff($request->role)) {
             $data['date_hired'] = $request->filled('date_hired') ? $request->date_hired : null;
+            $data['auto_tenure_leave_credits_enabled'] = $request->boolean('auto_tenure_leave_credits_enabled');
             $data['tin'] = $this->nullableProfileValue($request->input('tin'));
             $data['sss_number'] = $this->nullableProfileValue($request->input('sss_number'));
             $data['hdmf_number'] = $this->nullableProfileValue($request->input('hdmf_number'));
             $data['phic_number'] = $this->nullableProfileValue($request->input('phic_number'));
         } else {
             $data['date_hired'] = null;
+            $data['auto_tenure_leave_credits_enabled'] = false;
             $data['tin'] = null;
             $data['sss_number'] = null;
             $data['hdmf_number'] = null;
@@ -879,6 +883,14 @@ class UserController extends Controller
             }
         }
 
+        if (UserRoles::isStaff($request->role)) {
+            $appliedTier = EmployeeTenureLeaveCredits::syncForUser($user->fresh());
+            if ($appliedTier !== null) {
+                return redirect('/admin/users')
+                    ->with('success', 'User updated successfully. Applied '.EmployeeTenureLeaveCredits::tierLabel($appliedTier).' to leave credits.');
+            }
+        }
+
         return redirect('/admin/users')
             ->with('success', 'User updated successfully.');
     }
@@ -902,9 +914,17 @@ class UserController extends Controller
         $user->update(['is_active' => ! $user->is_active]);
 
         $status = $user->is_active ? 'activated' : 'deactivated';
+        $message = "User {$status} successfully.";
+
+        if ($user->is_active && UserRoles::isStaff($user->role)) {
+            $appliedTier = EmployeeTenureLeaveCredits::syncForUser($user->fresh());
+            if ($appliedTier !== null) {
+                $message .= ' Applied '.EmployeeTenureLeaveCredits::tierLabel($appliedTier).' to leave credits.';
+            }
+        }
 
         return redirect()->back()
-            ->with('success', "User {$status} successfully.");
+            ->with('success', $message);
     }
 
     public function approve(User $user)

@@ -382,7 +382,10 @@
                                 @if($ended)
                                     <span class="text-gray-700">{{ $ended->format('M j, Y') }}</span>
                                 @elseif($started)
-                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">Ongoing</span>
+                                    <span class="inline-flex items-center gap-2">
+                                        <span class="internship-ongoing-glow shrink-0 w-2.5 h-2.5 rounded-full bg-amber-400 ring-2 ring-amber-300/60" aria-hidden="true" title="Internship in progress"></span>
+                                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">Ongoing</span>
+                                    </span>
                                 @else
                                     <span class="text-gray-500">—</span>
                                 @endif
@@ -396,7 +399,8 @@
                             @if($canRateStudentPerformance)
                                 @php
                                     $ratingInfo = $performanceRatingsByStudentId[$student->id] ?? null;
-                                    $canRateThisStudent = $required > 0 && $total >= $required;
+                                    $hoursComplete = $required > 0 && $total >= $required;
+                                    $ratingUrl = route('admin.student-management.students.performance-rating.edit', $student);
                                 @endphp
                                 <td class="px-6 py-4 whitespace-nowrap text-sm text-center">
                                     @if($ratingInfo)
@@ -405,9 +409,14 @@
                                                   title="Admin-only performance rating">
                                                 {{ (int) $ratingInfo['overall'] }}/{{ (int) $ratingInfo['overall_max'] }}
                                             </span>
-                                            <span class="text-[10px] leading-tight text-slate-500 max-w-[9rem] truncate"
+                                            <span class="text-[10px] leading-tight text-slate-500 max-w-[9rem] truncate inline-flex items-center gap-0.5"
                                                   title="Rated by {{ $ratingInfo['rated_by_name'] }}{{ !empty($ratingInfo['rated_at']) ? ' on '.$ratingInfo['rated_at'] : '' }}">
-                                                by {{ $ratingInfo['rated_by_name'] }}
+                                                <span>by</span>
+                                                @if(!empty($ratingInfo['rated_by_user']))
+                                                    <x-user-name :user="$ratingInfo['rated_by_user']" :size="10" class="inline min-w-0" />
+                                                @else
+                                                    <span class="truncate">{{ $ratingInfo['rated_by_name'] }}</span>
+                                                @endif
                                             </span>
                                         </div>
                                     @else
@@ -415,18 +424,18 @@
                                     @endif
                                 </td>
                                 <td class="px-6 py-4 whitespace-nowrap text-sm text-right align-middle">
-                                    @if($canRateThisStudent)
-                                        <a href="{{ route('admin.student-management.students.performance-rating.edit', $student) }}"
-                                           class="student-rating-action-btn"
-                                           title="{{ $ratingInfo ? 'View or edit saved performance rating' : 'Rate this student' }}">
-                                            {{ $ratingInfo ? 'View / edit' : 'Rate' }}
-                                        </a>
-                                    @else
-                                        <span class="student-rating-hours-incomplete"
-                                              title="{{ $required > 0 ? number_format($total, 2).' / '.number_format($required, 2).' hours logged' : 'Required training hours not set' }}">
-                                            Hours incomplete
-                                        </span>
-                                    @endif
+                                    <a href="{{ $ratingUrl }}"
+                                       class="student-rating-action-btn"
+                                       title="{{ $ratingInfo ? 'View or edit saved performance rating' : 'Rate this student' }}"
+                                       @if(! $hoursComplete)
+                                           data-rating-hours-warning="1"
+                                           data-rating-url="{{ $ratingUrl }}"
+                                           data-student-name="{{ $student->name }}"
+                                           data-hours-logged="{{ number_format($total, 2, '.', '') }}"
+                                           data-hours-required="{{ number_format($required, 2, '.', '') }}"
+                                       @endif>
+                                        {{ $ratingInfo ? 'View / edit' : 'Rate' }}
+                                    </a>
                                 </td>
                             @endif
                         </tr>
@@ -450,6 +459,39 @@
                 {{ $students->links() }}
             </div>
         @endif
+    </div>
+</div>
+
+{{-- Performance rating: hours incomplete warning --}}
+<div id="ratingHoursWarningModal" class="fixed inset-0 z-50 hidden" aria-hidden="true" role="dialog" aria-labelledby="ratingHoursWarningModalTitle">
+    <div id="ratingHoursWarningModalBackdrop" class="fixed inset-0 bg-gray-900/50 backdrop-blur-sm" data-rating-hours-modal-dismiss></div>
+    <div class="fixed inset-0 flex items-center justify-center p-4 pointer-events-none">
+        <div class="relative w-full max-w-md bg-white rounded-xl shadow-xl border border-amber-200 pointer-events-auto">
+            <div class="px-5 py-4 border-b border-amber-100 bg-amber-50/90 rounded-t-xl">
+                <div class="flex items-start gap-3">
+                    <span class="internship-ongoing-glow shrink-0 mt-0.5 w-3 h-3 rounded-full bg-amber-400 ring-2 ring-amber-300/60" aria-hidden="true"></span>
+                    <div>
+                        <h2 id="ratingHoursWarningModalTitle" class="text-lg font-semibold text-gray-900">Training hours not yet complete</h2>
+                        <p id="ratingHoursWarningModalStudent" class="text-sm text-gray-700 mt-1 font-medium"></p>
+                    </div>
+                </div>
+            </div>
+            <div class="px-5 py-4 text-sm text-gray-700 space-y-3">
+                <p id="ratingHoursWarningModalMessage">This student has not yet met the required training hours. You can still open the performance rating form, but their internship is still marked as ongoing.</p>
+                <p class="rounded-lg border border-amber-200 bg-amber-50/60 px-3 py-2 text-amber-950">
+                    <span class="font-semibold tabular-nums" id="ratingHoursWarningModalProgress">—</span>
+                </p>
+                <p class="text-gray-600">Do you want to continue?</p>
+            </div>
+            <div class="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 px-5 py-4 border-t border-gray-100 bg-gray-50/80 rounded-b-xl">
+                <button type="button" class="inline-flex justify-center items-center px-4 py-2 rounded-lg border border-gray-300 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50" data-rating-hours-modal-dismiss>
+                    Cancel
+                </button>
+                <button type="button" id="ratingHoursWarningProceedBtn" class="inline-flex justify-center items-center px-4 py-2 rounded-lg bg-indigo-600 text-sm font-semibold text-white hover:bg-indigo-700">
+                    Proceed
+                </button>
+            </div>
+        </div>
     </div>
 </div>
 
@@ -1182,6 +1224,69 @@
             });
         });
     })();
+
+    (function () {
+        const modal = document.getElementById('ratingHoursWarningModal');
+        const studentEl = document.getElementById('ratingHoursWarningModalStudent');
+        const progressEl = document.getElementById('ratingHoursWarningModalProgress');
+        const proceedBtn = document.getElementById('ratingHoursWarningProceedBtn');
+        if (!modal || !proceedBtn) {
+            return;
+        }
+
+        let pendingRatingUrl = null;
+
+        function closeModal() {
+            modal.classList.add('hidden');
+            modal.setAttribute('aria-hidden', 'true');
+            pendingRatingUrl = null;
+        }
+
+        function openModal(link) {
+            const name = link.getAttribute('data-student-name') || 'This student';
+            const logged = link.getAttribute('data-hours-logged') || '0';
+            const required = link.getAttribute('data-hours-required') || '0';
+            pendingRatingUrl = link.getAttribute('data-rating-url') || link.href;
+
+            if (studentEl) {
+                studentEl.textContent = name;
+            }
+            if (progressEl) {
+                if (parseFloat(required) <= 0) {
+                    progressEl.textContent = logged + ' hours logged · required hours not set';
+                } else {
+                    progressEl.textContent = logged + ' / ' + required + ' hours logged';
+                }
+            }
+
+            modal.classList.remove('hidden');
+            modal.setAttribute('aria-hidden', 'false');
+            proceedBtn.focus();
+        }
+
+        document.querySelectorAll('[data-rating-hours-warning]').forEach(function (link) {
+            link.addEventListener('click', function (event) {
+                event.preventDefault();
+                openModal(link);
+            });
+        });
+
+        proceedBtn.addEventListener('click', function () {
+            if (pendingRatingUrl) {
+                window.location.href = pendingRatingUrl;
+            }
+        });
+
+        modal.querySelectorAll('[data-rating-hours-modal-dismiss]').forEach(function (el) {
+            el.addEventListener('click', closeModal);
+        });
+
+        document.addEventListener('keydown', function (event) {
+            if (event.key === 'Escape' && !modal.classList.contains('hidden')) {
+                closeModal();
+            }
+        });
+    })();
 </script>
 @endsection
 
@@ -1219,35 +1324,20 @@
         border-color: #4338ca;
     }
 
-    .student-rating-hours-incomplete {
-        display: inline-flex;
-        align-items: center;
-        padding: 0.375rem 0.75rem;
-        border-radius: 0.5rem;
-        font-size: 0.75rem;
-        line-height: 1rem;
-        font-weight: 600;
-        color: #78350f;
-        background-color: rgba(255, 251, 235, 0.95);
-        border: 1px solid rgba(252, 211, 77, 0.85);
-        cursor: default;
-        user-select: none;
-        animation: student-rating-hours-glow 2.4s ease-in-out infinite;
+    .internship-ongoing-glow {
+        animation: internship-ongoing-pulse 1.8s ease-in-out infinite;
     }
 
-    @keyframes student-rating-hours-glow {
+    @keyframes internship-ongoing-pulse {
         0%,
         100% {
-            box-shadow:
-                0 0 0 1px rgba(251, 191, 36, 0.35),
-                0 0 8px rgba(251, 191, 36, 0.15);
+            box-shadow: 0 0 0 0 rgba(251, 191, 36, 0.55), 0 0 6px rgba(251, 191, 36, 0.35);
+            transform: scale(1);
         }
 
         50% {
-            box-shadow:
-                0 0 0 2px rgba(245, 158, 11, 0.65),
-                0 0 14px rgba(251, 191, 36, 0.45),
-                0 0 22px rgba(245, 158, 11, 0.2);
+            box-shadow: 0 0 0 4px rgba(251, 191, 36, 0), 0 0 12px rgba(245, 158, 11, 0.65), 0 0 20px rgba(251, 191, 36, 0.35);
+            transform: scale(1.08);
         }
     }
 </style>

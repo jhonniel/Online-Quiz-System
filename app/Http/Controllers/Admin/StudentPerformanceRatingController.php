@@ -7,7 +7,6 @@ use App\Models\StudentPerformanceRating;
 use App\Models\User;
 use App\Models\UserActivity;
 use App\Support\StudentPerformanceRatingForm;
-use App\Support\StudentTrainingProgress;
 use Illuminate\Http\Request;
 
 class StudentPerformanceRatingController extends Controller
@@ -17,7 +16,7 @@ class StudentPerformanceRatingController extends Controller
         $this->assertCanAccessPerformanceRatings($user);
 
         $rating = StudentPerformanceRating::query()
-            ->with('rater')
+            ->with('rater:id,name,email,profile_verified')
             ->firstOrNew(['user_id' => $user->id]);
         $sections = StudentPerformanceRatingForm::sections();
         $totals = $rating->exists ? $rating->totals() : StudentPerformanceRatingForm::totals([]);
@@ -95,10 +94,6 @@ class StudentPerformanceRatingController extends Controller
             if (! in_array((int) $student->department_id, array_map('intval', $allowedDepartmentIds), true)) {
                 abort(403, 'Access denied.');
             }
-        }
-
-        if (! StudentTrainingProgress::hasMetRequiredTrainingHours($student)) {
-            abort(403, 'Performance rating is available only after the student completes their required training hours.');
         }
     }
 }

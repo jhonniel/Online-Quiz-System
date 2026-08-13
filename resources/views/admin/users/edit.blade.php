@@ -345,6 +345,31 @@
                                    value="{{ old('date_hired', $user->date_hired?->format('Y-m-d')) }}"
                                    class="block w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 text-sm @error('date_hired') border-red-500 @enderror">
                             @error('date_hired') <p class="mt-1 text-sm text-red-600">{{ $message }}</p> @enderror
+                            @php
+                                $tenureLeaveEnabled = (bool) old('auto_tenure_leave_credits_enabled', $user->auto_tenure_leave_credits_enabled);
+                                $tenurePreviewUser = $user->replicate();
+                                $tenurePreviewUser->date_hired = old('date_hired', $user->date_hired?->format('Y-m-d'))
+                                    ? \Carbon\Carbon::parse(old('date_hired', $user->date_hired?->format('Y-m-d')))
+                                    : null;
+                                $tenurePreviewUser->is_active = (bool) old('is_active', $user->is_active);
+                                $tenurePreviewUser->auto_tenure_leave_credits_enabled = $tenureLeaveEnabled;
+                            @endphp
+                            <div class="mt-4 rounded-xl border border-indigo-100 bg-indigo-50/60 p-4">
+                                <label class="flex items-start gap-3 cursor-pointer group">
+                                    <input type="checkbox" name="auto_tenure_leave_credits_enabled" id="auto_tenure_leave_credits_enabled" value="1"
+                                           {{ $tenureLeaveEnabled ? 'checked' : '' }}
+                                           class="mt-1 h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded">
+                                    <span>
+                                        <span class="block text-sm font-semibold text-gray-900 group-hover:text-indigo-900">Enable automatic tenure leave credits</span>
+                                        <span class="block text-xs text-gray-600 mt-1">Off by default. When enabled, active employees receive 5 leave credits after 6 months from Date Hired and 10 leave credits at 1 year or more.</span>
+                                    </span>
+                                </label>
+                                @error('auto_tenure_leave_credits_enabled') <p class="mt-2 text-sm text-red-600">{{ $message }}</p> @enderror
+                                <p class="mt-3 text-xs text-indigo-900 leading-relaxed">{{ \App\Support\EmployeeTenureLeaveCredits::eligibilitySummary($tenurePreviewUser) }}</p>
+                                @if($user->auto_tenure_leave_credits_last_tier)
+                                    <p class="mt-2 text-xs font-medium text-emerald-800">Last applied tier: {{ \App\Support\EmployeeTenureLeaveCredits::tierLabel((int) $user->auto_tenure_leave_credits_last_tier) }}</p>
+                                @endif
+                            </div>
                         </div>
                         <div>
                             <label for="tin" class="block text-sm font-semibold text-gray-700 mb-1.5">TIN</label>

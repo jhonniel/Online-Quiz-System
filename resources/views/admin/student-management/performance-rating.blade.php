@@ -84,7 +84,13 @@
         <div class="bg-white border border-gray-200 rounded-lg p-4 shadow-sm">
             <p class="text-xs font-semibold uppercase tracking-wide text-gray-500">Rated by</p>
             @if($hasSavedRating)
-                <p class="mt-2 text-lg font-bold text-gray-900 leading-snug">{{ $raterName }}</p>
+                <p class="mt-2 text-lg font-bold text-gray-900 leading-snug">
+                    @if($rating->rater)
+                        <x-user-name :user="$rating->rater" :size="16" />
+                    @else
+                        {{ $raterName }}
+                    @endif
+                </p>
                 @if($raterEmail)
                     <p class="mt-1 text-xs text-gray-500 break-all">{{ $raterEmail }}</p>
                 @endif

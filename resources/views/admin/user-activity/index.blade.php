@@ -136,7 +136,13 @@
                                             </span>
                                         </div>
                                         <div class="ml-3">
-                                            <div class="text-sm font-medium text-gray-900">{{ optional($activity->user)->name ?? 'Guest' }}</div>
+                                            <div class="text-sm font-medium text-gray-900">
+                                                @if($activity->user)
+                                                    <x-user-name :user="$activity->user" :size="14" />
+                                                @else
+                                                    Guest
+                                                @endif
+                                            </div>
                                             <div class="text-sm text-gray-500">{{ optional($activity->user)->email ?? 'Not logged in' }}</div>
                                         </div>
                                     </div>

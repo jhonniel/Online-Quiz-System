@@ -21,6 +21,10 @@ class Kernel extends ConsoleKernel
             ->dailyAt('06:30')
             ->withoutOverlapping();
 
+        $schedule->command('employees:sync-tenure-leave-credits')
+            ->dailyAt('06:45')
+            ->withoutOverlapping();
+
         $schedule->command('leave-requests:auto-reject-stale-resubmissions')
             ->hourly()
             ->withoutOverlapping();
