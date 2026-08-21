@@ -557,7 +557,7 @@ class SettingsController extends Controller
             'remove_icon' => 'boolean',
             'primary_color' => 'nullable|string|regex:/^#[0-9A-Fa-f]{6}$/',
             'secondary_color' => 'nullable|string|regex:/^#[0-9A-Fa-f]{6}$/',
-            'seasonal_effects' => 'nullable|string|in:halloween,christmas,disabled',
+            'seasonal_effects' => 'nullable|string|in:halloween,halloween_spidey,christmas,disabled',
             'maintenance_mode' => 'nullable|string|in:enabled,disabled',
             'maintenance_message' => 'nullable|string|max:1000',
             'hiring_process_enabled' => 'nullable|string|in:enabled,disabled',
@@ -748,7 +748,7 @@ class SettingsController extends Controller
 
         // Handle seasonal effects
         $seasonalEffect = $request->seasonal_effects ?? 'disabled';
-        Setting::set('seasonal_effects', $seasonalEffect, 'text', 'Seasonal effects (halloween, christmas, disabled)');
+        Setting::set('seasonal_effects', $seasonalEffect, 'text', 'Seasonal effects (halloween, halloween_spidey, christmas, disabled)');
 
         // Handle maintenance mode
         $maintenanceMode = $request->maintenance_mode ?? 'disabled';

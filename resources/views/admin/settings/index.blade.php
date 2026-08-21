@@ -368,6 +368,7 @@
                                         class="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
                                     <option value="disabled" {{ ($settings['seasonal_effects'] ?? 'disabled') == 'disabled' ? 'selected' : '' }}>Disabled</option>
                                     <option value="halloween" {{ ($settings['seasonal_effects'] ?? 'disabled') == 'halloween' ? 'selected' : '' }}>🎃 Halloween (Flying Spiders & Bats)</option>
+                                    <option value="halloween_spidey" {{ ($settings['seasonal_effects'] ?? 'disabled') == 'halloween_spidey' ? 'selected' : '' }}>🕷️ Its Halloween Spidey (Hanging Spiders & Webs)</option>
                                     <option value="christmas" {{ ($settings['seasonal_effects'] ?? 'disabled') == 'christmas' ? 'selected' : '' }}>❄️ Christmas (Falling Snow)</option>
                                     </select>
                                 <p class="mt-2 text-xs text-gray-500">Add seasonal animations to the home page</p>

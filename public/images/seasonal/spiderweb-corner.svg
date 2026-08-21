@@ -1,0 +1,68 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 320" fill="none" aria-hidden="true">
+  <defs>
+    <linearGradient id="cornerWebStrand" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#454545" stop-opacity="0.62"/>
+      <stop offset="45%" stop-color="#5e5e5e" stop-opacity="0.42"/>
+      <stop offset="100%" stop-color="#8a8a8a" stop-opacity="0.18"/>
+    </linearGradient>
+    <linearGradient id="cornerWebCapture" x1="0%" y1="0%" x2="90%" y2="90%">
+      <stop offset="0%" stop-color="#505050" stop-opacity="0.38"/>
+      <stop offset="100%" stop-color="#757575" stop-opacity="0.12"/>
+    </linearGradient>
+    <radialGradient id="cornerHub" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(0 0) scale(18)">
+      <stop offset="0%" stop-color="#555555" stop-opacity="0.5"/>
+      <stop offset="100%" stop-color="#555555" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+
+  <!-- Anchor / radial threads -->
+  <g stroke="url(#cornerWebStrand)" stroke-linecap="round" fill="none">
+    <line x1="0" y1="0" x2="320" y2="0" stroke-width="0.55" opacity="0.62"/>
+    <line x1="0" y1="0" x2="0" y2="320" stroke-width="0.55" opacity="0.62"/>
+    <line x1="0" y1="0" x2="226" y2="226" stroke-width="0.5" opacity="0.5"/>
+    <line x1="0" y1="0" x2="320" y2="58" stroke-width="0.42" opacity="0.46"/>
+    <line x1="0" y1="0" x2="58" y2="320" stroke-width="0.42" opacity="0.46"/>
+    <line x1="0" y1="0" x2="320" y2="118" stroke-width="0.34" opacity="0.34"/>
+    <line x1="0" y1="0" x2="118" y2="320" stroke-width="0.34" opacity="0.34"/>
+    <line x1="0" y1="0" x2="290" y2="22" stroke-width="0.28" opacity="0.28"/>
+    <line x1="0" y1="0" x2="22" y2="290" stroke-width="0.28" opacity="0.28"/>
+    <line x1="0" y1="0" x2="255" y2="92" stroke-width="0.3" opacity="0.3"/>
+    <line x1="0" y1="0" x2="92" y2="255" stroke-width="0.3" opacity="0.3"/>
+  </g>
+
+  <!-- Capture / spiral threads -->
+  <g stroke="url(#cornerWebCapture)" stroke-linecap="round" fill="none" stroke-width="0.28">
+    <path d="M 34 0 C 24 11 11 24 0 34" opacity="0.38"/>
+    <path d="M 68 0 C 48 22 22 48 0 68" opacity="0.36"/>
+    <path d="M 102 0 C 72 33 33 72 0 102" opacity="0.34"/>
+    <path d="M 138 0 C 97 45 45 97 0 138" opacity="0.32"/>
+    <path d="M 174 0 C 123 57 57 123 0 174" opacity="0.3"/>
+    <path d="M 212 0 C 150 71 71 150 0 212" opacity="0.28"/>
+    <path d="M 250 0 C 177 85 85 177 0 250" opacity="0.26"/>
+    <path d="M 288 0 C 204 99 99 204 0 288" opacity="0.24"/>
+    <path d="M 320 0 C 226 113 113 226 0 320" opacity="0.22"/>
+
+    <!-- Irregular secondary capture between radials -->
+    <path d="M 52 0 Q 38 18 22 0" opacity="0.22"/>
+    <path d="M 0 52 Q 18 38 0 22" opacity="0.22"/>
+    <path d="M 118 0 Q 92 34 64 0" opacity="0.2"/>
+    <path d="M 0 118 Q 34 92 0 64" opacity="0.2"/>
+    <path d="M 196 0 Q 150 58 104 0" opacity="0.18"/>
+    <path d="M 0 196 Q 58 150 0 104" opacity="0.18"/>
+    <path d="M 268 0 Q 205 82 142 0" opacity="0.16"/>
+    <path d="M 0 268 Q 82 205 0 142" opacity="0.16"/>
+
+    <!-- Cross-weave between diagonal sectors -->
+    <path d="M 80 0 Q 56 56 0 80" opacity="0.24"/>
+    <path d="M 160 0 Q 113 113 0 160" opacity="0.2"/>
+    <path d="M 240 0 Q 170 170 0 240" opacity="0.18"/>
+    <path d="M 320 12 Q 228 228 12 320" opacity="0.14"/>
+  </g>
+
+  <!-- Anchor glue / hub -->
+  <circle cx="0" cy="0" r="3.2" fill="url(#cornerHub)"/>
+  <circle cx="0" cy="0" r="1.1" fill="#555555" fill-opacity="0.55"/>
+  <circle cx="320" cy="0" r="1.4" fill="#666666" opacity="0.4"/>
+  <circle cx="0" cy="320" r="1.4" fill="#666666" opacity="0.4"/>
+  <circle cx="226" cy="226" r="1" fill="#777777" opacity="0.28"/>
+</svg>

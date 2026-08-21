@@ -17,6 +17,29 @@
                     <!-- Bats will be dynamically created by JavaScript -->
                 </div>
             </div>
+        @elseif($seasonalEffect === 'halloween_spidey')
+            <!-- Halloween Spidey Effects -->
+            <div id="halloween-spidey-effects">
+                @for ($i = 0; $i < 6; $i++)
+                    <div class="spidey-spider-unit spidey-spider-unit_{{ $i }}">
+                        <div class="spidey-spider">
+                            <div class="eye left"></div>
+                            <div class="eye right"></div>
+                            @for ($j = 0; $j < 4; $j++)
+                                <span class="leg left"></span>
+                            @endfor
+                            @for ($j = 0; $j < 4; $j++)
+                                <span class="leg right"></span>
+                            @endfor
+                        </div>
+                    </div>
+                @endfor
+                <img src="{{ asset('images/seasonal/spiderweb-corner.svg') }}" alt="" class="spidey-web spidey-web-right" aria-hidden="true">
+                <img src="{{ asset('images/seasonal/spiderweb-corner.svg') }}" alt="" class="spidey-web spidey-web-left" aria-hidden="true">
+                <img src="{{ asset('images/seasonal/spiderweb-corner.svg') }}" alt="" class="spidey-web spidey-web-bottom-right" aria-hidden="true">
+                <img src="{{ asset('images/seasonal/spiderweb-corner.svg') }}" alt="" class="spidey-web spidey-web-bottom-left" aria-hidden="true">
+                <img src="{{ asset('images/seasonal/spiderweb-footer.svg') }}" alt="" class="spidey-web spidey-web-footer" aria-hidden="true">
+            </div>
         @elseif($seasonalEffect === 'christmas')
             <!-- Christmas Effects -->
             <div id="christmas-effects" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; overflow: visible; pointer-events: none;">
@@ -85,6 +108,474 @@
         /* Christmas Effects - Canvas based */
         #snow-canvas {
             z-index: 1000;
+        }
+
+        /* Halloween Spidey — hanging spiders & corner webs (no page background) */
+        #halloween-spidey-effects {
+            position: fixed;
+            inset: 0;
+            overflow: visible;
+            pointer-events: none;
+        }
+
+        #halloween-spidey-effects .spidey-spider-unit {
+            position: absolute;
+            width: 50px;
+            z-index: 1001;
+        }
+
+        #halloween-spidey-effects .spidey-spider {
+            position: relative;
+            height: 40px;
+            width: 50px;
+            border-radius: 50%;
+            margin: 40px 0 0 0;
+            background: #110D04;
+        }
+
+        #halloween-spidey-effects .spidey-spider *,
+        #halloween-spidey-effects .spidey-spider::before,
+        #halloween-spidey-effects .spidey-spider::after,
+        #halloween-spidey-effects .spidey-spider :after,
+        #halloween-spidey-effects .spidey-spider :before {
+            position: absolute;
+            content: "";
+        }
+
+        #halloween-spidey-effects .spidey-spider::before {
+            width: 1px;
+            background: linear-gradient(to bottom, rgba(120, 120, 120, 0.75) 0%, rgba(140, 140, 140, 0.4) 50%, rgba(160, 160, 160, 0.12) 100%);
+            left: 50%;
+            transform: translateX(-50%);
+            top: -320px;
+            height: 320px;
+            box-shadow: 0 0 1px rgba(0, 0, 0, 0.12);
+            z-index: -2;
+        }
+
+        #halloween-spidey-effects .spidey-spider::after {
+            top: -338px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 54px;
+            height: 54px;
+            background: url("{{ asset('images/seasonal/spiderweb-hub.svg') }}") center / contain no-repeat;
+            opacity: 0.72;
+            z-index: -1;
+        }
+
+        #halloween-spidey-effects .spidey-spider .eye {
+            top: 16px;
+            height: 14px;
+            width: 12px;
+            background: #FFFFFF;
+            border-radius: 50%;
+        }
+
+        #halloween-spidey-effects .spidey-spider .eye::after {
+            top: 6px;
+            height: 5px;
+            width: 5px;
+            border-radius: 50%;
+            background: black;
+        }
+
+        #halloween-spidey-effects .spidey-spider .eye.left {
+            left: 14px;
+        }
+
+        #halloween-spidey-effects .spidey-spider .eye.left::after {
+            right: 3px;
+        }
+
+        #halloween-spidey-effects .spidey-spider .eye.right {
+            right: 14px;
+        }
+
+        #halloween-spidey-effects .spidey-spider .eye.right::after {
+            left: 3px;
+        }
+
+        #halloween-spidey-effects .spidey-spider .leg {
+            top: 6px;
+            height: 12px;
+            width: 14px;
+            border-top: 2px solid #110D04;
+            border-left: 1px solid transparent;
+            border-right: 1px solid transparent;
+            border-bottom: 1px solid transparent;
+            z-index: -1;
+        }
+
+        #halloween-spidey-effects .spidey-spider .leg.left {
+            left: -8px;
+            transform-origin: top right;
+            transform: rotate(36deg) skewX(-20deg);
+            border-left: 2px solid #110D04;
+            border-radius: 60% 0 0 0;
+            animation: spidey-legs-wriggle-left 1s 0s infinite;
+        }
+
+        #halloween-spidey-effects .spidey-spider .leg.right {
+            right: -8px;
+            transform-origin: top left;
+            transform: rotate(-36deg) skewX(20deg);
+            border-right: 2px solid #110D04;
+            border-radius: 0 60% 0 0;
+            animation: spidey-legs-wriggle-right 1s 0.2s infinite;
+        }
+
+        #halloween-spidey-effects .spidey-spider .leg.left:nth-of-type(2) {
+            top: 14px;
+            left: -11px;
+            animation: spidey-legs-wriggle-left 1s 0.8s infinite;
+        }
+
+        #halloween-spidey-effects .spidey-spider .leg.left:nth-of-type(3) {
+            top: 22px;
+            left: -12px;
+            animation: spidey-legs-wriggle-left 1s 0.2s infinite;
+        }
+
+        #halloween-spidey-effects .spidey-spider .leg.left:nth-of-type(4) {
+            top: 31px;
+            left: -10px;
+            animation: spidey-legs-wriggle-left 1s 0.4s infinite;
+        }
+
+        #halloween-spidey-effects .spidey-spider .leg.right:nth-of-type(6) {
+            top: 14px;
+            right: -11px;
+            animation: spidey-legs-wriggle-right 1s 0.4s infinite;
+        }
+
+        #halloween-spidey-effects .spidey-spider .leg.right:nth-of-type(7) {
+            top: 22px;
+            right: -12px;
+            animation: spidey-legs-wriggle-right 1s 0.7s infinite;
+        }
+
+        #halloween-spidey-effects .spidey-spider .leg.right:nth-of-type(8) {
+            top: 31px;
+            right: -10px;
+            animation: spidey-legs-wriggle-right 1s 0.3s infinite;
+        }
+
+        #halloween-spidey-effects .spidey-spider-unit_0 {
+            left: 5%;
+            animation: spidey-spider-move-0 5s infinite;
+        }
+
+        #halloween-spidey-effects .spidey-spider-unit_1 {
+            left: 20%;
+            animation: spidey-spider-move-1 5s infinite;
+        }
+
+        #halloween-spidey-effects .spidey-spider-unit_2 {
+            left: 35%;
+            animation: spidey-spider-move-2 5s infinite;
+        }
+
+        #halloween-spidey-effects .spidey-spider-unit_3 {
+            right: 35%;
+            margin-top: 160px;
+            animation: spidey-spider-move-3 5s infinite;
+        }
+
+        #halloween-spidey-effects .spidey-spider-unit_4 {
+            right: 20%;
+            margin-top: 50px;
+            animation: spidey-spider-move-4 5s infinite;
+        }
+
+        #halloween-spidey-effects .spidey-spider-unit_5 {
+            right: 5%;
+            margin-top: 210px;
+            animation: spidey-spider-move-5 5s infinite;
+        }
+
+        #halloween-spidey-effects .spidey-web {
+            filter: drop-shadow(0 0 0.6px rgba(255, 255, 255, 0.35)) drop-shadow(0 1px 3px rgba(0, 0, 0, 0.12));
+            image-rendering: auto;
+        }
+
+        #halloween-spidey-effects .spidey-web-right {
+            position: absolute;
+            height: 260px;
+            width: auto;
+            right: -12px;
+            top: -12px;
+            z-index: 999;
+            opacity: 0.78;
+        }
+
+        #halloween-spidey-effects .spidey-web-left {
+            position: absolute;
+            left: -12px;
+            top: -12px;
+            transform: rotate(-90deg);
+            transform-origin: top left;
+            z-index: 999;
+            opacity: 0.78;
+            height: 260px;
+            width: auto;
+        }
+
+        #halloween-spidey-effects .spidey-web-bottom-right {
+            position: absolute;
+            right: -12px;
+            bottom: -12px;
+            height: 260px;
+            width: auto;
+            transform: rotate(180deg) scaleX(-1);
+            transform-origin: right bottom;
+            z-index: 999;
+            opacity: 0.78;
+        }
+
+        #halloween-spidey-effects .spidey-web-bottom-left {
+            position: absolute;
+            left: -12px;
+            bottom: -12px;
+            height: 260px;
+            width: auto;
+            transform: rotate(180deg);
+            transform-origin: left bottom;
+            z-index: 999;
+            opacity: 0.78;
+        }
+
+        #halloween-spidey-effects .spidey-web-footer {
+            position: fixed;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            width: 100%;
+            height: clamp(90px, 16vh, 175px);
+            object-fit: contain;
+            object-position: bottom center;
+            z-index: 9999;
+            opacity: 0.62;
+            pointer-events: none;
+            filter: drop-shadow(0 0 0.5px rgba(255, 255, 255, 0.25));
+        }
+
+        @keyframes spidey-legs-wriggle-left {
+            0%, 100% { transform: rotate(36deg) skewX(-20deg); }
+            25%, 75% { transform: rotate(15deg) skewX(-20deg); }
+            50% { transform: rotate(45deg) skewX(-20deg); }
+        }
+
+        @keyframes spidey-legs-wriggle-right {
+            0%, 100% { transform: rotate(-36deg) skewX(20deg); }
+            25%, 75% { transform: rotate(-15deg) skewX(20deg); }
+            50% { transform: rotate(-45deg) skewX(20deg); }
+        }
+
+        @keyframes spidey-spider-move-0 {
+            0%, 100% { margin-top: 95px; }
+            42% { margin-top: calc(95px + 72px); }
+        }
+
+        @keyframes spidey-spider-move-1 {
+            0%, 100% { margin-top: 180px; }
+            58% { margin-top: calc(180px + 55px); }
+        }
+
+        @keyframes spidey-spider-move-2 {
+            0%, 100% { margin-top: 130px; }
+            35% { margin-top: calc(130px + 90px); }
+        }
+
+        @keyframes spidey-spider-move-3 {
+            0%, 100% { margin-top: 160px; }
+            48% { margin-top: calc(160px + 65px); }
+        }
+
+        @keyframes spidey-spider-move-4 {
+            0%, 100% { margin-top: 50px; }
+            62% { margin-top: calc(50px + 110px); }
+        }
+
+        @keyframes spidey-spider-move-5 {
+            0%, 100% { margin-top: 210px; }
+            40% { margin-top: calc(210px + 45px); }
+        }
+
+        @media (max-width: 768px) {
+            /* Fewer spiders on narrow screens to avoid overlap */
+            #halloween-spidey-effects .spidey-spider-unit_1,
+            #halloween-spidey-effects .spidey-spider-unit_4 {
+                display: none;
+            }
+
+            #halloween-spidey-effects .spidey-spider {
+                height: 32px;
+                width: 42px;
+                margin-top: 28px;
+            }
+
+            #halloween-spidey-effects .spidey-spider::before {
+                top: calc(-1 * clamp(90px, 20vh, 150px));
+                height: clamp(90px, 20vh, 150px);
+            }
+
+            #halloween-spidey-effects .spidey-spider::after {
+                top: calc(-1 * clamp(90px, 20vh, 150px) - 16px);
+                width: 42px;
+                height: 42px;
+                opacity: 0.65;
+            }
+
+            #halloween-spidey-effects .spidey-spider .eye {
+                top: 11px;
+                height: 10px;
+                width: 9px;
+            }
+
+            #halloween-spidey-effects .spidey-spider .eye::after {
+                top: 4px;
+                height: 4px;
+                width: 4px;
+            }
+
+            #halloween-spidey-effects .spidey-spider .eye.left {
+                left: 10px;
+            }
+
+            #halloween-spidey-effects .spidey-spider .eye.left::after {
+                right: 2px;
+            }
+
+            #halloween-spidey-effects .spidey-spider .eye.right {
+                right: 10px;
+            }
+
+            #halloween-spidey-effects .spidey-spider .eye.right::after {
+                left: 2px;
+            }
+
+            #halloween-spidey-effects .spidey-spider .leg {
+                top: 4px;
+                height: 9px;
+                width: 11px;
+                border-top-width: 1.5px;
+            }
+
+            #halloween-spidey-effects .spidey-spider .leg.left {
+                left: -6px;
+                border-left-width: 1.5px;
+            }
+
+            #halloween-spidey-effects .spidey-spider .leg.right {
+                right: -6px;
+                border-right-width: 1.5px;
+            }
+
+            #halloween-spidey-effects .spidey-spider .leg.left:nth-of-type(2) {
+                top: 10px;
+                left: -8px;
+            }
+
+            #halloween-spidey-effects .spidey-spider .leg.left:nth-of-type(3) {
+                top: 16px;
+                left: -9px;
+            }
+
+            #halloween-spidey-effects .spidey-spider .leg.left:nth-of-type(4) {
+                top: 22px;
+                left: -7px;
+            }
+
+            #halloween-spidey-effects .spidey-spider .leg.right:nth-of-type(6) {
+                top: 10px;
+                right: -8px;
+            }
+
+            #halloween-spidey-effects .spidey-spider .leg.right:nth-of-type(7) {
+                top: 16px;
+                right: -9px;
+            }
+
+            #halloween-spidey-effects .spidey-spider .leg.right:nth-of-type(8) {
+                top: 22px;
+                right: -7px;
+            }
+
+            #halloween-spidey-effects .spidey-spider-unit_0 {
+                left: 4%;
+                right: auto;
+                animation: spidey-spider-move-mobile-0 5s infinite;
+            }
+
+            #halloween-spidey-effects .spidey-spider-unit_2 {
+                left: 36%;
+                right: auto;
+                animation: spidey-spider-move-mobile-2 5s infinite;
+            }
+
+            #halloween-spidey-effects .spidey-spider-unit_3 {
+                left: auto;
+                right: 36%;
+                animation: spidey-spider-move-mobile-3 5s infinite;
+            }
+
+            #halloween-spidey-effects .spidey-spider-unit_5 {
+                left: auto;
+                right: 4%;
+                animation: spidey-spider-move-mobile-5 5s infinite;
+            }
+
+            #halloween-spidey-effects .spidey-web-right,
+            #halloween-spidey-effects .spidey-web-left,
+            #halloween-spidey-effects .spidey-web-bottom-right,
+            #halloween-spidey-effects .spidey-web-bottom-left {
+                height: 180px;
+                opacity: 0.8;
+            }
+
+            #halloween-spidey-effects .spidey-web-footer {
+                height: clamp(72px, 14vh, 140px);
+                opacity: 0.58;
+            }
+        }
+
+        @media (max-width: 480px) {
+            #halloween-spidey-effects .spidey-spider-unit_2 {
+                display: none;
+            }
+
+            #halloween-spidey-effects .spidey-spider-unit_0 {
+                left: 8%;
+            }
+
+            #halloween-spidey-effects .spidey-spider-unit_3 {
+                right: 38%;
+            }
+
+            #halloween-spidey-effects .spidey-spider-unit_5 {
+                right: 8%;
+            }
+        }
+
+        @keyframes spidey-spider-move-mobile-0 {
+            0%, 100% { margin-top: 36px; }
+            42% { margin-top: calc(36px + 28px); }
+        }
+
+        @keyframes spidey-spider-move-mobile-2 {
+            0%, 100% { margin-top: 72px; }
+            35% { margin-top: calc(72px + 32px); }
+        }
+
+        @keyframes spidey-spider-move-mobile-3 {
+            0%, 100% { margin-top: 52px; }
+            48% { margin-top: calc(52px + 24px); }
+        }
+
+        @keyframes spidey-spider-move-mobile-5 {
+            0%, 100% { margin-top: 88px; }
+            40% { margin-top: calc(88px + 20px); }
         }
 
         /* Animations */

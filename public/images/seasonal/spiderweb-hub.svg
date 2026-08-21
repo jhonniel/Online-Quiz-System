@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none" aria-hidden="true">
+  <defs>
+    <linearGradient id="hubStrand" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#4a4a4a" stop-opacity="0.65"/>
+      <stop offset="100%" stop-color="#7a7a7a" stop-opacity="0.2"/>
+    </linearGradient>
+    <linearGradient id="hubCapture" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#555555" stop-opacity="0.45"/>
+      <stop offset="100%" stop-color="#888888" stop-opacity="0.12"/>
+    </linearGradient>
+  </defs>
+  <g stroke="url(#hubStrand)" stroke-linecap="round" fill="none">
+    <line x1="32" y1="32" x2="32" y2="0" stroke-width="0.6"/>
+    <line x1="32" y1="32" x2="64" y2="32" stroke-width="0.55"/>
+    <line x1="32" y1="32" x2="0" y2="32" stroke-width="0.55"/>
+    <line x1="32" y1="32" x2="54" y2="10" stroke-width="0.45"/>
+    <line x1="32" y1="32" x2="10" y2="10" stroke-width="0.45"/>
+    <line x1="32" y1="32" x2="54" y2="54" stroke-width="0.4"/>
+    <line x1="32" y1="32" x2="10" y2="54" stroke-width="0.4"/>
+  </g>
+  <g stroke="url(#hubCapture)" stroke-linecap="round" fill="none" stroke-width="0.35">
+    <path d="M 32 32 Q 32 22 32 12"/>
+    <path d="M 32 32 Q 42 32 52 32"/>
+    <path d="M 32 32 Q 22 32 12 32"/>
+    <path d="M 32 32 Q 40 24 48 16"/>
+    <path d="M 32 32 Q 24 24 16 16"/>
+    <path d="M 32 32 Q 40 40 48 48"/>
+    <path d="M 32 32 Q 24 40 16 48"/>
+    <circle cx="32" cy="32" r="2" fill="#666666" fill-opacity="0.45" stroke="none"/>
+  </g>
+</svg>

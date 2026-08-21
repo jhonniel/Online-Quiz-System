@@ -1,0 +1,90 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 190" fill="none" aria-hidden="true" preserveAspectRatio="xMidYMax meet">
+  <defs>
+    <linearGradient id="silk" x1="0" y1="190" x2="0" y2="0" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#ececec" stop-opacity="0.75"/>
+      <stop offset="100%" stop-color="#d4d4d4" stop-opacity="0.12"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Messy bridge threads along the bottom (not one straight line) -->
+  <g stroke="url(#silk)" stroke-linecap="round" fill="none">
+    <path d="M -4 187 Q 95 191 210 186 T 430 188 T 655 185 T 880 189 T 1105 186 T 1204 188" stroke-width="0.55" opacity="0.62"/>
+    <path d="M 20 190 Q 260 183 520 189 Q 780 184 980 190 Q 1120 187 1185 191" stroke-width="0.35" opacity="0.38"/>
+    <path d="M 0 184 Q 140 178 290 182 Q 460 176 620 181 Q 790 175 960 180 Q 1100 177 1200 183" stroke-width="0.28" opacity="0.28"/>
+
+    <!-- Left corner orb-web fragment (irregular, not a perfect fan) -->
+    <path d="M 0 188 L 0 42" stroke-width="0.45" opacity="0.5"/>
+    <path d="M 0 188 L 118 188" stroke-width="0.42" opacity="0.48"/>
+    <path d="M 0 188 L 94 62" stroke-width="0.38" opacity="0.42"/>
+    <path d="M 0 188 L 62 28" stroke-width="0.32" opacity="0.34"/>
+    <path d="M 0 188 L 34 112" stroke-width="0.3" opacity="0.3"/>
+    <path d="M 0 188 Q 28 158 52 188" stroke-width="0.32" opacity="0.36"/>
+    <path d="M 0 188 Q 22 132 48 188" stroke-width="0.3" opacity="0.32"/>
+    <path d="M 0 188 Q 18 98 44 188" stroke-width="0.28" opacity="0.28"/>
+    <path d="M 0 188 Q 38 148 72 188" stroke-width="0.28" opacity="0.26"/>
+    <path d="M 0 188 Q 55 108 88 188" stroke-width="0.26" opacity="0.24"/>
+    <path d="M 52 188 Q 41 156 28 188" stroke-width="0.24" opacity="0.22"/>
+    <path d="M 94 62 Q 68 88 44 188" stroke-width="0.22" opacity="0.2"/>
+
+    <!-- Right corner orb-web fragment -->
+    <path d="M 1200 188 L 1200 38" stroke-width="0.45" opacity="0.5"/>
+    <path d="M 1200 188 L 1082 188" stroke-width="0.42" opacity="0.48"/>
+    <path d="M 1200 188 L 1106 58" stroke-width="0.38" opacity="0.42"/>
+    <path d="M 1200 188 L 1138 24" stroke-width="0.32" opacity="0.34"/>
+    <path d="M 1200 188 Q 1172 152 1148 188" stroke-width="0.32" opacity="0.36"/>
+    <path d="M 1200 188 Q 1178 118 1152 188" stroke-width="0.3" opacity="0.32"/>
+    <path d="M 1200 188 Q 1162 138 1128 188" stroke-width="0.28" opacity="0.26"/>
+    <path d="M 1106 58 Q 1132 84 1156 188" stroke-width="0.22" opacity="0.2"/>
+
+    <!-- Tangled cross-threads across the footer (sagging hammock strands) -->
+    <path d="M 130 188 C 148 162, 172 154, 198 188" stroke-width="0.34" opacity="0.4"/>
+    <path d="M 198 188 C 215 148, 248 138, 278 188" stroke-width="0.32" opacity="0.36"/>
+    <path d="M 278 188 C 302 128, 348 118, 392 188" stroke-width="0.3" opacity="0.34"/>
+    <path d="M 392 188 C 418 152, 452 146, 488 188" stroke-width="0.32" opacity="0.35"/>
+    <path d="M 488 188 C 512 118, 558 108, 604 188" stroke-width="0.3" opacity="0.33"/>
+    <path d="M 604 188 C 628 145, 668 136, 708 188" stroke-width="0.32" opacity="0.35"/>
+    <path d="M 708 188 C 738 122, 782 112, 828 188" stroke-width="0.3" opacity="0.33"/>
+    <path d="M 828 188 C 854 158, 888 148, 922 188" stroke-width="0.32" opacity="0.36"/>
+    <path d="M 922 188 C 948 132, 992 124, 1036 188" stroke-width="0.3" opacity="0.34"/>
+
+    <!-- Second layer — offset capture, uneven spacing -->
+    <path d="M 160 188 C 178 172, 205 168, 232 188" stroke-width="0.26" opacity="0.28"/>
+    <path d="M 340 188 C 362 158, 398 152, 434 188" stroke-width="0.26" opacity="0.27"/>
+    <path d="M 540 188 C 568 168, 602 162, 638 188" stroke-width="0.26" opacity="0.27"/>
+    <path d="M 760 188 C 788 155, 826 148, 864 188" stroke-width="0.26" opacity="0.28"/>
+    <path d="M 980 188 C 1008 170, 1044 164, 1080 188" stroke-width="0.26" opacity="0.27"/>
+
+    <!-- Loose dangling threads & drift silk -->
+    <path d="M 445 188 Q 438 132 452 78 Q 461 52 448 28" stroke-width="0.24" opacity="0.3"/>
+    <path d="M 448 28 Q 472 18 491 34" stroke-width="0.18" opacity="0.18"/>
+    <path d="M 668 188 Q 675 148 662 102 Q 654 74 671 48" stroke-width="0.22" opacity="0.26"/>
+    <path d="M 252 188 Q 246 156 258 118" stroke-width="0.2" opacity="0.22"/>
+    <path d="M 258 118 Q 278 108 292 124" stroke-width="0.16" opacity="0.15"/>
+    <path d="M 890 188 Q 882 142 898 96" stroke-width="0.2" opacity="0.22"/>
+    <path d="M 1050 188 Q 1044 158 1058 128 Q 1068 108 1054 88" stroke-width="0.18" opacity="0.18"/>
+
+    <!-- Broken / trailing wisps -->
+    <path d="M 520 188 Q 532 176 528 168" stroke-width="0.16" opacity="0.16"/>
+    <path d="M 720 188 Q 712 178 718 170" stroke-width="0.14" opacity="0.14"/>
+    <path d="M 118 188 Q 126 182 122 174" stroke-width="0.14" opacity="0.14"/>
+    <path d="M 380 188 L 386 176" stroke-width="0.12" opacity="0.12"/>
+    <path d="M 812 188 Q 806 180 814 172" stroke-width="0.14" opacity="0.13"/>
+
+    <!-- Diagonal tangles tying sections together -->
+    <path d="M 118 188 Q 210 142 278 188" stroke-width="0.22" opacity="0.22"/>
+    <path d="M 392 188 Q 488 128 604 188" stroke-width="0.2" opacity="0.2"/>
+    <path d="M 708 188 Q 812 138 922 188" stroke-width="0.2" opacity="0.2"/>
+    <path d="M 232 188 Q 360 108 488 188" stroke-width="0.18" opacity="0.16"/>
+    <path d="M 638 188 Q 760 98 922 188" stroke-width="0.17" opacity="0.15"/>
+  </g>
+
+  <!-- Dew / silk glue spots -->
+  <g fill="#efefef">
+    <circle cx="0" cy="188" r="1.6" fill-opacity="0.55"/>
+    <circle cx="1200" cy="188" r="1.6" fill-opacity="0.55"/>
+    <circle cx="445" cy="188" r="1" fill-opacity="0.35"/>
+    <circle cx="668" cy="188" r="1" fill-opacity="0.32"/>
+    <circle cx="448" cy="28" r="0.8" fill-opacity="0.25"/>
+    <circle cx="292" cy="124" r="0.7" fill-opacity="0.2"/>
+  </g>
+</svg>
