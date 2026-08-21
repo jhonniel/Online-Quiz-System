@@ -39,6 +39,7 @@
                 <img src="{{ asset('images/seasonal/spiderweb-corner.svg') }}" alt="" class="spidey-web spidey-web-bottom-right" aria-hidden="true">
                 <img src="{{ asset('images/seasonal/spiderweb-corner.svg') }}" alt="" class="spidey-web spidey-web-bottom-left" aria-hidden="true">
                 <img src="{{ asset('images/seasonal/spiderweb-footer.svg') }}" alt="" class="spidey-web spidey-web-footer" aria-hidden="true">
+                <div id="spidey-crawler-container" aria-hidden="true"></div>
             </div>
         @elseif($seasonalEffect === 'christmas')
             <!-- Christmas Effects -->
@@ -294,6 +295,25 @@
             animation: spidey-spider-move-5 5s infinite;
         }
 
+        #halloween-spidey-effects .spidey-crawler {
+            position: fixed;
+            width: 50px;
+            height: 40px;
+            z-index: 10002;
+            pointer-events: none;
+            will-change: left, top, transform;
+        }
+
+        #halloween-spidey-effects .spidey-crawler .spidey-spider {
+            margin-top: 0;
+        }
+
+        #halloween-spidey-effects .spidey-crawler .spidey-spider::before,
+        #halloween-spidey-effects .spidey-crawler .spidey-spider::after {
+            display: none;
+            content: none;
+        }
+
         #halloween-spidey-effects .spidey-web {
             filter: drop-shadow(0 0 0.6px rgba(255, 255, 255, 0.35)) drop-shadow(0 1px 3px rgba(0, 0, 0, 0.12));
             image-rendering: auto;
@@ -538,6 +558,16 @@
                 height: clamp(72px, 14vh, 140px);
                 opacity: 0.58;
             }
+
+            #halloween-spidey-effects .spidey-crawler {
+                width: 38px;
+                height: 32px;
+            }
+
+            #halloween-spidey-effects .spidey-crawler .spidey-spider {
+                height: 32px;
+                width: 42px;
+            }
         }
 
         @media (max-width: 480px) {
@@ -639,6 +669,8 @@
             if (seasonalEffect === 'halloween') {
                 console.log('Initializing Halloween effects...');
                 initHalloweenEffects();
+            } else if (seasonalEffect === 'halloween_spidey') {
+                initSpideyCrawler();
             } else if (seasonalEffect === 'christmas') {
                 console.log('Initializing Christmas effects...');
                 initChristmasEffects();
@@ -707,6 +739,73 @@
                     bat.parentNode.removeChild(bat);
                 }
             }, 20000);
+        }
+
+        function initSpideyCrawler() {
+            const container = document.getElementById('spidey-crawler-container');
+            if (!container) {
+                return;
+            }
+
+            const crawler = document.createElement('div');
+            crawler.className = 'spidey-crawler';
+            crawler.innerHTML = `
+                <div class="spidey-spider">
+                    <div class="eye left"></div>
+                    <div class="eye right"></div>
+                    <span class="leg left"></span>
+                    <span class="leg left"></span>
+                    <span class="leg left"></span>
+                    <span class="leg left"></span>
+                    <span class="leg right"></span>
+                    <span class="leg right"></span>
+                    <span class="leg right"></span>
+                    <span class="leg right"></span>
+                </div>
+            `;
+            container.appendChild(crawler);
+
+            const spiderSize = () => (window.innerWidth <= 768 ? 42 : 50);
+            let x = Math.random() * Math.max(window.innerWidth - spiderSize(), 40);
+            let y = Math.random() * Math.max(window.innerHeight - spiderSize(), 40);
+
+            const placeCrawler = () => {
+                crawler.style.left = x + 'px';
+                crawler.style.top = y + 'px';
+            };
+
+            const crawlToRandom = () => {
+                const size = spiderSize();
+                const maxX = Math.max(window.innerWidth - size, 40);
+                const maxY = Math.max(window.innerHeight - size, 40);
+                const targetX = Math.random() * maxX;
+                const targetY = Math.random() * maxY;
+                const dx = targetX - x;
+                const dy = targetY - y;
+                const distance = Math.hypot(dx, dy);
+                const duration = Math.max(2500, Math.min(12000, distance * 18));
+                const angle = Math.atan2(dy, dx) * (180 / Math.PI) + 90;
+
+                crawler.style.transition = `left ${duration}ms linear, top ${duration}ms linear`;
+                crawler.style.transform = `rotate(${angle}deg)`;
+                crawler.style.left = targetX + 'px';
+                crawler.style.top = targetY + 'px';
+
+                x = targetX;
+                y = targetY;
+
+                window.setTimeout(crawlToRandom, duration + 400 + Math.random() * 1800);
+            };
+
+            placeCrawler();
+            crawlToRandom();
+
+            window.addEventListener('resize', () => {
+                const size = spiderSize();
+                x = Math.min(x, Math.max(window.innerWidth - size, 0));
+                y = Math.min(y, Math.max(window.innerHeight - size, 0));
+                placeCrawler();
+            });
         }
 
         function initChristmasEffects() {
