@@ -252,7 +252,7 @@
                                 </button>
                             </form>
                         @endif
-                    @elseif($application->status == 'done_interview' && $application->user_id && auth()->user()->isSuperAdmin())
+                    @elseif($application->status == 'done_interview' && $application->user_id)
                         @php
                             $isInternship = $application->hiringPosition && strcasecmp($application->hiringPosition->employment_type ?? '', 'Internship') === 0;
                         @endphp
@@ -310,9 +310,34 @@
                                 </p>
                             </form>
                         @endif
+                        <form action="{{ url('/admin/hiring-applications/' . $application->id . '/reject') }}" method="POST" onsubmit="return confirm('Are you sure you want to decline this application? The applicant account will be deactivated.');">
+                            @csrf
+                            <div class="mb-3">
+                                <label for="admin_notes_decline_done" class="block text-sm font-medium text-gray-700 mb-1">
+                                    Decline Notes (Optional)
+                                </label>
+                                <textarea name="admin_notes"
+                                          id="admin_notes_decline_done"
+                                          rows="3"
+                                          placeholder="Add notes about declining this application (optional)"
+                                          class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm">{{ old('admin_notes', $application->admin_notes) }}</textarea>
+                            </div>
+                            <button type="submit" class="action-button w-full inline-flex justify-center items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-red-600 hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed" data-loading-text="Processing...">
+                                <span class="button-text">Decline Application</span>
+                                <span class="button-spinner hidden ml-2">
+                                    <svg class="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                    </svg>
+                                </span>
+                            </button>
+                            <p class="mt-2 text-xs text-gray-500">
+                                This will mark the application as rejected and deactivate the applicant account.
+                            </p>
+                        </form>
                     @endif
 
-                    @if(($application->status == 'interview_scheduled' || $application->status == 'accepted') && $application->user_id && auth()->user()->isSuperAdmin())
+                    @if(($application->status == 'interview_scheduled' || $application->status == 'accepted') && $application->user_id)
                         @php
                             $isInternship = $application->hiringPosition && strcasecmp($application->hiringPosition->employment_type ?? '', 'Internship') === 0;
                         @endphp

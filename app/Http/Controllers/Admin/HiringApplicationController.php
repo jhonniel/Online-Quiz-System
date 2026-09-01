@@ -1063,9 +1063,18 @@ class HiringApplicationController extends Controller
             abort(403, 'Access denied. You do not have permission to reject applications for this position.');
         }
 
+        $rejectableStatuses = ['pending', 'accepted', 'interview_scheduled', 'done_interview'];
+        if (! in_array($application->status, $rejectableStatuses, true)) {
+            return redirect('/admin/hiring-applications/'.$application->id)
+                ->withErrors(['error' => 'This application cannot be declined in its current status.']);
+        }
+
         $request->validate([
             'admin_notes' => 'nullable|string|max:1000',
         ]);
+
+        $shouldDeactivateUser = in_array($application->status, ['accepted', 'interview_scheduled', 'done_interview'], true)
+            && $application->user_id;
 
         HiringApplication::withoutEvents(function () use ($application, $request) {
             $application->update([
@@ -1090,6 +1099,16 @@ class HiringApplicationController extends Controller
             ]
         );
 
+        if ($shouldDeactivateUser) {
+            $user = $application->user;
+            if ($user) {
+                $user->update([
+                    'is_approved' => false,
+                    'is_active' => false,
+                ]);
+            }
+        }
+
         // Send email notification to applicant if enabled
         $emailNotificationsEnabled = \App\Models\Setting::get('hiring_email_notifications', 'enabled');
         if ($emailNotificationsEnabled === 'enabled') {
@@ -1112,8 +1131,12 @@ class HiringApplicationController extends Controller
             }
         }
 
+        $successMessage = $shouldDeactivateUser
+            ? 'Application declined. The applicant account has been deactivated.'
+            : 'Application rejected.';
+
         return redirect('/admin/hiring-applications/'.$application->id)
-            ->with('success', 'Application rejected.');
+            ->with('success', $successMessage);
     }
 
     public function reconsider(Request $request, HiringApplication $application)
@@ -1520,11 +1543,6 @@ class HiringApplicationController extends Controller
             abort(403, 'Access denied. You do not have permission to mark applicants as hired for this position.');
         }
 
-        // Only super admins can mark applicants as hired
-        if (! Auth::user()->isSuperAdmin()) {
-            abort(403, 'Access denied. Only super administrators can mark applicants as hired.');
-        }
-
         // Check if this is an internship position - if so, redirect to accept intern
         $isInternship = $application->hiringPosition &&
                         strcasecmp($application->hiringPosition->employment_type ?? '', 'Internship') === 0;
@@ -1633,11 +1651,6 @@ class HiringApplicationController extends Controller
         // Check if user can access this application's position
         if (! $this->canAccessPosition($application->hiring_position_id)) {
             abort(403, 'Access denied. You do not have permission to accept interns for this position.');
-        }
-
-        // Only super admins can accept interns
-        if (! Auth::user()->isSuperAdmin()) {
-            abort(403, 'Access denied. Only super administrators can accept interns.');
         }
 
         $validated = $request->validate([
