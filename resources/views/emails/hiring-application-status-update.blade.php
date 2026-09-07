@@ -19,7 +19,7 @@
         <tr>
             <td style="padding: 20px 24px; font-size: 14px; color: #374151; line-height: 1.6;">
                 @php
-                    $positionTitle = $position->title ?? ($application->position_applied ?? 'Position');
+                    $positionTitle = $position?->title ?? ($application->position_applied ?? 'Position');
                 @endphp
 
                 @if($status === 'accepted')
@@ -60,10 +60,10 @@
                     </p>
                 @endif
 
-                @if($message)
+                @if($statusMessage)
                     <h3 style="margin: 16px 0 8px 0; font-size: 16px; color: #111827;">Additional Information</h3>
                     <p style="margin: 0 0 12px 0; white-space: pre-line;">
-                        {{ $message }}
+                        {{ $statusMessage }}
                     </p>
                 @endif
 

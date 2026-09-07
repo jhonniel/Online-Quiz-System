@@ -3,7 +3,6 @@
 namespace App\Mail;
 
 use Illuminate\Bus\Queueable;
-use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Mail\Mailable;
 use Illuminate\Mail\Mailables\Content;
 use Illuminate\Mail\Mailables\Envelope;
@@ -16,17 +15,17 @@ class HiringApplicationStatusUpdate extends Mailable
     public $application;
     public $position;
     public $status;
-    public $message;
+    public $statusMessage;
 
     /**
      * Create a new message instance.
      */
-    public function __construct($application, $status, $message = null, $position = null)
+    public function __construct($application, $status, $statusMessage = null, $position = null)
     {
         $this->application = $application;
         $this->position = $position;
         $this->status = $status;
-        $this->message = $message;
+        $this->statusMessage = $statusMessage;
     }
 
     /**
@@ -52,7 +51,7 @@ class HiringApplicationStatusUpdate extends Mailable
                 'application' => $this->application,
                 'position' => $this->position,
                 'status' => $this->status,
-                'message' => $this->message,
+                'statusMessage' => $this->statusMessage,
             ],
         );
     }

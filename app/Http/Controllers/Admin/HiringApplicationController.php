@@ -1110,30 +1110,21 @@ class HiringApplicationController extends Controller
         }
 
         // Send email notification to applicant if enabled
-        $emailNotificationsEnabled = \App\Models\Setting::get('hiring_email_notifications', 'enabled');
-        if ($emailNotificationsEnabled === 'enabled') {
-            try {
-                // Ensure mail configuration is up to date from settings
-                MailConfigService::configure();
-
-                Mail::to($application->email)
-                    ->send(new \App\Mail\HiringApplicationStatusUpdate(
-                        $application,
-                        'rejected',
-                        $request->admin_notes,
-                        $application->hiringPosition
-                    ));
-            } catch (\Exception $e) {
-                Log::error('Failed to send rejection email', [
-                    'error' => $e->getMessage(),
-                    'application_id' => $application->id,
-                ]);
-            }
-        }
+        $emailSent = $this->sendHiringApplicantStatusEmail(
+            $application,
+            'rejected',
+            $request->admin_notes
+        );
 
         $successMessage = $shouldDeactivateUser
             ? 'Application declined. The applicant account has been deactivated.'
             : 'Application rejected.';
+
+        if ($this->isHiringEmailNotificationsEnabled() && ! $emailSent) {
+            $successMessage .= ' However, the notification email could not be sent. Please check mail settings or logs.';
+        } elseif ($emailSent) {
+            $successMessage .= ' A notification email was sent to the applicant.';
+        }
 
         return redirect('/admin/hiring-applications/'.$application->id)
             ->with('success', $successMessage);
@@ -1916,5 +1907,57 @@ class HiringApplicationController extends Controller
 
         return redirect('/admin/hiring-applications')
             ->with('success', 'Application deleted successfully.');
+    }
+
+    private function isHiringEmailNotificationsEnabled(): bool
+    {
+        $value = \App\Models\Setting::get('hiring_email_notifications', 'enabled');
+
+        return strtolower(trim((string) $value)) === 'enabled';
+    }
+
+    private function sendHiringApplicantStatusEmail(
+        HiringApplication $application,
+        string $status,
+        ?string $statusMessage = null
+    ): bool {
+        if (! $this->isHiringEmailNotificationsEnabled()) {
+            return false;
+        }
+
+        $application->loadMissing(['hiringPosition', 'user']);
+        $application->refresh();
+
+        $recipient = trim((string) ($application->email ?: $application->user?->email ?: ''));
+        if ($recipient === '' || ! filter_var($recipient, FILTER_VALIDATE_EMAIL)) {
+            Log::warning('Cannot send hiring status email: invalid recipient', [
+                'application_id' => $application->id,
+                'status' => $status,
+            ]);
+
+            return false;
+        }
+
+        try {
+            MailConfigService::configure();
+
+            Mail::to($recipient)->send(new \App\Mail\HiringApplicationStatusUpdate(
+                $application,
+                $status,
+                $statusMessage,
+                $application->hiringPosition
+            ));
+
+            return true;
+        } catch (\Exception $e) {
+            Log::error('Failed to send hiring status email', [
+                'error' => $e->getMessage(),
+                'application_id' => $application->id,
+                'status' => $status,
+                'recipient' => $recipient,
+            ]);
+
+            return false;
+        }
     }
 }
