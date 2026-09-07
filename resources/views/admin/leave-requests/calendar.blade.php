@@ -131,11 +131,14 @@
                         <p class="text-[10px] text-gray-500">Default: 8.0 hours per day. Can be customized.</p>
                     </div>
 
-                    <!-- Overtime (same structure as employee leave form) -->
+                    <!-- Overtime (admin filing — details optional; can complete on the request later) -->
                     <div id="admin_overtime_section" class="space-y-1.5 hidden border-t border-gray-100 pt-2 mt-1">
                         <p class="text-[10px] font-semibold text-gray-800">Overtime Details</p>
+                        <p class="text-[10px] text-indigo-700 bg-indigo-50 border border-indigo-100 rounded px-2 py-1">
+                            Only employee, type, and start date are required. Add overtime hours now or update them later on the leave request.
+                        </p>
                         <div>
-                            <label for="admin_overtime_work_type" class="block text-xs font-medium text-gray-700">Overtime Type <span class="text-red-500">*</span></label>
+                            <label for="admin_overtime_work_type" class="block text-xs font-medium text-gray-700">Overtime Type <span class="text-gray-400">(Optional)</span></label>
                             <select name="overtime_work_type" id="admin_overtime_work_type" class="w-full px-2.5 py-1.5 text-xs border border-gray-300 rounded-md focus:ring-2 focus:ring-indigo-500">
                                 <option value="">Select type</option>
                                 @foreach(\App\Models\LeaveRequest::overtimeWorkTypes() as $value => $label)
@@ -147,15 +150,15 @@
                             @enderror
                         </div>
                         <div>
-                            <label for="admin_overtime_hours" class="block text-xs font-medium text-gray-700">Total Overtime (HH:MM) <span class="text-red-500">*</span></label>
+                            <label for="admin_overtime_hours" class="block text-xs font-medium text-gray-700">Total Overtime (HH:MM) <span class="text-gray-400">(Optional)</span></label>
                             <input type="text" name="overtime_hours" id="admin_overtime_hours" value="{{ old('overtime_hours') }}" placeholder="01:30" class="w-full px-2.5 py-1.5 text-xs border border-gray-300 rounded-md focus:ring-2 focus:ring-indigo-500">
                         </div>
                         <div>
-                            <label for="admin_overtime_dates" class="block text-xs font-medium text-gray-700">Overtime Dates <span class="text-red-500">*</span></label>
-                            <input type="text" name="overtime_dates" id="admin_overtime_dates" value="{{ old('overtime_dates') }}" placeholder="e.g. May 10–11, 2025" class="w-full px-2.5 py-1.5 text-xs border border-gray-300 rounded-md focus:ring-2 focus:ring-indigo-500">
+                            <label for="admin_overtime_dates" class="block text-xs font-medium text-gray-700">Overtime Dates <span class="text-gray-400">(Optional)</span></label>
+                            <input type="text" name="overtime_dates" id="admin_overtime_dates" value="{{ old('overtime_dates') }}" placeholder="Uses start/end date if blank" class="w-full px-2.5 py-1.5 text-xs border border-gray-300 rounded-md focus:ring-2 focus:ring-indigo-500">
                         </div>
                         <div>
-                            <label for="admin_overtime_tasks" class="block text-xs font-medium text-gray-700">Tasks / ClickUp <span class="text-red-500">*</span></label>
+                            <label for="admin_overtime_tasks" class="block text-xs font-medium text-gray-700">Tasks / ClickUp <span class="text-gray-400">(Optional)</span></label>
                             <textarea name="overtime_tasks" id="admin_overtime_tasks" rows="2" class="w-full px-2.5 py-1.5 text-xs border border-gray-300 rounded-md focus:ring-2 focus:ring-indigo-500" placeholder="https://... URLs only">{{ old('overtime_tasks') }}</textarea>
                         </div>
                     </div>
@@ -643,13 +646,6 @@ function handleLeaveTypeChange(selectElement) {
 
     if (v === 'overtime') {
         overtimeSec.classList.remove('hidden');
-        if (otWorkType) otWorkType.required = true;
-        otH.required = true;
-        otD.required = true;
-        otT.required = true;
-        if (supportingInput) supportingInput.required = true;
-        if (supportingOptional) supportingOptional.classList.add('hidden');
-        if (supportingRequired) supportingRequired.classList.remove('hidden');
     }
 
     if (v === 'offset') {

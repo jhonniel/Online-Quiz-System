@@ -1398,11 +1398,11 @@ class LeaveRequestController extends Controller
             'end_date' => ['nullable', 'date', 'after_or_equal:start_date'],
             'reason' => ['required_if:type,travel', 'nullable', 'string', 'max:1000'],
             'travel_hours' => ['nullable', 'numeric', 'min:0', 'max:24'],
-            // Same structured fields as employee leave-requests/create
-            'overtime_hours' => ['required_if:type,overtime', 'nullable', 'regex:/^\d{2}:\d{2}$/'],
-            'overtime_work_type' => ['required_if:type,overtime', 'nullable', Rule::in(array_keys(LeaveRequest::overtimeWorkTypes()))],
-            'overtime_dates' => ['required_if:type,overtime', 'nullable', 'string', 'max:255'],
-            'overtime_tasks' => ['required_if:type,overtime', 'nullable', 'string', 'max:2000', new ClickUpTasksUrlsOnly],
+            // Admin filing: overtime details are optional; fill in later on the request if needed.
+            'overtime_hours' => ['nullable', 'regex:/^\d{1,4}:\d{2}$/'],
+            'overtime_work_type' => ['nullable', Rule::in(array_keys(LeaveRequest::overtimeWorkTypes()))],
+            'overtime_dates' => ['nullable', 'string', 'max:255'],
+            'overtime_tasks' => ['nullable', 'string', 'max:2000'],
             'wfh_mode' => ['required_if:type,work_from_home', 'nullable', 'in:working_remotely,request_to_be_excused'],
             'wfh_address' => ['required_if:type,work_from_home', 'nullable', 'string', 'max:255'],
             'wfh_tasks' => ['required_if:type,work_from_home', 'nullable', 'string', 'max:2000', new ClickUpTasksUrlsOnly],
@@ -1420,13 +1420,22 @@ class LeaveRequestController extends Controller
             }
         }
 
-        if ($validated['type'] === 'overtime' && ! $this->requestHasSupportingDocumentUploads($request)) {
-            return redirect()->back()
-                ->withErrors(['supporting_documents' => 'Supporting document is required for Overtime requests.'])
-                ->withInput();
+        if ($validated['type'] === 'overtime') {
+            $overtimeTasks = trim((string) ($validated['overtime_tasks'] ?? ''));
+            if ($overtimeTasks !== '') {
+                $clickUpRule = new ClickUpTasksUrlsOnly;
+                $validator = validator(['overtime_tasks' => $overtimeTasks], [
+                    'overtime_tasks' => [$clickUpRule],
+                ]);
+                if ($validator->fails()) {
+                    return redirect()->back()
+                        ->withErrors($validator)
+                        ->withInput();
+                }
+            }
         }
 
-        $reasonToStore = $this->buildReasonStringForAdminFiledEmployeeLeave($validated);
+        $reasonToStore = $this->buildReasonStringForAdminFiledEmployeeLeave($validated, $request);
 
         $employeeIds = $validated['user_ids'];
 
@@ -3021,22 +3030,45 @@ class LeaveRequestController extends Controller
     /**
      * Build stored reason text for admin-filed employee leave (same structure as employee-side forms).
      */
-    private function buildReasonStringForAdminFiledEmployeeLeave(array $validated): string
+    private function buildReasonStringForAdminFiledEmployeeLeave(array $validated, ?Request $request = null): string
     {
         $type = $validated['type'];
         $reasonToStore = trim((string) ($validated['reason'] ?? ''));
 
         if ($type === 'overtime') {
+            $overtimeHours = trim((string) ($validated['overtime_hours'] ?? ''));
+            if ($overtimeHours !== '' && preg_match('/^(\d{1,4}):(\d{2})$/', $overtimeHours, $parts)) {
+                $overtimeHours = sprintf('%02d:%02d', (int) $parts[1], (int) $parts[2]);
+            } elseif ($overtimeHours === '') {
+                $overtimeHours = '00:00';
+            }
+
+            $overtimeDates = trim((string) ($validated['overtime_dates'] ?? ''));
+            if ($overtimeDates === '') {
+                $startLabel = Carbon::parse($validated['start_date'])->format('M d, Y');
+                $endLabel = ! empty($validated['end_date'])
+                    ? Carbon::parse($validated['end_date'])->format('M d, Y')
+                    : $startLabel;
+                $overtimeDates = $startLabel === $endLabel ? $startLabel : $startLabel.' – '.$endLabel;
+            }
+
             $details = "Overtime Request Details:\n";
             $workTypeLabel = LeaveRequest::overtimeWorkTypeLabel($validated['overtime_work_type'] ?? null);
             if ($workTypeLabel !== null) {
                 $details .= 'Overtime Type: '.$workTypeLabel."\n";
             }
-            $details .= 'Total Overtime Hours: '.($validated['overtime_hours'] ?? '')."\n";
-            $details .= 'Overtime Dates: '.($validated['overtime_dates'] ?? '')."\n";
-            $details .= "Tasks / ClickUp Links:\n".($validated['overtime_tasks'] ?? '')."\n";
+            $details .= 'Total Overtime Hours: '.$overtimeHours."\n";
+            $details .= 'Overtime Dates: '.$overtimeDates."\n";
+
+            $overtimeTasks = trim((string) ($validated['overtime_tasks'] ?? ''));
+            if ($overtimeTasks !== '') {
+                $details .= "Tasks / ClickUp Links:\n".$overtimeTasks."\n";
+            }
+
             if ($reasonToStore !== '') {
                 $details .= "\nAdditional Explanation:\n".$reasonToStore;
+            } elseif ($request && $this->requestHasSupportingDocumentUploads($request)) {
+                $details .= "\nAdditional Explanation:\nFiled by admin via Leave Calendar.";
             }
 
             return $details;
