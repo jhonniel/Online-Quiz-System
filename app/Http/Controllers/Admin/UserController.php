@@ -210,43 +210,54 @@ class UserController extends Controller
 
     private function applyUsersSearch(Builder $query, string $search, string $idLikeSql, bool $isTeachersManagement): void
     {
-        $searchTokens = preg_split('/\s+/', $search, -1, PREG_SPLIT_NO_EMPTY) ?: [];
-        // Full phrase + each word, OR'd together so partial matches return more results.
-        $terms = array_values(array_unique(array_filter(array_merge([$search], $searchTokens))));
+        $tokens = preg_split('/\s+/', $search, -1, PREG_SPLIT_NO_EMPTY) ?: [];
+        $terms = array_values(array_unique(array_filter(array_merge([$search], $tokens))));
+        $dbDriver = DB::connection()->getDriverName();
+        $op = $dbDriver === 'pgsql' ? 'ilike' : 'like';
 
-        $query->where(function ($q) use ($terms, $idLikeSql, $isTeachersManagement) {
+        $query->where(function ($q) use ($terms, $idLikeSql, $op, $isTeachersManagement) {
             foreach ($terms as $term) {
-                $q->orWhere(fn ($termQ) => $this->applyUsersSearchTerm($termQ, $term, $idLikeSql, $isTeachersManagement));
+                $like = "%{$term}%";
+                $q->orWhere(function ($termQ) use ($like, $idLikeSql, $op, $term, $isTeachersManagement) {
+                    $termQ->whereRaw($idLikeSql, [$like])
+                        ->orWhere('name', $op, $like)
+                        ->orWhere('email', $op, $like)
+                        ->orWhere('role', $op, $like)
+                        ->orWhere('contact_number', $op, $like)
+                        ->orWhere('course', $op, $like)
+                        ->orWhere('tin', $op, $like)
+                        ->orWhere('sss_number', $op, $like)
+                        ->orWhere('hdmf_number', $op, $like)
+                        ->orWhere('phic_number', $op, $like)
+                        ->orWhere('bio', $op, $like)
+                        ->orWhere('gender', $op, $like)
+                        ->orWhere('status', $op, $like)
+                        ->orWhere('qr_code_id', $op, $like);
+
+                    if (! $isTeachersManagement) {
+                        $termQ->orWhereHas('department', function ($dq) use ($like, $op) {
+                            $dq->where('name', $op, $like)
+                                ->orWhere('code', $op, $like);
+                        })->orWhereHas('departmentPosition', function ($pq) use ($like, $op) {
+                            $pq->where('name', $op, $like);
+                        });
+                    }
+
+                    $termQ->orWhereHas('university', function ($uq) use ($like, $op) {
+                        $uq->where('name', $op, $like)
+                            ->orWhere('code', $op, $like)
+                            ->orWhere('location', $op, $like);
+                    });
+
+                    if (ctype_digit($term)) {
+                        $termQ->orWhere('id', (int) $term)
+                            ->orWhere('department_id', (int) $term)
+                            ->orWhere('university_id', (int) $term)
+                            ->orWhere('department_position_id', (int) $term);
+                    }
+                });
             }
         });
-    }
-
-    private function applyUsersSearchTerm(Builder $query, string $term, string $idLikeSql, bool $isTeachersManagement): void
-    {
-        $like = "%{$term}%";
-        $op = DB::connection()->getDriverName() === 'pgsql' ? 'ilike' : 'like';
-
-        $query->where('name', $op, $like)
-            ->orWhere('email', $op, $like)
-            ->orWhere('role', $op, $like)
-            ->orWhere('contact_number', $op, $like)
-            ->orWhereRaw($idLikeSql, [$like]);
-
-        if (! $isTeachersManagement) {
-            $query->orWhereHas('department', function ($dq) use ($like, $op) {
-                $dq->where('name', $op, $like)
-                    ->orWhere('code', $op, $like);
-            })->orWhereHas('departmentPosition', fn ($pq) => $pq->where('name', $op, $like));
-        }
-
-        $query->orWhereHas('university', function ($uq) use ($like, $op) {
-            $uq->where('name', $op, $like)
-                ->orWhere('code', $op, $like);
-        });
-
-        if (ctype_digit($term)) {
-            $query->orWhere('id', (int) $term);
-        }
     }
 
     /**

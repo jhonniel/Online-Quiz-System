@@ -1135,6 +1135,71 @@ class LeaveRequestController extends Controller
     }
 
     /**
+     * Adjust total overtime hours on an employee overtime leave request.
+     */
+    public function updateOvertimeHours(Request $request, LeaveRequest $leaveRequest)
+    {
+        $leaveRequest->load('user');
+        $this->assertCanManageLeaveRequestSubject($leaveRequest);
+
+        if ($leaveRequest->type !== 'overtime') {
+            return $this->redirectToAdminLeaveRequestShow($leaveRequest)
+                ->withErrors(['overtime_hours' => 'Only overtime requests can have overtime hours adjusted.']);
+        }
+
+        if (! in_array($leaveRequest->status, ['pending', 'approved'], true)) {
+            return $this->redirectToAdminLeaveRequestShow($leaveRequest)
+                ->withErrors(['overtime_hours' => 'Overtime hours can only be adjusted on pending or approved requests.']);
+        }
+
+        $validated = $request->validate([
+            'overtime_hours' => ['required', 'date_format:H:i'],
+            'admin_notes' => ['nullable', 'string', 'max:1000'],
+        ]);
+
+        [$hours, $minutes] = array_map('intval', explode(':', $validated['overtime_hours']));
+        $newFormatted = sprintf('%02d:%02d', $hours, $minutes);
+        $oldFormatted = $leaveRequest->overtimeHoursFormattedFromReason();
+
+        if ($oldFormatted === $newFormatted) {
+            return $this->redirectToAdminLeaveRequestShow($leaveRequest)
+                ->with('info', 'Overtime hours are already set to '.$newFormatted.'.');
+        }
+
+        $leaveRequest->update([
+            'reason' => $leaveRequest->replaceOvertimeTotalHoursInReason($newFormatted),
+        ]);
+        $leaveRequest->refresh();
+
+        $logNotes = trim((string) ($validated['admin_notes'] ?? ''));
+        if ($logNotes === '') {
+            $logNotes = sprintf(
+                'Adjusted overtime hours from %s to %s.',
+                $oldFormatted ?? 'unknown',
+                $newFormatted
+            );
+        }
+
+        LeaveRequestLog::create([
+            'leave_request_id' => $leaveRequest->id,
+            'action' => 'overtime_hours_adjusted',
+            'status_before' => $leaveRequest->status,
+            'status_after' => $leaveRequest->status,
+            'notes' => $logNotes,
+            'performed_by' => Auth::id(),
+            'changes' => [
+                'overtime_hours' => [
+                    'from' => $oldFormatted,
+                    'to' => $newFormatted,
+                ],
+            ],
+        ]);
+
+        return $this->redirectToAdminLeaveRequestShow($leaveRequest)
+            ->with('success', 'Overtime hours updated to '.$newFormatted.'. Employee overtime balance will reflect this change.');
+    }
+
+    /**
      * Calendar view of leave requests for easier tracking.
      */
     public function calendar(Request $request)

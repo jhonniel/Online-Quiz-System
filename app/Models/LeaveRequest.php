@@ -539,6 +539,42 @@ class LeaveRequest extends Model
         return $total >= 0 ? $total : null;
     }
 
+    public function overtimeHoursFormattedFromReason(): ?string
+    {
+        $mins = $this->parseOvertimeTotalMinutesFromReason();
+        if ($mins === null) {
+            return null;
+        }
+
+        return sprintf('%02d:%02d', intdiv($mins, 60), $mins % 60);
+    }
+
+    public function replaceOvertimeTotalHoursInReason(string $hhmm): string
+    {
+        $raw = (string) ($this->reason ?? '');
+
+        if (preg_match('/^(\d{1,4}):(\d{2})$/', trim($hhmm), $parts)) {
+            $normalized = sprintf('%02d:%02d', (int) $parts[1], (int) $parts[2]);
+        } else {
+            $normalized = trim($hhmm);
+        }
+
+        if (preg_match('/Total Overtime Hours:\s*.+/m', $raw)) {
+            return preg_replace(
+                '/Total Overtime Hours:\s*.+/',
+                'Total Overtime Hours: '.$normalized,
+                $raw,
+                1
+            );
+        }
+
+        $raw = trim($raw);
+
+        return $raw === ''
+            ? 'Total Overtime Hours: '.$normalized
+            : $raw."\nTotal Overtime Hours: ".$normalized;
+    }
+
     /**
      * Total overtime hours as decimal (from reason text), for balance/DTR helpers.
      */

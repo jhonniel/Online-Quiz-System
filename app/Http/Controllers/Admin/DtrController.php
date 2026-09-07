@@ -687,11 +687,8 @@ class DtrController extends Controller
         // Total hours for the day = Worked + Added
         $totalDecimal = $workedDecimal + $addedDecimal;
 
-        // Overtime is any hours beyond the standard 8:00
-        $standardDecimal = 8.0;
-        $overtimeDecimal = $totalDecimal > $standardDecimal
-            ? $totalDecimal - $standardDecimal
-            : 0;
+        // Overtime: use admin-entered value when provided, otherwise auto-calculate
+        $overtimeDecimal = $this->resolveOvertimeDecimal($request, $totalDecimal);
 
         // Generate date range (excluding weekends)
         $dateFrom = Carbon::parse($request->date_from);
@@ -849,7 +846,9 @@ class DtrController extends Controller
         $addedM = $addedMinutes % 60;
         $addedFormatted = sprintf('%02d:%02d', $addedH, $addedM);
 
-        return view('admin.dtr.edit', compact('dtr', 'employees', 'workedFormatted', 'addedFormatted'))
+        $overtimeFormatted = $this->formatDecimalHoursToHhMm((float) ($dtr->overtime_hours ?? 0));
+
+        return view('admin.dtr.edit', compact('dtr', 'employees', 'workedFormatted', 'addedFormatted', 'overtimeFormatted'))
             ->with('isNewEntry', false);
     }
 
@@ -920,12 +919,14 @@ class DtrController extends Controller
         $addedH = intdiv($addedMinutes, 60);
         $addedM = $addedMinutes % 60;
         $addedFormatted = sprintf('%02d:%02d', $addedH, $addedM);
+        $overtimeFormatted = $this->formatDecimalHoursToHhMm((float) ($dtr->overtime_hours ?? 0));
 
         return view('admin.dtr.edit', compact(
             'dtr',
             'employees',
             'workedFormatted',
             'addedFormatted',
+            'overtimeFormatted',
             'isNewEntry'
         ));
     }
@@ -943,6 +944,7 @@ class DtrController extends Controller
             'date' => 'required|date',
             'added_time_from_note' => 'nullable|date_format:H:i',
             'total_hours' => 'required|date_format:H:i',
+            'overtime_hours' => 'nullable|date_format:H:i',
             'status' => 'required|in:present,absent,late,half_day,on_leave,travel,holiday',
             'is_travel' => 'nullable|boolean',
             'remarks' => 'nullable|string|max:1000',
@@ -986,10 +988,7 @@ class DtrController extends Controller
             }
 
             $totalDecimal = $workedDecimal + $addedDecimal;
-            $standardDecimal = 8.0;
-            $overtimeDecimal = $totalDecimal > $standardDecimal
-                ? $totalDecimal - $standardDecimal
-                : 0;
+            $overtimeDecimal = $this->resolveOvertimeDecimal($request, $totalDecimal);
 
             $dtr = Dtr::updateOrCreate(
                 [
@@ -1041,6 +1040,7 @@ class DtrController extends Controller
             'date' => 'required|date',
             'added_time_from_note' => 'nullable|date_format:H:i',
             'total_hours' => 'required|date_format:H:i',
+            'overtime_hours' => 'nullable|date_format:H:i',
             'status' => 'required|in:present,absent,late,half_day,on_leave,travel,holiday',
             'is_travel' => 'nullable|boolean',
             'remarks' => 'nullable|string|max:1000',
@@ -1089,11 +1089,8 @@ class DtrController extends Controller
 
             $totalDecimal = $workedDecimal + $addedDecimal;
 
-            // Overtime is any hours beyond the standard 8:00
-            $standardDecimal = 8.0;
-            $overtimeDecimal = $totalDecimal > $standardDecimal
-                ? $totalDecimal - $standardDecimal
-                : 0;
+            // Overtime: use admin-entered value when provided, otherwise auto-calculate
+            $overtimeDecimal = $this->resolveOvertimeDecimal($request, $totalDecimal);
 
             $dtr->update([
                 'user_id' => $request->user_id,
@@ -3415,5 +3412,42 @@ class DtrController extends Controller
                     });
                 });
         });
+    }
+
+    private function formatDecimalHoursToHhMm(float $decimalHours): string
+    {
+        $minutes = max(0, (int) round($decimalHours * 60));
+
+        return sprintf('%02d:%02d', intdiv($minutes, 60), $minutes % 60);
+    }
+
+    private function parseHhMmToDecimal(?string $value): ?float
+    {
+        if ($value === null || trim($value) === '') {
+            return null;
+        }
+
+        $parts = explode(':', trim($value));
+        if (count($parts) !== 2) {
+            return null;
+        }
+
+        return ((int) $parts[0]) + ((int) $parts[1] / 60);
+    }
+
+    private function resolveOvertimeDecimal(Request $request, float $totalDecimal): float
+    {
+        if ($request->filled('overtime_hours')) {
+            $manual = $this->parseHhMmToDecimal($request->overtime_hours);
+            if ($manual !== null) {
+                return max(0, $manual);
+            }
+        }
+
+        $standardDecimal = 8.0;
+
+        return $totalDecimal > $standardDecimal
+            ? $totalDecimal - $standardDecimal
+            : 0;
     }
 }

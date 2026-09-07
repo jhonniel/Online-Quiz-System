@@ -255,9 +255,49 @@
 
                     <div>
                         <label class="block text-sm font-medium text-gray-500 mb-1">Duration</label>
-                        <p class="text-sm font-semibold text-gray-900">
-                            {{ $leaveRequest->duration_display_label }}
-                        </p>
+                        @if(($canEditLeaveRequestDetails ?? false) && $leaveRequest->type === 'overtime' && in_array($leaveRequest->status, ['pending', 'approved'], true))
+                            @php
+                                $editableOvertimeHours = old(
+                                    'overtime_hours',
+                                    $leaveRequest->overtimeHoursFormattedFromReason() ?? '00:00'
+                                );
+                            @endphp
+                            <form action="{{ url('/admin/leave-requests/' . $leaveRequest->id . '/overtime-hours') }}" method="POST"
+                                  class="flex flex-col sm:flex-row sm:items-end gap-3"
+                                  onsubmit="return confirm('Update overtime hours for this request? Employee overtime balance will reflect the new total.');">
+                                @csrf
+                                @include('admin.leave-requests.partials.show-nav-fields')
+                                @method('PATCH')
+                                <div class="flex-1 min-w-[8rem]">
+                                    <label for="leave-request-overtime-hours" class="sr-only">Overtime hours</label>
+                                    <input type="text" name="overtime_hours" id="leave-request-overtime-hours"
+                                           value="{{ $editableOvertimeHours }}"
+                                           placeholder="00:00"
+                                           required
+                                           pattern="^\d{1,4}:\d{2}$"
+                                           class="w-full px-3 py-2 text-sm font-mono border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white">
+                                    @error('overtime_hours')
+                                        <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                                    @enderror
+                                </div>
+                                <div class="flex-1 min-w-0 sm:min-w-[12rem]">
+                                    <label for="overtime-hours-change-notes" class="sr-only">Note (optional)</label>
+                                    <input type="text" name="admin_notes" id="overtime-hours-change-notes"
+                                           value="{{ old('admin_notes') }}"
+                                           placeholder="Optional note for activity log"
+                                           class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                                </div>
+                                <button type="submit"
+                                        class="inline-flex items-center justify-center px-4 py-2 text-sm font-medium text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 whitespace-nowrap">
+                                    Update Overtime
+                                </button>
+                            </form>
+                            <p class="mt-2 text-xs text-gray-500">Adjust total overtime hours (HH:MM). This updates the employee overtime balance when approved.</p>
+                        @else
+                            <p class="text-sm font-semibold text-gray-900">
+                                {{ $leaveRequest->duration_display_label }}
+                            </p>
+                        @endif
                     </div>
 
                     <div>
@@ -1644,11 +1684,11 @@ document.addEventListener('DOMContentLoaded', function() {
     @if($leaveRequest->logs && $leaveRequest->logs->count() > 0)
         <div class="space-y-4">
             @foreach($leaveRequest->logs as $log)
-                <div class="border-l-4 {{ $log->action === 'admin_officially_excused' ? 'border-teal-500' : ($log->action === 'approved' ? 'border-green-500' : ($log->action === 'rejected' ? 'border-red-500' : ($log->action === 'resubmission_requested' ? 'border-yellow-500' : ($log->action === 'for_more_verification' ? 'border-blue-500' : (in_array($log->action, ['type_changed', 'dates_changed'], true) ? 'border-purple-500' : ($log->action === 'requester_resubmitted' ? 'border-indigo-500' : 'border-gray-400')))))) }} pl-4 py-2">
+                <div class="border-l-4 {{ $log->action === 'admin_officially_excused' ? 'border-teal-500' : ($log->action === 'approved' ? 'border-green-500' : ($log->action === 'rejected' ? 'border-red-500' : ($log->action === 'resubmission_requested' ? 'border-yellow-500' : ($log->action === 'for_more_verification' ? 'border-blue-500' : (in_array($log->action, ['type_changed', 'dates_changed', 'overtime_hours_adjusted'], true) ? 'border-purple-500' : ($log->action === 'requester_resubmitted' ? 'border-indigo-500' : 'border-gray-400')))))) }} pl-4 py-2">
                     <div class="flex items-start justify-between">
                         <div class="flex-1">
                             <div class="flex items-center space-x-2">
-                                <span class="px-2 py-1 text-xs font-semibold rounded-full {{ $log->action === 'admin_officially_excused' ? 'bg-teal-100 text-teal-800' : ($log->action === 'approved' ? 'bg-green-100 text-green-800' : ($log->action === 'rejected' ? 'bg-red-100 text-red-800' : ($log->action === 'resubmission_requested' ? 'bg-yellow-100 text-yellow-800' : ($log->action === 'for_more_verification' ? 'bg-blue-100 text-blue-800' : (in_array($log->action, ['type_changed', 'dates_changed'], true) ? 'bg-purple-100 text-purple-800' : ($log->action === 'requester_resubmitted' ? 'bg-indigo-100 text-indigo-900' : 'bg-gray-100 text-gray-800')))))) }}">
+                                <span class="px-2 py-1 text-xs font-semibold rounded-full {{ $log->action === 'admin_officially_excused' ? 'bg-teal-100 text-teal-800' : ($log->action === 'approved' ? 'bg-green-100 text-green-800' : ($log->action === 'rejected' ? 'bg-red-100 text-red-800' : ($log->action === 'resubmission_requested' ? 'bg-yellow-100 text-yellow-800' : ($log->action === 'for_more_verification' ? 'bg-blue-100 text-blue-800' : (in_array($log->action, ['type_changed', 'dates_changed', 'overtime_hours_adjusted'], true) ? 'bg-purple-100 text-purple-800' : ($log->action === 'requester_resubmitted' ? 'bg-indigo-100 text-indigo-900' : 'bg-gray-100 text-gray-800')))))) }}">
                                     {{ $log->action_label }}
                                 </span>
                                 @if($log->status_before && $log->status_after)

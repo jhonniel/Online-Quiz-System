@@ -607,6 +607,7 @@ Route::prefix('admin')->middleware(['auth', 'admin'])->group(function () {
             Route::get('/leave-requests/{leaveRequest}', [LeaveRequestController::class, 'show'])->name('admin.leave-requests.show');
             Route::patch('/leave-requests/{leaveRequest}/type', [LeaveRequestController::class, 'updateType'])->name('admin.leave-requests.update-type');
             Route::patch('/leave-requests/{leaveRequest}/dates', [LeaveRequestController::class, 'updateDates'])->name('admin.leave-requests.update-dates');
+            Route::patch('/leave-requests/{leaveRequest}/overtime-hours', [LeaveRequestController::class, 'updateOvertimeHours'])->name('admin.leave-requests.update-overtime-hours');
             Route::post('/leave-requests/{leaveRequest}/approve', [LeaveRequestController::class, 'approve'])->name('admin.leave-requests.approve');
             Route::post('/leave-requests/{leaveRequest}/verify', [LeaveRequestController::class, 'verify'])->name('admin.leave-requests.verify');
             Route::post('/leave-requests/{leaveRequest}/force-accept', [LeaveRequestController::class, 'forceAccept'])->name('admin.leave-requests.force-accept');

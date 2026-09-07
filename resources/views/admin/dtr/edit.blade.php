@@ -148,24 +148,22 @@
                     @enderror
                 </div>
 
-                <!-- Read-only Overtime Info (calculated on save) -->
+                <!-- Overtime (admin-adjustable) -->
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                    <label for="overtime_hours" class="block text-sm font-medium text-gray-700 mb-2">
                         Overtime (HH:MM)
                     </label>
-                    @php
-                        $otMinutes = (int) round(($dtr->overtime_hours ?? 0) * 60);
-                        $otH = intdiv($otMinutes, 60);
-                        $otM = $otMinutes % 60;
-                        $otFormatted = sprintf('%02d:%02d', $otH, $otM);
-                    @endphp
-                    <div class="px-4 py-3 border border-gray-200 rounded-lg bg-gray-50 text-sm font-semibold text-orange-700">
-                        {{ $otMinutes > 0 ? $otFormatted : '00:00' }}
-                    </div>
+                    <input type="text" name="overtime_hours" id="overtime_hours"
+                           value="{{ old('overtime_hours', $overtimeFormatted ?? '00:00') }}"
+                           placeholder="00:00"
+                           class="time-input w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
                     <p class="mt-1 text-xs text-gray-500">
-                        Overtime is automatically recalculated on save as
-                        <strong>(Total Hours − 08:00)</strong> when Total Hours is more than 08:00.
+                        Adjust overtime manually in <strong>HH:MM</strong> format. Leave as suggested or change as needed.
+                        If left empty on create, overtime is calculated as <strong>(Total Hours − 08:00)</strong>.
                     </p>
+                    @error('overtime_hours')
+                        <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                    @enderror
                 </div>
 
                 <!-- Status (Auto-set based on Travel checkbox) -->
@@ -251,6 +249,55 @@
                 input.value = formatTime(input.value);
             });
         });
+
+        const workedInput = document.getElementById('total_hours');
+        const addedInput = document.getElementById('added_time_from_note');
+        const overtimeInput = document.getElementById('overtime_hours');
+        let overtimeManuallyEdited = false;
+
+        function parseTimeToMinutes(value) {
+            if (!value || !value.includes(':')) {
+                return 0;
+            }
+            const parts = value.split(':');
+            const hours = parseInt(parts[0], 10) || 0;
+            const minutes = parseInt(parts[1], 10) || 0;
+            return (hours * 60) + minutes;
+        }
+
+        function formatMinutesToTime(totalMinutes) {
+            const safeMinutes = Math.max(0, totalMinutes);
+            const hours = Math.floor(safeMinutes / 60);
+            const minutes = safeMinutes % 60;
+            return String(hours).padStart(2, '0') + ':' + String(minutes).padStart(2, '0');
+        }
+
+        function suggestOvertimeFromWorkedHours() {
+            if (!overtimeInput || overtimeManuallyEdited) {
+                return;
+            }
+
+            const workedMinutes = parseTimeToMinutes(workedInput ? workedInput.value : '');
+            const addedMinutes = parseTimeToMinutes(addedInput ? addedInput.value : '');
+            const totalMinutes = workedMinutes + addedMinutes;
+            const overtimeMinutes = Math.max(0, totalMinutes - (8 * 60));
+            overtimeInput.value = formatMinutesToTime(overtimeMinutes);
+        }
+
+        if (overtimeInput) {
+            overtimeInput.addEventListener('input', function () {
+                overtimeManuallyEdited = true;
+                overtimeInput.value = formatTime(overtimeInput.value);
+            });
+        }
+
+        if (workedInput) {
+            workedInput.addEventListener('input', suggestOvertimeFromWorkedHours);
+        }
+
+        if (addedInput) {
+            addedInput.addEventListener('input', suggestOvertimeFromWorkedHours);
+        }
 
         // Handle Travel checkbox
         const travelCheckbox = document.getElementById('is_travel');
