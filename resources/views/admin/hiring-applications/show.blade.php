@@ -627,6 +627,7 @@
             </div>
 
             @include('admin.hiring-applications.partials.application-actions-panel')
+            @include('admin.hiring-applications.partials.delete-application-modal')
         </div>
     </div>
 
@@ -800,30 +801,11 @@ document.addEventListener('DOMContentLoaded', function() {
         const form = button.closest('form');
 
         if (form) {
-            // Check if this is a delete form
-            const isDeleteForm = form.classList.contains('delete-form') ||
-                                 form.action.includes('/destroy') ||
-                                 form.querySelector('input[name="_method"][value="DELETE"]');
-
-            if (isDeleteForm) {
-                // Handle delete forms with confirm dialog
-                form.addEventListener('submit', function(e) {
-                    const confirmed = confirm('Are you sure you want to delete this application?');
-                    if (confirmed) {
-                        showLoadingState(button);
-                    } else {
-                        e.preventDefault();
-                        return false;
-                    }
-                });
-            } else {
-                // For other forms, show loading on submit
-                form.addEventListener('submit', function(e) {
-                    if (!button.disabled) {
-                        showLoadingState(button);
-                    }
-                });
-            }
+            form.addEventListener('submit', function() {
+                if (!button.disabled) {
+                    showLoadingState(button);
+                }
+            });
         }
     });
 

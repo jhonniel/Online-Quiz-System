@@ -15,9 +15,11 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\ValidationException;
 
 class HiringApplicationController extends Controller
 {
@@ -1944,7 +1946,7 @@ class HiringApplicationController extends Controller
             ->with('success', 'Admin notes updated successfully.');
     }
 
-    public function destroy(HiringApplication $application)
+    public function destroy(Request $request, HiringApplication $application)
     {
         // Check if user can access this application's position
         if (! $this->canAccessPosition($application->hiring_position_id)) {
@@ -1954,6 +1956,18 @@ class HiringApplicationController extends Controller
         // Only allow full admins (not employees with limited access) to delete applications
         if (! Auth::user()->isAdmin()) {
             abort(403, 'Only full administrators can delete applications.');
+        }
+
+        $request->validate([
+            'confirm_password' => 'required|string',
+        ], [
+            'confirm_password.required' => 'Please enter your password to confirm deletion.',
+        ]);
+
+        if (! Hash::check((string) $request->input('confirm_password'), (string) Auth::user()->password)) {
+            throw ValidationException::withMessages([
+                'confirm_password' => ['Your password is incorrect.'],
+            ]);
         }
 
         // Soft delete the application (don't delete resume file, keep it for audit purposes)
