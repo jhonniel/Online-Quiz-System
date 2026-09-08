@@ -404,11 +404,9 @@
                     @endif
                     @if(auth()->user()->isAdmin())
                         <button type="button"
-                                onclick="openHiringApplicationDeleteModal({
-                                    action: @json(url('/admin/hiring-applications/' . $application->id)),
-                                    message: @json('Delete the application for ' . $application->full_name . '?'),
-                                })"
-                                class="action-button w-full inline-flex justify-center items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed">
+                                class="hiring-application-delete-trigger action-button w-full inline-flex justify-center items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                                data-delete-url="{{ url('/admin/hiring-applications/' . $application->id) }}"
+                                data-delete-message="Delete the application for {{ $application->full_name }}?">
                             <span class="button-text">Delete Application</span>
                         </button>
                     @endif

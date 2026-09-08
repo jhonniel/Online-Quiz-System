@@ -58,56 +58,64 @@
     </div>
 </div>
 
-@once
-@push('scripts')
 <script>
-    function openHiringApplicationDeleteModal(options) {
-        const modal = document.getElementById('hiring-application-delete-modal');
-        const form = document.getElementById('hiring-application-delete-form');
-        const messageEl = document.getElementById('hiring-application-delete-modal-message');
-        const passwordInput = document.getElementById('hiring-application-delete-password');
+function openHiringApplicationDeleteModal(options) {
+    const modal = document.getElementById('hiring-application-delete-modal');
+    const form = document.getElementById('hiring-application-delete-form');
+    const messageEl = document.getElementById('hiring-application-delete-modal-message');
+    const passwordInput = document.getElementById('hiring-application-delete-password');
 
-        if (!modal || !form) {
-            return;
-        }
-
-        form.action = options.action || '';
-        if (messageEl) {
-            messageEl.textContent = options.message || 'Delete this application permanently?';
-        }
-        if (passwordInput) {
-            passwordInput.value = '';
-        }
-
-        modal.classList.remove('hidden');
-        document.body.classList.add('overflow-hidden');
-        passwordInput?.focus();
+    if (!modal || !form) {
+        return;
     }
 
-    function closeHiringApplicationDeleteModal() {
-        const modal = document.getElementById('hiring-application-delete-modal');
-        if (!modal) {
-            return;
-        }
-
-        modal.classList.add('hidden');
-        document.body.classList.remove('overflow-hidden');
+    form.action = options.action || '';
+    if (messageEl) {
+        messageEl.textContent = options.message || 'Delete this application permanently?';
+    }
+    if (passwordInput) {
+        passwordInput.value = '';
     }
 
-    document.addEventListener('keydown', function (event) {
-        if (event.key === 'Escape') {
-            closeHiringApplicationDeleteModal();
-        }
-    });
+    modal.classList.remove('hidden');
+    document.body.classList.add('overflow-hidden');
+    passwordInput?.focus();
+}
 
-    @if($errors->has('confirm_password'))
-    document.addEventListener('DOMContentLoaded', function () {
-        openHiringApplicationDeleteModal({
-            action: @json(url('/admin/hiring-applications/' . $application->id)),
-            message: @json('Delete the application for ' . $application->full_name . '?'),
-        });
+function closeHiringApplicationDeleteModal() {
+    const modal = document.getElementById('hiring-application-delete-modal');
+    if (!modal) {
+        return;
+    }
+
+    modal.classList.add('hidden');
+    document.body.classList.remove('overflow-hidden');
+}
+
+document.addEventListener('click', function (event) {
+    const trigger = event.target.closest('.hiring-application-delete-trigger');
+    if (!trigger) {
+        return;
+    }
+
+    openHiringApplicationDeleteModal({
+        action: trigger.dataset.deleteUrl || '',
+        message: trigger.dataset.deleteMessage || 'Delete this application permanently?',
     });
-    @endif
+});
+
+document.addEventListener('keydown', function (event) {
+    if (event.key === 'Escape') {
+        closeHiringApplicationDeleteModal();
+    }
+});
+
+@if($errors->has('confirm_password'))
+document.addEventListener('DOMContentLoaded', function () {
+    openHiringApplicationDeleteModal({
+        action: @json(url('/admin/hiring-applications/' . $application->id)),
+        message: @json('Delete the application for ' . $application->full_name . '?'),
+    });
+});
+@endif
 </script>
-@endpush
-@endonce
