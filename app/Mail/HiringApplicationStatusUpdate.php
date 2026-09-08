@@ -54,16 +54,6 @@ class HiringApplicationStatusUpdate extends Mailable
      */
     public function content(): Content
     {
-        $attachedDocumentNames = $this->isEmployeeHire()
-            ? array_values(array_filter(array_map(
-                fn (array $item): string => trim((string) ($item['name'] ?? '')),
-                array_merge(
-                    EmployeeDocumentMaterial::hiredEmailPolicyMaterials(),
-                    EmployeeDocumentMaterial::hiredEmailHandbookMaterials()
-                )
-            )))
-            : [];
-
         return new Content(
             view: 'emails.hiring-application-status-update',
             with: [
@@ -71,7 +61,6 @@ class HiringApplicationStatusUpdate extends Mailable
                 'position' => $this->position,
                 'status' => $this->status,
                 'statusMessage' => $this->statusMessage,
-                'attachedDocumentNames' => $attachedDocumentNames,
                 'isInternshipHire' => $this->isInternshipHire(),
                 'isEmployeeHire' => $this->isEmployeeHire(),
             ],

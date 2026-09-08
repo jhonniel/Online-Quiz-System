@@ -130,17 +130,6 @@
                         Welcome to the team!
                     </p>
 
-                    @if(! empty($attachedDocumentNames ?? []))
-                        <p style="margin: 0 0 12px 0;">
-                            Please review the attached company policy documents and Employee Handbook. The following documents are included with this email:
-                        </p>
-                        <ul style="margin: 0 0 12px 0; padding-left: 20px;">
-                            @foreach($attachedDocumentNames as $documentName)
-                                <li style="margin-bottom: 4px;">{{ $documentName }}</li>
-                            @endforeach
-                        </ul>
-                    @endif
-
                     @if(trim((string) ($statusMessage ?? '')) !== '')
                         <p style="margin: 0 0 12px 0; white-space: pre-line;">
                             {{ trim($statusMessage) }}
