@@ -392,6 +392,31 @@
                             </form>
                         @endif
                     @endif
+                    @if($application->status == 'hired' && auth()->user()->isSuperAdmin())
+                        @php
+                            $isHiredInternship = $application->hiringPosition && strcasecmp($application->hiringPosition->employment_type ?? '', 'Internship') === 0;
+                        @endphp
+                        <form action="{{ url('/admin/hiring-applications/' . $application->id . '/resend-hired-email') }}" method="POST" onsubmit="return confirm('Resend the {{ $isHiredInternship ? 'internship acceptance' : 'hired' }} email to the applicant?');">
+                            @csrf
+                            <button type="submit" class="action-button w-full inline-flex justify-center items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed" data-loading-text="Sending...">
+                                <span class="button-text">Resend {{ $isHiredInternship ? 'Internship Acceptance' : 'Hired' }} Email</span>
+                                <span class="button-spinner hidden ml-2">
+                                    <svg class="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                    </svg>
+                                </span>
+                            </button>
+                            <p class="mt-2 text-xs text-gray-500">
+                                @if($isHiredInternship)
+                                    Resends the internship acceptance email using the saved admin notes.
+                                @else
+                                    Resends the hired email with policy documents, Employee Handbook, start date, and saved admin notes.
+                                @endif
+                                Only admins with full access can use this action.
+                            </p>
+                        </form>
+                    @endif
                     @if($application->status == 'hired' && $application->user_id)
                         <form action="{{ url('/admin/hiring-applications/' . $application->id . '/cancel-hired') }}" method="POST" onsubmit="return confirm('Are you sure you want to cancel the hired status? The user account will be deactivated and they will not be able to login.');">
                             @csrf

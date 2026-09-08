@@ -691,6 +691,7 @@ Route::prefix('admin')->middleware(['auth', 'admin'])->group(function () {
         Route::post('/hiring-applications/{application}/accept-intern', [App\Http\Controllers\Admin\HiringApplicationController::class, 'acceptIntern'])->name('admin.hiring-applications.accept-intern');
         Route::post('/hiring-applications/{application}/assign-intern-quiz', [App\Http\Controllers\Admin\HiringApplicationController::class, 'assignInternQuiz'])->name('admin.hiring-applications.assign-intern-quiz');
         Route::post('/hiring-applications/{application}/resend-intern-quiz-email', [App\Http\Controllers\Admin\HiringApplicationController::class, 'resendInternQuizEmail'])->name('admin.hiring-applications.resend-intern-quiz-email');
+        Route::post('/hiring-applications/{application}/resend-hired-email', [App\Http\Controllers\Admin\HiringApplicationController::class, 'resendHiredEmail'])->name('admin.hiring-applications.resend-hired-email');
         Route::post('/hiring-applications/{application}/cancel-hired', [App\Http\Controllers\Admin\HiringApplicationController::class, 'cancelHired'])->name('admin.hiring-applications.cancel-hired');
         Route::get('/hiring-applications/{application}/download-resume', [App\Http\Controllers\Admin\HiringApplicationController::class, 'downloadResume'])->name('admin.hiring-applications.download-resume');
         Route::get('/hiring-applications/{application}/view-resume', [App\Http\Controllers\Admin\HiringApplicationController::class, 'viewResume'])->name('admin.hiring-applications.view-resume');

@@ -1647,6 +1647,64 @@ class HiringApplicationController extends Controller
             ->with('success', $successMessage);
     }
 
+    public function resendHiredEmail(Request $request, HiringApplication $application)
+    {
+        if (! Auth::user()->isSuperAdmin()) {
+            abort(403, 'Access denied. Only admins with full access can resend the hired email.');
+        }
+
+        if (! $this->canAccessPosition($application->hiring_position_id)) {
+            abort(403, 'Access denied. You do not have permission for this application.');
+        }
+
+        if ($application->status !== 'hired') {
+            return redirect('/admin/hiring-applications/'.$application->id)
+                ->withErrors(['error' => 'Can only resend the hired email when the application status is hired.']);
+        }
+
+        if (! $this->isHiringEmailNotificationsEnabled()) {
+            return redirect('/admin/hiring-applications/'.$application->id)
+                ->withErrors(['error' => 'Hiring email notifications are disabled in settings; the applicant was not emailed.']);
+        }
+
+        $application->loadMissing(['hiringPosition', 'user']);
+
+        $isInternship = $application->hiringPosition
+            && strcasecmp((string) ($application->hiringPosition->employment_type ?? ''), 'Internship') === 0;
+
+        $emailNote = trim((string) ($application->admin_notes ?? ''));
+        $emailSent = $this->sendHiringApplicantStatusEmail(
+            $application,
+            'hired',
+            $emailNote !== '' ? $emailNote : null
+        );
+
+        if (! $emailSent) {
+            return redirect('/admin/hiring-applications/'.$application->id)
+                ->withErrors(['error' => 'The hired email could not be sent. Please check mail settings or logs.']);
+        }
+
+        UserActivity::logActivity(
+            Auth::user(),
+            'action',
+            'hiring_application_hired_email_resent',
+            [
+                'application_id' => $application->id,
+                'applicant_name' => $application->full_name,
+                'applicant_email' => $application->email,
+                'position' => $application->hiringPosition->title ?? $application->position_applied,
+                'employment_type' => $isInternship ? 'Internship' : 'Employee',
+            ]
+        );
+
+        $successMessage = $isInternship
+            ? 'Internship acceptance email resent to the applicant.'
+            : 'Hired email resent to the applicant.';
+
+        return redirect('/admin/hiring-applications/'.$application->id)
+            ->with('success', $successMessage);
+    }
+
     public function acceptIntern(Request $request, HiringApplication $application)
     {
         // Check if user can access this application's position
