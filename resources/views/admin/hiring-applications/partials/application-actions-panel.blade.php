@@ -31,8 +31,19 @@
                         </form>
                         <form action="{{ url('/admin/hiring-applications/' . $application->id . '/reject') }}" method="POST">
                             @csrf
-                            <textarea name="admin_notes" rows="3" placeholder="Add notes (optional)"
-                                      class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm mb-3"></textarea>
+                            <div class="mb-3">
+                                <label for="admin_notes_reject_pending" class="block text-sm font-medium text-gray-700 mb-1">
+                                    Message for decline email (Optional)
+                                </label>
+                                <textarea name="admin_notes"
+                                          id="admin_notes_reject_pending"
+                                          rows="3"
+                                          placeholder="Add a personal note to include in the decline email (optional)"
+                                          class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm">{{ old('admin_notes') }}</textarea>
+                                <p class="mt-1 text-xs text-gray-500">
+                                    If provided, this message is included in the decline email sent to the applicant.
+                                </p>
+                            </div>
                             <button type="submit" class="action-button w-full inline-flex justify-center items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-red-600 hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed" data-loading-text="Processing...">
                                 <span class="button-text">Reject Application</span>
                                 <span class="button-spinner hidden ml-2">
@@ -286,16 +297,7 @@
                         @else
                             <form action="{{ url('/admin/hiring-applications/' . $application->id . '/mark-hired') }}" method="POST" onsubmit="return confirm('Are you sure you want to mark this applicant as hired? Their role will change from applicant to employee and they will be able to login.');">
                                 @csrf
-                                <div class="mb-3">
-                                    <label for="admin_notes_hired_done" class="block text-sm font-medium text-gray-700 mb-1">
-                                        Notes (Optional)
-                                    </label>
-                                    <textarea name="admin_notes"
-                                              id="admin_notes_hired_done"
-                                              rows="3"
-                                              placeholder="Add notes about hiring (optional)"
-                                              class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm">{{ old('admin_notes', $application->admin_notes) }}</textarea>
-                                </div>
+                                @include('admin.hiring-applications.partials.mark-hired-form-fields', ['fieldSuffix' => 'done'])
                                 <button type="submit" class="action-button w-full inline-flex justify-center items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-green-600 hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed" data-loading-text="Processing...">
                                     <span class="button-text">Mark as Hired</span>
                                     <span class="button-spinner hidden ml-2">
@@ -306,7 +308,7 @@
                                     </span>
                                 </button>
                                 <p class="mt-2 text-xs text-gray-500">
-                                    This will change the user role from applicant to employee and activate their account.
+                                    This will change the user role from applicant to employee, activate their account, and send a hired email.
                                 </p>
                             </form>
                         @endif
@@ -314,13 +316,16 @@
                             @csrf
                             <div class="mb-3">
                                 <label for="admin_notes_decline_done" class="block text-sm font-medium text-gray-700 mb-1">
-                                    Decline Notes (Optional)
+                                    Message for decline email (Optional)
                                 </label>
                                 <textarea name="admin_notes"
                                           id="admin_notes_decline_done"
                                           rows="3"
-                                          placeholder="Add notes about declining this application (optional)"
+                                          placeholder="Add a personal note to include in the decline email (optional)"
                                           class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm">{{ old('admin_notes', $application->admin_notes) }}</textarea>
+                                <p class="mt-1 text-xs text-gray-500">
+                                    If provided, this message is included in the decline email sent to the applicant.
+                                </p>
                             </div>
                             <button type="submit" class="action-button w-full inline-flex justify-center items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-red-600 hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed" data-loading-text="Processing...">
                                 <span class="button-text">Decline Application</span>
@@ -332,7 +337,7 @@
                                 </span>
                             </button>
                             <p class="mt-2 text-xs text-gray-500">
-                                This will mark the application as rejected and deactivate the applicant account.
+                                This will mark the application as rejected, deactivate the applicant account, and send a decline email.
                             </p>
                         </form>
                     @endif
@@ -371,16 +376,7 @@
                         @else
                             <form action="{{ url('/admin/hiring-applications/' . $application->id . '/mark-hired') }}" method="POST" onsubmit="return confirm('Are you sure you want to mark this applicant as hired? They will be able to login to their account.');">
                                 @csrf
-                                <div class="mb-3">
-                                    <label for="admin_notes_hired" class="block text-sm font-medium text-gray-700 mb-1">
-                                        Notes (Optional)
-                                    </label>
-                                    <textarea name="admin_notes"
-                                              id="admin_notes_hired"
-                                              rows="3"
-                                              placeholder="Add notes about hiring (optional)"
-                                              class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm">{{ old('admin_notes', $application->admin_notes) }}</textarea>
-                                </div>
+                                @include('admin.hiring-applications.partials.mark-hired-form-fields', ['fieldSuffix' => 'scheduled'])
                                 <button type="submit" class="action-button w-full inline-flex justify-center items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-green-600 hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed" data-loading-text="Processing...">
                                     <span class="button-text">Mark as Hired</span>
                                     <span class="button-spinner hidden ml-2">
@@ -391,7 +387,7 @@
                                     </span>
                                 </button>
                                 <p class="mt-2 text-xs text-gray-500">
-                                    This will activate the user account and allow them to login.
+                                    This will activate the user account, allow them to login, and send a hired email.
                                 </p>
                             </form>
                         @endif

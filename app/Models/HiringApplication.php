@@ -34,6 +34,7 @@ class HiringApplication extends Model
         'interview_date',
         'interview_format',
         'interview_meeting_link',
+        'start_date',
     ];
 
     protected $casts = [
@@ -41,6 +42,7 @@ class HiringApplication extends Model
         'reviewed_at' => 'datetime',
         'token_expires_at' => 'datetime',
         'interview_date' => 'datetime',
+        'start_date' => 'date',
         'deleted_at' => 'datetime',
     ];
 

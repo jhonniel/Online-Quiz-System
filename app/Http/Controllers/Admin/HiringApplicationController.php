@@ -1110,10 +1110,11 @@ class HiringApplicationController extends Controller
         }
 
         // Send email notification to applicant if enabled
+        $declineEmailNote = trim((string) ($request->admin_notes ?? ''));
         $emailSent = $this->sendHiringApplicantStatusEmail(
             $application,
             'rejected',
-            $request->admin_notes
+            $declineEmailNote !== '' ? $declineEmailNote : null
         );
 
         $successMessage = $shouldDeactivateUser
@@ -1123,7 +1124,9 @@ class HiringApplicationController extends Controller
         if ($this->isHiringEmailNotificationsEnabled() && ! $emailSent) {
             $successMessage .= ' However, the notification email could not be sent. Please check mail settings or logs.';
         } elseif ($emailSent) {
-            $successMessage .= ' A notification email was sent to the applicant.';
+            $successMessage .= $declineEmailNote !== ''
+                ? ' A decline email with your note was sent to the applicant.'
+                : ' A decline email was sent to the applicant.';
         }
 
         return redirect('/admin/hiring-applications/'.$application->id)
@@ -1534,6 +1537,11 @@ class HiringApplicationController extends Controller
             abort(403, 'Access denied. You do not have permission to mark applicants as hired for this position.');
         }
 
+        $validated = $request->validate([
+            'admin_notes' => 'nullable|string|max:1000',
+            'start_date' => 'nullable|date',
+        ]);
+
         // Check if this is an internship position - if so, redirect to accept intern
         $isInternship = $application->hiringPosition &&
                         strcasecmp($application->hiringPosition->employment_type ?? '', 'Internship') === 0;
@@ -1563,12 +1571,14 @@ class HiringApplicationController extends Controller
 
         // Store the previous status before updating
         $previousStatus = $application->status;
+        $startDate = filled($validated['start_date'] ?? null) ? $validated['start_date'] : null;
 
         // Update application status to hired
-        HiringApplication::withoutEvents(function () use ($application, $request) {
+        HiringApplication::withoutEvents(function () use ($application, $validated, $startDate) {
             $application->update([
                 'status' => 'hired',
-                'admin_notes' => $request->admin_notes ?? $application->admin_notes,
+                'admin_notes' => $validated['admin_notes'] ?? $application->admin_notes,
+                'start_date' => $startDate,
                 'reviewed_by' => Auth::id(),
                 'reviewed_at' => now(),
             ]);
@@ -1579,6 +1589,10 @@ class HiringApplicationController extends Controller
             'is_approved' => true,
             'is_active' => true,
         ];
+
+        if ($startDate !== null) {
+            $userUpdateData['date_hired'] = $startDate;
+        }
 
         // If previous status was done_interview and user is applicant, change role to employee
         if ($previousStatus === 'done_interview' && $user->role === 'applicant') {
@@ -1594,7 +1608,8 @@ class HiringApplicationController extends Controller
             'applicant_name' => $application->full_name,
             'applicant_email' => $application->email,
             'position' => $application->hiringPosition->title ?? $application->position_applied,
-            'admin_notes' => $request->admin_notes,
+            'admin_notes' => $validated['admin_notes'] ?? null,
+            'start_date' => $startDate,
         ];
 
         // If role was changed from applicant to employee, log it
@@ -1612,29 +1627,24 @@ class HiringApplicationController extends Controller
         );
 
         // Send email notification to applicant if enabled
-        $emailNotificationsEnabled = \App\Models\Setting::get('hiring_email_notifications', 'enabled');
-        if ($emailNotificationsEnabled === 'enabled') {
-            try {
-                // Ensure mail configuration is up to date from settings
-                MailConfigService::configure();
+        $hiredEmailNote = trim((string) ($validated['admin_notes'] ?? ''));
+        $emailSent = $this->sendHiringApplicantStatusEmail(
+            $application,
+            'hired',
+            $hiredEmailNote !== '' ? $hiredEmailNote : null
+        );
 
-                Mail::to($application->email)
-                    ->send(new \App\Mail\HiringApplicationStatusUpdate(
-                        $application,
-                        'hired',
-                        $request->admin_notes ?? 'Congratulations! You have been hired.',
-                        $application->hiringPosition
-                    ));
-            } catch (\Exception $e) {
-                Log::error('Failed to send hired email', [
-                    'error' => $e->getMessage(),
-                    'application_id' => $application->id,
-                ]);
-            }
+        $successMessage = 'Application marked as hired. User account is now active and can login.';
+        if ($this->isHiringEmailNotificationsEnabled() && ! $emailSent) {
+            $successMessage .= ' However, the hired email could not be sent. Please check mail settings or logs.';
+        } elseif ($emailSent) {
+            $successMessage .= $hiredEmailNote !== ''
+                ? ' A hired email with your note was sent to the applicant.'
+                : ' A hired email was sent to the applicant.';
         }
 
         return redirect('/admin/hiring-applications/'.$application->id)
-            ->with('success', 'Application marked as hired. User account is now active and can login.');
+            ->with('success', $successMessage);
     }
 
     public function acceptIntern(Request $request, HiringApplication $application)

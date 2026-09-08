@@ -22,7 +22,7 @@ class TestHiringApplicationEmail extends Command
      */
     protected $signature = 'test:hiring-email 
                             {email : The email address to send the test email to}
-                            {--type=credentials : Email type: credentials, reconsideration, rejection, or received}';
+                            {--type=credentials : Email type: credentials, reconsideration, rejection, hired, or received}';
 
     /**
      * The console command description.
@@ -68,12 +68,15 @@ class TestHiringApplicationEmail extends Command
                 case 'rejection':
                     $this->sendRejectionEmail($email, $mockApplication, $mockPosition);
                     break;
+                case 'hired':
+                    $this->sendHiredEmail($email, $mockApplication, $mockPosition);
+                    break;
                 case 'received':
                     $this->sendReceivedEmail($email, $mockApplication, $mockPosition);
                     break;
                 default:
                     $this->error("Unknown email type: {$type}");
-                    $this->info("Available types: credentials, reconsideration, rejection, received");
+                    $this->info("Available types: credentials, reconsideration, rejection, hired, received");
                     return 1;
             }
 
@@ -160,6 +163,22 @@ class TestHiringApplicationEmail extends Command
         ));
 
         $this->info("Sent: Hiring Application Rejection email");
+    }
+
+    private function sendHiredEmail($email, $application, $position)
+    {
+        $application->hiringPosition = $position;
+        $application->start_date = Carbon::now()->addWeeks(2);
+        $adminNotes = 'Please prepare your government IDs for onboarding.';
+
+        Mail::to($email)->send(new HiringApplicationStatusUpdate(
+            $application,
+            'hired',
+            $adminNotes,
+            $position
+        ));
+
+        $this->info("Sent: Hiring Application Hired email");
     }
 
     private function sendReceivedEmail($email, $application, $position)

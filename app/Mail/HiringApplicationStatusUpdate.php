@@ -2,8 +2,10 @@
 
 namespace App\Mail;
 
+use App\Support\EmployeeDocumentMaterial;
 use Illuminate\Bus\Queueable;
 use Illuminate\Mail\Mailable;
+use Illuminate\Mail\Mailables\Attachment;
 use Illuminate\Mail\Mailables\Content;
 use Illuminate\Mail\Mailables\Envelope;
 use Illuminate\Queue\SerializesModels;
@@ -34,9 +36,16 @@ class HiringApplicationStatusUpdate extends Mailable
     public function envelope(): Envelope
     {
         $positionTitle = $this->position ? $this->position->title : ($this->application->position_applied ?? 'Position');
-        $statusText = ucfirst($this->status);
+        $subject = match ($this->status) {
+            'rejected' => 'Application Update',
+            'hired' => $this->isInternshipHire()
+                ? 'Internship Application Accepted'
+                : 'Welcome to the Team',
+            default => 'Application Status Update: '.ucfirst($this->status)." - {$positionTitle}",
+        };
+
         return new Envelope(
-            subject: "Application Status Update: {$statusText} - {$positionTitle}",
+            subject: $subject,
         );
     }
 
@@ -45,6 +54,16 @@ class HiringApplicationStatusUpdate extends Mailable
      */
     public function content(): Content
     {
+        $attachedDocumentNames = $this->isEmployeeHire()
+            ? array_values(array_filter(array_map(
+                fn (array $item): string => trim((string) ($item['name'] ?? '')),
+                array_merge(
+                    EmployeeDocumentMaterial::hiredEmailPolicyMaterials(),
+                    EmployeeDocumentMaterial::hiredEmailHandbookMaterials()
+                )
+            )))
+            : [];
+
         return new Content(
             view: 'emails.hiring-application-status-update',
             with: [
@@ -52,6 +71,9 @@ class HiringApplicationStatusUpdate extends Mailable
                 'position' => $this->position,
                 'status' => $this->status,
                 'statusMessage' => $this->statusMessage,
+                'attachedDocumentNames' => $attachedDocumentNames,
+                'isInternshipHire' => $this->isInternshipHire(),
+                'isEmployeeHire' => $this->isEmployeeHire(),
             ],
         );
     }
@@ -63,6 +85,42 @@ class HiringApplicationStatusUpdate extends Mailable
      */
     public function attachments(): array
     {
-        return [];
+        if (! $this->isEmployeeHire()) {
+            return [];
+        }
+
+        return array_merge(
+            EmployeeDocumentMaterial::mailAttachmentsFromItems(
+                'policy',
+                EmployeeDocumentMaterial::hiredEmailPolicyMaterials()
+            ),
+            EmployeeDocumentMaterial::mailAttachmentsFromItems(
+                'handbook',
+                EmployeeDocumentMaterial::hiredEmailHandbookMaterials()
+            )
+        );
+    }
+
+    private function isInternshipHire(): bool
+    {
+        if ($this->status !== 'hired') {
+            return false;
+        }
+
+        return strcasecmp($this->resolvedEmploymentType(), 'Internship') === 0;
+    }
+
+    private function isEmployeeHire(): bool
+    {
+        return $this->status === 'hired' && ! $this->isInternshipHire();
+    }
+
+    private function resolvedEmploymentType(): string
+    {
+        return trim((string) (
+            $this->position?->employment_type
+            ?? $this->application->hiringPosition?->employment_type
+            ?? ''
+        ));
     }
 }

@@ -4,6 +4,8 @@ namespace App\Support;
 
 use App\Models\Setting;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Mail\Mailables\Attachment;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Symfony\Component\HttpFoundation\Response;
@@ -181,12 +183,98 @@ final class EmployeeDocumentMaterial
         $contents = Storage::disk($disk)->get($item['path']);
         abort_if(! is_string($contents), 404, $config['not_found_message']);
 
-        $filename = self::safeFilename($type, $item['name'], $item['path']);
+        $filename = self::attachmentFilename($type, $item);
 
         return response($contents, 200, [
             'Content-Type' => 'application/pdf',
             'Content-Disposition' => $disposition.'; filename="'.$filename.'"',
         ]);
+    }
+
+    /**
+     * Employee hire policy/handbook PDFs (not used for internship or OJT).
+     *
+     * @return list<array{id: string, name: string, path: string, disk: string, sort: int}>
+     */
+    public static function hiredEmailPolicyMaterials(): array
+    {
+        return self::available('policy');
+    }
+
+    /**
+     * Employee handbook PDFs for employee hires (not internship or OJT).
+     *
+     * @return list<array{id: string, name: string, path: string, disk: string, sort: int}>
+     */
+    public static function hiredEmailHandbookMaterials(): array
+    {
+        return self::available('handbook');
+    }
+
+    /**
+     * @param  list<array{id: string, name: string, path: string, disk: string, sort: int}>  $items
+     * @return list<Attachment>
+     */
+    public static function mailAttachmentsFromItems(string $type, array $items): array
+    {
+        $attachments = [];
+
+        foreach ($items as $item) {
+            $attachment = self::mailAttachmentFromItem($type, $item);
+            if ($attachment !== null) {
+                $attachments[] = $attachment;
+            }
+        }
+
+        return $attachments;
+    }
+
+    /**
+     * @param  array{id: string, name: string, path: string, disk: string, sort: int}  $item
+     */
+    public static function mailAttachmentFromItem(string $type, array $item): ?Attachment
+    {
+        $path = trim((string) ($item['path'] ?? ''));
+        if ($path === '') {
+            return null;
+        }
+
+        $disk = self::resolveDiskForPath($path, (string) ($item['disk'] ?? ''));
+        if ($disk === null) {
+            Log::warning('Employee document material missing for mail attachment', [
+                'type' => $type,
+                'name' => $item['name'] ?? null,
+                'path' => $path,
+            ]);
+
+            return null;
+        }
+
+        try {
+            $filename = self::attachmentFilename($type, $item);
+
+            return Attachment::fromData(
+                fn () => Storage::disk($disk)->get($path),
+                $filename
+            )->withMime('application/pdf');
+        } catch (\Throwable $exception) {
+            Log::error('Failed to build employee document mail attachment', [
+                'type' => $type,
+                'name' => $item['name'] ?? null,
+                'path' => $path,
+                'error' => $exception->getMessage(),
+            ]);
+
+            return null;
+        }
+    }
+
+    /**
+     * @param  array{id: string, name: string, path: string, disk: string, sort: int}  $item
+     */
+    public static function attachmentFilename(string $type, array $item): string
+    {
+        return self::safeFilename($type, (string) ($item['name'] ?? ''), (string) ($item['path'] ?? ''));
     }
 
     public static function settingKey(string $type): string

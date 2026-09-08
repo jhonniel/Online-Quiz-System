@@ -9,10 +9,24 @@
         <tr>
             <td style="padding: 20px 24px; border-bottom: 1px solid #e5e7eb;">
                 <h1 style="margin: 0 0 4px 0; font-size: 20px; color: #111827;">
-                    Application Status Update
+                    @if($status === 'hired' && ($isInternshipHire ?? false))
+                        Internship Application Accepted
+                    @elseif($status === 'hired')
+                        Welcome to the Team
+                    @else
+                        Application Status Update
+                    @endif
                 </h1>
                 <p style="margin: 0; font-size: 14px; color: #6b7280;">
-                    Hello {{ $application->first_name }},
+                    @if($status === 'rejected')
+                        Application Update
+                    @elseif($status === 'hired' && ($isInternshipHire ?? false))
+                        Your internship application has been accepted
+                    @elseif($status === 'hired')
+                        You have been selected to join our team
+                    @else
+                        Hello {{ $application->first_name }},
+                    @endif
                 </p>
             </td>
         </tr>
@@ -20,6 +34,11 @@
             <td style="padding: 20px 24px; font-size: 14px; color: #374151; line-height: 1.6;">
                 @php
                     $positionTitle = $position?->title ?? ($application->position_applied ?? 'Position');
+                    $applicantName = trim($application->full_name ?? trim(($application->first_name ?? '').' '.($application->last_name ?? '')));
+                    $startDate = $application->start_date ?? null;
+                    if ($startDate && ! $startDate instanceof \Carbon\Carbon) {
+                        $startDate = \Carbon\Carbon::parse($startDate);
+                    }
                 @endphp
 
                 @if($status === 'accepted')
@@ -45,11 +64,89 @@
                     @endif
 
                 @elseif($status === 'rejected')
-                    <h2 style="margin: 0 0 8px 0; font-size: 18px; color: #b91c1c;">Application Update</h2>
-                    <p style="margin: 0 0 12px 0;">
-                        We regret to inform you that your application for the <strong>{{ $positionTitle }}</strong> position has been
-                        <strong>rejected</strong> at this time.
+                    <p style="margin: 0 0 16px 0;">
+                        Dear {{ $applicantName !== '' ? $applicantName : 'Applicant' }},
                     </p>
+                    <p style="margin: 0 0 12px 0;">
+                        Thank you for your interest in becoming part of our team and for considering us as part of your career journey.
+                    </p>
+                    <p style="margin: 0 0 12px 0;">
+                        After careful consideration, we have decided to move forward with another candidate at this time. While we will not be proceeding with your application, we truly appreciate your interest and the time you have invested in the process.
+                    </p>
+                    <p style="margin: 0 0 12px 0;">
+                        We encourage you to continue pursuing opportunities that match your skills and goals, and we wish you continued success in your future endeavors.
+                    </p>
+
+                    @if(trim((string) ($statusMessage ?? '')) !== '')
+                        <p style="margin: 0 0 12px 0; white-space: pre-line;">
+                            {{ trim($statusMessage) }}
+                        </p>
+                    @endif
+
+                    <p style="margin: 0 0 12px 0;">
+                        Thank you once again for your interest in our organization.
+                    </p>
+
+                @elseif($status === 'hired' && ($isInternshipHire ?? false))
+                    <p style="margin: 0 0 16px 0;">
+                        Dear {{ $applicantName !== '' ? $applicantName : 'Applicant' }},
+                    </p>
+                    <p style="margin: 0 0 12px 0;">
+                        Congratulations! Your internship application has been accepted.
+                    </p>
+
+                    @if(trim((string) ($statusMessage ?? '')) !== '' && trim((string) $statusMessage) !== 'Congratulations! Your internship application has been accepted.')
+                        <p style="margin: 0 0 12px 0; white-space: pre-line;">
+                            {{ trim($statusMessage) }}
+                        </p>
+                    @endif
+
+                    <p style="margin: 0 0 12px 0;">
+                        We look forward to working with you.
+                    </p>
+
+                @elseif($status === 'hired')
+                    <p style="margin: 0 0 16px 0;">
+                        Dear {{ $applicantName !== '' ? $applicantName : 'Applicant' }},
+                    </p>
+                    <p style="margin: 0 0 12px 0;">
+                        We are pleased to inform you that you have been selected to join our team.
+                    </p>
+
+                    @if($startDate)
+                        <p style="margin: 0 0 12px 0;">
+                            Your start date will be <strong>{{ $startDate->format('F j, Y') }}</strong>. Please make sure to be available and ready to begin on this date. Further details regarding your schedule, responsibilities, and other onboarding information will be provided separately.
+                        </p>
+                    @else
+                        <p style="margin: 0 0 12px 0;">
+                            Further details regarding your start date, schedule, responsibilities, and other onboarding information will be provided separately.
+                        </p>
+                    @endif
+
+                    <p style="margin: 0 0 12px 0;">
+                        We are excited to have you join us and look forward to working with you.
+                    </p>
+                    <p style="margin: 0 0 12px 0;">
+                        Welcome to the team!
+                    </p>
+
+                    @if(! empty($attachedDocumentNames ?? []))
+                        <p style="margin: 0 0 12px 0;">
+                            Please review the attached company policy documents and Employee Handbook. The following documents are included with this email:
+                        </p>
+                        <ul style="margin: 0 0 12px 0; padding-left: 20px;">
+                            @foreach($attachedDocumentNames as $documentName)
+                                <li style="margin-bottom: 4px;">{{ $documentName }}</li>
+                            @endforeach
+                        </ul>
+                    @endif
+
+                    @if(trim((string) ($statusMessage ?? '')) !== '')
+                        <p style="margin: 0 0 12px 0; white-space: pre-line;">
+                            {{ trim($statusMessage) }}
+                        </p>
+                    @endif
+
                 @else
                     <h2 style="margin: 0 0 8px 0; font-size: 18px; color: #111827;">
                         Application Status: {{ ucfirst($status) }}
@@ -60,27 +157,28 @@
                     </p>
                 @endif
 
-                @if($statusMessage)
+                @if($statusMessage && ! in_array($status, ['rejected', 'hired'], true))
                     <h3 style="margin: 16px 0 8px 0; font-size: 16px; color: #111827;">Additional Information</h3>
                     <p style="margin: 0 0 12px 0; white-space: pre-line;">
                         {{ $statusMessage }}
                     </p>
                 @endif
 
+                @if(! in_array($status, ['rejected', 'hired'], true))
                 <p style="margin: 16px 0 0 0;">
                     Thank you for your interest in joining our team.
                 </p>
+                @endif
             </td>
         </tr>
         <tr>
             <td style="padding: 16px 24px 20px 24px; border-top: 1px solid #e5e7eb; font-size: 12px; color: #6b7280;">
                 <p style="margin: 0;">
                     Best regards,<br>
-                    Infosoft-Studio
+                    {{ in_array($status, ['rejected', 'hired'], true) ? 'Infosoft' : 'Infosoft-Studio' }}
                 </p>
             </td>
         </tr>
     </table>
 </body>
 </html>
-
