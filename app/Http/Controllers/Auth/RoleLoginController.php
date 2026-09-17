@@ -33,6 +33,10 @@ class RoleLoginController extends Controller
             }
 
             if ($user instanceof User && $user->isAdmin()) {
+                if ($user->hasAdminTotpEnabled() && ! app(\App\Support\AdminTotp::class)->sessionPassed()) {
+                    return redirect()->guest(url('/admin/two-factor-challenge'));
+                }
+
                 return redirect('/admin/dashboard');
             }
 
@@ -70,6 +74,13 @@ class RoleLoginController extends Controller
 
             if ($user instanceof User && $user->role === 'student' && (bool) $user->student_terminated) {
                 return redirect()->to(AccountTerminatedController::url());
+            }
+
+            // Fresh login must re-verify admin TOTP when enabled.
+            app(\App\Support\AdminTotp::class)->clearSessionPassed();
+
+            if ($user instanceof User && $user->hasAdminTotpEnabled()) {
+                return redirect()->guest(url('/admin/two-factor-challenge'));
             }
 
             $fallback = '/home';

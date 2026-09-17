@@ -38,6 +38,7 @@ use App\Http\Controllers\Admin\OmadaController;
 use App\Http\Controllers\Admin\PayslipController;
 use App\Http\Controllers\Admin\QuizController as AdminQuizController;
 use App\Http\Controllers\Admin\SettingsController;
+use App\Http\Controllers\Admin\SecurityController;
 use App\Http\Controllers\Admin\StackController;
 use App\Http\Controllers\Admin\StarlinkController;
 use App\Http\Controllers\Admin\StudentDashboardController;
@@ -59,6 +60,7 @@ use App\Http\Controllers\Admin\UserMapController;
 use App\Http\Controllers\AnonymousChatController;
 use App\Http\Controllers\Auth\RegisteredUserController;
 use App\Http\Controllers\Auth\RoleLoginController;
+use App\Http\Controllers\Auth\TotpChallengeController;
 use App\Http\Controllers\ChatController;
 use App\Http\Controllers\ChatMediaController;
 use App\Http\Controllers\DocumentExportVerificationController;
@@ -222,14 +224,31 @@ require __DIR__.'/auth.php';
 // Redirect authenticated users
 Route::get('/home', [RedirectController::class, 'home'])->name('home');
 
+// Admin TOTP challenge (auth only — must not require admin.totp yet)
+Route::prefix('admin')->middleware(['auth'])->group(function () {
+    Route::get('/two-factor-challenge', [TotpChallengeController::class, 'show'])->name('admin.totp.challenge');
+    Route::post('/two-factor-challenge', [TotpChallengeController::class, 'store'])
+        ->middleware('throttle:10,1')
+        ->name('admin.totp.challenge.store');
+    Route::post('/two-factor-challenge/cancel', [TotpChallengeController::class, 'cancel'])->name('admin.totp.challenge.cancel');
+});
+
 // Admin Routes
-Route::prefix('admin')->middleware(['auth', 'admin'])->group(function () {
+Route::prefix('admin')->middleware(['auth', 'admin', 'admin.totp'])->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('admin.dashboard');
     Route::get('/hr-dashboard', [HrDashboardController::class, 'index'])->name('admin.hr-dashboard');
     Route::get('/my-permissions', [AdminPermissionController::class, 'myPermissions'])->name('admin.my-permissions');
     Route::get('/activity-data', [DashboardController::class, 'getActivityData'])->name('admin.activity-data');
     Route::get('/chat-media/{chatMessageMedia}', [AdminChatMediaController::class, 'show'])->name('admin.chat-media.show');
     Route::redirect('/teacher-invites', '/admin/teachers-management/invite-links');
+
+    // Admin-only authenticator 2FA management
+    Route::get('/security', [SecurityController::class, 'index'])->name('admin.security.index');
+    Route::post('/security/totp/start', [SecurityController::class, 'start'])->name('admin.security.totp.start');
+    Route::post('/security/totp/confirm', [SecurityController::class, 'confirm'])->middleware('throttle:10,1')->name('admin.security.totp.confirm');
+    Route::post('/security/totp/cancel', [SecurityController::class, 'cancelSetup'])->name('admin.security.totp.cancel');
+    Route::post('/security/totp/disable', [SecurityController::class, 'disable'])->middleware('throttle:10,1')->name('admin.security.totp.disable');
+    Route::post('/security/totp/recovery-codes', [SecurityController::class, 'regenerateRecoveryCodes'])->middleware('throttle:5,1')->name('admin.security.totp.recovery');
 
     /**
      * Teacher invite links — registered here (auth + admin only) so route names always exist for

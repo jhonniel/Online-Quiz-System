@@ -889,15 +889,27 @@ class LeaveRequestController extends Controller
                 'before_or_equal:'.$lockedEnd,
             ],
             'overtime_tasks' => ['nullable', 'string', 'max:2000', new ClickUpTasksUrlsOnly],
-            'supporting_documents' => ['nullable', 'array', 'max:5'],
-            'supporting_documents.*' => ['file', 'mimes:pdf,jpg,jpeg,png', 'max:5120'],
+            'supporting_documents' => ['required', 'array', 'min:1', 'max:5'],
+            'supporting_documents.*' => ['required', 'file', 'mimes:jpg,jpeg,png,pdf', 'max:5120'],
         ], [
             'reason.required' => 'Please provide a reason for this overtime.',
             'overtime_specific_dates.required' => 'Please select at least one overtime date.',
             'overtime_specific_dates.*.after_or_equal' => 'Selected dates must match the date(s) filed in Record Attendance.',
             'overtime_specific_dates.*.before_or_equal' => 'Selected dates must match the date(s) filed in Record Attendance.',
+            'supporting_documents.required' => 'Hubstaff screenshot(s) are required for Additional Time requests.',
+            'supporting_documents.min' => 'Hubstaff screenshot(s) are required for Additional Time requests.',
+            'supporting_documents.*.required' => 'Each uploaded file must be a valid Hubstaff screenshot (JPG/PNG) or PDF.',
+            'supporting_documents.*.mimes' => 'Hubstaff screenshots must be JPG, PNG, or PDF.',
+            'supporting_documents.*.max' => 'Each file must be 5MB or smaller.',
         ]);
 
+        $files = $request->file('supporting_documents', []);
+        $hasUploads = is_array($files) && collect($files)->filter()->isNotEmpty();
+        if (! $hasUploads) {
+            return redirect()->back()
+                ->withErrors(['supporting_documents' => 'Hubstaff screenshot(s) are required for Additional Time requests.'])
+                ->withInput();
+        }
         if (trim($validated['overtime_hours']) !== $lockedHours) {
             return redirect()->back()
                 ->withErrors(['overtime_hours' => 'Overtime hours must match the amount filed in Record Attendance ('.$lockedHours.').'])
@@ -1798,6 +1810,9 @@ class LeaveRequestController extends Controller
 
         if (! $hasNewUploads && ! $hasExisting) {
             $label = $this->structuredHoursRequestLabel($type, $user);
+            if ($user->role === 'student') {
+                return ['supporting_documents' => 'Hubstaff screenshot(s) are required for Additional Time requests. Upload at least one JPG, PNG, or PDF.'];
+            }
 
             return ['supporting_documents' => "Supporting document is required for {$label} requests."];
         }

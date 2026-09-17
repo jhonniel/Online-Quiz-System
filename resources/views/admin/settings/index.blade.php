@@ -474,7 +474,7 @@
                                            min="0" max="1000000" step="1"
                                            class="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
                                     <p class="mt-2 text-xs text-gray-500">
-                                        Total student OJT capacity for dashboard tracking (set to 0 if not yet defined).
+                                        Total student OJT capacity for dashboard tracking. Set to <strong>0</strong> for no limit.
                                     </p>
                                 </div>
                             </div>

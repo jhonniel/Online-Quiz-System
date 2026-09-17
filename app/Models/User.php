@@ -115,6 +115,8 @@ class User extends Authenticatable
         'password',
         'remember_token',
         'p12_certificate_password',
+        'totp_secret',
+        'totp_recovery_codes',
     ];
 
     /**
@@ -147,6 +149,9 @@ class User extends Authenticatable
         'auto_tenure_leave_credits_enabled' => 'boolean',
         'auto_tenure_leave_credits_last_tier' => 'integer',
         'p12_certificate_password' => 'encrypted',
+        'totp_secret' => 'encrypted',
+        'totp_recovery_codes' => 'encrypted:array',
+        'totp_confirmed_at' => 'datetime',
         'ojt_target_end_date' => 'date',
         'ojt_requirement_met_at' => 'datetime',
         'ojt_completion_congratulations_sent_at' => 'datetime',
@@ -362,6 +367,26 @@ class User extends Authenticatable
     public function isAdmin()
     {
         return $this->role === 'admin';
+    }
+
+    /**
+     * Admin-only Google Authenticator TOTP is confirmed and active.
+     */
+    public function hasAdminTotpEnabled(): bool
+    {
+        return $this->isAdmin()
+            && filled($this->totp_secret)
+            && $this->totp_confirmed_at !== null;
+    }
+
+    /**
+     * Secret exists but not yet confirmed (setup in progress).
+     */
+    public function hasAdminTotpPending(): bool
+    {
+        return $this->isAdmin()
+            && filled($this->totp_secret)
+            && $this->totp_confirmed_at === null;
     }
 
     /**

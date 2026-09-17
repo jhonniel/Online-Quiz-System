@@ -381,6 +381,7 @@
                     <input type="password"
                            id="current_password"
                            name="current_password"
+                           autocomplete="current-password"
                            class="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm @error('current_password') border-red-300 @enderror"
                            required>
                     @error('current_password')
@@ -393,6 +394,7 @@
                     <input type="password"
                            id="new_password"
                            name="new_password"
+                           autocomplete="new-password"
                            class="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm @error('new_password') border-red-300 @enderror"
                            required>
                     <p class="mt-1 text-sm text-gray-500">Must be at least 8 characters</p>
@@ -406,6 +408,7 @@
                     <input type="password"
                            id="new_password_confirmation"
                            name="new_password_confirmation"
+                           autocomplete="new-password"
                            class="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
                            required>
                 </div>

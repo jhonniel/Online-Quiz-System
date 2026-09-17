@@ -213,7 +213,7 @@
                                 </dd>
                             @else
                                 <dd class="text-base sm:text-lg font-medium {{ $ojtOverCapacity ? 'text-red-900' : 'text-fuchsia-900' }}">{{ $ojtSlotsUsed ?? 0 }} ongoing interns</dd>
-                                <dd class="text-xs mt-1 {{ $ojtOverCapacity ? 'text-red-700' : 'text-fuchsia-600' }}">Set total slots in Admin Settings</dd>
+                                <dd class="text-xs mt-1 {{ $ojtOverCapacity ? 'text-red-700' : 'text-fuchsia-600' }}">No limit</dd>
                             @endif
                         </dl>
                     </div>

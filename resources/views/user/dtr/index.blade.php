@@ -700,7 +700,7 @@ document.addEventListener('DOMContentLoaded', function() {
             <div class="flex-1 min-w-0">
                 <h3 id="incomplete-overtime-reminder-title" class="text-xl font-bold text-gray-900">Incomplete Additional Time details</h3>
                 <p class="mt-2 text-sm sm:text-base text-gray-600 leading-relaxed">
-                    You have {{ count($incompleteOvertimeReminderItems) }} Additional Time request(s) from Record Attendance that still need a <strong>reason</strong> submitted (ClickUp links and supporting documents are optional).
+                    You have {{ count($incompleteOvertimeReminderItems) }} Additional Time request(s) from Record Attendance that still need a <strong>reason</strong> and <strong>Hubstaff screenshot(s)</strong> (ClickUp links remain optional).
                 </p>
                 <p class="mt-2 text-sm font-medium text-red-700">
                     If not completed within {{ $incompleteOvertimeWindowDays }} days of filing, each request will be <strong>automatically rejected</strong>.

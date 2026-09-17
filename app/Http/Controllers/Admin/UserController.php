@@ -659,6 +659,7 @@ class UserController extends Controller
             'name' => 'required|string|max:255',
             'email' => ['required', 'string', 'email', 'max:255', Rule::unique('users')->ignore($user->id)],
             'password' => 'nullable|string|min:8|confirmed',
+            'new_password' => 'nullable|string|min:8|confirmed',
             'role' => 'required|string|'.UserRoles::validationRule(),
             'university_id' => [
                 'nullable',
@@ -709,6 +710,10 @@ class UserController extends Controller
             'sss_number' => 'nullable|string|max:50',
             'hdmf_number' => 'nullable|string|max:50',
             'phic_number' => 'nullable|string|max:50',
+        ], [
+            'new_password.min' => 'New password must be at least 8 characters.',
+            'new_password.confirmed' => 'New password confirmation does not match.',
+            'password.confirmed' => 'Password confirmation does not match.',
         ]);
 
         // Custom validation for new university
@@ -756,8 +761,12 @@ class UserController extends Controller
             'theme_color_enabled' => $request->boolean('theme_color_enabled'),
         ];
 
-        if ($request->filled('password')) {
-            $data['password'] = Hash::make($request->password);
+        // Prefer new_password (avoids browser autofill of login password into name="password").
+        // Pass plaintext — User model casts password with 'hashed'.
+        if ($request->filled('new_password')) {
+            $data['password'] = (string) $request->input('new_password');
+        } elseif ($request->filled('password')) {
+            $data['password'] = (string) $request->input('password');
         }
 
         if ($request->filled('required_training_hours')) {

@@ -451,18 +451,20 @@
                         <h3 class="text-base font-semibold text-gray-900">Change Password</h3>
                     </div>
                     <div class="p-5 space-y-4">
-                        <p class="text-sm text-gray-500">Leave blank to keep current password.</p>
+                        <p class="text-sm text-gray-500">Leave blank to keep current password. Both fields are required to change it.</p>
                         <div>
-                            <label for="password" class="block text-sm font-semibold text-gray-700 mb-1.5">New Password</label>
-                            <input type="password" name="password" id="password"
-                                   class="block w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 text-sm @error('password') border-red-500 @enderror"
+                            <label for="new_password" class="block text-sm font-semibold text-gray-700 mb-1.5">New Password</label>
+                            <input type="password" name="new_password" id="new_password"
+                                   autocomplete="new-password"
+                                   class="block w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 text-sm @error('new_password') border-red-500 @enderror"
                                    placeholder="Leave blank to keep current">
-                            @error('password') <p class="mt-1 text-sm text-red-600">{{ $message }}</p> @enderror
+                            @error('new_password') <p class="mt-1 text-sm text-red-600">{{ $message }}</p> @enderror
                         </div>
                         <div>
-                            <label for="password_confirmation" class="block text-sm font-semibold text-gray-700 mb-1.5">Confirm Password</label>
-                            <input type="password" name="password_confirmation" id="password_confirmation"
-                                   class="block w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 text-sm"
+                            <label for="new_password_confirmation" class="block text-sm font-semibold text-gray-700 mb-1.5">Confirm Password</label>
+                            <input type="password" name="new_password_confirmation" id="new_password_confirmation"
+                                   autocomplete="new-password"
+                                   class="block w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 text-sm @error('new_password') border-red-500 @enderror"
                                    placeholder="Re-enter new password">
                         </div>
                     </div>
@@ -487,6 +489,15 @@
 @section('scripts')
 <script>
 document.addEventListener('DOMContentLoaded', function() {
+    // Prevent browsers from autofilling the optional "new password" fields with the
+    // saved login password (that causes confirmation mismatch on unrelated saves).
+    ['new_password', 'new_password_confirmation'].forEach(function (id) {
+        const el = document.getElementById(id);
+        if (el) {
+            el.value = '';
+        }
+    });
+
     const universitySelect = document.getElementById('university_select');
     const newUniversityContainer = document.getElementById('new-university-container');
     const newUniversityInput = document.getElementById('new_university_name');

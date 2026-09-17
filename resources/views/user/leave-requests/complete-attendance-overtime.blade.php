@@ -30,7 +30,7 @@
 
             <div class="rounded-lg border border-orange-200 bg-orange-50 px-4 py-3 text-sm text-orange-900">
                 <p class="font-semibold">Additional Time hours were recorded from Record Attendance.</p>
-                <p class="mt-1">Submit a reason below so your request can be reviewed. ClickUp links and supporting documents are optional. Admin approval is blocked until this form is completed.</p>
+                <p class="mt-1">Submit a reason and <strong>Hubstaff screenshot(s)</strong> below so your request can be reviewed. ClickUp links are optional. Admin approval is blocked until this form is completed.</p>
             </div>
 
             <div class="bg-white rounded-lg shadow border border-gray-200 p-6">
@@ -40,6 +40,16 @@
                     @method('PUT')
 
                     <input type="hidden" name="type" value="overtime">
+
+                    @if($errors->any())
+                        <div class="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
+                            <ul class="list-disc list-inside space-y-0.5">
+                                @foreach($errors->all() as $error)
+                                    <li>{{ $error }}</li>
+                                @endforeach
+                            </ul>
+                        </div>
+                    @endif
 
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div>
@@ -107,12 +117,12 @@
 
                     <div>
                         <label for="supporting_documents_input" class="block text-sm font-medium text-gray-700 mb-2">
-                            Supporting Documents <span class="text-gray-400">(Optional)</span>
+                            Hubstaff Screenshot(s) <span class="text-red-500">*</span>
                         </label>
                         <input type="file" name="supporting_documents[]" id="supporting_documents_input"
-                               accept=".pdf,.jpg,.jpeg,.png" multiple
+                               accept=".jpg,.jpeg,.png,.pdf" multiple required
                                class="w-full text-sm text-gray-600">
-                        <p class="mt-1 text-xs text-gray-500">Optional — upload up to 5 files (PDF/JPG/PNG), 5MB max each.</p>
+                        <p class="mt-1 text-xs text-gray-500">Required — upload Hubstaff screenshots proving the additional time (JPG/PNG/PDF), up to 5 files, 5MB max each.</p>
                         @error('supporting_documents')<p class="mt-1 text-sm text-red-600">{{ $message }}</p>@enderror
                         @error('supporting_documents.*')<p class="mt-1 text-sm text-red-600">{{ $message }}</p>@enderror
                     </div>

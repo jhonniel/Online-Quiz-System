@@ -84,10 +84,8 @@
                         @endif
                     @else
                         <p class="text-2xl font-bold {{ $ojtValueClass }}">{{ number_format($ojtUsedSlots) }}</p>
-                        <p class="text-xs font-semibold uppercase tracking-wide mt-1 {{ $ojtTitleClass }}">Ongoing Students</p>
-                        <p class="mt-1 text-xs text-gray-500">
-                            <a href="{{ url('/admin/settings') }}" class="text-indigo-600 hover:text-indigo-800 underline">Set total OJT slots</a> in Admin Settings
-                        </p>
+                        <p class="text-xs font-semibold uppercase tracking-wide mt-1 {{ $ojtTitleClass }}">OJT Slots Used (Ongoing)</p>
+                        <p class="mt-1 text-xs font-medium text-emerald-700">No limit</p>
                     @endif
                 </div>
             </div>

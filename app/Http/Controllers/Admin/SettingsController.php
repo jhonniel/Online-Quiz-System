@@ -870,12 +870,12 @@ class SettingsController extends Controller
             ]);
         }
 
-        // Global OJT slot capacity (0 means not configured / unlimited display context).
+        // Global OJT slot capacity (0 = no limit).
         $ojtTotalSlots = $request->input('ojt_total_slots');
         $ojtTotalSlots = ($ojtTotalSlots !== null && $ojtTotalSlots !== '')
             ? (int) $ojtTotalSlots
             : 0;
-        Setting::set('ojt_total_slots', $ojtTotalSlots, 'number', 'Total available OJT slots for student capacity tracking');
+        Setting::set('ojt_total_slots', $ojtTotalSlots, 'number', 'Total available OJT slots for student capacity tracking (0 = no limit)');
 
         // Leave Request Signatories
         $leaveImmediateSupervisor = trim((string) ($request->leave_immediate_supervisor ?? ''));

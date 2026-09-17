@@ -64,6 +64,7 @@ class Kernel extends HttpKernel
     protected $routeMiddleware = [
         'auth' => \App\Http\Middleware\Authenticate::class,
         'admin' => \App\Http\Middleware\AdminMiddleware::class,
+        'admin.totp' => \App\Http\Middleware\EnsureAdminTotpVerified::class,
         'admin.permission' => \App\Http\Middleware\CheckAdminPermission::class,
         'admin.analytics' => \App\Http\Middleware\CheckAnalyticsFeature::class,
         'admin.subfeature' => \App\Http\Middleware\CheckAdminSubFeature::class,

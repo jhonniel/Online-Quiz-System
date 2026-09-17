@@ -163,10 +163,10 @@
                         @enderror
                     </div>
 
-                    <!-- Supporting Document (required for Overtime; hidden for Travel) -->
+                    <!-- Supporting Document (required Hubstaff screenshots for student Additional Time / employee Overtime; hidden for Travel) -->
                     <div id="supporting-section">
                         <label class="block text-sm font-medium text-gray-700 mb-2">
-                            Supporting Document (e.g., Hubstaff screenshots, ClickUp links/screenshots)
+                            <span id="supporting-label-text">Supporting Document (e.g., Hubstaff screenshots)</span>
                             <span id="supporting-required-span" class="text-gray-400">(Optional)</span>
                         </label>
                         <input type="file" name="supporting_documents[]" id="supporting_documents_input" accept=".pdf,.jpg,.jpeg,.png" multiple
@@ -187,7 +187,7 @@
                             <p class="text-xs text-gray-500 mb-3" id="structured-hours-section-help">
                                 @if(auth()->user()->role === 'student')
                                     When requesting <strong>Additional Time</strong>, provide the total hours, the dates covered,
-                                    and list the tasks (e.g., ClickUp links) completed during that time.
+                                    list the tasks (e.g., ClickUp links) completed during that time, and upload <strong>Hubstaff screenshot(s)</strong> (required).
                                     When approved, these hours are added to your DTR and count toward your required training hours.
                                 @else
                                     When requesting <strong>Overtime</strong>, provide the total hours, dates covered, and tasks (e.g., ClickUp links) completed during that time.
@@ -882,9 +882,21 @@
                 if (supportingSection) supportingSection.classList.add('hidden');
             } else if (isStructuredHoursType(typeSelect.value)) {
                 if (supportingRequiredSpan) { supportingRequiredSpan.classList.remove('text-gray-400'); supportingRequiredSpan.classList.add('text-red-500'); supportingRequiredSpan.textContent = '*'; }
-                if (supportingHelp) supportingHelp.textContent = 'Required for Additional Time. Upload up to 5 files (PDF/JPG/PNG), 5MB max per file.';
+                const supportingLabel = document.getElementById('supporting-label-text');
+                if (supportingLabel) {
+                    supportingLabel.textContent = isStudent
+                        ? 'Hubstaff Screenshot(s)'
+                        : 'Supporting Document (e.g., Hubstaff screenshots)';
+                }
+                if (supportingHelp) {
+                    supportingHelp.textContent = isStudent
+                        ? 'Required for Additional Time. Upload Hubstaff screenshot(s) proving the hours (JPG/PNG/PDF), up to 5 files, 5MB max each.'
+                        : 'Required for Overtime. Upload up to 5 files (PDF/JPG/PNG), 5MB max per file.';
+                }
             } else {
                 if (supportingRequiredSpan) { supportingRequiredSpan.classList.remove('text-red-500'); supportingRequiredSpan.classList.add('text-gray-400'); supportingRequiredSpan.textContent = '(Optional)'; }
+                const supportingLabel = document.getElementById('supporting-label-text');
+                if (supportingLabel) supportingLabel.textContent = 'Supporting Document (e.g., Hubstaff screenshots)';
                 if (supportingHelp) supportingHelp.textContent = 'Optional, upload up to 5 files (PDF/JPG/PNG), 5MB max per file.';
             }
         }

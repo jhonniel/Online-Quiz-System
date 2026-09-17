@@ -167,10 +167,10 @@
                         @enderror
                     </div>
 
-                    <!-- Supporting Document (required for Overtime; hidden for Travel) -->
+                    <!-- Supporting Document (required Hubstaff screenshots for student Additional Time / employee Overtime; hidden for Travel) -->
                     <div id="supporting-section">
                         <label class="block text-sm font-medium text-gray-700 mb-2">
-                            Supporting Document (e.g., Hubstaff screenshots, ClickUp links/screenshots)
+                            <span id="supporting-label-text">Supporting Document (e.g., Hubstaff screenshots)</span>
                             <span id="supporting-required-span" class="text-gray-400">(Optional)</span>
                         </label>
 
@@ -814,14 +814,32 @@
                 if (supportingSection) supportingSection.classList.add('hidden');
             } else if (isStructuredHoursType(typeSelect.value)) {
                 if (supportingRequiredSpan) { supportingRequiredSpan.classList.remove('text-gray-400'); supportingRequiredSpan.classList.add('text-red-500'); supportingRequiredSpan.textContent = '*'; }
+                const supportingLabel = document.getElementById('supporting-label-text');
+                if (supportingLabel) {
+                    supportingLabel.textContent = isStudent
+                        ? 'Hubstaff Screenshot(s)'
+                        : 'Supporting Document (e.g., Hubstaff screenshots)';
+                }
                 if (supportingHelp) {
-                    supportingHelp.textContent = hasExistingSupporting
-                        ? 'Required for Additional Time unless current attachment(s) above remain. Uploading new files replaces current attachments.'
-                        : 'Required for Additional Time. Upload up to 5 files (PDF/JPG/PNG), 5MB max per file.';
+                    if (isStudent) {
+                        supportingHelp.textContent = hasExistingSupporting
+                            ? 'Required Hubstaff screenshot(s) — keep current files or upload new ones (new uploads replace current attachments).'
+                            : 'Required for Additional Time. Upload Hubstaff screenshot(s) proving the hours (JPG/PNG/PDF), up to 5 files, 5MB max each.';
+                    } else {
+                        supportingHelp.textContent = hasExistingSupporting
+                            ? 'Required for Overtime unless current attachment(s) above remain. Uploading new files replaces current attachments.'
+                            : 'Required for Overtime. Upload up to 5 files (PDF/JPG/PNG), 5MB max per file.';
+                    }
+                }
+                if (supportingInput) {
+                    supportingInput.required = !hasExistingSupporting;
                 }
             } else {
                 if (supportingRequiredSpan) { supportingRequiredSpan.classList.remove('text-red-500'); supportingRequiredSpan.classList.add('text-gray-400'); supportingRequiredSpan.textContent = '(Optional)'; }
+                const supportingLabel = document.getElementById('supporting-label-text');
+                if (supportingLabel) supportingLabel.textContent = 'Supporting Document (e.g., Hubstaff screenshots)';
                 if (supportingHelp) supportingHelp.textContent = 'Optional, upload up to 5 files (PDF/JPG/PNG), 5MB max per file. Uploading new files replaces current attachments.';
+                if (supportingInput) supportingInput.required = false;
             }
         }
 

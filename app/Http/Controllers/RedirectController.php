@@ -19,6 +19,10 @@ class RedirectController extends Controller
 
             // Any admin role user should always land on admin dashboard.
             if ($user instanceof User && $user->isAdmin()) {
+                if ($user->hasAdminTotpEnabled() && ! app(\App\Support\AdminTotp::class)->sessionPassed()) {
+                    return redirect()->guest(url('/admin/two-factor-challenge'));
+                }
+
                 return redirect('/admin/dashboard');
             }
 

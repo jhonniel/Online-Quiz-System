@@ -444,9 +444,9 @@ class ProfileController extends Controller
                     ->withErrors(['current_password' => 'Current password is incorrect.']);
             }
 
-            // Update password
+            // Update password (User model casts 'password' as hashed — pass plaintext)
             $user->update([
-                'password' => Hash::make($request->new_password),
+                'password' => (string) $request->new_password,
             ]);
 
             if ($request->expectsJson() || $request->ajax()) {
