@@ -280,6 +280,17 @@
                 </div>
                 <form id="user-share-form" method="POST" action="">
                     @csrf
+                    <div id="user-public-share-section" class="mb-4">
+                        <label class="flex items-start gap-2">
+                            <input type="checkbox" id="user-share-is-public"
+                                   class="mt-1 rounded border-gray-300 text-indigo-600 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50"
+                                   onchange="toggleUserPublicShare()">
+                            <span>
+                                <span class="block text-sm font-medium text-gray-700">Public link (no login required)</span>
+                                <span class="block text-xs text-gray-500">Anyone with the link can view this file or folder.</span>
+                            </span>
+                        </label>
+                    </div>
                     <div class="mb-4">
                         <label for="user-share-link-input" class="block text-sm font-medium text-gray-700 mb-2">Share link</label>
                         <div class="flex gap-2">
@@ -290,7 +301,7 @@
                                 Copy
                             </button>
                         </div>
-                        <p class="mt-1 text-xs text-gray-500">App link for users with access. Storage URL is not exposed.</p>
+                        <p id="user-share-link-help" class="mt-1 text-xs text-gray-500">Enable public link to share without login. Storage URL is not exposed.</p>
                     </div>
                     <div id="user-share-add-section" class="mb-4">
                         <div class="mb-4">
@@ -411,6 +422,8 @@
         const USER_FILES_SHARE_URL = @json(url('/files/__FILE__/share'));
         const USER_FILES_UNSHARE_URL = @json(url('/files/__FILE__/unshare'));
         const USER_FILES_SHARED_USERS_URL = @json(url('/files/__FILE__/shared-users'));
+        const USER_FILES_SHARE_DETAILS_URL = @json(url('/files/__FILE__/share-details'));
+        const USER_FILES_PUBLIC_SHARE_URL = @json(url('/files/__FILE__/public-share'));
         const USER_SHARE_USERS = @json($users ?? []);
 
         let currentUserShareItemId = null;
@@ -596,17 +609,88 @@
                 });
         }
 
+        function applyUserShareLinkDetails(details, type, id) {
+            const shareLinkInput = document.getElementById('user-share-link-input');
+            const publicCheckbox = document.getElementById('user-share-is-public');
+            const helpText = document.getElementById('user-share-link-help');
+            const publicSection = document.getElementById('user-public-share-section');
+
+            if (publicSection) {
+                publicSection.style.display = details && details.is_owner === false ? 'none' : 'block';
+            }
+
+            if (publicCheckbox) {
+                publicCheckbox.checked = !!(details && details.is_public);
+                publicCheckbox.disabled = !(details && details.is_owner);
+            }
+
+            if (shareLinkInput) {
+                if (details && details.is_public && details.public_url) {
+                    shareLinkInput.value = details.public_url;
+                } else if (details && details.requires_login_url) {
+                    shareLinkInput.value = details.requires_login_url;
+                } else {
+                    shareLinkInput.value = type === 'folder'
+                        ? `${USER_FILES_INDEX_URL}?folder_id=${id}`
+                        : USER_FILES_VIEW_URL.replace('__FILE__', id);
+                }
+            }
+
+            if (helpText) {
+                helpText.textContent = details && details.is_public
+                    ? 'Public link enabled. Anyone with this URL can view without logging in.'
+                    : 'Private link requires login. Enable public link to share without login.';
+            }
+        }
+
+        function loadUserShareDetails(fileId, type) {
+            const url = USER_FILES_SHARE_DETAILS_URL.replace('__FILE__', fileId);
+            return fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+                .then(res => res.json())
+                .then(details => {
+                    applyUserShareLinkDetails(details, type, fileId);
+                    return details;
+                })
+                .catch(() => applyUserShareLinkDetails(null, type, fileId));
+        }
+
+        function toggleUserPublicShare() {
+            if (!currentUserShareItemId || !currentUserShareIsOwner) return;
+
+            const checkbox = document.getElementById('user-share-is-public');
+            const url = USER_FILES_PUBLIC_SHARE_URL.replace('__FILE__', currentUserShareItemId);
+
+            fetch(url, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'Accept': 'application/json',
+                },
+                body: JSON.stringify({ is_public: !!(checkbox && checkbox.checked) }),
+            })
+                .then(res => res.json().then(data => ({ ok: res.ok, data })))
+                .then(({ ok, data }) => {
+                    if (!ok) throw new Error(data?.message || 'Failed to update public sharing.');
+                    applyUserShareLinkDetails({
+                        ...data,
+                        is_owner: true,
+                        requires_login_url: null,
+                    }, document.getElementById('user-share-item-type').textContent.toLowerCase(), currentUserShareItemId);
+                })
+                .catch(err => {
+                    alert(err?.message || 'Failed to update public sharing.');
+                    loadUserShareDetails(currentUserShareItemId, document.getElementById('user-share-item-type').textContent.toLowerCase());
+                });
+        }
+
         function openUserShareModal(id, type, isOwner) {
+            currentUserShareItemId = id;
             currentUserShareIsOwner = isOwner !== false;
             document.getElementById('user-share-item-type').textContent = type === 'folder' ? 'Folder' : 'File';
             document.getElementById('user-share-form').action = USER_FILES_SHARE_URL.replace('__FILE__', id);
-
-            const shareLinkInput = document.getElementById('user-share-link-input');
-            if (shareLinkInput) {
-                shareLinkInput.value = type === 'folder'
-                    ? `${USER_FILES_INDEX_URL}?folder_id=${id}`
-                    : USER_FILES_VIEW_URL.replace('__FILE__', id);
-            }
+            loadUserShareDetails(id, type);
             const addSection = document.getElementById('user-share-add-section');
             if (addSection) addSection.style.display = currentUserShareIsOwner ? 'block' : 'none';
             const canUploadContainer = document.getElementById('user-can-upload-container');

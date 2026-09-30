@@ -68,6 +68,7 @@ use App\Http\Controllers\FriendshipController;
 use App\Http\Controllers\GroupChatController;
 use App\Http\Controllers\HiringApplicationController;
 use App\Http\Controllers\LandingController;
+use App\Http\Controllers\PublicFileShareController;
 use App\Http\Controllers\QrCodeController;
 use App\Http\Controllers\RedirectController;
 use App\Http\Controllers\ReportProblemController;
@@ -117,6 +118,12 @@ Route::get('/report-problem', [ReportProblemController::class, 'show'])->name('r
 Route::post('/report-problem', [ReportProblemController::class, 'store'])->name('report-problem.store');
 Route::get('/image-proxy/{path}', [LandingController::class, 'imageProxy'])->where('path', '.*')->name('landing.image-proxy');
 Route::get('/privacy-policy', [LandingController::class, 'privacyPolicy'])->name('landing.privacy-policy');
+
+Route::prefix('shared/files')->name('public.files.')->group(function () {
+    Route::get('{uuid}', [PublicFileShareController::class, 'show'])->name('show');
+    Route::get('{uuid}/view', [PublicFileShareController::class, 'view'])->name('view');
+    Route::get('{uuid}/download', [PublicFileShareController::class, 'download'])->name('download');
+});
 Route::get('/tor-pdf', [LandingController::class, 'torPdf'])->name('landing.tor-pdf');
 
 // Say-it: Anonymous confession board (no login, /Say-it only)
@@ -738,6 +745,8 @@ Route::prefix('admin')->middleware(['auth', 'admin', 'admin.totp'])->group(funct
         Route::post('files/{file}/share', [FileController::class, 'share'])->name('admin.files.share');
         Route::post('files/{file}/unshare', [FileController::class, 'unshare'])->name('admin.files.unshare');
         Route::get('files/{file}/shared-users', [FileController::class, 'getSharedUsers'])->name('admin.files.shared-users');
+        Route::get('files/{file}/share-details', [FileController::class, 'shareDetails'])->name('admin.files.share-details');
+        Route::post('files/{file}/public-share', [FileController::class, 'updatePublicShare'])->name('admin.files.public-share');
     });
 
     // Confession (Say-it) – requires confession permission
@@ -922,6 +931,8 @@ Route::middleware(['auth', 'student.not_terminated'])->group(function () {
     Route::post('/files/{file}/share', [UserFileController::class, 'share'])->name('user.files.share');
     Route::post('/files/{file}/unshare', [UserFileController::class, 'unshare'])->name('user.files.unshare');
     Route::get('/files/{file}/shared-users', [UserFileController::class, 'getSharedUsers'])->name('user.files.shared-users');
+    Route::get('/files/{file}/share-details', [UserFileController::class, 'shareDetails'])->name('user.files.share-details');
+    Route::post('/files/{file}/public-share', [UserFileController::class, 'updatePublicShare'])->name('user.files.public-share');
     Route::delete('/files/{file}', [UserFileController::class, 'destroy'])->name('user.files.destroy');
 
     // Employee document requests (certificates, etc.)

@@ -7,10 +7,12 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 
 class File extends Model
 {
     protected $fillable = [
+        'uuid',
         'name',
         'original_name',
         'path',
@@ -21,11 +23,22 @@ class File extends Model
         'folder_id',
         'uploaded_by',
         'description',
+        'is_public',
     ];
 
     protected $casts = [
         'size' => 'integer',
+        'is_public' => 'boolean',
     ];
+
+    protected static function booted(): void
+    {
+        static::creating(function (File $file) {
+            if (empty($file->uuid)) {
+                $file->uuid = (string) Str::uuid();
+            }
+        });
+    }
 
     /**
      * Get the user who uploaded this file.
@@ -145,6 +158,30 @@ class File extends Model
     public function isFile(): bool
     {
         return $this->type === 'file';
+    }
+
+    public function isPubliclyAccessible(): bool
+    {
+        $current = $this;
+
+        while ($current) {
+            if ($current->is_public && $current->uuid) {
+                return true;
+            }
+
+            $current = $current->folder;
+        }
+
+        return false;
+    }
+
+    public function getPublicShareUrlAttribute(): ?string
+    {
+        if (! $this->uuid) {
+            return null;
+        }
+
+        return url('/shared/files/' . $this->uuid);
     }
 
     /**

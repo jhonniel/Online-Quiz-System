@@ -863,6 +863,56 @@ class FileController extends Controller
         return response()->json($sharedUsers);
     }
 
+    public function shareDetails(File $file)
+    {
+        $userId = auth()->id();
+        if ($file->uploaded_by != $userId && ! $file->canUserView($userId)) {
+            abort(403, 'You do not have permission to view share settings.');
+        }
+
+        return response()->json([
+            'is_public' => (bool) $file->is_public,
+            'is_owner' => (int) $file->uploaded_by === (int) $userId,
+            'public_url' => $file->public_share_url,
+            'requires_login_url' => $file->isFolder()
+                ? url('/files?folder_id=' . $file->id)
+                : url('/files/' . $file->id . '/view'),
+        ]);
+    }
+
+    public function updatePublicShare(Request $request, File $file)
+    {
+        if ($file->uploaded_by != auth()->id()) {
+            abort(403, 'Only the owner can change public sharing.');
+        }
+
+        $request->validate([
+            'is_public' => 'required|boolean',
+        ]);
+
+        $file->update([
+            'is_public' => $request->boolean('is_public'),
+        ]);
+
+        if ($request->ajax() || $request->wantsJson()) {
+            return response()->json([
+                'success' => true,
+                'is_public' => (bool) $file->is_public,
+                'public_url' => $file->public_share_url,
+                'message' => $file->is_public
+                    ? 'Public link enabled. Anyone with the link can view without logging in.'
+                    : 'Public link disabled.',
+            ]);
+        }
+
+        return redirect()->back()->with(
+            'success',
+            $file->is_public
+                ? 'Public link enabled. Anyone with the link can view without logging in.'
+                : 'Public link disabled.'
+        );
+    }
+
     /**
      * Delete a file or folder. Only the owner can delete; folders are recursively deleted.
      */

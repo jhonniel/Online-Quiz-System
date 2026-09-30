@@ -382,6 +382,17 @@
                 <form id="share-form" method="POST">
                     @csrf
                     <div class="mb-4">
+                        <label class="flex items-start gap-2">
+                            <input type="checkbox" id="share-is-public"
+                                   class="mt-1 rounded border-gray-300 text-indigo-600 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50"
+                                   onchange="toggleAdminPublicShare()">
+                            <span>
+                                <span class="block text-sm font-medium text-gray-700">Public link (no login required)</span>
+                                <span class="block text-xs text-gray-500">Anyone with the link can view this file or folder.</span>
+                            </span>
+                        </label>
+                    </div>
+                    <div class="mb-4">
                         <label for="share-link-input" class="block text-sm font-medium text-gray-700 mb-2">Share link</label>
                         <div class="flex gap-2">
                             <input type="text" id="share-link-input" readonly
@@ -391,7 +402,7 @@
                                 Copy
                             </button>
                         </div>
-                        <p class="mt-1 text-xs text-gray-500">App link for users with access. Storage URL is not exposed.</p>
+                        <p id="share-link-help" class="mt-1 text-xs text-gray-500">Enable public link to share without login. Storage URL is not exposed.</p>
                     </div>
                     <div class="mb-4">
                         <label for="share_user_id" class="block text-sm font-medium text-gray-700 mb-2">Select User</label>
@@ -454,6 +465,8 @@
         const ADMIN_FILES_SHARE_URL = @json(url('/admin/files/__FILE__/share'));
         const ADMIN_FILES_UNSHARE_URL = @json(url('/admin/files/__FILE__/unshare'));
         const ADMIN_FILES_SHARED_USERS_URL = @json(url('/admin/files/__FILE__/shared-users'));
+        const ADMIN_FILES_SHARE_DETAILS_URL = @json(url('/admin/files/__FILE__/share-details'));
+        const ADMIN_FILES_PUBLIC_SHARE_URL = @json(url('/admin/files/__FILE__/public-share'));
         const ADMIN_FILES_DOWNLOAD_URL = @json(url('/admin/files/__FILE__/download'));
         const ADMIN_FILES_VIEW_URL = @json(url('/admin/files/__FILE__/view'));
         const ADMIN_FILES_INDEX_URL = @json(url('/admin/files'));
@@ -616,16 +629,75 @@
                 });
         }
 
+        function applyShareLinkDetails(details, type, id) {
+            const shareLinkInput = document.getElementById('share-link-input');
+            const publicCheckbox = document.getElementById('share-is-public');
+            const helpText = document.getElementById('share-link-help');
+
+            if (publicCheckbox) {
+                publicCheckbox.checked = !!(details && details.is_public);
+            }
+
+            if (shareLinkInput) {
+                if (details && details.is_public && details.public_url) {
+                    shareLinkInput.value = details.public_url;
+                } else {
+                    shareLinkInput.value = type === 'folder'
+                        ? `${ADMIN_FILES_INDEX_URL}?folder_id=${id}`
+                        : ADMIN_FILES_VIEW_URL.replace('__FILE__', id);
+                }
+            }
+
+            if (helpText) {
+                helpText.textContent = details && details.is_public
+                    ? 'Public link enabled. Anyone with this URL can view without logging in.'
+                    : 'Private link requires login. Enable public link to share without login.';
+            }
+        }
+
+        function loadShareDetails(fileId, type) {
+            const url = ADMIN_FILES_SHARE_DETAILS_URL.replace('__FILE__', fileId);
+            return fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+                .then(res => res.json())
+                .then(details => {
+                    applyShareLinkDetails(details, type, fileId);
+                    return details;
+                })
+                .catch(() => applyShareLinkDetails(null, type, fileId));
+        }
+
+        function toggleAdminPublicShare() {
+            if (!currentShareItemId) return;
+
+            const checkbox = document.getElementById('share-is-public');
+            const url = ADMIN_FILES_PUBLIC_SHARE_URL.replace('__FILE__', currentShareItemId);
+
+            fetch(url, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'Accept': 'application/json',
+                },
+                body: JSON.stringify({ is_public: !!(checkbox && checkbox.checked) }),
+            })
+                .then(res => res.json().then(data => ({ ok: res.ok, data })))
+                .then(({ ok, data }) => {
+                    if (!ok) throw new Error(data?.message || 'Failed to update public sharing.');
+                    applyShareLinkDetails(data, document.getElementById('share-item-type').textContent.toLowerCase(), currentShareItemId);
+                })
+                .catch(err => {
+                    alert(err?.message || 'Failed to update public sharing.');
+                    loadShareDetails(currentShareItemId, document.getElementById('share-item-type').textContent.toLowerCase());
+                });
+        }
+
         function openShareModal(id, type) {
+            currentShareItemId = id;
             document.getElementById('share-item-type').textContent = type === 'folder' ? 'Folder' : 'File';
             document.getElementById('share-form').action = ADMIN_FILES_SHARE_URL.replace('__FILE__', id);
-
-            const shareLinkInput = document.getElementById('share-link-input');
-            if (shareLinkInput) {
-                shareLinkInput.value = type === 'folder'
-                    ? `${ADMIN_FILES_INDEX_URL}?folder_id=${id}`
-                    : ADMIN_FILES_VIEW_URL.replace('__FILE__', id);
-            }
+            loadShareDetails(id, type);
 
             // Show/hide can_upload checkbox based on type
             const canUploadContainer = document.getElementById('can-upload-container');
@@ -641,8 +713,6 @@
             document.querySelector('input[name="can_view"]').checked = true;
 
             document.getElementById('share-modal').classList.remove('hidden');
-
-            // Load shared users list (owner-only endpoint; shows who already has access)
             loadSharedUsers(id);
         }
 
