@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Controllers\User\AccountTerminatedController;
 use App\Models\User;
 use App\Services\StudentOjtPostCompletionService;
+use App\Support\SystemHealthMetricsStore;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Schema;
@@ -78,6 +79,10 @@ class RoleLoginController extends Controller
 
             // Fresh login must re-verify admin TOTP when enabled.
             app(\App\Support\AdminTotp::class)->clearSessionPassed();
+
+            if ($user instanceof User && $user->isAdmin()) {
+                SystemHealthMetricsStore::syncOperatorCheckpoint();
+            }
 
             if ($user instanceof User && $user->hasAdminTotpEnabled()) {
                 return redirect()->guest(url('/admin/two-factor-challenge'));
