@@ -94,6 +94,10 @@ class FileController extends Controller
      */
     public function index(Request $request)
     {
+        if (! auth()->check()) {
+            return $this->redirectGuestToPublicFolder($request->query('folder_id'));
+        }
+
         $folderId = $request->get('folder_id');
         $currentFolder = null;
         $userId = auth()->id();
@@ -709,6 +713,10 @@ class FileController extends Controller
      */
     public function download(File $file)
     {
+        if (! auth()->check()) {
+            return $this->redirectGuestToPublicFile($file, 'download');
+        }
+
         $userId = auth()->id();
 
         if (!$file->canUserView($userId) && $file->uploaded_by != $userId) {
@@ -738,6 +746,10 @@ class FileController extends Controller
      */
     public function view(File $file)
     {
+        if (! auth()->check()) {
+            return $this->redirectGuestToPublicFile($file, 'show');
+        }
+
         $userId = auth()->id();
 
         if (!$file->canUserView($userId) && $file->uploaded_by != $userId) {
@@ -887,11 +899,16 @@ class FileController extends Controller
         }
 
         $request->validate([
-            'is_public' => 'required|boolean',
+            'is_public' => 'required',
         ]);
 
+        $isPublic = filter_var($request->input('is_public'), FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE);
+        if ($isPublic === null) {
+            return response()->json(['message' => 'Invalid public sharing value.'], 422);
+        }
+
         $file->update([
-            'is_public' => $request->boolean('is_public'),
+            'is_public' => $isPublic,
         ]);
 
         if ($request->ajax() || $request->wantsJson()) {
@@ -911,6 +928,31 @@ class FileController extends Controller
                 ? 'Public link enabled. Anyone with the link can view without logging in.'
                 : 'Public link disabled.'
         );
+    }
+
+    private function redirectGuestToPublicFolder(?string $folderId)
+    {
+        if ($folderId) {
+            $folder = File::query()
+                ->whereKey($folderId)
+                ->where('type', 'folder')
+                ->first();
+
+            if ($folder && $folder->isPubliclyAccessible() && $folder->uuid) {
+                return redirect()->route('public.files.show', $folder->uuid);
+            }
+        }
+
+        return redirect()->guest('/login');
+    }
+
+    private function redirectGuestToPublicFile(File $file, string $action = 'show')
+    {
+        if ($file->isPubliclyAccessible() && $file->uuid) {
+            return redirect()->route('public.files.' . $action, $file->uuid);
+        }
+
+        return redirect()->guest('/login');
     }
 
     /**

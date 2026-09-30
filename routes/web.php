@@ -120,10 +120,15 @@ Route::get('/image-proxy/{path}', [LandingController::class, 'imageProxy'])->whe
 Route::get('/privacy-policy', [LandingController::class, 'privacyPolicy'])->name('landing.privacy-policy');
 
 Route::prefix('shared/files')->name('public.files.')->group(function () {
-    Route::get('{uuid}', [PublicFileShareController::class, 'show'])->name('show');
-    Route::get('{uuid}/view', [PublicFileShareController::class, 'view'])->name('view');
-    Route::get('{uuid}/download', [PublicFileShareController::class, 'download'])->name('download');
+    Route::get('{uuid}', [PublicFileShareController::class, 'show'])->whereUuid('uuid')->name('show');
+    Route::get('{uuid}/view', [PublicFileShareController::class, 'view'])->whereUuid('uuid')->name('view');
+    Route::get('{uuid}/download', [PublicFileShareController::class, 'download'])->whereUuid('uuid')->name('download');
 });
+
+// File Storage read routes (guests redirected to public share when enabled)
+Route::get('/files', [UserFileController::class, 'index'])->name('user.files.index');
+Route::get('/files/{file}/view', [UserFileController::class, 'view'])->name('user.files.view');
+Route::get('/files/{file}/download', [UserFileController::class, 'download'])->name('user.files.download');
 Route::get('/tor-pdf', [LandingController::class, 'torPdf'])->name('landing.tor-pdf');
 
 // Say-it: Anonymous confession board (no login, /Say-it only)
@@ -916,7 +921,6 @@ Route::middleware(['auth', 'student.not_terminated'])->group(function () {
     Route::get('/quizzes/{quiz}/time-expired', [UserQuizController::class, 'timeExpired'])->name('user.quizzes.time-expired');
 
     // File Storage (User)
-    Route::get('/files', [UserFileController::class, 'index'])->name('user.files.index');
     Route::post('/files/create-folder', [UserFileController::class, 'createFolder'])->name('user.files.create-folder');
     Route::post('/files', [UserFileController::class, 'store'])->name('user.files.store');
     Route::post('/files/presign', [UserFileController::class, 'presignUpload'])->name('user.files.presign');
@@ -926,8 +930,6 @@ Route::middleware(['auth', 'student.not_terminated'])->group(function () {
     Route::post('/files/multipart/upload-chunk', [UserFileController::class, 'uploadChunk'])->name('user.files.multipart.upload-chunk');
     Route::post('/files/multipart/complete', [UserFileController::class, 'completeMultipartUpload'])->name('user.files.multipart.complete');
     Route::post('/files/multipart/abort', [UserFileController::class, 'abortMultipartUpload'])->name('user.files.multipart.abort');
-    Route::get('/files/{file}/download', [UserFileController::class, 'download'])->name('user.files.download');
-    Route::get('/files/{file}/view', [UserFileController::class, 'view'])->name('user.files.view');
     Route::post('/files/{file}/share', [UserFileController::class, 'share'])->name('user.files.share');
     Route::post('/files/{file}/unshare', [UserFileController::class, 'unshare'])->name('user.files.unshare');
     Route::get('/files/{file}/shared-users', [UserFileController::class, 'getSharedUsers'])->name('user.files.shared-users');

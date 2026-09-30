@@ -1034,11 +1034,16 @@ class FileController extends Controller
     public function updatePublicShare(Request $request, File $file)
     {
         $request->validate([
-            'is_public' => 'required|boolean',
+            'is_public' => 'required',
         ]);
 
+        $isPublic = filter_var($request->input('is_public'), FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE);
+        if ($isPublic === null) {
+            return response()->json(['message' => 'Invalid public sharing value.'], 422);
+        }
+
         $file->update([
-            'is_public' => $request->boolean('is_public'),
+            'is_public' => $isPublic,
         ]);
 
         if ($request->ajax() || $request->wantsJson()) {
