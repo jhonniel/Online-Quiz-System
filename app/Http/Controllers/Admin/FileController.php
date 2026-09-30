@@ -1020,7 +1020,7 @@ class FileController extends Controller
     }
 
     /**
-     * Get file URL for viewing.
+     * Stream file for in-browser preview (masked app URL; does not redirect to Spaces).
      */
     public function view(File $file)
     {
@@ -1028,22 +1028,36 @@ class FileController extends Controller
             return redirect('/admin/files?folder_id=' . $file->id);
         }
 
+        $mimeType = $file->mime_type ?: 'application/octet-stream';
+        $disposition = 'inline; filename="' . addslashes($file->original_name ?: $file->name) . '"';
+
         try {
             $assetDisk = 'digitalocean';
             if (Storage::disk($assetDisk)->exists($file->path)) {
-                // Prefer signed URL (works even if bucket is private)
-                if (method_exists(Storage::disk($assetDisk), 'temporaryUrl')) {
-                    $url = Storage::disk($assetDisk)->temporaryUrl($file->path, now()->addMinutes(60));
-                } else {
-                    $url = Storage::disk($assetDisk)->url($file->path);
+                $stream = Storage::disk($assetDisk)->readStream($file->path);
+                if ($stream) {
+                    return response()->stream(function () use ($stream) {
+                        fpassthru($stream);
+                        if (is_resource($stream)) {
+                            fclose($stream);
+                        }
+                    }, 200, [
+                        'Content-Type' => $mimeType,
+                        'Content-Disposition' => $disposition,
+                        'Accept-Ranges' => 'bytes',
+                    ]);
                 }
-                return redirect($url);
             }
         } catch (\Exception $e) {
-            // Fallback to public disk
-            if (Storage::disk('public')->exists($file->path)) {
-                return Storage::disk('public')->response($file->path, $file->original_name);
-            }
+            // Fall through to public disk
+        }
+
+        if (Storage::disk('public')->exists($file->path)) {
+            return response()->file(Storage::disk('public')->path($file->path), [
+                'Content-Type' => $mimeType,
+                'Content-Disposition' => $disposition,
+                'Accept-Ranges' => 'bytes',
+            ]);
         }
 
         abort(404, 'File not found.');

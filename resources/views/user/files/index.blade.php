@@ -72,6 +72,7 @@
                                     @php
                                         $isImage = $item->mime_type && str_starts_with($item->mime_type, 'image/');
                                         $isVideo = $item->mime_type && str_starts_with($item->mime_type, 'video/');
+                                        $isAudio = $item->mime_type && str_starts_with($item->mime_type, 'audio/');
                                         $thumbnailUrl = null;
 
                                         if ($isImage) {
@@ -79,20 +80,36 @@
                                         }
                                     @endphp
 
-                                    <div class="flex justify-center mb-2 h-20 overflow-hidden rounded bg-gray-100">
+                                    @php
+                                        $userPreviewUrl = url('/files/' . $item->id . '/view');
+                                        $userPreviewOnclick = "openUserPreviewModal('{$item->id}', '" . addslashes($item->name) . "', '" . addslashes($item->mime_type ?? '') . "', '{$userPreviewUrl}')";
+                                    @endphp
+                                    <div class="flex justify-center mb-2 h-20 overflow-hidden rounded bg-gray-100 cursor-pointer hover:bg-gray-200/80 transition-colors"
+                                         onclick="{{ $userPreviewOnclick }}">
                                         @if($thumbnailUrl)
                                             <img src="{{ $thumbnailUrl }}" alt="{{ $item->name }}"
-                                                 class="w-full h-full object-cover cursor-pointer hover:opacity-90 transition-opacity"
-                                                 onclick="openUserPreviewModal('{{ $item->id }}', '{{ addslashes($item->name) }}', '{{ $item->mime_type }}', '{{ url('/files/' . $item->id . '/view') }}')">
+                                                 class="w-full h-full object-cover hover:opacity-90 transition-opacity">
                                         @else
                                             <div class="w-full h-full flex items-center justify-center">
                                                 @if($isVideo)
                                                     <svg class="w-10 h-10 text-purple-500" fill="currentColor" viewBox="0 0 20 20">
                                                         <path d="M2 6a2 2 0 012-2h6a2 2 0 012 2v8a2 2 0 01-2 2H4a2 2 0 01-2-2V6zM14.553 7.106A1 1 0 0014 8v4a1 1 0 00.553.894l2 1A1 1 0 0018 13V7a1 1 0 00-1.447-.894l-2 1z" />
                                                     </svg>
+                                                @elseif($isAudio)
+                                                    <svg class="w-10 h-10 text-green-500" fill="currentColor" viewBox="0 0 20 20">
+                                                        <path fill-rule="evenodd" d="M9.383 3.076A1 1 0 0110 4v12a1 1 0 01-1.707.707L4.586 13H2a1 1 0 01-1-1V8a1 1 0 011-1h2.586l3.707-3.707a1 1 0 011.09-.217zM14.657 2.929a1 1 0 011.414 0A9.972 9.972 0 0119 10a9.972 9.972 0 01-2.929 7.071 1 1 0 01-1.414-1.414A7.971 7.971 0 0017 10c0-2.21-.894-4.208-2.343-5.657a1 1 0 010-1.414zm-2.829 2.828a1 1 0 011.415 0A5.983 5.983 0 0115 10a5.984 5.984 0 01-1.757 4.243 1 1 0 01-1.415-1.415A3.984 3.984 0 0013 10a3.983 3.983 0 00-1.172-2.828 1 1 0 010-1.415z" clip-rule="evenodd" />
+                                                    </svg>
                                                 @elseif(str_starts_with($item->mime_type ?? '', 'application/pdf'))
                                                     <svg class="w-10 h-10 text-red-500" fill="currentColor" viewBox="0 0 20 20">
                                                         <path fill-rule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4z" clip-rule="evenodd" />
+                                                    </svg>
+                                                @elseif(in_array($item->display_type_label, ['Spreadsheet', 'CSV'], true))
+                                                    <svg class="w-10 h-10 text-emerald-600" fill="currentColor" viewBox="0 0 20 20">
+                                                        <path fill-rule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4zm2 6a1 1 0 011-1h6a1 1 0 110 2H7a1 1 0 01-1-1zm1 3a1 1 0 100 2h6a1 1 0 100-2H7z" clip-rule="evenodd" />
+                                                    </svg>
+                                                @elseif($item->display_type_label === 'Document')
+                                                    <svg class="w-10 h-10 text-blue-600" fill="currentColor" viewBox="0 0 20 20">
+                                                        <path fill-rule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4zm2 6a1 1 0 011-1h6a1 1 0 110 2H7a1 1 0 01-1-1zm1 3a1 1 0 100 2h6a1 1 0 100-2H7z" clip-rule="evenodd" />
                                                     </svg>
                                                 @else
                                                     <svg class="w-10 h-10 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -104,7 +121,8 @@
                                     </div>
 
                                     <h3 class="text-sm font-medium text-gray-900 truncate" title="{{ $item->name }}">{{ $item->name }}</h3>
-                                    <p class="text-xs text-gray-500 mt-1">{{ $item->formatted_size }}</p>
+                                    <p class="text-xs font-medium text-indigo-600 mt-1">{{ $item->display_type_label }}</p>
+                                    <p class="text-xs text-gray-500 mt-0.5">{{ $item->formatted_size }}</p>
                                 </div>
                             @endif
 
@@ -262,6 +280,18 @@
                 </div>
                 <form id="user-share-form" method="POST" action="">
                     @csrf
+                    <div class="mb-4">
+                        <label for="user-share-link-input" class="block text-sm font-medium text-gray-700 mb-2">Share link</label>
+                        <div class="flex gap-2">
+                            <input type="text" id="user-share-link-input" readonly
+                                   class="flex-1 min-w-0 px-3 py-2 border border-gray-300 rounded-md shadow-sm bg-gray-50 text-xs text-gray-700">
+                            <button type="button" onclick="copyUserShareLink()"
+                                    class="shrink-0 px-3 py-2 border border-gray-300 rounded-md text-xs font-medium text-gray-700 bg-white hover:bg-gray-50">
+                                Copy
+                            </button>
+                        </div>
+                        <p class="mt-1 text-xs text-gray-500">App link for users with access. Storage URL is not exposed.</p>
+                    </div>
                     <div id="user-share-add-section" class="mb-4">
                         <div class="mb-4">
                             <label for="user-share-search-input" class="block text-sm font-medium text-gray-700 mb-2">Add user to folder (students &amp; employees)</label>
@@ -365,8 +395,12 @@
         <p id="user-upload-floating-detail" class="text-xs text-gray-500 mt-2 truncate">Preparing...</p>
     </div>
 
+    @include('partials.file-storage-preview-script')
+
     <script>
         const USER_FILES_DOWNLOAD_URL = @json(url('/files/__FILE__/download'));
+        const USER_FILES_VIEW_URL = @json(url('/files/__FILE__/view'));
+        const USER_FILES_INDEX_URL = @json(url('/files'));
         const USER_FILES_PRESIGN_URL = @json(url('/files/presign'));
         const USER_FILES_CONFIRM_URL = @json(url('/files/confirm'));
         const USER_FILES_MULTIPART_INITIATE_URL = @json(url('/files/multipart/initiate'));
@@ -547,10 +581,32 @@
             .catch(() => alert('Failed to remove sharing.'));
         }
 
+        function copyUserShareLink() {
+            const input = document.getElementById('user-share-link-input');
+            if (!input || !input.value) {
+                return;
+            }
+
+            navigator.clipboard.writeText(input.value)
+                .then(() => alert('Link copied to clipboard.'))
+                .catch(() => {
+                    input.select();
+                    document.execCommand('copy');
+                    alert('Link copied to clipboard.');
+                });
+        }
+
         function openUserShareModal(id, type, isOwner) {
             currentUserShareIsOwner = isOwner !== false;
             document.getElementById('user-share-item-type').textContent = type === 'folder' ? 'Folder' : 'File';
             document.getElementById('user-share-form').action = USER_FILES_SHARE_URL.replace('__FILE__', id);
+
+            const shareLinkInput = document.getElementById('user-share-link-input');
+            if (shareLinkInput) {
+                shareLinkInput.value = type === 'folder'
+                    ? `${USER_FILES_INDEX_URL}?folder_id=${id}`
+                    : USER_FILES_VIEW_URL.replace('__FILE__', id);
+            }
             const addSection = document.getElementById('user-share-add-section');
             if (addSection) addSection.style.display = currentUserShareIsOwner ? 'block' : 'none';
             const canUploadContainer = document.getElementById('user-can-upload-container');
@@ -570,44 +626,16 @@
             loadUserSharedUsers(id);
         }
 
-        function openUserPreviewModal(id, name, mimeType, url) {
+        async function openUserPreviewModal(id, name, mimeType, url) {
             document.getElementById('user-preview-file-name').textContent = name;
             document.getElementById('user-preview-download-url').href = USER_FILES_DOWNLOAD_URL.replace('__FILE__', id);
-
-            const previewContent = document.getElementById('user-preview-content');
-            previewContent.innerHTML = '';
-
-            if (mimeType && mimeType.startsWith('image/')) {
-                const img = document.createElement('img');
-                img.src = url;
-                img.className = 'max-w-full max-h-[70vh] mx-auto rounded-lg';
-                img.alt = name;
-                previewContent.appendChild(img);
-            } else if (mimeType && mimeType === 'application/pdf') {
-                const iframe = document.createElement('iframe');
-                iframe.src = url;
-                iframe.className = 'w-full h-[70vh] border-0 rounded-lg';
-                previewContent.appendChild(iframe);
-            } else if (mimeType && mimeType.startsWith('video/')) {
-                const video = document.createElement('video');
-                video.src = url;
-                video.controls = true;
-                video.controlsList = 'nodownload';
-                video.preload = 'metadata';
-                video.playsInline = true;
-                video.className = 'max-w-full max-h-[70vh] mx-auto rounded-lg bg-black';
-                previewContent.appendChild(video);
-            } else if (mimeType && mimeType.startsWith('audio/')) {
-                const audio = document.createElement('audio');
-                audio.src = url;
-                audio.controls = true;
-                audio.className = 'w-full mx-auto';
-                previewContent.appendChild(audio);
-            } else {
-                previewContent.innerHTML = '<div class="text-center py-8"><p class="text-gray-500">Preview not available for this file type.</p><p class="text-sm text-gray-400 mt-2">Use the download button to open the file.</p></div>';
-            }
-
             document.getElementById('user-preview-modal').classList.remove('hidden');
+
+            await renderFileStoragePreview(document.getElementById('user-preview-content'), {
+                name: name,
+                mimeType: mimeType,
+                url: url,
+            });
         }
 
         // Direct upload to Spaces with progress

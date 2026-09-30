@@ -7,7 +7,7 @@ use App\Mail\StudentRulesNoticeMail;
 use App\Models\LeaveRequest;
 use App\Support\AdminScopedDashboardCharts;
 use App\Support\StudentMeritNoticeSettings;
-use App\Support\StudentMeritRulesNotice;
+use App\Support\StudentRemainingTimeCompletion;
 use App\Models\UserActivity;
 use App\Support\StudentViolationCounter;
 use Illuminate\Support\Facades\Hash;
@@ -24,6 +24,7 @@ use App\Models\University;
 use App\Support\StudentPerformanceRatingForm;
 use Illuminate\Http\Request;
 use Illuminate\Pagination\LengthAwarePaginator;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
@@ -1136,11 +1137,72 @@ class StudentDashboardController extends Controller
             'studentsWithRemainingTime' => $studentsWithRemainingTime,
             'studentsEndingThisMonth' => $studentsEndingThisMonth ?? 0,
             'showApprovedLeaveRequests' => $showApprovedLeaveRequests,
+            'canMarkRemainingTimeDone' => $user->isSuperAdmin(),
             'sortBy' => $sortBy,
             'sortDir' => $sortDir,
             'rankingSchool' => $rankingSchool,
             'rankingSchoolOptions' => $rankingSchoolOptions,
         ]);
+    }
+
+    public function completeRemainingTime(Request $request, User $user, StudentRemainingTimeCompletion $completion)
+    {
+        $admin = Auth::user();
+
+        if (! $admin?->isSuperAdmin()) {
+            abort(403, 'Only admins with full access can mark remaining time as done.');
+        }
+
+        if ($user->role !== 'student') {
+            return redirect()->back()->withErrors(['error' => 'Selected user is not a student.']);
+        }
+
+        $allowedDepartmentIds = $admin->canAccessStudentManagement()
+            ? $admin->getAllowedStudentDepartmentIds()
+            : null;
+
+        if (is_array($allowedDepartmentIds) && $allowedDepartmentIds !== [] && ! in_array($user->department_id, $allowedDepartmentIds, true)) {
+            abort(403, 'Access denied. You cannot manage this student.');
+        }
+
+        try {
+            $result = $completion->completeForStudent($user);
+        } catch (\InvalidArgumentException $exception) {
+            return redirect()->back()->withErrors(['error' => $exception->getMessage()]);
+        } catch (\RuntimeException $exception) {
+            return redirect()->back()->withErrors(['error' => $exception->getMessage()]);
+        }
+
+        UserActivity::logActivity(
+            $admin,
+            'action',
+            'student_remaining_time_completed',
+            [
+                'student_id' => $user->id,
+                'student_name' => $user->name,
+                'student_email' => $user->email,
+                'remaining_hours_completed' => $result['remaining_hours_completed'],
+                'dtr_created_count' => $result['created_count'],
+                'dtr_updated_count' => $result['updated_count'],
+                'entries' => $result['entries'],
+            ]
+        );
+
+        $hoursFormatted = $this->formatHours((float) $result['remaining_hours_completed']);
+        $successMessage = sprintf(
+            'Remaining time (%s hrs) marked as done for %s. %d past DTR record(s) created',
+            $hoursFormatted,
+            $user->name,
+            $result['created_count']
+        );
+
+        if ($result['updated_count'] > 0) {
+            $successMessage .= sprintf(', %d existing record(s) updated', $result['updated_count']);
+        }
+
+        $successMessage .= '.';
+
+        return redirect()->back()->with('success', $successMessage);
     }
 
     protected function formatHours(float $hours): string

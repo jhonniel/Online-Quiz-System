@@ -148,6 +148,61 @@ class File extends Model
     }
 
     /**
+     * Human-readable file type for previews (e.g. Video, PDF, MP4).
+     */
+    public function getDisplayTypeLabelAttribute(): string
+    {
+        if ($this->isFolder()) {
+            return 'Folder';
+        }
+
+        $mime = strtolower((string) ($this->mime_type ?? ''));
+
+        if (str_starts_with($mime, 'image/')) {
+            return 'Image';
+        }
+        if (str_starts_with($mime, 'video/')) {
+            return 'Video';
+        }
+        if (str_starts_with($mime, 'audio/')) {
+            return 'Audio';
+        }
+        if ($mime === 'application/pdf') {
+            return 'PDF';
+        }
+        if ($mime === 'text/csv' || $mime === 'application/csv' || $mime === 'text/comma-separated-values') {
+            return 'CSV';
+        }
+        if (str_contains($mime, 'spreadsheet') || str_contains($mime, 'excel')) {
+            return 'Spreadsheet';
+        }
+        if (str_contains($mime, 'wordprocessingml') || str_contains($mime, 'msword')) {
+            return 'Document';
+        }
+
+        $extension = strtolower((string) pathinfo($this->name, PATHINFO_EXTENSION));
+        if ($extension === 'csv') {
+            return 'CSV';
+        }
+        if (in_array($extension, ['xlsx', 'xls', 'xlsm', 'xlsb'], true)) {
+            return 'Spreadsheet';
+        }
+        if ($extension === 'docx') {
+            return 'Document';
+        }
+        if (str_contains($mime, 'presentation') || str_contains($mime, 'powerpoint')) {
+            return 'Presentation';
+        }
+        if (str_contains($mime, 'zip') || str_contains($mime, 'archive')) {
+            return 'Archive';
+        }
+
+        $extension = strtoupper((string) pathinfo($this->name, PATHINFO_EXTENSION));
+
+        return $extension !== '' ? $extension : 'File';
+    }
+
+    /**
      * Get formatted file size.
      */
     public function getFormattedSizeAttribute(): string

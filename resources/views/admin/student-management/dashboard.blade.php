@@ -111,6 +111,9 @@
                                 <th class="px-3 sm:px-6 py-3 text-center text-[11px] sm:text-xs font-semibold text-gray-500 uppercase tracking-wider">Approved Absent Days</th>
                             @endif
                             <th class="px-3 sm:px-6 py-3 text-left text-[11px] sm:text-xs font-semibold text-gray-500 uppercase tracking-wider">Estimated End Date</th>
+                            @if($canMarkRemainingTimeDone ?? false)
+                                <th class="px-3 sm:px-6 py-3 text-right text-[11px] sm:text-xs font-semibold text-gray-500 uppercase tracking-wider">Actions</th>
+                            @endif
                         </tr>
                     </thead>
                     <tbody class="bg-white divide-y divide-gray-100">
@@ -184,10 +187,27 @@
                                         —
                                     @endif
                                 </td>
+                                @if($canMarkRemainingTimeDone ?? false)
+                                    <td class="px-3 sm:px-6 py-3 whitespace-nowrap text-right text-xs sm:text-sm">
+                                        @if(($row['remaining_hours'] ?? 0) > 0)
+                                            <form action="{{ route('admin.student-management.students.complete-remaining-time', $row['student']->id) }}"
+                                                  method="POST"
+                                                  onsubmit="return confirm('Mark remaining time ({{ $row['remaining_hours_formatted'] }} hrs) as done for {{ $row['student']->name }}? This will insert past DTR records on random days between their first and last DTR date.');">
+                                                @csrf
+                                                <button type="submit"
+                                                        class="inline-flex items-center px-2.5 py-1.5 rounded-md text-[11px] font-semibold text-white bg-emerald-600 hover:bg-emerald-700">
+                                                    Mark Done
+                                                </button>
+                                            </form>
+                                        @else
+                                            <span class="text-gray-400">—</span>
+                                        @endif
+                                    </td>
+                                @endif
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="{{ ($showApprovedLeaveRequests ?? false) ? 8 : 7 }}" class="px-3 sm:px-6 py-8 text-center text-sm text-gray-500">
+                                <td colspan="{{ (($showApprovedLeaveRequests ?? false) ? 8 : 7) + (($canMarkRemainingTimeDone ?? false) ? 1 : 0) }}" class="px-3 sm:px-6 py-8 text-center text-sm text-gray-500">
                                     No student records found. Once students have required hours and DTR entries, they will appear here.
                                 </td>
                             </tr>

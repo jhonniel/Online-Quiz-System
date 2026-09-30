@@ -655,6 +655,7 @@ Route::prefix('admin')->middleware(['auth', 'admin', 'admin.totp'])->group(funct
 
         // Student Management Dashboard
         Route::get('/student-management/dashboard', [StudentDashboardController::class, 'index'])->name('admin.student-management.dashboard');
+        Route::post('/student-management/students/{user}/complete-remaining-time', [StudentDashboardController::class, 'completeRemainingTime'])->name('admin.student-management.students.complete-remaining-time');
 
         // Student DTR Management
         Route::get('/student-dtr', [DtrController::class, 'studentIndex'])->name('admin.student-dtr.index');
