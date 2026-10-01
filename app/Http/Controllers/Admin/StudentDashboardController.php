@@ -7,6 +7,7 @@ use App\Mail\StudentRulesNoticeMail;
 use App\Models\LeaveRequest;
 use App\Support\AdminScopedDashboardCharts;
 use App\Support\StudentMeritNoticeSettings;
+use App\Support\StudentMeritRulesNotice;
 use App\Support\StudentRemainingTimeCompletion;
 use App\Models\UserActivity;
 use App\Support\StudentViolationCounter;
