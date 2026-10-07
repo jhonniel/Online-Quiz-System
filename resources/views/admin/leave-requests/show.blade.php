@@ -502,27 +502,8 @@
                                 <p class="text-sm font-semibold text-gray-900">Supporting Document(s)</p>
                                 <div class="mt-1 space-y-1">
                                     @foreach($leaveRequest->all_supporting_document_paths as $index => $docPath)
-                                        @php
-                                            $docUrl = null;
-                                            try {
-                                                $docUrl = \Illuminate\Support\Facades\Storage::disk('digitalocean')
-                                                    ->temporaryUrl(
-                                                        $docPath,
-                                                        now()->addMinutes(30),
-                                                        ['ResponseContentDisposition' => 'inline']
-                                                    );
-                                            } catch (\Throwable $e) {
-                                                try {
-                                                    $docUrl = \Illuminate\Support\Facades\Storage::url($docPath);
-                                                } catch (\Throwable $e) {
-                                                    $docUrl = null;
-                                                }
-                                            }
-                                        @endphp
-                                        @if($docUrl)
-                                            <a href="{{ $docUrl }}" target="_blank" rel="noopener"
-                                               class="block text-sm text-indigo-700 underline break-words">View / Download file {{ $index + 1 }}</a>
-                                        @endif
+                                        <a href="{{ route('admin.leave-requests.supporting-document', ['leaveRequest' => $leaveRequest, 'index' => $index]) }}" target="_blank" rel="noopener"
+                                           class="block text-sm text-indigo-700 underline break-words">View / Download file {{ $index + 1 }}</a>
                                     @endforeach
                                 </div>
                             </div>

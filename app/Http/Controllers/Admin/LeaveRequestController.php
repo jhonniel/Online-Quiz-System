@@ -20,6 +20,7 @@ use App\Models\User;
 use App\Rules\ClickUpTasksUrlsOnly;
 use App\Services\LeaveRequestStaleResubmissionService;
 use App\Services\MailConfigService;
+use App\Support\FileStreamResponse;
 use App\Support\StudentMeritNoticeSettings;
 use App\Support\StudentMeritRulesNotice;
 use App\Support\StudentViolationCounter;
@@ -904,6 +905,18 @@ class LeaveRequestController extends Controller
             'backLink',
             'teacherExcusedBatchmates'
         ));
+    }
+
+    public function viewSupportingDocument(LeaveRequest $leaveRequest, int $index)
+    {
+        $this->assertCanAccessEmployeeLeaveRequest($leaveRequest);
+
+        $path = $leaveRequest->supportingDocumentPathAt($index);
+        if ($path === null) {
+            abort(404, 'Supporting document not found.');
+        }
+
+        return FileStreamResponse::inlinePath($path, basename($path));
     }
 
     public function showPdf(Request $request, LeaveRequest $leaveRequest)

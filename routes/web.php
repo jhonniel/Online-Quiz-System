@@ -635,6 +635,7 @@ Route::prefix('admin')->middleware(['auth', 'admin', 'admin.totp'])->group(funct
             Route::get('/leave-requests/export/pdf', [LeaveRequestController::class, 'exportApprovedPdf'])->name('admin.leave-requests.export-pdf');
             Route::post('/leave-requests/create-for-employee', [LeaveRequestController::class, 'storeForEmployee'])->name('admin.leave-requests.store-for-employee');
             Route::get('/leave-requests/{leaveRequest}/pdf', [LeaveRequestController::class, 'showPdf'])->name('admin.leave-requests.show-pdf');
+            Route::get('/leave-requests/{leaveRequest}/supporting-documents/{index}', [LeaveRequestController::class, 'viewSupportingDocument'])->name('admin.leave-requests.supporting-document')->whereNumber('index');
             Route::get('/leave-requests/{leaveRequest}', [LeaveRequestController::class, 'show'])->name('admin.leave-requests.show');
             Route::patch('/leave-requests/{leaveRequest}/type', [LeaveRequestController::class, 'updateType'])->name('admin.leave-requests.update-type');
             Route::patch('/leave-requests/{leaveRequest}/dates', [LeaveRequestController::class, 'updateDates'])->name('admin.leave-requests.update-dates');
@@ -983,6 +984,9 @@ Route::middleware(['auth', 'student.not_terminated'])->group(function () {
 
     Route::get('leave-requests/wfh-balance', [App\Http\Controllers\User\LeaveRequestController::class, 'wfhBalance'])
         ->name('user.leave-requests.wfh-balance');
+    Route::get('leave-requests/{leaveRequest}/supporting-documents/{index}', [App\Http\Controllers\User\LeaveRequestController::class, 'viewSupportingDocument'])
+        ->name('user.leave-requests.supporting-document')
+        ->whereNumber('index');
     Route::get('leave-requests/{leaveRequest}/complete-attendance-overtime', [App\Http\Controllers\User\LeaveRequestController::class, 'completeAttendanceOvertime'])
         ->name('user.leave-requests.complete-attendance-overtime');
     Route::put('leave-requests/{leaveRequest}/complete-attendance-overtime', [App\Http\Controllers\User\LeaveRequestController::class, 'storeAttendanceOvertimeCompletion'])

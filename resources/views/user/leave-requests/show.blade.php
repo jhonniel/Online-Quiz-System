@@ -484,33 +484,12 @@
                                 <p class="text-xs text-gray-500 mt-0.5">Files you attached to this request</p>
                                 <div class="mt-2 space-y-1.5">
                                     @foreach($leaveRequest->all_supporting_document_paths as $index => $docPath)
-                                        @php
-                                            $docUrl = null;
-                                            $docName = basename((string) $docPath);
-                                            try {
-                                                $docUrl = \Illuminate\Support\Facades\Storage::disk('digitalocean')
-                                                    ->temporaryUrl(
-                                                        $docPath,
-                                                        now()->addMinutes(30),
-                                                        ['ResponseContentDisposition' => 'inline']
-                                                    );
-                                            } catch (\Throwable $e) {
-                                                try {
-                                                    $docUrl = \Illuminate\Support\Facades\Storage::url($docPath);
-                                                } catch (\Throwable $e) {
-                                                    $docUrl = null;
-                                                }
-                                            }
-                                        @endphp
-                                        @if($docUrl)
-                                            <a href="{{ $docUrl }}" target="_blank" rel="noopener"
-                                               class="flex items-center gap-2 text-sm text-indigo-700 hover:text-indigo-900 underline break-all">
-                                                <span class="shrink-0 font-medium">File {{ $index + 1 }}:</span>
-                                                <span>{{ $docName !== '' ? $docName : 'View / Download' }}</span>
-                                            </a>
-                                        @else
-                                            <p class="text-sm text-gray-500">File {{ $index + 1 }}: unavailable</p>
-                                        @endif
+                                        @php $docName = basename((string) $docPath); @endphp
+                                        <a href="{{ route('user.leave-requests.supporting-document', ['leaveRequest' => $leaveRequest, 'index' => $index]) }}" target="_blank" rel="noopener"
+                                           class="flex items-center gap-2 text-sm text-indigo-700 hover:text-indigo-900 underline break-all">
+                                            <span class="shrink-0 font-medium">File {{ $index + 1 }}:</span>
+                                            <span>{{ $docName !== '' ? $docName : 'View / Download' }}</span>
+                                        </a>
                                     @endforeach
                                 </div>
                             </div>

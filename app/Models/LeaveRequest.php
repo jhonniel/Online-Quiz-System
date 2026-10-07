@@ -61,6 +61,13 @@ class LeaveRequest extends Model
         return $legacy !== '' ? [$legacy] : [];
     }
 
+    public function supportingDocumentPathAt(int $index): ?string
+    {
+        $paths = $this->all_supporting_document_paths;
+
+        return $paths[$index] ?? null;
+    }
+
     /**
      * Get the user who created this leave request.
      */

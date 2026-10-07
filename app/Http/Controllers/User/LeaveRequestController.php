@@ -13,6 +13,7 @@ use App\Models\TravelTimeLocation;
 use App\Models\User;
 use App\Rules\ClickUpTasksUrlsOnly;
 use App\Services\MailConfigService;
+use App\Support\FileStreamResponse;
 use App\Support\LeaveRequestSignatorySettings;
 use App\Support\TimeRequestOvertimeLeaveImport;
 use App\Support\WorkFromHomeQuota;
@@ -711,6 +712,25 @@ class LeaveRequestController extends Controller
         $leaveRequestActivityLogs = $this->leaveRequestActivityLogsForRequester($leaveRequest);
 
         return view('user.leave-requests.show', compact('leaveRequest', 'signatories', 'letterAddressee', 'studentTime', 'leaveRequestActivityLogs'));
+    }
+
+    public function viewSupportingDocument(LeaveRequest $leaveRequest, int $index)
+    {
+        $user = Auth::user();
+        if (! in_array($user->role, ['employee', 'student'])) {
+            abort(403, 'Only employees and students can view leave requests.');
+        }
+
+        if ($leaveRequest->user_id !== Auth::id()) {
+            abort(403, 'You can only view your own leave requests.');
+        }
+
+        $path = $leaveRequest->supportingDocumentPathAt($index);
+        if ($path === null) {
+            abort(404, 'Supporting document not found.');
+        }
+
+        return FileStreamResponse::inlinePath($path, basename($path));
     }
 
     /**
