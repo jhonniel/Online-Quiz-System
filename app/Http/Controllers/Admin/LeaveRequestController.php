@@ -726,9 +726,14 @@ class LeaveRequestController extends Controller
 
             $usedVacation = $this->sumApprovedLeaveDaysForUser($user->id, 'vacation_leave', $currentYear);
             $usedSick = $this->sumApprovedLeaveDaysForUser($user->id, 'sick_leave', $currentYear);
-            $usedLeaveCredits = $this->sumApprovedLeaveDaysForUser($user->id, ['vacation_leave', 'sick_leave'], $currentYear);
+            $usedLeaveCredits = $this->sumApprovedLeaveDaysForUser(
+                $user->id,
+                ['leave', 'vacation_leave', 'sick_leave'],
+                $currentYear
+            );
 
             $combinedAllowance = (float) $leaveBalance->vacation_allowance + (float) $leaveBalance->sick_allowance;
+            $leaveCreditsRemaining = $combinedAllowance - $usedLeaveCredits;
 
             // Only exclude a pending WFH request from the balance preview; approved requests must count as used.
             $excludeWfhRequestId = ($leaveRequest->type === 'work_from_home' && ! $leaveRequest->isApproved())
@@ -755,7 +760,7 @@ class LeaveRequestController extends Controller
                 'leave' => [
                     'allowance' => $combinedAllowance,
                     'used' => $usedLeaveCredits,
-                    'remaining' => max($combinedAllowance - $usedLeaveCredits, 0),
+                    'remaining' => $leaveCreditsRemaining,
                 ],
                 'work_from_home' => $wfhBalance,
             ];
@@ -1492,7 +1497,7 @@ class LeaveRequestController extends Controller
                 );
 
                 $usedLeaveCredits = LeaveRequest::where('user_id', $employee->id)
-                    ->whereIn('type', ['vacation_leave', 'sick_leave'])
+                    ->whereIn('type', ['leave', 'vacation_leave', 'sick_leave'])
                     ->where('status', 'approved')
                     ->whereYear('start_date', $currentYear)
                     ->get()
@@ -3312,20 +3317,9 @@ class LeaveRequestController extends Controller
         $requestDays = (float) $leaveRequest->days;
 
         if (in_array($leaveRequest->type, ['vacation_leave', 'sick_leave', 'leave'], true)) {
-            if ($leaveRequest->type === 'vacation_leave') {
-                $bucket = 'Vacation Leave';
-                $allowance = (float) ($balances['vacation']['allowance'] ?? 0);
-                $used = (float) ($balances['vacation']['used'] ?? 0);
-            } elseif ($leaveRequest->type === 'sick_leave') {
-                $bucket = 'Sick Leave';
-                $allowance = (float) ($balances['sick']['allowance'] ?? 0);
-                $used = (float) ($balances['sick']['used'] ?? 0);
-            } else {
-                $bucket = 'Leave Credits';
-                $allowance = (float) ($balances['leave']['allowance'] ?? 0);
-                $used = (float) ($balances['leave']['used'] ?? 0);
-            }
-
+            $requestTypeLabel = LeaveRequest::labelForType($leaveRequest->type);
+            $allowance = (float) ($balances['leave']['allowance'] ?? 0);
+            $used = (float) ($balances['leave']['used'] ?? 0);
             $remainingBefore = $allowance - $used;
             $remainingAfter = $remainingBefore - $requestDays;
 
@@ -3337,15 +3331,16 @@ class LeaveRequestController extends Controller
 
             return [
                 'kind' => 'leave_negative',
-                'label' => $bucket,
+                'label' => 'Leave Credits',
+                'request_type_label' => $requestTypeLabel,
                 'request_days' => $requestDays,
                 'remaining_before' => round($remainingBefore, 2),
                 'remaining_after' => round($remainingAfter, 2),
                 'shortfall' => round($shortfall, 2),
                 'carryover_debt' => 0.0,
                 'warning' => sprintf(
-                    'Approving this %s request (%.2f day(s)) will put the employee on a negative leave balance (%.2f remaining now → %.2f after approval, short by %.2f day(s)). Continue anyway?',
-                    $bucket,
+                    'Approving this %s request (%.2f day(s)) will put the employee on a negative Leave Credits balance (%.2f remaining now → %.2f after approval, short by %.2f day(s)). Continue anyway?',
+                    $requestTypeLabel,
                     $requestDays,
                     $remainingBefore,
                     $remainingAfter,

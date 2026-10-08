@@ -1060,9 +1060,12 @@
                             <p class="text-xs font-semibold text-gray-500 uppercase tracking-wide">Leave Credits</p>
                             <p class="text-sm text-gray-900">
                                 Remaining:
-                                <span class="font-bold">{{ $balances['leave']['remaining'] ?? 0 }}</span>
-                                / {{ $balances['leave']['allowance'] ?? 0 }} days
+                                <span class="font-bold {{ (($balances['leave']['remaining'] ?? 0) < 0) ? 'text-red-600' : '' }}">
+                                    {{ number_format((float) ($balances['leave']['remaining'] ?? 0), 2) }}
+                                </span>
+                                / {{ number_format((float) ($balances['leave']['allowance'] ?? 0), 2) }} days
                             </p>
+                            <p class="text-[11px] text-gray-500 mt-0.5">Shared pool for Vacation Leave, Sick Leave, and other leave credit requests.</p>
                             <p class="text-xs text-gray-500">Used: {{ $balances['leave']['used'] ?? 0 }} days</p>
                         </div>
                         <div class="border border-gray-100 rounded-lg px-3 py-2 {{ str_starts_with($overtimeFormatted ?? '00:00', '-') ? 'bg-red-50/40 border-red-200' : '' }}">
@@ -1106,9 +1109,10 @@
                             </p>
                             <p class="text-xs text-red-900 mt-1">
                                 @if(($approveImpact['kind'] ?? '') === 'leave_negative')
-                                    Approving this request needs
+                                    Approving this
+                                    {{ $approveImpact['request_type_label'] ?? 'leave' }} request needs
                                     <span class="font-semibold tabular-nums">{{ number_format((float) $approveImpact['request_days'], 2) }}</span>
-                                    day(s) but remaining {{ $approveImpact['label'] }} is only
+                                    day(s) but remaining Leave Credits is only
                                     <span class="font-semibold tabular-nums">{{ number_format((float) $approveImpact['remaining_before'], 2) }}</span>.
                                     Balance after approval:
                                     <span class="font-semibold tabular-nums text-red-700">{{ number_format((float) $approveImpact['remaining_after'], 2) }}</span>
