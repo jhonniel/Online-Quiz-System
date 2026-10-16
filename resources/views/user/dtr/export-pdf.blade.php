@@ -67,7 +67,7 @@
                 <tr>
                     <th style="width: 12%;">Date</th>
                     <th style="width: 8%;">Day</th>
-                    <th style="width: 12%;" class="right">Worked Hours</th>
+                    <th style="width: 12%;" class="right">Hubstaff Hours</th>
                     <th style="width: 12%;" class="right">Added Time</th>
                     <th style="width: 12%;" class="right">Total Hours</th>
                     <th style="width: 12%;" class="right">{{ ($user->role ?? '') === 'student' ? 'Additional Time' : 'Overtime' }}</th>

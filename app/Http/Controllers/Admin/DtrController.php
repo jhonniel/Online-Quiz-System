@@ -1567,7 +1567,7 @@ class DtrController extends Controller
             [
                 'Employee Email',
                 'Date (YYYY-MM-DD)',
-                'Worked Hours (HH:MM)',
+                'Hubstaff Hours (HH:MM)',
                 'Added Time From Note (HH:MM)',
                 'Activity Percentage (0-100)',
                 'Remarks',
@@ -3195,11 +3195,12 @@ class DtrController extends Controller
             $employee = $group['employee'];
             $employeeId = $employee->id;
 
-            // Recompute base totals from final record set (includes late-added synthetic HOLIDAY rows).
-            $group['total_hours'] = 0;
+            // Summary total: capped at 8:00 per record (overtime excluded from this count).
+            $group['total_hours'] = \App\Support\DtrEmployeeAttendance::sumCountableHoursForRecords(
+                $group['records'] ?? []
+            );
             $group['total_overtime'] = 0;
             foreach (($group['records'] ?? []) as $record) {
-                $group['total_hours'] += \App\Support\DtrEmployeeAttendance::effectiveDailyTotal($record);
                 $group['total_overtime'] += ($record->overtime_hours ?? 0);
             }
 
@@ -3238,9 +3239,8 @@ class DtrController extends Controller
                     // Add hours if no DTR exists OR if DTR exists but has 0 hours
                     if (!$hasDtr || ($dtrRecord && ($dtrRecord->total_hours ?? 0) == 0)) {
                         if ($dtrRecord && ($dtrRecord->total_hours ?? 0) > 0) {
-                            // Use DTR hours if available
-                            $leaveHoursToAdd += $dtrRecord->total_hours ?? 0;
-                            $leaveOvertimeToAdd += $dtrRecord->overtime_hours ?? 0;
+                            $leaveHoursToAdd += \App\Support\DtrEmployeeAttendance::effectiveDailyTotal($dtrRecord);
+                            $leaveOvertimeToAdd += ($dtrRecord->overtime_hours ?? 0);
                         } else {
                             // Default to 8 hours for approved leave
                             $leaveHoursToAdd += 8.0;
@@ -3276,9 +3276,8 @@ class DtrController extends Controller
                     // Add hours if no DTR exists OR if DTR exists but has 0 hours
                     if (!$hasDtr || ($dtrRecord && ($dtrRecord->total_hours ?? 0) == 0)) {
                         if ($dtrRecord && ($dtrRecord->total_hours ?? 0) > 0) {
-                            // Use DTR hours if available
-                            $leaveHoursToAdd += $dtrRecord->total_hours ?? 0;
-                            $leaveOvertimeToAdd += $dtrRecord->overtime_hours ?? 0;
+                            $leaveHoursToAdd += \App\Support\DtrEmployeeAttendance::effectiveDailyTotal($dtrRecord);
+                            $leaveOvertimeToAdd += ($dtrRecord->overtime_hours ?? 0);
                         } else {
                             // Default to 8 hours for approved travel
                             $leaveHoursToAdd += 8.0;
@@ -3357,6 +3356,8 @@ class DtrController extends Controller
             $employeeDeficitH = intdiv($employeeDeficitMinutes, 60);
             $employeeDeficitM = $employeeDeficitMinutes % 60;
             $group['total_deficit_formatted'] = sprintf('%02d:%02d', $employeeDeficitH, $employeeDeficitM);
+            $group['attendance_log_complete'] = $employeeDeficitHours < 0.001;
+            $group['attendance_log_deficit_formatted'] = $group['total_deficit_formatted'];
 
             // Calculate balance overtime for this employee: Overtime - Deficit (from completed weeks only)
             // Negative balance means deficit exceeds overtime

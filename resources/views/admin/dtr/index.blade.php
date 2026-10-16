@@ -148,7 +148,7 @@
                             <ul class="list-disc list-inside space-y-1">
                                 <li><strong>Employee Email</strong> - Must match an existing employee email</li>
                                 <li><strong>Date</strong> - Format: YYYY-MM-DD (e.g., 2024-12-01)</li>
-                                <li><strong>Worked Hours</strong> - Base hours worked for that day in <strong>HH:MM</strong> format (e.g., 08:00, 07:30)</li>
+                                <li><strong>Hubstaff Hours</strong> - Base hours worked for that day in <strong>HH:MM</strong> format (e.g., 08:00, 07:30)</li>
                                 <li><strong>Added Time From Note</strong> - Extra hours to add in <strong>HH:MM</strong> format (e.g., 01:15, 00:00)</li>
                                 <li><strong>Activity Percentage</strong> - Performance activity value from <strong>0 to 100</strong> (e.g., 92, 87.5, 100)</li>
                                 <li><strong>Remarks</strong> - Any additional notes (optional)</li>
@@ -354,7 +354,7 @@
                                         <thead class="bg-gray-50">
                                             <tr>
                                                 <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
-                                                <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Worked Hours</th>
+                                                <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Hubstaff Hours</th>
                                                 <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Added Time From Note</th>
                                                 @unless($hrDtrLimitedView)
                                                 <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Offset</th>
@@ -420,8 +420,8 @@
                                                     </td>
                                                     <td class="px-3 py-2 whitespace-nowrap">
                                                         @php
-                                                            $countableDailyTotal = \App\Support\DtrEmployeeAttendance::effectiveDailyTotal($dtr);
-                                                            $totalMinutes = (int) round($countableDailyTotal * 60);
+                                                            $displayDailyTotal = \App\Support\DtrEmployeeAttendance::displayedDailyTotal($dtr);
+                                                            $totalMinutes = (int) round($displayDailyTotal * 60);
                                                             $totalH = intdiv($totalMinutes, 60);
                                                             $totalM = $totalMinutes % 60;
                                                             $totalFormatted = sprintf('%02d:%02d', $totalH, $totalM);
@@ -845,7 +845,7 @@
                 <span id="reject-dtr-remarks-employee"></span> — <span id="reject-dtr-remarks-date"></span>
             </p>
             <p class="text-xs text-gray-500 mt-2">
-                Removes credited added time from note (including time parsed from remarks). Worked hours and offset are kept; total hours are recalculated.
+                Removes credited added time from note (including time parsed from remarks). Hubstaff hours and offset are kept; total hours are recalculated.
             </p>
         </div>
         <form id="reject-dtr-remarks-form" method="POST" action="">

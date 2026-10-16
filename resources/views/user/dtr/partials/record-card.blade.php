@@ -53,7 +53,7 @@
         <span class="px-2 py-1 inline-flex shrink-0 text-xs font-semibold rounded-full {{ $statusClass }}">{{ $statusLabel }}</span>
     </div>
     <dl class="mobile-card-kv">
-        <dt>Worked</dt>
+        <dt>Hubstaff Hours</dt>
         <dd>{{ $isCompleted ? 'Complete' : ($workedMinutes > 0 ? $workedFormatted : '00:00') }}</dd>
         @if($offsetMinutes > 0)
             <dt>Offset</dt>

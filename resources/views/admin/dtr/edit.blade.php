@@ -124,15 +124,15 @@
                        class="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
                        {{ old('is_travel', $dtr->status === 'travel') ? 'checked' : '' }}>
                 <label for="is_travel" class="text-sm font-medium text-gray-700 cursor-pointer">
-                    Mark as Travel (will auto-set Worked Hours to 08:00 and Status to Travel)
+                    Mark as Travel (will auto-set Hubstaff Hours to 08:00 and Status to Travel)
                 </label>
             </div>
 
             <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <!-- Worked Hours (Total Hours) -->
+                <!-- Hubstaff Hours (Total Hours) -->
                 <div>
                     <label for="total_hours" class="block text-sm font-medium text-gray-700 mb-2">
-                        Worked Hours (HH:MM) <span class="text-red-500">*</span>
+                        Hubstaff Hours (HH:MM) <span class="text-red-500">*</span>
                     </label>
                     <input type="text" name="total_hours" id="total_hours"
                            value="{{ old('total_hours', $workedFormatted) }}"
@@ -140,8 +140,8 @@
                            class="time-input w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
                            required>
                     <p class="mt-1 text-xs text-gray-500">
-                        Worked hours for this day in <strong>HH:MM</strong> format (e.g., 08:00, 07:30). No AM/PM.
-                        Total Hours = Worked Hours + Added Time From Note.
+                        Hubstaff hours for this day in <strong>HH:MM</strong> format (e.g., 08:00, 07:30). No AM/PM.
+                        Total Hours = Hubstaff Hours + Added Time From Note.
                     </p>
                     @error('total_hours')
                         <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
@@ -316,7 +316,7 @@
                     statusDisplay.textContent = 'Travel';
                     statusDisplay.className = 'px-4 py-3 border border-gray-200 rounded-lg bg-blue-50 text-sm font-medium text-blue-700';
                     
-                    // Only set Worked Hours to 08:00 if not initial load (user is toggling checkbox)
+                    // Only set Hubstaff Hours to 08:00 if not initial load (user is toggling checkbox)
                     if (!isInitial) {
                         totalHoursInput.value = '08:00';
                         totalHoursInput.dispatchEvent(new Event('input', { bubbles: true }));

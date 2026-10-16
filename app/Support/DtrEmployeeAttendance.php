@@ -10,16 +10,47 @@ final class DtrEmployeeAttendance
     public const WEEKLY_BASE_HOURS = 40.0;
 
     /**
-     * Daily total for attendance counting: actual time up to 8:00; excess is ignored (shown under Overtime).
+     * Total Hours column: Worked + Added Time (+ offset), not capped at 8:00.
      */
-    public static function effectiveDailyTotal(Dtr $dtr): float
+    public static function displayedDailyTotal(Dtr $dtr): float
     {
         $worked = DtrAddedTimeFromRemarks::effectiveWorkedHours($dtr);
         $added = DtrAddedTimeFromRemarks::effectiveAddedHours($dtr);
         $offset = (float) ($dtr->offset_hours ?? 0);
-        $total = $worked + $added + $offset;
 
-        return min(max($total, 0.0), DtrRecordHours::STANDARD_DAY_HOURS);
+        return max($worked + $added + $offset, 0.0);
+    }
+
+    /**
+     * Hours that count toward weekly/export totals (max 8:00 per day; time over 8:00 is excluded).
+     */
+    public static function effectiveDailyTotal(Dtr $dtr): float
+    {
+        return DtrRecordHours::countableDailyTotalHours(self::displayedDailyTotal($dtr));
+    }
+
+    /**
+     * Sum of {@see effectiveDailyTotal()} for each record on or before $today.
+     */
+    public static function sumCountableHoursForRecords(iterable $records, ?Carbon $today = null): float
+    {
+        $today = ($today ?? Carbon::today())->copy()->startOfDay();
+        $sum = 0.0;
+
+        foreach ($records as $dtr) {
+            if (! $dtr instanceof Dtr) {
+                continue;
+            }
+
+            $day = Carbon::parse($dtr->date)->startOfDay();
+            if ($day->gt($today)) {
+                continue;
+            }
+
+            $sum += self::effectiveDailyTotal($dtr);
+        }
+
+        return $sum;
     }
 
     public static function formatHoursDecimal(float $hours): string
@@ -63,6 +94,43 @@ final class DtrEmployeeAttendance
         $countableSum = self::sumCountableWeekdayHours($records, $today);
 
         return max(0.0, self::WEEKLY_BASE_HOURS - $countableSum);
+    }
+
+    /**
+     * Deficit for a date-range export: (each record × 8:00) − sum of capped daily totals.
+     * Matches PDF "Total Deficit" (not the Mon–Fri 40:00 week rule).
+     */
+    public static function periodAttendanceDeficitHours(iterable $records, ?Carbon $today = null): float
+    {
+        $today = ($today ?? Carbon::today())->copy()->startOfDay();
+        $recordCount = 0;
+
+        foreach ($records as $dtr) {
+            if (! $dtr instanceof Dtr) {
+                continue;
+            }
+
+            $day = Carbon::parse($dtr->date)->startOfDay();
+            if ($day->gt($today)) {
+                continue;
+            }
+
+            $recordCount++;
+        }
+
+        if ($recordCount === 0) {
+            return 0.0;
+        }
+
+        $sum = self::sumCountableHoursForRecords($records, $today);
+        $expected = $recordCount * DtrRecordHours::STANDARD_DAY_HOURS;
+
+        return max(0.0, $expected - $sum);
+    }
+
+    public static function isPeriodAttendanceLogComplete(iterable $records, ?Carbon $today = null): bool
+    {
+        return self::periodAttendanceDeficitHours($records, $today) < 0.001;
     }
 
     public static function isDayLogComplete(Dtr $dtr): bool

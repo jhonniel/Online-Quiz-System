@@ -45,28 +45,13 @@
     </footer>
 
     @foreach($groupedByEmployee as $employeeGroup)
-        @php
-            $exportWeekEnd = isset($employeeGroup['week_end'])
-                ? \Carbon\Carbon::parse($employeeGroup['week_end'])
-                : \Carbon\Carbon::today()->endOfWeek();
-            $exportAttendanceComplete = \App\Support\DtrEmployeeAttendance::isWeekAttendanceLogComplete(
-                $employeeGroup['records'] ?? [],
-                $exportWeekEnd
-            );
-            $exportAttendanceDeficitHours = \App\Support\DtrEmployeeAttendance::weekAttendanceDeficitHours(
-                $employeeGroup['records'] ?? []
-            );
-            $exportAttendanceDeficitFormatted = \App\Support\DtrEmployeeAttendance::formatHoursDecimal(
-                $exportAttendanceDeficitHours
-            );
-        @endphp
         <div class="employee-header">
             <div class="employee-name">
                 {{ $employeeGroup['employee']->name }}
-                @if($exportAttendanceComplete)
+                @if(!empty($employeeGroup['attendance_log_complete']))
                     <span style="color: #047857; font-size: 9px; font-weight: bold;"> — Attendance Log Complete ✓</span>
                 @else
-                    <span style="color: #B91C1C; font-size: 9px; font-weight: bold;"> — Attendance Log Deficit {{ $exportAttendanceDeficitFormatted }}</span>
+                    <span style="color: #B91C1C; font-size: 9px; font-weight: bold;"> — Attendance Log Deficit {{ $employeeGroup['attendance_log_deficit_formatted'] ?? '00:00' }}</span>
                 @endif
             </div>
             <div class="employee-email">{{ $employeeGroup['employee']->email }}@if($employeeGroup['employee']->department) • {{ $employeeGroup['employee']->department->name }}@endif</div>
@@ -81,7 +66,7 @@
                 <tr>
                     <th style="width: 14%;">Date</th>
                     <th style="width: 9%;">Day</th>
-                    <th style="width: 14%;" class="right">Worked Hours</th>
+                    <th style="width: 14%;" class="right">Hubstaff Hours</th>
                     <th style="width: 12%;" class="right">Added Time</th>
                     <th style="width: 10%;" class="right">Offset</th>
                     <th style="width: 12%;" class="right">Total Hours</th>
@@ -109,8 +94,8 @@
                         $offsetM = $offsetMinutes % 60;
                         $offsetFormatted = sprintf('%02d:%02d', $offsetH, $offsetM);
 
-                        $countableDailyTotal = \App\Support\DtrEmployeeAttendance::effectiveDailyTotal($dtr);
-                        $totalMinutes = (int) round($countableDailyTotal * 60);
+                        $displayDailyTotal = \App\Support\DtrEmployeeAttendance::displayedDailyTotal($dtr);
+                        $totalMinutes = (int) round($displayDailyTotal * 60);
                         $totalH = intdiv($totalMinutes, 60);
                         $totalM = $totalMinutes % 60;
                         $totalFormatted = sprintf('%02d:%02d', $totalH, $totalM);
@@ -315,7 +300,7 @@
                     <tr>
                         <th style="width: 14%;">Date</th>
                         <th style="width: 9%;">Day</th>
-                        <th style="width: 14%;" class="right">Worked Hours</th>
+                        <th style="width: 14%;" class="right">Hubstaff Hours</th>
                         <th style="width: 14%;" class="right">Added Time</th>
                         <th style="width: 14%;" class="right">Total Hours</th>
                         <th style="width: 12%;" class="center">Status</th>
@@ -414,7 +399,7 @@
                     <tr>
                         <th style="width: 14%;">Date</th>
                         <th style="width: 9%;">Day</th>
-                        <th style="width: 14%;" class="right">Worked Hours</th>
+                        <th style="width: 14%;" class="right">Hubstaff Hours</th>
                         <th style="width: 14%;" class="right">Added Time</th>
                         <th style="width: 14%;" class="right">Total Hours</th>
                         <th style="width: 12%;" class="center">Status</th>
