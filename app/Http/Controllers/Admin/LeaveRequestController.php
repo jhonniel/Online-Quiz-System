@@ -2607,6 +2607,12 @@ class LeaveRequestController extends Controller
             return;
         }
 
+        if ($leaveRequest->type === 'offset') {
+            $this->revertOffsetFromDtr($leaveRequest, $force);
+
+            return;
+        }
+
         if ($leaveRequest->type === 'overtime' && $leaveRequest->user?->role === 'student') {
             \App\Support\StudentOvertimeLeaveRequest::revertFromDtr($leaveRequest);
         }
@@ -2644,6 +2650,12 @@ class LeaveRequestController extends Controller
 
         if ($leaveRequest->type === 'travel') {
             $this->applyTravelTimeToDtr($leaveRequest, (float) ($leaveRequest->travel_hours ?? 8.0));
+
+            return;
+        }
+
+        if ($leaveRequest->type === 'offset') {
+            $this->applyOffsetTimeToDtr($leaveRequest);
 
             return;
         }
@@ -2883,6 +2895,87 @@ class LeaveRequestController extends Controller
      * Apply vacation leave or sick leave time to DTR records.
      * Each approved day gets 8.0 hours automatically added.
      */
+    private function applyOffsetTimeToDtr(LeaveRequest $leaveRequest): void
+    {
+        $totalOffsetHours = (float) $leaveRequest->offset_hours_needed;
+        if ($totalOffsetHours <= 0) {
+            return;
+        }
+
+        $dayCount = max(1, $this->leaveRequestInclusiveDayCount($leaveRequest));
+        $offsetHoursPerDay = $totalOffsetHours / $dayCount;
+        $offsetLabel = 'Offset: '.($leaveRequest->type_label ?? 'Offset');
+
+        foreach ($this->iterateLeaveRequestDates($leaveRequest) as $date) {
+            $dtr = $this->findOrCreateDtrRecord(
+                (int) $leaveRequest->user_id,
+                $date->toDateString(),
+                'on_leave'
+            );
+
+            \App\Support\DtrRecordHours::addOffset($dtr, $offsetHoursPerDay);
+
+            $existingRemarks = trim((string) ($dtr->remarks ?? ''));
+            if ($existingRemarks === '') {
+                $dtr->remarks = $offsetLabel;
+            } elseif (stripos($existingRemarks, 'Offset:') === false) {
+                $dtr->remarks = $existingRemarks.' | '.$offsetLabel;
+            }
+
+            if (empty($dtr->status) || $dtr->status === 'present') {
+                $dtr->status = 'on_leave';
+            }
+
+            $dtr->save();
+
+            $this->calculateAndStoreWeeklyDeficit($leaveRequest->user_id, $date);
+        }
+    }
+
+    private function revertOffsetFromDtr(LeaveRequest $leaveRequest, bool $force = false): void
+    {
+        $totalOffsetHours = (float) $leaveRequest->offset_hours_needed;
+        if ($totalOffsetHours <= 0) {
+            return;
+        }
+
+        $dayCount = max(1, $this->leaveRequestInclusiveDayCount($leaveRequest));
+        $offsetHoursPerDay = $totalOffsetHours / $dayCount;
+        $didRevert = false;
+
+        foreach ($this->iterateLeaveRequestDates($leaveRequest) as $date) {
+            $dtr = Dtr::where('user_id', $leaveRequest->user_id)
+                ->whereDate('date', $date->toDateString())
+                ->first();
+
+            if (! $dtr) {
+                continue;
+            }
+
+            \App\Support\DtrRecordHours::subtractOffset($dtr, $offsetHoursPerDay);
+
+            $existingRemarks = (string) ($dtr->remarks ?? '');
+            if ($existingRemarks !== '') {
+                $dtr->remarks = trim(preg_replace('/\s*\|\s*Offset:[^|]*/i', '', $existingRemarks) ?? $existingRemarks);
+                $dtr->remarks = trim(str_replace('Offset: Offset', '', (string) $dtr->remarks));
+            }
+
+            $dtr->save();
+            $didRevert = true;
+        }
+
+        if ($didRevert) {
+            LeaveRequestLog::create([
+                'leave_request_id' => $leaveRequest->id,
+                'action' => 'offset_time_reverted',
+                'status_before' => 'approved',
+                'status_after' => 'pending',
+                'notes' => 'Reverted credited offset time from DTR during resubmission request.',
+                'performed_by' => Auth::id(),
+            ]);
+        }
+    }
+
     private function applyLeaveTimeToDtr(LeaveRequest $leaveRequest): void
     {
         $leaveTypeLabel = $leaveRequest->type === 'vacation_leave'

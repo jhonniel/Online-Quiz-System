@@ -226,8 +226,8 @@ class DtrTimeRequestController extends Controller
     {
         $user = Auth::user();
 
-        if (! $user->isAdmin()) {
-            abort(403, 'Access denied. Only admins can bulk approve time requests.');
+        if (! $user->isAdmin() && ! $user->canAccessStudentManagement()) {
+            abort(403, 'Access denied. You do not have permission to bulk approve time requests.');
         }
 
         $validated = $request->validate([
@@ -311,6 +311,78 @@ class DtrTimeRequestController extends Controller
         }
         if ($warningDisabledCount > 0) {
             $message .= " Rules violation warning disabled for {$warningDisabledCount} student(s).";
+        }
+
+        return back()->with('success', $message);
+    }
+
+    /**
+     * Reject multiple pending time requests at once.
+     */
+    public function bulkReject(Request $request)
+    {
+        $user = Auth::user();
+
+        if (! $user->isAdmin() && ! $user->canAccessStudentManagement()) {
+            abort(403, 'Access denied. You do not have permission to bulk reject time requests.');
+        }
+
+        $validated = $request->validate([
+            'request_ids' => ['required', 'array', 'min:1'],
+            'request_ids.*' => ['integer', 'exists:dtr_time_requests,id'],
+            'admin_notes' => ['required', 'string', 'max:1000'],
+        ]);
+
+        $adminNotes = trim($validated['admin_notes']);
+        $rejectedCount = 0;
+        $skippedCount = 0;
+
+        $requests = DtrTimeRequest::with('user')
+            ->whereIn('id', $validated['request_ids'])
+            ->get();
+
+        foreach ($requests as $dtrTimeRequest) {
+            if ($dtrTimeRequest->status !== 'pending') {
+                $skippedCount++;
+                continue;
+            }
+
+            if ($dtrTimeRequest->user?->role !== 'student') {
+                $skippedCount++;
+                continue;
+            }
+
+            $allowedStudentDepartmentIds = $user->getAllowedStudentDepartmentIds();
+            if ($allowedStudentDepartmentIds !== null) {
+                $normalizedAllowedDepartmentIds = array_map('intval', $allowedStudentDepartmentIds);
+                if (! in_array((int) $dtrTimeRequest->user->department_id, $normalizedAllowedDepartmentIds, true)) {
+                    $skippedCount++;
+                    continue;
+                }
+            }
+
+            $dtrTimeRequest->update([
+                'status' => 'rejected',
+                'admin_notes' => $adminNotes,
+                'reviewed_by' => Auth::id(),
+                'reviewed_at' => now(),
+            ]);
+
+            $dtrTimeRequest->loadMissing('user');
+            if ($dtrTimeRequest->user?->role === 'student') {
+                StudentMeritRulesNotice::syncForStudent($dtrTimeRequest->user);
+            }
+
+            $rejectedCount++;
+        }
+
+        if ($rejectedCount === 0) {
+            return back()->withErrors(['error' => 'No pending time requests were rejected. Selected items may already be processed or outside your access.']);
+        }
+
+        $message = "Rejected {$rejectedCount} time request".($rejectedCount === 1 ? '' : 's').'.';
+        if ($skippedCount > 0) {
+            $message .= " Skipped {$skippedCount}.";
         }
 
         return back()->with('success', $message);

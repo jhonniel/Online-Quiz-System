@@ -60,8 +60,9 @@
                     <th style="width: 14%;">Date</th>
                     <th style="width: 9%;">Day</th>
                     <th style="width: 14%;" class="right">Worked Hours</th>
-                    <th style="width: 14%;" class="right">Added Time</th>
-                    <th style="width: 14%;" class="right">Total Hours</th>
+                    <th style="width: 12%;" class="right">Added Time</th>
+                    <th style="width: 10%;" class="right">Offset</th>
+                    <th style="width: 12%;" class="right">Total Hours</th>
                     <th style="width: 12%;" class="center">Status</th>
                     <th style="width: 23%;">Remarks</th>
                 </tr>
@@ -69,7 +70,7 @@
             <tbody>
                 @foreach($employeeGroup['records'] as $dtr)
                     @php
-                        $workedHours = max(($dtr->total_hours ?? 0) - ($dtr->added_time_from_note ?? 0), 0);
+                        $workedHours = max(($dtr->total_hours ?? 0) - ($dtr->added_time_from_note ?? 0) - ($dtr->offset_hours ?? 0), 0);
                         $workedMinutes = (int) round($workedHours * 60);
                         $workedH = intdiv($workedMinutes, 60);
                         $workedM = $workedMinutes % 60;
@@ -79,6 +80,11 @@
                         $extraH = intdiv($extraMinutes, 60);
                         $extraM = $extraMinutes % 60;
                         $extraFormatted = sprintf('%02d:%02d', $extraH, $extraM);
+
+                        $offsetMinutes = (int) round(($dtr->offset_hours ?? 0) * 60);
+                        $offsetH = intdiv($offsetMinutes, 60);
+                        $offsetM = $offsetMinutes % 60;
+                        $offsetFormatted = sprintf('%02d:%02d', $offsetH, $offsetM);
 
                         $totalMinutes = (int) round(($dtr->total_hours ?? 0) * 60);
                         $totalH = intdiv($totalMinutes, 60);
@@ -190,6 +196,7 @@
                         <td>{{ $dtr->date->format('D') }}</td>
                         <td class="right">{{ $workedMinutes > 0 ? $workedFormatted : '00:00' }}</td>
                         <td class="right">{{ $extraMinutes > 0 ? $extraFormatted : '00:00' }}</td>
+                        <td class="right">{{ $offsetMinutes > 0 ? $offsetFormatted : '00:00' }}</td>
                         <td class="right">{{ $totalMinutes > 0 ? $totalFormatted : '00:00' }}</td>
                         <td class="center"@if($statusLabel === 'Under Time') style="color: #DC2626; font-weight: bold;"@endif>{{ $statusLabel }}</td>
                         <td>{{ $remarks ?: '-' }}</td>
@@ -305,7 +312,7 @@
                             // For Absent leave, force 0 hours in PDF.
                             if ($dtrRecord && ($dtrRecord->total_hours ?? 0) > 0 && !$isAbsentLeave) {
                                 $leaveHours = $dtrRecord->total_hours;
-                                $workedHours = max($leaveHours - ($dtrRecord->added_time_from_note ?? 0), 0);
+                                $workedHours = max($leaveHours - ($dtrRecord->added_time_from_note ?? 0) - ($dtrRecord->offset_hours ?? 0), 0);
                                 $addedTime = $dtrRecord->added_time_from_note ?? 0;
                             } else {
                                 if ($isAbsentLeave) {
@@ -353,6 +360,7 @@
                             <td>{{ $leaveDate->format('D') }}</td>
                             <td class="right">{{ $workedFormatted }}</td>
                             <td class="right">{{ $addedMinutes > 0 ? $addedFormatted : '00:00' }}</td>
+                            <td class="right">00:00</td>
                             <td class="right">{{ $totalFormatted }}</td>
                             <td class="center">{{ ($leave->type ?? '') === 'absent' ? 'Absent' : 'Completed' }}</td>
                             <td>
@@ -399,7 +407,7 @@
                             // Use DTR hours if available, otherwise default to 8 hours
                             if ($dtrRecord && ($dtrRecord->total_hours ?? 0) > 0) {
                                 $travelHours = $dtrRecord->total_hours;
-                                $workedHours = max($travelHours - ($dtrRecord->added_time_from_note ?? 0), 0);
+                                $workedHours = max($travelHours - ($dtrRecord->added_time_from_note ?? 0) - ($dtrRecord->offset_hours ?? 0), 0);
                                 $addedTime = $dtrRecord->added_time_from_note ?? 0;
                             } else {
                                 // Default to 8 hours for approved travel
@@ -431,6 +439,7 @@
                             <td>{{ $travelDate->format('D') }}</td>
                             <td class="right">{{ $workedFormatted }}</td>
                             <td class="right">{{ $addedMinutes > 0 ? $addedFormatted : '00:00' }}</td>
+                            <td class="right">00:00</td>
                             <td class="right">{{ $totalFormatted }}</td>
                             <td class="center">Travel</td>
                             <td>

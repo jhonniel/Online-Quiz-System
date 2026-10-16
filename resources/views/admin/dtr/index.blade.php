@@ -157,7 +157,7 @@
                                 <p class="font-semibold text-blue-900 mb-1">Important Notes:</p>
                                 <ul class="list-disc list-inside space-y-1 text-blue-800">
                                     <li>Import uses the <strong>same calculation logic as manual entry</strong></li>
-                                    <li>If a DTR record already exists for an employee on a given date, it will be <strong>skipped</strong> (not updated)</li>
+                                    <li>If a DTR record already exists for an employee on a given date, imported worked and added time will be <strong>merged</strong> (offset hours from leave are preserved)</li>
                                     <li><strong>Total Hours</strong> and <strong>Overtime Hours</strong> are automatically calculated by the system</li>
                                     <li><strong>Status</strong> is automatically determined by the system based on the hours worked</li>
                                     <li>Weekly deficit is automatically calculated for each imported record</li>
@@ -258,6 +258,9 @@
     @php
         $hrDtrLimitedView = auth()->user()?->isHr() ?? false;
         $canEditAutoLabeledDtr = auth()->user()?->isSuperAdmin() ?? false;
+        $canManageEmployeeDtr = auth()->user()?->isAdmin()
+            || auth()->user()?->canAccessEmployeeManagement()
+            || auth()->user()?->canAccessEmployeeFeature('dtr');
     @endphp
     <div class="bg-white rounded-2xl shadow-xl border border-gray-200 overflow-hidden">
         <div class="px-6 py-4 border-b border-gray-200 bg-gray-50">
@@ -326,6 +329,7 @@
                                                 <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Worked Hours</th>
                                                 <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Added Time From Note</th>
                                                 @unless($hrDtrLimitedView)
+                                                <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Offset</th>
                                                 <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total Hours</th>
                                                 <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Overtime</th>
                                                 @endunless
@@ -345,7 +349,7 @@
                                                     </td>
                                                     <td class="px-3 py-2 whitespace-nowrap">
                                                         @php
-                                                            $workedHours = max(($dtr->total_hours ?? 0) - ($dtr->added_time_from_note ?? 0), 0);
+                                                            $workedHours = max(($dtr->total_hours ?? 0) - ($dtr->added_time_from_note ?? 0) - ($dtr->offset_hours ?? 0), 0);
                                                             $workedMinutes = (int) round($workedHours * 60);
                                                             $workedH = intdiv($workedMinutes, 60);
                                                             $workedM = $workedMinutes % 60;
@@ -365,8 +369,26 @@
                                                         <div class="text-sm font-medium text-gray-900">
                                                             {{ $extraMinutes > 0 ? $extraFormatted : '00:00' }}
                                                         </div>
+                                                        @if($hrDtrLimitedView && $canManageEmployeeDtr && $extraMinutes > 0 && $dtr->exists && $dtr->id)
+                                                            <button type="button"
+                                                                    onclick="openRejectDtrRemarksModal({{ $dtr->id }}, @js($employeeGroup['employee']->name), @js($dtr->date->format('M d, Y')))"
+                                                                    class="mt-1 text-xs font-medium text-rose-700 hover:text-rose-900">
+                                                                Reject remarks
+                                                            </button>
+                                                        @endif
                                                     </td>
                                                     @unless($hrDtrLimitedView)
+                                                    <td class="px-3 py-2 whitespace-nowrap">
+                                                        @php
+                                                            $offsetMinutes = (int) round(($dtr->offset_hours ?? 0) * 60);
+                                                            $offsetH = intdiv($offsetMinutes, 60);
+                                                            $offsetM = $offsetMinutes % 60;
+                                                            $offsetFormatted = sprintf('%02d:%02d', $offsetH, $offsetM);
+                                                        @endphp
+                                                        <div class="text-sm font-medium text-teal-700">
+                                                            {{ $offsetMinutes > 0 ? $offsetFormatted : '00:00' }}
+                                                        </div>
+                                                    </td>
                                                     <td class="px-3 py-2 whitespace-nowrap">
                                                         @php
                                                             $totalMinutes = (int) round(($dtr->total_hours ?? 0) * 60);
@@ -450,10 +472,17 @@
                                                     </td>
                                                     @unless($hrDtrLimitedView)
                                                     <td class="px-3 py-2">
-                                                        <div class="flex items-center space-x-3">
+                                                        <div class="flex flex-wrap items-center gap-2">
                                                             <div class="text-sm text-gray-500 max-w-xs truncate" title="{{ $dtr->remarks }}">
                                                                 {{ $dtr->remarks ?: '-' }}
                                                             </div>
+                                                            @if($canManageEmployeeDtr && $extraMinutes > 0 && $dtr->exists && $dtr->id)
+                                                                <button type="button"
+                                                                        onclick="openRejectDtrRemarksModal({{ $dtr->id }}, @js($employeeGroup['employee']->name), @js($dtr->date->format('M d, Y')))"
+                                                                        class="inline-flex items-center px-2.5 py-1.5 border border-rose-200 text-xs font-medium rounded-md text-rose-700 bg-rose-50 hover:bg-rose-100">
+                                                                    Reject remarks
+                                                                </button>
+                                                            @endif
                                                             @if($dtr->exists && $dtr->id)
                                                                 <a href="{{ url('/admin/dtr/' . $dtr->id . '/edit') }}"
                                                                    class="inline-flex items-center px-2.5 py-1.5 border border-indigo-200 text-xs font-medium rounded-md text-indigo-700 bg-indigo-50 hover:bg-indigo-100">
@@ -774,6 +803,61 @@
         });
     });
 </script>
+
+@if($canManageEmployeeDtr ?? false)
+<div id="reject-dtr-remarks-modal" class="hidden fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
+    <div class="relative top-20 mx-auto p-5 border w-full max-w-md shadow-lg rounded-md bg-white">
+        <div class="mb-4">
+            <h3 class="text-lg font-bold text-gray-900">Reject added time from remarks</h3>
+            <p class="text-sm text-gray-600 mt-1">
+                <span id="reject-dtr-remarks-employee"></span> — <span id="reject-dtr-remarks-date"></span>
+            </p>
+            <p class="text-xs text-gray-500 mt-2">
+                Removes credited added time from note (including time parsed from remarks). Worked hours and offset are kept; total hours are recalculated.
+            </p>
+        </div>
+        <form id="reject-dtr-remarks-form" method="POST" action="">
+            @csrf
+            <div class="mb-4">
+                <label for="reject_dtr_remarks_note" class="block text-sm font-medium text-gray-700 mb-2">Note (optional)</label>
+                <textarea name="note" id="reject_dtr_remarks_note" rows="3" maxlength="500"
+                          class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-rose-500 focus:border-rose-500"
+                          placeholder="Reason for rejecting remark-based added time…"></textarea>
+            </div>
+            <div class="flex justify-end gap-3">
+                <button type="button" onclick="closeRejectDtrRemarksModal()"
+                        class="px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300">
+                    Cancel
+                </button>
+                <button type="submit"
+                        class="px-4 py-2 bg-rose-600 text-white rounded-lg hover:bg-rose-700">
+                    Reject remarks
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+<script>
+function openRejectDtrRemarksModal(dtrId, employeeName, dateLabel) {
+    const modal = document.getElementById('reject-dtr-remarks-modal');
+    const form = document.getElementById('reject-dtr-remarks-form');
+    if (!modal || !form) return;
+    form.action = `/admin/dtr/${dtrId}/reject-remarks`;
+    document.getElementById('reject-dtr-remarks-employee').textContent = employeeName;
+    document.getElementById('reject-dtr-remarks-date').textContent = dateLabel;
+    modal.classList.remove('hidden');
+}
+function closeRejectDtrRemarksModal() {
+    const modal = document.getElementById('reject-dtr-remarks-modal');
+    if (!modal) return;
+    modal.classList.add('hidden');
+    document.getElementById('reject-dtr-remarks-form')?.reset();
+}
+document.getElementById('reject-dtr-remarks-modal')?.addEventListener('click', function (e) {
+    if (e.target === this) closeRejectDtrRemarksModal();
+});
+</script>
+@endif
 
 @endsection
 

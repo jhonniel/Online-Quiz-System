@@ -179,17 +179,17 @@
 
     <!-- Time Requests Table -->
     <div class="bg-white rounded-lg shadow border border-gray-200 overflow-hidden">
-        @php($canBulkApprove = auth()->user()->isAdmin())
+        @php($canBulkManageTimeRequests = auth()->user()->isAdmin() || auth()->user()->canAccessStudentManagement())
         <div class="px-4 sm:px-6 py-4 border-b border-gray-200 bg-gray-50 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
             <div>
                 <h2 class="text-base font-semibold text-gray-900">Requests</h2>
-                @if($canBulkApprove)
-                    <p class="text-sm text-gray-600 mt-0.5">Select pending requests to approve in bulk</p>
+                @if($canBulkManageTimeRequests)
+                    <p class="text-sm text-gray-600 mt-0.5">Select pending requests to approve or reject in bulk</p>
                 @else
                     <p class="text-sm text-gray-600 mt-0.5">Review and process student attendance time requests</p>
                 @endif
             </div>
-            @if($canBulkApprove)
+            @if($canBulkManageTimeRequests)
                 <div id="bulk-actions" class="flex flex-wrap items-center gap-3" style="display: none;">
                     <span class="text-sm text-gray-700" id="selected-count">0 selected</span>
                     <button type="button"
@@ -200,6 +200,14 @@
                         </svg>
                         Approve Selected
                     </button>
+                    <button type="button"
+                            onclick="openBulkRejectModal()"
+                            class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-lg shadow-sm text-white bg-red-600 hover:bg-red-700">
+                        <svg class="h-4 w-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                        </svg>
+                        Reject Selected
+                    </button>
                 </div>
             @endif
         </div>
@@ -207,7 +215,7 @@
             <table class="min-w-full divide-y divide-gray-200">
                 <thead class="bg-gray-50">
                     <tr>
-                        @if($canBulkApprove)
+                        @if($canBulkManageTimeRequests)
                             <th class="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-10">
                                 <input type="checkbox"
                                        id="select-all-pending"
@@ -229,7 +237,7 @@
                 <tbody class="bg-white divide-y divide-gray-200">
                     @forelse($timeRequests as $request)
                         <tr class="hover:bg-gray-50">
-                            @if($canBulkApprove)
+                            @if($canBulkManageTimeRequests)
                                 <td class="px-4 sm:px-6 py-4 whitespace-nowrap">
                                     @if($request->status === 'pending')
                                         <input type="checkbox"
@@ -324,7 +332,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="{{ $canBulkApprove ? 9 : 8 }}" class="px-6 py-8 text-center text-sm text-gray-500">
+                            <td colspan="{{ $canBulkManageTimeRequests ? 9 : 8 }}" class="px-6 py-8 text-center text-sm text-gray-500">
                                 No time requests found.
                             </td>
                         </tr>
@@ -494,6 +502,47 @@
                 <button type="submit"
                         class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors">
                     Approve Selected
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div id="bulk-reject-modal" class="hidden fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
+    <div class="relative top-20 mx-auto p-5 border w-11/12 md:w-1/2 shadow-lg rounded-md bg-white">
+        <div class="flex items-center justify-between mb-4">
+            <h3 class="text-lg font-bold text-gray-900">Reject Selected Time Requests</h3>
+            <button type="button" onclick="closeBulkRejectModal()" class="text-gray-400 hover:text-gray-600">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                </svg>
+            </button>
+        </div>
+        <p class="text-sm text-gray-600 mb-4">
+            You are about to reject <span id="bulk-reject-count" class="font-semibold text-gray-900">0</span> pending request(s). The same rejection reason will apply to all selected requests.
+        </p>
+        <form id="bulk-reject-form" method="POST" action="{{ route('admin.time-requests.bulk-reject') }}">
+            @csrf
+            <div id="bulk-reject-ids"></div>
+            <div class="space-y-4">
+                <div>
+                    <label for="bulk_reject_admin_notes" class="block text-sm font-medium text-gray-700 mb-2">Rejection Reason <span class="text-red-600">*</span></label>
+                    <textarea name="admin_notes"
+                              id="bulk_reject_admin_notes"
+                              rows="3"
+                              required
+                              class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500"></textarea>
+                </div>
+            </div>
+            <div class="mt-6 flex justify-end gap-3">
+                <button type="button"
+                        onclick="closeBulkRejectModal()"
+                        class="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors">
+                    Cancel
+                </button>
+                <button type="submit"
+                        class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors">
+                    Reject Selected
                 </button>
             </div>
         </form>
@@ -752,6 +801,41 @@ function closeBulkApproveModal() {
     document.getElementById('bulk-approve-ids').innerHTML = '';
 }
 
+function openBulkRejectModal() {
+    const selected = getSelectedPendingCheckboxes();
+    if (selected.length === 0) {
+        alert('Select at least one pending time request.');
+        return;
+    }
+
+    const idsContainer = document.getElementById('bulk-reject-ids');
+    if (!idsContainer) {
+        return;
+    }
+
+    idsContainer.innerHTML = '';
+    selected.forEach(function (checkbox) {
+        const input = document.createElement('input');
+        input.type = 'hidden';
+        input.name = 'request_ids[]';
+        input.value = checkbox.value;
+        idsContainer.appendChild(input);
+    });
+
+    document.getElementById('bulk-reject-count').textContent = String(selected.length);
+    document.getElementById('bulk-reject-modal').classList.remove('hidden');
+}
+
+function closeBulkRejectModal() {
+    const modal = document.getElementById('bulk-reject-modal');
+    if (!modal) {
+        return;
+    }
+    modal.classList.add('hidden');
+    document.getElementById('bulk-reject-form').reset();
+    document.getElementById('bulk-reject-ids').innerHTML = '';
+}
+
 function openRejectModal(requestId) {
     const modal = document.getElementById('reject-modal');
     const form = document.getElementById('reject-form');
@@ -792,6 +876,10 @@ document.getElementById('approve-modal')?.addEventListener('click', function(e) 
     if (e.target === this) {
         closeApproveModal();
     }
+});
+
+document.getElementById('bulk-reject-modal')?.addEventListener('click', function(e) {
+    if (e.target === this) closeBulkRejectModal();
 });
 
 document.getElementById('bulk-approve-modal')?.addEventListener('click', function(e) {

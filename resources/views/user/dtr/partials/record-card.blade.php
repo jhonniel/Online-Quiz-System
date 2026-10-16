@@ -29,7 +29,11 @@
         }
     }
 
-    $workedHours = max(($dtr->total_hours ?? 0) - ($dtr->added_time_from_note ?? 0), 0);
+    $workedHours = max(($dtr->total_hours ?? 0) - ($dtr->added_time_from_note ?? 0) - ($dtr->offset_hours ?? 0), 0);
+    $offsetMinutes = (int) round(($dtr->offset_hours ?? 0) * 60);
+    $offsetH = intdiv($offsetMinutes, 60);
+    $offsetM = $offsetMinutes % 60;
+    $offsetFormatted = sprintf('%02d:%02d', $offsetH, $offsetM);
     $workedMinutes = (int) round($workedHours * 60);
     $workedH = intdiv($workedMinutes, 60);
     $workedM = $workedMinutes % 60;
@@ -51,6 +55,10 @@
     <dl class="mobile-card-kv">
         <dt>Worked</dt>
         <dd>{{ $isCompleted ? 'Complete' : ($workedMinutes > 0 ? $workedFormatted : '00:00') }}</dd>
+        @if($offsetMinutes > 0)
+            <dt>Offset</dt>
+            <dd>{{ $offsetFormatted }}</dd>
+        @endif
         <dt>Total</dt>
         <dd>{{ $isCompleted ? 'Complete' : ($totalMinutes > 0 ? $totalFormatted : '00:00') }}</dd>
         @if($dtr->remarks)

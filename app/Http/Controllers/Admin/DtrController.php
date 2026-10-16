@@ -13,6 +13,7 @@ use App\Models\Department;
 use App\Models\LeaveRequest;
 use App\Services\StudentOjtPostCompletionService;
 use App\Support\DtrHolidayCalendar;
+use App\Support\DtrRecordHours;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\DB;
@@ -282,9 +283,6 @@ class DtrController extends Controller
                         $offsetHoursPerDay = $days > 0 ? $totalOffsetHours / $days : $totalOffsetHours;
 
                         if ($existingDtr) {
-                            // If DTR exists, add offset hours to existing total_hours
-                            $existingDtr->total_hours = ($existingDtr->total_hours ?? 0) + $offsetHoursPerDay;
-                            // Update remarks
                             $existingRemarks = $existingDtr->remarks ?: '';
                             $offsetLabel = 'Offset: ' . ($leave->type_label ?? 'Offset');
                             if ($existingRemarks) {
@@ -296,15 +294,16 @@ class DtrController extends Controller
                                 $existingDtr->remarks .= ' | ' . $approvedTypeRemark;
                             }
                         } else {
-                            // Persist so it consistently appears in DTR listings/exports
+                            // Fallback when approval sync did not create a row yet
                             $entry = Dtr::firstOrCreate(
                                 [
                                     'user_id' => $leave->user_id,
                                     'date' => $day->copy(),
                                 ],
                                 [
+                                    'offset_hours' => $offsetHoursPerDay,
                                     'total_hours' => $offsetHoursPerDay,
-                                    'overtime_hours' => 0, // Will be calculated from total_hours
+                                    'overtime_hours' => DtrRecordHours::overtimeFromTotal($offsetHoursPerDay),
                                     'status' => 'on_leave',
                                     'remarks' => 'Offset: ' . ($leave->type_label ?? 'Offset'),
                                 ]
@@ -742,37 +741,25 @@ class DtrController extends Controller
 
                 try {
                     if ($existingDtr) {
-                        // If DTR record already exists, add the new hours to existing total
-                        $existingTotal = (float) ($existingDtr->total_hours ?? 0);
-                        $existingAdded = (float) ($existingDtr->added_time_from_note ?? 0);
-                        
-                        // Add new worked hours and added time to existing values
-                        // New total = existing total + new worked hours + new added time
-                        $newTotal = $existingTotal + $workedDecimal + $addedDecimal;
-                        $newAdded = $existingAdded + $addedDecimal;
-                        
-                        // Recalculate overtime based on new total
-                        $newOvertime = max($newTotal - $standardDecimal, 0);
-                        
-                        // Update remarks - append new remark if provided
+                        DtrRecordHours::applyWorkedAndAdded($existingDtr, $workedDecimal, $addedDecimal);
+
                         $existingRemarks = $existingDtr->remarks ?? '';
                         $newRemarks = $existingRemarks;
-                        if (!empty($request->remarks)) {
-                            if (!empty($existingRemarks)) {
-                                $newRemarks = $existingRemarks . '; ' . $request->remarks;
+                        if (! empty($request->remarks)) {
+                            if (! empty($existingRemarks)) {
+                                $newRemarks = $existingRemarks.'; '.$request->remarks;
                             } else {
                                 $newRemarks = $request->remarks;
                             }
                         }
-                        
-                        // Update status only if it's not travel and we're not setting travel
-                        // If existing is travel, keep it as travel
+
                         $finalStatus = $existingDtr->status === 'travel' ? 'travel' : $dateStatus;
-                        
+
                         $existingDtr->update([
-                            'added_time_from_note' => $newAdded,
-                            'total_hours' => $newTotal,
-                            'overtime_hours' => $newOvertime,
+                            'added_time_from_note' => $existingDtr->added_time_from_note,
+                            'offset_hours' => $existingDtr->offset_hours ?? 0,
+                            'total_hours' => $existingDtr->total_hours,
+                            'overtime_hours' => $existingDtr->overtime_hours,
                             'status' => $finalStatus,
                             'remarks' => $newRemarks,
                         ]);
@@ -835,7 +822,7 @@ class DtrController extends Controller
             ->get();
 
         // Convert stored decimal hours back to HH:MM for form fields
-        $workedDecimal = max(($dtr->total_hours ?? 0) - ($dtr->added_time_from_note ?? 0), 0);
+        $workedDecimal = DtrRecordHours::workedDecimal($dtr);
         $workedMinutes = (int) round($workedDecimal * 60);
         $workedH = intdiv($workedMinutes, 60);
         $workedM = $workedMinutes % 60;
@@ -909,7 +896,7 @@ class DtrController extends Controller
             ->orderBy('name')
             ->get();
 
-        $workedDecimal = max(($dtr->total_hours ?? 0) - ($dtr->added_time_from_note ?? 0), 0);
+        $workedDecimal = DtrRecordHours::workedDecimal($dtr);
         $workedMinutes = (int) round($workedDecimal * 60);
         $workedH = intdiv($workedMinutes, 60);
         $workedM = $workedMinutes % 60;
@@ -987,27 +974,41 @@ class DtrController extends Controller
                 $addedDecimal = ((int) $eh) + ((int) $em / 60);
             }
 
-            $totalDecimal = $workedDecimal + $addedDecimal;
-            $overtimeDecimal = $this->resolveOvertimeDecimal($request, $totalDecimal);
+            $existing = Dtr::where('user_id', $request->user_id)
+                ->whereDate('date', $request->date)
+                ->first();
 
-            $dtr = Dtr::updateOrCreate(
-                [
+            $wasCreated = false;
+            if ($existing) {
+                DtrRecordHours::setWorkedAndAdded($existing, $workedDecimal, $addedDecimal);
+                $overtimeDecimal = $this->resolveOvertimeDecimal($request, (float) $existing->total_hours);
+                $existing->update([
+                    'added_time_from_note' => $existing->added_time_from_note,
+                    'total_hours' => $existing->total_hours,
+                    'overtime_hours' => $overtimeDecimal,
+                    'status' => $status,
+                    'remarks' => $request->remarks,
+                ]);
+                $dtr = $existing;
+            } else {
+                $wasCreated = true;
+                $totalDecimal = $workedDecimal + $addedDecimal;
+                $overtimeDecimal = $this->resolveOvertimeDecimal($request, $totalDecimal);
+                $dtr = Dtr::create([
                     'user_id' => $request->user_id,
                     'date' => $request->date,
-                ],
-                [
                     'added_time_from_note' => $addedDecimal,
                     'total_hours' => $totalDecimal,
                     'overtime_hours' => $overtimeDecimal,
                     'status' => $status,
                     'remarks' => $request->remarks,
-                ]
-            );
+                ]);
+            }
 
             $this->calculateAndStoreWeeklyDeficit($request->user_id, Carbon::parse($request->date));
 
             return redirect('/admin/dtr')
-                ->with('success', $dtr->wasRecentlyCreated
+                ->with('success', $wasCreated
                     ? 'DTR record created successfully.'
                     : 'DTR record updated successfully.');
         } catch (\Exception $e) {
@@ -1087,16 +1088,14 @@ class DtrController extends Controller
                 $addedDecimal = ((int) $eh) + ((int) $em / 60);
             }
 
-            $totalDecimal = $workedDecimal + $addedDecimal;
-
-            // Overtime: use admin-entered value when provided, otherwise auto-calculate
-            $overtimeDecimal = $this->resolveOvertimeDecimal($request, $totalDecimal);
+            DtrRecordHours::setWorkedAndAdded($dtr, $workedDecimal, $addedDecimal);
+            $overtimeDecimal = $this->resolveOvertimeDecimal($request, (float) $dtr->total_hours);
 
             $dtr->update([
                 'user_id' => $request->user_id,
                 'date' => $request->date,
-                'added_time_from_note' => $addedDecimal,
-                'total_hours' => $totalDecimal,
+                'added_time_from_note' => $dtr->added_time_from_note,
+                'total_hours' => $dtr->total_hours,
                 'overtime_hours' => $overtimeDecimal,
                 'status' => $status,
                 'remarks' => $request->remarks,
@@ -1119,8 +1118,55 @@ class DtrController extends Controller
     /**
      * Remove the specified resource from storage.
      */
+    /**
+     * Remove credited "added time from note" (often parsed from remarks) and recalculate totals.
+     */
+    public function rejectRemarks(Request $request, Dtr $dtr)
+    {
+        $this->assertCanManageEmployeeDtrRecord($dtr);
+
+        $request->validate([
+            'note' => ['nullable', 'string', 'max:500'],
+        ]);
+
+        $added = (float) ($dtr->added_time_from_note ?? 0);
+        if ($added <= 0) {
+            return redirect()->back()
+                ->withErrors(['error' => 'There is no added time from note to reject on this record.']);
+        }
+
+        try {
+            $worked = DtrRecordHours::workedDecimal($dtr);
+            DtrRecordHours::setWorkedAndAdded($dtr, $worked, 0.0);
+
+            $adminNote = trim((string) ($request->input('note') ?? ''));
+            $stamp = 'Added time from note rejected';
+            if ($adminNote !== '') {
+                $stamp .= ': '.$adminNote;
+            }
+            $existingRemarks = trim((string) ($dtr->remarks ?? ''));
+            $dtr->remarks = $existingRemarks !== ''
+                ? $existingRemarks.' | '.$stamp
+                : $stamp;
+
+            $dtr->save();
+
+            $this->calculateAndStoreWeeklyDeficit($dtr->user_id, Carbon::parse($dtr->date));
+
+            return redirect()->back()
+                ->with('success', 'Remark-based added time was rejected. Worked hours, offset, and total were recalculated.');
+        } catch (\Exception $e) {
+            Log::error('DTR reject remarks failed: '.$e->getMessage());
+
+            return redirect()->back()
+                ->withErrors(['error' => 'Failed to reject added time: '.$e->getMessage()]);
+        }
+    }
+
     public function destroy(Dtr $dtr)
     {
+        $this->assertCanManageEmployeeDtrRecord($dtr);
+
         try {
             $userId = $dtr->user_id;
             $date = $dtr->date;
@@ -1408,18 +1454,44 @@ class DtrController extends Controller
                         $status = 'present';
                     }
 
-                    // Check if record already exists - same behavior as manual creation (skip/error instead of update)
                     $existingDtr = Dtr::where('user_id', $user->id)
                         ->whereDate('date', $dateObj->format('Y-m-d'))
                         ->first();
 
                     if ($existingDtr) {
-                        $errors[] = "DTR record already exists for {$email} on {$date}. Skipping.";
-                        $skipped++;
+                        DtrRecordHours::applyWorkedAndAdded(
+                            $existingDtr,
+                            $workedHoursValue,
+                            $addedTimeFromNoteValue
+                        );
+
+                        if ($activityPercentageValue !== null) {
+                            $existingDtr->activity_percentage = $activityPercentageValue;
+                        }
+
+                        if ($existingDtr->status !== 'travel') {
+                            $existingDtr->status = $status;
+                        }
+
+                        if ($finalRemarks !== '') {
+                            $existingRemarks = trim((string) ($existingDtr->remarks ?? ''));
+                            $existingDtr->remarks = $existingRemarks !== ''
+                                ? $existingRemarks.' | '.$finalRemarks
+                                : $finalRemarks;
+                        }
+
+                        $existingDtr->save();
+                        $this->calculateAndStoreWeeklyDeficit($user->id, $dateObj);
+
+                        if (! in_array($user->id, $affectedUserIds)) {
+                            $affectedUserIds[] = $user->id;
+                        }
+
+                        $imported++;
+
                         continue;
                     }
 
-                    // Create new record - same logic as manual creation
                     Dtr::create([
                         'user_id' => $user->id,
                         'date' => $dateObj->format('Y-m-d'),
@@ -3449,5 +3521,36 @@ class DtrController extends Controller
         return $totalDecimal > $standardDecimal
             ? $totalDecimal - $standardDecimal
             : 0;
+    }
+
+    private function assertCanManageEmployeeDtrRecord(Dtr $dtr): void
+    {
+        $user = auth()->user();
+        if (! $user) {
+            abort(403);
+        }
+
+        $dtr->loadMissing('user');
+        if (! $dtr->user || $dtr->user->role !== 'employee') {
+            abort(404, 'Employee DTR record not found.');
+        }
+
+        if ($user->isAdmin()) {
+            return;
+        }
+
+        if ($user->canAccessEmployeeManagement() || $user->canAccessEmployeeFeature('dtr')) {
+            $allowedDepartmentIds = $user->getAllowedDepartmentIds();
+            if ($allowedDepartmentIds !== null) {
+                $normalized = array_map('intval', $allowedDepartmentIds);
+                if (! in_array((int) $dtr->user->department_id, $normalized, true)) {
+                    abort(403, 'Access denied. You cannot manage this employee department.');
+                }
+            }
+
+            return;
+        }
+
+        abort(403, 'Access denied. You do not have permission to manage employee DTR records.');
     }
 }

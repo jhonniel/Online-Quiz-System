@@ -19,6 +19,7 @@ class Dtr extends Model
         'activity_percentage',
         'remarks',
         'added_time_from_note',
+        'offset_hours',
         'status',
     ];
 
@@ -26,6 +27,7 @@ class Dtr extends Model
         'date' => 'date',
         'total_hours' => 'decimal:2',
         'overtime_hours' => 'decimal:2',
+        'offset_hours' => 'decimal:2',
         'activity_percentage' => 'decimal:2',
     ];
 

@@ -617,6 +617,7 @@ Route::prefix('admin')->middleware(['auth', 'admin', 'admin.totp'])->group(funct
             Route::post('/dtr/entry', [DtrController::class, 'storeEntry'])->name('admin.dtr.entry.store');
             Route::get('/dtr/{dtr}/edit', [DtrController::class, 'edit'])->name('admin.dtr.edit');
             Route::put('/dtr/{dtr}', [DtrController::class, 'update'])->name('admin.dtr.update');
+            Route::post('/dtr/{dtr}/reject-remarks', [DtrController::class, 'rejectRemarks'])->name('admin.dtr.reject-remarks');
             Route::delete('/dtr/{dtr}', [DtrController::class, 'destroy'])->name('admin.dtr.destroy');
             Route::post('/dtr/recalculate-deficits', [DtrController::class, 'recalculateDeficits'])->name('admin.dtr.recalculate-deficits');
             Route::post('/dtr/import', [DtrController::class, 'import'])->name('admin.dtr.import');
@@ -694,6 +695,7 @@ Route::prefix('admin')->middleware(['auth', 'admin', 'admin.totp'])->group(funct
         // Student Time Requests Management
         Route::get('/time-requests', [DtrTimeRequestController::class, 'index'])->name('admin.time-requests.index');
         Route::post('/time-requests/bulk-approve', [DtrTimeRequestController::class, 'bulkApprove'])->name('admin.time-requests.bulk-approve');
+        Route::post('/time-requests/bulk-reject', [DtrTimeRequestController::class, 'bulkReject'])->name('admin.time-requests.bulk-reject');
         Route::put('/time-requests/{dtrTimeRequest}', [DtrTimeRequestController::class, 'update'])->name('admin.time-requests.update');
         Route::post('/time-requests/{dtrTimeRequest}/approve', [DtrTimeRequestController::class, 'approve'])->name('admin.time-requests.approve');
         Route::post('/time-requests/{dtrTimeRequest}/reject', [DtrTimeRequestController::class, 'reject'])->name('admin.time-requests.reject');
