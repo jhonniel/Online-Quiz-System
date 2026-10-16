@@ -17,7 +17,7 @@
         $statusClass = 'bg-blue-100 text-blue-800';
         $isCompleted = true;
     } else {
-        $totalMinutesForStatus = (int) round(($dtr->total_hours ?? 0) * 60);
+        $totalMinutesForStatus = (int) round(\App\Support\DtrEmployeeAttendance::displayedDailyTotal($dtr) * 60);
         if ($totalMinutesForStatus < 480) {
             $statusLabel = 'Under Time';
             $statusClass = 'bg-yellow-100 text-yellow-800';
@@ -29,17 +29,18 @@
         }
     }
 
-    $workedHours = max(($dtr->total_hours ?? 0) - ($dtr->added_time_from_note ?? 0) - ($dtr->offset_hours ?? 0), 0);
-    $offsetMinutes = (int) round(($dtr->offset_hours ?? 0) * 60);
-    $offsetH = intdiv($offsetMinutes, 60);
-    $offsetM = $offsetMinutes % 60;
-    $offsetFormatted = sprintf('%02d:%02d', $offsetH, $offsetM);
+    $workedHours = \App\Support\DtrEmployeeAttendance::displayedHubstaffHours($dtr);
+    $leaveHours = \App\Support\DtrEmployeeAttendance::displayedLeaveHours($dtr);
+    $leaveMinutes = (int) round($leaveHours * 60);
+    $leaveH = intdiv($leaveMinutes, 60);
+    $leaveM = $leaveMinutes % 60;
+    $leaveFormatted = sprintf('%02d:%02d', $leaveH, $leaveM);
     $workedMinutes = (int) round($workedHours * 60);
     $workedH = intdiv($workedMinutes, 60);
     $workedM = $workedMinutes % 60;
     $workedFormatted = sprintf('%02d:%02d', $workedH, $workedM);
 
-    $totalMinutes = (int) round(($dtr->total_hours ?? 0) * 60);
+    $totalMinutes = (int) round(\App\Support\DtrEmployeeAttendance::displayedDailyTotal($dtr) * 60);
     $totalH = intdiv($totalMinutes, 60);
     $totalM = $totalMinutes % 60;
     $totalFormatted = sprintf('%02d:%02d', $totalH, $totalM);
@@ -55,9 +56,9 @@
     <dl class="mobile-card-kv">
         <dt>Hubstaff Hours</dt>
         <dd>{{ $isCompleted ? 'Complete' : ($workedMinutes > 0 ? $workedFormatted : '00:00') }}</dd>
-        @if($offsetMinutes > 0)
-            <dt>Offset</dt>
-            <dd>{{ $offsetFormatted }}</dd>
+        @if($leaveMinutes > 0)
+            <dt>Leave</dt>
+            <dd>{{ $leaveFormatted }}</dd>
         @endif
         <dt>Total</dt>
         <dd>{{ $isCompleted ? 'Complete' : ($totalMinutes > 0 ? $totalFormatted : '00:00') }}</dd>

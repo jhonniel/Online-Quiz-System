@@ -357,7 +357,7 @@
                                                 <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Hubstaff Hours</th>
                                                 <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Added Time From Note</th>
                                                 @unless($hrDtrLimitedView)
-                                                <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Offset</th>
+                                                <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Leave</th>
                                                 <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total Hours</th>
                                                 <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Overtime</th>
                                                 @endunless
@@ -378,7 +378,8 @@
                                                     <td class="px-3 py-2 whitespace-nowrap">
                                                         @php
                                                             $addedHours = \App\Support\DtrAddedTimeFromRemarks::effectiveAddedHours($dtr);
-                                                            $workedHours = \App\Support\DtrAddedTimeFromRemarks::effectiveWorkedHours($dtr);
+                                                            $workedHours = \App\Support\DtrEmployeeAttendance::displayedHubstaffHours($dtr);
+                                                            $leaveHours = \App\Support\DtrEmployeeAttendance::displayedLeaveHours($dtr);
                                                             $workedMinutes = (int) round($workedHours * 60);
                                                             $workedH = intdiv($workedMinutes, 60);
                                                             $workedM = $workedMinutes % 60;
@@ -409,13 +410,13 @@
                                                     @unless($hrDtrLimitedView)
                                                     <td class="px-3 py-2 whitespace-nowrap">
                                                         @php
-                                                            $offsetMinutes = (int) round(($dtr->offset_hours ?? 0) * 60);
-                                                            $offsetH = intdiv($offsetMinutes, 60);
-                                                            $offsetM = $offsetMinutes % 60;
-                                                            $offsetFormatted = sprintf('%02d:%02d', $offsetH, $offsetM);
+                                                            $leaveMinutes = (int) round($leaveHours * 60);
+                                                            $leaveH = intdiv($leaveMinutes, 60);
+                                                            $leaveM = $leaveMinutes % 60;
+                                                            $leaveFormatted = sprintf('%02d:%02d', $leaveH, $leaveM);
                                                         @endphp
                                                         <div class="text-sm font-medium text-teal-700">
-                                                            {{ $offsetMinutes > 0 ? $offsetFormatted : '00:00' }}
+                                                            {{ $leaveMinutes > 0 ? $leaveFormatted : '00:00' }}
                                                         </div>
                                                     </td>
                                                     <td class="px-3 py-2 whitespace-nowrap">
@@ -464,7 +465,7 @@
                                                                 $statusClass = 'bg-blue-100 text-blue-800';
                                                             } else {
                                                                 // Otherwise, show Under Time or Completed based on total hours
-                                                                $rawEffectiveTotal = $workedHours + $addedHours + (float) ($dtr->offset_hours ?? 0);
+                                                                $rawEffectiveTotal = $workedHours + $addedHours + $leaveHours;
                                                                 $totalMinutesForStatus = (int) round($rawEffectiveTotal * 60);
                                                                 if ($totalMinutesForStatus < 480) {
                                                                     $statusLabel = 'Under Time';
@@ -845,7 +846,7 @@
                 <span id="reject-dtr-remarks-employee"></span> — <span id="reject-dtr-remarks-date"></span>
             </p>
             <p class="text-xs text-gray-500 mt-2">
-                Removes credited added time from note (including time parsed from remarks). Hubstaff hours and offset are kept; total hours are recalculated.
+                Removes credited added time from note (including time parsed from remarks). Hubstaff hours and leave are kept; total hours are recalculated.
             </p>
         </div>
         <form id="reject-dtr-remarks-form" method="POST" action="">

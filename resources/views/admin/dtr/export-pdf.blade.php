@@ -68,7 +68,7 @@
                     <th style="width: 9%;">Day</th>
                     <th style="width: 14%;" class="right">Hubstaff Hours</th>
                     <th style="width: 12%;" class="right">Added Time</th>
-                    <th style="width: 10%;" class="right">Offset</th>
+                    <th style="width: 10%;" class="right">Leave</th>
                     <th style="width: 12%;" class="right">Total Hours</th>
                     <th style="width: 12%;" class="center">Status</th>
                     <th style="width: 23%;">Remarks</th>
@@ -78,7 +78,8 @@
                 @foreach($employeeGroup['records'] as $dtr)
                     @php
                         $addedHours = \App\Support\DtrAddedTimeFromRemarks::effectiveAddedHours($dtr);
-                        $workedHours = \App\Support\DtrAddedTimeFromRemarks::effectiveWorkedHours($dtr);
+                        $workedHours = \App\Support\DtrEmployeeAttendance::displayedHubstaffHours($dtr);
+                        $leaveHours = \App\Support\DtrEmployeeAttendance::displayedLeaveHours($dtr);
                         $workedMinutes = (int) round($workedHours * 60);
                         $workedH = intdiv($workedMinutes, 60);
                         $workedM = $workedMinutes % 60;
@@ -89,10 +90,10 @@
                         $extraM = $extraMinutes % 60;
                         $extraFormatted = sprintf('%02d:%02d', $extraH, $extraM);
 
-                        $offsetMinutes = (int) round(($dtr->offset_hours ?? 0) * 60);
-                        $offsetH = intdiv($offsetMinutes, 60);
-                        $offsetM = $offsetMinutes % 60;
-                        $offsetFormatted = sprintf('%02d:%02d', $offsetH, $offsetM);
+                        $leaveMinutes = (int) round($leaveHours * 60);
+                        $leaveH = intdiv($leaveMinutes, 60);
+                        $leaveM = $leaveMinutes % 60;
+                        $leaveFormatted = sprintf('%02d:%02d', $leaveH, $leaveM);
 
                         $displayDailyTotal = \App\Support\DtrEmployeeAttendance::displayedDailyTotal($dtr);
                         $totalMinutes = (int) round($displayDailyTotal * 60);
@@ -133,7 +134,7 @@
                             $statusLabel = 'Completed';
                         } else {
                             // Otherwise, show Under Time or Completed based on total hours
-                            $rawEffectiveTotal = $workedHours + $addedHours + (float) ($dtr->offset_hours ?? 0);
+                            $rawEffectiveTotal = $workedHours + $addedHours + $leaveHours;
                             $totalMinutesForStatus = (int) round($rawEffectiveTotal * 60);
                             if ($totalMinutesForStatus < 480) {
                                 $statusLabel = 'Under Time';
@@ -187,9 +188,11 @@
                         if (strtoupper((string) ($statusLabel ?? '')) === 'ABSENT') {
                             $workedFormatted = '00:00';
                             $extraFormatted = '00:00';
+                            $leaveFormatted = '00:00';
                             $totalFormatted = '00:00';
                             $workedMinutes = 0;
                             $extraMinutes = 0;
+                            $leaveMinutes = 0;
                             $totalMinutes = 0;
                         } elseif (strtoupper((string) ($statusLabel ?? '')) === 'HOLIDAY') {
                             // Holidays count as a full 8-hour day in PDF totals/display.
@@ -206,7 +209,7 @@
                         <td>{{ $dtr->date->format('D') }}</td>
                         <td class="right">{{ $workedMinutes > 0 ? $workedFormatted : '00:00' }}</td>
                         <td class="right">{{ $extraMinutes > 0 ? $extraFormatted : '00:00' }}</td>
-                        <td class="right">{{ $offsetMinutes > 0 ? $offsetFormatted : '00:00' }}</td>
+                        <td class="right">{{ $leaveMinutes > 0 ? $leaveFormatted : '00:00' }}</td>
                         <td class="right">{{ $totalMinutes > 0 ? $totalFormatted : '00:00' }}</td>
                         <td class="center"@if($statusLabel === 'Under Time') style="color: #DC2626; font-weight: bold;"@endif>{{ $statusLabel }}</td>
                         <td>{{ $remarks ?: '-' }}</td>

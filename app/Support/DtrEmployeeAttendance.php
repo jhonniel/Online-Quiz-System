@@ -10,15 +10,70 @@ final class DtrEmployeeAttendance
     public const WEEKLY_BASE_HOURS = 40.0;
 
     /**
-     * Total Hours column: Worked + Added Time (+ offset), not capped at 8:00.
+     * Leave column: offset leave hours, or vacation / sick leave credit (typically 08:00).
+     */
+    public static function displayedLeaveHours(Dtr $dtr): float
+    {
+        $offset = (float) ($dtr->offset_hours ?? 0);
+        if ($offset > 0) {
+            return $offset;
+        }
+
+        if (self::hasApprovedVacationOrSickLeave($dtr)) {
+            return DtrRecordHours::STANDARD_DAY_HOURS;
+        }
+
+        return 0.0;
+    }
+
+    /**
+     * Hubstaff column: tracked work time excluding leave / offset credit shown in Leave column.
+     */
+    public static function displayedHubstaffHours(Dtr $dtr): float
+    {
+        $worked = DtrAddedTimeFromRemarks::effectiveWorkedHours($dtr);
+        $leave = self::displayedLeaveHours($dtr);
+
+        if ($leave > 0 && self::hasApprovedVacationOrSickLeave($dtr)) {
+            return max($worked - $leave, 0.0);
+        }
+
+        return max($worked, 0.0);
+    }
+
+    /**
+     * Total Hours column: Hubstaff + Added Time + Leave, not capped at 8:00.
      */
     public static function displayedDailyTotal(Dtr $dtr): float
     {
-        $worked = DtrAddedTimeFromRemarks::effectiveWorkedHours($dtr);
         $added = DtrAddedTimeFromRemarks::effectiveAddedHours($dtr);
-        $offset = (float) ($dtr->offset_hours ?? 0);
 
-        return max($worked + $added + $offset, 0.0);
+        return max(
+            self::displayedHubstaffHours($dtr) + $added + self::displayedLeaveHours($dtr),
+            0.0
+        );
+    }
+
+    public static function hasApprovedVacationOrSickLeave(Dtr $dtr): bool
+    {
+        $remarks = (string) ($dtr->remarks ?? '');
+        $label = strtolower((string) ($dtr->leave_type_label ?? ''));
+
+        if (preg_match('/Approved\s+(Vacation Leave|Sick Leave)\b/i', $remarks)) {
+            return true;
+        }
+
+        if (preg_match('/Approved Leave:\s*(Vacation Leave|Sick Leave|Vacation|Sick Leave|Sick)\b/i', $remarks)) {
+            return true;
+        }
+
+        if (($dtr->status ?? '') === 'on_leave') {
+            if (str_contains($label, 'vacation') || str_contains($label, 'sick')) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /**
