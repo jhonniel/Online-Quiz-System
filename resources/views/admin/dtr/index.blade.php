@@ -158,8 +158,7 @@
                                 <ul class="list-disc list-inside space-y-1 text-blue-800">
                                     <li>Import uses the <strong>same calculation logic as manual entry</strong></li>
                                     <li>If a DTR record already exists for an employee on a given date, imported worked and added time will be <strong>merged</strong> (offset hours from leave are preserved)</li>
-                                    <li><strong>Total Hours</strong> counts up to <strong>08:00</strong> per day (time over 8:00 is shown under Overtime only). Weekly total targets <strong>40:00</strong>.</li>
-                                    <li><strong>Overtime Hours</strong> are automatically calculated by the system</li>
+                                    <li><strong>Total Hours</strong> and <strong>Overtime Hours</strong> are automatically calculated by the system</li>
                                     <li><strong>Status</strong> is automatically determined by the system based on the hours worked</li>
                                     <li>Weekly deficit is automatically calculated for each imported record</li>
                                 </ul>
