@@ -31,13 +31,21 @@
                     </svg>
                     Download Template
                 </a>
-                <a href="{{ url('/admin/dtr/export-pdf') . '?' . http_build_query(request()->query()) }}" target="_blank"
+                <a href="{{ url('/admin/dtr/export-pdf') . '?' . http_build_query(array_merge(request()->query(), ['exclude_weekends' => 1])) }}"
+                   id="dtr-export-pdf-link"
+                   target="_blank"
+                   rel="noopener noreferrer"
                    class="inline-flex items-center px-3 py-2 sm:px-4 sm:py-2 bg-white/10 backdrop-blur-sm border border-white/20 rounded-lg text-white hover:bg-white/20 transition duration-200 text-xs sm:text-sm">
                     <svg class="h-4 w-4 sm:h-5 sm:w-5 mr-1 sm:mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"></path>
                     </svg>
                     Export PDF
                 </a>
+                <label class="inline-flex items-center gap-2 text-xs sm:text-sm text-indigo-100 cursor-pointer px-1 py-1">
+                    <input type="checkbox" id="dtr-export-exclude-weekends" checked
+                           class="rounded border-white/40 text-indigo-600 focus:ring-indigo-300 h-4 w-4">
+                    <span>Exclude weekends from PDF</span>
+                </label>
             </div>
         </div>
     </div>
@@ -309,8 +317,11 @@
                                         $employeeGroup['records'],
                                         $weekEndForAttendance
                                     );
-                                    $attendanceLogDeficitFormatted = \App\Support\DtrEmployeeAttendance::formatWeekAttendanceDeficit(
+                                    $attendanceLogDeficitMinutes = \App\Support\DtrEmployeeAttendance::weekAttendanceDeficitMinutes(
                                         $employeeGroup['records']
+                                    );
+                                    $attendanceLogDeficitFormatted = \App\Support\DtrEmployeeAttendance::formatMinutesAsHoursWithMinuteCount(
+                                        $attendanceLogDeficitMinutes
                                     );
                                 @endphp
                                 <div class="px-6 py-2 bg-white">
@@ -335,7 +346,7 @@
                                                         Attendance Log Complete
                                                     </span>
                                                 @else
-                                                    <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-red-100 text-red-800 border border-red-200">
+                                                    <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-red-100 text-red-800 border border-red-200" title="{{ $attendanceLogDeficitMinutes }} minutes below 40:00 (Mon–Fri)">
                                                         Attendance Log Deficit
                                                         <span class="font-bold">{{ $attendanceLogDeficitFormatted }}</span>
                                                     </span>
@@ -426,12 +437,13 @@
                                                         @php
                                                             $dailyDeficitFormatted = \App\Support\DtrEmployeeAttendance::formatDailyDeficitForColumn($dtr);
                                                         @endphp
-                                                        <div class="flex items-center justify-between gap-2 min-w-[5.5rem]">
-                                                            <span class="text-sm font-medium text-gray-900">
+                                                        <div class="flex items-center w-full min-w-[11rem] pr-1">
+                                                            <span class="text-sm font-medium text-gray-900 shrink-0">
                                                                 {{ \App\Support\DtrEmployeeAttendance::formatTotalHoursColumn($dtr) }}
                                                             </span>
                                                             @if($dailyDeficitFormatted)
-                                                                <span class="text-xs font-semibold text-red-600" title="Deficit vs 08:00">{{ $dailyDeficitFormatted }}</span>
+                                                                @php $dailyDeficitMinutes = \App\Support\DtrEmployeeAttendance::dailyColumnDeficitMinutes($dtr); @endphp
+                                                                <span class="ml-auto pl-4 text-xs font-semibold text-red-600 whitespace-nowrap" title="{{ $dailyDeficitMinutes }} minutes below 08:00">Deficit {{ $dailyDeficitFormatted }}</span>
                                                             @endif
                                                         </div>
                                                     </td>
@@ -896,5 +908,26 @@ document.getElementById('reject-dtr-remarks-modal')?.addEventListener('click', f
 </script>
 @endif
 
+<script>
+(function () {
+    const link = document.getElementById('dtr-export-pdf-link');
+    const checkbox = document.getElementById('dtr-export-exclude-weekends');
+    if (!link || !checkbox) {
+        return;
+    }
+    const baseUrl = @json(url('/admin/dtr/export-pdf'));
+    const baseQuery = @json(request()->query());
+
+    function updateDtrExportPdfLink() {
+        const query = Object.assign({}, baseQuery, {
+            exclude_weekends: checkbox.checked ? '1' : '0',
+        });
+        link.href = baseUrl + '?' + new URLSearchParams(query).toString();
+    }
+
+    checkbox.addEventListener('change', updateDtrExportPdfLink);
+    updateDtrExportPdfLink();
+})();
+</script>
 @endsection
 

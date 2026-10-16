@@ -215,7 +215,7 @@ final class DtrEmployeeAttendance
             return null;
         }
 
-        return self::formatMinutesAsHours($deficitMinutes);
+        return self::formatMinutesAsHoursWithMinuteCount($deficitMinutes);
     }
 
     /**
@@ -259,6 +259,21 @@ final class DtrEmployeeAttendance
         $m = $minutes % 60;
 
         return sprintf('%02d:%02d', $h, $m);
+    }
+
+    /**
+     * HH:MM plus raw minute total (e.g. 00:24 (24 min)) for deficit labels.
+     */
+    public static function formatMinutesAsHoursWithMinuteCount(int $minutes): string
+    {
+        $minutes = max(0, $minutes);
+        $hhmm = self::formatMinutesAsHours($minutes);
+
+        if ($minutes <= 0) {
+            return $hhmm;
+        }
+
+        return $hhmm.' ('.$minutes.' min)';
     }
 
     /**
@@ -334,7 +349,16 @@ final class DtrEmployeeAttendance
 
     public static function formatWeekAttendanceDeficit(iterable $records, ?Carbon $today = null): string
     {
-        return self::formatMinutesAsHours(self::weekAttendanceDeficitMinutes($records, $today));
+        return self::formatMinutesAsHoursWithMinuteCount(
+            self::weekAttendanceDeficitMinutes($records, $today)
+        );
+    }
+
+    public static function formatPeriodAttendanceDeficit(iterable $records, ?Carbon $today = null): string
+    {
+        return self::formatMinutesAsHoursWithMinuteCount(
+            self::periodAttendanceDeficitMinutes($records, $today)
+        );
     }
 
     /**

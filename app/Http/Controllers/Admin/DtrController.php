@@ -2734,6 +2734,7 @@ class DtrController extends Controller
     {
         $user = auth()->user();
         $selectedStatus = null;
+        $excludeWeekends = $this->exportPdfExcludesWeekends($request);
 
         $query = Dtr::with('user')
             ->whereHas('user', function($q) {
@@ -2799,6 +2800,7 @@ class DtrController extends Controller
             ->get();
 
         $dtrs = $this->filterDtrCollectionToActiveUsers($dtrs);
+        $dtrs = $this->filterDtrCollectionByWeekendExportPolicy($dtrs, $excludeWeekends);
 
         // Employees in current PDF scope (respecting restrictions and filters),
         // used to ensure all weekdays are present in the export.
@@ -3049,6 +3051,9 @@ class DtrController extends Controller
                 $end = $leave->end_date ? Carbon::parse($leave->end_date) : $start->copy();
                 $period = new \Carbon\CarbonPeriod($start, $end);
                 foreach ($period as $day) {
+                    if ($excludeWeekends && $day->isWeekend()) {
+                        continue;
+                    }
                     $dateKey = $day->format('Y-m-d');
                     // Separate travel requests from other leave requests
                     if ($leave->type === 'travel') {
@@ -3075,6 +3080,9 @@ class DtrController extends Controller
                 $end = $leave->end_date ? Carbon::parse($leave->end_date) : $start->copy();
                 $period = new \Carbon\CarbonPeriod($start, $end);
                 foreach ($period as $day) {
+                    if ($excludeWeekends && $day->isWeekend()) {
+                        continue;
+                    }
                     $dateKey = $day->format('Y-m-d');
                     // Separate travel requests from other leave requests
                     if ($leave->type === 'travel') {
@@ -3188,6 +3196,15 @@ class DtrController extends Controller
             usort($group['records'], function ($a, $b) {
                 return strcmp($a->date->format('Y-m-d'), $b->date->format('Y-m-d'));
             });
+
+            if ($excludeWeekends) {
+                $group['records'] = array_values(array_filter(
+                    $group['records'] ?? [],
+                    function ($rec) {
+                        return ! Carbon::parse($rec->date)->isWeekend();
+                    }
+                ));
+            }
         }
         unset($group);
 
@@ -3352,10 +3369,11 @@ class DtrController extends Controller
                 $employeeOvertimeFromCompletedWeeks = $overtimeFromLeavesMinutes / 60;
             }
 
-            $group['total_deficit_formatted'] = \App\Support\DtrEmployeeAttendance::formatMinutesAsHours(
+            $group['attendance_log_deficit_minutes'] = $employeeDeficitMinutes;
+            $group['total_deficit_formatted'] = \App\Support\DtrEmployeeAttendance::formatMinutesAsHoursWithMinuteCount(
                 $employeeDeficitMinutes
             );
-            $group['attendance_log_complete'] = $employeeDeficitHours < 0.001;
+            $group['attendance_log_complete'] = $employeeDeficitMinutes <= 0;
             $group['attendance_log_deficit_formatted'] = $group['total_deficit_formatted'];
 
             // Calculate balance overtime for this employee: Overtime - Deficit (from completed weeks only)
@@ -3454,6 +3472,7 @@ class DtrController extends Controller
             'leaveRequestMap' => $leaveRequestMap,
             'travelRequestMap' => $travelRequestMap,
             'dtrMapByEmployeeAndDate' => $dtrMapByEmployeeAndDate,
+            'excludeWeekends' => $excludeWeekends,
         ];
 
         $pdf = Pdf::loadView('admin.dtr.export-pdf', $data)->setPaper('a4', 'landscape');
@@ -3466,6 +3485,30 @@ class DtrController extends Controller
      * @param  \Illuminate\Support\Collection<int, Dtr>  $dtrs
      * @return \Illuminate\Support\Collection<int, Dtr>
      */
+    private function exportPdfExcludesWeekends(Request $request): bool
+    {
+        if ($request->has('exclude_weekends')) {
+            return $request->boolean('exclude_weekends');
+        }
+
+        return true;
+    }
+
+    /**
+     * @param  \Illuminate\Support\Collection<int, Dtr>  $dtrs
+     * @return \Illuminate\Support\Collection<int, Dtr>
+     */
+    private function filterDtrCollectionByWeekendExportPolicy($dtrs, bool $excludeWeekends)
+    {
+        if (! $excludeWeekends) {
+            return $dtrs;
+        }
+
+        return $dtrs->filter(function (Dtr $dtr) {
+            return ! Carbon::parse($dtr->date)->isWeekend();
+        })->values();
+    }
+
     private function filterDtrCollectionToActiveUsers($dtrs)
     {
         return $dtrs->filter(function (Dtr $dtr) {

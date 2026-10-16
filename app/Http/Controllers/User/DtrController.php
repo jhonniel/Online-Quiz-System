@@ -478,6 +478,15 @@ class DtrController extends Controller
 
         $dtrs = $query->orderBy('date', 'asc')->get();
 
+        $excludeWeekends = $request->has('exclude_weekends')
+            ? $request->boolean('exclude_weekends')
+            : true;
+        if ($excludeWeekends) {
+            $dtrs = $dtrs->filter(function (Dtr $dtr) {
+                return ! Carbon::parse($dtr->date)->isWeekend();
+            })->values();
+        }
+
         // Include approved leave requests as on-leave entries
         $dateFrom = $request->filled('date_from') ? Carbon::parse($request->date_from) : ($dtrs->min('date') ? $dtrs->min('date')->copy() : null);
         $dateTo = $request->filled('date_to') ? Carbon::parse($request->date_to) : ($dtrs->max('date') ? $dtrs->max('date')->copy() : null);
@@ -511,6 +520,9 @@ class DtrController extends Controller
                 $period = new \Carbon\CarbonPeriod($start, $end);
                 foreach ($period as $day) {
                     if ($day->lt($dateFrom) || $day->gt($dateTo)) {
+                        continue;
+                    }
+                    if ($excludeWeekends && $day->isWeekend()) {
                         continue;
                     }
                     $entry = new Dtr([
@@ -616,7 +628,14 @@ class DtrController extends Controller
                 ];
             }
 
+            if ($excludeWeekends && $dtr->date->isWeekend()) {
+                continue;
+            }
             $groupedByWeek[$weekKey]['records'][] = $dtr;
+        }
+
+        if ($excludeWeekends) {
+            $totalRecords = $dtrs->count();
         }
 
         $data = [
@@ -624,6 +643,7 @@ class DtrController extends Controller
             'dtrs' => $dtrs,
             'groupedByWeek' => $groupedByWeek,
             'totalRecords' => $totalRecords,
+            'excludeWeekends' => $excludeWeekends,
             'totalHoursFormatted' => $totalHoursFormatted,
             'totalOvertimeFormatted' => $totalOvertimeFormatted,
             'dateFrom' => $dateFrom ? $dateFrom->format('F d, Y') : 'All Time',
