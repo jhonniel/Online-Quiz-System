@@ -35,6 +35,14 @@ class DtrRecordHours
     }
 
     /**
+     * Hours that count toward weekly base (max 8:00 per day); excess is tracked as overtime only.
+     */
+    public static function countableDailyTotalHours(float $total): float
+    {
+        return min(max($total, 0.0), self::STANDARD_DAY_HOURS);
+    }
+
+    /**
      * Split legacy offset-only rows (offset baked into total_hours) into offset_hours + zero worked.
      */
     public static function ensureLegacyOffsetPlaceholderSplit(Dtr $dtr): void

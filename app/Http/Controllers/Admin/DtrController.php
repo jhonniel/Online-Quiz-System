@@ -12,6 +12,7 @@ use App\Models\University;
 use App\Models\Department;
 use App\Models\LeaveRequest;
 use App\Services\StudentOjtPostCompletionService;
+use App\Support\DtrAddedTimeFromRemarks;
 use App\Support\DtrHolidayCalendar;
 use App\Support\DtrRecordHours;
 use Illuminate\Http\Request;
@@ -678,12 +679,12 @@ class DtrController extends Controller
             $workedDecimal = ((int) $h) + ((int) $m / 60);
         }
 
-        if ($request->filled('added_time_from_note')) {
-            [$eh, $em] = explode(':', $request->added_time_from_note);
-            $addedDecimal = ((int) $eh) + ((int) $em / 60);
-        }
+        $addedDecimal = DtrAddedTimeFromRemarks::resolveAddedHours(
+            $request->remarks,
+            $request->input('added_time_from_note')
+        );
 
-        // Total hours for the day = Worked + Added
+        // Total hours for the day = Worked + Added (offset 0 on new rows)
         $totalDecimal = $workedDecimal + $addedDecimal;
 
         // Overtime: use admin-entered value when provided, otherwise auto-calculate
@@ -741,7 +742,7 @@ class DtrController extends Controller
 
                 try {
                     if ($existingDtr) {
-                        DtrRecordHours::applyWorkedAndAdded($existingDtr, $workedDecimal, $addedDecimal);
+                        DtrRecordHours::applyWorkedAndAdded($existingDtr, $workedDecimal, 0);
 
                         $existingRemarks = $existingDtr->remarks ?? '';
                         $newRemarks = $existingRemarks;
@@ -753,13 +754,22 @@ class DtrController extends Controller
                             }
                         }
 
+                        $existingDtr->remarks = $newRemarks;
+                        DtrAddedTimeFromRemarks::syncStoredAddedTimeFromRemarks(
+                            $existingDtr,
+                            $request->input('added_time_from_note')
+                        );
+
+                        $newTotal = (float) $existingDtr->total_hours;
+                        $newOvertime = max($newTotal - 8.0, 0);
+
                         $finalStatus = $existingDtr->status === 'travel' ? 'travel' : $dateStatus;
 
                         $existingDtr->update([
                             'added_time_from_note' => $existingDtr->added_time_from_note,
                             'offset_hours' => $existingDtr->offset_hours ?? 0,
                             'total_hours' => $existingDtr->total_hours,
-                            'overtime_hours' => $existingDtr->overtime_hours,
+                            'overtime_hours' => $newOvertime,
                             'status' => $finalStatus,
                             'remarks' => $newRemarks,
                         ]);
@@ -822,13 +832,14 @@ class DtrController extends Controller
             ->get();
 
         // Convert stored decimal hours back to HH:MM for form fields
-        $workedDecimal = DtrRecordHours::workedDecimal($dtr);
+        $workedDecimal = DtrAddedTimeFromRemarks::effectiveWorkedHours($dtr);
         $workedMinutes = (int) round($workedDecimal * 60);
         $workedH = intdiv($workedMinutes, 60);
         $workedM = $workedMinutes % 60;
         $workedFormatted = sprintf('%02d:%02d', $workedH, $workedM);
 
-        $addedMinutes = (int) round(($dtr->added_time_from_note ?? 0) * 60);
+        $addedDecimal = DtrAddedTimeFromRemarks::effectiveAddedHours($dtr);
+        $addedMinutes = (int) round($addedDecimal * 60);
         $addedH = intdiv($addedMinutes, 60);
         $addedM = $addedMinutes % 60;
         $addedFormatted = sprintf('%02d:%02d', $addedH, $addedM);
@@ -896,13 +907,14 @@ class DtrController extends Controller
             ->orderBy('name')
             ->get();
 
-        $workedDecimal = DtrRecordHours::workedDecimal($dtr);
+        $workedDecimal = DtrAddedTimeFromRemarks::effectiveWorkedHours($dtr);
         $workedMinutes = (int) round($workedDecimal * 60);
         $workedH = intdiv($workedMinutes, 60);
         $workedM = $workedMinutes % 60;
         $workedFormatted = sprintf('%02d:%02d', $workedH, $workedM);
 
-        $addedMinutes = (int) round(($dtr->added_time_from_note ?? 0) * 60);
+        $addedDecimal = DtrAddedTimeFromRemarks::effectiveAddedHours($dtr);
+        $addedMinutes = (int) round($addedDecimal * 60);
         $addedH = intdiv($addedMinutes, 60);
         $addedM = $addedMinutes % 60;
         $addedFormatted = sprintf('%02d:%02d', $addedH, $addedM);
@@ -969,10 +981,10 @@ class DtrController extends Controller
                 $workedDecimal = ((int) $h) + ((int) $m / 60);
             }
 
-            if ($request->filled('added_time_from_note')) {
-                [$eh, $em] = explode(':', $request->added_time_from_note);
-                $addedDecimal = ((int) $eh) + ((int) $em / 60);
-            }
+            $addedDecimal = DtrAddedTimeFromRemarks::resolveAddedHours(
+                $request->remarks,
+                $request->input('added_time_from_note')
+            );
 
             $existing = Dtr::where('user_id', $request->user_id)
                 ->whereDate('date', $request->date)
@@ -1083,10 +1095,10 @@ class DtrController extends Controller
                 $workedDecimal = ((int) $h) + ((int) $m / 60);
             }
 
-            if ($request->filled('added_time_from_note')) {
-                [$eh, $em] = explode(':', $request->added_time_from_note);
-                $addedDecimal = ((int) $eh) + ((int) $em / 60);
-            }
+            $addedDecimal = DtrAddedTimeFromRemarks::resolveAddedHours(
+                $request->remarks,
+                $request->input('added_time_from_note')
+            );
 
             DtrRecordHours::setWorkedAndAdded($dtr, $workedDecimal, $addedDecimal);
             $overtimeDecimal = $this->resolveOvertimeDecimal($request, (float) $dtr->total_hours);
@@ -1227,7 +1239,14 @@ class DtrController extends Controller
                         ->whereDate('date', '<=', $effectiveToday->toDateString())
                         ->get();
 
-                    $weeklyTotalHours = $weeklyDtrs->sum('total_hours');
+                    $weeklyTotalHours = 0.0;
+                    foreach ($weeklyDtrs as $weeklyDtr) {
+                        $day = Carbon::parse($weeklyDtr->date);
+                        if ($day->isWeekend()) {
+                            continue;
+                        }
+                        $weeklyTotalHours += \App\Support\DtrEmployeeAttendance::effectiveDailyTotal($weeklyDtr);
+                    }
                     $weeklyBaseHours = 40.0;
                     $correctDeficitHours = max(0, $weeklyBaseHours - $weeklyTotalHours);
 
@@ -1398,19 +1417,6 @@ class DtrController extends Controller
                         }
                     }
 
-                    // Parse Added Time From Note using SmartTimeParser
-                    // Supports: 1h, 1hr, 1h30m, 2h 15m, 45m, 1:30, 1.5 hours, half hour,
-                    // one hr three mins, about 30 mins, around 2 hrs, 90 minutes, etc.
-                    $parsedFromAddedColumn = SmartTimeParser::parse($addedTimeFromNote);
-                    $parsedFromRemarks = 0.0;
-
-                    // Also add any time mentioned in remarks to Added Time From Note
-                    if ($remarks !== '') {
-                        $parsedFromRemarks = SmartTimeParser::parse($remarks);
-                    }
-
-                    $addedTimeFromNoteValue = $parsedFromAddedColumn + $parsedFromRemarks;
-
                     // Build remarks - include the original Added Time From Note value for visibility
                     $remarksParts = [];
 
@@ -1425,6 +1431,11 @@ class DtrController extends Controller
                     }
 
                     $finalRemarks = implode(' | ', $remarksParts);
+
+                    $addedTimeFromNoteValue = DtrAddedTimeFromRemarks::resolveAddedHours(
+                        $remarks,
+                        $addedTimeFromNote
+                    );
 
                     // Total hours = Worked + Added
                     $totalHoursValue = $workedHoursValue + $addedTimeFromNoteValue;
@@ -1459,11 +1470,16 @@ class DtrController extends Controller
                         ->first();
 
                     if ($existingDtr) {
-                        DtrRecordHours::applyWorkedAndAdded(
-                            $existingDtr,
-                            $workedHoursValue,
-                            $addedTimeFromNoteValue
-                        );
+                        DtrRecordHours::applyWorkedAndAdded($existingDtr, $workedHoursValue, 0);
+
+                        if ($finalRemarks !== '') {
+                            $existingRemarks = trim((string) ($existingDtr->remarks ?? ''));
+                            $existingDtr->remarks = $existingRemarks !== ''
+                                ? $existingRemarks.' | '.$finalRemarks
+                                : $finalRemarks;
+                        }
+
+                        DtrAddedTimeFromRemarks::syncStoredAddedTimeFromRemarks($existingDtr);
 
                         if ($activityPercentageValue !== null) {
                             $existingDtr->activity_percentage = $activityPercentageValue;
@@ -1473,12 +1489,7 @@ class DtrController extends Controller
                             $existingDtr->status = $status;
                         }
 
-                        if ($finalRemarks !== '') {
-                            $existingRemarks = trim((string) ($existingDtr->remarks ?? ''));
-                            $existingDtr->remarks = $existingRemarks !== ''
-                                ? $existingRemarks.' | '.$finalRemarks
-                                : $finalRemarks;
-                        }
+                        $existingDtr->overtime_hours = max((float) $existingDtr->total_hours - 8.0, 0);
 
                         $existingDtr->save();
                         $this->calculateAndStoreWeeklyDeficit($user->id, $dateObj);
@@ -1617,8 +1628,15 @@ class DtrController extends Controller
                 ->whereDate('date', '<=', $today->toDateString()) // Exclude future dates
                 ->get();
 
-            // Calculate weekly total hours (only from past and today, not future)
-            $weeklyTotalHours = $weeklyDtrs->sum('total_hours');
+            // Weekly total: capped at 8:00 per weekday (overtime excluded from base)
+            $weeklyTotalHours = 0.0;
+            foreach ($weeklyDtrs as $weeklyDtr) {
+                $day = Carbon::parse($weeklyDtr->date);
+                if ($day->isWeekend()) {
+                    continue;
+                }
+                $weeklyTotalHours += \App\Support\DtrEmployeeAttendance::effectiveDailyTotal($weeklyDtr);
+            }
 
             // Calculate deficit: 40:00 (2400 minutes) - weekly total
             $weeklyBaseHours = 40.0; // 40 hours = 40:00
@@ -3181,7 +3199,7 @@ class DtrController extends Controller
             $group['total_hours'] = 0;
             $group['total_overtime'] = 0;
             foreach (($group['records'] ?? []) as $record) {
-                $group['total_hours'] += ($record->total_hours ?? 0);
+                $group['total_hours'] += \App\Support\DtrEmployeeAttendance::effectiveDailyTotal($record);
                 $group['total_overtime'] += ($record->overtime_hours ?? 0);
             }
 

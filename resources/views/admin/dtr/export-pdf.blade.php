@@ -45,11 +45,25 @@
     </footer>
 
     @foreach($groupedByEmployee as $employeeGroup)
+        @php
+            $exportWeekEnd = isset($employeeGroup['week_end'])
+                ? \Carbon\Carbon::parse($employeeGroup['week_end'])
+                : \Carbon\Carbon::today()->endOfWeek();
+            $exportAttendanceComplete = \App\Support\DtrEmployeeAttendance::isWeekAttendanceLogComplete(
+                $employeeGroup['records'] ?? [],
+                $exportWeekEnd
+            );
+        @endphp
         <div class="employee-header">
-            <div class="employee-name">{{ $employeeGroup['employee']->name }}</div>
+            <div class="employee-name">
+                {{ $employeeGroup['employee']->name }}
+                @if($exportAttendanceComplete)
+                    <span style="color: #047857; font-size: 9px; font-weight: bold;"> — Attendance Log Complete ✓</span>
+                @endif
+            </div>
             <div class="employee-email">{{ $employeeGroup['employee']->email }}@if($employeeGroup['employee']->department) • {{ $employeeGroup['employee']->department->name }}@endif</div>
             <div class="muted" style="margin-top: 2px;">
-                Total Hours: {{ $employeeGroup['total_hours_formatted'] }} •
+                Total Hours (max 8:00/day): {{ $employeeGroup['total_hours_formatted'] }} •
                 Total Deficit: <span style="color: #DC2626;">{{ $employeeGroup['total_deficit_formatted'] }}</span> •
                 Records: {{ count($employeeGroup['records']) }}
             </div>
@@ -70,13 +84,14 @@
             <tbody>
                 @foreach($employeeGroup['records'] as $dtr)
                     @php
-                        $workedHours = max(($dtr->total_hours ?? 0) - ($dtr->added_time_from_note ?? 0) - ($dtr->offset_hours ?? 0), 0);
+                        $addedHours = \App\Support\DtrAddedTimeFromRemarks::effectiveAddedHours($dtr);
+                        $workedHours = \App\Support\DtrAddedTimeFromRemarks::effectiveWorkedHours($dtr);
                         $workedMinutes = (int) round($workedHours * 60);
                         $workedH = intdiv($workedMinutes, 60);
                         $workedM = $workedMinutes % 60;
                         $workedFormatted = sprintf('%02d:%02d', $workedH, $workedM);
 
-                        $extraMinutes = (int) round(($dtr->added_time_from_note ?? 0) * 60);
+                        $extraMinutes = (int) round($addedHours * 60);
                         $extraH = intdiv($extraMinutes, 60);
                         $extraM = $extraMinutes % 60;
                         $extraFormatted = sprintf('%02d:%02d', $extraH, $extraM);
@@ -86,7 +101,8 @@
                         $offsetM = $offsetMinutes % 60;
                         $offsetFormatted = sprintf('%02d:%02d', $offsetH, $offsetM);
 
-                        $totalMinutes = (int) round(($dtr->total_hours ?? 0) * 60);
+                        $countableDailyTotal = \App\Support\DtrEmployeeAttendance::effectiveDailyTotal($dtr);
+                        $totalMinutes = (int) round($countableDailyTotal * 60);
                         $totalH = intdiv($totalMinutes, 60);
                         $totalM = $totalMinutes % 60;
                         $totalFormatted = sprintf('%02d:%02d', $totalH, $totalM);
@@ -124,7 +140,8 @@
                             $statusLabel = 'Completed';
                         } else {
                             // Otherwise, show Under Time or Completed based on total hours
-                            $totalMinutesForStatus = (int) round(($dtr->total_hours ?? 0) * 60);
+                            $rawEffectiveTotal = $workedHours + $addedHours + (float) ($dtr->offset_hours ?? 0);
+                            $totalMinutesForStatus = (int) round($rawEffectiveTotal * 60);
                             if ($totalMinutesForStatus < 480) {
                                 $statusLabel = 'Under Time';
                             } else {

@@ -111,7 +111,7 @@
                        placeholder="00:00"
                        class="time-input w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
                 <p class="mt-1 text-xs text-gray-500">
-                    Extra time to add in <strong>HH:MM</strong> format (e.g., 01:00, 00:30, 02:15). No AM/PM.
+                    On save, this is recalculated from <strong>Remarks</strong> (e.g. <em>1h30m</em>, <em>30 mins</em>, <em>1:30</em>) plus any extra HH:MM entered here.
                 </p>
                 @error('added_time_from_note')
                     <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
@@ -202,7 +202,7 @@
                 <textarea name="remarks" id="remarks" rows="3"
                           placeholder="Any additional notes or comments"
                           class="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">{{ old('remarks', $dtr->remarks) }}</textarea>
-                <p class="mt-1 text-xs text-gray-500">Optional notes about this time record</p>
+                <p class="mt-1 text-xs text-gray-500">Time mentioned here (e.g. <em>45m</em>, <em>2h</em>) is added to <strong>Added Time From Note</strong> when you save.</p>
                 @error('remarks')
                     <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
                 @enderror

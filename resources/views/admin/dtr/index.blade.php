@@ -158,7 +158,8 @@
                                 <ul class="list-disc list-inside space-y-1 text-blue-800">
                                     <li>Import uses the <strong>same calculation logic as manual entry</strong></li>
                                     <li>If a DTR record already exists for an employee on a given date, imported worked and added time will be <strong>merged</strong> (offset hours from leave are preserved)</li>
-                                    <li><strong>Total Hours</strong> and <strong>Overtime Hours</strong> are automatically calculated by the system</li>
+                                    <li><strong>Total Hours</strong> counts up to <strong>08:00</strong> per day (time over 8:00 is shown under Overtime only). Weekly total targets <strong>40:00</strong>.</li>
+                                    <li><strong>Overtime Hours</strong> are automatically calculated by the system</li>
                                     <li><strong>Status</strong> is automatically determined by the system based on the hours worked</li>
                                     <li>Weekly deficit is automatically calculated for each imported record</li>
                                 </ul>
@@ -303,6 +304,13 @@
 
                                 <div class="hidden" data-week-content style="display: none;">
                             @foreach($week['employees'] as $employeeGroup)
+                                @php
+                                    $weekEndForAttendance = \Carbon\Carbon::parse($week['week_end']);
+                                    $attendanceLogComplete = \App\Support\DtrEmployeeAttendance::isWeekAttendanceLogComplete(
+                                        $employeeGroup['records'],
+                                        $weekEndForAttendance
+                                    );
+                                @endphp
                                 <div class="px-6 py-2 bg-white">
                                     <div class="flex items-center mb-2">
                                         <div class="flex-shrink-0 h-8 w-8">
@@ -312,9 +320,19 @@
                                                 </span>
                                             </div>
                                         </div>
-                                        <div class="ml-3">
-                                            <div class="text-sm font-semibold text-gray-900">
-                                                {{ $employeeGroup['employee']->name }}
+                                        <div class="ml-3 flex-1">
+                                            <div class="flex flex-wrap items-center gap-2">
+                                                <div class="text-sm font-semibold text-gray-900">
+                                                    {{ $employeeGroup['employee']->name }}
+                                                </div>
+                                                @if($attendanceLogComplete)
+                                                    <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-green-100 text-green-800 border border-green-200">
+                                                        <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true">
+                                                            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+                                                        </svg>
+                                                        Attendance Log Complete
+                                                    </span>
+                                                @endif
                                             </div>
                                             <div class="text-xs text-gray-500">
                                                 {{ $employeeGroup['employee']->email }}
@@ -349,7 +367,8 @@
                                                     </td>
                                                     <td class="px-3 py-2 whitespace-nowrap">
                                                         @php
-                                                            $workedHours = max(($dtr->total_hours ?? 0) - ($dtr->added_time_from_note ?? 0) - ($dtr->offset_hours ?? 0), 0);
+                                                            $addedHours = \App\Support\DtrAddedTimeFromRemarks::effectiveAddedHours($dtr);
+                                                            $workedHours = \App\Support\DtrAddedTimeFromRemarks::effectiveWorkedHours($dtr);
                                                             $workedMinutes = (int) round($workedHours * 60);
                                                             $workedH = intdiv($workedMinutes, 60);
                                                             $workedM = $workedMinutes % 60;
@@ -361,7 +380,7 @@
                                                     </td>
                                                     <td class="px-3 py-2 whitespace-nowrap">
                                                         @php
-                                                            $extraMinutes = (int) round(($dtr->added_time_from_note ?? 0) * 60);
+                                                            $extraMinutes = (int) round($addedHours * 60);
                                                             $extraH = intdiv($extraMinutes, 60);
                                                             $extraM = $extraMinutes % 60;
                                                             $extraFormatted = sprintf('%02d:%02d', $extraH, $extraM);
@@ -391,7 +410,8 @@
                                                     </td>
                                                     <td class="px-3 py-2 whitespace-nowrap">
                                                         @php
-                                                            $totalMinutes = (int) round(($dtr->total_hours ?? 0) * 60);
+                                                            $countableDailyTotal = \App\Support\DtrEmployeeAttendance::effectiveDailyTotal($dtr);
+                                                            $totalMinutes = (int) round($countableDailyTotal * 60);
                                                             $totalH = intdiv($totalMinutes, 60);
                                                             $totalM = $totalMinutes % 60;
                                                             $totalFormatted = sprintf('%02d:%02d', $totalH, $totalM);
@@ -434,7 +454,8 @@
                                                                 $statusClass = 'bg-blue-100 text-blue-800';
                                                             } else {
                                                                 // Otherwise, show Under Time or Completed based on total hours
-                                                                $totalMinutesForStatus = (int) round(($dtr->total_hours ?? 0) * 60);
+                                                                $rawEffectiveTotal = $workedHours + $addedHours + (float) ($dtr->offset_hours ?? 0);
+                                                                $totalMinutesForStatus = (int) round($rawEffectiveTotal * 60);
                                                                 if ($totalMinutesForStatus < 480) {
                                                                     $statusLabel = 'Under Time';
                                                                     $statusClass = 'bg-yellow-100 text-yellow-800';
@@ -513,13 +534,14 @@
                                             @php
                                                 // Calculate weekly total for this employee (excluding future dates)
                                                 $today = \Carbon\Carbon::today();
-                                                $weeklyTotalHours = 0;
+                                                $weeklyTotalHours = \App\Support\DtrEmployeeAttendance::sumCountableWeekdayHours(
+                                                    $employeeGroup['records'],
+                                                    $today
+                                                );
                                                 $weeklyOvertimeHours = 0;
                                                 foreach ($employeeGroup['records'] as $dtr) {
-                                                    // Only count dates that are today or in the past
                                                     $dtrDate = \Carbon\Carbon::parse($dtr->date);
-                                                    if ($dtrDate->lte($today)) {
-                                                        $weeklyTotalHours += ($dtr->total_hours ?? 0);
+                                                    if ($dtrDate->lte($today) && ! $dtrDate->isWeekend()) {
                                                         $weeklyOvertimeHours += ($dtr->overtime_hours ?? 0);
                                                     }
                                                 }
