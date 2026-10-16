@@ -216,7 +216,7 @@ class DtrController extends Controller
                     $existingDtr = $dtrMap[$leave->user_id][$dateKey] ?? null;
 
                     if ($leave->type === 'vacation_leave' || $leave->type === 'sick_leave') {
-                        // Vacation/Sick Leave: automatically record 08:00
+                        // Vacation/Sick Leave: 08:00 in Leave column (offset_hours), not Hubstaff
                         if (!$existingDtr) {
                             // Persist so it consistently appears in DTR listings/exports
                             $entry = Dtr::firstOrCreate(
@@ -225,8 +225,9 @@ class DtrController extends Controller
                                     'date' => $day->copy(),
                                 ],
                                 [
+                                    'offset_hours' => 8.0,
                                     'total_hours' => 8.0,
-                                    'overtime_hours' => 0, // Will be calculated from total_hours
+                                    'overtime_hours' => 0,
                                     'status' => 'on_leave',
                                     'remarks' => 'Approved Leave: ' . ($leave->type_label ?? ucfirst(str_replace('_', ' ', $leave->type))),
                                 ]
@@ -285,7 +286,7 @@ class DtrController extends Controller
 
                         if ($existingDtr) {
                             $existingRemarks = $existingDtr->remarks ?: '';
-                            $offsetLabel = 'Offset: ' . ($leave->type_label ?? 'Offset');
+                            $offsetLabel = 'Leave: Offset';
                             if ($existingRemarks) {
                                 $existingDtr->remarks = $existingRemarks . ' | ' . $offsetLabel;
                             } else {
@@ -306,7 +307,7 @@ class DtrController extends Controller
                                     'total_hours' => $offsetHoursPerDay,
                                     'overtime_hours' => DtrRecordHours::overtimeFromTotal($offsetHoursPerDay),
                                     'status' => 'on_leave',
-                                    'remarks' => 'Offset: ' . ($leave->type_label ?? 'Offset'),
+                                    'remarks' => 'Leave: Offset',
                                 ]
                             );
                             $entry->leave_type_label = $leave->type_label ?? 'Offset';

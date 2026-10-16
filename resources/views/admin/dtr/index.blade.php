@@ -357,7 +357,7 @@
                                                 <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Hubstaff Hours</th>
                                                 <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Added Time From Note</th>
                                                 @unless($hrDtrLimitedView)
-                                                <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Leave</th>
+                                                <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Leave/Offset</th>
                                                 <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total Hours</th>
                                                 <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Overtime</th>
                                                 @endunless
@@ -415,9 +415,15 @@
                                                             $leaveM = $leaveMinutes % 60;
                                                             $leaveFormatted = sprintf('%02d:%02d', $leaveH, $leaveM);
                                                         @endphp
+                                                        @php
+                                                            $leaveTypeLabel = \App\Support\DtrEmployeeAttendance::displayedLeaveTypeLabel($dtr);
+                                                        @endphp
                                                         <div class="text-sm font-medium text-teal-700">
                                                             {{ $leaveMinutes > 0 ? $leaveFormatted : '00:00' }}
                                                         </div>
+                                                        @if($leaveTypeLabel && $leaveMinutes > 0)
+                                                            <div class="text-xs text-teal-600">{{ $leaveTypeLabel }}</div>
+                                                        @endif
                                                     </td>
                                                     <td class="px-3 py-2 whitespace-nowrap">
                                                         @php

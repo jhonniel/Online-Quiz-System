@@ -57,7 +57,8 @@
         <dt>Hubstaff Hours</dt>
         <dd>{{ $isCompleted ? 'Complete' : ($workedMinutes > 0 ? $workedFormatted : '00:00') }}</dd>
         @if($leaveMinutes > 0)
-            <dt>Leave</dt>
+            @php $leaveTypeLabel = \App\Support\DtrEmployeeAttendance::displayedLeaveTypeLabel($dtr); @endphp
+            <dt>Leave/Offset{{ $leaveTypeLabel ? ' ('.$leaveTypeLabel.')' : '' }}</dt>
             <dd>{{ $leaveFormatted }}</dd>
         @endif
         <dt>Total</dt>

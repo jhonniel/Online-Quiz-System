@@ -19,26 +19,81 @@ final class DtrEmployeeAttendance
             return $offset;
         }
 
+        if (self::isOffsetLeave($dtr)) {
+            $total = (float) ($dtr->total_hours ?? 0);
+
+            return min(max($total, 0.0), DtrRecordHours::STANDARD_DAY_HOURS);
+        }
+
         if (self::hasApprovedVacationOrSickLeave($dtr)) {
             return DtrRecordHours::STANDARD_DAY_HOURS;
+        }
+
+        if (($dtr->status ?? '') === 'on_leave') {
+            $total = (float) ($dtr->total_hours ?? 0);
+
+            return $total > 0
+                ? min($total, DtrRecordHours::STANDARD_DAY_HOURS)
+                : DtrRecordHours::STANDARD_DAY_HOURS;
         }
 
         return 0.0;
     }
 
     /**
-     * Hubstaff column: tracked work time excluding leave / offset credit shown in Leave column.
+     * Short label under Leave column (e.g. Offset, Vacation Leave).
+     */
+    public static function displayedLeaveTypeLabel(Dtr $dtr): ?string
+    {
+        if (self::isOffsetLeave($dtr)) {
+            return 'Offset';
+        }
+
+        if (self::hasApprovedVacationOrSickLeave($dtr)) {
+            $label = strtolower((string) ($dtr->leave_type_label ?? ''));
+            $remarks = (string) ($dtr->remarks ?? '');
+            if (str_contains($label, 'sick') || preg_match('/Sick Leave|Sick\b/i', $remarks)) {
+                return 'Sick Leave';
+            }
+
+            return 'Vacation Leave';
+        }
+
+        if (($dtr->status ?? '') === 'on_leave') {
+            return 'Leave';
+        }
+
+        return null;
+    }
+
+    public static function isOffsetLeave(Dtr $dtr): bool
+    {
+        if ((float) ($dtr->offset_hours ?? 0) > 0) {
+            return true;
+        }
+
+        $remarks = (string) ($dtr->remarks ?? '');
+        $label = strtolower((string) ($dtr->leave_type_label ?? ''));
+
+        if ($label === 'offset' || str_contains($label, 'offset')) {
+            return true;
+        }
+
+        return (bool) preg_match('/Leave:\s*Offset\b/i', $remarks)
+            || (bool) preg_match('/Approved Leave:\s*Offset\b/i', $remarks)
+            || (bool) preg_match('/\bOffset:\s*(Offset|Leave)\b/i', $remarks);
+    }
+
+    /**
+     * Hubstaff column: day total minus added time minus leave (leave never double-counted here).
      */
     public static function displayedHubstaffHours(Dtr $dtr): float
     {
-        $worked = DtrAddedTimeFromRemarks::effectiveWorkedHours($dtr);
+        $added = DtrAddedTimeFromRemarks::effectiveAddedHours($dtr);
         $leave = self::displayedLeaveHours($dtr);
+        $total = self::rawEffectiveTotalHours($dtr);
 
-        if ($leave > 0 && self::hasApprovedVacationOrSickLeave($dtr)) {
-            return max($worked - $leave, 0.0);
-        }
-
-        return max($worked, 0.0);
+        return max($total - $added - $leave, 0.0);
     }
 
     /**
@@ -46,16 +101,28 @@ final class DtrEmployeeAttendance
      */
     public static function displayedDailyTotal(Dtr $dtr): float
     {
-        $added = DtrAddedTimeFromRemarks::effectiveAddedHours($dtr);
+        return max(self::rawEffectiveTotalHours($dtr), 0.0);
+    }
 
+    /**
+     * Effective day total from Hubstaff + added + offset (stored total aligned with remarks).
+     */
+    public static function rawEffectiveTotalHours(Dtr $dtr): float
+    {
         return max(
-            self::displayedHubstaffHours($dtr) + $added + self::displayedLeaveHours($dtr),
+            DtrAddedTimeFromRemarks::effectiveWorkedHours($dtr)
+            + DtrAddedTimeFromRemarks::effectiveAddedHours($dtr)
+            + (float) ($dtr->offset_hours ?? 0),
             0.0
         );
     }
 
     public static function hasApprovedVacationOrSickLeave(Dtr $dtr): bool
     {
+        if (self::isOffsetLeave($dtr)) {
+            return false;
+        }
+
         $remarks = (string) ($dtr->remarks ?? '');
         $label = strtolower((string) ($dtr->leave_type_label ?? ''));
 
@@ -64,6 +131,10 @@ final class DtrEmployeeAttendance
         }
 
         if (preg_match('/Approved Leave:\s*(Vacation Leave|Sick Leave|Vacation|Sick Leave|Sick)\b/i', $remarks)) {
+            return true;
+        }
+
+        if (preg_match('/\b(vacation_leave|sick_leave|Vacation Leave|Sick Leave)\b/i', $remarks)) {
             return true;
         }
 

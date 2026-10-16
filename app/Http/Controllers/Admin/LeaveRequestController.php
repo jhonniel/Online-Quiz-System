@@ -2797,9 +2797,11 @@ class LeaveRequestController extends Controller
             }
 
             $existingTotal = (float) ($dtr->total_hours ?? 0);
+            $existingOffset = (float) ($dtr->offset_hours ?? 0);
             $newTotal = max($existingTotal - $hoursPerDay, 0);
             $dtr->total_hours = $newTotal;
-            $dtr->overtime_hours = max($newTotal - 8.0, 0);
+            $dtr->offset_hours = max($existingOffset - $hoursPerDay, 0);
+            $dtr->overtime_hours = \App\Support\DtrRecordHours::overtimeFromTotal($newTotal);
             $dtr->save();
             $didRevert = true;
         }
@@ -2904,7 +2906,7 @@ class LeaveRequestController extends Controller
 
         $dayCount = max(1, $this->leaveRequestInclusiveDayCount($leaveRequest));
         $offsetHoursPerDay = $totalOffsetHours / $dayCount;
-        $offsetLabel = 'Offset: '.($leaveRequest->type_label ?? 'Offset');
+        $offsetLabel = 'Leave: Offset';
 
         foreach ($this->iterateLeaveRequestDates($leaveRequest) as $date) {
             $dtr = $this->findOrCreateDtrRecord(
@@ -2918,7 +2920,7 @@ class LeaveRequestController extends Controller
             $existingRemarks = trim((string) ($dtr->remarks ?? ''));
             if ($existingRemarks === '') {
                 $dtr->remarks = $offsetLabel;
-            } elseif (stripos($existingRemarks, 'Offset:') === false) {
+            } elseif (stripos($existingRemarks, 'Leave: Offset') === false && stripos($existingRemarks, 'Offset:') === false) {
                 $dtr->remarks = $existingRemarks.' | '.$offsetLabel;
             }
 
@@ -2956,8 +2958,9 @@ class LeaveRequestController extends Controller
 
             $existingRemarks = (string) ($dtr->remarks ?? '');
             if ($existingRemarks !== '') {
-                $dtr->remarks = trim(preg_replace('/\s*\|\s*Offset:[^|]*/i', '', $existingRemarks) ?? $existingRemarks);
-                $dtr->remarks = trim(str_replace('Offset: Offset', '', (string) $dtr->remarks));
+                $dtr->remarks = trim(preg_replace('/\s*\|\s*Leave:\s*Offset[^|]*/i', '', $existingRemarks) ?? $existingRemarks);
+                $dtr->remarks = trim(preg_replace('/\s*\|\s*Offset:[^|]*/i', '', (string) $dtr->remarks) ?? $dtr->remarks);
+                $dtr->remarks = trim(str_replace(['Leave: Offset', 'Offset: Offset'], '', (string) $dtr->remarks));
             }
 
             $dtr->save();
@@ -2990,9 +2993,12 @@ class LeaveRequestController extends Controller
             );
 
             $existingTotal = (float) ($dtr->total_hours ?? 0);
-            $newTotal = $existingTotal + 8.0; // Add 8 hours for the leave day
+            $existingOffset = (float) ($dtr->offset_hours ?? 0);
+            $leaveCredit = 8.0;
+            $dtr->offset_hours = $existingOffset + $leaveCredit;
+            $newTotal = $existingTotal + $leaveCredit;
             $dtr->total_hours = $newTotal;
-            $dtr->overtime_hours = max($newTotal - 8.0, 0);
+            $dtr->overtime_hours = \App\Support\DtrRecordHours::overtimeFromTotal($newTotal);
 
             // Update remarks to include leave information
             $existingRemarks = $dtr->remarks ?? '';

@@ -52,7 +52,7 @@ class DtrRecordHours
         }
 
         $remarks = (string) ($dtr->remarks ?? '');
-        if (! preg_match('/\bOffset\b/i', $remarks)) {
+        if (! preg_match('/\bOffset\b/i', $remarks) && ! preg_match('/Leave:\s*Offset/i', $remarks)) {
             return;
         }
 

@@ -68,7 +68,7 @@
                     <th style="width: 9%;">Day</th>
                     <th style="width: 14%;" class="right">Hubstaff Hours</th>
                     <th style="width: 12%;" class="right">Added Time</th>
-                    <th style="width: 10%;" class="right">Leave</th>
+                    <th style="width: 10%;" class="right">Leave/Offset</th>
                     <th style="width: 12%;" class="right">Total Hours</th>
                     <th style="width: 12%;" class="center">Status</th>
                     <th style="width: 23%;">Remarks</th>
@@ -209,7 +209,13 @@
                         <td>{{ $dtr->date->format('D') }}</td>
                         <td class="right">{{ $workedMinutes > 0 ? $workedFormatted : '00:00' }}</td>
                         <td class="right">{{ $extraMinutes > 0 ? $extraFormatted : '00:00' }}</td>
-                        <td class="right">{{ $leaveMinutes > 0 ? $leaveFormatted : '00:00' }}</td>
+                        <td class="right">
+                            {{ $leaveMinutes > 0 ? $leaveFormatted : '00:00' }}
+                            @php $leaveTypeLabel = \App\Support\DtrEmployeeAttendance::displayedLeaveTypeLabel($dtr); @endphp
+                            @if($leaveTypeLabel && $leaveMinutes > 0)
+                                <div style="font-size: 7px; color: #0F766E;">{{ $leaveTypeLabel }}</div>
+                            @endif
+                        </td>
                         <td class="right">{{ $totalMinutes > 0 ? $totalFormatted : '00:00' }}</td>
                         <td class="center"@if($statusLabel === 'Under Time') style="color: #DC2626; font-weight: bold;"@endif>{{ $statusLabel }}</td>
                         <td>{{ $remarks ?: '-' }}</td>

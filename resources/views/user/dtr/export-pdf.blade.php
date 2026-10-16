@@ -68,6 +68,9 @@
                     <th style="width: 12%;">Date</th>
                     <th style="width: 8%;">Day</th>
                     <th style="width: 12%;" class="right">Hubstaff Hours</th>
+                    @if(($user->role ?? '') !== 'student')
+                    <th style="width: 10%;" class="right">Leave/Offset</th>
+                    @endif
                     <th style="width: 12%;" class="right">Added Time</th>
                     <th style="width: 12%;" class="right">Total Hours</th>
                     <th style="width: 12%;" class="right">{{ ($user->role ?? '') === 'student' ? 'Additional Time' : 'Overtime' }}</th>
@@ -103,14 +106,22 @@
                         }
 
                         // Calculate time values
-                        $workedHours = max(($dtr->total_hours ?? 0) - ($dtr->added_time_from_note ?? 0), 0);
+                        $addedHours = \App\Support\DtrAddedTimeFromRemarks::effectiveAddedHours($dtr);
+                        $leaveHours = \App\Support\DtrEmployeeAttendance::displayedLeaveHours($dtr);
+                        $workedHours = ($user->role ?? '') === 'student'
+                            ? max(($dtr->total_hours ?? 0) - ($dtr->added_time_from_note ?? 0), 0)
+                            : \App\Support\DtrEmployeeAttendance::displayedHubstaffHours($dtr);
                         $workedMinutes = (int) round($workedHours * 60);
+                        $leaveMinutes = (int) round($leaveHours * 60);
+                        $leaveH = intdiv($leaveMinutes, 60);
+                        $leaveM = $leaveMinutes % 60;
+                        $leaveFormatted = sprintf('%02d:%02d', $leaveH, $leaveM);
                         $workedH = intdiv($workedMinutes, 60);
                         $workedM = $workedMinutes % 60;
                         $workedFormatted = sprintf('%02d:%02d', $workedH, $workedM);
                         $workedOver8Hours = $workedMinutes > 480; // 8 hours = 480 minutes
 
-                        $extraMinutes = (int) round(($dtr->added_time_from_note ?? 0) * 60);
+                        $extraMinutes = (int) round($addedHours * 60);
                         $extraH = intdiv($extraMinutes, 60);
                         $extraM = $extraMinutes % 60;
                         $extraFormatted = sprintf('%02d:%02d', $extraH, $extraM);
@@ -131,18 +142,17 @@
                     <tr>
                         <td>{{ $dtr->date->format('M d, Y') }}</td>
                         <td>{{ $dtr->date->format('D') }}</td>
+                        <td class="right">{{ $workedMinutes > 0 ? $workedFormatted : '00:00' }}</td>
+                        @if(($user->role ?? '') !== 'student')
+                        <td class="right">{{ $leaveMinutes > 0 ? $leaveFormatted : '00:00' }}</td>
+                        @endif
                         <td class="right">
-                            @if($isCompleted || $workedOver8Hours)
-                                ✓
-                            @else
-                                {{ $workedMinutes > 0 ? $workedFormatted : '00:00' }}
-                            @endif
-                        </td>
-                        <td class="right">
-                            @if($isCompleted || $extraMinutes > 0)
+                            @if(($user->role ?? '') === 'student' && ($isCompleted || $extraMinutes > 0))
                                 ✓
                             @elseif($dtr->status === 'absent' || $dtr->status === 'holiday')
                                 00:00
+                            @elseif($extraMinutes > 0)
+                                {{ $extraFormatted }}
                             @else
                                 -
                             @endif

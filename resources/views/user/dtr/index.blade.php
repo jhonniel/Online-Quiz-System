@@ -335,6 +335,7 @@
                                             <tr>
                                                 <th class="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
                                                 <th class="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Hubstaff Hours</th>
+                                                <th class="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Leave/Offset</th>
                                                 <th class="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Added Time</th>
                                                 <th class="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total Hours</th>
                                                 <th class="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
@@ -375,16 +376,22 @@
                                                     }
                                                     
                                                     // Calculate time values
-                                                    $workedHours = max(($dtr->total_hours ?? 0) - ($dtr->added_time_from_note ?? 0), 0);
+                                                    $addedHours = \App\Support\DtrAddedTimeFromRemarks::effectiveAddedHours($dtr);
+                                                    $leaveHours = \App\Support\DtrEmployeeAttendance::displayedLeaveHours($dtr);
+                                                    $workedHours = \App\Support\DtrEmployeeAttendance::displayedHubstaffHours($dtr);
                                                     $workedMinutes = (int) round($workedHours * 60);
+                                                    $leaveMinutes = (int) round($leaveHours * 60);
+                                                    $leaveH = intdiv($leaveMinutes, 60);
+                                                    $leaveM = $leaveMinutes % 60;
+                                                    $leaveFormatted = sprintf('%02d:%02d', $leaveH, $leaveM);
                                                     $workedH = intdiv($workedMinutes, 60);
                                                     $workedM = $workedMinutes % 60;
                                                     $workedFormatted = sprintf('%02d:%02d', $workedH, $workedM);
                                                     $workedOver8Hours = $workedMinutes > 480; // 8 hours = 480 minutes
                                                     
-                                                    $extraMinutes = (int) round(($dtr->added_time_from_note ?? 0) * 60);
+                                                    $extraMinutes = (int) round($addedHours * 60);
                                                     
-                                                    $totalMinutes = (int) round(($dtr->total_hours ?? 0) * 60);
+                                                    $totalMinutes = (int) round(\App\Support\DtrEmployeeAttendance::displayedDailyTotal($dtr) * 60);
                                                     $totalH = intdiv($totalMinutes, 60);
                                                     $totalM = $totalMinutes % 60;
                                                     $totalFormatted = sprintf('%02d:%02d', $totalH, $totalM);
@@ -397,23 +404,34 @@
                                                     </td>
                                                     <td class="px-3 sm:px-6 py-4 whitespace-nowrap">
                                                         <div class="text-sm font-medium text-gray-900">
-                                                            @if($isCompleted)
-                                                                <svg class="w-5 h-5 text-green-600" fill="currentColor" viewBox="0 0 20 20">
-                                                                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
-                                                                </svg>
-                                                            @else
-                                                                {{ $workedMinutes > 0 ? $workedFormatted : '00:00' }}
-                                                            @endif
+                                                            {{ $workedMinutes > 0 ? $workedFormatted : '00:00' }}
                                                         </div>
                                                     </td>
                                                     <td class="px-3 sm:px-6 py-4 whitespace-nowrap">
+                                                        @php
+                                                            $leaveTypeLabel = \App\Support\DtrEmployeeAttendance::displayedLeaveTypeLabel($dtr);
+                                                        @endphp
+                                                        <div class="text-sm font-medium text-teal-700">
+                                                            {{ $leaveMinutes > 0 ? $leaveFormatted : '00:00' }}
+                                                        </div>
+                                                        @if($leaveTypeLabel && $leaveMinutes > 0)
+                                                            <div class="text-xs text-teal-600">{{ $leaveTypeLabel }}</div>
+                                                        @endif
+                                                    </td>
+                                                    <td class="px-3 sm:px-6 py-4 whitespace-nowrap">
                                                         <div class="text-sm font-medium text-gray-900">
-                                                            @if($isCompleted)
+                                                            @if($isCompleted && $dtr->status !== 'on_leave' && $dtr->status !== 'travel')
                                                                 <svg class="w-5 h-5 text-green-600" fill="currentColor" viewBox="0 0 20 20">
                                                                     <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
                                                                 </svg>
                                                             @elseif($dtr->status === 'absent' || $dtr->status === 'holiday')
                                                                 00:00
+                                                            @elseif($extraMinutes > 0)
+                                                                @php
+                                                                    $extraH = intdiv($extraMinutes, 60);
+                                                                    $extraM = $extraMinutes % 60;
+                                                                @endphp
+                                                                {{ sprintf('%02d:%02d', $extraH, $extraM) }}
                                                             @else
                                                                 <span class="text-gray-400">-</span>
                                                             @endif
