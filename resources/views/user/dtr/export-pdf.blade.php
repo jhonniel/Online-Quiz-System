@@ -126,12 +126,15 @@
                         $extraM = $extraMinutes % 60;
                         $extraFormatted = sprintf('%02d:%02d', $extraH, $extraM);
 
-                        $totalMinutes = ($user->role ?? '') === 'student'
-                            ? (int) round(($dtr->total_hours ?? 0) * 60)
-                            : (int) round(\App\Support\DtrEmployeeAttendance::displayedTotalHoursForColumn($dtr) * 60);
-                        $totalH = intdiv($totalMinutes, 60);
-                        $totalM = $totalMinutes % 60;
-                        $totalFormatted = sprintf('%02d:%02d', $totalH, $totalM);
+                        if (($user->role ?? '') === 'student') {
+                            $totalMinutes = (int) round(($dtr->total_hours ?? 0) * 60);
+                            $totalH = intdiv($totalMinutes, 60);
+                            $totalM = $totalMinutes % 60;
+                            $totalFormatted = sprintf('%02d:%02d', $totalH, $totalM);
+                        } else {
+                            $totalFormatted = \App\Support\DtrEmployeeAttendance::formatTotalHoursColumn($dtr);
+                            $totalMinutes = (int) round(\App\Support\DtrEmployeeAttendance::displayedTotalHoursForColumn($dtr) * 60);
+                        }
                         $totalOver8Hours = $totalMinutes > 480; // 8 hours = 480 minutes
 
                         $otMinutes = (int) round(($dtr->overtime_hours ?? 0) * 60);
@@ -160,7 +163,13 @@
                             @endif
                         </td>
                         <td class="right">
-                            @if($isCompleted || $totalOver8Hours)
+                            @if(($user->role ?? '') === 'employee')
+                                @php $dailyDeficitFormatted = \App\Support\DtrEmployeeAttendance::formatDailyDeficitForColumn($dtr); @endphp
+                                <span>{{ $totalFormatted }}</span>
+                                @if($dailyDeficitFormatted)
+                                    <span style="color: #DC2626; font-weight: bold; margin-left: 4px;">{{ $dailyDeficitFormatted }}</span>
+                                @endif
+                            @elseif($isCompleted || $totalOver8Hours)
                                 ✓
                             @else
                                 {{ $totalMinutes > 0 ? $totalFormatted : '00:00' }}

@@ -309,11 +309,8 @@
                                         $employeeGroup['records'],
                                         $weekEndForAttendance
                                     );
-                                    $attendanceLogDeficitHours = \App\Support\DtrEmployeeAttendance::weekAttendanceDeficitHours(
+                                    $attendanceLogDeficitFormatted = \App\Support\DtrEmployeeAttendance::formatWeekAttendanceDeficit(
                                         $employeeGroup['records']
-                                    );
-                                    $attendanceLogDeficitFormatted = \App\Support\DtrEmployeeAttendance::formatHoursDecimal(
-                                        $attendanceLogDeficitHours
                                     );
                                 @endphp
                                 <div class="px-6 py-2 bg-white">
@@ -427,14 +424,15 @@
                                                     </td>
                                                     <td class="px-3 py-2 whitespace-nowrap">
                                                         @php
-                                                            $displayDailyTotal = \App\Support\DtrEmployeeAttendance::displayedTotalHoursForColumn($dtr);
-                                                            $totalMinutes = (int) round($displayDailyTotal * 60);
-                                                            $totalH = intdiv($totalMinutes, 60);
-                                                            $totalM = $totalMinutes % 60;
-                                                            $totalFormatted = sprintf('%02d:%02d', $totalH, $totalM);
+                                                            $dailyDeficitFormatted = \App\Support\DtrEmployeeAttendance::formatDailyDeficitForColumn($dtr);
                                                         @endphp
-                                                        <div class="text-sm font-medium text-gray-900">
-                                                            {{ $totalMinutes > 0 ? $totalFormatted : '00:00' }}
+                                                        <div class="flex items-center justify-between gap-2 min-w-[5.5rem]">
+                                                            <span class="text-sm font-medium text-gray-900">
+                                                                {{ \App\Support\DtrEmployeeAttendance::formatTotalHoursColumn($dtr) }}
+                                                            </span>
+                                                            @if($dailyDeficitFormatted)
+                                                                <span class="text-xs font-semibold text-red-600" title="Deficit vs 08:00">{{ $dailyDeficitFormatted }}</span>
+                                                            @endif
                                                         </div>
                                                     </td>
                                                     <td class="px-3 py-2 whitespace-nowrap">

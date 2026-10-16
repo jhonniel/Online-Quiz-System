@@ -40,10 +40,8 @@
     $workedM = $workedMinutes % 60;
     $workedFormatted = sprintf('%02d:%02d', $workedH, $workedM);
 
+    $totalFormatted = \App\Support\DtrEmployeeAttendance::formatTotalHoursColumn($dtr);
     $totalMinutes = (int) round(\App\Support\DtrEmployeeAttendance::displayedTotalHoursForColumn($dtr) * 60);
-    $totalH = intdiv($totalMinutes, 60);
-    $totalM = $totalMinutes % 60;
-    $totalFormatted = sprintf('%02d:%02d', $totalH, $totalM);
 @endphp
 <div class="mobile-card">
     <div class="flex items-start justify-between gap-3">
@@ -62,7 +60,17 @@
             <dd>{{ $leaveFormatted }}</dd>
         @endif
         <dt>Total</dt>
-        <dd>{{ $isCompleted ? 'Complete' : ($totalMinutes > 0 ? $totalFormatted : '00:00') }}</dd>
+        <dd class="flex items-center justify-end gap-2">
+            @if($isCompleted && ($dtr->status ?? '') !== 'on_leave' && ($dtr->status ?? '') !== 'travel')
+                Complete
+            @else
+                <span>{{ $totalMinutes > 0 ? $totalFormatted : '00:00' }}</span>
+                @php $dailyDeficitFormatted = \App\Support\DtrEmployeeAttendance::formatDailyDeficitForColumn($dtr); @endphp
+                @if($dailyDeficitFormatted)
+                    <span class="text-xs font-semibold text-red-600">{{ $dailyDeficitFormatted }}</span>
+                @endif
+            @endif
+        </dd>
         @if($dtr->remarks)
             <dt class="col-span-2">Remarks</dt>
             <dd class="col-span-2 text-left font-normal text-gray-600">{{ $dtr->remarks }}</dd>

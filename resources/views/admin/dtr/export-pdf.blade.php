@@ -95,11 +95,8 @@
                         $leaveM = $leaveMinutes % 60;
                         $leaveFormatted = sprintf('%02d:%02d', $leaveH, $leaveM);
 
-                        $displayDailyTotal = \App\Support\DtrEmployeeAttendance::displayedTotalHoursForColumn($dtr);
-                        $totalMinutes = (int) round($displayDailyTotal * 60);
-                        $totalH = intdiv($totalMinutes, 60);
-                        $totalM = $totalMinutes % 60;
-                        $totalFormatted = sprintf('%02d:%02d', $totalH, $totalM);
+                        $totalFormatted = \App\Support\DtrEmployeeAttendance::formatTotalHoursColumn($dtr);
+                        $totalMinutes = (int) round(\App\Support\DtrEmployeeAttendance::displayedTotalHoursForColumn($dtr) * 60);
 
                         // Build remarks with leave request info (excluding overtime type)
                         // Only show approved leave requests
@@ -216,7 +213,13 @@
                                 <div style="font-size: 7px; color: #0F766E;">{{ $leaveTypeLabel }}</div>
                             @endif
                         </td>
-                        <td class="right">{{ $totalMinutes > 0 ? $totalFormatted : '00:00' }}</td>
+                        <td class="right">
+                            @php $dailyDeficitFormatted = \App\Support\DtrEmployeeAttendance::formatDailyDeficitForColumn($dtr); @endphp
+                            <span>{{ $totalMinutes > 0 ? $totalFormatted : '00:00' }}</span>
+                            @if($dailyDeficitFormatted)
+                                <span style="color: #DC2626; font-weight: bold; margin-left: 4px;">{{ $dailyDeficitFormatted }}</span>
+                            @endif
+                        </td>
                         <td class="center"@if($statusLabel === 'Under Time') style="color: #DC2626; font-weight: bold;"@endif>{{ $statusLabel }}</td>
                         <td>{{ $remarks ?: '-' }}</td>
                     </tr>

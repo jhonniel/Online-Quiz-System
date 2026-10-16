@@ -9,6 +9,10 @@ final class DtrEmployeeAttendance
 {
     public const WEEKLY_BASE_HOURS = 40.0;
 
+    public const STANDARD_DAY_MINUTES = 480;
+
+    public const WEEKLY_BASE_MINUTES = 2400;
+
     /**
      * Leave column: offset leave hours, or vacation / sick leave credit (typically 08:00).
      */
@@ -156,11 +160,62 @@ final class DtrEmployeeAttendance
     }
 
     /**
-     * Total Hours column: actual day total, shown as 08:00 when over 8:00 (overtime shown separately).
+     * Total Hours column: day total capped at 08:00 (overtime shown separately).
      */
     public static function displayedTotalHoursForColumn(Dtr $dtr): float
     {
-        return self::effectiveDailyTotal($dtr);
+        $capMinutes = (int) round(DtrRecordHours::STANDARD_DAY_HOURS * 60);
+
+        $added = DtrAddedTimeFromRemarks::effectiveAddedHours($dtr);
+        $hubstaff = self::displayedHubstaffHours($dtr);
+        $leave = self::displayedLeaveHours($dtr);
+
+        $visibleSumMinutes = (int) round(($hubstaff + $added + $leave) * 60);
+        $computedMinutes = (int) round(self::displayedDailyTotal($dtr) * 60);
+        $storedMinutes = (int) round((float) ($dtr->total_hours ?? 0) * 60);
+
+        $uncappedMinutes = max($visibleSumMinutes, $computedMinutes, $storedMinutes);
+
+        return min($uncappedMinutes, $capMinutes) / 60.0;
+    }
+
+    public static function formatTotalHoursColumn(Dtr $dtr): string
+    {
+        return self::formatHoursDecimal(self::displayedTotalHoursForColumn($dtr));
+    }
+
+    /**
+     * Daily deficit vs 08:00 when Total Hours for the day is under 8:00.
+     */
+    public static function displayedDailyDeficitHoursForColumn(Dtr $dtr): float
+    {
+        $deficitMinutes = self::dailyColumnDeficitMinutes($dtr);
+
+        return $deficitMinutes / 60.0;
+    }
+
+    /**
+     * Deficit vs 08:00 for the Total Hours column, in whole minutes.
+     */
+    public static function dailyColumnDeficitMinutes(Dtr $dtr): int
+    {
+        $totalMinutes = (int) round(self::displayedTotalHoursForColumn($dtr) * 60);
+
+        if ($totalMinutes <= 0 || $totalMinutes >= self::STANDARD_DAY_MINUTES) {
+            return 0;
+        }
+
+        return self::STANDARD_DAY_MINUTES - $totalMinutes;
+    }
+
+    public static function formatDailyDeficitForColumn(Dtr $dtr): ?string
+    {
+        $deficitMinutes = self::dailyColumnDeficitMinutes($dtr);
+        if ($deficitMinutes <= 0) {
+            return null;
+        }
+
+        return self::formatMinutesAsHours($deficitMinutes);
     }
 
     /**
@@ -168,8 +223,13 @@ final class DtrEmployeeAttendance
      */
     public static function sumCountableHoursForRecords(iterable $records, ?Carbon $today = null): float
     {
+        return self::sumCountableMinutesForRecords($records, $today) / 60.0;
+    }
+
+    public static function sumCountableMinutesForRecords(iterable $records, ?Carbon $today = null): int
+    {
         $today = ($today ?? Carbon::today())->copy()->startOfDay();
-        $sum = 0.0;
+        $sumMinutes = 0;
 
         foreach ($records as $dtr) {
             if (! $dtr instanceof Dtr) {
@@ -181,15 +241,20 @@ final class DtrEmployeeAttendance
                 continue;
             }
 
-            $sum += self::effectiveDailyTotal($dtr);
+            $sumMinutes += (int) round(self::effectiveDailyTotal($dtr) * 60);
         }
 
-        return $sum;
+        return $sumMinutes;
     }
 
     public static function formatHoursDecimal(float $hours): string
     {
-        $minutes = (int) round($hours * 60);
+        return self::formatMinutesAsHours((int) round($hours * 60));
+    }
+
+    public static function formatMinutesAsHours(int $minutes): string
+    {
+        $minutes = max(0, $minutes);
         $h = intdiv($minutes, 60);
         $m = $minutes % 60;
 
@@ -197,12 +262,12 @@ final class DtrEmployeeAttendance
     }
 
     /**
-     * Sum capped daily totals for weekday records on or before $today.
+     * Sum Total Hours column values (capped at 08:00/day) in minutes for weekday records on or before $today.
      */
-    public static function sumCountableWeekdayHours(iterable $records, ?Carbon $today = null): float
+    public static function sumDisplayedColumnTotalMinutesForWeekdays(iterable $records, ?Carbon $today = null): int
     {
         $today = ($today ?? Carbon::today())->copy()->startOfDay();
-        $sum = 0.0;
+        $sumMinutes = 0;
 
         foreach ($records as $dtr) {
             if (! $dtr instanceof Dtr) {
@@ -214,10 +279,49 @@ final class DtrEmployeeAttendance
                 continue;
             }
 
-            $sum += self::effectiveDailyTotal($dtr);
+            $sumMinutes += (int) round(self::displayedTotalHoursForColumn($dtr) * 60);
         }
 
-        return $sum;
+        return $sumMinutes;
+    }
+
+    /**
+     * Sum capped daily totals for weekday records on or before $today.
+     */
+    public static function sumCountableWeekdayHours(iterable $records, ?Carbon $today = null): float
+    {
+        return self::sumCountableWeekdayMinutes($records, $today) / 60.0;
+    }
+
+    public static function sumCountableWeekdayMinutes(iterable $records, ?Carbon $today = null): int
+    {
+        $today = ($today ?? Carbon::today())->copy()->startOfDay();
+        $sumMinutes = 0;
+
+        foreach ($records as $dtr) {
+            if (! $dtr instanceof Dtr) {
+                continue;
+            }
+
+            $day = Carbon::parse($dtr->date)->startOfDay();
+            if ($day->isWeekend() || $day->gt($today)) {
+                continue;
+            }
+
+            $sumMinutes += (int) round(self::effectiveDailyTotal($dtr) * 60);
+        }
+
+        return $sumMinutes;
+    }
+
+    /**
+     * Weekly attendance deficit vs 40:00 (Mon–Fri), using minute totals from the Total Hours column.
+     */
+    public static function weekAttendanceDeficitMinutes(iterable $records, ?Carbon $today = null): int
+    {
+        $sumMinutes = self::sumDisplayedColumnTotalMinutesForWeekdays($records, $today);
+
+        return max(0, self::WEEKLY_BASE_MINUTES - $sumMinutes);
     }
 
     /**
@@ -225,9 +329,12 @@ final class DtrEmployeeAttendance
      */
     public static function weekAttendanceDeficitHours(iterable $records, ?Carbon $today = null): float
     {
-        $countableSum = self::sumCountableWeekdayHours($records, $today);
+        return self::weekAttendanceDeficitMinutes($records, $today) / 60.0;
+    }
 
-        return max(0.0, self::WEEKLY_BASE_HOURS - $countableSum);
+    public static function formatWeekAttendanceDeficit(iterable $records, ?Carbon $today = null): string
+    {
+        return self::formatMinutesAsHours(self::weekAttendanceDeficitMinutes($records, $today));
     }
 
     /**
@@ -235,6 +342,11 @@ final class DtrEmployeeAttendance
      * Matches PDF "Total Deficit" (not the Mon–Fri 40:00 week rule).
      */
     public static function periodAttendanceDeficitHours(iterable $records, ?Carbon $today = null): float
+    {
+        return self::periodAttendanceDeficitMinutes($records, $today) / 60.0;
+    }
+
+    public static function periodAttendanceDeficitMinutes(iterable $records, ?Carbon $today = null): int
     {
         $today = ($today ?? Carbon::today())->copy()->startOfDay();
         $recordCount = 0;
@@ -253,13 +365,34 @@ final class DtrEmployeeAttendance
         }
 
         if ($recordCount === 0) {
-            return 0.0;
+            return 0;
         }
 
-        $sum = self::sumCountableHoursForRecords($records, $today);
-        $expected = $recordCount * DtrRecordHours::STANDARD_DAY_HOURS;
+        $sumMinutes = self::sumDisplayedColumnTotalMinutesForRecords($records, $today);
+        $expectedMinutes = $recordCount * self::STANDARD_DAY_MINUTES;
 
-        return max(0.0, $expected - $sum);
+        return max(0, $expectedMinutes - $sumMinutes);
+    }
+
+    public static function sumDisplayedColumnTotalMinutesForRecords(iterable $records, ?Carbon $today = null): int
+    {
+        $today = ($today ?? Carbon::today())->copy()->startOfDay();
+        $sumMinutes = 0;
+
+        foreach ($records as $dtr) {
+            if (! $dtr instanceof Dtr) {
+                continue;
+            }
+
+            $day = Carbon::parse($dtr->date)->startOfDay();
+            if ($day->gt($today)) {
+                continue;
+            }
+
+            $sumMinutes += (int) round(self::displayedTotalHoursForColumn($dtr) * 60);
+        }
+
+        return $sumMinutes;
     }
 
     public static function isPeriodAttendanceLogComplete(iterable $records, ?Carbon $today = null): bool

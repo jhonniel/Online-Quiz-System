@@ -3301,11 +3301,11 @@ class DtrController extends Controller
             $employeeOvertimeM = $employeeOvertimeMinutes % 60;
             $group['total_overtime_formatted'] = sprintf('%02d:%02d', $employeeOvertimeH, $employeeOvertimeM);
 
-            // Calculate deficit for export as:
-            // (number of records * 8 hours) - total rendered hours.
-            $recordCount = count($group['records'] ?? []);
-            $expectedHours = $recordCount * 8.0;
-            $employeeDeficitHours = max(0, $expectedHours - ($group['total_hours'] ?? 0));
+            // Deficit: (records × 08:00) − sum of capped Total Hours column values (minute math).
+            $employeeDeficitMinutes = \App\Support\DtrEmployeeAttendance::periodAttendanceDeficitMinutes(
+                $group['records'] ?? []
+            );
+            $employeeDeficitHours = $employeeDeficitMinutes / 60.0;
 
             // Keep existing overtime balance computation for display context.
             $employeeOvertimeFromCompletedWeeks = 0;
@@ -3352,11 +3352,9 @@ class DtrController extends Controller
                 $employeeOvertimeFromCompletedWeeks = $overtimeFromLeavesMinutes / 60;
             }
 
-            // Format employee deficit
-            $employeeDeficitMinutes = (int) round($employeeDeficitHours * 60);
-            $employeeDeficitH = intdiv($employeeDeficitMinutes, 60);
-            $employeeDeficitM = $employeeDeficitMinutes % 60;
-            $group['total_deficit_formatted'] = sprintf('%02d:%02d', $employeeDeficitH, $employeeDeficitM);
+            $group['total_deficit_formatted'] = \App\Support\DtrEmployeeAttendance::formatMinutesAsHours(
+                $employeeDeficitMinutes
+            );
             $group['attendance_log_complete'] = $employeeDeficitHours < 0.001;
             $group['attendance_log_deficit_formatted'] = $group['total_deficit_formatted'];
 

@@ -391,10 +391,8 @@
                                                     
                                                     $extraMinutes = (int) round($addedHours * 60);
                                                     
+                                                    $totalFormatted = \App\Support\DtrEmployeeAttendance::formatTotalHoursColumn($dtr);
                                                     $totalMinutes = (int) round(\App\Support\DtrEmployeeAttendance::displayedTotalHoursForColumn($dtr) * 60);
-                                                    $totalH = intdiv($totalMinutes, 60);
-                                                    $totalM = $totalMinutes % 60;
-                                                    $totalFormatted = sprintf('%02d:%02d', $totalH, $totalM);
                                                     $totalOver8Hours = $totalMinutes > 480; // 8 hours = 480 minutes
                                                 @endphp
                                                 <tr class="hover:bg-gray-50">
@@ -438,15 +436,29 @@
                                                         </div>
                                                     </td>
                                                     <td class="px-3 sm:px-6 py-4 whitespace-nowrap">
-                                                        <div class="text-sm font-medium text-gray-900">
-                                                            @if($isCompleted)
-                                                                <svg class="w-5 h-5 text-green-600" fill="currentColor" viewBox="0 0 20 20">
-                                                                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
-                                                                </svg>
-                                                            @else
-                                                                {{ $totalMinutes > 0 ? $totalFormatted : '00:00' }}
-                                                            @endif
-                                                        </div>
+                                                        @if(auth()->user()?->role === 'employee')
+                                                            @php
+                                                                $dailyDeficitFormatted = \App\Support\DtrEmployeeAttendance::formatDailyDeficitForColumn($dtr);
+                                                            @endphp
+                                                            <div class="flex items-center justify-between gap-2 min-w-[5.5rem]">
+                                                                <span class="text-sm font-medium text-gray-900">
+                                                                    {{ $totalFormatted }}
+                                                                </span>
+                                                                @if($dailyDeficitFormatted)
+                                                                    <span class="text-xs font-semibold text-red-600" title="Deficit vs 08:00">{{ $dailyDeficitFormatted }}</span>
+                                                                @endif
+                                                            </div>
+                                                        @else
+                                                            <div class="text-sm font-medium text-gray-900">
+                                                                @if($isCompleted)
+                                                                    <svg class="w-5 h-5 text-green-600" fill="currentColor" viewBox="0 0 20 20">
+                                                                        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+                                                                    </svg>
+                                                                @else
+                                                                    {{ $totalMinutes > 0 ? $totalFormatted : '00:00' }}
+                                                                @endif
+                                                            </div>
+                                                        @endif
                                                     </td>
                                                     <td class="px-3 sm:px-6 py-4 whitespace-nowrap">
                                                         <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full {{ $statusClass }}">
