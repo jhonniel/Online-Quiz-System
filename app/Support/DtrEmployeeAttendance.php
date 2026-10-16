@@ -215,7 +215,7 @@ final class DtrEmployeeAttendance
             return null;
         }
 
-        return self::formatMinutesAsHoursWithMinuteCount($deficitMinutes);
+        return self::formatMinutesAsHours($deficitMinutes);
     }
 
     /**

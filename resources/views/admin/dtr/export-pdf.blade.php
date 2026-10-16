@@ -218,7 +218,7 @@
                             @php $dailyDeficitFormatted = \App\Support\DtrEmployeeAttendance::formatDailyDeficitForColumn($dtr); @endphp
                             <span>{{ $totalMinutes > 0 ? $totalFormatted : '00:00' }}</span>
                             @if($dailyDeficitFormatted)
-                                <span style="color: #DC2626; font-weight: bold; margin-left: 14px; white-space: nowrap;">Deficit {{ $dailyDeficitFormatted }}</span>
+                                <span style="color: #DC2626; font-weight: 600; font-size: 7px; margin-left: 8px; white-space: nowrap;">Deficit {{ $dailyDeficitFormatted }}</span>
                             @endif
                         </td>
                         <td class="center"@if($statusLabel === 'Under Time') style="color: #DC2626; font-weight: bold;"@endif>{{ $statusLabel }}</td>
