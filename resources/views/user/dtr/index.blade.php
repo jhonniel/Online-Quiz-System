@@ -391,7 +391,7 @@
                                                     
                                                     $extraMinutes = (int) round($addedHours * 60);
                                                     
-                                                    $totalMinutes = (int) round(\App\Support\DtrEmployeeAttendance::displayedDailyTotal($dtr) * 60);
+                                                    $totalMinutes = (int) round(\App\Support\DtrEmployeeAttendance::displayedTotalHoursForColumn($dtr) * 60);
                                                     $totalH = intdiv($totalMinutes, 60);
                                                     $totalM = $totalMinutes % 60;
                                                     $totalFormatted = sprintf('%02d:%02d', $totalH, $totalM);

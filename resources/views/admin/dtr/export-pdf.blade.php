@@ -95,7 +95,7 @@
                         $leaveM = $leaveMinutes % 60;
                         $leaveFormatted = sprintf('%02d:%02d', $leaveH, $leaveM);
 
-                        $displayDailyTotal = \App\Support\DtrEmployeeAttendance::displayedDailyTotal($dtr);
+                        $displayDailyTotal = \App\Support\DtrEmployeeAttendance::displayedTotalHoursForColumn($dtr);
                         $totalMinutes = (int) round($displayDailyTotal * 60);
                         $totalH = intdiv($totalMinutes, 60);
                         $totalM = $totalMinutes % 60;

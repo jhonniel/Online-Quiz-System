@@ -126,7 +126,9 @@
                         $extraM = $extraMinutes % 60;
                         $extraFormatted = sprintf('%02d:%02d', $extraH, $extraM);
 
-                        $totalMinutes = (int) round(($dtr->total_hours ?? 0) * 60);
+                        $totalMinutes = ($user->role ?? '') === 'student'
+                            ? (int) round(($dtr->total_hours ?? 0) * 60)
+                            : (int) round(\App\Support\DtrEmployeeAttendance::displayedTotalHoursForColumn($dtr) * 60);
                         $totalH = intdiv($totalMinutes, 60);
                         $totalM = $totalMinutes % 60;
                         $totalFormatted = sprintf('%02d:%02d', $totalH, $totalM);

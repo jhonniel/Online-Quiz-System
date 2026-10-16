@@ -156,6 +156,14 @@ final class DtrEmployeeAttendance
     }
 
     /**
+     * Total Hours column: actual day total, shown as 08:00 when over 8:00 (overtime shown separately).
+     */
+    public static function displayedTotalHoursForColumn(Dtr $dtr): float
+    {
+        return self::effectiveDailyTotal($dtr);
+    }
+
+    /**
      * Sum of {@see effectiveDailyTotal()} for each record on or before $today.
      */
     public static function sumCountableHoursForRecords(iterable $records, ?Carbon $today = null): float

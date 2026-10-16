@@ -427,7 +427,7 @@
                                                     </td>
                                                     <td class="px-3 py-2 whitespace-nowrap">
                                                         @php
-                                                            $displayDailyTotal = \App\Support\DtrEmployeeAttendance::displayedDailyTotal($dtr);
+                                                            $displayDailyTotal = \App\Support\DtrEmployeeAttendance::displayedTotalHoursForColumn($dtr);
                                                             $totalMinutes = (int) round($displayDailyTotal * 60);
                                                             $totalH = intdiv($totalMinutes, 60);
                                                             $totalM = $totalMinutes % 60;
