@@ -67,7 +67,7 @@
                 <span>{{ $totalMinutes > 0 ? $totalFormatted : '00:00' }}</span>
                 @php $dailyDeficitFormatted = \App\Support\DtrEmployeeAttendance::formatDailyDeficitForColumn($dtr); @endphp
                 @if($dailyDeficitFormatted)
-                    <span class="ml-auto text-[10px] leading-tight font-medium text-red-600 whitespace-nowrap tabular-nums" title="{{ \App\Support\DtrEmployeeAttendance::dailyColumnDeficitMinutes($dtr) }} minutes below 08:00">Deficit {{ $dailyDeficitFormatted }}</span>
+                    <span class="ml-auto text-[9px] leading-none font-normal text-red-500 whitespace-nowrap tabular-nums tracking-tight" title="{{ \App\Support\DtrEmployeeAttendance::dailyColumnDeficitMinutes($dtr) }} minutes below 08:00">Deficit {{ $dailyDeficitFormatted }}</span>
                 @endif
             @endif
         </dd>
