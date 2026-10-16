@@ -53,17 +53,25 @@
                 $employeeGroup['records'] ?? [],
                 $exportWeekEnd
             );
+            $exportAttendanceDeficitHours = \App\Support\DtrEmployeeAttendance::weekAttendanceDeficitHours(
+                $employeeGroup['records'] ?? []
+            );
+            $exportAttendanceDeficitFormatted = \App\Support\DtrEmployeeAttendance::formatHoursDecimal(
+                $exportAttendanceDeficitHours
+            );
         @endphp
         <div class="employee-header">
             <div class="employee-name">
                 {{ $employeeGroup['employee']->name }}
                 @if($exportAttendanceComplete)
                     <span style="color: #047857; font-size: 9px; font-weight: bold;"> — Attendance Log Complete ✓</span>
+                @else
+                    <span style="color: #B91C1C; font-size: 9px; font-weight: bold;"> — Attendance Log Deficit {{ $exportAttendanceDeficitFormatted }}</span>
                 @endif
             </div>
             <div class="employee-email">{{ $employeeGroup['employee']->email }}@if($employeeGroup['employee']->department) • {{ $employeeGroup['employee']->department->name }}@endif</div>
             <div class="muted" style="margin-top: 2px;">
-                Total Hours (max 8:00/day): {{ $employeeGroup['total_hours_formatted'] }} •
+                Total Hours: {{ $employeeGroup['total_hours_formatted'] }} •
                 Total Deficit: <span style="color: #DC2626;">{{ $employeeGroup['total_deficit_formatted'] }}</span> •
                 Records: {{ count($employeeGroup['records']) }}
             </div>

@@ -310,6 +310,12 @@
                                         $employeeGroup['records'],
                                         $weekEndForAttendance
                                     );
+                                    $attendanceLogDeficitHours = \App\Support\DtrEmployeeAttendance::weekAttendanceDeficitHours(
+                                        $employeeGroup['records']
+                                    );
+                                    $attendanceLogDeficitFormatted = \App\Support\DtrEmployeeAttendance::formatHoursDecimal(
+                                        $attendanceLogDeficitHours
+                                    );
                                 @endphp
                                 <div class="px-6 py-2 bg-white">
                                     <div class="flex items-center mb-2">
@@ -331,6 +337,11 @@
                                                             <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
                                                         </svg>
                                                         Attendance Log Complete
+                                                    </span>
+                                                @else
+                                                    <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-red-100 text-red-800 border border-red-200">
+                                                        Attendance Log Deficit
+                                                        <span class="font-bold">{{ $attendanceLogDeficitFormatted }}</span>
                                                     </span>
                                                 @endif
                                             </div>

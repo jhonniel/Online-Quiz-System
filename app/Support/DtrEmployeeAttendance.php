@@ -55,6 +55,16 @@ final class DtrEmployeeAttendance
         return $sum;
     }
 
+    /**
+     * Weekly attendance deficit vs 40:00 using capped weekday hours (same as weekly summary).
+     */
+    public static function weekAttendanceDeficitHours(iterable $records, ?Carbon $today = null): float
+    {
+        $countableSum = self::sumCountableWeekdayHours($records, $today);
+
+        return max(0.0, self::WEEKLY_BASE_HOURS - $countableSum);
+    }
+
     public static function isDayLogComplete(Dtr $dtr): bool
     {
         $status = (string) ($dtr->status ?? '');
