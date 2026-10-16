@@ -15,16 +15,25 @@ final class AdminTotp
 
     public const RECOVERY_CODE_COUNT = 8;
 
-    private Google2FA $google2fa;
+    private ?Google2FA $google2fa;
 
     public function __construct(?Google2FA $google2fa = null)
     {
-        $this->google2fa = $google2fa ?? new Google2FA;
+        $this->google2fa = $google2fa;
+    }
+
+    private function google2fa(): Google2FA
+    {
+        if ($this->google2fa === null) {
+            $this->google2fa = new Google2FA;
+        }
+
+        return $this->google2fa;
     }
 
     public function generateSecret(): string
     {
-        return $this->google2fa->generateSecretKey(32);
+        return $this->google2fa()->generateSecretKey(32);
     }
 
     public function companyName(): string
@@ -36,7 +45,7 @@ final class AdminTotp
 
     public function otpAuthUrl(User $user, string $secret): string
     {
-        return $this->google2fa->getQRCodeUrl(
+        return $this->google2fa()->getQRCodeUrl(
             $this->companyName(),
             (string) $user->email,
             $secret
@@ -60,7 +69,7 @@ final class AdminTotp
         }
 
         try {
-            return (bool) $this->google2fa->verifyKey($secret, $code, 1);
+            return (bool) $this->google2fa()->verifyKey($secret, $code, 1);
         } catch (\Throwable) {
             return false;
         }
