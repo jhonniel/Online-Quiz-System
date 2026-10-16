@@ -60,14 +60,14 @@
             <dd>{{ $leaveFormatted }}</dd>
         @endif
         <dt>Total</dt>
-        <dd class="flex items-center justify-end gap-2">
+        <dd class="text-right leading-tight">
             @if($isCompleted && ($dtr->status ?? '') !== 'on_leave' && ($dtr->status ?? '') !== 'travel')
                 Complete
             @else
-                <span>{{ $totalMinutes > 0 ? $totalFormatted : '00:00' }}</span>
+                <div class="tabular-nums">{{ $totalMinutes > 0 ? $totalFormatted : '00:00' }}</div>
                 @php $dailyDeficitFormatted = \App\Support\DtrEmployeeAttendance::formatDailyDeficitForColumn($dtr); @endphp
                 @if($dailyDeficitFormatted)
-                    <span class="ml-auto text-[8px] leading-none font-normal text-red-400 whitespace-nowrap tabular-nums scale-90 origin-right" title="{{ \App\Support\DtrEmployeeAttendance::dailyColumnDeficitMinutes($dtr) }} minutes below 08:00">Deficit {{ $dailyDeficitFormatted }}</span>
+                    <div class="text-[8px] font-normal text-red-500 tabular-nums mt-0.5" title="{{ \App\Support\DtrEmployeeAttendance::dailyColumnDeficitMinutes($dtr) }} minutes below 08:00">Deficit {{ $dailyDeficitFormatted }}</div>
                 @endif
             @endif
         </dd>

@@ -440,13 +440,13 @@
                                                             @php
                                                                 $dailyDeficitFormatted = \App\Support\DtrEmployeeAttendance::formatDailyDeficitForColumn($dtr);
                                                             @endphp
-                                                            <div class="flex items-center w-full min-w-[9.5rem] pr-1 gap-2">
-                                                                <span class="text-sm font-medium text-gray-900 shrink-0">
+                                                            <div class="leading-tight">
+                                                                <div class="text-sm font-medium text-gray-900 tabular-nums">
                                                                     {{ $totalFormatted }}
-                                                                </span>
+                                                                </div>
                                                                 @if($dailyDeficitFormatted)
                                                                     @php $dailyDeficitMinutes = \App\Support\DtrEmployeeAttendance::dailyColumnDeficitMinutes($dtr); @endphp
-                                                                    <span class="ml-auto text-[8px] leading-none font-normal text-red-400 whitespace-nowrap tabular-nums scale-90 origin-right" title="{{ $dailyDeficitMinutes }} minutes below 08:00">Deficit {{ $dailyDeficitFormatted }}</span>
+                                                                    <div class="text-[8px] font-normal text-red-500 tabular-nums mt-0.5" title="{{ $dailyDeficitMinutes }} minutes below 08:00">Deficit {{ $dailyDeficitFormatted }}</div>
                                                                 @endif
                                                             </div>
                                                         @else

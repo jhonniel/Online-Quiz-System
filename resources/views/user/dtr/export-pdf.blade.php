@@ -165,9 +165,9 @@
                         <td class="right">
                             @if(($user->role ?? '') === 'employee')
                                 @php $dailyDeficitFormatted = \App\Support\DtrEmployeeAttendance::formatDailyDeficitForColumn($dtr); @endphp
-                                <span>{{ $totalFormatted }}</span>
+                                <div>{{ $totalFormatted }}</div>
                                 @if($dailyDeficitFormatted)
-                                    <span style="color: #DC2626; font-family: DejaVu Sans, sans-serif; font-weight: normal; font-size: 5px; margin-left: 5px; white-space: nowrap; opacity: 0.92;">Deficit {{ $dailyDeficitFormatted }}</span>
+                                    <div style="color: #DC2626; font-family: DejaVu Sans, sans-serif; font-weight: normal; font-size: 6px; line-height: 1.1; margin-top: 1px; white-space: nowrap;">Deficit {{ $dailyDeficitFormatted }}</div>
                                 @endif
                             @elseif($isCompleted || $totalOver8Hours)
                                 ✓
