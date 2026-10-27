@@ -246,7 +246,7 @@
             @include('partials.student-merit-dashboard-summary', ['studentMeritDetails' => $studentMeritDetails])
         @endif
 
-        <div class="grid grid-cols-1 xl:grid-cols-2 gap-4">
+        <div class="user-dashboard-chart-row grid grid-cols-1 gap-4 md:grid-cols-2">
             <x-user-panel :padding="false" title="Required vs logged vs remaining" subtitle="Training hour breakdown">
                 <div class="user-panel-chart user-panel-chart--sm">
                     <canvas id="studentTrainingProgressChart" class="user-panel-chart__canvas"></canvas>
@@ -336,7 +336,7 @@
                 + $empRejected
                 + $empResub;
         @endphp
-        <div class="grid grid-cols-1 gap-4 xl:grid-cols-2">
+        <div class="user-dashboard-chart-row grid grid-cols-1 gap-4 md:grid-cols-2">
             <x-user-panel embedded :padding="false" title="Leave request status" subtitle="Current year">
                 @if($leaveStatusChartTotal > 0)
                     <div class="user-panel-chart user-panel-chart--doughnut">

@@ -10,31 +10,25 @@
     <x-user-kpi-cell
         label="Total requests"
         :value="number_format((int) $total)"
-        class="user-leave-kpi-summary__total"
     />
     <x-user-kpi-cell
         label="Pending"
         :value="number_format((int) $pending)"
         :value-class="(int) $pending > 0 ? 'text-amber-600' : 'text-slate-900'"
-        class="user-leave-kpi-summary__pending"
-    />
-    <x-user-kpi-cell
-        label="Rejected"
-        :value="number_format((int) $rejected)"
-        :value-class="(int) $rejected > 0 ? 'text-rose-600' : 'text-slate-900'"
-        class="user-leave-kpi-summary__rejected"
-    />
-    <x-user-kpi-cell
-        label="For resubmission"
-        :value="number_format((int) $resubmission)"
-        :value-class="(int) $resubmission > 0 ? 'text-rose-600' : 'text-slate-900'"
-        class="user-leave-kpi-summary__resubmission"
     />
     <x-user-kpi-cell
         label="Approved"
         :value="number_format((int) $approved)"
         value-class="text-emerald-700"
-        featured
-        class="user-leave-kpi-summary__approved"
+    />
+    <x-user-kpi-cell
+        label="Rejected"
+        :value="number_format((int) $rejected)"
+        :value-class="(int) $rejected > 0 ? 'text-rose-600' : 'text-slate-900'"
+    />
+    <x-user-kpi-cell
+        label="For resubmission"
+        :value="number_format((int) $resubmission)"
+        :value-class="(int) $resubmission > 0 ? 'text-rose-600' : 'text-slate-900'"
     />
 </div>

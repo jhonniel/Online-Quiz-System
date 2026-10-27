@@ -18,6 +18,25 @@
     max-width: 100% !important;
 }
 
+/* Dashboard chart pairs: stack on phone, two columns on web */
+.user-dashboard-chart-row {
+    display: grid !important;
+    grid-template-columns: 1fr;
+    gap: 1rem;
+    width: 100%;
+    max-width: 100%;
+}
+
+.user-dashboard-chart-row > * {
+    min-width: 0;
+}
+
+@media (min-width: 768px) {
+    .user-dashboard-chart-row {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
 .user-portal-page-header {
     background: linear-gradient(135deg, #312e81 0%, #4f46e5 42%, #6366f1 100%) !important;
     box-shadow: 0 10px 28px rgba(49, 46, 129, 0.28);
@@ -453,7 +472,7 @@
     color: #64748b;
 }
 
-/* Leave request KPI — bento layout (2×2 + featured approved column) */
+/* Leave request KPI — one row on web */
 .user-leave-kpi-summary {
     display: grid;
     width: 100%;
@@ -463,15 +482,11 @@
     border: 1px solid rgba(226, 232, 240, 0.9);
     background: #fff;
     box-shadow: 0 1px 2px rgba(15, 23, 42, 0.05);
-    grid-template-columns: 1fr 1fr;
-    grid-template-rows: auto auto auto;
-    grid-template-areas:
-        "total pending"
-        "rejected resubmission"
-        "approved approved";
+    grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
 .user-leave-kpi-summary > * {
+    min-width: 0;
     border-color: #f1f5f9;
     border-style: solid;
     border-width: 0;
@@ -479,52 +494,29 @@
     border-bottom-width: 1px;
 }
 
-.user-leave-kpi-summary__total {
-    grid-area: total;
-}
-
-.user-leave-kpi-summary__pending {
-    grid-area: pending;
+.user-leave-kpi-summary > *:nth-child(2n) {
     border-right-width: 0;
 }
 
-.user-leave-kpi-summary__rejected {
-    grid-area: rejected;
-}
-
-.user-leave-kpi-summary__resubmission {
-    grid-area: resubmission;
-    border-right-width: 0;
-}
-
-.user-leave-kpi-summary__approved {
-    grid-area: approved;
-    border-right-width: 0;
+.user-leave-kpi-summary > *:nth-last-child(-n + 1) {
     border-bottom-width: 0;
-    text-align: center;
 }
 
-@media (min-width: 640px) {
+@media (min-width: 768px) {
     .user-leave-kpi-summary {
-        grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(9rem, 1.2fr);
-        grid-template-rows: auto auto;
-        grid-template-areas:
-            "total pending approved"
-            "rejected resubmission approved";
+        grid-template-columns: repeat(5, minmax(0, 1fr));
     }
 
-    .user-leave-kpi-summary__pending {
+    .user-leave-kpi-summary > * {
+        border-bottom-width: 0;
         border-right-width: 1px;
     }
 
-    .user-leave-kpi-summary__resubmission {
+    .user-leave-kpi-summary > *:nth-child(2n) {
         border-right-width: 1px;
-        border-bottom-width: 0;
     }
 
-    .user-leave-kpi-summary__approved {
-        border-left-width: 1px;
-        border-bottom-width: 0;
-        text-align: left;
+    .user-leave-kpi-summary > *:last-child {
+        border-right-width: 0;
     }
 }
