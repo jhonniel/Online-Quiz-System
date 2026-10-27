@@ -1,13 +1,16 @@
 @props([
     'title',
     'description' => null,
+    'eyebrow' => 'Overview',
 ])
 
-<section {{ $attributes->merge(['class' => 'min-w-0 overflow-hidden rounded-xl border border-slate-200/90 bg-white shadow-sm ring-1 ring-slate-900/5']) }}>
-    <div class="border-b border-slate-200/80 bg-gradient-to-b from-slate-50 to-white px-3 py-3.5 sm:px-6 sm:py-5">
+<section {{ $attributes->merge(['class' => 'user-dashboard-section min-w-0 overflow-hidden rounded-xl border border-slate-200/90 bg-white shadow-sm shadow-slate-900/[0.03] ring-1 ring-slate-900/[0.04]']) }}>
+    <div class="border-b border-slate-200/70 bg-gradient-to-b from-slate-50/95 to-white px-3 py-3.5 sm:px-6 sm:py-5">
         <div class="flex flex-col gap-2.5 sm:flex-row sm:items-end sm:justify-between sm:gap-3">
             <div class="min-w-0">
-                <p class="text-[10px] font-semibold uppercase tracking-wider text-slate-400 sm:text-[11px]">Overview</p>
+                @if(filled($eyebrow))
+                    <p class="user-section-eyebrow">{{ $eyebrow }}</p>
+                @endif
                 <h2 class="mt-0.5 text-base font-semibold tracking-tight text-slate-900 break-words sm:text-lg">{{ $title }}</h2>
                 @if($description)
                     <p class="mt-1 text-xs text-slate-600 sm:text-sm">{{ $description }}</p>

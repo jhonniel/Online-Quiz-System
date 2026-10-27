@@ -12,7 +12,7 @@
     };
 @endphp
 
-<div {{ $attributes->merge(['class' => 'flex gap-3 rounded-xl border px-4 py-3.5 shadow-sm '.$styles['wrap']]) }} role="status">
+<div {{ $attributes->merge(['class' => 'flex flex-col gap-3 rounded-xl border px-4 py-3.5 shadow-sm ring-1 ring-black/[0.03] sm:flex-row sm:items-start '.$styles['wrap']]) }} role="status">
     @if(isset($icon))
         <div class="{{ $styles['icon'] }} mt-0.5 shrink-0 [&>svg]:h-5 [&>svg]:w-5 [&>svg]:max-h-5 [&>svg]:max-w-5">
             {{ $icon }}
@@ -27,7 +27,7 @@
         </div>
     </div>
     @if(isset($actions))
-        <div class="shrink-0 self-start sm:self-center">
+        <div class="shrink-0 sm:self-center [&_a]:inline-flex [&_a]:min-h-[44px] [&_a]:items-center [&_button]:min-h-[44px]">
             {{ $actions }}
         </div>
     @endif

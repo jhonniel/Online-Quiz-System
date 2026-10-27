@@ -1,35 +1,22 @@
 @extends('layouts.user')
 
-@section('content')
-<div class="h-full flex flex-col min-h-0">
-    <!-- Page Header -->
-    <div class="bg-gradient-to-r from-indigo-500 to-indigo-600 shadow-sm p-4 flex-shrink-0">
-        <div class="flex items-center justify-between">
-            <div class="flex items-center">
-                <div class="flex-shrink-0">
-                    <svg class="h-6 w-6 sm:h-8 sm:w-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
-                    </svg>
-                </div>
-                <div class="ml-3">
-                    <h1 class="text-lg sm:text-xl lg:text-2xl font-bold text-white">New Leave Request</h1>
-                    <p class="text-indigo-100 text-sm">Submit a new leave or work request</p>
-                </div>
-            </div>
-            <a href="{{ url('/leave-requests') }}"
-               class="inline-flex items-center px-4 py-2 bg-white/20 backdrop-blur-sm border border-white/30 rounded-lg text-white hover:bg-white/30 transition duration-200">
-                <svg class="h-5 w-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
-                </svg>
-                Back
-            </a>
-        </div>
-    </div>
+@section('page-title', 'New Leave Request')
 
-    <!-- Form -->
-    <div class="flex-1 overflow-y-auto p-4">
-        <div class="max-w-3xl mx-auto">
-            <div class="bg-white rounded-lg shadow border border-gray-200 p-6">
+@section('content')
+<x-user-page-shell fluid class="space-y-4 sm:space-y-5">
+    <x-user-page-header title="New Leave Request" subtitle="Submit a new leave or work request">
+        <x-slot:icon>
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+        </x-slot:icon>
+        <x-slot:actions>
+            <x-user-header-btn-secondary href="{{ url('/leave-requests') }}">
+                <svg class="h-4 w-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/></svg>
+                Back
+            </x-user-header-btn-secondary>
+        </x-slot:actions>
+    </x-user-page-header>
+
+    <x-user-dashboard-section title="Request details" description="Complete the form below. Required fields are marked." class="max-w-3xl mx-auto w-full">
                 <form id="leave-request-form" action="{{ url('/leave-requests') }}" method="POST" enctype="multipart/form-data" class="space-y-6">
                     @csrf
 
@@ -357,10 +344,8 @@
                         </button>
                     </div>
                 </form>
-            </div>
-        </div>
-    </div>
-</div>
+    </x-user-dashboard-section>
+</x-user-page-shell>
 
 @php
     $noBalanceModalMessage = $errors->has('type') ? $errors->first('type') : null;

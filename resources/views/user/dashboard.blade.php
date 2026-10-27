@@ -6,14 +6,14 @@
 @php
     $canQuizzes = ($canViewAssignedQuizzes ?? auth()->user()->canViewAssignedQuizzes());
 @endphp
-<x-user-page-shell fluid class="pb-6 -mx-3 px-3 sm:-mx-4 sm:px-4 lg:-mx-6 lg:px-6">
+<x-user-page-shell fluid>
     <x-user-page-header title="My Dashboard">
-        <x-slot:subtitle>
+        <x-slot:subtitleSlot>
             Welcome back, <x-user-name :user="auth()->user()" class="inline font-medium text-white" /> · Rank {{ auth()->user()->getRankText() }} · {{ auth()->user()->getTotalScore() }} pts
             @if(auth()->user()->role === 'student' && !empty($studentMeritDetails['breakdown']['total']))
                 · Merits: <span class="font-semibold tabular-nums">{{ (int) $studentMeritDetails['breakdown']['total'] }}</span>
             @endif
-        </x-slot:subtitle>
+        </x-slot:subtitleSlot>
         <x-slot:icon>
             <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2H5a2 2 0 00-2-2z"></path>
@@ -21,14 +21,14 @@
         </x-slot:icon>
         @if(auth()->user()->isStaffMember())
             <x-slot:actions>
-                <a href="{{ url('/leave-requests') }}" class="inline-flex items-center gap-2 rounded-lg border border-white/30 bg-white/10 px-3 py-2 text-sm font-medium text-white hover:bg-white/20">
-                    <svg class="h-4 w-4 opacity-90" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                <x-user-header-btn-secondary href="{{ url('/leave-requests') }}">
+                    <svg class="h-4 w-4 shrink-0 opacity-90" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
                     Leave requests
-                </a>
-                <a href="{{ url('/dtr') }}" class="inline-flex items-center gap-2 rounded-lg border border-white/30 bg-white/10 px-3 py-2 text-sm font-medium text-white hover:bg-white/20">
-                    <svg class="h-4 w-4 opacity-90" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                </x-user-header-btn-secondary>
+                <x-user-header-btn-secondary href="{{ url('/dtr') }}">
+                    <svg class="h-4 w-4 shrink-0 opacity-90" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
                     Time records
-                </a>
+                </x-user-header-btn-secondary>
             </x-slot:actions>
         @endif
     </x-user-page-header>

@@ -1,44 +1,31 @@
 @extends('layouts.user')
 
-@section('content')
-<div class="h-full flex flex-col space-y-3 min-h-0">
-    <!-- Page Header -->
-    <div class="bg-gradient-to-r from-indigo-500 to-indigo-600 rounded-lg shadow-sm p-4 flex-shrink-0 mx-2 sm:mx-3 lg:mx-4 xl:mx-6">
-        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-            <div class="flex items-center">
-                <div class="flex-shrink-0">
-                    <svg class="h-6 w-6 sm:h-8 sm:w-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
-                    </svg>
-                </div>
-                <div class="ml-3">
-                    <h1 class="text-lg sm:text-xl lg:text-2xl font-bold text-white">My Profile</h1>
-                    <p class="text-indigo-100 text-sm">Manage your profile information and photos</p>
-                </div>
-            </div>
-            <div class="flex items-center space-x-2">
-                <a href="{{ url('/profile/edit') }}"
-                   class="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-all duration-200">
-                    <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
-                    </svg>
-                    <span class="hidden sm:inline">Edit Profile</span>
-                </a>
-            </div>
-        </div>
-    </div>
+@section('page-title', 'My Profile')
 
-    <!-- Profile Card -->
-    <div class="bg-white shadow-sm rounded-lg border border-gray-200 mx-2 sm:mx-3 lg:mx-4 xl:mx-6 flex-1 overflow-visible">
+@section('content')
+<x-user-page-shell fluid class="space-y-4 sm:space-y-5">
+    <x-user-page-header title="My Profile" subtitle="Manage your profile information and photos">
+        <x-slot:icon>
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>
+        </x-slot:icon>
+        <x-slot:actions>
+            <x-user-header-btn-primary href="{{ url('/profile/edit') }}">
+                <svg class="h-4 w-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+                Edit profile
+            </x-user-header-btn-primary>
+        </x-slot:actions>
+    </x-user-page-header>
+
+    <x-user-surface-card class="overflow-visible">
         <!-- Cover Photo Section -->
         <div class="relative h-48 sm:h-56 lg:h-64 overflow-visible rounded-t-lg">
-            <div class="absolute inset-0 overflow-hidden rounded-t-lg bg-gradient-to-r from-blue-400 via-purple-500 to-pink-500">
+            <div class="absolute inset-0 overflow-hidden rounded-t-lg bg-gradient-to-br from-slate-700 via-indigo-800 to-indigo-950">
             @if($user->hasCoverPhoto())
                 <img src="{{ $user->getCoverPhotoUrl() }}"
                      alt="Cover Photo"
                      class="w-full h-full object-cover">
             @else
-                <div class="w-full h-full bg-gradient-to-r from-blue-400 via-purple-500 to-pink-500 flex items-center justify-center">
+                <div class="w-full h-full bg-gradient-to-br from-slate-700 via-indigo-800 to-indigo-950 flex items-center justify-center">
                     <div class="text-center text-white">
                         <svg class="w-16 h-16 mx-auto mb-2 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
@@ -218,53 +205,30 @@
             @endif
 
             <!-- Stats Section -->
-            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
-                <div class="bg-gradient-to-r from-blue-50 to-blue-100 rounded-lg p-4 text-center">
-                    <div class="text-2xl font-bold text-blue-600">{{ $user->getTotalScore() }}</div>
-                    <div class="text-sm text-blue-800">Total Points</div>
+            <div class="mb-6 grid grid-cols-1 gap-3 sm:grid-cols-3 sm:gap-4">
+                <div class="rounded-xl border border-slate-200/90 bg-slate-50/80 p-4 text-center ring-1 ring-slate-900/[0.03]">
+                    <div class="text-2xl font-semibold tabular-nums text-indigo-700">{{ $user->getTotalScore() }}</div>
+                    <div class="text-xs font-medium uppercase tracking-wide text-slate-500">Total points</div>
                 </div>
-                <div class="bg-gradient-to-r from-green-50 to-green-100 rounded-lg p-4 text-center">
-                    <div class="text-2xl font-bold text-green-600">{{ $user->getRank() }}</div>
-                    <div class="text-sm text-green-800">Current Rank</div>
+                <div class="rounded-xl border border-slate-200/90 bg-slate-50/80 p-4 text-center ring-1 ring-slate-900/[0.03]">
+                    <div class="text-2xl font-semibold tabular-nums text-slate-900">{{ $user->getRank() }}</div>
+                    <div class="text-xs font-medium uppercase tracking-wide text-slate-500">Current rank</div>
                 </div>
-                <div class="bg-gradient-to-r from-purple-50 to-purple-100 rounded-lg p-4 text-center">
-                    <div class="text-2xl font-bold text-purple-600">{{ $user->friends()->count() }}</div>
-                    <div class="text-sm text-purple-800">Friends</div>
+                <div class="rounded-xl border border-slate-200/90 bg-slate-50/80 p-4 text-center ring-1 ring-slate-900/[0.03]">
+                    <div class="text-2xl font-semibold tabular-nums text-slate-900">{{ $user->friends()->count() }}</div>
+                    <div class="text-xs font-medium uppercase tracking-wide text-slate-500">Friends</div>
                 </div>
             </div>
 
-            <!-- Action Buttons -->
-            <div class="flex flex-col sm:flex-row gap-3">
-                <a href="{{ url('/profile/edit') }}"
-                   class="inline-flex items-center justify-center px-6 py-3 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors duration-200">
-                    <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
-                    </svg>
-                    Edit Profile
-                </a>
-                <a href="{{ url('/user-chat') }}"
-                   class="inline-flex items-center justify-center px-6 py-3 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors duration-200">
-                    <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path>
-                    </svg>
-                    Start Chat
-                </a>
+            <div class="flex flex-col gap-3 sm:flex-row">
+                <x-user-btn-primary href="{{ url('/profile/edit') }}">Edit profile</x-user-btn-primary>
+                <x-user-btn-secondary href="{{ url('/user-chat') }}">Start chat</x-user-btn-secondary>
             </div>
         </div>
-    </div>
+    </x-user-surface-card>
 
-    <!-- Friend Requests Section -->
-    <div class="bg-white shadow-sm rounded-lg border border-gray-200 mx-2 sm:mx-3 lg:mx-4 xl:mx-6">
-        <div class="px-6 py-4 border-b border-gray-200">
-            <h3 class="text-lg font-semibold text-gray-900 flex items-center">
-                <svg class="w-5 h-5 mr-2 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path>
-                </svg>
-                Friend Requests
-            </h3>
-        </div>
-
-        <div class="p-6">
+    <x-user-dashboard-section title="Friends & requests" description="Search for colleagues, manage requests, and grow your network." eyebrow="Network">
+        <div class="-mx-1 sm:mx-0">
             <!-- Search for Friends -->
             <div class="mb-6">
                 <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
@@ -480,10 +444,8 @@
                 @endif
             </div>
         </div>
-    </div>
-        </div>
-    </div>
-</div>
+    </x-user-dashboard-section>
+</x-user-page-shell>
 
 <!-- Toast Notification -->
 <x-toast />

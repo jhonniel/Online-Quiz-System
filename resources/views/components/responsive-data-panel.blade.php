@@ -15,7 +15,7 @@
     $desktopHidden = $breakpoint === 'lg' ? 'hidden lg:block' : ($breakpoint === 'sm' ? 'hidden sm:block' : 'hidden md:block');
 @endphp
 
-<div {{ $attributes->merge(['class' => 'overflow-hidden rounded-lg border border-slate-200/90 bg-white shadow-sm']) }}>
+<div {{ $attributes->merge(['class' => 'overflow-hidden rounded-xl border border-slate-200/90 bg-white shadow-sm ring-1 ring-slate-900/[0.04]']) }}>
     @isset($mobile)
         <div class="{{ $mobileHidden }} mobile-card-list">
             {{ $mobile }}

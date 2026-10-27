@@ -1,36 +1,22 @@
 @extends('layouts.user')
 
-@section('content')
-<div class="h-full flex flex-col space-y-3 min-h-0">
-    <!-- Page Header -->
-    <div class="bg-gradient-to-r from-indigo-500 to-indigo-600 rounded-lg shadow-sm p-4 flex-shrink-0 mx-2 sm:mx-3 lg:mx-4 xl:mx-6">
-        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-            <div class="flex items-center">
-                <div class="flex-shrink-0">
-                    <svg class="h-6 w-6 sm:h-8 sm:w-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
-                    </svg>
-                </div>
-                <div class="ml-3">
-                    <h1 class="text-lg sm:text-xl lg:text-2xl font-bold text-white">Edit Profile</h1>
-                    <p class="text-indigo-100 text-sm">Update your profile information and photos</p>
-                </div>
-            </div>
-            <div class="flex items-center space-x-2">
-                <a href="{{ url('/profile') }}"
-                   class="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-all duration-200">
-                    <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
-                    </svg>
-                    <span class="hidden sm:inline">View Profile</span>
-                </a>
-            </div>
-        </div>
-    </div>
+@section('page-title', 'Edit Profile')
 
-    <!-- Edit Form -->
-    <div class="bg-white shadow-sm rounded-lg border border-gray-200 mx-2 sm:mx-3 lg:mx-4 xl:mx-6 flex-1 overflow-hidden">
+@section('content')
+<x-user-page-shell fluid class="space-y-4 sm:space-y-5">
+    <x-user-page-header title="Edit Profile" subtitle="Update your profile information and photos">
+        <x-slot:icon>
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+        </x-slot:icon>
+        <x-slot:actions>
+            <x-user-header-btn-primary href="{{ url('/profile') }}">
+                <svg class="h-4 w-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
+                View profile
+            </x-user-header-btn-primary>
+        </x-slot:actions>
+    </x-user-page-header>
+
+    <x-user-surface-card class="flex-1 overflow-hidden">
         <form id="profile-form" action="{{ url('/profile') }}" method="POST" enctype="multipart/form-data" class="h-full flex flex-col">
             @csrf
             @method('PUT')
@@ -40,7 +26,7 @@
                 <div class="mb-8">
                     <h3 class="text-lg font-medium text-gray-900 mb-4">Cover Photo</h3>
                     <div class="relative">
-                        <div class="h-32 sm:h-40 bg-gradient-to-r from-blue-400 via-purple-500 to-pink-500 rounded-lg overflow-hidden">
+                        <div class="h-32 sm:h-40 rounded-lg overflow-hidden bg-gradient-to-br from-slate-700 via-indigo-800 to-indigo-950">
                             @if($user->hasCoverPhoto())
                                 <img id="cover-preview" src="{{ $user->getCoverPhotoUrl() }}"
                                      alt="Cover Photo"
@@ -423,9 +409,8 @@
                     </button>
                 </div>
             </form>
-        </div>
-    </div>
-</div>
+    </x-user-surface-card>
+</x-user-page-shell>
 
 <!-- Toast Notification -->
 <x-toast />

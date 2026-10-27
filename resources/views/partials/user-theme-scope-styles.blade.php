@@ -75,8 +75,10 @@
     .{{ $scopeClass }} .from-indigo-600.to-indigo-700,
     .{{ $scopeClass }} .from-indigo-600.to-indigo-700.bg-gradient-to-r,
     .{{ $scopeClass }} .from-indigo-600.via-indigo-600.to-indigo-700.bg-gradient-to-r,
-    .{{ $scopeClass }} .from-indigo-600.via-indigo-600.to-indigo-800.bg-gradient-to-br {
-        background-image: linear-gradient(to bottom right, var(--{{ $cssPrefix }}), var(--{{ $cssPrefix }}), var(--{{ $cssPrefix }}-dark)) !important;
+    .{{ $scopeClass }} .from-indigo-600.via-indigo-600.to-indigo-800.bg-gradient-to-br,
+    .{{ $scopeClass }} .from-indigo-600.via-indigo-700.to-indigo-900.bg-gradient-to-br,
+    .{{ $scopeClass }} .user-page-header-elevated.bg-gradient-to-br {
+        background-image: linear-gradient(to bottom right, var(--{{ $cssPrefix }}), var(--{{ $cssPrefix }}-dark), var(--{{ $cssPrefix }}-darker)) !important;
     }
 
     .{{ $scopeClass }} [data-sidebar-brand-root].bg-indigo-600 {
