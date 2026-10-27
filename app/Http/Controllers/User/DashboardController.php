@@ -302,23 +302,10 @@ class DashboardController extends Controller
                 ->where('user_id', $user->id);
 
             $currentYear = now()->year;
-            $defaultVacation = (float) Setting::get('default_vacation_balance', 15);
-            $defaultSick = (float) Setting::get('default_sick_leave_balance', 10);
-            $leaveBalance = LeaveBalance::firstOrCreateWithCarryover(
-                (int) $user->id,
-                (int) $currentYear,
-                (float) $defaultVacation,
-                (float) $defaultSick
-            );
-            $leaveAllowance = (float) $leaveBalance->vacation_allowance + (float) $leaveBalance->sick_allowance;
-            $usedLeaveCredits = (float) LeaveRequest::query()
-                ->where('user_id', $user->id)
-                ->whereIn('type', ['leave', 'vacation_leave', 'sick_leave'])
-                ->where('status', 'approved')
-                ->whereYear('start_date', $currentYear)
-                ->get()
-                ->sum('days');
-            $leaveCreditsRemaining = max($leaveAllowance - $usedLeaveCredits, 0);
+            $leaveCreditSummary = \App\Support\StaffLeaveCredits::summaryForUser($user, (int) $currentYear);
+            $leaveAllowance = (float) $leaveCreditSummary['allowance'];
+            $usedLeaveCredits = (float) $leaveCreditSummary['used'];
+            $leaveCreditsRemaining = (float) $leaveCreditSummary['remaining'];
 
             $today = Carbon::today();
             $overtimeEarnedMinutes = 0;

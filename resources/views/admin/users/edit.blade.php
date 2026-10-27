@@ -361,7 +361,7 @@
                                            class="mt-1 h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded">
                                     <span>
                                         <span class="block text-sm font-semibold text-gray-900 group-hover:text-indigo-900">Enable automatic tenure leave credits</span>
-                                        <span class="block text-xs text-gray-600 mt-1">Off by default. When enabled, active employees receive 5 leave credits after 6 months from Date Hired and 10 leave credits at 1 year or more.</span>
+                                        <span class="block text-xs text-gray-600 mt-1">Off by default. When enabled, active employees receive 6 leave credits after 6 months from Date Hired and 12 leave credits at 1 year or more.</span>
                                     </span>
                                 </label>
                                 @error('auto_tenure_leave_credits_enabled') <p class="mt-2 text-sm text-red-600">{{ $message }}</p> @enderror

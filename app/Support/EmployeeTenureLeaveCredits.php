@@ -9,9 +9,9 @@ use Carbon\Carbon;
 
 class EmployeeTenureLeaveCredits
 {
-    public const TIER_SIX_MONTHS = 5;
+    public const TIER_SIX_MONTHS = 6;
 
-    public const TIER_ONE_YEAR = 10;
+    public const TIER_ONE_YEAR = 12;
 
     public static function eligibleTierForUser(User $user, ?Carbon $asOf = null): int
     {
@@ -32,6 +32,14 @@ class EmployeeTenureLeaveCredits
         }
 
         return 0;
+    }
+
+    /**
+     * Leave credit pool size from employment tenure only (before admin override).
+     */
+    public static function tenureAllowanceCredits(User $user, ?Carbon $asOf = null): int
+    {
+        return self::eligibleTierForUser($user, $asOf);
     }
 
     /**
@@ -103,8 +111,8 @@ class EmployeeTenureLeaveCredits
     public static function tierLabel(int $tier): ?string
     {
         return match ($tier) {
-            self::TIER_SIX_MONTHS => '5 leave credits (6+ months employed)',
-            self::TIER_ONE_YEAR => '10 leave credits (1+ year employed)',
+            self::TIER_SIX_MONTHS => '6 leave credits (6+ months employed)',
+            self::TIER_ONE_YEAR => '12 leave credits (1+ year employed)',
             default => null,
         };
     }
@@ -130,7 +138,7 @@ class EmployeeTenureLeaveCredits
             $sixMonthDate = $user->date_hired->copy()->startOfDay()->addMonths(6)->format('F j, Y');
             $oneYearDate = $user->date_hired->copy()->startOfDay()->addYear()->format('F j, Y');
 
-            return "Not yet eligible. Next milestones: 5 credits on {$sixMonthDate}, 10 credits on {$oneYearDate}.";
+            return "Not yet eligible. Next milestones: 6 credits on {$sixMonthDate}, 12 credits on {$oneYearDate}.";
         }
 
         $eligibleLabel = self::tierLabel($eligibleTier);

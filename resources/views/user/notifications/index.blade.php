@@ -3,36 +3,32 @@
 @section('page-title', 'Notifications')
 
 @section('content')
-<div class="mx-2 sm:mx-3 lg:mx-4 xl:mx-6">
-    <div class="bg-white rounded-lg shadow-sm border border-gray-200">
-        <!-- Header -->
-        <div class="px-6 py-4 border-b border-gray-200">
-            <div class="flex items-center justify-between">
-                <div>
-                    <h1 class="text-2xl font-bold text-gray-900">Notifications</h1>
-                    <p class="text-sm text-gray-600 mt-1">Stay updated with your latest activities</p>
-                </div>
-                <div class="flex items-center space-x-3">
-                    <button onclick="markAllAsRead()"
-                            class="inline-flex items-center px-3 py-2 border border-gray-300 shadow-sm text-sm leading-4 font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+<x-user-page-shell>
+    <x-user-page-header title="Notifications" subtitle="Stay updated with your latest activities">
+        <x-slot:icon>
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"></path>
+            </svg>
+        </x-slot:icon>
+        <x-slot:actions>
+                    <button type="button" onclick="markAllAsRead()" class="user-btn-secondary">
                         <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
                         </svg>
                         Mark All Read
                     </button>
-                    <button onclick="clearAllNotifications()"
-                            class="inline-flex items-center px-3 py-2 border border-red-300 shadow-sm text-sm leading-4 font-medium rounded-md text-red-700 bg-white hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500">
-                        <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <button type="button" onclick="clearAllNotifications()"
+                            class="inline-flex items-center px-3 py-2 border border-red-200 text-sm font-medium rounded-lg text-red-700 bg-white hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500">
+                        <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
                         </svg>
                         Clear All
                     </button>
-                </div>
-            </div>
-        </div>
+        </x-slot:actions>
+    </x-user-page-header>
 
-        <!-- Notifications List -->
-        <div class="divide-y divide-gray-200">
+    <x-user-panel :padding="false">
+        <div class="divide-y divide-slate-100">
             @forelse($notifications as $notification)
                 <div class="p-6 hover:bg-gray-50 transition-colors duration-200 {{ !$notification->is_read ? 'bg-blue-50' : '' }}"
                      id="notification-{{ $notification->id }}">
@@ -131,8 +127,8 @@
                 {{ $notifications->links() }}
             </div>
         @endif
-    </div>
-</div>
+    </x-user-panel>
+</x-user-page-shell>
 
 <script>
 // Notification management functions

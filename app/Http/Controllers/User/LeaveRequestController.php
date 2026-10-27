@@ -63,32 +63,13 @@ class LeaveRequestController extends Controller
             'rejected' => LeaveRequest::where('user_id', $userId)->where('status', 'rejected')->count(),
         ];
 
-        // Ensure a leave balance record exists for this user & year (auto-recurring each year)
-        $defaultVacation = (float) \App\Models\Setting::get('default_vacation_balance', 15);
-        $defaultSick = (float) \App\Models\Setting::get('default_sick_leave_balance', 10);
-
-        $leaveBalance = LeaveBalance::firstOrCreateWithCarryover(
-            (int) $userId,
-            (int) $currentYear,
-            (float) $defaultVacation,
-            (float) $defaultSick
-        );
-
-        // Unified leave credits (Vacation + Sick + Leave)
-        $usedLeaveCredits = LeaveRequest::where('user_id', $userId)
-            ->whereIn('type', ['leave', 'vacation_leave', 'sick_leave'])
-            ->where('status', 'approved')
-            ->whereYear('start_date', $currentYear)
-            ->get()
-            ->sum->days;
-
-        $totalAllowance = (float) $leaveBalance->vacation_allowance + (float) $leaveBalance->sick_allowance;
+        $leaveCreditSummary = \App\Support\StaffLeaveCredits::summaryForUser($user, (int) $currentYear);
         $wfhBalance = WorkFromHomeQuota::balanceForMonth((int) $userId);
         $balances = [
             'leave' => [
-                'allowance' => $totalAllowance,
-                'used' => $usedLeaveCredits,
-                'remaining' => max($totalAllowance - $usedLeaveCredits, 0),
+                'allowance' => $leaveCreditSummary['allowance'],
+                'used' => $leaveCreditSummary['used'],
+                'remaining' => $leaveCreditSummary['remaining'],
             ],
             'work_from_home' => $wfhBalance,
         ];
@@ -1499,31 +1480,12 @@ class LeaveRequestController extends Controller
      */
     private function getEmployeeLeaveBalances($user): array
     {
-        $currentYear = now()->year;
-        $defaultVacation = (float) \App\Models\Setting::get('default_vacation_balance', 15);
-        $defaultSick = (float) \App\Models\Setting::get('default_sick_leave_balance', 10);
-
-        $leaveBalance = LeaveBalance::firstOrCreateWithCarryover(
-            (int) $user->id,
-            (int) $currentYear,
-            (float) $defaultVacation,
-            (float) $defaultSick
-        );
-
-        $usedLeave = LeaveRequest::where('user_id', $user->id)
-            ->whereIn('type', ['leave', 'vacation_leave', 'sick_leave'])
-            ->where('status', 'approved')
-            ->whereYear('start_date', $currentYear)
-            ->get()
-            ->sum->days;
-
-        $totalAllowance = (float) $leaveBalance->vacation_allowance + (float) $leaveBalance->sick_allowance;
-
+        $summary = \App\Support\StaffLeaveCredits::summaryForUser($user);
         $wfhBalance = WorkFromHomeQuota::balanceForMonth((int) $user->id);
 
         return [
-            'leave_remaining' => max($totalAllowance - $usedLeave, 0),
-            'leave_allowance' => $totalAllowance,
+            'leave_remaining' => $summary['remaining'],
+            'leave_allowance' => $summary['allowance'],
             'overtime_hours' => $this->getEmployeeOvertimeBalanceHours($user),
             'work_from_home' => $wfhBalance,
             'work_from_home_remaining' => $wfhBalance['remaining'],

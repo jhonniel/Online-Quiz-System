@@ -1,6 +1,9 @@
 @extends('layouts.user')
 
+@section('page-title', 'Dashboard')
+
 @section('content')
+<x-user-page-shell wide class="min-h-full">
 <div class="min-h-full flex flex-col">
     <!-- Search and Filter Bar -->
     @if(($canViewAssignedQuizzes ?? auth()->user()->canViewAssignedQuizzes()))
@@ -760,6 +763,7 @@
         </div>
     </div>
 </div>
+</x-user-page-shell>
 
 <script>
 function openQuizCodeModal() {

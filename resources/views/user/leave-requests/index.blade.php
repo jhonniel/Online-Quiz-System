@@ -1,151 +1,72 @@
 @extends('layouts.user')
 
+@section('page-title', 'Leave Requests')
+
 @section('content')
-<div class="h-full flex flex-col min-h-0">
-    <!-- Page Header -->
-    <div class="bg-gradient-to-r from-indigo-500 to-indigo-600 shadow-sm p-4 flex-shrink-0">
-        <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <div class="flex items-center min-w-0">
-                <div class="flex-shrink-0">
-                    <svg class="h-6 w-6 sm:h-8 sm:w-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
-                    </svg>
-                </div>
-                <div class="ml-3 min-w-0">
-                    <h1 class="text-lg sm:text-xl lg:text-2xl font-bold text-white truncate">Leave Requests</h1>
-                    <p class="text-indigo-100 text-sm">Manage your leave and other requests</p>
-                </div>
-            </div>
-            <a href="{{ route('user.leave-requests.create') }}"
-               class="inline-flex w-full sm:w-auto justify-center items-center px-4 py-2.5 bg-white/20 backdrop-blur-sm border border-white/30 rounded-lg text-white hover:bg-white/30 transition duration-200 touch-manipulation shrink-0">
-                <svg class="h-5 w-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+<x-user-page-shell>
+    <x-user-page-header title="Leave Requests" subtitle="Manage your leave and other requests">
+        <x-slot:icon>
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+            </svg>
+        </x-slot:icon>
+        <x-slot:actions>
+            <a href="{{ route('user.leave-requests.create') }}" class="user-btn-primary w-full sm:w-auto touch-manipulation">
+                <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
                 </svg>
                 New Request
             </a>
-        </div>
-    </div>
+        </x-slot:actions>
+    </x-user-page-header>
 
-    <!-- Success Message -->
-    @if(session('info'))
-        <div class="bg-blue-50 border-l-4 border-blue-400 p-4 mx-4 mt-4 rounded-lg">
-            <p class="text-sm text-blue-800">{{ session('info') }}</p>
-        </div>
-    @endif
-
-    @if(session('success'))
-        <div class="bg-green-50 border-l-4 border-green-400 p-4 mx-4 mt-4 rounded-lg">
-            <div class="flex">
-                <div class="flex-shrink-0">
-                    <svg class="h-5 w-5 text-green-400" fill="currentColor" viewBox="0 0 20 20">
-                        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
-                    </svg>
-                </div>
-                <div class="ml-3">
-                    <p class="text-sm text-green-700">{{ session('success') }}</p>
-                </div>
-            </div>
-        </div>
-    @endif
-
-    <!-- Statistics & balance cards -->
-    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-x-4 gap-y-5 pt-5 sm:pt-6 px-4 pb-5 sm:pb-6">
-        <div class="bg-white rounded-lg shadow p-4 border border-gray-200">
-            <div class="flex items-center">
-                <div class="flex-shrink-0 bg-indigo-100 rounded-lg p-3">
-                    <svg class="h-6 w-6 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
-                    </svg>
-                </div>
-                <div class="ml-4">
-                    <p class="text-sm font-medium text-gray-500">Total Requests</p>
-                    <p class="text-2xl font-bold text-gray-900">{{ $stats['total'] }}</p>
-                </div>
-            </div>
-        </div>
-
-        <div class="bg-white rounded-lg shadow p-4 border border-gray-200">
-            <div class="flex items-center">
-                <div class="flex-shrink-0 bg-yellow-100 rounded-lg p-3">
-                    <svg class="h-6 w-6 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                    </svg>
-                </div>
-                <div class="ml-4">
-                    <p class="text-sm font-medium text-gray-500">Pending</p>
-                    <p class="text-2xl font-bold text-gray-900">{{ $stats['pending'] }}</p>
-                </div>
-            </div>
-        </div>
-
-        <div class="bg-white rounded-lg shadow p-4 border border-gray-200">
-            <div class="flex items-center">
-                <div class="flex-shrink-0 bg-green-100 rounded-lg p-3">
-                    <svg class="h-6 w-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                    </svg>
-                </div>
-                <div class="ml-4">
-                    <p class="text-sm font-medium text-gray-500">Approved</p>
-                    <p class="text-2xl font-bold text-gray-900">{{ $stats['approved'] }}</p>
-                </div>
-            </div>
-        </div>
-
-        <div class="bg-white rounded-lg shadow p-4 border border-gray-200">
-            <div class="flex items-center">
-                <div class="flex-shrink-0 bg-red-100 rounded-lg p-3">
-                    <svg class="h-6 w-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                    </svg>
-                </div>
-                <div class="ml-4">
-                    <p class="text-sm font-medium text-gray-500">Rejected</p>
-                    <p class="text-2xl font-bold text-gray-900">{{ $stats['rejected'] }}</p>
-                </div>
-            </div>
-        </div>
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <x-user-stat-card label="Total Requests" :value="$stats['total']" tone="indigo">
+            <x-slot:icon>
+                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+            </x-slot:icon>
+        </x-user-stat-card>
+        <x-user-stat-card label="Pending" :value="$stats['pending']" tone="amber">
+            <x-slot:icon>
+                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+            </x-slot:icon>
+        </x-user-stat-card>
+        <x-user-stat-card label="Approved" :value="$stats['approved']" tone="emerald">
+            <x-slot:icon>
+                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+            </x-slot:icon>
+        </x-user-stat-card>
+        <x-user-stat-card label="Rejected" :value="$stats['rejected']" tone="rose">
+            <x-slot:icon>
+                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+            </x-slot:icon>
+        </x-user-stat-card>
 
         @if(auth()->user()->isStaffMember())
-            <div class="bg-white rounded-lg shadow p-4 border border-indigo-200 sm:col-span-2 lg:col-span-2">
-                <div class="flex items-center min-h-[4.5rem]">
-                    <div class="flex-shrink-0 bg-indigo-100 rounded-lg p-3">
-                        <svg class="h-6 w-6 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
-                        </svg>
-                    </div>
-                    <div class="ml-4 min-w-0">
-                        <p class="text-sm font-medium text-gray-500">Leave Credits</p>
-                        <p class="text-xl font-bold text-gray-900">
-                            {{ $balances['leave']['remaining'] }} / {{ $balances['leave']['allowance'] }} days
-                        </p>
-                        <p class="text-xs text-gray-500 mt-1">
-                            Used: {{ $balances['leave']['used'] }} {{ $balances['leave']['used'] == 1 ? 'day' : 'days' }} this year
-                        </p>
-                    </div>
-                </div>
-            </div>
-
-            <div class="bg-white rounded-lg shadow p-4 border border-emerald-200 sm:col-span-2 lg:col-span-2">
-                <div class="flex items-center min-h-[4.5rem]">
-                    <div class="flex-shrink-0 bg-emerald-100 rounded-lg p-3">
-                        <svg class="h-6 w-6 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                        </svg>
-                    </div>
-                    <div class="ml-4 min-w-0">
-                        <p class="text-sm font-medium text-gray-500">Overtime ({{ $overtimeWindowLabel ?? 'This Year' }})</p>
-                        <p class="text-xl">
-                            <span class="font-bold {{ str_starts_with($overtimeFormatted, '-') ? 'text-red-600' : 'text-gray-900' }}">
-                                {{ $overtimeFormatted }}
-                            </span>
-                        </p>
-                        @if(isset($approvedAbsentCount))
-                            <p class="text-xs text-gray-500 mt-1">Approved Absent: {{ $approvedAbsentCount }}</p>
-                        @endif
-                    </div>
-                </div>
-            </div>
+            <x-user-stat-card
+                class="sm:col-span-2 lg:col-span-2"
+                label="Leave Credits"
+                tone="indigo"
+                :value="$balances['leave']['remaining'].' / '.$balances['leave']['allowance'].' days'"
+                :hint="'Used: '.$balances['leave']['used'].' '.($balances['leave']['used'] == 1 ? 'day' : 'days').' this year'"
+            >
+                <x-slot:icon>
+                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                </x-slot:icon>
+            </x-user-stat-card>
+            <x-user-stat-card
+                class="sm:col-span-2 lg:col-span-2"
+                :label="'Overtime ('.($overtimeWindowLabel ?? 'This Year').')'"
+                tone="emerald"
+                :hint="isset($approvedAbsentCount) ? 'Approved Absent: '.$approvedAbsentCount : null"
+            >
+                <x-slot:icon>
+                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                </x-slot:icon>
+                <x-slot:valueSlot>
+                    <span class="{{ str_starts_with($overtimeFormatted, '-') ? 'text-red-600' : 'text-slate-900' }}">{{ $overtimeFormatted }}</span>
+                </x-slot:valueSlot>
+            </x-user-stat-card>
         @endif
     </div>
 
@@ -213,8 +134,7 @@
         </div>
     @endif
 
-    <!-- Leave Requests Table -->
-    <div class="flex-1 overflow-y-auto px-3 sm:px-4 pt-2 sm:pt-3 pb-3 sm:pb-4">
+    <x-user-panel title="Your requests" subtitle="Track status and open details for each submission." class="flex-1 min-h-0">
         @if($leaveRequests->count() > 0)
             <x-responsive-data-panel>
                 <x-slot:mobile>
@@ -359,7 +279,7 @@
                 </div>
         </div>
         @endif
-    </div>
-</div>
+    </x-user-panel>
+</x-user-page-shell>
 @endsection
 

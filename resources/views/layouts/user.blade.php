@@ -143,7 +143,7 @@
         : ($studentRulesBannerRows === 1 ? ' pt-10 sm:pt-11' : '');
     $userThemeBodyClass = ($authUser && $authUser->resolvedThemeColor()) ? ' user-theme-custom' : '';
 @endphp
-<body class="font-sans antialiased bg-gray-50 app-shell overflow-x-hidden{{ $studentRulesBodyPad }}{{ $userThemeBodyClass }}" x-data="{ sidebarOpen: false, sidebarCollapsed: false }">
+<body class="font-sans antialiased bg-slate-50 app-shell overflow-x-hidden{{ $studentRulesBodyPad }}{{ $userThemeBodyClass }}" x-data="{ sidebarOpen: false, sidebarCollapsed: false }">
     @php
         $layoutOffsetMobilePx = $studentRulesBannerRows === 2 ? 80 : ($studentRulesBannerRows === 1 ? 40 : 0);
         $layoutOffsetDesktopPx = $studentRulesBannerRows === 2 ? 96 : ($studentRulesBannerRows === 1 ? 44 : 0);
@@ -241,8 +241,8 @@
                 </div>
 
                 <!-- Navigation -->
-                <div class="flex-1 flex flex-col overflow-y-auto bg-gray-800">
-                    <nav class="flex-1 px-2 py-4 space-y-1">
+                <div class="flex-1 flex flex-col overflow-y-auto user-sidebar">
+                    <nav class="flex-1 space-y-1">
                         @include('components.nav.partial-admin-sidebar')
 
 
@@ -330,7 +330,7 @@
                  x-transition:leave="transition ease-in-out duration-300 transform"
                  x-transition:leave-start="translate-x-0"
                  x-transition:leave-end="-translate-x-full"
-                 class="fixed inset-y-0 left-0 z-50 w-64 bg-gray-800">
+                 class="fixed inset-y-0 left-0 z-50 w-64 user-sidebar">
                 <div class="flex flex-col h-full">
                     <!-- Mobile sidebar header -->
                     <div class="flex items-center justify-between h-16 px-4 bg-indigo-600 min-w-0 gap-2" data-sidebar-brand-root>
@@ -733,7 +733,7 @@
         <!-- Main content -->
         <div class="flex-1 min-h-0 flex flex-col overflow-hidden transition-all duration-300">
             <!-- Top header bar -->
-            <div class="flex items-center justify-between h-16 px-3 sm:px-4 bg-white border-b border-gray-200 gap-2 min-w-0">
+            <div class="user-topbar flex items-center justify-between h-16 px-3 sm:px-4 gap-2 min-w-0">
                 <div class="flex items-center space-x-2 sm:space-x-3 min-w-0 flex-1">
                     <!-- Mobile menu button -->
                     <button type="button"
@@ -861,23 +861,10 @@
             </div>
 
             <!-- Page content -->
-            <main class="flex-1 min-h-0 min-w-0 overflow-y-auto overflow-x-hidden bg-gray-50 px-3 sm:px-4 lg:px-6 py-3 sm:py-4 safe-bottom">
-                <div class="min-h-full">
-                    <div>
-                        @if(session('success'))
-                            <div class="mb-4 bg-green-100 border border-green-400 text-green-700 px-4 py-3">
-                                {{ session('success') }}
-                            </div>
-                        @endif
-
-                        @if(session('error'))
-                            <div class="mb-4 bg-red-100 border border-red-400 text-red-700 px-4 py-3">
-                                {{ session('error') }}
-                            </div>
-                        @endif
-
-                        @yield('content')
-                    </div>
+            <main class="user-portal flex-1 min-h-0 min-w-0 overflow-y-auto overflow-x-hidden px-3 sm:px-4 lg:px-6 py-4 sm:py-5 safe-bottom">
+                <div class="min-h-full flex flex-col gap-4">
+                    @include('partials.user-flash')
+                    @yield('content')
                 </div>
             </main>
         </div>

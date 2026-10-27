@@ -332,6 +332,233 @@
                 0 0 22px rgba(245, 158, 11, 0.2);
         }
     }
+
+    /* —— User portal (employee / student / teacher UI) —— */
+    .user-portal {
+        @apply text-slate-800 antialiased;
+        background-color: #f8fafc;
+    }
+
+    .user-topbar {
+        @apply bg-white/95 backdrop-blur-sm border-b border-slate-200/90 shadow-sm;
+    }
+
+    .user-topbar h1 {
+        @apply text-slate-900 tracking-tight;
+    }
+
+    .user-sidebar {
+        @apply bg-slate-900;
+    }
+
+    .user-sidebar nav {
+        @apply px-2 py-4;
+    }
+
+    .user-alert {
+        @apply flex gap-3 rounded-xl border px-4 py-3 text-sm shadow-sm;
+    }
+
+    .user-alert__icon {
+        @apply h-5 w-5 shrink-0 mt-0.5;
+    }
+
+    .user-alert__text {
+        @apply min-w-0 leading-relaxed;
+    }
+
+    .user-alert--success {
+        @apply border-emerald-200 bg-emerald-50 text-emerald-900;
+    }
+
+    .user-alert--success .user-alert__icon {
+        @apply text-emerald-500;
+    }
+
+    .user-alert--error {
+        @apply border-red-200 bg-red-50 text-red-900;
+    }
+
+    .user-alert--error .user-alert__icon {
+        @apply text-red-500;
+    }
+
+    .user-alert--info {
+        @apply border-sky-200 bg-sky-50 text-sky-900;
+    }
+
+    .user-alert--info .user-alert__icon {
+        @apply text-sky-500;
+    }
+
+    .user-page-header {
+        @apply flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between rounded-xl border border-slate-200/90 bg-white px-4 py-4 sm:px-5 sm:py-5 shadow-sm;
+    }
+
+    .user-page-header__main {
+        @apply flex items-start gap-3 min-w-0;
+    }
+
+    .user-page-header__icon {
+        @apply flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-indigo-50 text-indigo-600;
+    }
+
+    .user-page-header__icon svg {
+        @apply h-6 w-6;
+    }
+
+    .user-page-header__title {
+        @apply text-lg sm:text-xl font-semibold text-slate-900 tracking-tight truncate;
+    }
+
+    .user-page-header__subtitle {
+        @apply mt-0.5 text-sm text-slate-500;
+    }
+
+    .user-page-header__actions {
+        @apply flex flex-wrap items-center gap-2 shrink-0;
+    }
+
+    .user-stat-card {
+        @apply flex items-center gap-4 rounded-xl border bg-white p-4 shadow-sm transition-shadow hover:shadow-md;
+    }
+
+    .user-stat-card__icon {
+        @apply flex h-11 w-11 shrink-0 items-center justify-center rounded-lg;
+    }
+
+    .user-stat-card__icon svg {
+        @apply h-6 w-6;
+    }
+
+    .user-stat-card__label {
+        @apply text-xs font-medium uppercase tracking-wide text-slate-500;
+    }
+
+    .user-stat-card__value {
+        @apply mt-1 text-2xl font-semibold tabular-nums text-slate-900;
+    }
+
+    .user-stat-card__hint {
+        @apply mt-1 text-xs text-slate-500;
+    }
+
+    .user-stat-card--default .user-stat-card__icon {
+        @apply bg-slate-100 text-slate-600;
+    }
+
+    .user-stat-card--indigo {
+        @apply border-indigo-100;
+    }
+
+    .user-stat-card--indigo .user-stat-card__icon {
+        @apply bg-indigo-50 text-indigo-600;
+    }
+
+    .user-stat-card--emerald {
+        @apply border-emerald-100;
+    }
+
+    .user-stat-card--emerald .user-stat-card__icon {
+        @apply bg-emerald-50 text-emerald-600;
+    }
+
+    .user-stat-card--amber .user-stat-card__icon {
+        @apply bg-amber-50 text-amber-600;
+    }
+
+    .user-stat-card--rose .user-stat-card__icon {
+        @apply bg-rose-50 text-rose-600;
+    }
+
+    .user-stat-card--sky .user-stat-card__icon {
+        @apply bg-sky-50 text-sky-600;
+    }
+
+    .user-panel {
+        @apply overflow-hidden rounded-xl border border-slate-200/90 bg-white shadow-sm;
+    }
+
+    .user-panel__head {
+        @apply flex flex-col gap-3 border-b border-slate-100 bg-slate-50/80 px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-5;
+    }
+
+    .user-panel__title {
+        @apply text-base font-semibold text-slate-900;
+    }
+
+    .user-panel__subtitle {
+        @apply mt-0.5 text-sm text-slate-500;
+    }
+
+    .user-panel__actions {
+        @apply flex flex-wrap items-center gap-2;
+    }
+
+    .user-panel__body {
+        @apply p-4 sm:p-5;
+    }
+
+    .user-portal .user-btn-primary {
+        @apply inline-flex items-center justify-center gap-2 rounded-lg bg-indigo-600 px-4 py-2.5 text-sm font-medium text-white shadow-sm transition hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2;
+    }
+
+    .user-portal .user-btn-secondary {
+        @apply inline-flex items-center justify-center gap-2 rounded-lg border border-slate-300 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 shadow-sm transition hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2;
+    }
+
+    /* Legacy in-page gradient heroes → clean page intro (applies across existing views) */
+    .user-portal [class*='from-indigo-500'][class*='to-indigo-600'] {
+        background-image: none !important;
+        background-color: #fff;
+        border-radius: 0.75rem;
+        border: 1px solid rgb(226 232 240 / 0.9);
+        box-shadow: 0 1px 2px 0 rgb(15 23 42 / 0.06);
+    }
+
+    .user-portal [class*='from-indigo-500'][class*='to-indigo-600'] [class*='text-white'] {
+        color: #0f172a !important;
+    }
+
+    .user-portal [class*='from-indigo-500'][class*='to-indigo-600'] [class*='text-indigo-100'] {
+        color: #64748b !important;
+    }
+
+    .user-portal [class*='from-indigo-500'][class*='to-indigo-600'] svg[class*='text-white'] {
+        color: #4f46e5 !important;
+    }
+
+    .user-portal [class*='from-indigo-500'][class*='to-indigo-600'] a[class*='bg-white'] {
+        border-color: transparent !important;
+        background-color: #4f46e5 !important;
+        color: #fff !important;
+        backdrop-filter: none;
+    }
+
+    .user-portal [class*='from-indigo-500'][class*='to-indigo-600'] a[class*='bg-white']:hover {
+        background-color: #4338ca !important;
+    }
+
+    .user-portal .user-legacy-card {
+        border-radius: 0.75rem;
+        border: 1px solid rgb(226 232 240 / 0.9);
+        box-shadow: 0 1px 2px 0 rgb(15 23 42 / 0.06);
+    }
+
+    .user-portal table thead th {
+        @apply text-xs font-semibold uppercase tracking-wide text-slate-500;
+    }
+
+    .user-portal input[type="text"],
+    .user-portal input[type="email"],
+    .user-portal input[type="password"],
+    .user-portal input[type="number"],
+    .user-portal input[type="date"],
+    .user-portal input[type="search"],
+    .user-portal select,
+    .user-portal textarea {
+        @apply rounded-lg border-slate-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500;
+    }
 }
 
 @layer utilities {
