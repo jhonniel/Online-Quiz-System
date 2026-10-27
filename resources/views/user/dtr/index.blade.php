@@ -46,36 +46,6 @@
         </x-user-notice>
     @endif
 
-    <x-user-dashboard-section title="Filter records" description="Choose a date range and status to refine your DTR." eyebrow="Refine">
-        <x-user-filter-bar :action="route('user.dtr.index')" class="-mt-1">
-            <x-user-filter-field label="Date from" for="date_from">
-                <input type="date" name="date_from" id="date_from" value="{{ request('date_from') }}">
-            </x-user-filter-field>
-            <x-user-filter-field label="Date to" for="date_to">
-                <input type="date" name="date_to" id="date_to" value="{{ request('date_to') }}">
-            </x-user-filter-field>
-            <x-user-filter-field label="Status" for="status">
-                <select name="status" id="status">
-                    <option value="">All statuses</option>
-                    <option value="present" @selected(request('status') == 'present')>Present</option>
-                    <option value="absent" @selected(request('status') == 'absent')>Absent</option>
-                    <option value="holiday" @selected(request('status') == 'holiday')>Holiday</option>
-                    <option value="late" @selected(request('status') == 'late')>Late</option>
-                    <option value="half_day" @selected(request('status') == 'half_day')>Half day</option>
-                    <option value="on_leave" @selected(request('status') == 'on_leave')>On leave</option>
-                    <option value="travel" @selected(request('status') == 'travel')>Travel</option>
-                </select>
-            </x-user-filter-field>
-            <x-user-filter-field label="Filter actions" for="dtr-filter-apply" col="actions" class="[&_.user-filter-bar__label]:sr-only">
-                <x-user-btn-primary tag="button" type="submit" id="dtr-filter-apply" class="w-full sm:w-auto">
-                    <svg class="h-4 w-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
-                    Apply filters
-                </x-user-btn-primary>
-                <x-user-btn-secondary href="{{ route('user.dtr.index') }}" class="w-full sm:w-auto">Reset</x-user-btn-secondary>
-            </x-user-filter-field>
-        </x-user-filter-bar>
-    </x-user-dashboard-section>
-
     @if(auth()->user()->role === 'student' && !empty($incompleteOvertimeReminderItems))
     <x-user-notice tone="warning" title="Incomplete Additional Time details">
         <x-slot:icon>
@@ -193,56 +163,86 @@
     </x-user-dashboard-section>
     @endif
 
-    <x-user-dashboard-section title="Time records" description="Grouped by year, month, and week. Expand a section to view daily entries.">
+    @php
+        $yearsInView = is_countable($groupedDtrsByYear ?? null) ? count($groupedDtrsByYear) : 0;
+        $statusFilterLabel = request()->filled('status')
+            ? ucwords(str_replace('_', ' ', (string) request('status')))
+            : 'All statuses';
+    @endphp
+
+    <x-user-dashboard-section title="Time records" description="Filter by date or status, then expand a year to view daily entries." eyebrow="Overview">
         @if(auth()->user()->role === 'student')
             <x-slot:actions>
                 @if(! empty($canStudentRecordAttendance))
-                    <button type="button" onclick="openRecordAttendanceModal()"
-                            class="inline-flex items-center gap-2 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-emerald-700">
-                        <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+                    <x-user-btn-primary tag="button" type="button" onclick="openRecordAttendanceModal()" class="!bg-emerald-600 hover:!bg-emerald-700 focus:ring-emerald-500">
+                        <svg class="h-4 w-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
                         Record attendance
-                    </button>
+                    </x-user-btn-primary>
                 @else
                     <button type="button" disabled title="Upload and get your NDA approved first"
-                            class="inline-flex cursor-not-allowed items-center gap-2 rounded-lg bg-slate-200 px-4 py-2 text-sm font-medium text-slate-500">
+                            class="inline-flex min-h-[44px] cursor-not-allowed items-center gap-2 rounded-lg bg-slate-200 px-4 py-2.5 text-sm font-medium text-slate-500">
                         Record attendance
                     </button>
                 @endif
             </x-slot:actions>
         @endif
 
-        <x-user-kpi-grid columns="grid-cols-1 divide-y sm:grid-cols-1 sm:divide-y-0">
-            <x-user-kpi-cell label="Records in current view" :value="number_format($totalRecords)" />
+        <x-user-filter-bar :action="route('user.dtr.index')" class="-mt-1 mb-5">
+            <x-user-filter-field label="Date from" for="date_from">
+                <input type="date" name="date_from" id="date_from" value="{{ request('date_from') }}">
+            </x-user-filter-field>
+            <x-user-filter-field label="Date to" for="date_to">
+                <input type="date" name="date_to" id="date_to" value="{{ request('date_to') }}">
+            </x-user-filter-field>
+            <x-user-filter-field label="Status" for="status">
+                <select name="status" id="status">
+                    <option value="">All statuses</option>
+                    <option value="present" @selected(request('status') == 'present')>Present</option>
+                    <option value="absent" @selected(request('status') == 'absent')>Absent</option>
+                    <option value="holiday" @selected(request('status') == 'holiday')>Holiday</option>
+                    <option value="late" @selected(request('status') == 'late')>Late</option>
+                    <option value="half_day" @selected(request('status') == 'half_day')>Half day</option>
+                    <option value="on_leave" @selected(request('status') == 'on_leave')>On leave</option>
+                    <option value="travel" @selected(request('status') == 'travel')>Travel</option>
+                </select>
+            </x-user-filter-field>
+            <x-user-filter-field label="Filter actions" for="dtr-filter-apply" col="actions" class="[&_.user-filter-bar__label]:sr-only">
+                <x-user-btn-primary tag="button" type="submit" id="dtr-filter-apply" class="w-full sm:w-auto">
+                    <svg class="h-4 w-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+                    Apply filters
+                </x-user-btn-primary>
+                <x-user-btn-secondary href="{{ route('user.dtr.index') }}" class="w-full sm:w-auto">Reset</x-user-btn-secondary>
+            </x-user-filter-field>
+        </x-user-filter-bar>
+
+        <x-user-kpi-grid columns="grid-cols-2 divide-y sm:grid-cols-3 sm:divide-x sm:divide-y-0" class="mb-5">
+            <x-user-kpi-cell label="Records" :value="number_format($totalRecords)" />
+            <x-user-kpi-cell label="Years" :value="$yearsInView" />
+            <x-user-kpi-cell label="Status filter" :value="$statusFilterLabel" class="col-span-2 sm:col-span-1" value-class="text-sm font-semibold text-slate-800 sm:text-2xl" />
         </x-user-kpi-grid>
 
-        <div class="overflow-hidden rounded-lg border border-slate-200/90 bg-white" id="dtr-groups-root">
+        <div class="dtr-tree" id="dtr-groups-root">
             @forelse($groupedDtrsByYear as $yearKey => $year)
-                <div class="border-b border-slate-200 last:border-b-0" data-year-group>
-                    <button type="button"
-                            class="flex w-full items-center justify-between bg-slate-50 px-5 py-3.5 text-left transition hover:bg-slate-100/80 sm:px-6"
-                            data-toggle="year">
-                        <h2 class="text-base font-semibold text-slate-900">{{ $year['label'] }}</h2>
-                        <span class="inline-flex h-7 w-7 items-center justify-center rounded-md border border-slate-200 bg-white text-sm font-medium text-slate-600" data-year-chevron aria-hidden="true">+</span>
+                <div class="border-b border-slate-200/90 last:border-b-0" data-year-group>
+                    <button type="button" class="dtr-tree__year-btn" data-toggle="year">
+                        <h2 class="dtr-tree__year-label">{{ $year['label'] }}</h2>
+                        <span class="dtr-tree__chevron" data-year-chevron aria-hidden="true">+</span>
                     </button>
 
                     <div class="hidden border-t border-slate-200 bg-white" data-year-content style="display: none;">
                         @foreach($year['months'] as $monthKey => $month)
-                <div class="border-b border-slate-100" data-month-group>
-                    <button type="button"
-                            class="flex w-full items-center justify-between bg-white py-3 pl-8 pr-5 text-left transition hover:bg-slate-50 sm:pl-10 sm:pr-6"
-                            data-toggle="month">
-                        <h3 class="text-sm font-semibold text-slate-800">{{ $month['label'] }}</h3>
-                        <span class="inline-flex h-6 w-6 items-center justify-center rounded border border-slate-200 bg-slate-50 text-xs font-medium text-slate-600" data-month-chevron aria-hidden="true">+</span>
+                <div data-month-group>
+                    <button type="button" class="dtr-tree__month-btn" data-toggle="month">
+                        <h3 class="dtr-tree__month-label">{{ $month['label'] }}</h3>
+                        <span class="dtr-tree__chevron dtr-tree__chevron--sm" data-month-chevron aria-hidden="true">+</span>
                     </button>
 
                     <div class="hidden border-t border-slate-100" data-month-content style="display: none;">
                         @foreach($month['weeks'] as $weekKey => $week)
-                            <div class="border-b border-slate-100 last:border-b-0" data-week-group>
-                                <button type="button"
-                                        class="flex w-full items-center justify-between bg-slate-50/60 py-2.5 pl-10 pr-5 text-left transition hover:bg-slate-100/60 sm:pl-12 sm:pr-6"
-                                        data-toggle="week">
-                                    <h4 class="text-sm font-medium text-slate-700">{{ $week['label'] }}</h4>
-                                    <span class="inline-flex h-6 w-6 items-center justify-center rounded border border-slate-200 bg-white text-xs font-medium text-slate-600" data-week-chevron aria-hidden="true">+</span>
+                            <div data-week-group>
+                                <button type="button" class="dtr-tree__week-btn" data-toggle="week">
+                                    <h4 class="dtr-tree__week-label">{{ $week['label'] }}</h4>
+                                    <span class="dtr-tree__chevron dtr-tree__chevron--sm" data-week-chevron aria-hidden="true">+</span>
                                 </button>
 
                                 <div class="hidden" data-week-content style="display: none;">

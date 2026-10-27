@@ -619,23 +619,23 @@
     }
 
     .user-filter-bar {
-        @apply rounded-xl border border-slate-200/90 bg-slate-50/80 p-3 ring-1 ring-slate-900/[0.03] sm:p-4;
+        @apply w-full rounded-xl border border-slate-200/90 bg-slate-50/80 p-3 ring-1 ring-slate-900/[0.03] sm:p-4;
     }
 
     .user-filter-bar__grid {
-        @apply grid grid-cols-1 items-end gap-3 sm:grid-cols-2 lg:grid-cols-12 lg:gap-4;
+        @apply grid w-full grid-cols-1 items-end gap-3 sm:grid-cols-2 lg:grid-cols-12 lg:gap-4;
     }
 
     .user-filter-bar__field {
-        @apply min-w-0 lg:col-span-3;
+        @apply min-w-0 w-full sm:col-span-1 lg:col-span-3;
     }
 
     .user-filter-bar__field--wide {
-        @apply min-w-0 lg:col-span-4;
+        @apply min-w-0 w-full lg:col-span-4;
     }
 
     .user-filter-bar__actions {
-        @apply flex min-w-0 flex-col gap-2 sm:flex-row sm:flex-wrap lg:col-span-3 lg:justify-end;
+        @apply flex w-full min-w-0 flex-col gap-2 sm:col-span-2 sm:flex-row sm:flex-wrap lg:col-span-3 lg:justify-end;
     }
 
     .user-filter-bar__label {
@@ -646,7 +646,43 @@
     .user-filter-bar input[type="search"],
     .user-filter-bar input[type="text"],
     .user-filter-bar select {
-        @apply block w-full rounded-lg border-slate-300 bg-white py-2.5 text-sm text-slate-900 shadow-sm focus:border-indigo-500 focus:ring-indigo-500/20;
+        @apply block w-full min-w-0 rounded-lg border-slate-300 bg-white py-2.5 text-sm text-slate-900 shadow-sm focus:border-indigo-500 focus:ring-indigo-500/20;
+    }
+
+    .dtr-tree {
+        @apply overflow-hidden rounded-xl border border-slate-200/90 bg-white ring-1 ring-slate-900/[0.04];
+    }
+
+    .dtr-tree__year-btn {
+        @apply flex w-full items-center justify-between gap-3 bg-gradient-to-r from-slate-50 to-white px-4 py-3.5 text-left transition hover:from-slate-100/90 hover:to-slate-50 sm:px-5;
+    }
+
+    .dtr-tree__year-label {
+        @apply text-base font-semibold tracking-tight text-slate-900;
+    }
+
+    .dtr-tree__chevron {
+        @apply inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-slate-200 bg-white text-sm font-semibold text-slate-600 shadow-sm;
+    }
+
+    .dtr-tree__month-btn {
+        @apply flex w-full items-center justify-between gap-3 border-t border-slate-100 bg-white py-3 pl-6 pr-4 text-left transition hover:bg-slate-50/90 sm:pl-8 sm:pr-5;
+    }
+
+    .dtr-tree__month-label {
+        @apply text-sm font-semibold text-slate-800;
+    }
+
+    .dtr-tree__week-btn {
+        @apply flex w-full items-center justify-between gap-3 border-t border-slate-100 bg-slate-50/50 py-2.5 pl-8 pr-4 text-left transition hover:bg-slate-100/70 sm:pl-10 sm:pr-5;
+    }
+
+    .dtr-tree__week-label {
+        @apply text-sm font-medium text-slate-700;
+    }
+
+    .dtr-tree__chevron--sm {
+        @apply h-7 w-7 text-xs;
     }
 
     .user-portal table thead th {

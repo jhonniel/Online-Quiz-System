@@ -1,7 +1,7 @@
 @props([
     'title',
     'description' => null,
-    'eyebrow' => 'Overview',
+    'eyebrow' => null,
 ])
 
 <section {{ $attributes->merge(['class' => 'user-dashboard-section min-w-0 overflow-hidden rounded-xl border border-slate-200/90 bg-white shadow-sm shadow-slate-900/[0.03] ring-1 ring-slate-900/[0.04]']) }}>
