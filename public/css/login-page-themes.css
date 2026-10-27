@@ -68,24 +68,26 @@
     pointer-events: none;
 }
 
-/* Readable welcome + tagline on busy / dark panels */
+/* Welcome + tagline above art (no box — z-index + shadow only) */
 .login-welcome-copy {
     position: relative;
-    z-index: 35;
+    z-index: 40;
     width: 100%;
     max-width: 34rem;
     margin-left: auto;
     margin-right: auto;
-    padding: 1rem 1.125rem 1.125rem;
-    border-radius: 0.875rem;
-    isolation: isolate;
+    padding: 0 0.5rem;
+    background: none;
+    border: none;
+    box-shadow: none;
 }
 
 .login-welcome-copy__title,
 .login-welcome-copy__tagline {
     text-shadow:
-        0 1px 2px rgba(0, 0, 0, 0.55),
-        0 2px 12px rgba(0, 0, 0, 0.45);
+        0 1px 3px rgba(0, 0, 0, 0.75),
+        0 2px 8px rgba(0, 0, 0, 0.55),
+        0 0 24px rgba(0, 0, 0, 0.35);
 }
 
 .login-welcome-copy__title {
@@ -93,32 +95,7 @@
 }
 
 .login-welcome-copy__tagline {
-    color: rgba(255, 255, 255, 0.94);
-}
-
-.login-welcome-copy--halloween,
-.login-welcome-copy--christmas,
-.login-welcome-copy--hohoho {
-    background: rgba(7, 5, 24, 0.82);
-    border: 1px solid rgba(255, 255, 255, 0.16);
-    box-shadow: 0 10px 32px rgba(0, 0, 0, 0.4);
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
-}
-
-.login-welcome-copy--default {
-    background: rgba(0, 0, 0, 0.28);
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    backdrop-filter: blur(6px);
-    -webkit-backdrop-filter: blur(6px);
-}
-
-.login-welcome-copy--christmas {
-    background: rgba(15, 23, 42, 0.85);
-}
-
-.login-welcome-copy--hohoho {
-    background: rgba(80, 10, 10, 0.82);
+    color: rgba(255, 255, 255, 0.96);
 }
 
 .login-left-panel--christmas {
