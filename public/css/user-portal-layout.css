@@ -32,6 +32,26 @@
     ) !important;
 }
 
+.user-page-header__actions .user-header-btn-primary {
+    width: 100%;
+}
+
+.user-theme-custom .user-page-header__actions .user-header-btn-primary {
+    color: var(--user-theme-dark, #4338ca) !important;
+}
+
+@media (min-width: 640px) {
+    .user-page-header__actions .user-header-btn-primary:only-child,
+    .user-page-header__actions .user-header-btn-secondary:only-child {
+        min-width: 11.5rem;
+    }
+
+    .user-page-header__actions .user-header-btn-primary,
+    .user-page-header__actions .user-header-btn-secondary {
+        width: auto;
+    }
+}
+
 .user-portal-filter {
     display: block !important;
     box-sizing: border-box;
@@ -366,4 +386,80 @@
     text-align: center;
     font-size: 0.875rem;
     color: #64748b;
+}
+
+/* Leave request KPI — bento layout (2×2 + featured approved column) */
+.user-leave-kpi-summary {
+    display: grid;
+    width: 100%;
+    max-width: 100%;
+    overflow: hidden;
+    border-radius: 0.75rem;
+    border: 1px solid rgba(226, 232, 240, 0.9);
+    background: #fff;
+    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.05);
+    grid-template-columns: 1fr 1fr;
+    grid-template-rows: auto auto auto;
+    grid-template-areas:
+        "total pending"
+        "rejected resubmission"
+        "approved approved";
+}
+
+.user-leave-kpi-summary > * {
+    border-color: #f1f5f9;
+    border-style: solid;
+    border-width: 0;
+    border-right-width: 1px;
+    border-bottom-width: 1px;
+}
+
+.user-leave-kpi-summary__total {
+    grid-area: total;
+}
+
+.user-leave-kpi-summary__pending {
+    grid-area: pending;
+    border-right-width: 0;
+}
+
+.user-leave-kpi-summary__rejected {
+    grid-area: rejected;
+}
+
+.user-leave-kpi-summary__resubmission {
+    grid-area: resubmission;
+    border-right-width: 0;
+}
+
+.user-leave-kpi-summary__approved {
+    grid-area: approved;
+    border-right-width: 0;
+    border-bottom-width: 0;
+    text-align: center;
+}
+
+@media (min-width: 640px) {
+    .user-leave-kpi-summary {
+        grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(9rem, 1.2fr);
+        grid-template-rows: auto auto;
+        grid-template-areas:
+            "total pending approved"
+            "rejected resubmission approved";
+    }
+
+    .user-leave-kpi-summary__pending {
+        border-right-width: 1px;
+    }
+
+    .user-leave-kpi-summary__resubmission {
+        border-right-width: 1px;
+        border-bottom-width: 0;
+    }
+
+    .user-leave-kpi-summary__approved {
+        border-left-width: 1px;
+        border-bottom-width: 0;
+        text-align: left;
+    }
 }

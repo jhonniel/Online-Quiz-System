@@ -516,7 +516,7 @@
     .user-page-header__actions > .user-header-btn-secondary,
     .user-page-header__actions > a:not([class*="user-header"]),
     .user-page-header__actions > button {
-        @apply min-h-[44px] min-w-0;
+        @apply min-h-[48px] min-w-0 sm:min-h-[52px];
     }
 
     @media (min-width: 640px) {

@@ -304,13 +304,14 @@
         $empLeaveYear = (int) ($employeeLeaveSummary['leave_credits_year'] ?? now()->year);
     @endphp
     <x-user-dashboard-section title="Leave & attendance" description="Request status, leave credits, and overtime at a glance.">
-        <x-user-kpi-grid>
-            <x-user-kpi-cell label="Total requests" :value="number_format((int) ($employeeLeaveSummary['total_requests'] ?? 0))" />
-            <x-user-kpi-cell label="Pending" :value="number_format($empPending)" :value-class="$empPending > 0 ? 'text-amber-600' : 'text-slate-900'" />
-            <x-user-kpi-cell label="Approved" :value="number_format((int) ($employeeLeaveSummary['approved_requests'] ?? 0))" value-class="text-emerald-700" />
-            <x-user-kpi-cell label="Rejected" :value="number_format($empRejected)" :value-class="$empRejected > 0 ? 'text-rose-600' : 'text-slate-900'" />
-            <x-user-kpi-cell label="For resubmission" :value="number_format($empResub)" :value-class="$empResub > 0 ? 'text-rose-600' : 'text-slate-900'" class="col-span-2 sm:col-span-1" />
-        </x-user-kpi-grid>
+        <x-user-leave-kpi-summary
+            class="user-portal-kpi"
+            :total="(int) ($employeeLeaveSummary['total_requests'] ?? 0)"
+            :pending="$empPending"
+            :approved="(int) ($employeeLeaveSummary['approved_requests'] ?? 0)"
+            :rejected="$empRejected"
+            :resubmission="$empResub"
+        />
 
         <div class="grid grid-cols-1 gap-4 lg:grid-cols-2">
             <x-user-stat-card

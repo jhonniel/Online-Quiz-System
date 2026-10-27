@@ -26,7 +26,7 @@
         </div>
     </div>
     @if(isset($actions))
-        <div class="user-page-header__actions relative z-[1] grid w-full min-w-0 grid-cols-1 gap-2 min-[480px]:grid-cols-2 sm:flex sm:w-auto sm:flex-row sm:flex-wrap sm:items-center">
+        <div class="user-page-header__actions relative z-[1] flex w-full min-w-0 flex-col gap-2.5 sm:w-auto sm:flex-row sm:flex-wrap sm:items-stretch sm:justify-end">
             {{ $actions }}
         </div>
     @endif
