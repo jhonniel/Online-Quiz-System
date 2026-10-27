@@ -472,51 +472,60 @@
     color: #64748b;
 }
 
-/* Leave request KPI — one row on web */
-.user-leave-kpi-summary {
-    display: grid;
-    width: 100%;
-    max-width: 100%;
-    overflow: hidden;
-    border-radius: 0.75rem;
-    border: 1px solid rgba(226, 232, 240, 0.9);
-    background: #fff;
-    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.05);
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+/* Leave KPI: five separate cards, one row on web (viewport-based; not the old bento box) */
+.user-leave-kpi-row,
+.user-leave-kpi-summary.user-leave-kpi-row {
+    display: flex !important;
+    flex-direction: column !important;
+    flex-wrap: nowrap !important;
+    align-items: stretch !important;
+    gap: 0.75rem !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    border: none !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    overflow: visible !important;
 }
 
-.user-leave-kpi-summary > * {
-    min-width: 0;
-    border-color: #f1f5f9;
-    border-style: solid;
-    border-width: 0;
-    border-right-width: 1px;
-    border-bottom-width: 1px;
+.user-leave-kpi-row > * {
+    flex: 1 1 auto !important;
+    min-width: 0 !important;
+    width: 100% !important;
 }
 
-.user-leave-kpi-summary > *:nth-child(2n) {
-    border-right-width: 0;
+@media (min-width: 640px) {
+    .user-leave-kpi-row,
+    .user-leave-kpi-summary.user-leave-kpi-row {
+        flex-direction: row !important;
+        flex-wrap: nowrap !important;
+        gap: 0.75rem !important;
+        overflow-x: visible !important;
+    }
+
+    .user-leave-kpi-row > * {
+        flex: 1 1 0 !important;
+        width: auto !important;
+        min-width: 0 !important;
+    }
 }
 
-.user-leave-kpi-summary > *:nth-last-child(-n + 1) {
-    border-bottom-width: 0;
+/* Kill legacy single-box bento if an old cached sheet still targets this class */
+.user-leave-kpi-summary:not(.user-leave-kpi-row) {
+    display: flex !important;
+    flex-direction: row !important;
+    flex-wrap: nowrap !important;
+    gap: 0.75rem !important;
+    border: none !important;
+    background: transparent !important;
+    grid-template-columns: none !important;
+    grid-template-areas: none !important;
 }
 
-@media (min-width: 768px) {
-    .user-leave-kpi-summary {
-        grid-template-columns: repeat(5, minmax(0, 1fr));
-    }
-
-    .user-leave-kpi-summary > * {
-        border-bottom-width: 0;
-        border-right-width: 1px;
-    }
-
-    .user-leave-kpi-summary > *:nth-child(2n) {
-        border-right-width: 1px;
-    }
-
-    .user-leave-kpi-summary > *:last-child {
-        border-right-width: 0;
-    }
+.user-leave-kpi-summary:not(.user-leave-kpi-row) > * {
+    flex: 1 1 0 !important;
+    border: none !important;
+    grid-area: unset !important;
 }

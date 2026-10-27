@@ -305,7 +305,7 @@
     @endphp
     <x-user-dashboard-section title="Leave & attendance" description="Request status, leave credits, and overtime at a glance.">
         <x-user-leave-kpi-summary
-            class="user-portal-kpi"
+            class="user-portal-kpi user-leave-kpi-row"
             :total="(int) ($employeeLeaveSummary['total_requests'] ?? 0)"
             :pending="$empPending"
             :approved="(int) ($employeeLeaveSummary['approved_requests'] ?? 0)"
