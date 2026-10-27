@@ -6,14 +6,14 @@
 
 @php
     $colClass = match ($col) {
-        'wide' => 'user-filter-bar__field user-filter-bar__field--wide',
-        'actions' => 'user-filter-bar__actions',
-        default => 'user-filter-bar__field',
+        'wide' => 'min-w-0 w-full lg:col-span-4',
+        'actions' => 'flex w-full min-w-0 flex-col gap-2 sm:col-span-2 sm:flex-row sm:flex-wrap lg:col-span-3 lg:justify-end',
+        default => 'min-w-0 w-full sm:col-span-1 lg:col-span-3',
     };
 @endphp
 
 <div {{ $attributes->merge(['class' => $colClass]) }}>
-    <label for="{{ $for }}" class="user-filter-bar__label">{{ $label }}</label>
+    <label for="{{ $for }}" class="block text-xs font-semibold uppercase tracking-wide text-slate-500">{{ $label }}</label>
     <div @class([
         'mt-1.5',
         'flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center' => $col === 'actions',

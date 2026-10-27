@@ -188,14 +188,17 @@
         @endif
 
         <x-user-filter-bar :action="route('user.dtr.index')" class="-mt-1 mb-5">
+            @php
+                $dtrFilterControlClass = 'block w-full min-w-0 rounded-lg border border-slate-300 bg-white py-2.5 text-sm text-slate-900 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20';
+            @endphp
             <x-user-filter-field label="Date from" for="date_from">
-                <input type="date" name="date_from" id="date_from" value="{{ request('date_from') }}">
+                <input type="date" name="date_from" id="date_from" value="{{ request('date_from') }}" class="{{ $dtrFilterControlClass }}">
             </x-user-filter-field>
             <x-user-filter-field label="Date to" for="date_to">
-                <input type="date" name="date_to" id="date_to" value="{{ request('date_to') }}">
+                <input type="date" name="date_to" id="date_to" value="{{ request('date_to') }}" class="{{ $dtrFilterControlClass }}">
             </x-user-filter-field>
             <x-user-filter-field label="Status" for="status">
-                <select name="status" id="status">
+                <select name="status" id="status" class="{{ $dtrFilterControlClass }}">
                     <option value="">All statuses</option>
                     <option value="present" @selected(request('status') == 'present')>Present</option>
                     <option value="absent" @selected(request('status') == 'absent')>Absent</option>
@@ -206,7 +209,7 @@
                     <option value="travel" @selected(request('status') == 'travel')>Travel</option>
                 </select>
             </x-user-filter-field>
-            <x-user-filter-field label="Filter actions" for="dtr-filter-apply" col="actions" class="[&_.user-filter-bar__label]:sr-only">
+            <x-user-filter-field label="Filter actions" for="dtr-filter-apply" col="actions" class="[&_label]:sr-only">
                 <x-user-btn-primary tag="button" type="submit" id="dtr-filter-apply" class="w-full sm:w-auto">
                     <svg class="h-4 w-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
                     Apply filters
@@ -221,28 +224,28 @@
             <x-user-kpi-cell label="Status filter" :value="$statusFilterLabel" class="col-span-2 sm:col-span-1" value-class="text-sm font-semibold text-slate-800 sm:text-2xl" />
         </x-user-kpi-grid>
 
-        <div class="dtr-tree" id="dtr-groups-root">
+        <div class="overflow-hidden rounded-xl border border-slate-200/90 bg-white ring-1 ring-slate-900/[0.04]" id="dtr-groups-root">
             @forelse($groupedDtrsByYear as $yearKey => $year)
                 <div class="border-b border-slate-200/90 last:border-b-0" data-year-group>
-                    <button type="button" class="dtr-tree__year-btn" data-toggle="year">
-                        <h2 class="dtr-tree__year-label">{{ $year['label'] }}</h2>
-                        <span class="dtr-tree__chevron" data-year-chevron aria-hidden="true">+</span>
+                    <button type="button" class="flex w-full items-center justify-between gap-3 bg-gradient-to-r from-slate-50 to-white px-4 py-3.5 text-left transition hover:from-slate-100/90 hover:to-slate-50 sm:px-5" data-toggle="year">
+                        <h2 class="text-base font-semibold tracking-tight text-slate-900">{{ $year['label'] }}</h2>
+                        <span class="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-slate-200 bg-white text-sm font-semibold text-slate-600 shadow-sm" data-year-chevron aria-hidden="true">+</span>
                     </button>
 
                     <div class="hidden border-t border-slate-200 bg-white" data-year-content style="display: none;">
                         @foreach($year['months'] as $monthKey => $month)
                 <div data-month-group>
-                    <button type="button" class="dtr-tree__month-btn" data-toggle="month">
-                        <h3 class="dtr-tree__month-label">{{ $month['label'] }}</h3>
-                        <span class="dtr-tree__chevron dtr-tree__chevron--sm" data-month-chevron aria-hidden="true">+</span>
+                    <button type="button" class="flex w-full items-center justify-between gap-3 border-t border-slate-100 bg-white py-3 pl-6 pr-4 text-left transition hover:bg-slate-50/90 sm:pl-8 sm:pr-5" data-toggle="month">
+                        <h3 class="text-sm font-semibold text-slate-800">{{ $month['label'] }}</h3>
+                        <span class="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border border-slate-200 bg-white text-xs font-semibold text-slate-600 shadow-sm" data-month-chevron aria-hidden="true">+</span>
                     </button>
 
                     <div class="hidden border-t border-slate-100" data-month-content style="display: none;">
                         @foreach($month['weeks'] as $weekKey => $week)
                             <div data-week-group>
-                                <button type="button" class="dtr-tree__week-btn" data-toggle="week">
-                                    <h4 class="dtr-tree__week-label">{{ $week['label'] }}</h4>
-                                    <span class="dtr-tree__chevron dtr-tree__chevron--sm" data-week-chevron aria-hidden="true">+</span>
+                                <button type="button" class="flex w-full items-center justify-between gap-3 border-t border-slate-100 bg-slate-50/50 py-2.5 pl-8 pr-4 text-left transition hover:bg-slate-100/70 sm:pl-10 sm:pr-5" data-toggle="week">
+                                    <h4 class="text-sm font-medium text-slate-700">{{ $week['label'] }}</h4>
+                                    <span class="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border border-slate-200 bg-white text-xs font-semibold text-slate-600 shadow-sm" data-week-chevron aria-hidden="true">+</span>
                                 </button>
 
                                 <div class="hidden" data-week-content style="display: none;">
