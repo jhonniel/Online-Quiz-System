@@ -472,60 +472,39 @@
     color: #64748b;
 }
 
-/* Leave KPI: five separate cards, one row on web (viewport-based; not the old bento box) */
-.user-leave-kpi-row,
-.user-leave-kpi-summary.user-leave-kpi-row {
-    display: flex !important;
-    flex-direction: column !important;
-    flex-wrap: nowrap !important;
-    align-items: stretch !important;
-    gap: 0.75rem !important;
-    width: 100% !important;
-    max-width: 100% !important;
-    margin: 0 !important;
-    padding: 0 !important;
-    border: none !important;
-    background: transparent !important;
-    box-shadow: none !important;
-    overflow: visible !important;
-}
-
-.user-leave-kpi-row > * {
-    flex: 1 1 auto !important;
-    min-width: 0 !important;
-    width: 100% !important;
+/* Leave KPI row — icon stat cards (matches Leave Requests summary; no Tailwind grid) */
+.user-leave-kpi-row {
+    box-sizing: border-box;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0.75rem;
+    width: 100%;
+    max-width: 100%;
 }
 
 @media (min-width: 640px) {
-    .user-leave-kpi-row,
-    .user-leave-kpi-summary.user-leave-kpi-row {
-        flex-direction: row !important;
-        flex-wrap: nowrap !important;
-        gap: 0.75rem !important;
-        overflow-x: visible !important;
-    }
-
-    .user-leave-kpi-row > * {
-        flex: 1 1 0 !important;
-        width: auto !important;
-        min-width: 0 !important;
+    .user-leave-kpi-row {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 1rem;
     }
 }
 
-/* Kill legacy single-box bento if an old cached sheet still targets this class */
-.user-leave-kpi-summary:not(.user-leave-kpi-row) {
-    display: flex !important;
-    flex-direction: row !important;
-    flex-wrap: nowrap !important;
-    gap: 0.75rem !important;
-    border: none !important;
-    background: transparent !important;
-    grid-template-columns: none !important;
-    grid-template-areas: none !important;
+@media (min-width: 1024px) {
+    .user-leave-kpi-row {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+
+    .user-leave-kpi-row:has(.user-leave-kpi-row__wide) {
+        grid-template-columns: repeat(5, minmax(0, 1fr));
+    }
 }
 
-.user-leave-kpi-summary:not(.user-leave-kpi-row) > * {
-    flex: 1 1 0 !important;
-    border: none !important;
-    grid-area: unset !important;
+.user-leave-kpi-row > * {
+    min-width: 0;
+}
+
+@media (max-width: 1023px) {
+    .user-leave-kpi-row__wide {
+        grid-column: 1 / -1;
+    }
 }

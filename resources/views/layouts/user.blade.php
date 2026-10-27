@@ -112,7 +112,7 @@
             ])
         @endif
     @endauth
-    <link rel="stylesheet" href="{{ asset('css/user-portal-layout.css') }}?v=13">
+    <link rel="stylesheet" href="{{ asset('css/user-portal-layout.css') }}?v=16">
 </head>
 
 @php
