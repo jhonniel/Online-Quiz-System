@@ -1,113 +1,73 @@
 @extends('layouts.user')
 
+@section('page-title', 'Enter Quiz Code')
+
 @section('content')
-<div class="min-h-full flex flex-col justify-center py-12 sm:px-6 lg:px-8">
-    <div class="sm:mx-auto sm:w-full sm:max-w-md">
-        <h2 class="mt-6 text-center text-3xl font-extrabold text-gray-900">
-            Enter Quiz Code
-        </h2>
-        <p class="mt-2 text-center text-sm text-gray-600">
-            Enter the quiz code to start taking a quiz
-        </p>
-    </div>
+<x-user-page-shell class="pb-8">
+    <x-user-page-header title="Enter quiz code" subtitle="Use the code from your instructor to open an assigned quiz.">
+        <x-slot:icon>
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"></path>
+            </svg>
+        </x-slot:icon>
+    </x-user-page-header>
 
-    <div class="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
-        <div class="bg-white py-8 px-4 shadow sm:rounded-lg sm:px-10">
-            <form class="space-y-6" action="{{ url('/quizzes/validate-code') }}" method="POST">
+    <div class="mx-auto w-full max-w-md">
+        <div class="overflow-hidden rounded-xl border border-slate-200/90 bg-white p-6 shadow-sm ring-1 ring-slate-900/5 sm:p-8">
+            <form class="space-y-5" action="{{ route('user.quizzes.validate-code') }}" method="POST">
                 @csrf
-
                 <div>
-                    <label for="quiz_code" class="block text-sm font-medium text-gray-700">
-                        Quiz Code
-                    </label>
-                    <div class="mt-1">
-                        <input id="quiz_code" name="quiz_code" type="text" required
-                               class="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md placeholder-gray-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm uppercase"
-                               placeholder="Enter quiz code"
-                               maxlength="20"
-                               value="{{ old('quiz_code') }}">
-                    </div>
+                    <label for="quiz_code" class="block text-sm font-medium text-slate-700">Quiz code</label>
+                    <input id="quiz_code"
+                           name="quiz_code"
+                           type="text"
+                           required
+                           maxlength="20"
+                           autocomplete="off"
+                           class="mt-1.5 block w-full rounded-lg border-slate-300 uppercase shadow-sm placeholder:normal-case placeholder:text-slate-400 focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                           placeholder="e.g. ABC123"
+                           value="{{ old('quiz_code') }}">
                     @if(isset($errors) && $errors->has('quiz_code'))
-                        <p class="mt-2 text-sm text-red-600">{{ $errors->first('quiz_code') }}</p>
+                        <p class="mt-2 text-sm text-rose-600">{{ $errors->first('quiz_code') }}</p>
                     @endif
                 </div>
-
-                <div>
-                    <button type="submit"
-                            class="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
-                        Start Quiz
-                    </button>
-                </div>
+                <button type="submit"
+                        class="flex w-full justify-center rounded-lg bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2">
+                    Start quiz
+                </button>
             </form>
 
-            <div class="mt-6">
-                <div class="relative">
-                    <div class="absolute inset-0 flex items-center">
-                        <div class="w-full border-t border-gray-300" />
-                    </div>
-                    <div class="relative flex justify-center text-sm">
-                        <span class="px-2 bg-white text-gray-500">Or</span>
-                    </div>
+            <div class="relative my-6">
+                <div class="absolute inset-0 flex items-center" aria-hidden="true">
+                    <div class="w-full border-t border-slate-200"></div>
                 </div>
-
-                <div class="mt-6">
-                    <button type="button"
-                            id="back-to-dashboard-btn"
-                            onclick="goToDashboard()"
-                            class="w-full flex justify-center py-2 px-4 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors duration-200">
-                        <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
-                        </svg>
-                        Back to Dashboard
-                    </button>
+                <div class="relative flex justify-center text-xs uppercase tracking-wide">
+                    <span class="bg-white px-2 text-slate-400">or</span>
                 </div>
             </div>
+
+            <a href="{{ url('/dashboard') }}"
+               class="flex w-full items-center justify-center gap-2 rounded-lg border border-slate-300 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 shadow-sm hover:bg-slate-50">
+                <svg class="h-4 w-4 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
+                </svg>
+                Back to dashboard
+            </a>
         </div>
     </div>
-</div>
+</x-user-page-shell>
+@endsection
 
+@section('scripts')
 <script>
-// Global function for dashboard navigation
-function goToDashboard() {
-    console.log('Navigating to dashboard...');
-    try {
-        // Try multiple navigation methods
-        window.location.href = '{{ url("/dashboard") }}';
-    } catch (error) {
-        console.error('Navigation error:', error);
-        // Fallback to direct URL
-        window.location.href = '/dashboard';
-    }
-}
-
-document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('DOMContentLoaded', function () {
     const quizCodeInput = document.getElementById('quiz_code');
-    const backToDashboardBtn = document.getElementById('back-to-dashboard-btn');
-
-    // Auto-uppercase and limit to 20 characters
-    quizCodeInput.addEventListener('input', function(e) {
+    if (!quizCodeInput) {
+        return;
+    }
+    quizCodeInput.addEventListener('input', function (e) {
         e.target.value = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '');
     });
-
-    // Ensure back to dashboard button works
-    if (backToDashboardBtn) {
-        backToDashboardBtn.addEventListener('click', function(e) {
-            console.log('Back to dashboard button clicked');
-            goToDashboard();
-        });
-
-        // Add hover effect
-        backToDashboardBtn.addEventListener('mouseenter', function() {
-            this.style.backgroundColor = '#f9fafb';
-        });
-
-        backToDashboardBtn.addEventListener('mouseleave', function() {
-            this.style.backgroundColor = '';
-        });
-    }
-
-    // Debug: Log the dashboard URL
-    console.log('Dashboard URL: {{ url("/dashboard") }}');
 });
 </script>
 @endsection
